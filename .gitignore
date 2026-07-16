@@ -1,0 +1,13 @@
+# PRODUCT_CONFIG 4-1: push 제외 대상
+dev_history/
+hooks/
+mcp/
+skills/
+CLAUDE.md
+PRODUCT_CONFIG.md
+PROGRESS.md
+TASK.md
+
+# PRODUCT_CONFIG 4: Secret 관리 — 환경 변수 파일은 절대 포함하지 않는다
+.env
+.env.*
