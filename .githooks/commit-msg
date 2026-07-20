@@ -1,0 +1,68 @@
+#!/usr/bin/env sh
+# 커밋 메시지 형식을 강제한다 (PRODUCT_CONFIG.md 6장).
+#
+#   <scope>: <imperative summary>
+#
+#   <optional body>
+#
+# 켜는 방법: git config core.hooksPath .githooks
+
+set -u
+
+MSG_FILE="${1:-}"
+if [ -z "$MSG_FILE" ] || [ ! -f "$MSG_FILE" ]; then
+    echo "커밋 거부: 메시지 파일을 찾을 수 없습니다." >&2
+    exit 1
+fi
+
+# 허용 scope 목록. 새 영역이 생기면 여기에 추가한다.
+SCOPES="scheduling docs infra backend frontend test chore"
+
+# git이 붙이는 주석 줄은 검사 대상이 아니다. 앞쪽 빈 줄도 걷어낸다.
+CLEANED=$(sed '/^#/d' "$MSG_FILE" | sed '/./,$!d')
+
+SUBJECT=$(printf '%s\n' "$CLEANED" | sed -n '1p')
+SECOND=$(printf '%s\n' "$CLEANED" | sed -n '2p')
+LINES=$(printf '%s\n' "$CLEANED" | sed -n '$=')
+
+reject() {
+    echo "" >&2
+    echo "커밋이 거부되었습니다 — $1" >&2
+    echo "" >&2
+    echo "  받은 첫 줄: ${SUBJECT:-(비어 있음)}" >&2
+    echo "" >&2
+    echo "  올바른 형식:" >&2
+    echo "    <scope>: <요약>" >&2
+    echo "" >&2
+    echo "    <본문은 빈 줄 하나를 띄우고 쓴다>" >&2
+    echo "" >&2
+    echo "  허용 scope: $SCOPES" >&2
+    echo "  예시: scheduling: add room-specific operating hours" >&2
+    echo "" >&2
+    exit 1
+}
+
+# 내용이 하나도 없는 경우
+if [ -z "$SUBJECT" ]; then
+    reject "메시지가 비어 있습니다."
+fi
+
+# 병합·되돌리기 커밋은 git이 자동으로 만드는 형식이므로 그대로 통과시킨다.
+case "$SUBJECT" in
+    "Merge "*|"Revert "*)
+        exit 0
+        ;;
+esac
+
+# 첫 줄 형식 검사: 허용 scope + 콜론 + 공백 하나 + 비어 있지 않은 요약
+PATTERN="^($(echo "$SCOPES" | tr ' ' '|')): [^[:space:]].*$"
+if ! printf '%s' "$SUBJECT" | grep -Eq "$PATTERN"; then
+    reject "첫 줄이 '<scope>: <요약>' 형식이 아니거나, 허용되지 않은 scope입니다."
+fi
+
+# 본문을 쓸 경우 첫 줄과 본문 사이에 빈 줄이 하나 있어야 한다.
+if [ "${LINES:-1}" -gt 1 ] && [ -n "$SECOND" ]; then
+    reject "첫 줄과 본문 사이에 빈 줄이 없습니다."
+fi
+
+exit 0
