@@ -1,0 +1,14 @@
+services:
+  # 개발용 컨테이너 — 테스트와 개발 작업을 여기서 돌린다.
+  dev:
+    build:
+      context: ./backend
+      target: dev
+    image: banblit-backend:dev
+    volumes:
+      # 내 PC의 backend 폴더를 컨테이너 안에 연결한다.
+      # 파일을 고치면 다시 빌드하지 않아도 바로 반영된다.
+      - ./backend:/app
+      # 연결된 폴더가 컨테이너 안의 패키지 설치 위치를 덮지 않도록 분리한다.
+      - /app/.venv
+    working_dir: /app
