@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 
-from backend.scheduling.assignment import Assignment, assign
+from backend.scheduling.assignment import Assignment, Room, assign
 from backend.scheduling.availability import Team
-from backend.scheduling.interval import TimeInterval
 
 
 @dataclass
@@ -19,11 +18,10 @@ class Resolution:
 
 def resolve(
     teams: list[Team],
-    slots: list[TimeInterval],
+    rooms: list[Room],
     slots_per_team: int,
-    rooms: int = 1,
 ) -> Resolution:
-    base = assign(teams, slots, slots_per_team, rooms)
+    base = assign(teams, rooms, slots_per_team)
     if base.feasible:
         return Resolution(assignment=base, proposals=[])
 
@@ -37,7 +35,7 @@ def resolve(
         # 제외했더니 어느 팀이든 텅 비어버리면, 그건 "빼서 푸는" 유효한 제안이 아니다.
         if any(len(team.members) == 0 for team in reduced):
             continue
-        trial = assign(reduced, slots, slots_per_team, rooms)
+        trial = assign(reduced, rooms, slots_per_team)
         if trial.feasible:
             proposals.append(ExclusionProposal(excluded_member=name, assignment=trial))
     return Resolution(assignment=base, proposals=proposals)
