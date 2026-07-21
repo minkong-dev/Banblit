@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class IntervalIn(BaseModel):
@@ -10,12 +10,12 @@ class IntervalIn(BaseModel):
 
 class MemberIn(BaseModel):
     name: str
-    unavailable: list[IntervalIn] = []
+    unavailable: list[IntervalIn] = Field(default_factory=list, max_length=100)
 
 
 class TeamIn(BaseModel):
     name: str
-    members: list[MemberIn]
+    members: list[MemberIn] = Field(min_length=1, max_length=10)
 
 
 class RoomIn(BaseModel):
@@ -24,8 +24,8 @@ class RoomIn(BaseModel):
 
 
 class AssignRequest(BaseModel):
-    teams: list[TeamIn]
-    rooms: list[RoomIn]
+    teams: list[TeamIn] = Field(min_length=1, max_length=20)
+    rooms: list[RoomIn] = Field(min_length=1, max_length=10)
     slots_per_team: int
 
 
