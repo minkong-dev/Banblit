@@ -8,7 +8,9 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "fastapi>=0.139.2",
     "ortools>=9.15.6755",
+    "uvicorn[standard]>=0.51.0",
 ]
 
 [project.scripts]
@@ -20,5 +22,6 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28.1",
     "pytest>=9.1.1",
 ]
