@@ -50,9 +50,13 @@ class Membership(Base):
     __tablename__ = "memberships"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    member_id: Mapped[int] = mapped_column(ForeignKey("members.id"))
-    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"))
-    position_id: Mapped[int] = mapped_column(ForeignKey("positions.id"))
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("members.id", ondelete="CASCADE")
+    )
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"))
+    position_id: Mapped[int] = mapped_column(
+        ForeignKey("positions.id", ondelete="RESTRICT")
+    )
 
     __table_args__ = (UniqueConstraint("member_id", "team_id"),)
 
@@ -66,7 +70,9 @@ class UnavailableTime(Base):
     __tablename__ = "unavailable_times"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    member_id: Mapped[int] = mapped_column(ForeignKey("members.id"))
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("members.id", ondelete="CASCADE")
+    )
     starts_at: Mapped[datetime] = mapped_column(DateTime)
     ends_at: Mapped[datetime] = mapped_column(DateTime)
     repeats_weekly: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -94,6 +100,7 @@ class Room(Base):
             "date_part('minute', closes_at) IN (0, 30)"
             " AND date_part('second', closes_at) = 0"
         ),
+        CheckConstraint("closes_at > opens_at"),
     )
 
 
@@ -110,8 +117,8 @@ class Period(Base):
     starts_on: Mapped[date] = mapped_column(Date)
     ends_on: Mapped[date] = mapped_column(Date)
     everyday: Mapped[bool] = mapped_column(Boolean, default=False)
-    first_run_at: Mapped[time | None] = mapped_column(Time, nullable=True)
-    second_run_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    first_run_at: Mapped[time] = mapped_column(Time)
+    second_run_at: Mapped[time] = mapped_column(Time)
 
     __table_args__ = (
         CheckConstraint("kind IN ('open', 'focused')"),
@@ -125,9 +132,11 @@ class Assignment(Base):
     __tablename__ = "assignments"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    period_id: Mapped[int] = mapped_column(ForeignKey("periods.id"))
-    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"))
-    room_id: Mapped[int] = mapped_column(ForeignKey("rooms.id"))
+    period_id: Mapped[int] = mapped_column(
+        ForeignKey("periods.id", ondelete="CASCADE")
+    )
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"))
+    room_id: Mapped[int] = mapped_column(ForeignKey("rooms.id", ondelete="CASCADE"))
     starts_at: Mapped[datetime] = mapped_column(DateTime)
     ends_at: Mapped[datetime] = mapped_column(DateTime)
 
