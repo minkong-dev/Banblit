@@ -92,3 +92,24 @@ def test_infeasible_request_returns_200_with_proposals() -> None:
     data = response.json()
     assert data["assignment"]["feasible"] is False
     assert [p["excluded_member"] for p in data["proposals"]] == ["blocker"]
+
+
+def test_value_error_outside_assign_is_not_masked_as_422() -> None:
+    # 배정 창구 밖에서 터진 ValueError 는 입력 오류(422)로 둔갑해서는 안 된다.
+    import pytest
+    from fastapi.testclient import TestClient
+
+    from backend.api.app import app as prod_app
+
+    @prod_app.get("/_boom_for_test")
+    def boom() -> None:
+        raise ValueError("internal fault")
+
+    try:
+        with pytest.raises(ValueError):
+            TestClient(prod_app).get("/_boom_for_test")
+    finally:
+        prod_app.router.routes[:] = [
+            r for r in prod_app.router.routes
+            if getattr(r, "path", None) != "/_boom_for_test"
+        ]
