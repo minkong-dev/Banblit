@@ -38,7 +38,6 @@ CMD ["pytest"]
 # ─────────────────────────────────────────────────────────────
 # 3단계 · 배포용 — 실행에 필요한 것만 남긴 층
 #   테스트 도구가 들어오지 않는다.
-#   실행할 서버(FastAPI)가 아직 없으므로 시작 명령은 비워 둔다.
 # ─────────────────────────────────────────────────────────────
 FROM base AS prod
 
@@ -47,5 +46,5 @@ COPY README.md ./
 COPY src ./src
 RUN uv sync --locked --no-dev
 
-# TODO(웹 계층 추가 시): FastAPI 서버 실행 명령으로 교체한다.
-CMD ["python", "-c", "import backend.scheduling.assignment; print('backend image ready — no server entrypoint yet')"]
+EXPOSE 8000
+CMD ["uvicorn", "backend.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
