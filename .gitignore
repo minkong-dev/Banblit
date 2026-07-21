@@ -11,6 +11,8 @@ TASK.md
 # PRODUCT_CONFIG 4: Secret 관리 — 환경 변수 파일은 절대 포함하지 않는다
 .env
 .env.*
+# 예외: 비밀값 없는 견본 파일은 커밋한다
+!.env.example
 
 # 기획 문서(로컬 전용) — 사용자 지시로 push 제외
 .cluedoc/
