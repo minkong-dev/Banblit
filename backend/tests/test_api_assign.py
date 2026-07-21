@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi.testclient import TestClient
 
 from backend.api.app import app
@@ -5,7 +7,7 @@ from backend.api.app import app
 client = TestClient(app)
 
 
-def _feasible_body() -> dict:
+def _feasible_body() -> dict[str, Any]:
     return {
         "teams": [{"name": "A", "members": [{"name": "hong", "unavailable": []}]}],
         "rooms": [
