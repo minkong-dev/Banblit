@@ -34,6 +34,28 @@ def test_assign_returns_feasible_assignment() -> None:
     assert data["proposals"] == []
 
 
+def test_leftover_slots_are_returned_as_open_slots() -> None:
+    # 방에 칸이 2개(18:00, 18:30), 팀이 1칸만 가져가면 남은 1칸이 예약 가능 자리로 나와야 한다.
+    body = _feasible_body()
+    body["rooms"][0]["open_period"]["end"] = "2026-07-20T19:00:00"
+
+    response = client.post("/assign", json=body)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["assignment"]["feasible"] is True
+
+    taken = data["assignment"]["slots_by_team"]["A"]
+    open_slots = data["assignment"]["open_slots"]
+    assert len(taken) == 1
+    assert len(open_slots) == 1
+    assert open_slots[0]["room"] == "1번방"
+
+    # 가져간 칸과 남은 칸을 합치면 정확히 18:00, 18:30 두 칸이어야 한다.
+    starts = sorted(slot["start"] for slot in taken + open_slots)
+    assert starts == ["2026-07-20T18:00:00", "2026-07-20T18:30:00"]
+
+
 def test_duplicate_room_name_is_rejected_as_422() -> None:
     body = _feasible_body()
     body["rooms"].append(dict(body["rooms"][0]))  # 같은 이름의 방을 하나 더
