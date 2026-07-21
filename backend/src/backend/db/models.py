@@ -95,3 +95,43 @@ class Room(Base):
             " AND date_part('second', closes_at) = 0"
         ),
     )
+
+
+class Period(Base):
+    """기간. open이면 선착순 예약, focused면 자동 배정 대상.
+
+    everyday는 집중기간의 "매일" 옵션. first/second_run_at은 하루 2회 연산 시각.
+    """
+
+    __tablename__ = "periods"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str] = mapped_column(Text)
+    starts_on: Mapped[date] = mapped_column(Date)
+    ends_on: Mapped[date] = mapped_column(Date)
+    everyday: Mapped[bool] = mapped_column(Boolean, default=False)
+    first_run_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    second_run_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+
+    __table_args__ = (
+        CheckConstraint("kind IN ('open', 'focused')"),
+        CheckConstraint("ends_on >= starts_on"),
+    )
+
+
+class Assignment(Base):
+    """확정된 배정 한 칸. 같은 방의 같은 시각에는 하나만 존재할 수 있다."""
+
+    __tablename__ = "assignments"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    period_id: Mapped[int] = mapped_column(ForeignKey("periods.id"))
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id"))
+    room_id: Mapped[int] = mapped_column(ForeignKey("rooms.id"))
+    starts_at: Mapped[datetime] = mapped_column(DateTime)
+    ends_at: Mapped[datetime] = mapped_column(DateTime)
+
+    __table_args__ = (
+        UniqueConstraint("room_id", "starts_at"),
+        CheckConstraint("ends_at > starts_at"),
+    )
