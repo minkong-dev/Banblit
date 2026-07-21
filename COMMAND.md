@@ -1,6 +1,6 @@
 # COMMAND
 
-> 문서 버전: 1.2.0 draft
+> 문서 버전: 1.3.0 draft
 
 이 문서는 Banblit에서 실제로 실행해 동작을 확인한 명령어만 담는다.
 실행해 보지 않은 명령어는 적지 않는다.
@@ -153,9 +153,77 @@ docker compose down
 
 ---
 
-## 4. 이미지 주고받기
+## 4. 데이터 저장소
 
-### 4-1. 이미지를 파일 하나로 내보내기
+### 4-1. DB 컨테이너만 따로 띄우기
+
+```
+docker compose up -d db
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `docker-compose.yml`의 `db` 서비스(PostgreSQL 17)만 백그라운드로 띄운다. `dev`·`api` 서비스는 `depends_on: db (service_healthy)`로 이 서비스를 자동으로 함께 띄우므로, DB 안을 직접 들여다보고 싶을 때(예: `4-4`의 `psql` 접속)만 이 명령을 따로 쓴다.
+- **옵션**
+  - `up` — 정의된 서비스를 만들고(필요하면 이미지를 받아오고) 실행한다.
+  - `-d` — 백그라운드로 띄운다. 붙이지 않으면 터미널이 로그로 막힌다.
+  - `db` — 띄울 대상 서비스 이름. 생략하면 `docker-compose.yml`에 정의된 서비스가 모두 뜬다.
+- **주의점**
+  - **호스트 포트를 열지 않았다.** 이 PC에는 다른 프로덕트의 PostgreSQL 컨테이너가 있어 5432 포트 충돌을 피하려고 `db` 서비스는 컨테이너 사이 내부망(`db:5432`)으로만 접속하도록 만들었다. 그래서 내 PC에 설치된 DB 도구(예: pgAdmin, DBeaver, `psql` 등)로 `localhost`에 바로 접속할 수 없다 — 반드시 `4-4`처럼 `docker compose exec db`로 컨테이너 안에 들어가서 확인해야 한다.
+  - 데이터는 이름 있는 볼륨(`banblit-db-data`)에 보존된다. `docker compose down`으로 서비스를 내려도 데이터는 남고, `docker compose down -v`처럼 볼륨까지 지우는 명령을 쓸 때만 사라진다.
+
+### 4-2. 마이그레이션을 최신으로 맞추기
+
+```
+docker compose run --rm dev alembic upgrade head
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `backend/migrations/versions/`에 쌓인 마이그레이션을 순서대로 적용해, DB 스키마를 가장 최신 정의(`backend/src/backend/db/models.py`)와 맞춘다.
+- **옵션**
+  - `run --rm dev` — `1-2`와 동일. 개발용 컨테이너를 일회성으로 띄워 명령을 실행하고 끝나면 지운다.
+  - `alembic upgrade head` — alembic에게 "아직 적용되지 않은 마이그레이션을 전부, 가장 최신(head)까지 순서대로 적용하라"고 지시한다.
+- **주의점**
+  - `dev` 서비스가 `db`에 `depends_on: service_healthy`로 걸려 있어, 이 명령을 실행하면 `db` 컨테이너가 떠 있지 않던 경우 자동으로 함께 뜨고 healthcheck를 통과한 뒤에 적용이 시작된다. 따로 `4-1`을 먼저 실행할 필요는 없다.
+  - 접속 주소는 `backend/migrations/env.py`가 `config.attributes`에 명시된 값을 최우선하고, 없으면 `DATABASE_URL` 환경변수로 접속한다. 이 명령으로 실행하면 컨테이너 환경변수인 `DATABASE_URL`(메인 `banblit` DB)이 그대로 쓰인다 — 테스트 전용 DB(`banblit_test`)는 pytest 실행 시 `backend/tests/conftest.py`가 별도로 다룬다.
+
+### 4-3. 모델 변경 후 마이그레이션 새로 만들기
+
+```
+docker compose run --rm dev alembic revision --autogenerate -m "<제목>"
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `backend/src/backend/db/models.py`를 고친 뒤, 그 변경분을 현재 DB 스키마와 비교해 마이그레이션 파일을 자동으로 만든다. 파일은 `backend/migrations/versions/`에 생성된다.
+- **옵션**
+  - `revision` — 새 마이그레이션 파일 하나를 만든다.
+  - `--autogenerate` — 현재 DB에 이미 적용된 스키마와 `models.py`가 정의한 목표 스키마를 비교해, 그 차이를 채운 `upgrade()`/`downgrade()` 초안을 자동으로 써 준다.
+  - `-m "<제목>"` — 마이그레이션 파일 이름에 들어갈 설명. 생략하면 제목 없는 파일이 되어 나중에 무슨 변경인지 알아보기 어렵다.
+- **주의점**
+  - **autogenerate는 `CheckConstraint`를 감지하지 못할 수 있다.** 실제로 `rooms`(30분 격자), `periods`(kind 목록), `assignments`(시간 역전 방지) 테이블의 `CheckConstraint`가 자동 생성된 초안에 빠졌던 적이 있어, 파일을 열어 직접 확인하고 빠졌으면 `op.create_check_constraint`로 채워 넣어야 한다.
+  - 자동 생성된 파일은 초안일 뿐이다. 실행하기 전에 반드시 내용을 읽고, 기본값 데이터를 심어야 하는 경우(예: `positions` 기본 5종)는 `upgrade()` 끝에 `op.bulk_insert`를 직접 추가해야 한다.
+  - 생성만 하고 적용은 되지 않는다. 적용하려면 `4-2`의 `alembic upgrade head`를 이어서 실행해야 한다.
+
+### 4-4. 저장소 안을 직접 들여다보기 (psql)
+
+```
+docker compose exec db psql -U banblit -d banblit
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`, `db` 서비스가 이미 떠 있어야 한다)
+- **용도**: 컨테이너 안의 PostgreSQL에 `psql` 클라이언트로 직접 접속해, 테이블 내용을 눈으로 확인한다.
+- **옵션**
+  - `exec` — 이미 떠 있는 컨테이너 안에서 명령을 실행한다. (`run`과 달리 새 컨테이너를 만들지 않는다.)
+  - `db` — 접속할 대상 서비스 이름.
+  - `psql -U banblit -d banblit` — `banblit` 사용자로 `banblit` 데이터베이스에 접속한다. 사용자·DB 이름은 `.env`(`.env.example` 견본)의 `POSTGRES_USER`·`POSTGRES_DB` 값과 같아야 한다.
+- **주의점**
+  - **호스트 포트를 열지 않았으므로, 이 방법 말고는 내 PC의 DB 도구로 직접 접속할 수 없다.** `db` 서비스가 `docker compose up -d db`나 `docker compose run --rm dev alembic ...` 등으로 이미 기동돼 있어야 하며, 떠 있지 않으면 `service "db" is not running` 오류가 난다.
+  - 나올 때는 `\q`를 입력한다.
+
+---
+
+## 5. 이미지 주고받기
+
+### 5-1. 이미지를 파일 하나로 내보내기
 
 ```
 docker save banblit-backend:dev -o banblit-backend-dev.tar
@@ -167,7 +235,7 @@ docker save banblit-backend:dev -o banblit-backend-dev.tar
   - `-o <파일이름>` — 내보낼 파일 이름. 생략하면 화면으로 쏟아지므로 반드시 지정한다.
 - **주의점**: 파일 크기가 800MB를 넘는다. 저장소에 올리지 않는다.
 
-### 4-2. 받은 파일을 이미지로 풀기
+### 5-2. 받은 파일을 이미지로 풀기
 
 ```
 docker load -i banblit-backend-dev.tar
@@ -180,7 +248,7 @@ docker load -i banblit-backend-dev.tar
 
 ---
 
-## 5. 로컬 가상환경 (참고용, 기준 아님)
+## 6. 로컬 가상환경 (참고용, 기준 아님)
 
 컨테이너 도입 이전에 쓰던 방식이다. **기준 실행 방법은 `1-2`의 컨테이너 실행이다.**
 컨테이너 빌드가 막혔을 때의 대비책으로만 남겨 둔다.
@@ -198,9 +266,9 @@ uv run pytest -q
 
 ---
 
-## 6. 커밋 메시지 검사 훅
+## 7. 커밋 메시지 검사 훅
 
-### 6-1. 훅 켜기
+### 7-1. 훅 켜기
 
 ```
 git config core.hooksPath .githooks
@@ -213,7 +281,7 @@ git config core.hooksPath .githooks
   - `.githooks` — 지정할 폴더 이름.
 - **주의점**: 이 설정은 저장소마다 따로 잡힌다. 새로 복제한 저장소에서는 다시 실행해야 한다.
 
-### 6-2. 훅이 제대로 거르는지 검사
+### 7-2. 훅이 제대로 거르는지 검사
 
 ```
 bash .githooks/test-commit-msg.sh
@@ -223,7 +291,7 @@ bash .githooks/test-commit-msg.sh
 - **용도**: 훅이 통과시켜야 할 메시지와 거부해야 할 메시지를 각각 넣어 결과를 확인한다. 훅을 고쳤다면 반드시 실행한다.
 - **주의점**: 통과 14 / 실패 0이 나와야 정상이다. 실제 커밋을 만들지 않으므로 히스토리에 영향이 없다.
 
-### 6-3. 통과하는 커밋 메시지 형식
+### 7-3. 통과하는 커밋 메시지 형식
 
 ```
 <scope>: <요약>
