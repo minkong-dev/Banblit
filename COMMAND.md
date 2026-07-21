@@ -1,6 +1,6 @@
 # COMMAND
 
-> 문서 버전: 1.1.0 draft
+> 문서 버전: 1.2.0 draft
 
 이 문서는 Banblit에서 실제로 실행해 동작을 확인한 명령어만 담는다.
 실행해 보지 않은 명령어는 적지 않는다.
@@ -79,14 +79,22 @@ docker build --target prod -t banblit-backend:prod backend/
 ### 2-2. 배포용 이미지 동작 확인
 
 ```
-docker run --rm banblit-backend:prod
+docker run --rm -d -p 8001:8000 --name banblit-prod-check banblit-backend:prod
+curl -s http://localhost:8001/health
+docker stop banblit-prod-check
 ```
 
-- **실행 경로**: 어디서든 무관
-- **용도**: 배포용 이미지가 제대로 만들어졌는지 확인한다. 지금은 실행할 서버(FastAPI)가 없으므로, 계산 모듈을 불러오기만 하고 준비됐다는 문구를 출력한 뒤 끝난다.
+- **실행 경로**: 어디서든 무관 (단, 8001 포트가 이미 쓰이고 있지 않아야 한다)
+- **용도**: 배포용 이미지가 실제로 서버로 기동해 요청에 응답하는지 확인한다. 배포용 `Dockerfile`의 실행 명령이 `uvicorn backend.api.app:app`으로 서버를 띄우도록 바뀌면서, 컨테이너가 문구만 출력하고 끝나던 이전 방식(`python -c "..."`)은 더 이상 쓸 수 없다 — 서버는 종료되지 않고 계속 떠 있으므로 포트를 열어 응답을 확인해야 한다.
 - **옵션**
-  - `--rm` — 끝난 컨테이너를 자동으로 지운다.
-- **주의점**: 웹 계층이 추가되면 `Dockerfile`의 실행 명령을 서버 기동 명령으로 바꾸고, 이 항목도 함께 고쳐야 한다.
+  - `docker run` — 이미지로 컨테이너를 새로 만들어 실행한다.
+  - `--rm` — 컨테이너가 멈추면 자동으로 지운다.
+  - `-d` — 백그라운드로 띄운다. 붙이지 않으면 서버가 터미널을 점유해 뒤 명령을 칠 수 없다.
+  - `-p 8001:8000` — 내 PC의 8001번 포트를 컨테이너 안의 8000번 포트에 연결한다. 개발용 `api` 서비스(`3-1`)가 8000번을 쓰므로, 겹치지 않게 8001번을 썼다.
+  - `--name banblit-prod-check` — 컨테이너에 이름을 붙인다. 뒤에서 `docker stop`으로 정지시킬 때 이 이름으로 찾는다. 생략하면 임의의 이름이 붙어 찾기 번거롭다.
+  - `curl -s http://localhost:8001/health` — 서버가 응답하는지 확인. `-s`는 진행 표시를 숨긴다. `{"status":"ok"}`가 나오면 정상.
+  - `docker stop banblit-prod-check` — 이름으로 컨테이너를 정지시킨다. `--rm`이 붙어 있으므로 정지 즉시 컨테이너도 삭제된다.
+- **주의점**: `-d` 없이 실행하면 터미널이 서버 로그로 막혀 다음 명령을 칠 수 없다. 확인이 끝나면 반드시 `docker stop`으로 내려야 컨테이너가 계속 떠 있는 채로 남지 않는다.
 
 ### 2-3. 배포용에 테스트 도구가 없는지 확인
 
@@ -102,9 +110,52 @@ docker run --rm banblit-backend:prod python -c "import pytest"
 
 ---
 
-## 3. 이미지 주고받기
+## 3. 스케줄링 API 서버 — 로컬 기동
 
-### 3-1. 이미지를 파일 하나로 내보내기
+### 3-1. 개발용 API 서버 띄우기
+
+```
+docker compose up -d api
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `docker-compose.yml`의 `api` 서비스를 백그라운드로 띄워, `http://localhost:8000`에서 스케줄링 API(`GET /health`, `POST /assign`)를 호출할 수 있게 한다. `api` 서비스는 개발용(`dev`) 이미지를 쓰고 `backend/` 폴더를 컨테이너에 연결해, `--reload` 옵션으로 코드를 고치면 서버가 자동으로 다시 뜬다.
+- **옵션**
+  - `up` — 정의된 서비스를 만들고(필요하면 이미지를 빌드) 실행한다.
+  - `-d` — 백그라운드로 띄운다. 붙이지 않으면 터미널이 서버 로그로 막혀 다음 명령을 칠 수 없다.
+  - `api` — 띄울 대상 서비스 이름. `docker-compose.yml`의 `services.api`를 가리킨다. 생략하면 `docker-compose.yml`에 정의된 서비스가 모두 뜬다(`dev`는 기본 명령이 `pytest`라 곧바로 종료된다).
+- **주의점**
+  - 8000번 포트가 이미 다른 프로그램(다른 프로젝트의 컨테이너 등)에 쓰이고 있으면 `port is already allocated` 오류로 실패한다. 이 저장소와 무관한 컨테이너가 그 포트를 쓰고 있다면, 함부로 내리지 말고 `CLAUDE.md` 4-1에 따라 먼저 사용자에게 확인받는다.
+  - `backend/pyproject.toml` 또는 `backend/uv.lock`이 바뀐 뒤라면 `docker compose build dev`로 이미지를 먼저 다시 만들어야 새 패키지가 반영된다(`api` 서비스는 `dev` 이미지를 그대로 쓴다).
+
+### 3-2. 서버 응답 확인
+
+```
+curl -s http://localhost:8000/health
+```
+
+- **실행 경로**: 어디서든 무관 (단, `3-1`로 `api` 서비스가 떠 있어야 한다)
+- **용도**: 서버가 정상적으로 응답하는지 확인한다. `{"status":"ok"}`가 나오면 정상.
+- **옵션**
+  - `-s` — 진행률 표시줄을 숨기고 응답 본문만 출력한다.
+- **주의점**: Git Bash에서 한글이 포함된 JSON 본문을 작은따옴표로 감싼 인라인 인자(`-d '...'`)로 `POST /assign`에 넘기면 인코딩이 깨져 `"There was an error parsing the body"`가 돌아온다. 한글이 포함된 요청은 UTF-8로 저장한 파일을 `--data-binary @파일명`으로 넘겨야 한다.
+
+### 3-3. 서버 내리기
+
+```
+docker compose down
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `docker compose up`으로 띄운 서비스(컨테이너·네트워크)를 정리한다.
+- **옵션**: 옵션 없이 사용 — `docker-compose.yml`에 정의된 모든 서비스를 대상으로 정리한다.
+- **주의점**: 이 저장소가 띄운 서비스만 내린다. 다른 프로젝트의 컨테이너에는 영향을 주지 않는다.
+
+---
+
+## 4. 이미지 주고받기
+
+### 4-1. 이미지를 파일 하나로 내보내기
 
 ```
 docker save banblit-backend:dev -o banblit-backend-dev.tar
@@ -116,7 +167,7 @@ docker save banblit-backend:dev -o banblit-backend-dev.tar
   - `-o <파일이름>` — 내보낼 파일 이름. 생략하면 화면으로 쏟아지므로 반드시 지정한다.
 - **주의점**: 파일 크기가 800MB를 넘는다. 저장소에 올리지 않는다.
 
-### 3-2. 받은 파일을 이미지로 풀기
+### 4-2. 받은 파일을 이미지로 풀기
 
 ```
 docker load -i banblit-backend-dev.tar
@@ -129,7 +180,7 @@ docker load -i banblit-backend-dev.tar
 
 ---
 
-## 4. 로컬 가상환경 (참고용, 기준 아님)
+## 5. 로컬 가상환경 (참고용, 기준 아님)
 
 컨테이너 도입 이전에 쓰던 방식이다. **기준 실행 방법은 `1-2`의 컨테이너 실행이다.**
 컨테이너 빌드가 막혔을 때의 대비책으로만 남겨 둔다.
@@ -147,9 +198,9 @@ uv run pytest -q
 
 ---
 
-## 5. 커밋 메시지 검사 훅
+## 6. 커밋 메시지 검사 훅
 
-### 5-1. 훅 켜기
+### 6-1. 훅 켜기
 
 ```
 git config core.hooksPath .githooks
@@ -162,7 +213,7 @@ git config core.hooksPath .githooks
   - `.githooks` — 지정할 폴더 이름.
 - **주의점**: 이 설정은 저장소마다 따로 잡힌다. 새로 복제한 저장소에서는 다시 실행해야 한다.
 
-### 5-2. 훅이 제대로 거르는지 검사
+### 6-2. 훅이 제대로 거르는지 검사
 
 ```
 bash .githooks/test-commit-msg.sh
@@ -172,7 +223,7 @@ bash .githooks/test-commit-msg.sh
 - **용도**: 훅이 통과시켜야 할 메시지와 거부해야 할 메시지를 각각 넣어 결과를 확인한다. 훅을 고쳤다면 반드시 실행한다.
 - **주의점**: 통과 14 / 실패 0이 나와야 정상이다. 실제 커밋을 만들지 않으므로 히스토리에 영향이 없다.
 
-### 5-3. 통과하는 커밋 메시지 형식
+### 6-3. 통과하는 커밋 메시지 형식
 
 ```
 <scope>: <요약>
