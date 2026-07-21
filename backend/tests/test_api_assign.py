@@ -94,6 +94,56 @@ def test_infeasible_request_returns_200_with_proposals() -> None:
     assert [p["excluded_member"] for p in data["proposals"]] == ["blocker"]
 
 
+def test_too_many_teams_is_rejected_as_422() -> None:
+    body = {
+        "teams": [
+            {
+                "name": f"team{i}",
+                "members": [{"name": f"member{i}", "unavailable": []}],
+            }
+            for i in range(21)
+        ],
+        "rooms": [
+            {
+                "name": "1번방",
+                "open_period": {
+                    "start": "2026-07-20T18:00:00",
+                    "end": "2026-07-20T18:30:00",
+                },
+            }
+        ],
+        "slots_per_team": 1,
+    }
+
+    response = client.post("/assign", json=body)
+
+    assert response.status_code == 422
+
+
+def test_slots_request_exceeding_total_capacity_is_rejected_as_422() -> None:
+    body = {
+        "teams": [
+            {"name": "A", "members": [{"name": "a1", "unavailable": []}]},
+            {"name": "B", "members": [{"name": "b1", "unavailable": []}]},
+        ],
+        "rooms": [
+            {
+                "name": "1번방",
+                "open_period": {
+                    "start": "2026-07-20T18:00:00",
+                    "end": "2026-07-20T19:00:00",
+                },
+            }
+        ],
+        "slots_per_team": 2,
+    }
+
+    response = client.post("/assign", json=body)
+
+    assert response.status_code == 422
+    assert "전체 칸 수" in response.json()["detail"]
+
+
 def test_value_error_outside_assign_is_not_masked_as_422() -> None:
     # 배정 창구 밖에서 터진 ValueError 는 입력 오류(422)로 둔갑해서는 안 된다.
     import pytest
