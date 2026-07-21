@@ -163,3 +163,16 @@ def test_value_error_outside_assign_is_not_masked_as_422() -> None:
             r for r in prod_app.router.routes
             if getattr(r, "path", None) != "/_boom_for_test"
         ]
+
+
+def test_shape_error_detail_is_a_single_string() -> None:
+    # 형식 오류도 내용 오류와 같은 모양(detail = 문장 하나)이어야 한다.
+    body = _feasible_body()
+    body["slots_per_team"] = "많이"  # 숫자 자리에 글자
+
+    response = client.post("/assign", json=body)
+
+    assert response.status_code == 422
+    detail = response.json()["detail"]
+    assert isinstance(detail, str)
+    assert "slots_per_team" in detail
