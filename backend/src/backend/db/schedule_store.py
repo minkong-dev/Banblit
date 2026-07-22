@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import Assignment, AssignmentBackup
 
+BACKUP_KEEP = 2  # 남길 백업 회차 수. 하루 2회 연산 = 하루치.
+
 
 def save_schedule(
     session: Session,
@@ -21,6 +23,7 @@ def save_schedule(
     session.execute(delete(Assignment).where(Assignment.period_id == period_id))
     for row in rows:
         session.add(Assignment(period_id=period_id, **row))
+    _prune_backups(session, period_id)
 
 
 def _archive_current(session: Session, period_id: int, saved_at: datetime) -> None:
@@ -38,3 +41,18 @@ def _archive_current(session: Session, period_id: int, saved_at: datetime) -> No
                 saved_at=saved_at,
             )
         )
+
+
+def _prune_backups(session: Session, period_id: int) -> None:
+    saved_times = session.scalars(
+        select(AssignmentBackup.saved_at)
+        .where(AssignmentBackup.period_id == period_id)
+        .distinct()
+        .order_by(AssignmentBackup.saved_at.desc())
+    ).all()
+    keep = saved_times[:BACKUP_KEEP]
+    session.execute(
+        delete(AssignmentBackup)
+        .where(AssignmentBackup.period_id == period_id)
+        .where(AssignmentBackup.saved_at.notin_(keep))
+    )

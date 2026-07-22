@@ -93,3 +93,30 @@ def test_second_save_archives_previous(db_session: Session) -> None:
     backups = db_session.scalars(select(AssignmentBackup)).all()
     assert [b.starts_at for b in backups] == [datetime(2026, 8, 1, 19, 0)]
     assert backups[0].saved_at == datetime(2026, 8, 1, 21, 0)
+
+
+def test_backups_keep_only_two_most_recent(db_session: Session) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+
+    # 네 번 저장하면 백업 회차 3개(9:00·21:00·다음날 9:00)가 생기고,
+    # 최신 2개만 남아야 한다.
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)],
+                  saved_at=datetime(2026, 8, 1, 8, 0))
+    db_session.commit()
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 19)],
+                  saved_at=datetime(2026, 8, 1, 9, 0))
+    db_session.commit()
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 20)],
+                  saved_at=datetime(2026, 8, 1, 21, 0))
+    db_session.commit()
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 21)],
+                  saved_at=datetime(2026, 8, 2, 9, 0))
+    db_session.commit()
+
+    saved_times = set(
+        db_session.scalars(select(AssignmentBackup.saved_at).distinct()).all()
+    )
+    assert saved_times == {
+        datetime(2026, 8, 1, 21, 0),
+        datetime(2026, 8, 2, 9, 0),
+    }
