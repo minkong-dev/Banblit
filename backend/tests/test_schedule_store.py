@@ -69,3 +69,27 @@ def test_first_save_writes_current_schedule(db_session: Session) -> None:
     ).all()
     assert [a.starts_at for a in current] == [datetime(2026, 8, 1, 19, 0)]
     assert db_session.scalars(select(AssignmentBackup)).all() == []
+
+
+def test_second_save_archives_previous(db_session: Session) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+
+    save_schedule(
+        db_session, period_id, [_row(team_id, room_id, 19)],
+        saved_at=datetime(2026, 8, 1, 9, 0),
+    )
+    db_session.commit()
+    save_schedule(
+        db_session, period_id, [_row(team_id, room_id, 20)],
+        saved_at=datetime(2026, 8, 1, 21, 0),
+    )
+    db_session.commit()
+
+    current = db_session.scalars(
+        select(Assignment).where(Assignment.period_id == period_id)
+    ).all()
+    assert [a.starts_at for a in current] == [datetime(2026, 8, 1, 20, 0)]
+
+    backups = db_session.scalars(select(AssignmentBackup)).all()
+    assert [b.starts_at for b in backups] == [datetime(2026, 8, 1, 19, 0)]
+    assert backups[0].saved_at == datetime(2026, 8, 1, 21, 0)
