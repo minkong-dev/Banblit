@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team
-from backend.db.schedule_store import save_schedule
+from backend.db.schedule_store import rollback_schedule, save_schedule
 
 
 def _scaffold(session: Session) -> tuple[int, int, int]:
@@ -120,3 +120,39 @@ def test_backups_keep_only_two_most_recent(db_session: Session) -> None:
         datetime(2026, 8, 1, 21, 0),
         datetime(2026, 8, 2, 9, 0),
     }
+
+
+def test_rollback_restores_previous_schedule(db_session: Session) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 19)],
+                  saved_at=datetime(2026, 8, 1, 9, 0))
+    db_session.commit()
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 20)],
+                  saved_at=datetime(2026, 8, 1, 21, 0))
+    db_session.commit()
+
+    ok = rollback_schedule(db_session, period_id)
+    db_session.commit()
+
+    assert ok is True
+    current = db_session.scalars(
+        select(Assignment).where(Assignment.period_id == period_id)
+    ).all()
+    assert [a.starts_at for a in current] == [datetime(2026, 8, 1, 19, 0)]
+    assert db_session.scalars(select(AssignmentBackup)).all() == []
+
+
+def test_rollback_without_backup_returns_false(db_session: Session) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 19)],
+                  saved_at=datetime(2026, 8, 1, 9, 0))
+    db_session.commit()
+
+    ok = rollback_schedule(db_session, period_id)
+    db_session.commit()
+
+    assert ok is False
+    current = db_session.scalars(
+        select(Assignment).where(Assignment.period_id == period_id)
+    ).all()
+    assert [a.starts_at for a in current] == [datetime(2026, 8, 1, 19, 0)]
