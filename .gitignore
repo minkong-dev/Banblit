@@ -14,8 +14,9 @@ TASK.md
 # 예외: 비밀값 없는 견본 파일은 커밋한다
 !.env.example
 
-# 기획 문서(로컬 전용) — 사용자 지시로 push 제외
-.cluedoc/
+# 문서 관리 주체는 cluedoc 하나로 통합한다 — .cluedoc/는 커밋 대상
+# superpowers로 짠 spec/계획 문서는 cluedoc 마이그레이션용 중간 산출물이므로 커밋 제외
+docs/superpowers/
 
 # 파이썬 산출물 (가상환경·캐시)
 .venv/
