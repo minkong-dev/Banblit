@@ -144,3 +144,25 @@ class Assignment(Base):
         UniqueConstraint("room_id", "starts_at"),
         CheckConstraint("ends_at > starts_at"),
     )
+
+
+class AssignmentBackup(Base):
+    """이전 배정 스냅샷. 재연산 때 현행(assignments)에서 이리로 옮긴다.
+
+    saved_at은 백업된 시각이다 — 같은 기간의 여러 백업을 구분하고 정렬하는 기준.
+    현행과 달리 여러 회차가 공존하므로 room+시각 유니크를 두지 않는다.
+    """
+
+    __tablename__ = "assignment_backups"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    period_id: Mapped[int] = mapped_column(
+        ForeignKey("periods.id", ondelete="CASCADE")
+    )
+    team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"))
+    room_id: Mapped[int] = mapped_column(ForeignKey("rooms.id", ondelete="CASCADE"))
+    starts_at: Mapped[datetime] = mapped_column(DateTime)
+    ends_at: Mapped[datetime] = mapped_column(DateTime)
+    saved_at: Mapped[datetime] = mapped_column(DateTime)
+
+    __table_args__ = (CheckConstraint("ends_at > starts_at"),)
