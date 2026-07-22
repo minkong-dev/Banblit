@@ -7,7 +7,7 @@ sources:
   - backend/tests/conftest.py           # 전용 테스트 DB에 실제 마이그레이션을 적용하는 픽스처
 ---
 
-> 문서 버전: 1.1.0
+> 문서 버전: 1.2.0
 
 ```mermaid
 erDiagram
@@ -18,6 +18,9 @@ erDiagram
     Room ||--o{ Assignment : "장소가 된다"
     Team ||--o{ Assignment : "배정받는다"
     Period ||--o{ Assignment : "기간 안에 속한다"
+    Room ||--o{ AssignmentBackup : "장소가 된다"
+    Team ||--o{ AssignmentBackup : "배정받는다"
+    Period ||--o{ AssignmentBackup : "기간 안에 속한다"
 
     Member { int id PK }
     Position { string name }
@@ -27,7 +30,10 @@ erDiagram
     Room { time opens_at }
     Period { string kind }
     Assignment { datetime starts_at }
+    AssignmentBackup { datetime saved_at }
 ```
+
+현재 시간표(배정)와 그 백업(이전 시간표 회차들)은 [배정 이력과 롤백](./schedule-versioning/README.md)에서 따로 다룬다 — 여기서는 두 테이블이 저장소 안에 함께 있다는 것까지만 표시한다.
 
 ## Abstract
 
@@ -43,6 +49,7 @@ erDiagram
 - [팀과 소속](../teams/README.md) — 사람·팀·포지션·소속 개념의 근거
 - [합주실과 기간](../practice-room-and-periods/README.md) — 합주실 운영시간·기간 종류의 근거
 - [자동 배정](../auto-assignment/README.md) — 이 저장소가 아직 연결돼 있지 않은 계산 로직. 저장된 데이터로 배정을 계산하는 연결은 이후 별도 작업으로 남아 있다
+- [배정 이력과 롤백](./schedule-versioning/README.md) — 현재 시간표를 다시 짤 때 이전 시간표를 백업으로 보관하고 되돌리는 저장 규칙(하위 기능)
 
 ## Description
 
