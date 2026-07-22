@@ -3,7 +3,8 @@ from datetime import date, datetime, time
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.db.models import AssignmentBackup, Period, Room, Team
+from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team
+from backend.db.schedule_store import save_schedule
 
 
 def _scaffold(session: Session) -> tuple[int, int, int]:
@@ -50,3 +51,21 @@ def test_assignment_backup_round_trips(db_session: Session) -> None:
     saved = db_session.scalars(select(AssignmentBackup)).one()
     assert saved.saved_at == datetime(2026, 8, 1, 21, 0)
     assert saved.starts_at == datetime(2026, 8, 1, 19, 0)
+
+
+def test_first_save_writes_current_schedule(db_session: Session) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+
+    save_schedule(
+        db_session,
+        period_id,
+        [_row(team_id, room_id, 19)],
+        saved_at=datetime(2026, 8, 1, 21, 0),
+    )
+    db_session.commit()
+
+    current = db_session.scalars(
+        select(Assignment).where(Assignment.period_id == period_id)
+    ).all()
+    assert [a.starts_at for a in current] == [datetime(2026, 8, 1, 19, 0)]
+    assert db_session.scalars(select(AssignmentBackup)).all() == []
