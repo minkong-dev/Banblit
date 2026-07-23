@@ -4,7 +4,16 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.db.models import Assignment, Member, Membership, Period, Position, Room, Team
+from backend.db.models import (
+    Assignment,
+    Member,
+    Membership,
+    Period,
+    Position,
+    Room,
+    Team,
+    UnavailableTime,
+)
 
 
 def _period(session: Session) -> int:
@@ -172,6 +181,128 @@ def test_assign_saves_the_schedule_and_reports_it(
 
     saved = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
     assert len(saved) == 4
+
+
+def test_assign_reports_open_slots_with_real_room_names(
+    api_client: TestClient, db_session: Session
+) -> None:
+    """칸이 팀보다 많이 남는 시나리오 — open_slots가 엔진 키가 아니라 실제 방 정보로 되돌아오는지."""
+    period = Period(
+        kind="focused",
+        starts_on=date(2026, 8, 1),
+        ends_on=date(2026, 8, 1),
+        everyday=False,
+        first_run_at=time(9, 0),
+        second_run_at=time(21, 0),
+    )
+    db_session.add(period)
+    db_session.flush()
+    team_a = _team_with_member(db_session, "A", "김민수")
+    team_b = _team_with_member(db_session, "B", "박지훈")
+    room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 30))  # 3칸
+    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(21, 0))  # 2칸
+    db_session.add_all([room_1, room_2])
+    db_session.flush()
+    db_session.commit()
+
+    response = api_client.post(
+        f"/periods/{period.id}/assign",
+        json={"team_ids": [team_a, team_b], "room_ids": [room_1.id, room_2.id]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["assignment"]["feasible"] is True
+    open_slots = body["assignment"]["open_slots"]
+    assert len(open_slots) == 1  # 전체 5칸 - 팀당 2칸 × 2팀 = 1칸 남는다
+    room_id_by_name = {"1번방": room_1.id, "2번방": room_2.id}
+    slot = open_slots[0]
+    # 엔진 키는 "1번방 (2026-08-01)" 형태다 — 순수한 방 이름만 나와야 한다.
+    assert slot["room"] in room_id_by_name
+    assert slot["room_id"] == room_id_by_name[slot["room"]]
+
+
+def test_assign_reports_a_coordination_proposal_with_real_names(
+    api_client: TestClient, db_session: Session
+) -> None:
+    """배정이 실패해 조율안이 나오는 경로 — 제외 인원과 조율안 안 배정 모두 실제 값으로 되돌아오는지."""
+    period = Period(
+        kind="focused",
+        starts_on=date(2026, 8, 1),
+        ends_on=date(2026, 8, 1),
+        everyday=False,
+        first_run_at=time(9, 0),
+        second_run_at=time(21, 0),
+    )
+    db_session.add(period)
+    db_session.flush()
+
+    team = Team(name="A")
+    member_1 = Member(name="김민수")
+    member_2 = Member(name="이영희")
+    db_session.add_all([team, member_1, member_2])
+    db_session.flush()
+    position_id = db_session.scalars(select(Position.id)).first()
+    db_session.add_all(
+        [
+            Membership(
+                member_id=member_1.id, team_id=team.id, position_id=position_id
+            ),
+            Membership(
+                member_id=member_2.id, team_id=team.id, position_id=position_id
+            ),
+        ]
+    )
+    # 이영희만 운영시간 내내 불가능하게 만든다.
+    db_session.add(
+        UnavailableTime(
+            member_id=member_2.id,
+            starts_at=datetime(2026, 8, 1, 18, 0),
+            ends_at=datetime(2026, 8, 1, 19, 0),
+            repeats_weekly=False,
+            repeat_until=None,
+        )
+    )
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    db_session.add(room)
+    db_session.flush()
+    db_session.commit()
+
+    response = api_client.post(
+        f"/periods/{period.id}/assign",
+        json={"team_ids": [team.id], "room_ids": [room.id]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["saved"] is False
+    assert body["assignment"]["feasible"] is False
+    assert len(body["proposals"]) == 1
+    proposal = body["proposals"][0]
+    # 엔진 키는 "이영희 #<id>" 형태다 — 실제 id·이름으로 되돌아와야 한다.
+    assert proposal["excluded_member"] == {"id": member_2.id, "name": "이영희"}
+    slots = proposal["assignment"]["slots_by_team"]["A"]
+    assert len(slots) == 2
+    assert {slot["room"] for slot in slots} == {"1번방"}
+    assert all(slot["room_id"] == room.id for slot in slots)
+
+
+def test_assign_with_unknown_team_is_rejected(
+    api_client: TestClient, db_session: Session
+) -> None:
+    period_id = _period(db_session)
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    db_session.add(room)
+    db_session.flush()
+    db_session.commit()
+
+    response = api_client.post(
+        f"/periods/{period_id}/assign",
+        json={"team_ids": [999999], "room_ids": [room.id]},
+    )
+
+    assert response.status_code == 422
+    assert "그런 팀이 없습니다" in response.json()["detail"]
 
 
 def test_assign_on_an_open_period_is_rejected(
