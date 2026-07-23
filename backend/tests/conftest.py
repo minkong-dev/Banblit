@@ -1,8 +1,10 @@
 import os
+from collections.abc import Iterator
 
 import pytest
 from alembic import command
 from alembic.config import Config
+from fastapi.testclient import TestClient
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.orm import Session
 
@@ -59,3 +61,19 @@ def db_session(test_engine: Engine) -> Session:
         for table in reversed(Base.metadata.sorted_tables):
             if table.name != "positions":
                 connection.execute(table.delete())
+
+
+@pytest.fixture()
+def api_client(db_session: Session) -> Iterator[TestClient]:
+    """엔드포인트가 테스트 전용 세션을 쓰도록 갈아끼운 클라이언트.
+
+    실제 앱은 요청마다 새 세션을 열지만, 테스트에서는 db_session 픽스처가 만든
+    세션을 그대로 쓴다 — 테스트가 넣은 데이터를 엔드포인트가 같은 세션에서 본다.
+    """
+    from backend.api.app import app
+    from backend.db.session import get_session
+
+    app.dependency_overrides[get_session] = lambda: db_session
+    with TestClient(app) as client:
+        yield client
+    app.dependency_overrides.clear()

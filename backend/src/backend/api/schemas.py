@@ -49,3 +49,16 @@ class ProposalOut(BaseModel):
 class ResolutionOut(BaseModel):
     assignment: AssignmentOut
     proposals: list[ProposalOut]
+
+
+class ScheduleRowOut(BaseModel):
+    team_id: int
+    team: str
+    room_id: int
+    room: str
+    start: datetime
+    end: datetime
+
+
+class ScheduleOut(BaseModel):
+    rows: list[ScheduleRowOut]
