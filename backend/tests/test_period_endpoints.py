@@ -461,3 +461,63 @@ def test_rollback_without_any_backup_reports_nothing_to_undo(
 
     assert response.status_code == 200
     assert response.json() == {"rolled_back": False}
+
+
+def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
+    api_client: TestClient, db_session: Session
+) -> None:
+    """되돌리려는 백업이 다른 기간이 차지한 방·시각과 겹치면, 저장 제약 위반이
+    그대로 새어 나가 500이 되면 안 된다 — 배정 경로와 같은 422로 거부해야 한다.
+
+    재현 순서(리뷰 C2와 동일):
+    1) 기간 A를 1번방으로 배정 → 현행 = 1번방
+    2) 기간 A를 2번방으로 다시 배정 → 백업 = 1번방, 현행 = 2번방(1번방 자리가 빈다)
+    3) 기간 B를 1번방으로 배정 → 충돌 없이 성공
+    4) 기간 A를 되돌리기 → 1번방 백업을 되살리려다 기간 B와 충돌
+    """
+    period_a = _period(db_session)  # 8/1 ~ 8/2
+    period_b = Period(
+        kind="focused",
+        starts_on=date(2026, 8, 1),
+        ends_on=date(2026, 8, 2),
+        everyday=False,
+        first_run_at=time(9, 0),
+        second_run_at=time(21, 0),
+    )
+    db_session.add(period_b)
+    db_session.flush()
+
+    team_a = _team_with_member(db_session, "A", "김민수")
+    team_b = _team_with_member(db_session, "B", "이영희")
+    room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(21, 0))
+    db_session.add_all([room_1, room_2])
+    db_session.flush()
+    db_session.commit()
+
+    r1 = api_client.post(
+        f"/periods/{period_a}/assign",
+        json={"team_ids": [team_a], "room_ids": [room_1.id]},
+    )
+    assert r1.json()["saved"] is True
+
+    r2 = api_client.post(
+        f"/periods/{period_a}/assign",
+        json={"team_ids": [team_a], "room_ids": [room_2.id]},
+    )
+    assert r2.json()["saved"] is True
+
+    r3 = api_client.post(
+        f"/periods/{period_b.id}/assign",
+        json={"team_ids": [team_b], "room_ids": [room_1.id]},
+    )
+    assert r3.json()["saved"] is True
+
+    response = api_client.post(f"/periods/{period_a}/rollback")
+
+    assert response.status_code == 422
+    assert "이미" in response.json()["detail"]
+
+    # 실패한 되돌리기가 기간 B의 현행 시간표를 건드리지 않아야 한다.
+    b_rows = api_client.get(f"/periods/{period_b.id}/schedule").json()["rows"]
+    assert len(b_rows) == 4  # 이틀 × 2칸

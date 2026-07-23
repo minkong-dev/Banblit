@@ -4,10 +4,15 @@ from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.api.mapping import request_to_engine, resolution_to_out
-from backend.api.period_service import PeriodAssignResult, assign_period
+from backend.api.period_service import (
+    PeriodAssignResult,
+    assign_period,
+    conflict_message_for,
+)
 from backend.api.schemas import (
     AssignRequest,
     ExcludedMemberOut,
@@ -158,6 +163,17 @@ def rollback_period_schedule(
     if period is None:
         raise HTTPException(status_code=422, detail="그런 기간이 없습니다")
 
-    rolled_back = rollback_schedule(session, period_id)
-    session.commit()
+    try:
+        rolled_back = rollback_schedule(session, period_id)
+        session.commit()
+    except IntegrityError as error:
+        session.rollback()
+        # 배정 경로(period_service.assign_period)와 같은 판별·같은 메시지·같은
+        # 상태 코드로 맞춘다 — 다른 기간이 되돌리려는 방·시각을 먼저 차지했을 때
+        # 저장 제약 위반이 그대로 새어 나가 500이 되는 사고를 막는다.
+        message = conflict_message_for(error)
+        if message is None:
+            raise
+        raise HTTPException(status_code=422, detail=message) from error
+
     return RollbackOut(rolled_back=rolled_back)

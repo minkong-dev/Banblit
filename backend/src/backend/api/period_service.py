@@ -26,6 +26,39 @@ from backend.scheduling.interval import TimeInterval
 from backend.scheduling.resolution import Resolution, resolve
 
 
+# assignments 테이블의 (room_id, starts_at) 유니크 제약 이름. 컨테이너 안에서
+# 직접 충돌을 재현해 psycopg 예외의 orig.diag.constraint_name으로 관찰했다.
+_ROOM_TIME_CONFLICT_CONSTRAINT = "assignments_room_id_starts_at_key"
+
+
+def conflict_message_for(error: IntegrityError) -> str | None:
+    """IntegrityError가 (room_id, starts_at) 유니크 위반일 때만 사용자용 문장을 돌려준다.
+
+    다른 원인(외래키 위반 등)이면 None을 돌려줘, 호출자가 원래 예외를 그대로
+    다시 올리게 한다 — 원인이 다른 사고에 같은 설명을 붙이면 사용자가 엉뚱한
+    곳을 찾게 된다.
+
+    관찰(컨테이너 안에서 직접 재현, 2026-07-23):
+    - "다른 기간이 같은 방·시각을 쓰는 경우"와 "같은 기간을 동시에 두 번 저장하는
+      경우" 모두 psycopg.errors.UniqueViolation이고 diag.constraint_name이
+      "assignments_room_id_starts_at_key"로 완전히 동일했다. DB에 남는 정보만으로는
+      이 둘을 구분할 수 없어, 문구가 두 경우를 모두 아우르게 썼다.
+    - 팀·합주실이 저장 직전에 삭제된 경우는 psycopg.errors.ForeignKeyViolation이고
+      constraint_name이 "assignments_team_id_fkey"/"assignments_room_id_fkey"였다.
+    - 시간 역전(ends_at <= starts_at)은 psycopg.errors.CheckViolation,
+      constraint_name이 "assignments_check"였다.
+    """
+    orig = error.orig
+    diag = getattr(orig, "diag", None)
+    constraint_name = getattr(diag, "constraint_name", None)
+    if constraint_name != _ROOM_TIME_CONFLICT_CONSTRAINT:
+        return None
+    return (
+        "다른 기간이거나 같은 기간의 동시 실행이 이미 같은 합주실의 같은 시간을 "
+        "쓰고 있습니다. 기간이 겹치지 않게 하거나 합주실을 나누십시오"
+    )
+
+
 @dataclass(frozen=True)
 class PeriodAssignResult:
     """배정 결과와, 엔진이 쓴 이름을 실제 id·이름으로 되돌릴 대응표."""
@@ -98,10 +131,10 @@ def assign_period(
             session.commit()
         except IntegrityError as error:
             session.rollback()
-            raise ValueError(
-                "다른 기간이 이미 같은 합주실의 같은 시간을 쓰고 있습니다. "
-                "기간이 겹치지 않게 하거나 합주실을 나누십시오"
-            ) from error
+            message = conflict_message_for(error)
+            if message is None:
+                raise
+            raise ValueError(message) from error
         saved = True
 
     return PeriodAssignResult(
