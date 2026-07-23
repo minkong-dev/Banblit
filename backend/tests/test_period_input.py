@@ -132,6 +132,29 @@ def test_unavailable_time_straddling_the_window_end_is_kept() -> None:
     ]
 
 
+def test_multiple_unavailable_times_for_the_same_person_are_all_kept() -> None:
+    """한 사람에게 불가능시간이 둘 이상이면 둘 다 결과에 담겨야 한다.
+    rows의 첫 원소만 처리하도록 망가뜨리면 두 번째 행(매주 반복)이 통째로
+    사라진다."""
+    rows = [
+        _row(datetime(2026, 8, 3, 19, 0), datetime(2026, 8, 3, 21, 0)),
+        _row(
+            datetime(2026, 8, 5, 9, 0),
+            datetime(2026, 8, 5, 11, 0),
+            repeats_weekly=True,
+            repeat_until=date(2026, 8, 12),
+        ),
+    ]
+
+    result = expand_unavailable(rows, WINDOW_START, WINDOW_END)
+
+    assert [(i.start, i.end) for i in result] == [
+        (datetime(2026, 8, 3, 19, 0), datetime(2026, 8, 3, 21, 0)),
+        (datetime(2026, 8, 5, 9, 0), datetime(2026, 8, 5, 11, 0)),
+        (datetime(2026, 8, 12, 9, 0), datetime(2026, 8, 12, 11, 0)),
+    ]
+
+
 def test_weekly_repeat_that_started_before_the_window_still_lands_inside() -> None:
     rows = [
         _row(
