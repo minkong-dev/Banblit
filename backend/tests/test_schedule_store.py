@@ -142,6 +142,47 @@ def test_rollback_restores_previous_schedule(db_session: Session) -> None:
     assert db_session.scalars(select(AssignmentBackup)).all() == []
 
 
+def test_rollback_after_third_save_leaves_older_backup_intact(
+    db_session: Session,
+) -> None:
+    """세 번째 저장(s3) 뒤 롤백 1회는 s2로 되돌리고, s2 백업 회차만 남겨야 한다.
+
+    BACKUP_KEEP=2이므로 s1·s2·s3 저장 뒤 백업에는 s2·s3 회차 2개만 남는다.
+    이 상태에서 롤백하면 최신 회차(s3)만 지워지고 s2는 그대로 살아있어야 한다.
+    """
+    period_id, team_id, room_id = _scaffold(db_session)
+
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)],
+                  saved_at=datetime(2026, 8, 1, 8, 0))  # s1
+    db_session.commit()
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 19)],
+                  saved_at=datetime(2026, 8, 1, 9, 0))  # s2
+    db_session.commit()
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 20)],
+                  saved_at=datetime(2026, 8, 1, 21, 0))  # s3
+    db_session.commit()
+
+    backups_before = db_session.scalars(select(AssignmentBackup)).all()
+    assert {b.saved_at for b in backups_before} == {
+        datetime(2026, 8, 1, 9, 0),
+        datetime(2026, 8, 1, 21, 0),
+    }
+
+    ok = rollback_schedule(db_session, period_id)
+    db_session.commit()
+
+    assert ok is True
+    current = db_session.scalars(
+        select(Assignment).where(Assignment.period_id == period_id)
+    ).all()
+    assert [a.starts_at for a in current] == [datetime(2026, 8, 1, 19, 0)]
+
+    remaining = db_session.scalars(select(AssignmentBackup)).all()
+    assert len(remaining) == 1
+    assert remaining[0].saved_at == datetime(2026, 8, 1, 9, 0)
+    assert remaining[0].starts_at == datetime(2026, 8, 1, 18, 0)
+
+
 def test_rollback_without_backup_returns_false(db_session: Session) -> None:
     period_id, team_id, room_id = _scaffold(db_session)
     save_schedule(db_session, period_id, [_row(team_id, room_id, 19)],
