@@ -219,7 +219,7 @@ def test_two_periods_do_not_interfere(db_session: Session) -> None:
     period2_id, team2_id, room2_id = period2.id, team2.id, room2.id
 
     # period1: 두 번 저장해 백업 회차 1개(saved_at=8/1 23:00)를 만들어둔다.
-    # 이 saved_at은 아래 period2의 백업 saved_at들(8:00·9:00·21:00·22:00)과
+    # 이 saved_at은 아래 period2의 백업 saved_at들(9:00·21:00·22:00)과
     # 절대 겹치지 않게 잡는다 — 프루닝이 period_id를 무시하면 period2의
     # keep 목록에 없다는 이유로 이 회차가 잘못 지워지는 것을 검증하기 위해서다.
     save_schedule(db_session, period1_id, [_row(team1_id, room1_id, 10)],
