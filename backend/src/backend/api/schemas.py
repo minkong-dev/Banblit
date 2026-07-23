@@ -62,3 +62,37 @@ class ScheduleRowOut(BaseModel):
 
 class ScheduleOut(BaseModel):
     rows: list[ScheduleRowOut]
+
+
+class PeriodAssignIn(BaseModel):
+    team_ids: list[int] = Field(min_length=1, max_length=20)
+    room_ids: list[int] = Field(min_length=1, max_length=10)
+
+
+class PeriodRoomSlotOut(BaseModel):
+    room_id: int
+    room: str
+    start: datetime
+    end: datetime
+
+
+class PeriodAssignmentOut(BaseModel):
+    feasible: bool
+    slots_by_team: dict[str, list[PeriodRoomSlotOut]]
+    open_slots: list[PeriodRoomSlotOut]
+
+
+class ExcludedMemberOut(BaseModel):
+    id: int
+    name: str
+
+
+class PeriodProposalOut(BaseModel):
+    excluded_member: ExcludedMemberOut
+    assignment: PeriodAssignmentOut
+
+
+class PeriodAssignOut(BaseModel):
+    saved: bool
+    assignment: PeriodAssignmentOut
+    proposals: list[PeriodProposalOut]
