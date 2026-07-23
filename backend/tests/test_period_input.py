@@ -1,7 +1,15 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 
-from backend.api.period_input import dates_in_period, expand_unavailable
-from backend.db.models import UnavailableTime
+import pytest
+
+from backend.api.period_input import (
+    auto_slots_per_team,
+    build_engine_rooms,
+    dates_in_period,
+    expand_unavailable,
+    room_key,
+)
+from backend.db.models import Room, UnavailableTime
 
 WINDOW_START = datetime(2026, 8, 1, 0, 0)
 WINDOW_END = datetime(2026, 8, 15, 0, 0)  # 8월 14일까지 포함하는 열린 끝
@@ -94,3 +102,55 @@ def test_weekly_repeat_that_started_before_the_window_still_lands_inside() -> No
         datetime(2026, 8, 3, 19, 0),
         datetime(2026, 8, 10, 19, 0),
     ]
+
+
+def _room(room_id: int, name: str, opens: time, closes: time) -> Room:
+    room = Room(name=name, opens_at=opens, closes_at=closes)
+    room.id = room_id
+    return room
+
+
+def test_each_room_becomes_one_engine_room_per_day() -> None:
+    rooms = [_room(7, "1번방", time(18, 0), time(20, 0))]
+    days = [date(2026, 8, 1), date(2026, 8, 2)]
+
+    engine_rooms, room_id_by_key, room_name_by_key = build_engine_rooms(rooms, days)
+
+    assert [r.name for r in engine_rooms] == [
+        "1번방 (2026-08-01)",
+        "1번방 (2026-08-02)",
+    ]
+    assert engine_rooms[0].open_period.start == datetime(2026, 8, 1, 18, 0)
+    assert engine_rooms[0].open_period.end == datetime(2026, 8, 1, 20, 0)
+    assert room_id_by_key == {
+        "1번방 (2026-08-01)": 7,
+        "1번방 (2026-08-02)": 7,
+    }
+    assert set(room_name_by_key.values()) == {"1번방"}
+
+
+def test_room_key_collision_is_rejected() -> None:
+    rooms = [
+        _room(1, "1번방", time(18, 0), time(20, 0)),
+        _room(2, "1번방 (2026-08-01)", time(18, 0), time(20, 0)),
+    ]
+
+    with pytest.raises(ValueError, match="겹칩니다"):
+        build_engine_rooms(rooms, [date(2026, 8, 1)])
+
+
+def test_slots_per_team_is_the_whole_grid_divided_by_team_count() -> None:
+    rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]  # 하루 4칸
+    engine_rooms, _, _ = build_engine_rooms(
+        rooms, [date(2026, 8, 1), date(2026, 8, 2)]
+    )  # 8칸
+
+    assert auto_slots_per_team(engine_rooms, team_count=3) == 2
+
+
+def test_slots_per_team_is_rejected_when_no_team_can_get_a_slot() -> None:
+    rooms = [_room(1, "1번방", time(18, 0), time(19, 0))]  # 2칸
+    engine_rooms, _, _ = build_engine_rooms(rooms, [date(2026, 8, 1)])
+
+    with pytest.raises(ValueError, match="한 칸도"):
+        auto_slots_per_team(engine_rooms, team_count=3)
