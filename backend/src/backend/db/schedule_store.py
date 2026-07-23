@@ -51,6 +51,9 @@ def _prune_backups(session: Session, period_id: int) -> None:
         .order_by(AssignmentBackup.saved_at.desc())
     ).all()
     keep = saved_times[:BACKUP_KEEP]
+    if not keep:
+        # keep이 비면 notin_([])이 항상 참이 되어 delete가 전체 삭제로 번진다 — 방어.
+        return
     session.execute(
         delete(AssignmentBackup)
         .where(AssignmentBackup.period_id == period_id)
