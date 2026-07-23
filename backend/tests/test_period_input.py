@@ -174,14 +174,26 @@ def test_each_room_becomes_one_engine_room_per_day() -> None:
     assert set(room_name_by_key.values()) == {"1번방"}
 
 
-def test_room_key_collision_is_rejected() -> None:
+def test_room_name_that_looks_like_another_rooms_key_is_not_rejected() -> None:
+    # "1번방"의 (날짜) 표기가 우연히 다른 방의 원래 이름과 같아져도, 실제로 엔진에
+    # 넘어가는 키끼리는 절대 겹치지 않는다 — 날짜 꼬리표 " (YYYY-MM-DD)"가 항상 13자
+    # 고정이라, 두 방 키가 같아지려면 날짜와 이름이 모두 같아야 하는데 방 이름은
+    # DB에서 유일하기 때문이다. 그러므로 이런 입력은 거부되면 안 된다.
     rooms = [
         _room(1, "1번방", time(18, 0), time(20, 0)),
         _room(2, "1번방 (2026-08-01)", time(18, 0), time(20, 0)),
     ]
 
-    with pytest.raises(ValueError, match="겹칩니다"):
-        build_engine_rooms(rooms, [date(2026, 8, 1)])
+    engine_rooms, room_id_by_key, _ = build_engine_rooms(rooms, [date(2026, 8, 1)])
+
+    names = [r.name for r in engine_rooms]
+    assert names == [
+        "1번방 (2026-08-01)",
+        "1번방 (2026-08-01) (2026-08-01)",
+    ]
+    assert len(set(names)) == 2
+    assert room_id_by_key["1번방 (2026-08-01)"] == 1
+    assert room_id_by_key["1번방 (2026-08-01) (2026-08-01)"] == 2
 
 
 def test_slots_per_team_is_the_whole_grid_divided_by_team_count() -> None:
@@ -199,6 +211,14 @@ def test_slots_per_team_is_rejected_when_no_team_can_get_a_slot() -> None:
 
     with pytest.raises(ValueError, match="한 칸도"):
         auto_slots_per_team(engine_rooms, team_count=3)
+
+
+def test_slots_per_team_is_rejected_when_there_are_no_teams() -> None:
+    rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]
+    engine_rooms, _, _ = build_engine_rooms(rooms, [date(2026, 8, 1)])
+
+    with pytest.raises(ValueError, match="배정할 팀이 없습니다"):
+        auto_slots_per_team(engine_rooms, team_count=0)
 
 
 def test_two_people_with_the_same_name_stay_separate() -> None:
