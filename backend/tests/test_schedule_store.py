@@ -197,3 +197,68 @@ def test_rollback_without_backup_returns_false(db_session: Session) -> None:
         select(Assignment).where(Assignment.period_id == period_id)
     ).all()
     assert [a.starts_at for a in current] == [datetime(2026, 8, 1, 19, 0)]
+
+
+def test_two_periods_do_not_interfere(db_session: Session) -> None:
+    """서로 다른 기간의 저장·프루닝·롤백은 다른 기간의 현행·백업을 건드리지 않는다."""
+    period1_id, team1_id, room1_id = _scaffold(db_session)
+
+    period2 = Period(
+        kind="focused",
+        starts_on=date(2026, 8, 1),
+        ends_on=date(2026, 8, 14),
+        everyday=False,
+        first_run_at=time(9, 0),
+        second_run_at=time(21, 0),
+    )
+    team2 = Team(name="B")
+    room2 = Room(name="2번방", opens_at=time(18, 0), closes_at=time(22, 0))
+    db_session.add_all([period2, team2, room2])
+    db_session.flush()
+    period2_id, team2_id, room2_id = period2.id, team2.id, room2.id
+
+    # period1: 두 번 저장해 백업 회차 1개(saved_at=8/1 23:00)를 만들어둔다.
+    # 이 saved_at은 아래 period2의 백업 saved_at들(8:00·9:00·21:00)과
+    # 절대 겹치지 않게 잡는다 — 프루닝이 period_id를 무시하면 period2의
+    # keep 목록에 없다는 이유로 이 회차가 잘못 지워지는 것을 검증하기 위해서다.
+    save_schedule(db_session, period1_id, [_row(team1_id, room1_id, 10)],
+                  saved_at=datetime(2026, 8, 1, 7, 0))
+    db_session.commit()
+    save_schedule(db_session, period1_id, [_row(team1_id, room1_id, 11)],
+                  saved_at=datetime(2026, 8, 1, 23, 0))
+    db_session.commit()
+
+    # period2: 프루닝이 일어날 만큼(3회) 저장한 뒤 롤백까지 수행한다.
+    save_schedule(db_session, period2_id, [_row(team2_id, room2_id, 18)],
+                  saved_at=datetime(2026, 8, 1, 8, 0))
+    db_session.commit()
+    save_schedule(db_session, period2_id, [_row(team2_id, room2_id, 19)],
+                  saved_at=datetime(2026, 8, 1, 9, 0))
+    db_session.commit()
+    save_schedule(db_session, period2_id, [_row(team2_id, room2_id, 20)],
+                  saved_at=datetime(2026, 8, 1, 21, 0))
+    db_session.commit()
+    ok = rollback_schedule(db_session, period2_id)
+    db_session.commit()
+    assert ok is True
+
+    # period1의 현행·백업은 위 period2 작업 전 상태 그대로여야 한다.
+    current1 = db_session.scalars(
+        select(Assignment).where(Assignment.period_id == period1_id)
+    ).all()
+    assert [a.starts_at for a in current1] == [datetime(2026, 8, 1, 11, 0)]
+    backups1 = db_session.scalars(
+        select(AssignmentBackup).where(AssignmentBackup.period_id == period1_id)
+    ).all()
+    assert [b.saved_at for b in backups1] == [datetime(2026, 8, 1, 23, 0)]
+    assert [b.starts_at for b in backups1] == [datetime(2026, 8, 1, 10, 0)]
+
+    # period2도 자신의 저장·롤백 결과대로 정상 동작해야 한다.
+    current2 = db_session.scalars(
+        select(Assignment).where(Assignment.period_id == period2_id)
+    ).all()
+    assert [a.starts_at for a in current2] == [datetime(2026, 8, 1, 19, 0)]
+    backups2 = db_session.scalars(
+        select(AssignmentBackup).where(AssignmentBackup.period_id == period2_id)
+    ).all()
+    assert [b.saved_at for b in backups2] == [datetime(2026, 8, 1, 9, 0)]
