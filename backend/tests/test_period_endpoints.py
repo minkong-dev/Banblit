@@ -1,9 +1,10 @@
 from datetime import date, datetime, time
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.db.models import Assignment, Period, Room, Team
+from backend.db.models import Assignment, Member, Membership, Period, Position, Room, Team
 
 
 def _period(session: Session) -> int:
@@ -130,3 +131,72 @@ def test_schedule_excludes_other_periods_assignments(
             }
         ]
     }
+
+
+def _team_with_member(db_session: Session, team_name: str, member_name: str) -> int:
+    position_id = db_session.scalars(select(Position.id)).first()
+    team = Team(name=team_name)
+    member = Member(name=member_name)
+    db_session.add_all([team, member])
+    db_session.flush()
+    db_session.add(
+        Membership(member_id=member.id, team_id=team.id, position_id=position_id)
+    )
+    db_session.flush()
+    return team.id
+
+
+def test_assign_saves_the_schedule_and_reports_it(
+    api_client: TestClient, db_session: Session
+) -> None:
+    period_id = _period(db_session)  # 8/1 ~ 8/2
+    team_id = _team_with_member(db_session, "A", "김민수")
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    db_session.add(room)
+    db_session.flush()
+    db_session.commit()
+
+    response = api_client.post(
+        f"/periods/{period_id}/assign",
+        json={"team_ids": [team_id], "room_ids": [room.id]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["saved"] is True
+    assert body["assignment"]["feasible"] is True
+    slots = body["assignment"]["slots_by_team"]["A"]
+    assert len(slots) == 4  # 이틀 × 2칸
+    assert {slot["room"] for slot in slots} == {"1번방"}
+    assert all(slot["room_id"] == room.id for slot in slots)
+
+    saved = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
+    assert len(saved) == 4
+
+
+def test_assign_on_an_open_period_is_rejected(
+    api_client: TestClient, db_session: Session
+) -> None:
+    period = Period(
+        kind="open",
+        starts_on=date(2026, 8, 1),
+        ends_on=date(2026, 8, 1),
+        everyday=False,
+        first_run_at=time(9, 0),
+        second_run_at=time(21, 0),
+    )
+    db_session.add(period)
+    db_session.flush()
+    team_id = _team_with_member(db_session, "A", "김민수")
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    db_session.add(room)
+    db_session.flush()
+    db_session.commit()
+
+    response = api_client.post(
+        f"/periods/{period.id}/assign",
+        json={"team_ids": [team_id], "room_ids": [room.id]},
+    )
+
+    assert response.status_code == 422
+    assert "집중" in response.json()["detail"]

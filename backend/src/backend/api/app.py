@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -5,9 +7,22 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.api.mapping import request_to_engine, resolution_to_out
-from backend.api.schemas import AssignRequest, ResolutionOut, ScheduleOut, ScheduleRowOut
+from backend.api.period_service import PeriodAssignResult, assign_period
+from backend.api.schemas import (
+    AssignRequest,
+    ExcludedMemberOut,
+    PeriodAssignIn,
+    PeriodAssignmentOut,
+    PeriodAssignOut,
+    PeriodProposalOut,
+    PeriodRoomSlotOut,
+    ResolutionOut,
+    ScheduleOut,
+    ScheduleRowOut,
+)
 from backend.db.models import Assignment, Period, Room, Team
 from backend.db.session import get_session
+from backend.scheduling.assignment import Assignment as EngineAssignment
 from backend.scheduling.resolution import resolve
 
 app = FastAPI(title="Banblit Scheduling API")
@@ -75,4 +90,58 @@ def read_schedule(
             )
             for assignment, team_name, room_name in rows
         ]
+    )
+
+
+def _period_assignment_out(
+    assignment: EngineAssignment, result: PeriodAssignResult
+) -> PeriodAssignmentOut:
+    def to_slot(room_slot) -> PeriodRoomSlotOut:
+        return PeriodRoomSlotOut(
+            room_id=result.room_id_by_key[room_slot.room],
+            room=result.room_name_by_key[room_slot.room],
+            start=room_slot.interval.start,
+            end=room_slot.interval.end,
+        )
+
+    return PeriodAssignmentOut(
+        feasible=assignment.feasible,
+        slots_by_team={
+            team_name: [to_slot(rs) for rs in slots]
+            for team_name, slots in assignment.slots_by_team.items()
+        },
+        open_slots=[to_slot(rs) for rs in assignment.open_slots],
+    )
+
+
+@app.post("/periods/{period_id}/assign", response_model=PeriodAssignOut)
+def assign_period_schedule(
+    period_id: int,
+    req: PeriodAssignIn,
+    session: Session = Depends(get_session),
+) -> PeriodAssignOut:
+    try:
+        result = assign_period(
+            session,
+            period_id,
+            req.team_ids,
+            req.room_ids,
+            saved_at=datetime.now(),
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+    return PeriodAssignOut(
+        saved=result.saved,
+        assignment=_period_assignment_out(result.resolution.assignment, result),
+        proposals=[
+            PeriodProposalOut(
+                excluded_member=ExcludedMemberOut(
+                    id=result.member_by_key[proposal.excluded_member][0],
+                    name=result.member_by_key[proposal.excluded_member][1],
+                ),
+                assignment=_period_assignment_out(proposal.assignment, result),
+            )
+            for proposal in result.resolution.proposals
+        ],
     )
