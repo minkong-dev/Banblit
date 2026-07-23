@@ -52,7 +52,7 @@ def _prune_backups(session: Session, period_id: int) -> None:
     ).all()
     keep = saved_times[:BACKUP_KEEP]
     if not keep:
-        # keep이 비면 notin_([])이 항상 참이 되어 delete가 전체 삭제로 번진다 — 방어.
+        # keep이 비면 notin_([])이 항상 참이 되어 그 기간의 백업이 통째로 지워진다 — 방어.
         return
     session.execute(
         delete(AssignmentBackup)
