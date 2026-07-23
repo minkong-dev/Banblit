@@ -165,3 +165,37 @@ def test_reassignment_archives_the_previous_schedule(db_session: Session) -> Non
     backups = db_session.scalars(select(AssignmentBackup)).all()
     assert len(backups) == 2  # 첫 회차의 2칸이 백업으로 옮겨졌다
     assert {b.saved_at for b in backups} == {datetime(2026, 8, 1, 21, 0)}
+
+
+def test_two_week_schedule_for_four_teams_finishes(db_session: Session) -> None:
+    """2주 × 방 2개 × 팀 4개 — 실제로 쓰일 만한 크기가 계산되는지 확인한다.
+
+    계산 시간 자체는 단언하지 않는다(기계마다 다르다). 이 테스트가 도는 시간이
+    곧 실측값이므로, `pytest --durations`로 확인해 문서에 적는다.
+    """
+    period = Period(
+        kind="focused",
+        starts_on=date(2026, 8, 1),
+        ends_on=date(2026, 8, 14),
+        everyday=False,
+        first_run_at=time(9, 0),
+        second_run_at=time(21, 0),
+    )
+    db_session.add(period)
+    db_session.flush()
+
+    team_ids = [
+        _team_with_member(db_session, f"팀{index}", f"사람{index}")
+        for index in range(4)
+    ]
+    room_ids = [
+        _room(db_session, "1번방", time(18, 0), time(22, 0)),
+        _room(db_session, "2번방", time(19, 0), time(22, 0)),
+    ]
+
+    result = assign_period(
+        db_session, period.id, team_ids, room_ids, saved_at=SAVED_AT
+    )
+
+    assert result.resolution.assignment.feasible is True
+    assert result.saved is True
