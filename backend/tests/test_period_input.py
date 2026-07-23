@@ -87,6 +87,48 @@ def test_weekly_repeat_stops_at_its_repeat_until_date() -> None:
     assert [i.start for i in result] == [datetime(2026, 8, 3, 19, 0)]
 
 
+def test_repeats_weekly_none_is_treated_as_not_repeating() -> None:
+    # 세션에 넣지 않은 객체는 repeats_weekly가 아직 기본값(False)이 적용되지 않아
+    # None일 수 있다 — 이때도 반복 없는 1회짜리로 다뤄야 한다.
+    rows = [
+        UnavailableTime(
+            member_id=1,
+            starts_at=datetime(2026, 8, 3, 19, 0),
+            ends_at=datetime(2026, 8, 3, 21, 0),
+            repeats_weekly=None,
+            repeat_until=None,
+        )
+    ]
+
+    result = expand_unavailable(rows, WINDOW_START, WINDOW_END)
+
+    assert [(i.start, i.end) for i in result] == [
+        (datetime(2026, 8, 3, 19, 0), datetime(2026, 8, 3, 21, 0))
+    ]
+
+
+def test_unavailable_time_straddling_the_window_start_is_kept() -> None:
+    # 시작은 기간 밖(7/31), 끝은 기간 안(8/1)에 걸쳐 있다 — 버려지면 안 된다.
+    rows = [_row(datetime(2026, 7, 31, 23, 0), datetime(2026, 8, 1, 1, 0))]
+
+    result = expand_unavailable(rows, WINDOW_START, WINDOW_END)
+
+    assert [(i.start, i.end) for i in result] == [
+        (datetime(2026, 7, 31, 23, 0), datetime(2026, 8, 1, 1, 0))
+    ]
+
+
+def test_unavailable_time_straddling_the_window_end_is_kept() -> None:
+    # 시작은 기간 안(8/14), 끝은 기간 밖(8/15 새벽)에 걸쳐 있다 — 버려지면 안 된다.
+    rows = [_row(datetime(2026, 8, 14, 23, 0), datetime(2026, 8, 15, 1, 0))]
+
+    result = expand_unavailable(rows, WINDOW_START, WINDOW_END)
+
+    assert [(i.start, i.end) for i in result] == [
+        (datetime(2026, 8, 14, 23, 0), datetime(2026, 8, 15, 1, 0))
+    ]
+
+
 def test_weekly_repeat_that_started_before_the_window_still_lands_inside() -> None:
     rows = [
         _row(
