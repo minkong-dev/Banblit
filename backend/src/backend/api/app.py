@@ -25,6 +25,7 @@ from backend.db.models import Assignment, Period, Room, Team
 from backend.db.schedule_store import rollback_schedule
 from backend.db.session import get_session
 from backend.scheduling.assignment import Assignment as EngineAssignment
+from backend.scheduling.assignment import RoomSlot
 from backend.scheduling.resolution import resolve
 
 app = FastAPI(title="Banblit Scheduling API")
@@ -98,7 +99,7 @@ def read_schedule(
 def _period_assignment_out(
     assignment: EngineAssignment, result: PeriodAssignResult
 ) -> PeriodAssignmentOut:
-    def to_slot(room_slot) -> PeriodRoomSlotOut:
+    def to_slot(room_slot: RoomSlot) -> PeriodRoomSlotOut:
         return PeriodRoomSlotOut(
             room_id=result.room_id_by_key[room_slot.room],
             room=result.room_name_by_key[room_slot.room],

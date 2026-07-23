@@ -21,6 +21,7 @@ from backend.db.models import (
 )
 from backend.db.schedule_store import save_schedule
 from backend.scheduling.assignment import Assignment as EngineAssignment
+from backend.scheduling.interval import TimeInterval
 from backend.scheduling.resolution import Resolution, resolve
 
 
@@ -140,7 +141,7 @@ def _load_unavailable(
     member_ids: list[int],
     window_start: datetime,
     window_end: datetime,
-) -> dict[int, list]:
+) -> dict[int, list[TimeInterval]]:
     if not member_ids:
         return {}
     rows = session.scalars(
