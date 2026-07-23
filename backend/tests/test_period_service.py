@@ -279,6 +279,57 @@ def test_team_without_members_is_rejected(db_session: Session) -> None:
         )
 
 
+def test_overlapping_period_room_conflict_is_rejected_not_500(
+    db_session: Session,
+) -> None:
+    """날짜가 겹치는 두 기간이 같은 방·같은 시각을 쓰면 (room_id, starts_at) 유니크
+    제약에 걸린다 — 사용자가 만들 수 있는 상황이므로 500이 아니라 422(ValueError)로
+    거부되어야 하고, 첫 번째 기간의 현행 시간표는 그대로 남아 있어야 한다."""
+    period_a = _period(db_session)
+    period_b = _period(db_session)
+    team_a = _team_with_member(db_session, "A", "김민수")
+    team_b = _team_with_member(db_session, "B", "이영희")
+    room_id = _room(db_session, "1번방", time(18, 0), time(19, 0))
+
+    first = assign_period(
+        db_session, period_a, [team_a], [room_id], saved_at=SAVED_AT
+    )
+    assert first.saved is True
+
+    with pytest.raises(ValueError, match="이미"):
+        assign_period(db_session, period_b, [team_b], [room_id], saved_at=SAVED_AT)
+
+    remaining = db_session.scalars(
+        select(Assignment).where(Assignment.period_id == period_a)
+    ).all()
+    assert len(remaining) == 2  # 첫 번째 기간의 현행 시간표가 그대로 남아 있다
+    assert db_session.scalars(
+        select(Assignment).where(Assignment.period_id == period_b)
+    ).all() == []
+
+
+def test_duplicate_team_id_is_rejected(db_session: Session) -> None:
+    period_id = _period(db_session)
+    team_id = _team_with_member(db_session, "A", "김민수")
+    room_id = _room(db_session, "1번방", time(18, 0), time(19, 0))
+
+    with pytest.raises(ValueError, match="팀"):
+        assign_period(
+            db_session, period_id, [team_id, team_id], [room_id], saved_at=SAVED_AT
+        )
+
+
+def test_duplicate_room_id_is_rejected(db_session: Session) -> None:
+    period_id = _period(db_session)
+    team_id = _team_with_member(db_session, "A", "김민수")
+    room_id = _room(db_session, "1번방", time(18, 0), time(19, 0))
+
+    with pytest.raises(ValueError, match="합주실"):
+        assign_period(
+            db_session, period_id, [team_id], [room_id, room_id], saved_at=SAVED_AT
+        )
+
+
 def test_two_week_schedule_for_four_teams_finishes(db_session: Session) -> None:
     """2주 × 방 2개 × 팀 4개 — 실제로 쓰일 만한 크기가 계산되는지 확인한다.
 

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import datetime, time
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.api.period_input import (
@@ -53,6 +54,10 @@ def assign_period(
         raise ValueError("그런 기간이 없습니다")
     if period.kind != "focused":
         raise ValueError("집중 합주기간에서만 자동 배정을 실행할 수 있습니다")
+    if len(team_ids) != len(set(team_ids)):
+        raise ValueError("팀 id가 중복되었습니다")
+    if len(room_ids) != len(set(room_ids)):
+        raise ValueError("합주실 id가 중복되었습니다")
 
     rooms = _load_rooms(session, room_ids)
     teams = _load_teams(session, team_ids)
@@ -81,13 +86,22 @@ def assign_period(
 
     saved = False
     if resolution.assignment.feasible:
-        save_schedule(
-            session,
-            period_id,
-            _assignment_rows(resolution.assignment, team_id_by_name, room_id_by_key),
-            saved_at=saved_at,
-        )
-        session.commit()
+        try:
+            save_schedule(
+                session,
+                period_id,
+                _assignment_rows(
+                    resolution.assignment, team_id_by_name, room_id_by_key
+                ),
+                saved_at=saved_at,
+            )
+            session.commit()
+        except IntegrityError as error:
+            session.rollback()
+            raise ValueError(
+                "다른 기간이 이미 같은 합주실의 같은 시간을 쓰고 있습니다. "
+                "기간이 겹치지 않게 하거나 합주실을 나누십시오"
+            ) from error
         saved = True
 
     return PeriodAssignResult(
