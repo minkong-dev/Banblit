@@ -336,21 +336,119 @@ def test_assign_on_an_open_period_is_rejected(
 def test_rollback_restores_the_previous_schedule(
     api_client: TestClient, db_session: Session
 ) -> None:
+    """직전 회차가 아니라 엉뚱한 회차를 복원하는 결함을 잡을 수 있어야 한다.
+
+    합주실을 하나 더 만들어 두 번째 배정에서만 함께 지정한다 — 그러면 전체
+    자리 수가 달라져(4칸 → 8칸) 두 회차의 시각·방 구성이 원천적으로 달라진다.
+    회차를 셋(S1·S2·S3)으로 늘린 이유는, 회차가 둘뿐이면 백업이 1개(S1)만
+    생겨 "가장 오래된 회차"와 "가장 최신 회차"를 고르는 정렬 방향이 뒤집혀도
+    LIMIT 1이 그 하나뿐인 후보를 그대로 돌려주므로 결함이 드러나지 않기
+    때문이다. 세 번째 배정(S3)까지 해야 백업이 2개(S1, S2)가 되어 정렬
+    방향이 실제로 결과를 가른다. 되돌린 뒤에는 직전 회차(S2)와 정확히
+    같아야 하고, 그보다 오래된 회차(S1)나 되돌리기 전 현재였던 회차(S3)와는
+    달라야 한다 — 아래 리스트 전체 일치 단언이 이를 함께 보장한다.
+    """
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
-    db_session.add(room)
+    room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(21, 0))
+    db_session.add_all([room_1, room_2])
     db_session.flush()
     db_session.commit()
-    body = {"team_ids": [team_id], "room_ids": [room.id]}
-    api_client.post(f"/periods/{period_id}/assign", json=body)
-    api_client.post(f"/periods/{period_id}/assign", json=body)
+
+    # S1: 1번방만 → 팀 하나가 이틀 × 2칸 = 4칸 전부를 받는다.
+    r1 = api_client.post(
+        f"/periods/{period_id}/assign",
+        json={"team_ids": [team_id], "room_ids": [room_1.id]},
+    )
+    assert r1.json()["saved"] is True
+    # S2: 1번방 + 2번방 → 전체 자리가 8칸으로 늘어 팀이 8칸 전부를 받는다.
+    #     방 구성 자체가 S1과 다르므로 결과도 원천적으로 다르다.
+    r2 = api_client.post(
+        f"/periods/{period_id}/assign",
+        json={"team_ids": [team_id], "room_ids": [room_1.id, room_2.id]},
+    )
+    assert r2.json()["saved"] is True
+    # S3: 2번방만 → 세 번째 저장으로 백업 회차를 2개(S1, S2)로 만든다.
+    r3 = api_client.post(
+        f"/periods/{period_id}/assign",
+        json={"team_ids": [team_id], "room_ids": [room_2.id]},
+    )
+    assert r3.json()["saved"] is True
 
     response = api_client.post(f"/periods/{period_id}/rollback")
 
     assert response.status_code == 200
     assert response.json() == {"rolled_back": True}
-    assert len(api_client.get(f"/periods/{period_id}/schedule").json()["rows"]) == 4
+
+    rows = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
+    # 직전 회차(S2)와 정확히 같아야 한다 — 시각·방까지 구체값으로 비교한다.
+    assert rows == [
+        {
+            "team_id": team_id,
+            "team": "A",
+            "room_id": room_1.id,
+            "room": "1번방",
+            "start": "2026-08-01T18:00:00",
+            "end": "2026-08-01T18:30:00",
+        },
+        {
+            "team_id": team_id,
+            "team": "A",
+            "room_id": room_1.id,
+            "room": "1번방",
+            "start": "2026-08-01T18:30:00",
+            "end": "2026-08-01T19:00:00",
+        },
+        {
+            "team_id": team_id,
+            "team": "A",
+            "room_id": room_2.id,
+            "room": "2번방",
+            "start": "2026-08-01T20:00:00",
+            "end": "2026-08-01T20:30:00",
+        },
+        {
+            "team_id": team_id,
+            "team": "A",
+            "room_id": room_2.id,
+            "room": "2번방",
+            "start": "2026-08-01T20:30:00",
+            "end": "2026-08-01T21:00:00",
+        },
+        {
+            "team_id": team_id,
+            "team": "A",
+            "room_id": room_1.id,
+            "room": "1번방",
+            "start": "2026-08-02T18:00:00",
+            "end": "2026-08-02T18:30:00",
+        },
+        {
+            "team_id": team_id,
+            "team": "A",
+            "room_id": room_1.id,
+            "room": "1번방",
+            "start": "2026-08-02T18:30:00",
+            "end": "2026-08-02T19:00:00",
+        },
+        {
+            "team_id": team_id,
+            "team": "A",
+            "room_id": room_2.id,
+            "room": "2번방",
+            "start": "2026-08-02T20:00:00",
+            "end": "2026-08-02T20:30:00",
+        },
+        {
+            "team_id": team_id,
+            "team": "A",
+            "room_id": room_2.id,
+            "room": "2번방",
+            "start": "2026-08-02T20:30:00",
+            "end": "2026-08-02T21:00:00",
+        },
+    ]
 
 
 def test_rollback_without_any_backup_reports_nothing_to_undo(
