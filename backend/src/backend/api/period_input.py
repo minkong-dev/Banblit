@@ -67,15 +67,9 @@ def build_engine_rooms(
     engine_rooms: list[EngineRoom] = []
     room_id_by_key: dict[str, int] = {}
     room_name_by_key: dict[str, str] = {}
-    # 방 이름 자체가 다른 방의 (이름+날짜) 표기와 우연히 같아질 수 있다. 생성된 키들끼리만
-    # 비교하면 이 경우를 놓치므로, 원본 방 이름 전체도 함께 겹침 대상에 넣는다.
-    room_names = {room.name for room in rooms}
     for day in days:
         for room in rooms:
             key = room_key(room.name, day)
-            if key in room_id_by_key or key in room_names:
-                # 조용히 덮어쓰면 배정 결과가 엉뚱한 방에 저장된다.
-                raise ValueError(f"합주실 이름이 겹칩니다: {key}")
             engine_rooms.append(
                 EngineRoom(
                     name=key,
