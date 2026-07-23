@@ -5,11 +5,14 @@ import pytest
 from backend.api.period_input import (
     auto_slots_per_team,
     build_engine_rooms,
+    build_engine_teams,
     dates_in_period,
     expand_unavailable,
+    member_key,
     room_key,
 )
 from backend.db.models import Room, UnavailableTime
+from backend.scheduling.interval import TimeInterval
 
 WINDOW_START = datetime(2026, 8, 1, 0, 0)
 WINDOW_END = datetime(2026, 8, 15, 0, 0)  # 8월 14일까지 포함하는 열린 끝
@@ -196,3 +199,47 @@ def test_slots_per_team_is_rejected_when_no_team_can_get_a_slot() -> None:
 
     with pytest.raises(ValueError, match="한 칸도"):
         auto_slots_per_team(engine_rooms, team_count=3)
+
+
+def test_two_people_with_the_same_name_stay_separate() -> None:
+    teams = [(10, "A"), (20, "B")]
+    members_by_team = {10: [(1, "김민수")], 20: [(2, "김민수")]}
+
+    engine_teams, team_id_by_name, member_by_key = build_engine_teams(
+        teams, members_by_team, unavailable_by_member={}
+    )
+
+    first = engine_teams[0].members[0].name
+    second = engine_teams[1].members[0].name
+    assert first != second
+    assert member_by_key[first] == (1, "김민수")
+    assert member_by_key[second] == (2, "김민수")
+    assert team_id_by_name == {"A": 10, "B": 20}
+
+
+def test_the_same_person_in_two_teams_keeps_one_key() -> None:
+    teams = [(10, "A"), (20, "B")]
+    members_by_team = {10: [(1, "김민수")], 20: [(1, "김민수")]}
+
+    engine_teams, _, member_by_key = build_engine_teams(
+        teams, members_by_team, unavailable_by_member={}
+    )
+
+    assert engine_teams[0].members[0].name == engine_teams[1].members[0].name
+    assert len(member_by_key) == 1
+
+
+def test_unavailable_times_follow_the_person_into_every_team() -> None:
+    blocked = [
+        TimeInterval(
+            start=datetime(2026, 8, 1, 19, 0), end=datetime(2026, 8, 1, 20, 0)
+        )
+    ]
+    engine_teams, _, _ = build_engine_teams(
+        [(10, "A"), (20, "B")],
+        {10: [(1, "김민수")], 20: [(1, "김민수")]},
+        unavailable_by_member={1: blocked},
+    )
+
+    assert engine_teams[0].members[0].unavailable == blocked
+    assert engine_teams[1].members[0].unavailable == blocked

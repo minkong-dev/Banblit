@@ -2,6 +2,8 @@ from datetime import date, datetime, time, timedelta
 
 from backend.db.models import Room, UnavailableTime
 from backend.scheduling.assignment import Room as EngineRoom
+from backend.scheduling.availability import Member as EngineMember
+from backend.scheduling.availability import Team as EngineTeam
 from backend.scheduling.interval import TimeInterval
 from backend.scheduling.slots import generate_slots
 
@@ -101,3 +103,33 @@ def auto_slots_per_team(engine_rooms: list[EngineRoom], team_count: int) -> int:
             f"팀마다 한 칸도 줄 수 없습니다"
         )
     return per_team
+
+
+def member_key(member_id: int, name: str) -> str:
+    """엔진에 넘길 사람 이름. 엔진은 이름으로 사람을 구분하므로 동명이인을 갈라야 한다."""
+    return f"{name} #{member_id}"
+
+
+def build_engine_teams(
+    teams: list[tuple[int, str]],
+    members_by_team: dict[int, list[tuple[int, str]]],
+    unavailable_by_member: dict[int, list[TimeInterval]],
+) -> tuple[list[EngineTeam], dict[str, int], dict[str, tuple[int, str]]]:
+    """팀과 그 명단을 엔진 입력으로 옮기고, 되돌릴 대응표를 함께 만든다."""
+    engine_teams: list[EngineTeam] = []
+    team_id_by_name: dict[str, int] = {}
+    member_by_key: dict[str, tuple[int, str]] = {}
+    for team_id, team_name in teams:
+        members: list[EngineMember] = []
+        for member_id, member_name in members_by_team.get(team_id, []):
+            key = member_key(member_id, member_name)
+            members.append(
+                EngineMember(
+                    name=key,
+                    unavailable=list(unavailable_by_member.get(member_id, [])),
+                )
+            )
+            member_by_key[key] = (member_id, member_name)
+        engine_teams.append(EngineTeam(name=team_name, members=members))
+        team_id_by_name[team_name] = team_id
+    return engine_teams, team_id_by_name, member_by_key
