@@ -96,3 +96,7 @@ class PeriodAssignOut(BaseModel):
     saved: bool
     assignment: PeriodAssignmentOut
     proposals: list[PeriodProposalOut]
+
+
+class RollbackOut(BaseModel):
+    rolled_back: bool

@@ -200,3 +200,35 @@ def test_assign_on_an_open_period_is_rejected(
 
     assert response.status_code == 422
     assert "집중" in response.json()["detail"]
+
+
+def test_rollback_restores_the_previous_schedule(
+    api_client: TestClient, db_session: Session
+) -> None:
+    period_id = _period(db_session)
+    team_id = _team_with_member(db_session, "A", "김민수")
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    db_session.add(room)
+    db_session.flush()
+    db_session.commit()
+    body = {"team_ids": [team_id], "room_ids": [room.id]}
+    api_client.post(f"/periods/{period_id}/assign", json=body)
+    api_client.post(f"/periods/{period_id}/assign", json=body)
+
+    response = api_client.post(f"/periods/{period_id}/rollback")
+
+    assert response.status_code == 200
+    assert response.json() == {"rolled_back": True}
+    assert len(api_client.get(f"/periods/{period_id}/schedule").json()["rows"]) == 4
+
+
+def test_rollback_without_any_backup_reports_nothing_to_undo(
+    api_client: TestClient, db_session: Session
+) -> None:
+    period_id = _period(db_session)
+    db_session.commit()
+
+    response = api_client.post(f"/periods/{period_id}/rollback")
+
+    assert response.status_code == 200
+    assert response.json() == {"rolled_back": False}

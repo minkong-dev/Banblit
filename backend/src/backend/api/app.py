@@ -17,10 +17,12 @@ from backend.api.schemas import (
     PeriodProposalOut,
     PeriodRoomSlotOut,
     ResolutionOut,
+    RollbackOut,
     ScheduleOut,
     ScheduleRowOut,
 )
 from backend.db.models import Assignment, Period, Room, Team
+from backend.db.schedule_store import rollback_schedule
 from backend.db.session import get_session
 from backend.scheduling.assignment import Assignment as EngineAssignment
 from backend.scheduling.resolution import resolve
@@ -145,3 +147,16 @@ def assign_period_schedule(
             for proposal in result.resolution.proposals
         ],
     )
+
+
+@app.post("/periods/{period_id}/rollback", response_model=RollbackOut)
+def rollback_period_schedule(
+    period_id: int, session: Session = Depends(get_session)
+) -> RollbackOut:
+    period = session.get(Period, period_id)
+    if period is None:
+        raise HTTPException(status_code=422, detail="그런 기간이 없습니다")
+
+    rolled_back = rollback_schedule(session, period_id)
+    session.commit()
+    return RollbackOut(rolled_back=rolled_back)
