@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# 커밋 메시지 형식을 강제한다 (PRODUCT_CONFIG.md 6장).
+# 커밋 메시지 형식을 강제한다 (CLAUDE.md 7장).
 #
 #   <scope>: <imperative summary>
 #

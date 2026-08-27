@@ -1,25 +1,26 @@
-# PRODUCT_CONFIG 4-1: push 제외 대상
+# CLAUDE.md 8-1: push 제외 대상
 dev_history/
-hooks/
-mcp/
-skills/
-CLAUDE.md
-PRODUCT_CONFIG.md
-PROGRESS.md
-TASK.md
+.claude/settings.local.json
 
-# PRODUCT_CONFIG 4: Secret 관리 — 환경 변수 파일은 절대 포함하지 않는다
+# 삭제 대신 옮겨두는 곳 (rm 금지 — mv trash/)
+trash/
+
+# CLAUDE.md 8장: 비밀값 — 환경 변수 파일은 절대 포함하지 않는다
 .env
 .env.*
 # 예외: 비밀값 없는 견본 파일은 커밋한다
 !.env.example
 
-# 문서 관리 주체는 cluedoc 하나로 통합한다 — .cluedoc/는 커밋 대상
-# superpowers로 짠 spec/계획 문서는 cluedoc 마이그레이션용 중간 산출물이므로 커밋 제외
-docs/superpowers/
+# superpowers 산출물. 2026-08-27 하네스 정리로 폐지했다 — 플러그인을 쓰지 않는다.
+# 파일은 디스크에 그대로 남아 있고, 정본은 .cluedoc/ 이다.
+docs/
+.superpowers/
 
 # 파이썬 산출물 (가상환경·캐시)
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# refactor-audit 스킬이 만드는 임시 검사 결과. 쓰임이 끝나면 trash/ 로 옮긴다.
+AUDIT.md
