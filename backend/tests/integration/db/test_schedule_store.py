@@ -4,7 +4,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team
-from backend.db.schedule_store import rollback_schedule, save_schedule
+from backend.db.schedule_store import (
+    AssignmentRow,
+    rollback_schedule,
+    save_schedule,
+)
 
 
 def _scaffold(session: Session) -> tuple[int, int, int]:
@@ -24,7 +28,7 @@ def _scaffold(session: Session) -> tuple[int, int, int]:
     return period.id, team.id, room.id
 
 
-def _row(team_id: int, room_id: int, hour: int) -> dict:
+def _row(team_id: int, room_id: int, hour: int) -> AssignmentRow:
     """8월 1일 hour시 시작하는 30분짜리 배정 한 칸(현행/백업 공용 입력)."""
     return {
         "team_id": team_id,

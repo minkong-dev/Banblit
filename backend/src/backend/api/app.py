@@ -1,18 +1,15 @@
+import logging
 from datetime import datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from backend.api.mapping import request_to_engine, resolution_to_out
-from backend.api.period_service import (
-    PeriodAssignResult,
-    assign_period,
-    conflict_message_for,
-)
+from backend.api.mapping import assignment_out, request_to_engine, resolution_to_out
+from backend.api.period_service import PeriodAssignResult, assign_period
 from backend.api.schemas import (
     AssignRequest,
     ExcludedMemberOut,
@@ -22,16 +19,20 @@ from backend.api.schemas import (
     PeriodProposalOut,
     PeriodRoomSlotOut,
     ResolutionOut,
+    RoomSlotOut,
     RollbackOut,
     ScheduleOut,
     ScheduleRowOut,
 )
+from backend.db.health import check_database
 from backend.db.models import Assignment, Period, Room, Team
+from backend.db.pipeline import get_session
 from backend.db.schedule_store import rollback_schedule
-from backend.db.session import get_session
 from backend.scheduling.assignment import Assignment as EngineAssignment
 from backend.scheduling.assignment import RoomSlot
 from backend.scheduling.resolution import resolve
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Banblit Scheduling API")
 
@@ -46,6 +47,20 @@ def _format_validation_error(exc: RequestValidationError) -> str:
     return " / ".join(lines)
 
 
+@app.exception_handler(OperationalError)
+async def handle_database_down(
+    request: Request, exc: OperationalError
+) -> JSONResponse:
+    # DB 에 닿지 못한 요청을 503 으로 돌려준다. 사용자 잘못이 아니라 이쪽이 지금
+    # 못 받는 상태이므로, 잘못된 입력(422)과도 서버 고장(500)과도 구분한다.
+    # 자세한 사유는 기록에만 남기고 화면에는 넣지 않는다.
+    logger.error("데이터베이스에 닿지 못했습니다 (%s): %s", request.url.path, exc)
+    return JSONResponse(
+        status_code=503,
+        content={"detail": "데이터베이스에 연결하지 못했습니다. 잠시 후 다시 시도하십시오"},
+    )
+
+
 @app.exception_handler(RequestValidationError)
 async def handle_validation_error(
     request: Request, exc: RequestValidationError
@@ -56,19 +71,30 @@ async def handle_validation_error(
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health() -> JSONResponse:
+    # check_database 로 실제 접속과 마이그레이션 적용 여부를 확인해 그대로 싣는다.
+    # 하나라도 끊겼으면 503 으로 답해, 앞단이 이 서버를 빼고 돌 수 있게 한다.
+    database = check_database()
+    checks = {"database": {"ok": database.ok, "detail": database.detail}}
+    healthy = database.ok
+    if not healthy:
+        logger.error("정상 확인 실패: %s", checks)
+    return JSONResponse(
+        status_code=200 if healthy else 503,
+        content={"status": "ok" if healthy else "down", "checks": checks},
+    )
 
 
-@app.post("/assign", response_model=ResolutionOut)
+@app.post("/assign", response_model=ResolutionOut[RoomSlotOut, str])
 def assign_schedule(req: AssignRequest) -> ResolutionOut:
     try:
-        teams, rooms, slots_per_team = request_to_engine(req)
+        teams, rooms, slots_per_team, names = request_to_engine(req)
         result = resolve(teams, rooms, slots_per_team)
     except ValueError as error:
         # 엔진이 잘못된 입력을 거부하며 던진 메시지를 그대로 사용자에게 전한다.
         raise HTTPException(status_code=422, detail=str(error)) from error
-    return resolution_to_out(result)
+    # names 는 엔진이 쓴 번호를 요청에 적힌 이름으로 되돌린다.
+    return resolution_to_out(result, names)
 
 
 @app.get("/periods/{period_id}/schedule", response_model=ScheduleOut)
@@ -86,8 +112,9 @@ def read_schedule(
         .where(Assignment.period_id == period_id)
         .order_by(Assignment.starts_at, Room.name)
     ).all()
-    return ScheduleOut(
-        rows=[
+    out_rows: list[ScheduleRowOut] = []
+    for assignment, team_name, room_name in rows:
+        out_rows.append(
             ScheduleRowOut(
                 team_id=assignment.team_id,
                 team=team_name,
@@ -96,30 +123,26 @@ def read_schedule(
                 start=assignment.starts_at,
                 end=assignment.ends_at,
             )
-            for assignment, team_name, room_name in rows
-        ]
-    )
+        )
+    return ScheduleOut(rows=out_rows)
 
 
 def _period_assignment_out(
     assignment: EngineAssignment, result: PeriodAssignResult
 ) -> PeriodAssignmentOut:
     def to_slot(room_slot: RoomSlot) -> PeriodRoomSlotOut:
+        # 엔진이 쓴 번호가 곧 저장소의 합주실 번호다. 이름만 대응표에서 찾아 붙인다.
         return PeriodRoomSlotOut(
-            room_id=result.room_id_by_key[room_slot.room],
-            room=result.room_name_by_key[room_slot.room],
+            room_id=room_slot.room_id,
+            room=result.room_names[room_slot.room_id],
             start=room_slot.interval.start,
             end=room_slot.interval.end,
         )
 
-    return PeriodAssignmentOut(
-        feasible=assignment.feasible,
-        slots_by_team={
-            team_name: [to_slot(rs) for rs in slots]
-            for team_name, slots in assignment.slots_by_team.items()
-        },
-        open_slots=[to_slot(rs) for rs in assignment.open_slots],
-    )
+    def to_team_name(team_id: int) -> str:
+        return result.team_names[team_id]
+
+    return assignment_out(assignment, to_slot, to_team_name)
 
 
 @app.post("/periods/{period_id}/assign", response_model=PeriodAssignOut)
@@ -139,19 +162,23 @@ def assign_period_schedule(
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
 
-    return PeriodAssignOut(
-        saved=result.saved,
-        assignment=_period_assignment_out(result.resolution.assignment, result),
-        proposals=[
+    proposals: list[PeriodProposalOut] = []
+    for proposal in result.resolution.proposals:
+        # 엔진이 쓴 번호가 곧 저장소의 사람 번호다. 이름만 대응표에서 찾아 붙인다.
+        member_id = proposal.excluded_member
+        proposals.append(
             PeriodProposalOut(
                 excluded_member=ExcludedMemberOut(
-                    id=result.member_by_key[proposal.excluded_member][0],
-                    name=result.member_by_key[proposal.excluded_member][1],
+                    id=member_id, name=result.member_names[member_id]
                 ),
                 assignment=_period_assignment_out(proposal.assignment, result),
             )
-            for proposal in result.resolution.proposals
-        ],
+        )
+
+    return PeriodAssignOut(
+        saved=result.saved,
+        assignment=_period_assignment_out(result.resolution.assignment, result),
+        proposals=proposals,
     )
 
 
@@ -164,16 +191,10 @@ def rollback_period_schedule(
         raise HTTPException(status_code=422, detail="그런 기간이 없습니다")
 
     try:
+        # rollback_schedule 이 되돌리기와 확정을 함께 끝낸다. 방·시각 충돌이면
+        # ScheduleConflict(ValueError)로 올라와 아래 except 가 422로 바꾼다.
         rolled_back = rollback_schedule(session, period_id)
-        session.commit()
-    except IntegrityError as error:
-        session.rollback()
-        # 배정 경로(period_service.assign_period)와 같은 판별·같은 메시지·같은
-        # 상태 코드로 맞춘다 — 다른 기간이 되돌리려는 방·시각을 먼저 차지했을 때
-        # 저장 제약 위반이 그대로 새어 나가 500이 되는 사고를 막는다.
-        message = conflict_message_for(error)
-        if message is None:
-            raise
-        raise HTTPException(status_code=422, detail=message) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
     return RollbackOut(rolled_back=rolled_back)

@@ -26,8 +26,8 @@ def test_team_name_must_be_unique(db_session: Session) -> None:
 def test_same_person_cannot_join_same_team_twice(db_session: Session) -> None:
     member = Member(name="김민수")
     team = Team(name="A")
-    guitar = db_session.scalar(select(Position).where(Position.name == "기타"))
-    drums = db_session.scalar(select(Position).where(Position.name == "드럼"))
+    guitar = db_session.scalars(select(Position).where(Position.name == "기타")).one()
+    drums = db_session.scalars(select(Position).where(Position.name == "드럼")).one()
     db_session.add_all([member, team])
     db_session.flush()
     db_session.add(
@@ -46,8 +46,8 @@ def test_one_person_may_join_two_teams_with_different_positions(
 ) -> None:
     member = Member(name="김민수")
     team_a, team_b = Team(name="A"), Team(name="B")
-    guitar = db_session.scalar(select(Position).where(Position.name == "기타"))
-    drums = db_session.scalar(select(Position).where(Position.name == "드럼"))
+    guitar = db_session.scalars(select(Position).where(Position.name == "기타")).one()
+    drums = db_session.scalars(select(Position).where(Position.name == "드럼")).one()
     db_session.add_all([member, team_a, team_b])
     db_session.flush()
     db_session.add_all(

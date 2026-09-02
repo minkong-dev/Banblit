@@ -25,7 +25,10 @@ else:
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # disable_existing_loggers 를 끄지 않으면, 이 설정을 읽는 순간 이미 만들어져
+    # 있던 기록기가 전부 꺼진다. 마이그레이션을 부른 쪽(서버·검사)이 그 뒤로
+    # 아무것도 기록하지 못하게 되므로, 기존 기록기는 그대로 둔다.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

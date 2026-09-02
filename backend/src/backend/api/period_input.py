@@ -54,34 +54,26 @@ def _occurrences(row: UnavailableTime, window_end: datetime) -> list[datetime]:
     return starts
 
 
-def room_key(room_name: str, day: date) -> str:
-    """엔진에 넘길 합주실 이름. 엔진은 한 합주실에 이어진 운영시간 하나만 줄 수 있어,
-    날짜마다 별개의 합주실로 넘긴다. 오류 메시지에 그대로 나오므로 사람이 읽을 수 있게 둔다."""
-    return f"{room_name} ({day.isoformat()})"
+def build_engine_rooms(rooms: list[Room], days: list[date]) -> list[EngineRoom]:
+    """합주실 × 날짜를 엔진 합주실 목록으로 펼친다.
 
-
-def build_engine_rooms(
-    rooms: list[Room], days: list[date]
-) -> tuple[list[EngineRoom], dict[str, int], dict[str, str]]:
-    """합주실 × 날짜를 엔진 합주실 목록으로 펼치고, 되돌릴 대응표를 함께 만든다."""
+    엔진은 한 합주실에 이어진 운영시간 하나만 받으므로 날짜마다 한 번씩 넘긴다.
+    번호는 저장소의 합주실 번호를 그대로 쓴다 — 날짜가 다르면 시간 구간이 달라
+    같은 번호가 여러 번 나와도 칸끼리는 겹치지 않는다.
+    """
     engine_rooms: list[EngineRoom] = []
-    room_id_by_key: dict[str, int] = {}
-    room_name_by_key: dict[str, str] = {}
     for day in days:
         for room in rooms:
-            key = room_key(room.name, day)
             engine_rooms.append(
                 EngineRoom(
-                    name=key,
+                    id=room.id,
                     open_period=TimeInterval(
                         start=datetime.combine(day, room.opens_at),
                         end=datetime.combine(day, room.closes_at),
                     ),
                 )
             )
-            room_id_by_key[key] = room.id
-            room_name_by_key[key] = room.name
-    return engine_rooms, room_id_by_key, room_name_by_key
+    return engine_rooms
 
 
 def auto_slots_per_team(engine_rooms: list[EngineRoom], team_count: int) -> int:
@@ -99,31 +91,24 @@ def auto_slots_per_team(engine_rooms: list[EngineRoom], team_count: int) -> int:
     return per_team
 
 
-def member_key(member_id: int, name: str) -> str:
-    """엔진에 넘길 사람 이름. 엔진은 이름으로 사람을 구분하므로 동명이인을 갈라야 한다."""
-    return f"{name} #{member_id}"
-
-
 def build_engine_teams(
-    teams: list[tuple[int, str]],
-    members_by_team: dict[int, list[tuple[int, str]]],
+    team_ids: list[int],
+    member_ids_by_team: dict[int, list[int]],
     unavailable_by_member: dict[int, list[TimeInterval]],
-) -> tuple[list[EngineTeam], dict[str, int], dict[str, tuple[int, str]]]:
-    """팀과 그 명단을 엔진 입력으로 옮기고, 되돌릴 대응표를 함께 만든다."""
+) -> list[EngineTeam]:
+    """팀과 그 명단을 엔진 입력으로 옮긴다.
+
+    팀도 사람도 저장소의 번호를 그대로 쓴다. 사람은 동명이인이 있어 이름으로는
+    가를 수 없고, 두 팀에 걸친 한 사람은 번호가 같아 엔진이 한 몸으로 다룬다.
+    """
     engine_teams: list[EngineTeam] = []
-    team_id_by_name: dict[str, int] = {}
-    member_by_key: dict[str, tuple[int, str]] = {}
-    for team_id, team_name in teams:
-        members: list[EngineMember] = []
-        for member_id, member_name in members_by_team.get(team_id, []):
-            key = member_key(member_id, member_name)
-            members.append(
-                EngineMember(
-                    name=key,
-                    unavailable=list(unavailable_by_member.get(member_id, [])),
-                )
+    for team_id in team_ids:
+        members = [
+            EngineMember(
+                id=member_id,
+                unavailable=list(unavailable_by_member.get(member_id, [])),
             )
-            member_by_key[key] = (member_id, member_name)
-        engine_teams.append(EngineTeam(name=team_name, members=members))
-        team_id_by_name[team_name] = team_id
-    return engine_teams, team_id_by_name, member_by_key
+            for member_id in member_ids_by_team.get(team_id, [])
+        ]
+        engine_teams.append(EngineTeam(id=team_id, members=members))
+    return engine_teams

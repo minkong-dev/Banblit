@@ -5,13 +5,17 @@ from backend.scheduling.interval import TimeInterval
 
 @dataclass
 class Member:
-    name: str
+    """사람 한 명. 이름이 아니라 번호로 구분한다 — 동명이인이 있다."""
+
+    id: int
     unavailable: list[TimeInterval]
 
 
 @dataclass
 class Team:
-    name: str
+    """팀 하나. 이름은 엔진 밖에서만 쓰므로 여기에는 두지 않는다."""
+
+    id: int
     members: list[Member]
 
 

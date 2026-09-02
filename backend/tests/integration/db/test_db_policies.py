@@ -28,7 +28,7 @@ def test_deleting_a_member_removes_their_memberships_and_unavailable_times(
 ) -> None:
     member = Member(name="김민수")
     team = Team(name="A")
-    guitar = db_session.scalar(select(Position).where(Position.name == "기타"))
+    guitar = db_session.scalars(select(Position).where(Position.name == "기타")).one()
     db_session.add_all([member, team])
     db_session.flush()
     db_session.add(
@@ -94,7 +94,7 @@ def test_deleting_a_team_removes_its_assignments(db_session: Session) -> None:
 def test_position_in_use_cannot_be_deleted(db_session: Session) -> None:
     member = Member(name="김민수")
     team = Team(name="A")
-    guitar = db_session.scalar(select(Position).where(Position.name == "기타"))
+    guitar = db_session.scalars(select(Position).where(Position.name == "기타")).one()
     db_session.add_all([member, team])
     db_session.flush()
     db_session.add(
