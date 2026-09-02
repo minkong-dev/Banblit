@@ -3,10 +3,10 @@ title: 배정 이력과 롤백
 sources:
   - backend/src/backend/db/schedule_store.py   # 저장(교체·아카이브·프루닝)과 롤백 규칙
   - backend/src/backend/db/models.py            # 백업 스냅샷 테이블
-  - backend/tests/test_schedule_store.py        # 저장·아카이브·프루닝·롤백 시나리오
+  - backend/tests/integration/db/test_schedule_store.py        # 저장·아카이브·프루닝·롤백 시나리오
 ---
 
-> 문서 버전: 1.1.0
+> 문서 버전: 1.1.1 draft
 
 ```
    재연산(다시 짜기)                          롤백(되돌리기)
@@ -89,7 +89,7 @@ sources:
 실행 커맨드(저장소 루트에서):
 
 ```
-docker compose run --rm dev pytest tests/test_schedule_store.py -q
+docker compose run --rm dev pytest tests/integration/db/test_schedule_store.py -q
 ```
 
 전체 스위트 기준으로는 다음으로 확인했으며, 이 규칙 추가 후 74개가 통과한다:
