@@ -1,9 +1,11 @@
 import logging
+import os
 from datetime import datetime
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
@@ -198,3 +200,15 @@ def rollback_period_schedule(
         raise HTTPException(status_code=422, detail=str(error)) from error
 
     return RollbackOut(rolled_back=rolled_back)
+
+
+# 개발용 — 프로토타입 화면을 API 와 같은 출처로 내보낸다. 출처가 같아야 화면의
+# fetch 가 CORS 에 막히지 않는다. PROTOTYPE_DIR 이 실제 폴더를 가리킬 때만 붙으므로
+# 그 환경변수가 없는 배포에서는 이 자리가 아예 생기지 않는다.
+_prototype_dir = os.environ.get("PROTOTYPE_DIR")
+if _prototype_dir and os.path.isdir(_prototype_dir):
+    app.mount(
+        "/proto",
+        StaticFiles(directory=_prototype_dir, html=True),
+        name="prototypes",
+    )
