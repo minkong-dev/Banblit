@@ -1,6 +1,6 @@
 # COMMAND
 
-> 문서 버전: 1.5.0 draft
+> 문서 버전: 1.7.0 draft
 
 이 문서는 Banblit에서 실제로 실행해 동작을 확인한 명령어만 담는다.
 실행해 보지 않은 명령어는 적지 않는다.
@@ -26,6 +26,20 @@ docker compose build dev
   - 처음 실행하면 파이썬 기반 이미지와 OR-Tools를 인터넷에서 받아오므로 몇 분 걸린다. 두 번째부터는 캐시가 있어 몇 초로 끝난다.
   - `backend/pyproject.toml` 또는 `backend/uv.lock`이 바뀌면 다시 실행해야 한다. 소스 코드만 고친 경우에는 다시 만들 필요가 없다.
 
+### 1-1-1. 의존성을 추가한 뒤 잠금 파일 갱신하기
+
+```
+docker compose run --rm --no-deps dev uv lock
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `backend/pyproject.toml`에 패키지를 추가·삭제한 뒤, 실제로 설치할 버전을 확정해 `backend/uv.lock`에 적는다. 이미지는 `uv sync --locked`로 잠금 파일에 적힌 버전 그대로만 설치하므로, 이 단계를 건너뛰면 `1-1` 빌드가 "잠금 파일이 pyproject.toml과 맞지 않는다"며 실패한다.
+- **옵션**
+  - `--no-deps` — 잠금 파일을 만드는 데 PostgreSQL 이 필요 없으므로 `db` 서비스를 띄우지 않는다.
+  - `uv lock` — 컨테이너 안에서 실행할 명령. 호스트에는 파이썬 환경이 없어 `uv`를 쓸 수 없다. 컨테이너의 `/app`이 내 PC의 `backend/` 폴더와 연결돼 있어, 갱신된 잠금 파일이 그대로 내 PC에 남는다.
+- **주의점**
+  - 이 명령 뒤에는 반드시 `1-1`(`docker compose build dev`)을 실행해야 새 패키지가 이미지에 들어간다.
+
 ### 1-2. 컨테이너 안에서 테스트 돌리기
 
 ```
@@ -42,9 +56,53 @@ docker compose run --rm dev pytest -q
   - `-q` — 결과를 짧게 출력한다(통과한 테스트를 점 하나로 표시). 붙이지 않으면 기본값인 보통 길이로 출력한다.
 - **자주 쓰는 변형**
   - `docker compose run --rm dev pytest -v` — 테스트 이름을 하나씩 모두 출력한다. 어떤 시나리오를 검사하는지 눈으로 확인할 때 쓴다.
-  - `docker compose run --rm dev pytest tests/test_resolution.py` — 특정 파일만 돌린다.
+  - `docker compose run --rm dev pytest tests/unit/test_resolution.py` — 특정 파일만 돌린다.
 - **주의점**
   - 내 PC의 `backend/` 폴더가 컨테이너 안에 연결돼 있어, 코드를 고치면 이미지를 다시 만들지 않아도 바로 반영된다.
+
+### 1-2-1. 아무것도 띄우지 않고 순수 계산 테스트만 돌리기
+
+```
+docker compose run --rm --no-deps dev pytest -q tests/unit
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 바깥과 통신하지 않는 검사만 돌린다. 실패가 코드 탓인지 환경 탓인지 갈라낼 때 먼저 이것을 돌린다.
+- **옵션**
+  - `--no-deps` — `docker-compose.yml`에서 `dev`가 의존하는 `db` 서비스를 띄우지 않는다. 붙이지 않으면 PostgreSQL 이 먼저 떠서, 아무것도 없이 도는지를 확인하는 의미가 없어진다.
+  - `tests/unit` — 돌릴 폴더를 지정한다. 생략하면 `tests/` 전체가 돌아 통합 검사까지 포함된다.
+- **주의점**
+  - 바깥과 실제로 통신하는 검사는 `tests/integration/<의존 대상>/` 아래에 둔다. 지금은 `tests/integration/db/` 하나뿐이다.
+  - 폴더 이름이 곧 표시(marker) 이름이다. `backend/tests/conftest.py`의 `pytest_collection_modifyitems`가 폴더를 보고 자동으로 붙인다. 표시 이름 자체는 `backend/pyproject.toml`의 `[tool.pytest.ini_options]`에 등록돼 있다.
+  - `tests/unit` 의 검사가 실제 DB 픽스처(`test_engine`·`db_session`·`api_client`)를 쓰면 수집 단계에서 멈춘다. DB 가 떠 있는 동안 조용히 통과해 버리는 것을 막기 위해서다.
+  - 2026-08-28 기준 전체 145개 중 `tests/unit` 이 91개, `tests/integration/db` 가 54개다.
+
+### 1-2-2. DB 가 필요한 테스트만 돌리기
+
+```
+docker compose run --rm dev pytest -q tests/integration/db
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 실제 PostgreSQL 에 붙어야 도는 검사만 돌린다.
+- **주의점**
+  - `--no-deps` 를 붙이면 안 된다. `db` 서비스가 떠 있어야 한다.
+  - 표시로 고르는 `-m db` 도 같은 결과를 낸다. 폴더 쪽이 눈에 더 잘 보여 이쪽을 정본으로 쓴다.
+
+### 1-2-3. 타입 검사 돌리기
+
+```
+docker compose run --rm --no-deps dev mypy
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 표기한 타입과 실제로 넘어가는 값이 어긋나지 않는지 검사한다. `CLAUDE.md`가 모든 함수에 타입 표기를 요구하는데, 이 검사가 없으면 표기가 맞는지 아무도 확인하지 않는다.
+- **옵션**
+  - `--no-deps` — 타입 검사는 코드를 읽기만 하므로 PostgreSQL 이 필요 없다.
+  - `mypy` — 검사할 대상을 뒤에 적지 않는다. `backend/pyproject.toml`의 `[tool.mypy]`에 `files = ["src", "tests"]`로 적혀 있어 그 둘을 검사한다.
+- **주의점**
+  - `disallow_untyped_defs`가 켜져 있다. 표기가 빠진 함수는 mypy가 속을 아예 들여다보지 않으므로, 표기가 빠진 것 자체를 오류로 잡는다.
+  - 2026-08-28 기준 소스 44개 파일이 오류 없이 통과한다.
 
 ### 1-3. 가장 느린 테스트 확인하기
 
@@ -140,6 +198,29 @@ docker compose up -d api
 - **주의점**
   - 8000번 포트가 이미 다른 프로그램(다른 프로젝트의 컨테이너 등)에 쓰이고 있으면 `port is already allocated` 오류로 실패한다. 이 저장소와 무관한 컨테이너가 그 포트를 쓰고 있다면, 함부로 내리지 말고 `CLAUDE.md` 4-1에 따라 먼저 사용자에게 확인받는다.
   - `backend/pyproject.toml` 또는 `backend/uv.lock`이 바뀐 뒤라면 `docker compose build dev`로 이미지를 먼저 다시 만들어야 새 패키지가 반영된다(`api` 서비스는 `dev` 이미지를 그대로 쓴다).
+
+### 3-1-1. 띄운 서버 내리기
+
+```
+docker compose stop api
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `3-1`로 띄운 API 서버를 멈춘다. 8000번 포트를 놓아준다.
+- **옵션**
+  - `stop` — 컨테이너를 멈추기만 하고 지우지는 않는다. 다음에 `up -d api`로 다시 띄우면 같은 컨테이너를 쓴다. 지우려면 `stop` 대신 `down`을 쓰지만, `down`은 `db`까지 함께 내리므로 주의한다.
+  - `api` — 멈출 서비스 이름. 생략하면 `db`를 포함한 모든 서비스가 멈춘다.
+
+### 3-1-2. 서버 기록 보기
+
+```
+docker compose logs api --tail 30
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: API 서버가 남긴 기록을 본다. 요청이 500이나 503으로 답했을 때 원인을 여기서 찾는다.
+- **옵션**
+  - `--tail 30` — 마지막 30줄만 본다. 생략하면 기동 이후 전부를 출력해 화면이 넘친다.
 
 ### 3-2. 서버 응답 확인
 

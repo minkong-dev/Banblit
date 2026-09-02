@@ -7,7 +7,7 @@ sources:
   - backend/tests/conftest.py           # 전용 테스트 DB에 실제 마이그레이션을 적용하는 픽스처
 ---
 
-> 문서 버전: 1.2.0
+> 문서 버전: 1.2.1 draft
 
 ```mermaid
 erDiagram
@@ -107,11 +107,11 @@ erDiagram
 
 | 테스트 파일 | 커버하는 시나리오 |
 | --- | --- |
-| `backend/tests/test_db_connection.py` | 접속 주소로 실제 접속이 성립하는지 |
-| `backend/tests/test_db_core.py` | 포지션 기본 5종이 심어져 있는지, 동명이인 두 사람이 함께 저장되는지, 팀 이름 중복이 거부되는지, 같은 사람이 같은 팀에 두 번 소속되는 것이 거부되는지, 한 사람이 서로 다른 포지션으로 두 팀에 소속되는 것은 허용되는지 |
-| `backend/tests/test_db_schedule_inputs.py` | 매주 반복되는 불가능시간이 그대로 저장·조회되는지, 뒤집힌 불가능시간 구간이 거부되는지, 합주실 이름 중복이 거부되는지, 30분 격자를 벗어난 합주실 운영시간이 거부되는지 |
-| `backend/tests/test_db_periods.py` | 하루 2회 연산 시각을 가진 집중기간이 그대로 저장·조회되는지, 정해지지 않은 기간 종류가 거부되는지, 같은 합주실의 같은 시작 시각에 배정이 두 번 들어가는 것이 거부되는지 |
-| `backend/tests/test_db_policies.py` | 닫는 시각이 여는 시각보다 앞선 합주실이 거부되는지, 사람을 지우면 그 사람의 소속·불가능시간이 함께 지워지는지, 팀을 지우면 그 팀의 배정이 함께 지워지는지, 소속돼 있는 포지션은 삭제가 거부되는지, 두 연산 시각 중 하나라도 비어 있는 기간이 거부되는지 |
+| `backend/tests/integration/db/test_db_connection.py` | 접속 주소로 실제 접속이 성립하는지 |
+| `backend/tests/integration/db/test_db_core.py` | 포지션 기본 5종이 심어져 있는지, 동명이인 두 사람이 함께 저장되는지, 팀 이름 중복이 거부되는지, 같은 사람이 같은 팀에 두 번 소속되는 것이 거부되는지, 한 사람이 서로 다른 포지션으로 두 팀에 소속되는 것은 허용되는지 |
+| `backend/tests/integration/db/test_db_schedule_inputs.py` | 매주 반복되는 불가능시간이 그대로 저장·조회되는지, 뒤집힌 불가능시간 구간이 거부되는지, 합주실 이름 중복이 거부되는지, 30분 격자를 벗어난 합주실 운영시간이 거부되는지 |
+| `backend/tests/integration/db/test_db_periods.py` | 하루 2회 연산 시각을 가진 집중기간이 그대로 저장·조회되는지, 정해지지 않은 기간 종류가 거부되는지, 같은 합주실의 같은 시작 시각에 배정이 두 번 들어가는 것이 거부되는지 |
+| `backend/tests/integration/db/test_db_policies.py` | 닫는 시각이 여는 시각보다 앞선 합주실이 거부되는지, 사람을 지우면 그 사람의 소속·불가능시간이 함께 지워지는지, 팀을 지우면 그 팀의 배정이 함께 지워지는지, 소속돼 있는 포지션은 삭제가 거부되는지, 두 연산 시각 중 하나라도 비어 있는 기간이 거부되는지 |
 
 실행 커맨드(저장소 루트에서):
 
@@ -122,7 +122,7 @@ docker compose run --rm dev pytest -q
 위 다섯 파일을 포함한 전체 66개 테스트가 통과함을 확인했다. 이 층만 따로 확인하려면:
 
 ```
-docker compose run --rm dev pytest tests/test_db_connection.py tests/test_db_core.py tests/test_db_schedule_inputs.py tests/test_db_periods.py tests/test_db_policies.py -q
+docker compose run --rm dev pytest tests/integration/db/test_db_connection.py tests/integration/db/test_db_core.py tests/integration/db/test_db_schedule_inputs.py tests/integration/db/test_db_periods.py tests/integration/db/test_db_policies.py -q
 ```
 
 ### 트러블슈팅
