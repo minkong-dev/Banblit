@@ -1,6 +1,6 @@
 from sqlalchemy import text
 
-from backend.db.engine import get_engine
+from backend.db.pipeline import get_engine
 
 
 def test_database_answers_select_one() -> None:

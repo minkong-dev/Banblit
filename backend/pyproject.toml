@@ -26,5 +26,24 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "httpx>=0.28.1",
+    "mypy>=1.19.0",
     "pytest>=9.1.1",
 ]
+
+[tool.pytest.ini_options]
+# 표시는 tests/conftest.py 가 폴더 이름을 보고 자동으로 붙인다.
+# 아무것도 띄우지 않고 돌리려면 `pytest tests/unit`.
+markers = [
+    "db: 실제 PostgreSQL 이 떠 있어야 도는 검사",
+    "llm: 실제 LLM 서비스에 닿아야 도는 검사",
+    "broker: 실제 메시지 브로커가 떠 있어야 도는 검사",
+]
+
+[tool.mypy]
+# 표기 없는 함수는 속을 아예 안 본다. CLAUDE.md 가 모든 함수에 표기를 요구하므로
+# 표기가 빠진 것 자체를 오류로 잡는다 — 안 그러면 검사가 조용히 건너뛴다.
+files = ["src", "tests"]
+python_version = "3.14"
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+warn_unused_ignores = true

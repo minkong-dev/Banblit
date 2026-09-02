@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from backend.scheduling.interval import TimeInterval
 
@@ -6,7 +6,7 @@ from backend.scheduling.interval import TimeInterval
 SLOT_MINUTES = 30
 
 
-def _is_on_grid(moment) -> bool:
+def _is_on_grid(moment: datetime) -> bool:
     return (
         moment.minute in (0, SLOT_MINUTES)
         and moment.second == 0

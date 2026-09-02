@@ -8,8 +8,6 @@ from backend.api.period_input import (
     build_engine_teams,
     dates_in_period,
     expand_unavailable,
-    member_key,
-    room_key,
 )
 from backend.db.models import Room, UnavailableTime
 from backend.scheduling.interval import TimeInterval
@@ -182,46 +180,30 @@ def test_each_room_becomes_one_engine_room_per_day() -> None:
     rooms = [_room(7, "1번방", time(18, 0), time(20, 0))]
     days = [date(2026, 8, 1), date(2026, 8, 2)]
 
-    engine_rooms, room_id_by_key, room_name_by_key = build_engine_rooms(rooms, days)
+    engine_rooms = build_engine_rooms(rooms, days)
 
-    assert [r.name for r in engine_rooms] == [
-        "1번방 (2026-08-01)",
-        "1번방 (2026-08-02)",
-    ]
+    # 같은 합주실이 날짜마다 한 번씩, 저장소의 번호를 그대로 달고 나온다.
+    assert [r.id for r in engine_rooms] == [7, 7]
     assert engine_rooms[0].open_period.start == datetime(2026, 8, 1, 18, 0)
     assert engine_rooms[0].open_period.end == datetime(2026, 8, 1, 20, 0)
-    assert room_id_by_key == {
-        "1번방 (2026-08-01)": 7,
-        "1번방 (2026-08-02)": 7,
-    }
-    assert set(room_name_by_key.values()) == {"1번방"}
+    assert engine_rooms[1].open_period.start == datetime(2026, 8, 2, 18, 0)
 
 
-def test_room_name_that_looks_like_another_rooms_key_is_not_rejected() -> None:
-    # "1번방"의 (날짜) 표기가 우연히 다른 방의 원래 이름과 같아져도, 실제로 엔진에
-    # 넘어가는 키끼리는 절대 겹치지 않는다 — 날짜 꼬리표 " (YYYY-MM-DD)"가 항상 13자
-    # 고정이라, 두 방 키가 같아지려면 날짜와 이름이 모두 같아야 하는데 방 이름은
-    # DB에서 유일하기 때문이다. 그러므로 이런 입력은 거부되면 안 된다.
+def test_rooms_with_the_same_name_stay_separate() -> None:
+    # 이름은 엔진에 가지 않는다. 이름이 같아도 번호가 다르면 다른 합주실이다.
     rooms = [
         _room(1, "1번방", time(18, 0), time(20, 0)),
-        _room(2, "1번방 (2026-08-01)", time(18, 0), time(20, 0)),
+        _room(2, "1번방", time(18, 0), time(20, 0)),
     ]
 
-    engine_rooms, room_id_by_key, _ = build_engine_rooms(rooms, [date(2026, 8, 1)])
+    engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
 
-    names = [r.name for r in engine_rooms]
-    assert names == [
-        "1번방 (2026-08-01)",
-        "1번방 (2026-08-01) (2026-08-01)",
-    ]
-    assert len(set(names)) == 2
-    assert room_id_by_key["1번방 (2026-08-01)"] == 1
-    assert room_id_by_key["1번방 (2026-08-01) (2026-08-01)"] == 2
+    assert [r.id for r in engine_rooms] == [1, 2]
 
 
 def test_slots_per_team_is_the_whole_grid_divided_by_team_count() -> None:
     rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]  # 하루 4칸
-    engine_rooms, _, _ = build_engine_rooms(
+    engine_rooms = build_engine_rooms(
         rooms, [date(2026, 8, 1), date(2026, 8, 2)]
     )  # 8칸
 
@@ -230,7 +212,7 @@ def test_slots_per_team_is_the_whole_grid_divided_by_team_count() -> None:
 
 def test_slots_per_team_is_rejected_when_no_team_can_get_a_slot() -> None:
     rooms = [_room(1, "1번방", time(18, 0), time(19, 0))]  # 2칸
-    engine_rooms, _, _ = build_engine_rooms(rooms, [date(2026, 8, 1)])
+    engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
 
     with pytest.raises(ValueError, match="한 칸도"):
         auto_slots_per_team(engine_rooms, team_count=3)
@@ -238,38 +220,28 @@ def test_slots_per_team_is_rejected_when_no_team_can_get_a_slot() -> None:
 
 def test_slots_per_team_is_rejected_when_there_are_no_teams() -> None:
     rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]
-    engine_rooms, _, _ = build_engine_rooms(rooms, [date(2026, 8, 1)])
+    engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
 
     with pytest.raises(ValueError, match="배정할 팀이 없습니다"):
         auto_slots_per_team(engine_rooms, team_count=0)
 
 
 def test_two_people_with_the_same_name_stay_separate() -> None:
-    teams = [(10, "A"), (20, "B")]
-    members_by_team = {10: [(1, "김민수")], 20: [(2, "김민수")]}
-
-    engine_teams, team_id_by_name, member_by_key = build_engine_teams(
-        teams, members_by_team, unavailable_by_member={}
+    # 동명이인은 저장소 번호로만 갈린다. 이름은 엔진에 가지 않는다.
+    engine_teams = build_engine_teams(
+        [10, 20], {10: [1], 20: [2]}, unavailable_by_member={}
     )
 
-    first = engine_teams[0].members[0].name
-    second = engine_teams[1].members[0].name
-    assert first != second
-    assert member_by_key[first] == (1, "김민수")
-    assert member_by_key[second] == (2, "김민수")
-    assert team_id_by_name == {"A": 10, "B": 20}
+    assert engine_teams[0].members[0].id == 1
+    assert engine_teams[1].members[0].id == 2
 
 
-def test_the_same_person_in_two_teams_keeps_one_key() -> None:
-    teams = [(10, "A"), (20, "B")]
-    members_by_team = {10: [(1, "김민수")], 20: [(1, "김민수")]}
-
-    engine_teams, _, member_by_key = build_engine_teams(
-        teams, members_by_team, unavailable_by_member={}
+def test_the_same_person_in_two_teams_keeps_one_number() -> None:
+    engine_teams = build_engine_teams(
+        [10, 20], {10: [1], 20: [1]}, unavailable_by_member={}
     )
 
-    assert engine_teams[0].members[0].name == engine_teams[1].members[0].name
-    assert len(member_by_key) == 1
+    assert engine_teams[0].members[0].id == engine_teams[1].members[0].id
 
 
 def test_unavailable_times_follow_the_person_into_every_team() -> None:
@@ -278,10 +250,8 @@ def test_unavailable_times_follow_the_person_into_every_team() -> None:
             start=datetime(2026, 8, 1, 19, 0), end=datetime(2026, 8, 1, 20, 0)
         )
     ]
-    engine_teams, _, _ = build_engine_teams(
-        [(10, "A"), (20, "B")],
-        {10: [(1, "김민수")], 20: [(1, "김민수")]},
-        unavailable_by_member={1: blocked},
+    engine_teams = build_engine_teams(
+        [10, 20], {10: [1], 20: [1]}, unavailable_by_member={1: blocked}
     )
 
     assert engine_teams[0].members[0].unavailable == blocked

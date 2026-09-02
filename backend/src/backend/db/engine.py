@@ -1,23 +1,31 @@
 import os
-from functools import lru_cache
 
 from sqlalchemy import Engine, create_engine
 
-
-@lru_cache(maxsize=None)
-def _build_engine(url: str) -> Engine:
-    # 엔진은 접속 풀을 통째로 들고 있는 무거운 객체라, 접속 주소별로 하나만 만들어
-    # 재사용한다. get_engine()이 요청마다 불려도(FastAPI Depends) 여기서 막아
-    # 요청마다 새 접속 풀이 열리는 것을 막는다.
-    return create_engine(url)
+DEFAULT_CONNECT_TIMEOUT = 5
+DEFAULT_POOL_TIMEOUT = 10
 
 
-def get_engine() -> Engine:
-    """DATABASE_URL 환경변수로 접속 엔진을 만든다. 미설정이면 즉시 실패한다.
+def _timeout_seconds(variable: str, fallback: int) -> int:
+    # variable 환경변수의 값을 초 단위 정수로 돌려준다. 없거나 숫자가 아니면 fallback.
+    raw = os.environ.get(variable)
+    if raw is None or not raw.strip().lstrip("-").isdigit():
+        return fallback
+    return int(raw)
 
-    같은 접속 주소로 여러 번 불러도 엔진(접속 풀)은 프로세스에 하나만 만들어 재사용한다.
-    """
-    url = os.environ.get("DATABASE_URL")
-    if not url:
-        raise RuntimeError("DATABASE_URL 환경변수가 설정되지 않았습니다")
-    return _build_engine(url)
+
+def create_db_engine(url: str) -> Engine:
+    # url 을 create_engine 에 넣어 접속 풀을 가진 Engine 을 돌려준다.
+    # connect_timeout 은 psycopg 로 그대로 넘어가 접속 하나를 여는 데 기다리는 초,
+    # pool_timeout 은 이미 열린 접속을 풀에서 받을 때까지 기다리는 초다.
+    # pool_pre_ping 은 풀에서 꺼낸 접속이 살아 있는지 먼저 확인한다.
+    return create_engine(
+        url,
+        pool_pre_ping=True,
+        pool_timeout=_timeout_seconds("DB_POOL_TIMEOUT", DEFAULT_POOL_TIMEOUT),
+        connect_args={
+            "connect_timeout": _timeout_seconds(
+                "DB_CONNECT_TIMEOUT", DEFAULT_CONNECT_TIMEOUT
+            )
+        },
+    )

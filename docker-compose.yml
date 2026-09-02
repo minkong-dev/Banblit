@@ -27,6 +27,11 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      db:
+        condition: service_healthy
 
   # 데이터 저장소 — 개발용 PostgreSQL.
   # 호스트 포트는 열지 않는다: 이 PC에는 다른 프로덕트의 postgres 컨테이너가 있어

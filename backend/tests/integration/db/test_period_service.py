@@ -2,10 +2,9 @@ from datetime import date, datetime, time, timedelta
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.api.period_service import assign_period, conflict_message_for
+from backend.api.period_service import assign_period
 from backend.db.models import (
     Assignment,
     AssignmentBackup,
@@ -22,7 +21,7 @@ SAVED_AT = datetime(2026, 8, 1, 9, 0)
 
 
 def _position(session: Session) -> int:
-    return session.scalars(select(Position.id)).first()
+    return session.scalars(select(Position.id)).first() or 0
 
 
 def _period(session: Session, kind: str = "focused", days: int = 1) -> int:
@@ -157,8 +156,7 @@ def test_failed_assignment_saves_nothing_and_names_who_to_exclude(
     assert result.saved is False
     assert db_session.scalars(select(Assignment)).all() == []
     excluded = [
-        result.member_by_key[p.excluded_member][1]
-        for p in result.resolution.proposals
+        result.member_names[p.excluded_member] for p in result.resolution.proposals
     ]
     assert excluded == ["이영희"]
 
@@ -365,57 +363,6 @@ def test_two_week_schedule_for_four_teams_finishes(db_session: Session) -> None:
     assert result.saved is True
 
 
-class _FakeDiag:
-    def __init__(self, constraint_name: str) -> None:
-        self.constraint_name = constraint_name
-
-
-class _FakeOrig(Exception):
-    def __init__(self, constraint_name: str) -> None:
-        super().__init__(constraint_name)
-        self.diag = _FakeDiag(constraint_name)
-
-
-def _fake_integrity_error(constraint_name: str) -> IntegrityError:
-    # 실제 psycopg 예외를 컨테이너에서 직접 재현해 관찰한 모양(orig.diag.constraint_name)을
-    # 그대로 흉내낸다 — 실제 DB 없이도 판별식만 단위로 검사하기 위한 가짜다.
-    return IntegrityError("stmt", {}, _FakeOrig(constraint_name))
-
-
-def test_conflict_message_for_the_room_time_unique_violation() -> None:
-    """(room_id, starts_at) 유니크 위반은 사용자용 문장으로 바꿔야 한다.
-
-    컨테이너에서 직접 재현해 관찰한 결과(관찰 스크립트로 실제 충돌을 두 번 일으킴):
-    "다른 기간이 같은 방·시각을 쓰는 경우"와 "같은 기간을 동시에 두 번 저장하는
-    경우" 모두 psycopg.errors.UniqueViolation이고 diag.constraint_name이
-    "assignments_room_id_starts_at_key"로 완전히 동일해, DB 정보만으로는 두 경우를
-    구분할 수 없었다 — 문구가 두 경우를 모두 담아야 한다.
-    """
-    error = _fake_integrity_error("assignments_room_id_starts_at_key")
-
-    message = conflict_message_for(error)
-
-    assert message is not None
-    assert "다른 기간" in message
-    assert "동시" in message
-
-
-def test_conflict_message_for_a_foreign_key_violation_is_none() -> None:
-    """팀·합주실이 저장 직전에 삭제되어 생기는 외래키 위반은 다른 원인이므로,
-    같은 방·시각 충돌 문장으로 뭉개면 안 된다 — None을 돌려줘 원래 예외가 그대로
-    올라가게 한다. 컨테이너에서 team_id가 없는 행을 넣어 재현했을 때 실제로
-    psycopg.errors.ForeignKeyViolation, diag.constraint_name이
-    "assignments_team_id_fkey"였다.
-    """
-    error = _fake_integrity_error("assignments_team_id_fkey")
-
-    assert conflict_message_for(error) is None
-
-
-def test_conflict_message_for_a_check_violation_is_none() -> None:
-    error = _fake_integrity_error("assignments_check")
-
-    assert conflict_message_for(error) is None
 
 
 def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
@@ -457,8 +404,7 @@ def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
     assert result.resolution.assignment.feasible is False
     assert result.saved is False
     excluded = [
-        result.member_by_key[p.excluded_member][1]
-        for p in result.resolution.proposals
+        result.member_names[p.excluded_member] for p in result.resolution.proposals
     ]
     assert excluded == ["이영희"]
 

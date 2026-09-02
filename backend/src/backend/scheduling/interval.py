@@ -14,9 +14,7 @@ class TimeInterval:
     end: datetime
 
     def __post_init__(self) -> None:
-        # 시간대 지원은 아직 설계되지 않았다. 시간대가 붙은 값과 붙지 않은 값이
-        # 섞이면 같은 시각인데도 서로 다른 시각으로 취급되어 안전장치가 풀린다.
-        # 여름시간제까지 얽히므로, 제대로 설계하기 전까지는 받지 않는다.
+        # tzinfo 가 붙은 시각은 거부한다. 시간대 지원은 아직 열지 않았다.
         if self.start.tzinfo is not None or self.end.tzinfo is not None:
             raise ValueError(
                 "시간대가 붙은 시각은 아직 지원하지 않습니다. 시간대 없는 시각을 넣으십시오"
