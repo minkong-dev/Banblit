@@ -27,8 +27,12 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      # 프로토타입 화면을 API 와 같은 출처(localhost:8000/proto)로 내보내려고 붙인다.
+      # 출처가 같으면 화면의 fetch 가 CORS 에 막히지 않는다. 읽기 전용으로 건다.
+      - ./frontend/prototypes:/proto:ro
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      PROTOTYPE_DIR: /proto
     depends_on:
       db:
         condition: service_healthy
