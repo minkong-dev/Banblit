@@ -247,6 +247,27 @@ docker compose down
 
 ---
 
+### 3-4. 프로토타입 화면을 실제 데이터로 열어보기
+
+```
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/proto/scheduler-live.html
+start http://localhost:8000/proto/scheduler-live.html
+start http://localhost:8000/proto/assignment-live.html
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `frontend/prototypes/` 의 화면을 **API 서버가 함께 내보내는 주소**로 연다. `-live` 가 붙은 사본은 하드코딩 데이터를 지우고 실제 API 응답을 그린다. 원본(`scheduler.html`, `assignment.html`)은 확정된 화면 설계의 근거라 손대지 않고 그대로 둔다.
+- **옵션**
+  - `curl -s` — 진행률 표시를 끈다. `-o /dev/null` 은 본문을 버리고, `-w "%{http_code}"` 는 상태 코드만 출력한다. 화면을 열기 전에 서빙이 붙었는지만 확인할 때 쓴다.
+  - `start <url>` — Windows에서 기본 브라우저로 주소를 연다. 옵션 없이 주소만 넘긴다.
+- **주의점**
+  - **`3-1`로 API 서버가 떠 있어야 하고, `4-5`의 시드가 들어가 있어야 한다.** 서버가 없으면 주소 자체가 열리지 않고, 데이터가 없으면 달력이 빈 채로 뜬다.
+  - 이 주소는 `docker-compose.yml` 의 `api` 서비스에 `./frontend/prototypes:/proto:ro` 를 걸고 `PROTOTYPE_DIR=/proto` 를 준 덕에 생긴다. 환경변수가 없으면 `backend/src/backend/api/app.py` 끝의 `app.mount` 가 아예 실행되지 않아 `/proto` 가 존재하지 않는다 — 배포에는 붙지 않는다는 뜻이다.
+  - 파일을 브라우저로 직접 여는 것(`file://`)으로는 동작하지 않는다. 출처가 달라져 화면의 `fetch` 가 CORS 에 막힌다. 반드시 `localhost:8000/proto/` 로 연다.
+  - 볼륨이 읽기 전용(`:ro`)이라 컨테이너 안에서는 이 파일들을 고칠 수 없다. 호스트에서 고치면 새로고침만으로 반영된다.
+
+---
+
 ## 4. 데이터 저장소
 
 ### 4-1. DB 컨테이너만 따로 띄우기
@@ -312,6 +333,27 @@ docker compose exec db psql -U banblit -d banblit
 - **주의점**
   - **호스트 포트를 열지 않았으므로, 이 방법 말고는 내 PC의 DB 도구로 직접 접속할 수 없다.** `db` 서비스가 `docker compose up -d db`나 `docker compose run --rm dev alembic ...` 등으로 이미 기동돼 있어야 하며, 떠 있지 않으면 `service "db" is not running` 오류가 난다.
   - 나올 때는 `\q`를 입력한다.
+
+---
+
+### 4-5. 개발용 시드 데이터 넣기
+
+```
+docker compose run --rm dev python scripts/seed_dev.py
+docker compose run --rm dev python scripts/seed_dev.py --reset
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 화면에 띄울 실제 데이터를 만든다. 팀 4개·부원·합주실 2개·기간 2개를 넣고, 각 기간에 대해 배정을 실제로 돌린다. 앞 기간(1번)은 배정이 성사돼 `assignments`에 저장되고, 뒤 기간(2번)은 새벽 네시가 자리를 못 채워 저장 없이 조율안만 나온다 — 프로토타입 화면의 "확정된 시간표"와 "A안·B안"을 둘 다 실물로 보기 위한 구성이다.
+- **옵션**
+  - `run --rm dev` — `1-2`와 동일. 개발용 컨테이너를 일회성으로 띄워 명령을 실행하고 끝나면 지운다.
+  - `python scripts/seed_dev.py` — 컨테이너의 `working_dir`가 `/app`이고 `PYTHONPATH=/app/src`라서 `backend.*` 를 그대로 불러올 수 있다. 별도 설치 없이 이 경로로 실행한다.
+  - `--reset` — 생략하면 팀이 이미 하나라도 있을 때 아무것도 하지 않고 끝난다. 붙이면 시드가 만든 것(배정·백업·못 나오는 시간·소속·기간·합주실·팀·사람)을 지우고 처음부터 다시 넣는다.
+- **주의점**
+  - **`4-2`의 마이그레이션을 먼저 돌려야 한다.** 표가 없으면 첫 조회에서 실패한다.
+  - 포지션(`positions`)은 마이그레이션이 넣는 기준 데이터라 시드가 건드리지 않는다. `--reset`도 지우지 않는다.
+  - 배정 계산(CP-SAT)이 기간마다 한 번씩, 조율안을 찾느라 사람 수만큼 더 돈다. 이 구성에서 30초 안팎 걸린다.
+  - `dev` 서비스가 `db`에 `depends_on: service_healthy`로 걸려 있어 `db`가 자동으로 함께 뜬다.
 
 ---
 
