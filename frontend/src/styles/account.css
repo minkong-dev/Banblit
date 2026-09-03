@@ -1,0 +1,161 @@
+  /* 랜딩과 같은 한 가지 모습으로 고정한다. 왼쪽 사진에서 오른쪽 흰 지면으로
+     넘어가는 대비가 이 페이지의 인상이라 보는 사람의 화면 설정을 따르지 않는다. */
+  body[data-page="account"] {
+    --ink: #0E0F11; --ink-2: #4E5460; --ink-3: #8B9099;
+    --paper: #FFFFFF; --paper-2: #F5F6F7;
+    --edge: #E4E6E9; --edge-2: #CDD1D6;
+    --coral: #FF6161; --coral-press: #E84B4B; --coral-tint: #FFEFEF;
+    --red: #E03B3B;
+    --kakao: #FEE500; --kakao-ink: #191600;
+  }
+
+  /* 최소 창 크기 — 이 아래로는 요소가 겹친다.
+     가로 420px: 서식 한 벌의 최소 폭 388 + 좌우 여백 36.
+     세로 620px: 사진 200 + 제목 74 + 입력 네 줄 + 버튼. */
+  body[data-page="account"] { min-width: 420px; min-height: 620px; }
+  body[data-page="account"] {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: "Noto Sans KR", -apple-system, "Malgun Gothic", sans-serif;
+    font-size: 15px; line-height: 1.6; letter-spacing: -.025em;
+    -webkit-text-size-adjust: 100%;
+  }
+  body[data-page="account"] :where(button, input) { font: inherit; color: inherit; letter-spacing: inherit; }
+  body[data-page="account"] button { cursor: pointer; background: none; border: none; padding: 0; }
+  body[data-page="account"] a { color: inherit; }
+  body[data-page="account"] :where(a, button, input):focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; border-radius: 6px; }
+
+body[data-page="account"] {
+
+  .split { display: grid; grid-template-columns: 2fr 1fr; min-height: 100vh; }
+
+  /* ===== 왼쪽 사진 ===== */
+  .stage {
+    position: sticky; top: 0; align-self: start; height: 100vh; padding: 44px;
+    display: flex; flex-direction: column;
+    background: #0A0B0D center/cover no-repeat;
+    background-image: linear-gradient(160deg, rgba(8,9,11,.30), rgba(8,9,11,.86)), url("/images/in_six_strings.jpg");
+    color: #fff;
+  }
+  .stage .mark { font-size: 17px; font-weight: 900; letter-spacing: .16em; }
+  .stage .say { margin-top: auto; }
+  .stage .say h1 {
+    margin: 0; font-size: clamp(24px, 2.4vw, 34px); font-weight: 700;
+    line-height: 1.5; letter-spacing: -.045em;
+  }
+  .stage .say h1 em { font-style: normal; color: var(--coral); font-weight: 900; letter-spacing: .04em; }
+  .stage .say p { margin: 16px 0 0; font-size: 14.5px; font-weight: 300; color: #C6CAD0; }
+
+  /* ===== 오른쪽 서식 ===== */
+  .form {
+    position: relative;
+    display: flex; align-items: center; justify-content: center; padding: 48px 40px;
+  }
+
+  /* 서식 칸 바닥에 붙는 약관 줄 */
+  .legal {
+    position: absolute; left: 0; right: 0; bottom: 30px;
+    display: flex; justify-content: center; gap: 42px; font-size: 12.5px;
+  }
+  .legal a { color: var(--ink-3); text-decoration: none; }
+  .legal a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  .inner { width: 100%; max-width: 388px; }
+
+  .head { margin-bottom: 30px; }
+  .head h2 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -.04em; }
+  .head p { margin: 8px 0 0; font-size: 14.5px; color: var(--ink-3); }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--ink-2); margin-bottom: 7px; }
+  .field input {
+    width: 100%; min-height: 52px; padding: 14px 16px;
+    background: var(--paper-2); border: 1px solid transparent; border-radius: 12px;
+    font-size: 15.5px;
+    transition: border-color .16s ease, background-color .16s ease;
+  }
+  .field input::placeholder { color: var(--ink-3); }
+  .field input:hover { background: #F0F1F3; }
+  .field input:focus { background: var(--paper); border-color: var(--ink); outline: none; }
+  .field input[aria-invalid="true"] { border-color: var(--red); background: #FEF5F5; }
+  .field .bad { display: none; margin: 7px 0 0; font-size: 12.5px; color: var(--red); font-weight: 500; }
+  .field.err .bad { display: block; }
+
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 22px; }
+  .keep { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; min-height: 44px; }
+  .keep input { width: 17px; height: 17px; accent-color: var(--coral); cursor: pointer; }
+  .row .links { display: flex; gap: 14px; }
+  .row a { font-size: 13.5px; color: var(--ink-3); text-decoration: none; }
+  .row a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+  .go {
+    width: 100%; min-height: 54px; padding: 15px;
+    background: var(--coral); color: #fff; border-radius: 12px;
+    font-size: 16px; font-weight: 700;
+    transition: background-color .16s ease;
+  }
+  .go:hover { background: var(--coral-press); }
+
+  .or { display: flex; align-items: center; gap: 14px; margin: 28px 0 18px; color: var(--ink-3); font-size: 12.5px; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--edge); }
+
+  .social { display: flex; flex-direction: column; gap: 9px; }
+  .social button {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    width: 100%; min-height: 52px; border-radius: 12px;
+    font-size: 15px; font-weight: 500;
+    transition: background-color .16s ease, border-color .16s ease;
+  }
+  .social .google { background: var(--paper); border: 1px solid var(--edge-2); }
+  .social .google:hover { background: var(--paper-2); border-color: var(--ink-3); }
+  .social .kakao { background: var(--kakao); color: var(--kakao-ink); }
+  .social .kakao:hover { background: #F2DA00; }
+  .social svg { width: 18px; height: 18px; }
+
+  .foot { margin-top: 28px; font-size: 13.5px; color: var(--ink-3); text-align: center; }
+  .foot a { color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+
+  .cap { font-size: 13px; font-weight: 500; color: var(--ink-2); margin: 22px 0 9px; }
+  .cap small { color: var(--ink-3); font-weight: 400; }
+  .picks { display: flex; flex-wrap: wrap; gap: 8px; }
+  .picks button {
+    padding: 10px 16px; min-height: 44px; border-radius: 999px;
+    background: var(--paper-2); color: var(--ink-2); font-size: 14px; font-weight: 500;
+    transition: background-color .16s ease, color .16s ease;
+  }
+  .picks button:hover { background: #EDEEF0; color: var(--ink); }
+  .picks button[aria-pressed="true"] { background: var(--coral-tint); color: var(--coral-press); font-weight: 700; }
+  .posbad { display: none; margin: 9px 0 0; font-size: 12.5px; color: var(--red); font-weight: 500; }
+  .posbad.on { display: block; }
+
+  .note { margin: 20px 0 0; padding: 14px 16px; background: var(--paper-2); border-radius: 12px; font-size: 12.5px; color: var(--ink-2); line-height: 1.7; }
+
+  .ok {
+    position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 160%);
+    z-index: 40; padding: 14px 22px; border-radius: 12px;
+    background: var(--ink); color: #fff; font-size: 14px; font-weight: 500;
+    transition: transform .26s cubic-bezier(.22,1,.36,1);
+  }
+  .ok.on { transform: translate(-50%, 0); }
+
+  [hidden] { display: none !important; }
+
+  @media (max-width: 1180px) {
+    .stage { padding: 32px; }
+    .form { padding: 40px 28px; }
+  }
+  @media (max-width: 940px) {
+    .split { grid-template-columns: 1fr; min-height: 0; }
+    .stage { position: relative; height: auto; min-height: 280px; padding: 28px; }
+    .stage .say h1 { font-size: 23px; }
+    .form { padding: 40px 24px 64px; }
+    .legal { position: static; margin-top: 36px; }
+  }
+  @media (max-width: 680px) {
+    .stage { min-height: 200px; padding: 20px; }
+    .stage .say h1 { font-size: 19px; line-height: 1.45; }
+    .stage .say p { display: none; }
+    .form { padding: 30px 18px 52px; }
+    .head h2 { font-size: 24px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; } }
+
+}
