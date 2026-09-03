@@ -37,6 +37,24 @@ services:
       db:
         condition: service_healthy
 
+  # 화면 개발 서버 — Vite 가 5173 에서 돌고, API 로 가는 요청만 api 로 넘긴다.
+  # 넘기는 경로 목록은 frontend/vite.config.ts 가 갖는다.
+  web:
+    image: node:24-alpine
+    working_dir: /app
+    # 꾸러미를 먼저 맞춘 뒤 개발 서버를 띄운다. node_modules 는 아래 이름 붙은
+    # 저장소에 둔다 — 윈도우 폴더에 그대로 두면 파일이 많아 눈에 띄게 느려진다.
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - banblit-web-modules:/app/node_modules
+    environment:
+      API_ORIGIN: http://api:8000
+    depends_on:
+      - api
+
   # 데이터 저장소 — 개발용 PostgreSQL.
   # 호스트 포트는 열지 않는다: 이 PC에는 다른 프로덕트의 postgres 컨테이너가 있어
   # 5432 충돌을 피한다. 접속은 컨테이너 사이 내부망(db:5432)으로만 한다.
@@ -56,3 +74,4 @@ services:
 
 volumes:
   banblit-db-data:
+  banblit-web-modules:
