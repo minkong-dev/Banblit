@@ -1,0 +1,8 @@
+/* 모든 화면이 함께 쓰는 초기화. 화면마다 다른 값은 각 화면 CSS 가 갖는다.
+   화면 CSS 는 body[data-page="..."] 안에 갇혀 있어 서로 섞이지 않는다 —
+   스케줄러와 배정 화면은 같은 이름의 클래스를 서른 개 넘게 서로 다른 규칙으로 쓴다. */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { overflow: auto; }
+body { margin: 0; }
+[hidden] { display: none !important; }
