@@ -50,3 +50,30 @@ def test_create_db_engine_falls_back_to_default_timeouts(
     assert captured["connect_args"] == {
         "connect_timeout": engine_module.DEFAULT_CONNECT_TIMEOUT
     }
+
+
+def test_create_db_engine_rejects_useless_timeout_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """0 이하이거나 숫자가 아닌 값은 기본값으로 되돌린다.
+
+    음수는 psycopg 가 시간 제한 없음으로 받아들여, 막으려던 무한 대기를 다시 만든다.
+    빼기 기호가 둘인 값은 정수로 바꾸다 예외가 나 기동 자체가 죽는다.
+    """
+    for bad in ("-5", "0", "--5", "5초", ""):
+        captured: dict[str, object] = {}
+
+        def spy_create_engine(url: str, **options: object) -> str:
+            captured.update(options)
+            return "engine"
+
+        monkeypatch.setattr(engine_module, "create_engine", spy_create_engine)
+        monkeypatch.setenv("DB_CONNECT_TIMEOUT", bad)
+        monkeypatch.setenv("DB_POOL_TIMEOUT", bad)
+
+        create_db_engine("postgresql+psycopg://u:p@db:5432/x")
+
+        assert captured["pool_timeout"] == engine_module.DEFAULT_POOL_TIMEOUT, bad
+        assert captured["connect_args"] == {
+            "connect_timeout": engine_module.DEFAULT_CONNECT_TIMEOUT
+        }, bad
