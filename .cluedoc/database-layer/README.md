@@ -7,7 +7,7 @@ sources:
   - backend/tests/conftest.py           # 전용 테스트 DB에 실제 마이그레이션을 적용하는 픽스처
 ---
 
-> 문서 버전: 1.2.1 draft
+> 문서 버전: 1.3.0 draft
 
 ```mermaid
 erDiagram
@@ -37,7 +37,7 @@ erDiagram
 
 ## Abstract
 
-데이터 저장소는 지금까지 기획 문서로만 존재하던 규칙(소속, 이름 식별자, 30분 격자, 동명이인 구분 등)을 실제로 저장하고 지키는 층이다. PostgreSQL 컨테이너 위에 8개 테이블을 두고, 스키마 변경 이력은 마이그레이션으로 관리한다. 이 층은 아직 자동 배정 계산이나 API와 연결돼 있지 않다 — 저장하고 규칙을 지키는 역할까지만 맡는다.
+데이터 저장소는 지금까지 기획 문서로만 존재하던 규칙(소속, 이름 식별자, 30분 격자, 동명이인 구분 등)을 실제로 저장하고 지키는 층이다. PostgreSQL 컨테이너 위에 8개 테이블을 두고, 스키마 변경 이력은 마이그레이션으로 관리한다. 이 층 자체는 저장하고 규칙을 지키는 역할까지만 맡는다 — 여기 남은 데이터를 읽어 배정을 계산하고 그 결과를 다시 여기 남기는 순서는 [기간 자동 배정](../scheduling-api/period-assignment/README.md)이 맡는다.
 
 ## Introduction
 
@@ -48,7 +48,9 @@ erDiagram
 - [Banblit 개요](../README.md) — 전체 기능 지도
 - [팀과 소속](../teams/README.md) — 사람·팀·포지션·소속 개념의 근거
 - [합주실과 기간](../practice-room-and-periods/README.md) — 합주실 운영시간·기간 종류의 근거
-- [자동 배정](../auto-assignment/README.md) — 이 저장소가 아직 연결돼 있지 않은 계산 로직. 저장된 데이터로 배정을 계산하는 연결은 이후 별도 작업으로 남아 있다
+- [기간 자동 배정](../scheduling-api/period-assignment/README.md) — 여기 저장된 데이터를 읽어 배정을 계산하고, 성공하면 그 결과를 다시 여기 남기는 통로
+- [자동 배정](../auto-assignment/README.md) — 그 통로가 부르는 계산 자체의 규칙
+- [개발용 시드 데이터](../screen-prototypes/dev-seed/README.md) — 화면을 열어보려고 이 표들을 미리 채우는 장치
 - [배정 이력과 롤백](./schedule-versioning/README.md) — 현재 시간표를 다시 짤 때 이전 시간표를 백업으로 보관하고 되돌리는 저장 규칙(하위 기능)
 
 ## Description
