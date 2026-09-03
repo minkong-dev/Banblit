@@ -8,7 +8,7 @@ sources:
   - backend/src/backend/scheduling/interval.py       # 시간 구간과 그 유효성
 ---
 
-> 문서 버전: 2.2.0 draft
+> 문서 버전: 2.3.0 draft
 
 ```mermaid
 flowchart TD
@@ -38,6 +38,8 @@ flowchart TD
 - [LLM 도우미](../llm-assistant/README.md) — 배정이 막혔을 때 조율안을 제시하는 역할
 - [스케줄러](../scheduler/README.md) — 확정된 배정이 표시되는 화면
 - [스케줄링 API](../scheduling-api/README.md) — 이 계산을 바깥에서 호출할 수 있게 여는 서버 통로
+- [화면 프로토타입](../screen-prototypes/README.md) — 확정된 시간표와 조율안이 실제로 그려지는 화면
+- [개발용 시드 데이터](../screen-prototypes/dev-seed/README.md) — 성사와 불가 두 경우를 일부러 함께 만들어 이 계산을 눈으로 확인하는 장치
 
 ## Description
 
