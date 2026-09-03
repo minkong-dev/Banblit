@@ -24,3 +24,10 @@ __pycache__/
 
 # refactor-audit 스킬이 만드는 임시 검사 결과. 쓰임이 끝나면 trash/ 로 옮긴다.
 AUDIT.md
+
+# 화면 산출물 (내려받은 꾸러미·빌드 결과)
+node_modules/
+frontend/dist/
+
+# TypeScript 증분 빌드 기록. 빌드할 때마다 바뀐다.
+frontend/tsconfig.tsbuildinfo
