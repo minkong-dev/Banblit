@@ -44,8 +44,13 @@ ECC에는 스킬이 281개 있다. 이 프로젝트 구성에 맞는 것은 아�
 
 `coding-standards`는 주석 규칙이 아래 `refactoring` 스킬과 충돌한다. 충돌 시 `refactoring`이 우선한다.
 
-ECC 밖의 스킬은 세 가지만 쓴다 — 문서는 `cluedoc`, 외부 포맷 내보내기는 `document-skills`,
-Claude API 연동은 `claude-api`.
+ECC 밖의 스킬은 네 가지를 쓴다 — 문서는 `cluedoc`, 외부 포맷 내보내기는 `document-skills`,
+Claude API 연동은 `claude-api`, 그리고 `ui-ux-pro-max`.
+
+`ui-ux-pro-max` 는 **자료를 찾아보는 용도로만 쓴다.** 색 짝·폰트 짝·차트 종류를 고를 때
+연다. 화면을 실제로 만드는 것은 6장이 정한 `example-skills:frontend-design` 이다.
+이 스킬에 화면을 맡기면 "이런 제품에는 보통 이런 색"의 평균값이 나와, 어느 서비스에
+갖다 놔도 되는 화면이 된다.
 
 ---
 ## 2-1. 리팩토링 스킬 (이 저장소 것)
