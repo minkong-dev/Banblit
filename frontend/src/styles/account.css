@@ -56,8 +56,9 @@ body[data-page="account"] {
     position: absolute; left: 0; right: 0; bottom: 30px;
     display: flex; justify-content: center; gap: 42px; font-size: 12.5px;
   }
-  .legal a { color: var(--ink-3); text-decoration: none; }
+  .legal :is(a, button) { color: var(--ink-3); text-decoration: none; }
   .legal a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  .legal button:disabled { cursor: default; }
   .inner { width: 100%; max-width: 388px; }
 
   .head { margin-bottom: 30px; }

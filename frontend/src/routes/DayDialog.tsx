@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 
 import { CloseIcon } from "../components/icons";
-import { slotLabel, takenGrid } from "../lib/calendar";
+import { addReservation, addUnavailable, isoAt, slotLabel, takenGrid } from "../lib/pipeline";
 
-export type Team = { id: number; name: string; key: string; mine: boolean };
 
 /** 하루에 놓인 것 하나. 배정은 서버가 준 것이고, 예약과 못 나오는 시간은 화면이 넣은 것이다. */
+/** 달력이 그리는 팀 — 서버 규격(lib/contract 의 Team)이 아니라 이 화면이
+ *  확정 시간표에서 만들어 쓰는 것이다. 색(key)과 내 팀인지(mine)를 함께 든다. */
+export type DayTeam = { id: number; name: string; key: string; mine: boolean };
+
 export type Entry = {
   kind: "assign" | "book" | "off";
   team: string | null;
@@ -31,7 +34,7 @@ function kindLabel(entry: Entry): string {
 export function DayDialog(props: {
   dayKey: string;
   tab: "me" | "book" | "all";
-  teams: Team[];
+  teams: DayTeam[];
   entries: Entry[];
   openHour: number;
   closeHour: number;
@@ -39,12 +42,17 @@ export function DayDialog(props: {
   /** 위쪽 시간 고르기에서 이미 시간을 정했으면 그 시간으로 바로 예약한다. */
   fixed: { from: number; to: number } | null;
   inFocus: boolean;
-  onAdd: (dayKey: string, entry: Entry) => void;
+  /** 로그인한 사람 번호. 아직 못 받았으면 null이고, 그동안은 등록·예약을 막는다. */
+  memberId: number | null;
+  /** 예약을 넣을 합주실 번호. 방을 고르는 자리가 화면에 없어 하나로 고정해 받는다. */
+  roomId: number | null;
+  /** 서버 저장이 성공한 뒤 화면이 최신 값을 다시 받아오게 알린다. */
+  onSaved: () => void;
   onSay: (message: string) => void;
   onClose: () => void;
 }) {
   const { dayKey, tab, teams, entries, openHour, closeHour, slotCount, fixed, inFocus } = props;
-  const { onAdd, onSay, onClose } = props;
+  const { memberId, roomId, onSaved, onSay, onClose } = props;
 
   const dialog = useRef<HTMLDialogElement>(null);
   const [error, setError] = useState("");
@@ -116,24 +124,50 @@ export function DayDialog(props: {
   const readValue = (name: string): number =>
     Number((document.getElementById(name) as HTMLSelectElement | null)?.value ?? 0);
 
-  const addOff = () => {
+  const addOff = async () => {
     const a = readValue("mf");
     const b = readValue("mt");
     if (b <= a) { setError("끝나는 시각이 시작보다 뒤여야 해요."); return; }
-    onAdd(dayKey, { kind: "off", team: null, who: "직접 등록", a, b });
+    if (memberId === null) { setError("내 번호를 아직 못 받아왔어요. 잠시 후 다시 시도해 주세요."); return; }
+    try {
+      await addUnavailable(memberId, isoAt(dayKey, a, openHour), isoAt(dayKey, b, openHour));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "등록하지 못했어요.");
+      return;
+    }
     setError("");
+    onSaved();
     onSay("안 되는 시간으로 등록했어요");
   };
 
-  const addBooking = () => {
+  const addBooking = async () => {
     const a = fixed ? fixed.from : readValue("bf");
     const b = fixed ? fixed.to : readValue("bt");
     if (b <= a) { setError("끝나는 시각이 시작보다 뒤여야 해요."); return; }
-    // 선착순이므로 이미 찬 칸이 하나라도 있으면 받지 않는다.
+    // 선착순이므로 이미 찬 칸이 하나라도 있으면 먼저 걸러 서버까지 가지 않는다.
+    // 두 사람이 동시에 노려 이 검사를 둘 다 통과해도, 최종 판정은 서버(선착순 유니크
+    // 제약)가 하므로 아래 catch 에서 서버가 돌려준 사유를 그대로 보여준다.
     for (let i = a; i < b; i += 1) {
       if (grid[i]) { setError(`${label(i)}은 이미 찼어요. 다른 시간을 골라주세요.`); return; }
     }
-    onAdd(dayKey, { kind: "book", team: who === "me" ? null : who, who: who === "me" ? "이도현" : undefined, a, b });
+    if (memberId === null || roomId === null) {
+      setError("예약할 자리를 아직 못 받아왔어요. 잠시 후 다시 시도해 주세요.");
+      return;
+    }
+    const teamId = who === "me" ? null : teams.find((team) => team.key === who)?.id ?? null;
+    try {
+      await addReservation({
+        room_id: roomId,
+        member_id: memberId,
+        team_id: teamId,
+        starts_at: isoAt(dayKey, a, openHour),
+        ends_at: isoAt(dayKey, b, openHour),
+      });
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "예약하지 못했어요.");
+      return;
+    }
+    onSaved();
     onSay(`${dayTitle(dayKey)} ${label(a)}–${endLabel(b)} 예약했어요`);
     onClose();
   };
@@ -194,7 +228,10 @@ export function DayDialog(props: {
       {tab === "all" ? null : (
         <div className="mfoot">
           <button className="ghost" onClick={() => dialog.current?.close()}>닫기</button>
-          <button className="primary" onClick={tab === "me" ? addOff : addBooking}>
+          <button
+            className="primary"
+            onClick={() => { void (tab === "me" ? addOff() : addBooking()); }}
+          >
             {tab === "me" ? "등록하기" : "예약하기"}
           </button>
         </div>

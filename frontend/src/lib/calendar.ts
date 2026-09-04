@@ -2,6 +2,9 @@
 
 const SLOTS_PER_HOUR = 2;
 const DAYS_PER_WEEK = 7;
+// 합주실이 하나도 없을 때 쓸 여닫는 시각 — 달력을 그릴 시간 범위가 아예 없을 수는 없다.
+const FALLBACK_OPEN_HOUR = 10;
+const FALLBACK_CLOSE_HOUR = 22;
 
 export function monthCells(year: number, month: number): (number | null)[] {
   // year 년 month 월(0부터 센다)을 7의 배수 길이 배열로 돌려준다.
@@ -44,10 +47,43 @@ export function isRangeFree(grid: boolean[], from: number, to: number): boolean 
   return grid.slice(from, to).every((taken) => !taken);
 }
 
+export function roomBounds(rooms: { opens_at: string; closes_at: string }[]): {
+  open: number;
+  close: number;
+} {
+  // 합주실 여닫는 시각 중 가장 이른 것과 가장 늦은 것으로 달력의 앞뒤 시각을 정한다.
+  // 배정이 있든 없든 합주실 설정만 있으면 정해진다.
+  if (rooms.length === 0) return { open: FALLBACK_OPEN_HOUR, close: FALLBACK_CLOSE_HOUR };
+
+  let open = 24;
+  let close = 0;
+  for (const room of rooms) {
+    open = Math.min(open, Number(room.opens_at.slice(0, 2)));
+    // 22시 30분에 닫으면 23시까지 칸이 그려져야 그 자리가 보인다.
+    const closeHour =
+      Number(room.closes_at.slice(0, 2)) + (room.closes_at.slice(3, 5) === "00" ? 0 : 1);
+    close = Math.max(close, closeHour);
+  }
+  return open < close ? { open, close } : { open: FALLBACK_OPEN_HOUR, close: FALLBACK_CLOSE_HOUR };
+}
+
+export function focusedRange(
+  periods: { kind: string; starts_on: string; ends_on: string }[],
+): { from: string; to: string } | null {
+  // 집중 합주기간 중 시작일이 가장 이른 것 하나로 달력에 띠를 그린다. 여러 개를
+  // 한 화면에 같이 보여줄 자리가 아직 없어, Settings.tsx 의 Readout 과 같은 방식으로
+  // 하나만 쓴다.
+  const focused = [...periods]
+    .filter((period) => period.kind === "focused")
+    .sort((a, b) => a.starts_on.localeCompare(b.starts_on));
+  const first = focused[0];
+  return first ? { from: first.starts_on, to: first.ends_on } : null;
+}
+
 export function datesBetween(from: string, to: string): string[] {
   // "2026-09-14" 부터 "2026-09-17" 까지의 날짜를 양 끝 포함해 잇는다.
-  // 정오로 만들어 세는 이유는, 자정으로 두면 여름시간제가 있는 지역에서 하루가
-  // 23시간이 되는 날에 날짜가 하나 건너뛰기 때문이다.
+  // 정오를 기준으로 하루씩 더해 나간다. 자정으로 세면 여름시간제가 있는 지역에서
+  // 하루가 23시간인 날에 날짜 하나를 건너뛴다.
   const cursor = new Date(`${from}T12:00:00`);
   const last = new Date(`${to}T12:00:00`);
   const days: string[] = [];

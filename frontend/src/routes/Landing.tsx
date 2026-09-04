@@ -3,7 +3,7 @@ import type { RefObject } from "react";
 import { Link } from "react-router-dom";
 
 import { ArrowIcon, CloseIcon, WideMenuIcon } from "../components/icons";
-import { usePage } from "../usePage";
+import { usePage } from "../components/hooks";
 import "../styles/landing.css";
 
 // 미리보기 달력에 찍는 표시 — 날짜마다 어느 팀이 안 되는지 색 점으로만 보인다.
@@ -231,9 +231,10 @@ export function Landing() {
       <footer>
         <div className="wrap row">
           <span className="b">BANBLIT</span>
-          <a href="#">이용약관</a>
-          <a href="#">개인정보 처리방침</a>
-          <a href="#">문의</a>
+          {/* 아직 만들지 않은 페이지다 — 진짜 없는 곳으로 보내는 대신 눌리지 않는 글로 둔다. */}
+          <button type="button" disabled>이용약관</button>
+          <button type="button" disabled>개인정보 처리방침</button>
+          <button type="button" disabled>문의</button>
         </div>
       </footer>
     </div>

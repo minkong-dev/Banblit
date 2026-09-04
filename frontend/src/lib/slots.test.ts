@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dayOf, hhmm, mergeSessions, slotIndex } from "./slots";
+import { dayOf, hhmm, isoAt, mergeSessions, slotIndex } from "./slots";
 import type { Session } from "./slots";
 
 const slot = (team: string, room: string, start: string, end: string): Session => ({
@@ -97,5 +97,16 @@ describe("slotIndex — 여는 시각을 0번으로 둔 30분 칸 번호", () =>
 
   it("여는 시각이 바뀌면 번호도 함께 밀린다", () => {
     expect(slotIndex("2026-09-14T18:00:00", 10)).toBe(16);
+  });
+});
+
+describe("isoAt — slotIndex 의 반대 방향", () => {
+  it("날짜와 칸 번호를 시간대 없는 시각 문자열로 합친다", () => {
+    expect(isoAt("2026-09-14", 4, 18)).toBe("2026-09-14T20:00:00");
+  });
+
+  it("slotIndex 로 되돌리면 원래 칸 번호가 나온다", () => {
+    const iso = isoAt("2026-09-14", 5, 18);
+    expect(slotIndex(iso, 18)).toBe(5);
   });
 });

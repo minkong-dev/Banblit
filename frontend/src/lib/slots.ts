@@ -1,6 +1,8 @@
 // 서버가 준 배정을 화면이 읽을 모양으로 바꾼다. 여기 있는 것은 전부 계산이라
 // 화면도 서버도 건드리지 않는다.
 
+import { slotLabel } from "./calendar";
+
 export type Session = {
   team: string;
   room: string;
@@ -49,4 +51,9 @@ export function slotIndex(iso: string, openHour: number): number {
   const hour = Number(iso.slice(11, 13));
   const minute = Number(iso.slice(14, 16));
   return (hour - openHour) * 2 + (minute >= 30 ? 1 : 0);
+}
+
+export function isoAt(dayKey: string, index: number, openHour: number): string {
+  // slotIndex 의 반대 방향 — 날짜와 칸 번호를 서버가 받는 시간대 없는 시각 문자열로 합친다.
+  return `${dayKey}T${slotLabel(index, openHour)}:00`;
 }

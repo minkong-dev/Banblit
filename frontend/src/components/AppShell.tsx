@@ -1,34 +1,35 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 import { MenuIcon, ThemeIcon } from "./icons";
-import { usePage } from "../usePage";
+import { usePage } from "./hooks";
+import { logOut } from "../lib/pipeline";
 
 // 사이드바 차림. 두 화면이 같은 것을 보여주고, 지금 보는 곳만 다르게 켠다.
 const NAV = [
   { key: "schedule", label: "합주실 시간표", to: "/scheduler" },
-  { key: "notice", label: "공지사항", to: null },
-  { key: "find-team", label: "팀 찾기", to: null },
-  { key: "board", label: "팀 게시판", to: null },
+  { key: "notice", label: "공지사항", to: "/notices" },
+  { key: "find-team", label: "팀 찾기", to: "/teams" },
+  { key: "board", label: "팀 게시판", to: "/board" },
 ] as const;
 
 const MANAGER_NAV = [
   { key: "assign", label: "배정 결과 확인", to: "/admin" },
-  { key: "settings", label: "합주실·기간 설정", to: null },
+  { key: "settings", label: "합주실·기간 설정", to: "/settings" },
 ] as const;
 
 export type NavKey = (typeof NAV)[number]["key"] | (typeof MANAGER_NAV)[number]["key"];
 
 type NavItem = { key: string; label: string; to: string | null };
 
-function NavList({ items, current }: { items: readonly NavItem[]; current: NavKey }) {
+function NavList({ items, current }: { items: readonly NavItem[]; current: NavKey | undefined }) {
   return (
     <nav>
       {items.map((item) =>
         // 아직 만들지 않은 화면은 링크가 아니라 눌리지 않는 글이다.
         item.to === null ? (
-          <a key={item.key} href="#" aria-disabled="true">{item.label}</a>
+          <button key={item.key} type="button" disabled>{item.label}</button>
         ) : (
           <NavLink key={item.key} to={item.to}
             aria-current={item.key === current ? "page" : undefined}>
@@ -52,7 +53,8 @@ function toggleTheme(): "dark" | "light" {
 export function AppShell(props: {
   /** 화면 CSS 가 갇혀 있는 이름 — scheduler, admin. */
   page: string;
-  current: NavKey;
+  /** 사이드바에 없는 화면(프로필 설정)은 아무 항목도 켜지 않도록 비워 둔다. */
+  current?: NavKey;
   /** 상단 오른쪽 — 프로필 버튼과, 있다면 그 말풍선까지. */
   profile: ReactNode;
   /** 사이드바 맨 아래에 덧붙일 것. */
@@ -134,6 +136,59 @@ export function Tabs<T extends string>(props: {
         </button>
       ))}
     </div>
+  );
+}
+
+/** 상단 오른쪽 프로필 단추 + 말풍선. 스케줄러·게시판류 화면이 함께 쓴다.
+ *  "프로필 설정"이 이 말풍선에서 `/profile`로 들어가는 유일한 자리다. */
+export function ProfileMenu(props: {
+  name: string;
+  sub: string;
+  teams: { id: number; name: string; colorKey: string }[];
+}) {
+  const { name, sub, teams } = props;
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const initial = name.slice(0, 2);
+
+  // 서버 호출이 실패해도 로그인 화면으로는 보낸다 — 표시용 쿠키가 남아 있어도
+  // 다음 요청은 401로 거절되니 화면을 붙잡아 둘 이유가 없다.
+  async function handleLogOut(): Promise<void> {
+    setOpen(false);
+    try {
+      await logOut();
+    } catch {
+      // 위 주석대로 실패해도 로그인 화면으로 넘어간다.
+    }
+    void navigate("/login");
+  }
+
+  return (
+    <>
+      <button className="profbtn" aria-expanded={open} onClick={() => setOpen((on) => !on)}>
+        <span className="face" aria-hidden="true">{initial}</span>
+        <span className="nm">{name}</span>
+        <span className="ar" aria-hidden="true">▾</span>
+      </button>
+      <div className={open ? "pop on" : "pop"} role="dialog" aria-label="내 프로필">
+        <div className="who">
+          <span className="face" aria-hidden="true">{initial}</span>
+          <div><b>{name}</b><small>{sub}</small></div>
+        </div>
+        <hr />
+        <div className="cap">소속 팀 {teams.length}개</div>
+        {teams.map((team) => (
+          <div className="tm" key={team.id}>
+            <i style={{ background: `var(--${team.colorKey})` }} />{team.name}<small>미연동</small>
+          </div>
+        ))}
+        <hr />
+        <button className="act" onClick={() => { setOpen(false); void navigate("/profile"); }}>
+          프로필 설정<span>›</span>
+        </button>
+        <button className="act quit" onClick={() => void handleLogOut()}>로그아웃</button>
+      </div>
+    </>
   );
 }
 

@@ -5,10 +5,21 @@ import { Link, Outlet, useLocation, useNavigate, useOutletContext } from "react-
 import { Field, failures, fieldText } from "../components/Field";
 import type { Errors } from "../components/Field";
 import { GoogleIcon, KakaoIcon } from "../components/icons";
-import { emailMessage, passwordMessage, phoneMessage, strongPasswordMessage } from "../lib/validate";
-import { useToast } from "../useToast";
-import { usePage } from "../usePage";
+import { useToast } from "../components/hooks";
+import { usePage } from "../components/hooks";
 import "../styles/account.css";
+import {
+  emailMessage,
+  logIn,
+  passwordMessage,
+  phoneMessage,
+  signUp,
+  strongPasswordMessage,
+} from "../lib/pipeline";
+
+function reason(error: unknown): string {
+  return error instanceof Error ? error.message : "서버에 닿지 못했습니다";
+}
 
 // 사진은 화면에 붙박이로 두고 오른쪽 서식만 갈아 끼운다. 다섯 화면이 한 자리를 나눠 쓴다.
 // 주소가 다섯 개로 나뉘어 있어 뒤로 가기와 링크 보내기가 제대로 동작하고,
@@ -49,8 +60,9 @@ export function AccountLayout() {
           </div>
 
           <div className="legal">
-            <a href="#">서비스 이용약관</a>
-            <a href="#">개인정보 처리방침</a>
+            {/* 아직 만들지 않은 페이지다 — 진짜 없는 곳으로 보내는 대신 눌리지 않는 글로 둔다. */}
+            <button type="button" disabled>서비스 이용약관</button>
+            <button type="button" disabled>개인정보 처리방침</button>
           </div>
         </main>
       </div>
@@ -60,17 +72,22 @@ export function AccountLayout() {
   );
 }
 
-/** 검사에 걸리면 사유를 화면에 걸고 멈춘다. 다 통과했을 때만 onPass 로 넘어간다. */
+/** 검사에 걸리면 사유를 화면에 걸고 멈춘다. 다 통과했을 때만 onPass 로 넘어간다.
+ *  onPass는 서버를 부르는 자리라 비동기일 수 있다 — 여기서 결과를 기다리지 않고
+ *  흘려보내므로(void), onPass 안에서 실패를 직접 잡아 처리해야 한다. */
 function useSubmit() {
   const [errors, setErrors] = useState<Errors>({});
   const submit =
-    (check: (form: HTMLFormElement) => Errors, onPass: (form: HTMLFormElement) => void) =>
+    (
+      check: (form: HTMLFormElement) => Errors,
+      onPass: (form: HTMLFormElement) => void | Promise<void>,
+    ) =>
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       const form = event.currentTarget;
       const bad = failures(check(form));
       setErrors(bad);
-      if (Object.keys(bad).length === 0) onPass(form);
+      if (Object.keys(bad).length === 0) void onPass(form);
     };
   return { errors, submit };
 }
@@ -78,6 +95,7 @@ function useSubmit() {
 export function SignIn() {
   const { say } = useOutletContext<AccountContext>();
   const { errors, submit } = useSubmit();
+  const navigate = useNavigate();
 
   return (
     <form
@@ -88,7 +106,15 @@ export function SignIn() {
           mail: emailMessage(fieldText(form, "mail").trim()),
           pw: passwordMessage(fieldText(form, "pw")),
         }),
-        () => say("로그인했어요"),
+        async (form) => {
+          try {
+            await logIn(fieldText(form, "mail").trim(), fieldText(form, "pw"));
+            say("로그인했어요");
+            void navigate("/scheduler");
+          } catch (error) {
+            say(reason(error));
+          }
+        },
       )}
     >
       <Field name="mail" label="이메일" type="email" inputMode="email"
@@ -106,10 +132,12 @@ export function SignIn() {
 
       <div className="or">또는</div>
       <div className="social">
-        <button type="button" className="google" onClick={() => say("구글 계정으로 넘어가요")}>
+        {/* 구글·카카오 로그인은 외부 서비스 등록과 키가 있어야 한다 — 아직 없어 눌리지
+            않는 상태로 둔다. "서비스 이용약관"과 같은 자리(52번째 줄)가 쓰는 패턴이다. */}
+        <button type="button" className="google" disabled>
           <GoogleIcon />구글로 계속하기
         </button>
-        <button type="button" className="kakao" onClick={() => say("카카오 계정으로 넘어가요")}>
+        <button type="button" className="kakao" disabled>
           <KakaoIcon />카카오로 계속하기
         </button>
       </div>
@@ -124,6 +152,7 @@ const POSITIONS = ["보컬", "기타", "베이스", "드럼", "키보드", "서�
 export function SignUp() {
   const { say } = useOutletContext<AccountContext>();
   const { errors, submit } = useSubmit();
+  const navigate = useNavigate();
   const [positions, setPositions] = useState<string[]>([]);
 
   const toggle = (name: string) =>
@@ -147,7 +176,20 @@ export function SignUp() {
             positions: positions.length ? "" : "포지션을 하나 이상 골라 주세요.",
           };
         },
-        (form) => say(`${fieldText(form, "nm").trim()}님, 가입됐어요 · ${positions.join(", ")}`),
+        async (form) => {
+          try {
+            const account = await signUp({
+              name: fieldText(form, "nm").trim(),
+              email: fieldText(form, "mail2").trim(),
+              password: fieldText(form, "pw2"),
+              positions,
+            });
+            say(`${account.name}님, 가입됐어요 · ${positions.join(", ")}`);
+            void navigate("/scheduler");
+          } catch (error) {
+            say(reason(error));
+          }
+        },
       )}
     >
       <Field name="nm" label="이름" type="text"
@@ -220,7 +262,9 @@ export function FindPassword() {
           // 본인 확인이 끝나야 재설정 화면으로 넘어간다. 서버가 생기면 이 자리에서
           // 받은 토큰을 주소에 실어 넘긴다 — 지금은 확인만 하고 넘긴다.
           say("본인 확인이 끝났어요 · 새 비밀번호를 정해주세요");
-          navigate("/reset-password");
+          // navigate 는 viewTransition 옵션을 줄 때만 Promise 를 돌려준다. 이 화면은
+          // 그 옵션을 쓰지 않아 실제로는 항상 void 라 명시적으로 무시한다.
+          void navigate("/reset-password");
         },
       )}
     >
@@ -260,7 +304,9 @@ export function ResetPassword() {
         },
         () => {
           say("비밀번호를 바꿨어요 · 새 비밀번호로 로그인해주세요");
-          navigate("/login");
+          // navigate 는 viewTransition 옵션을 줄 때만 Promise 를 돌려준다. 이 화면은
+          // 그 옵션을 쓰지 않아 실제로는 항상 void 라 명시적으로 무시한다.
+          void navigate("/login");
         },
       )}
     >
