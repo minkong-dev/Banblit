@@ -107,11 +107,11 @@ def assign(
             if not is_team_available(team, room_slot.interval):
                 model.add(var == 0)
         model.add(
-            sum(chosen[(team.id, i)] for i in range(len(room_slots))) == slots_per_team
+            sum(chosen[(team.id, i)] for i, _ in enumerate(room_slots)) == slots_per_team
         )
 
     # 한 방의 한 칸에는 팀 하나만 들어간다.
-    for index in range(len(room_slots)):
+    for index, _ in enumerate(room_slots):
         model.add(sum(chosen[(team.id, index)] for team in teams) <= 1)
 
     indices_by_interval: dict[TimeInterval, list[int]] = defaultdict(list)
@@ -148,7 +148,7 @@ def assign(
     for team in teams:
         picked = [
             index
-            for index in range(len(room_slots))
+            for index, _ in enumerate(room_slots)
             if solver.value(chosen[(team.id, index)]) == 1
         ]
         taken.update(picked)

@@ -1,7 +1,7 @@
 import pytest
 
 from backend.db import pipeline as pipeline_module
-from backend.db.pipeline import get_engine, get_session
+from backend.db.pipeline import get_engine, get_session, get_session_factory
 
 
 def test_get_engine_reuses_the_same_engine_for_the_same_url() -> None:
@@ -50,3 +50,27 @@ def test_get_session_closes_the_session_when_the_request_ends(
     with pytest.raises(StopIteration):
         next(sessions)
     assert events == ["open", "close"]
+
+
+def test_session_factory_opens_a_new_session_each_call(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """배경 스레드가 요청 스레드와 다른 세션을 열 수 있도록, 부를 때마다 새 세션을 연다.
+
+    Session 객체 하나를 여러 스레드가 같이 쓰면 안 되므로, 세션이 아니라
+    "세션을 여는 함수"를 돌려줘야 스레드마다 자기 세션을 새로 열 수 있다.
+    """
+    opened: list[object] = []
+
+    class FakeSession:
+        def __init__(self, bind: object) -> None:
+            opened.append(bind)
+
+    monkeypatch.setattr(pipeline_module, "Session", FakeSession)
+    monkeypatch.setattr(pipeline_module, "get_engine", lambda: "engine")
+
+    factory = get_session_factory()
+    factory()
+    factory()
+
+    assert opened == ["engine", "engine"]

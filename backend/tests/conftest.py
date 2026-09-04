@@ -1,5 +1,7 @@
 import os
-from collections.abc import Iterator
+import time
+from collections.abc import Callable, Iterator
+from typing import Any
 
 import pytest
 from alembic import command
@@ -71,12 +73,40 @@ def api_client(db_session: Session) -> Iterator[TestClient]:
     세션을 그대로 쓴다 — 테스트가 넣은 데이터를 엔드포인트가 같은 세션에서 본다.
     """
     from backend.api.app import app
-    from backend.db.pipeline import get_session
+    from backend.db.pipeline import get_session, get_session_factory
 
+    # 배정 작업은 배경 스레드에서 db_session 과 다른 세션을 연다(Session은 스레드끼리
+    # 공유하면 안 된다). 테스트에서도 같은 엔진에 새 세션을 열어야 그 스레드가 쓴
+    # 값이 커밋된 뒤 db_session 에서도 보인다.
+    test_engine = db_session.get_bind()
     app.dependency_overrides[get_session] = lambda: db_session
+    app.dependency_overrides[get_session_factory] = lambda: (
+        lambda: Session(test_engine)
+    )
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def poll_job(api_client: TestClient) -> Callable[[str], dict[str, Any]]:
+    """배정 요청은 202 로 접수만 되므로, 검사는 GET /jobs/{id} 를 이걸로 반복 조회한다.
+
+    실제 계산은 실측상 최대 22.2초까지 걸린다(2026-08-28, AUDIT.md 4부). 시험은
+    빠른 시나리오만 쓰므로 15초면 충분하지만, 코드가 깨져 status 가 영영 안 바뀌면
+    시험이 멈춘 채 안 끝나지 않도록 상한을 둔다.
+    """
+
+    def wait(job_id: str, timeout: float = 15.0) -> dict[str, Any]:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            body = api_client.get(f"/jobs/{job_id}").json()["job"]
+            if body["status"] in ("done", "failed"):
+                return body
+            time.sleep(0.05)
+        raise AssertionError("제한 시간 안에 작업이 끝나지 않았습니다")
+
+    return wait
 
 
 # 바깥과 실제로 통신해야 도는 검사는 tests/integration/<의존 대상>/ 아래 둔다.

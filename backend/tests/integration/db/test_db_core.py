@@ -7,8 +7,10 @@ from backend.db.models import Member, Membership, Position, Team
 
 
 def test_default_positions_are_seeded(db_session: Session) -> None:
+    # 서포터즈는 accounts-and-roles 마이그레이션이 추가했다 — 가입 화면(SignUp)의
+    # 선택지가 core_tables 마이그레이션이 넣은 다섯보다 하나 더 많았다.
     names = set(db_session.scalars(select(Position.name)))
-    assert names == {"보컬", "기타", "베이스", "드럼", "키보드"}
+    assert names == {"보컬", "기타", "베이스", "드럼", "키보드", "서포터즈"}
 
 
 def test_two_members_may_share_a_name(db_session: Session) -> None:

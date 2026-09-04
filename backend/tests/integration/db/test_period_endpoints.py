@@ -1,4 +1,6 @@
+from collections.abc import Callable
 from datetime import date, datetime, time
+from typing import Any
 
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -156,7 +158,7 @@ def _team_with_member(db_session: Session, team_name: str, member_name: str) -> 
 
 
 def test_assign_saves_the_schedule_and_reports_it(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, poll_job: Callable[[str], dict[str, Any]]
 ) -> None:
     period_id = _period(db_session)  # 8/1 ~ 8/2
     team_id = _team_with_member(db_session, "A", "김민수")
@@ -165,13 +167,16 @@ def test_assign_saves_the_schedule_and_reports_it(
     db_session.flush()
     db_session.commit()
 
-    response = api_client.post(
+    submitted = api_client.post(
         f"/periods/{period_id}/assign",
         json={"team_ids": [team_id], "room_ids": [room.id]},
     )
+    assert submitted.status_code == 202
 
-    assert response.status_code == 200
-    body = response.json()
+    job = poll_job(submitted.json()["job"]["id"])
+
+    assert job["status"] == "done"
+    body = job["result"]
     assert body["saved"] is True
     assert body["assignment"]["feasible"] is True
     slots = body["assignment"]["slots_by_team"]["A"]
@@ -184,7 +189,7 @@ def test_assign_saves_the_schedule_and_reports_it(
 
 
 def test_assign_reports_open_slots_with_real_room_names(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, poll_job: Callable[[str], dict[str, Any]]
 ) -> None:
     """칸이 팀보다 많이 남는 시나리오 — open_slots가 엔진 키가 아니라 실제 방 정보로 되돌아오는지."""
     period = Period(
@@ -205,13 +210,16 @@ def test_assign_reports_open_slots_with_real_room_names(
     db_session.flush()
     db_session.commit()
 
-    response = api_client.post(
+    submitted = api_client.post(
         f"/periods/{period.id}/assign",
         json={"team_ids": [team_a, team_b], "room_ids": [room_1.id, room_2.id]},
     )
+    assert submitted.status_code == 202
 
-    assert response.status_code == 200
-    body = response.json()
+    job = poll_job(submitted.json()["job"]["id"])
+
+    assert job["status"] == "done"
+    body = job["result"]
     assert body["assignment"]["feasible"] is True
     open_slots = body["assignment"]["open_slots"]
     assert len(open_slots) == 1  # 전체 5칸 - 팀당 2칸 × 2팀 = 1칸 남는다
@@ -223,7 +231,7 @@ def test_assign_reports_open_slots_with_real_room_names(
 
 
 def test_assign_reports_a_coordination_proposal_with_real_names(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, poll_job: Callable[[str], dict[str, Any]]
 ) -> None:
     """배정이 실패해 조율안이 나오는 경로 — 제외 인원과 조율안 안 배정 모두 실제 값으로 되돌아오는지."""
     period = Period(
@@ -268,13 +276,16 @@ def test_assign_reports_a_coordination_proposal_with_real_names(
     db_session.flush()
     db_session.commit()
 
-    response = api_client.post(
+    submitted = api_client.post(
         f"/periods/{period.id}/assign",
         json={"team_ids": [team.id], "room_ids": [room.id]},
     )
+    assert submitted.status_code == 202
 
-    assert response.status_code == 200
-    body = response.json()
+    job = poll_job(submitted.json()["job"]["id"])
+
+    assert job["status"] == "done"
+    body = job["result"]
     assert body["saved"] is False
     assert body["assignment"]["feasible"] is False
     assert len(body["proposals"]) == 1
@@ -287,26 +298,13 @@ def test_assign_reports_a_coordination_proposal_with_real_names(
     assert all(slot["room_id"] == room.id for slot in slots)
 
 
-def test_assign_with_unknown_team_is_rejected(
-    api_client: TestClient, db_session: Session
-) -> None:
-    period_id = _period(db_session)
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
-    db_session.add(room)
-    db_session.flush()
-    db_session.commit()
-
-    response = api_client.post(
-        f"/periods/{period_id}/assign",
-        json={"team_ids": [999999], "room_ids": [room.id]},
-    )
-
-    assert response.status_code == 422
-    assert "그런 팀이 없습니다" in response.json()["detail"]
+# 없는 팀 번호를 넣었을 때 job 이 failed 로 남는 경로는
+# test_assign_jobs.py::test_a_rejected_assignment_becomes_a_failed_job_with_the_reason
+# 가 같은 시나리오로 이미 검증한다 — 여기서 다시 두지 않는다.
 
 
 def test_assign_on_an_open_period_is_rejected(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, poll_job: Callable[[str], dict[str, Any]]
 ) -> None:
     period = Period(
         kind="open",
@@ -324,17 +322,20 @@ def test_assign_on_an_open_period_is_rejected(
     db_session.flush()
     db_session.commit()
 
-    response = api_client.post(
+    submitted = api_client.post(
         f"/periods/{period.id}/assign",
         json={"team_ids": [team_id], "room_ids": [room.id]},
     )
+    assert submitted.status_code == 202
 
-    assert response.status_code == 422
-    assert "집중" in response.json()["detail"]
+    job = poll_job(submitted.json()["job"]["id"])
+
+    assert job["status"] == "failed"
+    assert "집중" in job["error"]
 
 
 def test_rollback_restores_the_previous_schedule(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, poll_job: Callable[[str], dict[str, Any]]
 ) -> None:
     """직전 회차가 아니라 엉뚱한 회차를 복원하는 결함을 잡을 수 있어야 한다.
 
@@ -357,24 +358,26 @@ def test_rollback_restores_the_previous_schedule(
     db_session.commit()
 
     # S1: 1번방만 → 팀 하나가 이틀 × 2칸 = 4칸 전부를 받는다.
+    # 매 회차 poll_job 으로 끝까지 기다린 뒤 다음 회차를 접수한다 — 세 회차의
+    # 저장 순서(saved_at)가 뒤섞이면 백업 정렬이 검증하려는 것과 달라진다.
     r1 = api_client.post(
         f"/periods/{period_id}/assign",
         json={"team_ids": [team_id], "room_ids": [room_1.id]},
     )
-    assert r1.json()["saved"] is True
+    assert poll_job(r1.json()["job"]["id"])["result"]["saved"] is True
     # S2: 1번방 + 2번방 → 전체 자리가 8칸으로 늘어 팀이 8칸 전부를 받는다.
     #     방 구성 자체가 S1과 다르므로 결과도 원천적으로 다르다.
     r2 = api_client.post(
         f"/periods/{period_id}/assign",
         json={"team_ids": [team_id], "room_ids": [room_1.id, room_2.id]},
     )
-    assert r2.json()["saved"] is True
+    assert poll_job(r2.json()["job"]["id"])["result"]["saved"] is True
     # S3: 2번방만 → 세 번째 저장으로 백업 회차를 2개(S1, S2)로 만든다.
     r3 = api_client.post(
         f"/periods/{period_id}/assign",
         json={"team_ids": [team_id], "room_ids": [room_2.id]},
     )
-    assert r3.json()["saved"] is True
+    assert poll_job(r3.json()["job"]["id"])["result"]["saved"] is True
 
     response = api_client.post(f"/periods/{period_id}/rollback")
 
@@ -464,7 +467,7 @@ def test_rollback_without_any_backup_reports_nothing_to_undo(
 
 
 def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, poll_job: Callable[[str], dict[str, Any]]
 ) -> None:
     """되돌리려는 백업이 다른 기간이 차지한 방·시각과 겹치면, 저장 제약 위반이
     그대로 새어 나가 500이 되면 안 된다 — 배정 경로와 같은 422로 거부해야 한다.
@@ -499,19 +502,19 @@ def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
         f"/periods/{period_a}/assign",
         json={"team_ids": [team_a], "room_ids": [room_1.id]},
     )
-    assert r1.json()["saved"] is True
+    assert poll_job(r1.json()["job"]["id"])["result"]["saved"] is True
 
     r2 = api_client.post(
         f"/periods/{period_a}/assign",
         json={"team_ids": [team_a], "room_ids": [room_2.id]},
     )
-    assert r2.json()["saved"] is True
+    assert poll_job(r2.json()["job"]["id"])["result"]["saved"] is True
 
     r3 = api_client.post(
         f"/periods/{period_b.id}/assign",
         json={"team_ids": [team_b], "room_ids": [room_1.id]},
     )
-    assert r3.json()["saved"] is True
+    assert poll_job(r3.json()["job"]["id"])["result"]["saved"] is True
 
     response = api_client.post(f"/periods/{period_a}/rollback")
 

@@ -13,11 +13,16 @@ from backend.api.schemas import (
     RoomSlotOut,
     TeamIn,
 )
-from backend.scheduling.assignment import Assignment, Room, RoomSlot
-from backend.scheduling.availability import Member, Team
-from backend.scheduling.interval import TimeInterval
-from backend.scheduling.resolution import Resolution
-from backend.scheduling.slots import generate_slots
+from backend.scheduling.pipeline import (
+    Assignment,
+    Member,
+    Resolution,
+    Room,
+    RoomSlot,
+    Team,
+    TimeInterval,
+    generate_slots,
+)
 
 
 @dataclass(frozen=True)
