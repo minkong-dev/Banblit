@@ -45,8 +45,8 @@ flowchart TD
 - [자동 배정](../../auto-assignment/README.md) — 계산 엔진 자체의 배정·조율안 규칙
 - [합주실과 기간](../../practice-room-and-periods/README.md) — 기간의 종류(상시/집중)와 "매일" 옵션의 뜻
 - [데이터 저장소](../../database-layer/README.md) — 팀·소속·불가능시간·합주실이 저장되는 테이블 구조
-- [화면 프로토타입](../../screen-prototypes/README.md) — 이 세 통로를 실제로 부르는 배정 결과 화면
-- [개발용 시드 데이터](../../screen-prototypes/dev-seed/README.md) — 이 통로를 성사·불가 두 경우로 실제로 돌려보는 장치
+- [화면](../../screens/README.md) — 이 세 통로를 실제로 부르는 배정 결과 화면
+- [개발용 시드 데이터](../../screens/dev-seed/README.md) — 이 통로를 성사·불가 두 경우로 실제로 돌려보는 장치
 
 ## Description
 
