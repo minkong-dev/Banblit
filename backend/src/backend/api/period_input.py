@@ -1,11 +1,10 @@
 from datetime import date, datetime, time, timedelta
 
 from backend.db.models import Room, UnavailableTime
-from backend.scheduling.assignment import Room as EngineRoom
-from backend.scheduling.availability import Member as EngineMember
-from backend.scheduling.availability import Team as EngineTeam
-from backend.scheduling.interval import TimeInterval
-from backend.scheduling.slots import generate_slots
+from backend.scheduling.pipeline import Member as EngineMember
+from backend.scheduling.pipeline import Room as EngineRoom
+from backend.scheduling.pipeline import Team as EngineTeam
+from backend.scheduling.pipeline import TimeInterval, generate_slots
 
 WEEK = timedelta(days=7)
 

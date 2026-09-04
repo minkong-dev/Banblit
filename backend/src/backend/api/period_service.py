@@ -19,10 +19,9 @@ from backend.db.models import (
     Team,
     UnavailableTime,
 )
-from backend.db.schedule_store import AssignmentRow, save_schedule
-from backend.scheduling.assignment import Assignment as EngineAssignment
-from backend.scheduling.interval import TimeInterval
-from backend.scheduling.resolution import Resolution, resolve
+from backend.db.pipeline import AssignmentRow, save_schedule
+from backend.scheduling.pipeline import Assignment as EngineAssignment
+from backend.scheduling.pipeline import Resolution, TimeInterval, resolve
 
 
 @dataclass(frozen=True)
