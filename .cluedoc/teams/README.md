@@ -1,10 +1,13 @@
 ---
 title: 팀과 소속
 sources:
-  - backend/src/backend/db/models.py   # Member·Position·Team·Membership 테이블
+  - backend/src/backend/db/models.py     # Member·Position·Team·Membership 테이블
+  - backend/src/backend/api/roster_service.py  # 팀·명단·포지션을 읽는 자리
+  - frontend/src/routes/Teams.tsx        # 팀 목록과 명단을 보여주는 화면
+  - frontend/src/routes/Profile.tsx      # 내 소속과 포지션을 보여주는 화면
 ---
 
-> 문서 버전: 1.0.1 draft
+> 문서 버전: 1.1.0 draft
 
 ```mermaid
 erDiagram
@@ -34,6 +37,7 @@ erDiagram
 - [자동 배정](../auto-assignment/README.md) — 소속을 근거로 팀 합주 시간을 배정
 - [게시판과 공지](../boards/README.md) — 소속에 따라 팀 게시판 접근이 갈림
 - [데이터 저장소](../database-layer/README.md) — 소속(사람+팀+포지션)과 이름 식별자 규칙이 실제로 저장되는 방식
+- [화면](../screens/README.md) — 팀 목록과 명단이 실제로 그려지는 자리
 
 ## Description
 

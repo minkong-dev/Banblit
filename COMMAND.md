@@ -1,6 +1,6 @@
 # COMMAND
 
-> 문서 버전: 1.7.0 draft
+> 문서 버전: 1.11.0 draft
 
 이 문서는 Banblit에서 실제로 실행해 동작을 확인한 명령어만 담는다.
 실행해 보지 않은 명령어는 적지 않는다.
@@ -247,24 +247,64 @@ docker compose down
 
 ---
 
-### 3-4. 프로토타입 화면을 실제 데이터로 열어보기
+### 3-4. 확정된 설계 원본 화면 열어보기
 
 ```
-curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/proto/scheduler-live.html
-start http://localhost:8000/proto/scheduler-live.html
-start http://localhost:8000/proto/assignment-live.html
+curl -s -o /dev/null -w "%{http_code}
+" http://localhost:8000/proto/scheduler.html
+start http://localhost:8000/proto/scheduler.html
+start http://localhost:8000/proto/assignment.html
+start http://localhost:8000/proto/landing.html
+start http://localhost:8000/proto/login.html
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: `frontend/prototypes/` 의 화면을 **API 서버가 함께 내보내는 주소**로 연다. `-live` 가 붙은 사본은 하드코딩 데이터를 지우고 실제 API 응답을 그린다. 원본(`scheduler.html`, `assignment.html`)은 확정된 화면 설계의 근거라 손대지 않고 그대로 둔다.
+- **용도**: `frontend/prototypes/` 에 굳혀둔 **확정된 화면 설계 원본**을 연다. 사람이 실제로 쓰는 화면은 이것이 아니라 `10-1` 의 화면 개발 서버가 내보내는 앱이다. 이 원본은 앱을 고치다 모양이 어긋났을 때 나란히 놓고 비교할 기준으로만 쓴다.
 - **옵션**
   - `curl -s` — 진행률 표시를 끈다. `-o /dev/null` 은 본문을 버리고, `-w "%{http_code}"` 는 상태 코드만 출력한다. 화면을 열기 전에 서빙이 붙었는지만 확인할 때 쓴다.
   - `start <url>` — Windows에서 기본 브라우저로 주소를 연다. 옵션 없이 주소만 넘긴다.
 - **주의점**
-  - **`3-1`로 API 서버가 떠 있어야 하고, `4-5`의 시드가 들어가 있어야 한다.** 서버가 없으면 주소 자체가 열리지 않고, 데이터가 없으면 달력이 빈 채로 뜬다.
+  - **`3-1`로 API 서버가 떠 있어야 한다.** 원본은 예시 데이터가 안에 박혀 있어 시드가 없어도 그려지지만, 주소 자체는 서버가 떠 있어야 열린다.
   - 이 주소는 `docker-compose.yml` 의 `api` 서비스에 `./frontend/prototypes:/proto:ro` 를 걸고 `PROTOTYPE_DIR=/proto` 를 준 덕에 생긴다. 환경변수가 없으면 `backend/src/backend/api/app.py` 끝의 `app.mount` 가 아예 실행되지 않아 `/proto` 가 존재하지 않는다 — 배포에는 붙지 않는다는 뜻이다.
-  - 파일을 브라우저로 직접 여는 것(`file://`)으로는 동작하지 않는다. 출처가 달라져 화면의 `fetch` 가 CORS 에 막힌다. 반드시 `localhost:8000/proto/` 로 연다.
-  - 볼륨이 읽기 전용(`:ro`)이라 컨테이너 안에서는 이 파일들을 고칠 수 없다. 호스트에서 고치면 새로고침만으로 반영된다.
+  - `-live` 가 붙은 사본은 2026-09-03 React 이전과 함께 없어졌다. `trash/2026-09-03-react-migration/` 에 있다.
+  - 원본은 서버에 아무것도 묻지 않고 그림도 옆에 놓인 파일을 상대경로로 부르므로, 파일을 브라우저로 직접 여는 것(`file://`)으로도 그대로 열린다. 서버로 여는 쪽을 적어둔 것은 앱(`10-1`)과 나란히 놓고 비교하기 편해서다.
+  - 볼륨이 읽기 전용(`:ro`)이라 컨테이너 안에서는 이 파일들을 고칠 수 없다. 원본은 설계를 바꾸기로 했을 때만 호스트에서 고친다.
+
+---
+
+### 3-5. 로그인·인증 흐름 확인 (쿠키)
+
+```
+curl -s -i -X POST http://localhost:8000/signup -H "Content-Type: application/json" --data-binary @signup.json -c cookies.txt
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/me -b cookies.txt
+curl -s -o /dev/null -w "%{http_code}\n" -X POST http://localhost:8000/logout -b cookies.txt
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/me -b cookies.txt
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`, `3-1`로 `api` 서비스가 떠 있어야 한다)
+- **용도**: 로그인 세션이 **쿠키**로 오가는지를 네 줄로 확인한다. 가입해서 쿠키를 파일에 받아두고(1행), 그 쿠키만으로 "내 계정"을 물어 `200`을 받고(2행), 로그아웃한 뒤(3행) 같은 쿠키로 다시 물어 `401`이 되는지 본다(4행). 4행이 `200`이면 로그아웃이 세션을 끊지 못한 것이다.
+- **본문 파일**: 1행의 `signup.json`은 직접 만든다. 이름·이메일·비밀번호·포지션 네 값이 필요하고, 포지션은 마이그레이션이 심어둔 목록(보컬·기타·베이스·드럼·키보드)에서 고른다.
+
+  ```json
+  {"name": "홍길동", "email": "test@example.com", "password": "banblit-test-1", "positions": ["드럼"]}
+  ```
+
+- **옵션**
+  - `-s` — 진행률 표시줄을 숨긴다.
+  - `-i` — 응답 **머리글까지 함께** 출력한다. 생략하면 본문만 나와 `set-cookie` 두 줄(`banblit_session`, `banblit_signed_in`)이 실제로 내려오는지 눈으로 볼 수 없다.
+  - `-X POST` — 보내는 방식을 지정한다. 생략하면 `GET`이다(본문을 붙이면 `curl`이 알아서 `POST`로 바꾸지만, 읽는 사람을 위해 적어 둔다).
+  - `-H "Content-Type: application/json"` — 본문이 JSON이라고 알린다. 생략하면 서버가 본문을 JSON으로 읽지 않아 `422`로 거절한다.
+  - `--data-binary @<파일>` — 파일 내용을 **손대지 않고 그대로** 본문으로 보낸다.
+  - `-c <쿠키파일>` — 응답으로 받은 쿠키를 그 파일에 **저장한다**. 생략하면 받은 쿠키를 버리므로 다음 줄이 인증되지 않는다.
+  - `-b <쿠키파일>` — 저장해 둔 쿠키를 요청에 **실어 보낸다**. 생략하면 쿠키 없이 나가므로 `/me`는 `401`이다.
+  - `-o /dev/null` — 본문을 버린다. `-w "%{http_code}\n"` — 상태 번호만 한 줄로 찍는다. 둘을 함께 써서 번호만 본다.
+- **주의점**
+  - **`4-2`의 마이그레이션이 먼저 적용돼 있어야 한다.** 세션을 담는 `sessions` 표가 없으면 가입 자체가 실패한다.
+  - 한글이 든 본문을 인라인(`-d '...'`)으로 넘기면 Git Bash에서 인코딩이 깨진다. 그래서 `--data-binary @파일`을 쓴다 — 자세한 사유는 `3-2`의 주의점에 적어 두었다.
+  - **쿠키 파일은 로그인한 상태 그 자체다.** 확인이 끝나면 지우고, 저장소에 올리지 않는다.
+  - 같은 이메일로 1행을 두 번 실행하면 `422`("이미 가입된 이메일입니다")가 돌아온다. 다시 확인할 때는 이메일을 바꾸거나 `4-5`의 `--reset`으로 데이터를 비운다.
+  - 개발 구성은 `docker-compose.override.yml`이 `COOKIE_SECURE=false`로 덮으므로 `http`로도 쿠키가 붙는다. 배포 구성(`11-2`)은 `docker-compose.yml`의 `COOKIE_SECURE=true`가 살아 있어, `https`가 아니면 브라우저가 세션 쿠키를 저장하지 않는다.
+  - `token` 같은 필드를 응답 본문에서 찾지 않는다. 세션은 본문이 아니라 쿠키로만 오간다 — 헤더에 토큰을 실어 보내던 예전 방식은 더 이상 동작하지 않는다.
 
 ---
 
@@ -333,6 +373,25 @@ docker compose exec db psql -U banblit -d banblit
 - **주의점**
   - **호스트 포트를 열지 않았으므로, 이 방법 말고는 내 PC의 DB 도구로 직접 접속할 수 없다.** `db` 서비스가 `docker compose up -d db`나 `docker compose run --rm dev alembic ...` 등으로 이미 기동돼 있어야 하며, 떠 있지 않으면 `service "db" is not running` 오류가 난다.
   - 나올 때는 `\q`를 입력한다.
+
+---
+
+### 4-4-1. 로그인 세션 표를 눈으로 확인하기
+
+```
+docker compose exec -T db psql -U banblit -d banblit -c "select member_id, left(token_hash,12), revoked_at is not null from sessions order by id desc limit 3;"
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`, `db` 서비스가 이미 떠 있어야 한다)
+- **용도**: 방금 만든 로그인 세션이 실제로 저장소에 남았는지, 로그아웃이 그 줄에 취소 표시를 남겼는지 확인한다. `3-5`를 돌린 직후에 보면 마지막 줄의 마지막 칸이 `t`(취소됨)로 바뀌어 있다.
+- **옵션**
+  - `exec` — 이미 떠 있는 컨테이너 안에서 명령을 실행한다. (`4-4`와 같다.)
+  - `-T` — 터미널을 붙이지 않는다. 생략하면 터미널을 붙이려 하므로, 출력을 다른 명령으로 넘기거나 스크립트 안에서 돌릴 때 걸린다.
+  - `-c "<질의>"` — 대화형으로 들어가지 않고 질의 하나만 실행하고 끝낸다. 생략하면 `4-4`처럼 `psql` 안으로 들어간다.
+  - `left(token_hash,12)` — 세션을 가리키는 지문의 앞 12글자만 본다. **전체를 찍지 않는다** — 줄을 알아보는 데는 앞자리로 충분하다.
+- **주의점**
+  - **원문 토큰은 이 표에 없다.** 저장된 것은 되돌릴 수 없게 줄인 지문뿐이라, 여기 보이는 값으로는 로그인할 수 없다.
+  - 만료된 세션 줄은 저절로 지워지지 않는다. 쌓인 줄이 눈에 걸리면 이 질의로 확인하고 직접 지운다.
 
 ---
 
@@ -476,3 +535,206 @@ rm trash/없는파일.txt
   - 막는 대상은 `rm` `del` `erase` `rmdir` `unlink` `Remove-Item` `ri` `rd` 여덟 가지다. 명령 첫머리이거나 `;` `&` `|` 뒤에 올 때만 걸린다 — 파일 이름에 우연히 `rm`이 들어간 경우는 막지 않는다.
   - 훅 설정은 `.claude/settings.json`에 있다. 이 파일을 고치면 새 세션부터 반영된다.
   - 파일을 치워야 할 때는 지우지 말고 옮긴다: `mv <파일> trash/<날짜>-<무엇을-치우는지>/`
+
+---
+
+## 10. 화면 앱
+
+### 10-1. 화면 개발 서버 띄우기
+
+```
+docker compose up -d api web
+docker compose logs web --since 1m
+start http://localhost:5173/
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `web` 서비스(Vite 개발 서버)를 띄워 `http://localhost:5173` 에서 React 앱을 연다. 주소마다 다른 화면이 뜬다 — `/` 랜딩, `/login` `/signup` `/find-id` `/find-password` `/reset-password` 계정 다섯 벌, `/scheduler` 달력, `/admin` 배정 결과.
+- **옵션**
+  - `up -d api web` — 화면과 API 를 함께 띄운다. `web` 만 띄워도 `depends_on` 이 `api` 를 함께 올리지만, 둘을 적어두면 무엇이 떠야 하는지가 명령에 드러난다. `api` 는 다시 `db` 가 healthy 가 될 때까지 기다린다.
+  - `logs web --since 1m` — **최근 1분치 기록만** 본다. 아래 주의점 참고.
+  - `start <url>` — Windows에서 기본 브라우저로 주소를 연다.
+- **주의점**
+  - **처음 띄우면 컨테이너 안에서 `npm install` 이 돈다.** 꾸러미는 호스트 폴더가 아니라 `banblit-web-modules` 라는 이름 붙은 저장소에 들어간다(윈도우 폴더에 그대로 두면 파일이 많아 눈에 띄게 느려진다). 설치가 끝나기 전에는 5173 이 응답하지 않는다. `VITE ... ready in` 이 기록에 뜬 뒤에 연다.
+  - **`docker compose logs web` 은 이전 기동의 기록까지 함께 보여준다.** 컨테이너를 지우지 않고 `stop`/`start` 만 하면 기록이 쌓인 채로 남는다. `--since` 없이 보면 지난번 `ready` 를 이번 것으로 잘못 읽는다. 이번 기동 이후만 보려면 `--since 1m` 또는 `docker inspect banblit-web-1 --format '{{.State.StartedAt}}'` 로 얻은 시각을 `--since` 에 넣는다.
+  - **코드를 고쳤는데 화면이 안 바뀌면 개발 서버가 옛 코드를 물고 있는 것이다.** 윈도우 폴더를 컨테이너에 걸면 파일이 바뀌었다는 알림이 컨테이너 안까지 오지 않는다. `frontend/vite.config.ts` 의 `server.watch.usePolling` 이 이것 때문에 켜져 있다. 그래도 안 따라오면 `docker compose restart web` 으로 다시 띄운다. 이 증상을 코드 문제로 오진한 적이 두 번 있다.
+  - **화면은 5173, API 는 8000 에서 돈다.** 브라우저는 화면을 받아온 곳과 다른 곳에 값을 물으면 막으므로, 개발 서버가 정해진 경로만 API 로 대신 넘긴다. 넘기는 경로 목록은 `frontend/vite.config.ts` 의 `API_PATHS` 가 갖는다. API 통로를 추가하면 이 목록도 함께 늘려야 한다.
+  - 달력에 데이터가 보이려면 `4-2` 마이그레이션과 `4-5` 시드가 들어가 있어야 한다. 없으면 화면은 정상적으로 뜨고 "저장된 배정이 없다" 고 말한다.
+  - 5173 번 포트가 다른 프로그램에 쓰이고 있으면 실패한다. 이 저장소와 무관한 컨테이너가 그 포트를 쓰고 있다면 함부로 내리지 않는다.
+
+### 10-1-1. 화면이 실제로 뜨는지 확인하기
+
+```
+curl -s -o /dev/null -w "%{http_code}
+" http://localhost:5173/scheduler
+curl -s http://localhost:5173/periods/1/schedule
+```
+
+- **실행 경로**: 어디서든 무관 (단, `10-1` 로 `web` 이 떠 있어야 한다)
+- **용도**: 브라우저를 열지 않고 두 가지를 확인한다. 첫 줄은 주소를 직접 쳤을 때 화면이 나오는지(`200`), 둘째 줄은 개발 서버가 API 로 제대로 넘기는지(시간표 JSON 이 오는지)다.
+- **옵션**
+  - `-s` — 진행률 표시를 끈다. `-o /dev/null` 은 본문을 버리고 `-w "%{http_code}"` 로 상태 코드만 찍는다.
+- **주의점**
+  - `000` 이 나오면 서버가 아직 응답하지 않는 것이다. 대개 `npm install` 이 아직 도는 중이다. `10-1` 의 기록 확인으로 돌아간다.
+  - 이 확인은 화면이 **응답하는지**만 본다. 화면이 설계대로 그려지는지는 브라우저로 열어 `3-4` 의 원본과 나란히 놓고 봐야 한다.
+
+### 10-2. 화면 테스트 돌리기
+
+```
+docker compose run --rm --no-deps web npm test
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 화면 쪽 검사를 돌린다. 지금 덮는 것은 순수 계산과 입력 검증이다 — 서버 호출 감싸개, 달력 칸 계산, 30분 조각을 합주로 잇는 계산, 계정 서식 입력 검사. 통과하면 `Tests 55 passed` 가 나온다. 화면을 실제로 띄워 보는 검사는 아직 없다.
+- **옵션**
+  - `run` — 일회용 컨테이너를 만들어 명령 하나만 돌리고 끝낸다. 개발 서버를 띄운 채로도 따로 돌릴 수 있다.
+  - `--rm` — 끝나면 그 컨테이너를 지운다. 붙이지 않으면 돌릴 때마다 찌꺼기가 쌓인다.
+  - `--no-deps` — `depends_on` 에 걸린 `api`(그리고 `db`)를 함께 띄우지 않는다. 화면 검사는 서버가 필요 없다. 생략하면 DB 까지 올라와 느려진다.
+  - `npm test` — `frontend/package.json` 의 `test` 를 실행한다. 내용은 `vitest run` 이다. `run` 이 붙어 있어 한 번 돌고 끝나며, 파일을 지켜보는 상태로 머물지 않는다.
+- **주의점**
+  - 꾸러미는 `10-1` 이 채워둔 `banblit-web-modules` 저장소를 그대로 쓴다. 그래서 이 명령은 설치 없이 곧바로 돈다.
+  - 검사 파일은 `frontend/src/**/*.test.ts` 만 잡는다. 범위는 `frontend/vite.config.ts` 의 `test.include` 가 정한다.
+
+### 10-3. 화면 타입 검사 돌리기
+
+```
+docker compose run --rm --no-deps web npm run typecheck
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 화면 코드의 타입을 검사한다. 아무것도 출력하지 않고 끝나면 통과다.
+- **옵션**
+  - `npm run typecheck` — `frontend/package.json` 의 `typecheck` 를 실행한다. 내용은 `tsc -b --noEmit` 이다. `-b` 는 `frontend/tsconfig.json` 이 가리키는 설정들을 순서대로 검사하고, `--noEmit` 은 결과 파일을 만들지 않는다.
+  - `--rm --no-deps` — `10-2` 와 같은 이유다.
+- **주의점**
+  - `-b` 는 지난 검사 결과를 `frontend/tsconfig.tsbuildinfo` 에 남겨 두 번째부터 빨라진다. 이 파일은 저장소에 들어 있다.
+
+### 10-4. 화면 빌드하기
+
+```
+docker compose run --rm --no-deps web npm run build
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 배포용 화면 묶음을 만든다. 결과는 `frontend/dist/` 에 들어간다.
+- **옵션**
+  - `npm run build` — `frontend/package.json` 의 `build` 를 실행한다. 내용은 `tsc -b && vite build` 다. 타입 검사를 먼저 통과해야 묶기로 넘어간다.
+  - `--rm --no-deps` — `10-2` 와 같은 이유다.
+- **주의점**
+  - **`frontend/dist/` 는 저장소에 들어 있다.** 이 명령을 돌리면 그 안이 덮여 쓰이므로, 커밋 전에 `git status` 로 무엇이 바뀌었는지 본다.
+  - 이 묶음을 실제로 내보내는 장치는 아직 없다. 개발 서버는 배포에 가지 않으므로, 배포에서는 주소를 나눠주는 다른 것이 그 일을 대신해야 한다 — 아직 정하지 않았다.
+
+---
+
+## 11. 배포용 구성
+
+### 11-1. 배포용 이미지 만들기
+
+```
+docker compose -f docker-compose.prod.yml build
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 배포용 이미지 두 개를 만든다. 서버는 `backend/Dockerfile` 의 `prod` 단계(테스트 도구가 빠진 것), 화면은 `frontend/Dockerfile` 의 `prod` 단계(묶은 파일을 nginx 가 내보내는 것)다.
+- **옵션**
+  - `-f docker-compose.prod.yml` — 개발용(`docker-compose.yml`) 대신 이 파일을 쓴다. 생략하면 개발용이 대상이 되어 화면 이미지가 아예 없다.
+  - 서비스 이름을 뒤에 붙이면 그것만 만든다 (`... build web`).
+- **주의점**
+  - 화면 이미지는 컨테이너 안에서 `npm ci` 와 `npm run build` 를 새로 돌린다. 처음에는 몇 분 걸린다.
+  - 개발용 이미지와 이름이 다르다(`banblit-frontend:prod`, `banblit-backend:prod`). 개발용을 덮어쓰지 않는다.
+
+### 11-2. 배포용 구성이 실제로 도는지 확인
+
+```
+docker run -d --rm --name banblit-prod-smoke --network banblit_default   -e API_ORIGIN=http://api:8000 -e NGINX_ENVSUBST_FILTER='^API_ORIGIN$'   -p 8080:80 banblit-frontend:prod
+curl -s -o /dev/null -w "%{http_code}
+" http://localhost:8080/scheduler
+curl -s http://localhost:8080/api/health
+docker rm -f banblit-prod-smoke
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 배포용 화면 이미지만 따로 띄워, 개발 서버가 하던 두 가지를 nginx 가 대신하는지 본다 — 주소를 직접 쳤을 때 화면이 나오는지, `/api` 가 서버로 넘어가는지.
+- **옵션**
+  - `--network banblit_default` — **개발용으로 이미 떠 있는 `api` 컨테이너에 닿으려고 그 망에 붙인다.** 이것 없이는 `api` 라는 이름을 못 찾아 502 가 난다. 망 이름은 `docker network ls` 로 확인한다.
+  - `-e API_ORIGIN` — nginx 가 넘길 주소. 코드에 박혀 있지 않고 여기서 준다.
+  - `-e NGINX_ENVSUBST_FILTER='^API_ORIGIN$'` — **채울 이름을 이것 하나로 못박는다.** 없이 두면 nginx 가 제 설정 안의 `$uri`·`$host` 까지 빈 값으로 지워 설정이 깨진다.
+  - `--rm` — 멈추면 지워진다. 확인용이라 남길 이유가 없다.
+  - `-p 8080:80` — 컨테이너 안 80번을 이 PC 의 8080 으로 연다. 개발 서버(5173)와 부딪히지 않는다.
+- **주의점**
+  - **`docker compose -f docker-compose.prod.yml up` 을 그냥 쓰면 안 된다.** 프로젝트 이름이 개발용과 같아 떠 있는 개발 컨테이너를 갈아치운다. 나란히 띄우려면 `-p banblit-prod` 로 프로젝트 이름을 따로 준다.
+  - 이 확인은 화면과 넘기기만 본다. 데이터가 보이려면 `4-2` 마이그레이션과 `4-5` 시드가 들어가 있어야 한다.
+
+---
+
+## 12. 종단(E2E) 검사
+
+### 12-1. 종단 검사 돌리기
+
+```
+docker compose run --rm e2e
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `frontend/e2e/` 의 Playwright 검사를 전부 돌린다. 사람이 브라우저에서 하는
+  일(달력 보기, 설정 고치기, 글쓰기·댓글, 배정 다시 계산, 팀 명단 보기)을 흉내내
+  화면·서버·저장소가 실제로 이어져 도는지 확인한다.
+- **옵션**
+  - `run --rm` — 일회성 컨테이너를 띄워 명령을 실행하고 끝나면 지운다.
+  - `e2e` — `docker-compose.yml` 의 `e2e` 서비스. 공식 이미지 `mcr.microsoft.com/playwright:v1.62.1-noble`
+    를 써서 브라우저를 따로 받지 않는다. 컨테이너 안에서 `npm install` 로 `frontend/package.json`
+    의 `@playwright/test`(버전을 이미지 태그와 똑같이 `1.62.1` 로 고정했다)를 설치한 뒤
+    `npx playwright test` 를 돈다.
+  - `depends_on: web` 이 걸려 있어 `web` 서비스가 자동으로 함께 뜬다. 다만 `web` 이
+    응답할 수 있는 상태까지 기다려 주지는 않으므로(→ 주의점), 미리 `10-1` 로 띄워
+    두고 화면이 실제로 열리는 것을 확인한 뒤 이 명령을 돌리는 편이 안전하다.
+- **주의점**
+  - **`web` 을 막 띄웠거나 막 재시작했다면 먼저 준비될 때까지 기다려야 한다.**
+    컨테이너 안에서 매번 `npm install` 을 다시 돌기 때문에(`docker-compose.yml`
+    의 `web.command`), 뜬 지 얼마 안 됐으면 5173 번이 아직 응답하지 않는다.
+    이 상태에서 `e2e` 를 돌리면 모든 검사가 `ECONNREFUSED` 로 한꺼번에 실패한다.
+    `10-1-1` 의 확인 명령으로 200 이 나오는 것을 보고 나서 돌린다.
+  - **이미지가 크다(브라우저 세 종 포함, 처음 받으면 1GB 가 넘는다).** 처음 한 번만
+    느리고, 그 뒤로는 로컬 이미지 캐시를 그대로 쓴다.
+  - **`@playwright/test` 버전과 이미지 태그 버전이 어긋나면 안 된다.** 이미지 안의
+    브라우저가 그 버전에 맞춰 미리 깔려 있어서다. `frontend/package.json` 의
+    devDependency 버전을 올릴 때는 `docker-compose.yml` 의 `e2e.image` 태그도
+    같은 숫자로 함께 고친다.
+  - 꾸러미는 `web` 과 따로 `banblit-e2e-modules` 라는 이름 붙은 저장소에 둔다.
+    이미지 바탕(Ubuntu)이 `web`(Alpine)과 달라, 네이티브 바이너리가 섞이는 것을
+    막으려고 나눴다.
+  - 계산이 걸리는 검사(`frontend/e2e/assignment.spec.ts`)는 배정 다시 계산이
+    끝날 때까지 기다린다. 2026-09-04 실측으로 1초 안팎이라 20초면 넉넉하지만,
+    컨테이너 부하가 크면 늘어날 수 있다.
+  - 검사 중 `frontend/e2e/notices.spec.ts` 가 공지에 글을 하나 남긴다. 지우는
+    통로가 없어 돌릴 때마다(제목에 실행 시각을 붙여 구분은 되지만) 계속 쌓인다.
+
+### 12-2. 특정 검사 파일만 돌리기
+
+```
+docker compose run --rm e2e npx playwright test e2e/assignment.spec.ts
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 파일 하나만 골라 돌린다. `12-1` 은 매번 전체를 돌려 느릴 때 이쪽을 쓴다.
+- **옵션**
+  - `npx playwright test <경로>` — `e2e` 서비스의 기본 명령(`npm install && npx playwright test`)
+    대신 뒤에 이어 붙인 명령을 그대로 실행한다. 경로는 `frontend/` 기준 상대경로다.
+
+### 12-3. 화면 쪽에서 종단 검사만 따로 린트·타입 검사하기
+
+```
+docker compose run --rm --no-deps web npm run lint:e2e
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `frontend/e2e/` 만 타입 인식 린트로 검사한다.
+- **주의점**
+  - **`frontend/eslint.config.js` 는 이 저장소의 `config-protection` 훅이 에이전트의
+    수정을 막는다.** 그래서 `e2e/` 전용 설정을 `frontend/e2e/lint.config.js` 에
+    따로 두고, `npm run lint`(기본 `eslint .`)에서는 `--ignore-pattern 'e2e/**/*'`
+    로 그 폴더를 빼는 대신 이 명령으로 따로 검사한다. 두 설정 파일이 나뉜 것은
+    선호가 아니라 이 제약 때문이다 — 한 파일로 합치려면 사람이 직접
+    `frontend/eslint.config.js` 에 `files: ["e2e/**/*.ts"]` 블록을 더해야 한다.
+  - `npm run typecheck`(`tsc -b --noEmit`)은 `frontend/tsconfig.json` 의 `include`
+    에 `e2e` 를 이미 넣어 두어 따로 명령을 안 만들어도 `e2e/` 까지 함께 검사한다.

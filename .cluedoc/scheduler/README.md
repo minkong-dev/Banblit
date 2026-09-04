@@ -1,12 +1,14 @@
 ---
 title: 스케줄러
 sources:
-  - frontend/prototypes/scheduler.html       # 확정된 화면 설계 원본
-  - frontend/prototypes/scheduler-live.html  # 같은 화면을 실제 응답으로 그리는 사본
-  - frontend/prototypes/scheduler-live.js    # 달력이 그릴 데이터를 서버에서 받아오는 부분
+  - frontend/prototypes/scheduler.html   # 확정된 화면 설계 원본 — 손대지 않는다
+  - frontend/src/routes/Scheduler.tsx    # 이 설계를 실제 응답으로 그리는 화면
+  - frontend/src/routes/DayDialog.tsx    # 날짜를 눌렀을 때 뜨는 확인 모달
+  - frontend/src/lib/calendar.ts         # 달력 칸과 남은 시간을 세는 계산
+  - frontend/src/lib/slots.ts            # 30분 조각을 합주 한 번으로 잇는 계산
 ---
 
-> 문서 버전: 1.2.0 draft
+> 문서 버전: 1.3.0 draft
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -46,7 +48,7 @@ sources:
 - [계정과 역할](../accounts-and-roles/README.md) — 프로필 카드에 나오는 역할과 소속
 - [팀과 소속](../teams/README.md) — 오른쪽 "내 팀" 목록의 근거
 - [게시판과 공지](../boards/README.md) — 오른쪽 공지사항 목록의 출처
-- [화면 프로토타입](../screen-prototypes/README.md) — 이 화면을 실제 서버에 물려 확인한 결과
+- [화면](../screens/README.md) — 이 설계가 실제 앱에서 어떻게 그려지는지
 - [기간 자동 배정](../scheduling-api/period-assignment/README.md) — 달력이 읽어오는 확정된 시간표의 출처
 
 ## Description
@@ -122,7 +124,7 @@ flowchart LR
 
 계산은 30분 칸을 하나씩 배정하므로 서버가 주는 것은 조각의 나열이다. 화면은 같은 팀이 같은 방에서 이어 쓴 조각을 하나로 합쳐 "합주 한 번"으로 그린다. 사람이 세는 단위는 칸이 아니라 합주이기 때문이다.
 
-아직 통로가 없어 화면이 임시로 메우고 있는 자리가 남아 있다 — 합주실 여닫는 시각, 집중기간의 범위, 팀별 명단, 내가 속한 팀의 구분이 그렇다. 화면은 이미 받아온 배정에서 뽑아낼 수 있는 것은 뽑아내고, 그럴 수 없는 것은 사람에게 미연동이라고 밝힌다. 무엇을 어떻게 메우고 있는지는 [화면 프로토타입](../screen-prototypes/README.md)이 표로 정리한다.
+아직 통로가 없어 화면이 임시로 메우고 있는 자리가 남아 있다 — 합주실 여닫는 시각, 집중기간의 범위, 팀별 명단, 내가 속한 팀의 구분이 그렇다. 화면은 이미 받아온 배정에서 뽑아낼 수 있는 것은 뽑아내고, 그럴 수 없는 것은 사람에게 미연동이라고 밝힌다. 무엇을 어떻게 메우고 있는지는 [화면](../screens/README.md)이 표로 정리한다.
 
 예약과 못 나오는 시간은 서버와 주고받을 통로가 아직 없다. 화면에서 넣은 것은 그 브라우저 안에만 남고 새로 고치면 사라진다. 이 화면의 설계는 그대로 유효하며, 통로가 생기면 데이터를 받아오는 자리만 바꿔 끼우면 된다.
 
