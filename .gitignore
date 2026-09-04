@@ -31,3 +31,10 @@ frontend/dist/
 
 # TypeScript 증분 빌드 기록. 빌드할 때마다 바뀐다.
 frontend/tsconfig.tsbuildinfo
+
+# 브라우저 도구가 만드는 프로필 캐시. 100MB 단위로 커진다.
+.chrome-tmp/
+
+# Playwright 실행 산출물 (실패 화면·추적 파일·보고서)
+frontend/test-results/
+frontend/playwright-report/
