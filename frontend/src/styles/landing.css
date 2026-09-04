@@ -195,6 +195,7 @@ body[data-page="landing"] {
   footer .row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; border-top: 1px solid #23262B; padding-top: 30px; }
   footer .b { font-weight: 900; letter-spacing: .16em; color: #fff; font-size: 14px; margin-right: auto; }
   footer a:hover { color: #fff; }
+  footer button:disabled { cursor: default; }
 
   .rise { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1); }
   .rise.in { opacity: 1; transform: none; }

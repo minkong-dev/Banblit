@@ -2,31 +2,19 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
+import { DevOfflineToggle } from "../components/DevOfflineToggle";
 import { getJSON } from "../lib/api";
-import { datesBetween } from "../lib/calendar";
-import { dayOf, hhmm, mergeSessions } from "../lib/slots";
-import type { Session } from "../lib/slots";
-import { useToast } from "../useToast";
+import { runAssignment } from "../lib/pipeline";
+import type { AssignBody } from "../lib/pipeline";
+import { useToast } from "../components/hooks";
 import "../styles/assignment.css";
+import type { AssignOut, Period, Room, ScheduleRow, Slot, Team } from "../lib/contract";
+import { datesBetween, dayOf, hhmm, mergeSessions } from "../lib/pipeline";
+import type { Session } from "../lib/pipeline";
 
-// 기간 목록을 주는 API 가 아직 없어 시드가 넣은 번호를 그대로 쓴다.
-const PERIOD_IDS = [1, 2];
-// 팀·합주실 목록 API 도 없다. 확정된 시간표에서 번호를 뽑고, 비어 있으면 이것을 쓴다.
-const FALLBACK_TEAM_IDS = [1, 2, 3, 4];
-const FALLBACK_ROOM_IDS = [1, 2];
 const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 const MINUTES_PER_HOUR = 60;
 
-type ScheduleRow = {
-  team_id: number; team: string; room_id: number; room: string; start: string; end: string;
-};
-type Slot = { room_id: number; room: string; start: string; end: string };
-type AssignmentOut = { feasible: boolean; slots_by_team: Record<string, Slot[]> };
-type AssignOut = {
-  saved: boolean;
-  assignment: AssignmentOut;
-  proposals: { excluded_member: { id: number; name: string }; assignment: AssignmentOut }[];
-};
 
 /** 팀별로 나뉘어 온 칸을 한 줄로 펴서 합주 한 번씩으로 합친다. */
 function sessionsOf(byTeam: Record<string, Slot[]>): Session[] {
@@ -52,25 +40,50 @@ function colorsOf(sessions: Session[]): Map<string, string> {
 export function Assignment() {
   const { message, say } = useToast();
   const queryClient = useQueryClient();
-  const [periodId, setPeriodId] = useState(PERIOD_IDS[0]);
+  const [periodId, setPeriodId] = useState<number | null>(null);
   const [view, setView] = useState("now");
 
-  const schedule = useQuery({
-    queryKey: ["schedule", periodId],
-    queryFn: () => getJSON<{ rows: ScheduleRow[] }>(`/periods/${periodId}/schedule`),
+  const periods = useQuery({
+    queryKey: ["periods"],
+    queryFn: () => getJSON<{ periods: Period[] }>("/periods"),
   });
+  // 이 화면은 집중 합주기간만 다룬다 — 상시 개방 기간은 자동 배정 대상이 아니다.
+  const focusedPeriods = (periods.data?.periods ?? []).filter((period) => period.kind === "focused");
+  // 사람이 아직 고르지 않았으면 목록의 첫 기간을 쓴다. useEffect 로 동기화하지 않고
+  // 그릴 때마다 이렇게 계산한다.
+  const activePeriodId = periodId ?? focusedPeriods[0]?.id ?? null;
+
+  const rooms = useQuery({
+    queryKey: ["rooms"],
+    queryFn: () => getJSON<{ rooms: Room[] }>("/rooms"),
+  });
+
+  const teams = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => getJSON<{ teams: Team[] }>("/teams"),
+  });
+
+  const schedule = useQuery({
+    queryKey: ["schedule", activePeriodId],
+    queryFn: () => {
+      if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
+      return getJSON<{ rows: ScheduleRow[] }>(`/periods/${activePeriodId}/schedule`);
+    },
+    enabled: activePeriodId !== null,
+  });
+  // schedule.data 가 없을 때만 매번 새 빈 배열이 생긴다 — 아래 useMemo 가 그동안 다시
+  // 돌아도 빈 배열을 합치는 가벼운 계산이라 따로 감쌀 만큼은 아니다.
   const rows = schedule.data?.rows ?? [];
 
   const recompute = useMutation({
-    mutationFn: (body: { team_ids: number[]; room_ids: number[] }) =>
-      getJSON<AssignOut>(`/periods/${periodId}/assign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }),
+    mutationFn: (body: AssignBody) => {
+      if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
+      // 서버는 접수만 하고 곧바로 답한다. 끝날 때까지 되묻는 것은 runAssignment 다.
+      return runAssignment<AssignOut>(activePeriodId, body);
+    },
     onSuccess: async (result) => {
       // 저장까지 끝났으면 확정 시간표를 다시 받아 화면과 서버를 맞춘다.
-      await queryClient.invalidateQueries({ queryKey: ["schedule", periodId] });
+      await queryClient.invalidateQueries({ queryKey: ["schedule", activePeriodId] });
       setView("now");
       say(
         result.assignment.feasible
@@ -88,6 +101,8 @@ export function Assignment() {
     [rows],
   );
 
+  // recompute.data 가 없을 때만 매번 새 빈 배열이 생긴다 — 재계산 전에는 proposals 를
+  // 쓰는 곳도 없어 아래 useMemo 가 다시 돌아도 비용이 없다.
   const proposals = recompute.data?.proposals ?? [];
   const proposalIndex = view.startsWith("p") ? Number(view.slice(1)) : null;
   const shown = useMemo(() => {
@@ -98,10 +113,15 @@ export function Assignment() {
 
   const colors = useMemo(() => colorsOf([...confirmed, ...shown]), [confirmed, shown]);
 
-  // 확정 시간표에 나온 번호를 재계산에 그대로 넘긴다. 비어 있으면 시드 번호를 쓴다.
+  // 확정 시간표에 나온 번호를 재계산에 그대로 넘긴다. 아직 아무것도 확정되지 않았으면
+  // 목록 통로가 준 전체를 쓴다.
   const uniqueSorted = (values: number[]) => [...new Set(values)].sort((a, b) => a - b);
-  const teamIds = rows.length ? uniqueSorted(rows.map((row) => row.team_id)) : FALLBACK_TEAM_IDS;
-  const roomIds = rows.length ? uniqueSorted(rows.map((row) => row.room_id)) : FALLBACK_ROOM_IDS;
+  const teamIds = rows.length
+    ? uniqueSorted(rows.map((row) => row.team_id))
+    : (teams.data?.teams ?? []).map((team) => team.id);
+  const roomIds = rows.length
+    ? uniqueSorted(rows.map((row) => row.room_id))
+    : (rooms.data?.rooms ?? []).map((room) => room.id);
 
   const tabs = [
     { key: "now", text: "지금 확정된 것" },
@@ -135,7 +155,7 @@ export function Assignment() {
 
   const again = (
     <div className="act">
-      <button className="btn main" disabled={recompute.isPending}
+      <button className="btn main" disabled={recompute.isPending || activePeriodId === null}
         onClick={() => recompute.mutate({ team_ids: teamIds, room_ids: roomIds })}>
         {recompute.isPending ? "계산하는 중…" : "지금 다시 계산"}
       </button>
@@ -143,8 +163,8 @@ export function Assignment() {
   );
 
   let under;
-  if (schedule.isError || recompute.isError) {
-    const error = schedule.error ?? recompute.error;
+  if (periods.isError || rooms.isError || teams.isError || schedule.isError || recompute.isError) {
+    const error = periods.error ?? rooms.error ?? teams.error ?? schedule.error ?? recompute.error;
     under = (
       <>
         <h2>서버가 요청을 받지 못했습니다</h2>
@@ -156,7 +176,7 @@ export function Assignment() {
     const who = proposals[proposalIndex].excluded_member;
     under = (
       <>
-        <h2>{who.name}(#{who.id}) 을 빼면 이렇게 됩니다</h2>
+        <h2>{who.name} 을 빼면 이렇게 됩니다</h2>
         <p className="sub">
           이 사람의 못 나오는 시간 때문에 팀 전원이 모일 자리를 찾지 못했습니다.
           빠지는 것은 이 기간의 합주뿐입니다.
@@ -214,6 +234,7 @@ export function Assignment() {
           <span className="role">헤드매니저</span>
         </button>
       }
+      sideExtra={import.meta.env.DEV && <DevOfflineToggle />}
     >
       <Tabs label="배정안" items={tabs} selected={view} onSelect={setView} />
 
@@ -224,9 +245,14 @@ export function Assignment() {
             <span>
               {days.length ? `${days[0]} – ${days[days.length - 1]}` : "표시할 일정 없음"}
               {" · 기간 "}
-              <select value={periodId} aria-label="기간 고르기"
+              <select value={activePeriodId ?? ""} aria-label="기간 고르기"
                 onChange={(event) => { setPeriodId(Number(event.target.value)); setView("now"); }}>
-                {PERIOD_IDS.map((id) => <option value={id} key={id}>{id}번</option>)}
+                {/* 번호가 아니라 날짜 범위로 보여준다 — 사람·기간을 번호로 부르지 않는다. */}
+                {focusedPeriods.map((period) => (
+                  <option value={period.id} key={period.id}>
+                    {period.starts_on} – {period.ends_on}
+                  </option>
+                ))}
               </select>
             </span>
             <div className="keys">

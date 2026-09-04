@@ -47,15 +47,22 @@
     --shadow-up: 0 16px 56px rgba(0,0,0,.6);
   }
 
-  /* 최소 창 크기 — 이 아래로는 요소가 겹친다.
-     가로 700px: 달력이 날짜별 세로 목록으로 바뀐 뒤, 날짜칸 58 + 합주 이름과 시각 한 줄.
-     세로 680px: 상단바 62 + 탭 58 + 달력 머리 60 + 목록 최소 높이 + 설명 영역. */
-  body[data-page="admin"] { min-width: 700px; min-height: 680px; }
+  /* 최소 창 크기 — 이 아래로는 확정된 배치가 유지되지 않는다. 스크롤로 넘기지 않고
+     창이 더 줄어들지 않게 막는다.
+     가로 1060px: 1040px 아래로 가면 사이드바가 격자에서 빠지고 오른쪽 목록이 달력 밑으로
+       내려간다. 그 경계 바로 위를 바닥으로 잡았다. 시간표 화면과 같은 값이다 — 두 화면이
+       같은 틀을 쓰므로 바닥이 다르면 오가며 창 크기가 튄다.
+     세로 740px: 이 화면의 날짜 칸은 min-height 118px 이라 눌리지 않는다. 대신 그만큼
+       카드가 길어져 본문이 제 안에서 굴러간다. 달력 머리 60 + 요일 34 + 날짜 두 줄 236 +
+       아래 설명 200 + 탭 58 + 본문 여백 36 + 상단바 63 = 687 → 740 으로 맞췄다.
+     1060x740 에서 브라우저로 재어, 겹치는 곳이 없음을 확인했다. */
+  body[data-page="admin"] { --minw: 1060px; --minh: 740px;
+    min-width: var(--minw); min-height: var(--minh); }
   body[data-page="admin"] {
     margin: 0; background: var(--bg); color: var(--t1);
     font-family: "Noto Sans KR", -apple-system, "Malgun Gothic", sans-serif;
     font-size: 15px; line-height: 1.6; letter-spacing: -.02em;
-    font-variant-numeric: tabular-nums; height: 100vh; overflow: hidden;
+    font-variant-numeric: tabular-nums; height: max(100vh, var(--minh)); overflow: hidden;
     -webkit-text-size-adjust: 100%;
   }
   body[data-page="admin"] :where(button, select) { font: inherit; color: inherit; letter-spacing: inherit; }
@@ -79,15 +86,20 @@ body[data-page="admin"] {
   .profbtn .nm { font-size: 14.5px; font-weight: 500; }
   .role { font-size: 11.5px; font-weight: 700; color: var(--blue); background: var(--blue-tint); padding: 3px 9px; border-radius: 999px; }
 
-  .shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); height: calc(100vh - 62px); }
+  .shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); height: calc(max(100vh, var(--minh)) - 62px); }
   .side { overflow: hidden auto; background: var(--card); border-right: 1px solid var(--line); }
   .side .inner { width: 296px; height: 100%; padding: 20px 14px; display: flex; flex-direction: column; gap: 18px; }
   .side nav { display: flex; flex-direction: column; gap: 2px; }
-  .side nav a { display: flex; align-items: center; padding: 12px; min-height: 46px; color: var(--t1); text-decoration: none; font-size: 15px; font-weight: 500; border-radius: 10px; white-space: nowrap; }
+  .side nav :is(a, button) { display: flex; align-items: center; text-align: left; padding: 12px; min-height: 46px; color: var(--t1); text-decoration: none; font-size: 15px; font-weight: 500; border-radius: 10px; white-space: nowrap; }
   .side nav a:hover { background: var(--card-2); }
   .side nav a[aria-current="page"] { background: var(--blue-tint); color: var(--blue); font-weight: 700; }
+  .side nav button:disabled { cursor: default; }
   .side .cap { font-size: 12px; color: var(--t3); padding: 0 12px; }
   .side .sep { border-top: 1px solid var(--line); }
+  /* scheduler.css 의 개발용 체크박스와 같은 자리, 같은 모양 — 배포에는 체크박스 자체가
+     없어(Assignment.tsx 가 import.meta.env.DEV 로 가린다) 이 규칙은 조용히 쓰이지 않는다. */
+  .side label { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 12px; font-size: 13px; color: var(--t2); cursor: pointer; white-space: nowrap; }
+  .side label input { width: 17px; height: 17px; accent-color: var(--blue); cursor: pointer; }
 
   .page { height: 100%; padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr) 380px; grid-template-rows: auto minmax(0, 1fr); column-gap: 18px; min-height: 0; }
   .tabs { grid-column: 1; grid-row: 1; display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
@@ -213,29 +225,9 @@ body[data-page="admin"] {
     .panel > .ph { padding: 13px 15px; font-size: 14.5px; }
     .panel li a { padding: 9px; font-size: 13.5px; }
   }
-  @media (max-width: 1040px) {
-    .shell { --side: 0px; }
-    #menuBtn { display: grid; }
-    .side { position: fixed; inset: 62px auto 0 0; z-index: 41; width: 264px;
-            transform: translateX(-101%); transition: transform .24s ease; }
-    &.navopen .side { transform: none; box-shadow: var(--shadow-up); }
-    .page { grid-template-columns: minmax(0, 1fr); }
-    .rail { grid-column: 1; flex-direction: row; gap: 12px; }
-    .rail .panel { flex: 1 1 0; }
-  }
-  @media (max-width: 860px) {
-    .page { padding: 12px; }
-    .tabs { overflow-x: auto; }
-    .rail { flex-direction: column; }
-  }
-  @media (max-width: 860px) {
-    .dow { display: none; }
-    .grid { grid-template-columns: 1fr; }
-    .day { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: start;
-           gap: 7px 12px; min-height: 0; padding: 12px 14px; border-right: none; }
-    .day .n { grid-row: 1 / span 99; font-weight: 700; font-size: 15px; }
-    .day .free { margin: 0; }
-  }
+  /* 1040px·860px 이하 규칙은 걷어냈다. 본문이 min-width 아래로 내려가지 않으므로
+     그 아래를 위한 배치가 실제로 쓰이지 않는다. 창이 더 작아지면 배치를 바꾸는 것이
+     아니라 문서가 굴러간다. */
   @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; } }
 
 }

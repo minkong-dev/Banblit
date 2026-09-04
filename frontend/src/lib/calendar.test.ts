@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { datesBetween, hoursLabel, isRangeFree, monthCells, slotLabel, takenGrid } from "./calendar";
+import {
+  datesBetween,
+  focusedRange,
+  hoursLabel,
+  isRangeFree,
+  monthCells,
+  roomBounds,
+  slotLabel,
+  takenGrid,
+} from "./calendar";
 
 describe("monthCells — 한 달을 7칸씩 나눠 담는다", () => {
   // 2026년 9월 1일은 화요일이라 앞에 빈 칸 둘이 붙는다. month 는 0부터 세는 값이다.
@@ -95,5 +104,36 @@ describe("datesBetween — 두 날짜 사이를 하루도 빠뜨리지 않고 �
 
   it("끝이 시작보다 앞이면 비운다", () => {
     expect(datesBetween("2026-09-17", "2026-09-14")).toEqual([]);
+  });
+});
+
+describe("roomBounds — 합주실 여닫는 시각으로 달력의 앞뒤를 잡는다", () => {
+  it("가장 이른 여는 시각과 가장 늦은 닫는 시각을 쓴다", () => {
+    expect(roomBounds([
+      { opens_at: "18:00", closes_at: "22:00" },
+      { opens_at: "19:00", closes_at: "21:00" },
+    ])).toEqual({ open: 18, close: 22 });
+  });
+
+  it("30분에 닫으면 다음 정시까지 칸을 넓힌다", () => {
+    expect(roomBounds([{ opens_at: "18:00", closes_at: "22:30" }])).toEqual({ open: 18, close: 23 });
+  });
+
+  it("합주실이 없으면 기본값을 쓴다", () => {
+    expect(roomBounds([])).toEqual({ open: 10, close: 22 });
+  });
+});
+
+describe("focusedRange — 집중 합주기간의 날짜 범위", () => {
+  it("여럿이면 시작일이 가장 이른 것을 고른다", () => {
+    expect(focusedRange([
+      { kind: "focused", starts_on: "2026-09-21", ends_on: "2026-09-27" },
+      { kind: "focused", starts_on: "2026-09-14", ends_on: "2026-09-20" },
+      { kind: "open", starts_on: "2026-01-01", ends_on: "2026-12-31" },
+    ])).toEqual({ from: "2026-09-14", to: "2026-09-20" });
+  });
+
+  it("집중기간이 없으면 null", () => {
+    expect(focusedRange([{ kind: "open", starts_on: "2026-01-01", ends_on: "2026-12-31" }])).toBeNull();
   });
 });
