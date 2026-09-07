@@ -103,7 +103,7 @@ def update_reservation_endpoint(
     session: Session = Depends(get_session),
 ) -> ReservationsOut:
     try:
-        # 옮길 자리를 새로 잡는 것이므로, 잡은 시각은 옮긴 지금이다.
+        # 옮길 slot 을 새로 잡는 것이므로, 잡은 시각은 옮긴 지금이다.
         rows, room_name, member_name, team_name = update_reservation(
             session,
             reservation_id,

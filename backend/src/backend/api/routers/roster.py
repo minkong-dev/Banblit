@@ -64,7 +64,7 @@ def _position_out(position: Position) -> PositionOut:
     return PositionOut(id=position.id, name=position.name)
 
 
-# 요청한 사람이 누구인지 쓰지 않고 로그인만 확인하는 통로는, 쓰이지 않는 인자를
+# 요청한 사람이 누구인지 쓰지 않고 로그인만 확인하는 endpoint 는, 쓰이지 않는 인자를
 # 남기지 않도록 dependencies 로 건다.
 @router.get("/teams", response_model=TeamsOut, dependencies=[Depends(require_account)])
 def read_teams(session: Session = Depends(get_session)) -> TeamsOut:
@@ -210,7 +210,7 @@ def leave_team(
 ) -> None:
     try:
         # 남을 뺄 수 있는지는 member_remove 항목이 가른다. 본인이 나가는 경우는
-        # 그 항목이 없어도 되므로 통로 전체를 막지 않고 서비스에 함께 넘긴다.
+        # 그 항목이 없어도 되므로 endpoint 전체를 막지 않고 서비스에 함께 넘긴다.
         may_remove_others = "member_remove" in account_permissions(session, requester.id)
         leave_team_row(session, team_id, member_id, requester, may_remove_others)
     except PermissionError as error:

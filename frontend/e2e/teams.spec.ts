@@ -29,7 +29,7 @@ test("팀 찾기에서 팀을 누르면 명단이 나온다", async ({ page, req
 
 // 승인하는 쪽은 page 와 page.request(시드가 넣은 E2E 계정, join_approve 를 가졌다),
 // 신청하는 쪽은 request 를 로그아웃하고 새 계정으로 갈아 쓴다 — 쿠키 저장소가 둘로
-// 갈려 있어야 한 검사 안에서 두 사람을 흉내낼 수 있다.
+// 갈려 있어야 한 테스트 안에서 두 사람을 흉내낼 수 있다.
 test("직접 승인 팀은 승인해야 명단에 오르고 그전에는 인원 수에 안 세진다", async ({
   page,
   request,
@@ -82,7 +82,7 @@ test("직접 승인 팀은 승인해야 명단에 오르고 그전에는 인원 
     team.member_count + 1,
   );
 
-  // 되돌린다 — 명단과 승인 방식을 검사 전으로 돌려놓지 않으면 다음 실행이 다른 값을 본다.
+  // 되돌린다 — 명단과 승인 방식을 테스트 전으로 돌려놓지 않으면 다음 실행이 다른 값을 본다.
   await page.request.delete(`/api/teams/${team.id}/members/${account.id}`);
   await page.request.patch(`/api/teams/${team.id}`, {
     data: { name: team.name, join_policy: team.join_policy },

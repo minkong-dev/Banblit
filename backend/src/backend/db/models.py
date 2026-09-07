@@ -1,4 +1,4 @@
-# 이것은 공유 선언이다 — 표·필드 정의만 담고, api 와 db 양쪽이 그대로 참조한다.
+# 이 파일은 공유 선언이다 — table·필드 정의만 담고, api 와 db 양쪽이 그대로 참조한다.
 # 계산·판단이 필요하면 이 파일이 아니라 부르는 쪽에 둔다.
 
 from datetime import date, datetime, time

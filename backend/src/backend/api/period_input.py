@@ -57,8 +57,8 @@ def build_engine_rooms(rooms: list[Room], days: list[date]) -> list[EngineRoom]:
     """합주실 × 날짜를 엔진 합주실 목록으로 펼친다.
 
     엔진은 한 합주실에 이어진 운영시간 하나만 받으므로 날짜마다 한 번씩 넘긴다.
-    번호는 저장소의 합주실 번호를 그대로 쓴다 — 날짜가 다르면 시간 구간이 달라
-    같은 번호가 여러 번 나와도 칸끼리는 겹치지 않는다.
+    번호는 DB 의 합주실 번호를 그대로 쓴다 — 날짜가 다르면 시간 구간이 달라
+    같은 번호가 여러 번 나와도 slot 끼리는 겹치지 않는다.
     """
     engine_rooms: list[EngineRoom] = []
     for day in days:
@@ -76,7 +76,7 @@ def build_engine_rooms(rooms: list[Room], days: list[date]) -> list[EngineRoom]:
 
 
 def auto_slots_per_team(engine_rooms: list[EngineRoom], team_count: int) -> int:
-    """전체 칸을 팀 수로 나눠 팀마다 가질 자리 개수를 정한다(나머지는 남는 자리)."""
+    """전체 slot 을 팀 수로 나눠 팀마다 가질 slot 개수를 정한다(나머지는 남는 slot)."""
     if team_count <= 0:
         raise ValueError("배정할 팀이 없습니다")
 
@@ -97,7 +97,7 @@ def build_engine_teams(
 ) -> list[EngineTeam]:
     """팀과 그 명단을 엔진 입력으로 옮긴다.
 
-    팀도 사람도 저장소의 번호를 그대로 쓴다. 사람은 동명이인이 있어 이름으로는
+    팀도 사람도 DB 의 번호를 그대로 쓴다. 사람은 동명이인이 있어 이름으로는
     가를 수 없고, 두 팀에 걸친 한 사람은 번호가 같아 엔진이 한 몸으로 다룬다.
     """
     engine_teams: list[EngineTeam] = []

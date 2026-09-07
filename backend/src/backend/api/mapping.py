@@ -29,8 +29,8 @@ from backend.scheduling.pipeline import (
 class EngineNames:
     """엔진이 쓴 번호를 요청에 적힌 이름으로 되돌린다.
 
-    엔진은 팀·합주실·사람을 번호로만 다룬다. 이 창구는 저장소를 거치지 않아
-    진짜 번호가 없으므로, 요청에 나온 순서를 번호로 삼는다 — 목록의 자리번호가
+    엔진은 팀·합주실·사람을 번호로만 다룬다. EngineNames 는 DB 를 거치지 않아
+    진짜 번호가 없으므로, 요청에 나온 순서를 번호로 삼는다 — 목록의 index 가
     곧 그 대상의 번호다.
     """
 
@@ -100,7 +100,7 @@ def _duplicated(names: list[str]) -> set[str]:
 
 
 def _reject_duplicate_names(req: AssignRequest) -> None:
-    # 답장은 팀 이름으로 배정 결과를 묶고 합주실 이름으로 자리를 가리킨다.
+    # 응답은 팀 이름으로 배정 결과를 묶고 합주실 이름으로 slot 을 가리킨다.
     # 이름이 겹치면 한쪽 결과가 다른 쪽을 덮어써 조용히 사라진다.
     duplicated_rooms = _duplicated([room.name for room in req.rooms])
     if duplicated_rooms:
@@ -114,10 +114,10 @@ def _reject_duplicate_names(req: AssignRequest) -> None:
 def _reject_if_over_capacity(
     teams: list[Team], rooms: list[Room], names: EngineNames, slots_per_team: int
 ) -> None:
-    # rooms 의 운영시간을 generate_slots 로 칸으로 쪼개 전체 칸 수를 센 뒤,
-    # 팀 수 × 팀당 칸 수가 그보다 많으면 ValueError 로 거부한다.
+    # rooms 의 운영시간을 generate_slots 로 slot 으로 쪼개 전체 slot 수를 센 뒤,
+    # 팀 수 × 팀당 slot 수가 그보다 많으면 ValueError 로 거부한다.
     # 운영시간 자체가 잘못됐으면 요청에 적힌 방 이름을 붙여 여기서 거부한다 —
-    # 엔진이 붙이는 번호는 요청 안의 자리번호일 뿐이라 부르는 쪽에 뜻이 없다.
+    # 엔진이 붙이는 번호는 요청 안의 index 일 뿐이라 부르는 쪽에 뜻이 없다.
     total_slots = 0
     for room in rooms:
         try:
@@ -140,8 +140,8 @@ def assignment_out(
     to_slot: Callable[[RoomSlot], BaseModel],
     to_team_name: Callable[[int], str],
 ) -> AssignmentOut:
-    # assignment 의 칸들을 to_slot 에 하나씩 넣어 응답용 배정 한 벌을 만들고,
-    # 팀 번호는 to_team_name 으로 이름으로 바꿔 묶음의 열쇠로 쓴다.
+    # assignment 의 slot 들을 to_slot 에 하나씩 넣어 응답용 배정 한 벌을 만들고,
+    # 팀 번호는 to_team_name 으로 이름으로 바꿔 slots_by_team 의 key 로 쓴다.
     # 기간 배정은 이 두 함수만 바꿔 이 함수를 그대로 쓴다.
     slots_by_team: dict[str, list[BaseModel]] = {}
     for team_id, slots in assignment.slots_by_team.items():

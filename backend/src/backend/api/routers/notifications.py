@@ -23,7 +23,7 @@ def _notification_out(notification: Notification) -> NotificationOut:
 
 
 # 알림은 언제나 "내 것"이다 — 어느 사람의 것인지는 주소가 아니라 인증 쿠키가 정한다.
-# 주소로 받으면 남의 번호를 적어 보는 통로가 되고, 그것을 막는 확인이 또 필요해진다.
+# 주소로 받으면 남의 번호를 적어 보는 endpoint 가 되고, 남의 번호를 막는 확인이 또 필요해진다.
 @router.get("/notifications", response_model=NotificationsOut)
 def read_notifications(
     requester: Member = Depends(require_account),

@@ -44,7 +44,7 @@ def get_engine() -> Engine:
 
     if url not in _engines:
         # create_db_engine 을 여기서만 부른다. 시간 제한이 붙지 않은 Engine 이
-        # 다른 경로로 만들어지지 않도록, 만드는 자리를 한 곳으로 묶는다.
+        # 다른 경로로 만들어지지 않도록, 만드는 곳을 여기 하나로 묶는다.
         _engines[url] = create_db_engine(url)
     return _engines[url]
 

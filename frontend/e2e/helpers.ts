@@ -1,4 +1,4 @@
-// 여러 검사 파일이 함께 쓰는 것 — 시각 파싱, 요일 이름, 실제 데이터로 기간을
+// 여러 테스트 파일이 함께 쓰는 것 — 시각 파싱, 요일 이름, 실제 데이터로 기간을
 // 찾는 API 호출. 시드 번호(팀·기간 id)가 재시딩마다 바뀌므로, 화면에 보이는
 // 값이나 그때그때 부른 /api/... 응답으로 찾는다.
 
@@ -12,12 +12,12 @@ export const E2E_ACCOUNT_EMAIL = "e2e@banblit.test";
 export const E2E_ACCOUNT_PASSWORD = "e2e-password1";
 export const E2E_ACCOUNT_TEAM = "새벽 네시";
 
-/** 넘긴 통신 창구마다 /api/login 을 불러 세션 쿠키를 받아 둔다.
+/** 넘긴 APIRequestContext 마다 /api/login 을 불러 세션 쿠키를 받아 둔다.
  *  page.request 는 page 의 브라우저 컨텍스트와 쿠키 저장소를 공유하므로 거기에
  *  받은 쿠키(banblit_session·banblit_signed_in)는 이어지는 page.goto 에도 실린다.
- *  반면 검사가 받는 request 는 그와 별개의 쿠키 저장소다 — 화면과 API를 함께 보는
- *  검사는 `loginForTests(page.request, request)` 처럼 둘 다 넘겨야 한다.
- *  로그인 서식 자체가 되는지는 account.spec.ts가 따로 확인한다 — 나머지 검사들은
+ *  반면 테스트가 받는 request 는 그와 별개의 쿠키 저장소다 — 화면과 API를 함께 보는
+ *  테스트는 `loginForTests(page.request, request)` 처럼 둘 다 넘겨야 한다.
+ *  로그인 서식 자체가 되는지는 account.spec.ts가 따로 확인한다 — 나머지 테스트는
  *  로그인된 다음 화면만 보면 되므로 매번 서식을 채우지 않는다. */
 export async function loginForTests(...contexts: APIRequestContext[]): Promise<void> {
   for (const context of contexts) {
@@ -64,7 +64,7 @@ export type Period = {
 export type PeriodWithSchedule = Period & { rows: ScheduleRow[] };
 
 /** 집중 합주기간 중, 저장된 배정이 있는 것 하나와 없는 것 하나를 찾는다.
- *  시드는 앞 기간은 성사돼 저장되고 뒤 기간은 자리를 못 채워 저장되지 않게
+ *  시드는 앞 기간은 성사돼 저장되고 뒤 기간은 slot 을 못 채워 저장되지 않게
  *  만들지만, 그 순서를 여기서 가정하지 않고 실제 응답을 하나씩 확인한다. */
 export async function findFocusedPeriods(request: APIRequestContext): Promise<{
   withSchedule: PeriodWithSchedule | null;

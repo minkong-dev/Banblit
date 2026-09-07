@@ -19,11 +19,11 @@ import { Settings } from "./routes/Settings";
 import { Teams } from "./routes/Teams";
 import { isSignedIn } from "./lib/pipeline";
 
-/** 로그인 화면 뒤쪽 일곱 화면을 감싼다. 로그인 표시 쿠키가 없으면 그 화면을
+/** 로그인 화면 뒤쪽 일곱 화면을 감싼다. 로그인 표시 쿠키가 없으면 감싼 화면을
  *  그리지 않고 로그인으로 보낸다 — 서버도 세션 없는 요청은 401로 거절하니,
- *  화면에서 먼저 걸러 빈 화면이 잠깐 보였다 튕기는 것을 막는다.
+ *  frontend 에서 먼저 걸러 빈 화면이 잠깐 보였다 튕기는 것을 막는다.
  *  ponytail: 표시용 쿠키는 서버가 세션을 취소해도 곧바로 사라지지 않는다(다른
- *  기기에서 로그아웃한 경우 등). 그때는 여기를 통과하지만 뒤이은 요청이
+ *  기기에서 로그아웃한 경우 등). 그때는 RequireAuth 를 통과하지만 뒤이은 요청이
  *  401로 거절된다. */
 function RequireAuth(props: { children: ReactElement }): ReactElement {
   return isSignedIn() ? props.children : <Navigate to="/login" replace />;

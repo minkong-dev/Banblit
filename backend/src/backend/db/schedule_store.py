@@ -11,10 +11,10 @@ BACKUP_KEEP = 2  # 남길 백업 회차 수. 하루 2회 연산 = 하루치.
 
 
 class AssignmentRow(TypedDict):
-    """저장할 배정 한 칸. 항목 이름은 여기 한 곳에만 적는다.
+    """저장할 배정 한 slot. 항목 이름은 여기 한 곳에만 적는다.
 
     두 곳에 각각 적으면 한쪽 이름을 바꿔도 파이썬이 잡아주지 못한다.
-    실제 표의 칼럼은 backend/db/models.py 의 Assignment 가 정의한다.
+    실제 table 의 칼럼은 backend/db/models.py 의 Assignment 가 정의한다.
     """
 
     team_id: int
@@ -29,7 +29,7 @@ _ROOM_TIME_CONFLICT_CONSTRAINT = "assignments_room_id_starts_at_key"
 class ScheduleConflict(ValueError):
     """이미 차 있는 방·시각에 저장하려 했다는 뜻.
 
-    ValueError 를 물려받아, 부르는 쪽이 잘못된 입력과 같은 자리에서 잡을 수 있다.
+    ValueError 를 물려받아, 부르는 쪽이 잘못된 입력과 같은 곳에서 잡을 수 있다.
     """
 
 
@@ -128,7 +128,7 @@ def _prune_backups(session: Session, period_id: int) -> None:
 
 
 class BackupRound(TypedDict):
-    """백업 한 회차. saved_at 이 회차를 가르는 값이고, slot_count 는 그 회차의 칸 수다.
+    """백업 한 회차. saved_at 이 회차를 가르는 값이고, slot_count 는 그 회차의 slot 수다.
 
     회차 번호를 따로 두는 칼럼은 assignment_backups 에 없다 — 한 번의 저장에서
     옮겨진 줄들이 같은 saved_at 도장을 나눠 가진다.

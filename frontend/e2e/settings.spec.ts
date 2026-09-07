@@ -10,7 +10,7 @@ test.beforeEach(async ({ page, request }) => {
 
 const SLOT_MINUTES = 30;
 
-/** 30분 격자를 지키며 opens_at 을 한 칸 옮긴다. +30분이 closes_at 을 넘으면 -30분으로 옮긴다. */
+/** 30분 격자를 지키며 opens_at 을 한 slot 옮긴다. +30분이 closes_at 을 넘으면 -30분으로 옮긴다. */
 function shiftedOpensAt(opensAt: string, closesAt: string): string {
   const [hour, minute] = opensAt.split(":").map(Number);
   const [closeHour, closeMinute] = closesAt.split(":").map(Number);
@@ -48,7 +48,7 @@ test("합주실을 고치면 저장되고 다시 열어도 남아 있다", async
     .filter({ has: page.getByRole("button", { name: editButtonName }) });
   await expect(rowAfterReload).toContainText(changedOpensAt);
 
-  // 되돌린다 — 다음 번 검사도, 이 값을 보는 사람도 원래 시각을 봐야 한다.
+  // 되돌린다 — 다음 번 테스트도, 이 값을 보는 사람도 원래 시각을 봐야 한다.
   await page.getByRole("button", { name: editButtonName }).click();
   await page.locator("li.editing").getByLabel("여는 시각").fill(room.opens_at);
   await page.locator("li.editing").getByRole("button", { name: "저장" }).click();

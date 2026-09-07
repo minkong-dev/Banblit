@@ -83,7 +83,7 @@ def _posts_out(rows: list[PostRow]) -> PostsOut:
 
 
 # 공지의 "전체 공개"는 팀을 가리지 않는다는 뜻이지 방문자에게 연다는 뜻이 아니다.
-# 목록이 놓인 자리가 로그인 뒤의 메인 캘린더라, 누구인지는 쓰지 않고 로그인만 본다.
+# 목록이 놓인 화면이 로그인 뒤의 메인 캘린더라, 누구인지는 쓰지 않고 로그인만 본다.
 @router.get(
     "/notices", response_model=PostsOut, dependencies=[Depends(require_account)]
 )
@@ -157,7 +157,7 @@ def read_post_detail(
         post=_post_out(post, author, comment_count),
         comments=[_comment_out(comment, author) for comment, author in comment_rows],
         # 볼 자격은 바로 위 get_post_with_comments 가 이미 확인했다. 여기서 다시
-        # 확인하는 함수를 쓰면 같은 소속 조회가 한 요청에 두 번 돈다.
+        # 확인하는 함수를 쓰면 같은 소속 조회가 한 요청에 두 번 실행된다.
         attachments=[_attachment_out(row) for row in attachments_of_post(session, post.id)],
     )
 
@@ -193,8 +193,8 @@ def upload_attachment(
 ) -> AttachmentEnvelopeOut:
     try:
         # file.file 은 프레임워크가 이미 임시 파일로 받아 둔 것을 가리킨다. 서비스에는
-        # UploadFile 이 아니라 읽을 수 있는 것만 넘긴다 — 서비스가 통로 형식을 모르게 둔다.
-        # 크기 상한 검사를 여기 두지 않는다. 이 함수에 닿기 전에 앞단 nginx 의
+        # UploadFile 이 아니라 읽을 수 있는 것만 넘긴다 — 서비스가 endpoint 형식을 모르게 둔다.
+        # 크기 상한 검사를 여기 두지 않는다. 이 함수에 닿기 전에 nginx 의
         # client_max_body_size(frontend/nginx.conf.template)가 이미 거절한다.
         attachment = save_attachment(
             session,
@@ -272,8 +272,8 @@ def delete_post_endpoint(
 ) -> None:
     try:
         post = require_post_author(session, post_id, requester)
-        # 표의 행이 사라지기 전에 디스크의 파일부터 지운다. 순서를 바꾸면 어느 파일이
-        # 이 글의 것이었는지 알 방법이 없어져, 아무도 못 지우는 파일이 남는다.
+        # attachments table 의 행이 사라지기 전에 디스크의 파일부터 지운다. 순서를 바꾸면
+        # 어느 파일이 이 게시글의 것이었는지 알 방법이 없어져, 아무도 못 지우는 파일이 남는다.
         remove_post_files(session, post_id)
         session.delete(post)
         session.commit()

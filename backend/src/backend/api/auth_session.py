@@ -37,8 +37,8 @@ def _delete_dead_sessions(session: Session, member_id: int, now: datetime) -> No
 def create_session(session: Session, member_id: int, now: datetime) -> str:
     """새 세션 토큰을 만들어 저장하고, 토큰 원문을 돌려준다.
 
-    쌓인 죽은 행은 새 행과 같은 커밋에서 함께 지운다 — 로그인·가입이 이 표에 행을
-    더하는 유일한 자리라서, 여기 말고 정리할 자리가 없다.
+    쌓인 죽은 행은 새 행과 같은 커밋에서 함께 지운다 — 로그인·가입이 login_sessions
+    table 에 행을 더하는 유일한 코드라서, 여기 말고 정리할 곳이 없다.
 
     ponytail: 로그인하지 않는 계정의 행은 계속 남는다. 그 계정 수가 문제되면
     주기적 삭제를 붙인다 — 지금 이 저장소에는 예약 실행 장치가 없다.

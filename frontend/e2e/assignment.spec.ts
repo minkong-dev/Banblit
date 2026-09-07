@@ -3,8 +3,8 @@ import { expect, test } from "@playwright/test";
 import { findFocusedPeriods, loginForTests } from "./helpers";
 
 // 배정 계산은 실측 1초 안팎이지만(2026-09-04), 컨테이너 부하에 따라 늘어날 수 있어
-// 넉넉히 20초를 둔다. 화면(lib/jobs.ts)의 JOB_DEADLINE_MS(60초)보다는 작다 — 그보다
-// 오래 걸리면 화면도 스스로 포기하므로 그 이상 기다릴 이유가 없다.
+// 넉넉히 20초를 둔다. frontend(lib/jobs.ts)의 JOB_DEADLINE_MS(60초)보다는 작다 — 그보다
+// 오래 걸리면 frontend 도 스스로 포기하므로 그 이상 기다릴 이유가 없다.
 const ASSIGN_WAIT_MS = 20_000;
 
 test.describe("배정 다시 계산", () => {
@@ -73,8 +73,8 @@ test.describe("배정 다시 계산", () => {
 
     const recomputeButton = page.getByRole("button", { name: /다시 계산|계산하는 중/ });
     await recomputeButton.click();
-    // 자리가 안 맞는다는 판정은 CP-SAT 이 탐색 없이 곧장 끝낼 때가 있어 "계산하는
-    // 중…" 이 뜨는 순간을 못 볼 수 있다("저장된 배정이…" 검사가 그 문구는 이미 본다).
+    // slot 이 안 맞는다는 판정은 CP-SAT 이 탐색 없이 곧장 끝낼 때가 있어 "계산하는
+    // 중…" 이 뜨는 순간을 못 볼 수 있다("저장된 배정이…" 테스트가 그 문구는 이미 본다).
     // 여기서는 끝난 뒤의 결과만 확실히 잡는다.
     await expect(recomputeButton).toHaveText("지금 다시 계산", { timeout: ASSIGN_WAIT_MS });
 

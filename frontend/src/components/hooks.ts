@@ -1,5 +1,4 @@
-// 화면이 함께 쓰는 훅. 흩어져 있던 네 파일을 한 기능 파일로 묶었다.
-// 서버를 부르는 것은 시퀀스 파일(lib/pipeline)을 거친다.
+// 화면이 함께 쓰는 훅. 서버를 부르는 것은 시퀀스 파일(lib/pipeline)을 거친다.
 
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -7,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchMe, getJSON, teamIdsByStatus } from "../lib/pipeline";
 import type { Account, Team } from "../lib/contract";
 
-/** 화면 CSS 는 body[data-page="..."] 안에 갇혀 있다. 그 표시를 걸고 떼는 자리. */
+/** 화면 CSS 는 body[data-page="..."] 안에 갇혀 있다. data-page 를 걸고 떼는 곳. */
 export function usePage(page: string): void {
   useEffect(() => {
     document.body.dataset.page = page;
@@ -31,7 +30,7 @@ export function useToast(): { message: string; say: (message: string) => void } 
     timer.current = window.setTimeout(() => setMessage(""), HOLD_MS);
   }, []);
 
-  // 화면을 떠날 때 남은 시계를 끈다. 없어진 화면에 값을 넣으려 하면 경고가 뜬다.
+  // 화면을 떠날 때 남은 타이머를 끈다. 없어진 화면에 값을 넣으려 하면 경고가 뜬다.
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   return { message, say };
@@ -66,7 +65,7 @@ export function useMe(): {
 
 export type MyTeam = { id: number; name: string; colorKey: string };
 
-/** 내가 속한 팀을 전체 팀 목록에서 골라내고, 목록 안 자리로 색을 매긴다(스케줄러와
+/** 내가 속한 팀을 전체 팀 목록에서 골라내고, 목록 안 순서로 색을 매긴다(스케줄러와
  *  같은 규칙 — 전체 팀 목록에서의 순서가 곧 달력 색이다). 프로필 말풍선이 화면마다
  *  쓴다. 아직 못 불러왔거나 실패하면 빈 배열을 돌려준다 — 말풍선은 팀 없이도 그려진다. */
 export function useMyTeams(): MyTeam[] {

@@ -9,8 +9,8 @@ from backend.db.models import (
     PermissionSet,
 )
 
-# 아무도 없는 저장소에 처음 가입한 사람이 받는 묶음의 이름. 마이그레이션이 심는
-# 묶음도 같은 이름을 쓴다(migrations/versions/b7f1a92c4d31_permission_sets.py).
+# 아무도 없는 DB 에 처음 가입한 사람이 받는 permission set 의 이름. 마이그레이션이
+# 심는 permission set 도 같은 이름을 쓴다(migrations/versions/b7f1a92c4d31_permission_sets.py).
 FULL_SET_NAME = "헤드매니저"
 
 
@@ -41,9 +41,9 @@ def _require_unique_name(session: Session, name: str, exclude_id: int | None) ->
 
 
 def account_permissions(session: Session, member_id: int) -> list[str]:
-    """member_id 가 가진 모든 묶음의 항목을 합집합으로 모아 선언 순서로 돌려준다.
+    """member_id 가 가진 모든 permission set 의 항목을 합집합으로 모아 선언 순서로 돌려준다.
 
-    묶음이 하나도 없으면 빈 목록이다 — 아무것도 할 수 없다는 뜻이다.
+    permission set 이 하나도 없으면 빈 목록이다 — 아무것도 할 수 없다는 뜻이다.
     """
     rows = session.scalars(
         select(PermissionSet.permissions)
@@ -60,7 +60,7 @@ def account_permissions(session: Session, member_id: int) -> list[str]:
 
 
 def list_permission_sets(session: Session) -> list[tuple[PermissionSet, list[int]]]:
-    """묶음을 id 오름차순으로, 그 묶음을 가진 사람 번호와 함께 돌려준다."""
+    """permission set 을 id 오름차순으로, 그 permission set 을 가진 사람 번호와 함께 돌려준다."""
     holders: dict[int, list[int]] = {}
     rows = session.execute(
         select(MemberPermissionSet.permission_set_id, MemberPermissionSet.member_id)
@@ -74,7 +74,7 @@ def list_permission_sets(session: Session) -> list[tuple[PermissionSet, list[int
 
 
 def set_holders(session: Session, set_id: int) -> list[int]:
-    """set_id 묶음을 가진 사람 번호를 오름차순으로 돌려준다."""
+    """set_id permission set 을 가진 사람 번호를 오름차순으로 돌려준다."""
     return list(
         session.scalars(
             select(MemberPermissionSet.member_id)
@@ -87,7 +87,7 @@ def set_holders(session: Session, set_id: int) -> list[int]:
 def create_permission_set(
     session: Session, name: str, permissions: list[str]
 ) -> PermissionSet:
-    """name 으로 묶음을 새로 만든다. 빈 이름과 이미 있는 이름을 거절한다."""
+    """name 으로 permission set 을 새로 만든다. 빈 이름과 이미 있는 이름을 거절한다."""
     clean_name = require_non_empty(name, "이름")
     _require_unique_name(session, clean_name, exclude_id=None)
 
@@ -102,7 +102,7 @@ def create_permission_set(
 def update_permission_set(
     session: Session, set_id: int, name: str, permissions: list[str]
 ) -> PermissionSet:
-    """set_id 묶음의 이름과 켜진 항목을 통째로 갈아 끼운다."""
+    """set_id permission set 의 이름과 켜진 항목을 통째로 갈아 끼운다."""
     permission_set = _get_set_or_raise(session, set_id)
     clean_name = require_non_empty(name, "이름")
     _require_unique_name(session, clean_name, exclude_id=set_id)
@@ -114,7 +114,7 @@ def update_permission_set(
 
 
 def delete_permission_set(session: Session, set_id: int) -> None:
-    """set_id 묶음을 지운다. 그 묶음을 가졌던 사람의 연결도 함께 사라진다
+    """set_id permission set 을 지운다. 그 permission set 을 가졌던 사람의 연결도 함께 사라진다
     (member_permission_sets.permission_set_id 가 ON DELETE CASCADE)."""
     session.delete(_get_set_or_raise(session, set_id))
     session.commit()
@@ -132,7 +132,7 @@ def _find_grant(
 
 
 def grant_permission_set(session: Session, member_id: int, set_id: int) -> None:
-    """member_id 에게 set_id 묶음을 붙인다. 이미 가지고 있으면 그대로 둔다."""
+    """member_id 에게 set_id permission set 을 붙인다. 이미 가지고 있으면 그대로 둔다."""
     if session.get(Member, member_id) is None:
         raise ValueError("그런 사람이 없습니다")
     _get_set_or_raise(session, set_id)
@@ -146,7 +146,7 @@ def grant_permission_set(session: Session, member_id: int, set_id: int) -> None:
 
 
 def revoke_permission_set(session: Session, member_id: int, set_id: int) -> None:
-    """member_id 에게서 set_id 묶음을 뗀다. 가지고 있지 않으면 거절한다."""
+    """member_id 에게서 set_id permission set 을 뗀다. 가지고 있지 않으면 거절한다."""
     grant = _find_grant(session, member_id, set_id)
     if grant is None:
         raise ValueError("그 권한 묶음을 가지고 있지 않습니다")
@@ -155,7 +155,7 @@ def revoke_permission_set(session: Session, member_id: int, set_id: int) -> None
 
 
 def grant_full_permissions(session: Session, member_id: int) -> None:
-    """member_id 에게 열한 가지가 전부 켜진 묶음을 붙인다. 그런 묶음이 없으면 만든다.
+    """member_id 에게 열한 가지가 전부 켜진 permission set 을 붙인다. 그런 permission set 이 없으면 만든다.
 
     커밋은 부르는 쪽이 한다 — 가입은 계정·포지션·권한을 한 번에 커밋한다.
     """
