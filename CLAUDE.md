@@ -184,10 +184,12 @@ PDF·PPT·Word·Excel은 `document-skills` 스킬을 포맷에 맞게 쓴다.
 
 ### 8-1. push에 포함하지 않는 것
 
-- `dev_history/` — 내부 기록이다.
 - `trash/` — 지우는 대신 옮겨 두는 곳이다.
 - `.claude/settings.local.json` — 이 PC에만 해당하는 권한 목록이다.
 - `.env` 계열 — 비밀값이 든다. 견본(`.env.example`)만 예외로 올린다.
 
 규칙 파일과 훅·스킬(`CLAUDE.md`, `.claude/`)은 저장소가 함께 들고 다녀야 다른 PC에서도
 같은 방식으로 일할 수 있으므로 포함한다.
+
+`dev_history/` 도 포함한다. 무엇을 했고 무엇이 남았는지가 여기에만 있어서, 빠지면
+다른 PC나 다음 세션에서 진행 상황을 따라갈 수 없다.
