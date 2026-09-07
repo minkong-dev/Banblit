@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from backend.scheduling.interval import TimeInterval
 
-# 칸은 정시와 30분에서만 시작한다. 이 격자를 벗어나는 시간은 인정하지 않는다.
+# slot 은 정시와 30분에서만 시작한다. 30분 격자를 벗어나는 시간은 인정하지 않는다.
 SLOT_MINUTES = 30
 
 
@@ -15,7 +15,7 @@ def _is_on_grid(moment: datetime) -> bool:
 
 
 def generate_slots(period: TimeInterval) -> list[TimeInterval]:
-    """운영 시간 구간을 30분짜리 칸으로 쪼갠다.
+    """운영 시간 구간을 30분짜리 slot 으로 쪼갠다.
 
     운영 시간은 정시 또는 30분에서 시작하고 끝나야 한다.
     격자를 벗어나면 자투리를 버리지 않고 잘못된 설정으로 거부한다.

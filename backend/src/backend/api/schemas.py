@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from backend.db.models import JoinPolicy, MembershipStatus, Permission
 from backend.db.models import NotificationKind
 
-# 배정 결과의 모양은 한 벌만 둔다. 칸과 제외 인원의 타입만 갈아 끼운다 —
+# 배정 결과의 모양은 한 벌만 둔다. slot 과 제외 인원의 타입만 갈아 끼운다 —
 # /assign 은 이름만 주고받고, 기간 배정은 거기에 실제 id 가 붙는다.
 SlotT = TypeVar("SlotT", bound=BaseModel)
 ExcludedT = TypeVar("ExcludedT")
@@ -75,7 +75,7 @@ class ScheduleRowOut(BaseModel):
 
 
 class ScheduleOut(BaseModel):
-    # open_slots 는 아무 팀도 쓰지 않는 30분 칸이다. 화면은 이 시간만 예약으로 연다.
+    # open_slots 는 아무 팀도 쓰지 않는 30분 slot 이다. 화면은 open_slots 의 시간만 예약으로 연다.
     rows: list[ScheduleRowOut]
     open_slots: list[PeriodRoomSlotOut]
 
@@ -241,7 +241,7 @@ class MembershipEnvelopeOut(BaseModel):
 
 
 class MembershipCreateIn(BaseModel):
-    # 참가하는 사람은 인증 쿠키의 주인이다. 남을 대신 넣는 자리는 만들지 않았다.
+    # 참가하는 사람은 인증 쿠키의 주인이다. 남을 대신 넣는 항목은 만들지 않았다.
     # ponytail: 헤드매니저가 남을 팀에 넣는 화면이 생기면 member_id 를 여기 되살린다.
     position_id: int
 
@@ -378,7 +378,7 @@ class MyMembershipOut(BaseModel):
 class MeOut(BaseModel):
     account: AccountOut
     # 승인된 소속과 대기 중인 신청을 팀 번호 순으로 함께 담는다 — 화면이 새로 고쳐도
-    # 자기가 어디에 신청해 뒀는지 알 수 있는 자리가 여기뿐이다.
+    # 자기가 어디에 신청해 뒀는지 알 수 있는 곳이 여기뿐이다.
     memberships: list[MyMembershipOut]
 
 
@@ -461,7 +461,7 @@ class NotificationsOut(BaseModel):
 
 
 class FindIdIn(BaseModel):
-    # 길이 상한은 SignupIn·LoginIn 과 같은 값이다. 로그인 없이 열려 있는 통로라
+    # 길이 상한은 SignupIn·LoginIn 과 같은 값이다. 로그인 없이 열려 있는 endpoint 라
     # 아무 길이나 받으면 큰 글자를 계속 보내는 것만으로 서버를 붙잡아 둘 수 있다.
     name: str = Field(max_length=100)
     email: str = Field(max_length=254)

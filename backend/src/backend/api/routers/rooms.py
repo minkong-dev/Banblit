@@ -21,7 +21,7 @@ def _room_out(room: Room) -> RoomOut:
     )
 
 
-# 요청한 사람이 누구인지 쓰지 않고 권한만 확인하는 통로는, 쓰이지 않는 인자를
+# 요청한 사람이 누구인지 쓰지 않고 권한만 확인하는 endpoint 는, 쓰이지 않는 인자를
 # 남기지 않도록 dependencies 로 건다.
 @router.get("/rooms", response_model=RoomsOut, dependencies=[Depends(require_account)])
 def read_rooms(session: Session = Depends(get_session)) -> RoomsOut:

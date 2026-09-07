@@ -51,7 +51,7 @@ def list_members(session: Session, team_id: int) -> list[tuple[Member, list[str]
     """team_id 팀의 소속원을 id 오름차순으로, 각자의 포지션과 함께 돌려준다.
 
     memberships는 (member_id, team_id)가 유일해 한 팀 안에서 한 사람은 한 행만
-    가지므로, 행마다 포지션 하나를 담은 한 칸짜리 목록으로 감싸면 된다.
+    가지므로, 행마다 포지션 하나를 담은 원소 하나짜리 목록으로 감싸면 된다.
     승인 대기는 아직 소속이 아니므로 빠진다.
     """
     if session.get(Team, team_id) is None:
@@ -92,7 +92,7 @@ def list_positions(session: Session) -> list[Position]:
 
 def team_member_count(session: Session, team_id: int) -> int:
     """팀 하나의 소속 인원 수. list_teams의 집계는 전체 팀을 한 번에 세므로, 팀 하나만
-    다시 보여줘야 하는 자리(생성·수정 직후 응답)에서는 이 쪽을 쓴다."""
+    다시 보여줘야 하는 곳(생성·수정 직후 응답)에서는 이 함수를 쓴다."""
     return session.execute(
         select(func.count(Membership.id)).where(
             Membership.team_id == team_id, Membership.status == "approved"
@@ -178,7 +178,7 @@ def commit_roster(session: Session) -> None:
 def create_team(session: Session, name: str) -> Team:
     """name 으로 새 팀을 만들어 돌려준다. 빈 이름과 이미 있는 이름을 거절한다.
 
-    누가 만들 수 있는지는 통로(routers/roster.py)의 team_manage 확인이 가른다.
+    누가 만들 수 있는지는 endpoint(routers/roster.py)의 team_manage 확인이 가른다.
     """
     clean_name = require_team_name(name)
     _require_unique_team_name(session, clean_name, exclude_id=None)
@@ -254,7 +254,7 @@ def approve_join_request(
     session: Session, team_id: int, member_id: int
 ) -> tuple[Membership, str, str]:
     """대기 중인 신청을 소속으로 바꾸고, join_team 과 같은 (소속, 사람 이름, 포지션 이름)을
-    돌려준다. 누가 승인할 수 있는지는 통로의 join_approve 확인이 가른다."""
+    돌려준다. 누가 승인할 수 있는지는 endpoint 의 join_approve 확인이 가른다."""
     membership = _get_pending_or_raise(session, team_id, member_id)
     membership.status = "approved"
     session.commit()
@@ -269,7 +269,7 @@ def approve_join_request(
 
 
 def reject_join_request(session: Session, team_id: int, member_id: int) -> None:
-    """대기 중인 신청을 지운다. 이미 소속인 사람은 이 통로로 뺄 수 없다."""
+    """대기 중인 신청을 지운다. 이미 소속인 사람은 이 endpoint 로 뺄 수 없다."""
     membership = _get_pending_or_raise(session, team_id, member_id)
     session.delete(membership)
     session.commit()
@@ -284,7 +284,7 @@ def leave_team(
 ) -> None:
     """member_id 를 team_id 소속에서 뺀다. 소속도 신청도 없으면 거절한다.
 
-    상태를 가리지 않고 지우므로, 대기 중인 본인 신청을 취소하는 것도 이 통로다.
+    상태를 가리지 않고 지우므로, 대기 중인 본인 신청을 취소하는 것도 이 endpoint 다.
 
     may_remove_others 는 requester 가 member_remove 항목을 가졌는지다. 본인도
     아니고 그 항목도 없으면 PermissionError 를 올린다 —

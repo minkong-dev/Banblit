@@ -64,7 +64,7 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Banblit Scheduling API")
 
-# 배정 계산을 접수해 배경 스레드에서 돌린다. 앱 하나에 하나만 둔다 — 요청마다 새로
+# 배정 계산을 접수해 배경 스레드에서 실행한다. 앱 하나에 하나만 둔다 — 요청마다 새로
 # 만들면 스레드 풀과 작업 기록이 요청마다 따로 생겨 상한도 조회도 의미가 없어진다.
 job_runner: JobRunner[PeriodAssignResult] = JobRunner(
     max_concurrent=max_concurrent_jobs_from_env()
@@ -73,7 +73,7 @@ job_runner: JobRunner[PeriodAssignResult] = JobRunner(
 
 def _format_validation_error(exc: RequestValidationError) -> str:
     # 형식 오류를 "어느 항목: 무엇이 문제" 문장으로 합친다. 내용 오류(엔진 거부)와
-    # 답장 모양을 맞춰, 화면이 detail 하나만 보여주면 되게 한다.
+    # 응답 모양을 맞춰, 화면이 detail 하나만 보여주면 되게 한다.
     lines: list[str] = []
     for error in exc.errors():
         location = " → ".join(str(part) for part in error["loc"] if part != "body")
@@ -119,7 +119,7 @@ async def handle_validation_error(
 @app.get("/health")
 def health() -> JSONResponse:
     # check_database 로 실제 접속과 마이그레이션 적용 여부를 확인해 그대로 싣는다.
-    # 하나라도 끊겼으면 503 으로 답해, 앞단이 이 서버를 빼고 돌 수 있게 한다.
+    # 하나라도 끊겼으면 503 으로 답해, reverse proxy 가 이 서버를 빼고 동작할 수 있게 한다.
     database = check_database()
     checks = {"database": {"ok": database.ok, "detail": database.detail}}
     healthy = database.ok
@@ -131,7 +131,7 @@ def health() -> JSONResponse:
     )
 
 
-# 도메인 라우터를 붙인다. 각 라우터는 표 하나(또는 하나에 딸린 CRUD)만 다루므로
+# 도메인 라우터를 붙인다. 각 라우터는 table 하나(또는 하나에 딸린 CRUD)만 다루므로
 # room_service·period_crud_service·roster_service·board_service 와 같은 경계로 나눴다.
 # 순서는 응답에 영향이 없다 — 주소가 서로 겹치지 않기 때문이다.
 app.include_router(rooms.router)
@@ -146,7 +146,7 @@ app.include_router(notifications.router)
 
 
 # 저장하지 않는 계산이지만 최대 22.2초까지 걸린다(2026-08-28 실측). 로그인을
-# 요구하지 않으면 이 통로 하나로 서버를 묶을 수 있어 require_account 를 건다.
+# 요구하지 않으면 이 endpoint 하나로 서버를 묶을 수 있어 require_account 를 건다.
 @app.post(
     "/assign",
     response_model=ResolutionOut[RoomSlotOut, str],
@@ -196,9 +196,10 @@ def read_schedule(
             )
         )
 
-    # 남는 칸을 시간표와 같은 답장에 싣는다. 화면은 이것만 보고 예약 가능한 시간을
-    # 연다 — 따로 물으러 오게 두면 배정 계산(최대 22.2초)을 다시 돌리는 통로가
-    # 필요해진다. 운영시간이 30분 칸으로 안 쪼개지는 방이 섞이면 ValueError 로 온다.
+    # 남는 slot 을 시간표와 같은 응답에 싣는다. 화면은 open_slots 만 보고 예약 가능한
+    # 시간을 연다 — 따로 물으러 오게 두면 배정 계산(최대 22.2초)을 다시 실행하는
+    # endpoint 가 필요해진다. 운영시간이 30분 slot 으로 안 쪼개지는 방이 섞이면
+    # ValueError 로 온다.
     try:
         open_slots = open_slots_in_period(session, period)
     except ValueError as error:
@@ -222,7 +223,7 @@ def _period_assignment_out(
     assignment: EngineAssignment, result: PeriodAssignResult
 ) -> PeriodAssignmentOut:
     def to_slot(room_slot: RoomSlot) -> PeriodRoomSlotOut:
-        # 엔진이 쓴 번호가 곧 저장소의 합주실 번호다. 이름만 대응표에서 찾아 붙인다.
+        # 엔진이 쓴 번호가 곧 DB 의 합주실 번호다. 이름만 대응표에서 찾아 붙인다.
         return PeriodRoomSlotOut(
             room_id=room_slot.room_id,
             room=result.room_names[room_slot.room_id],
@@ -239,7 +240,7 @@ def _period_assignment_out(
 def _period_assign_out(result: PeriodAssignResult) -> PeriodAssignOut:
     proposals: list[PeriodProposalOut] = []
     for proposal in result.resolution.proposals:
-        # 엔진이 쓴 번호가 곧 저장소의 사람 번호다. 이름만 대응표에서 찾아 붙인다.
+        # 엔진이 쓴 번호가 곧 DB 의 사람 번호다. 이름만 대응표에서 찾아 붙인다.
         member_id = proposal.excluded_member
         proposals.append(
             PeriodProposalOut(
@@ -278,7 +279,7 @@ def _submit_assign_job(
 ) -> JobEnvelopeOut:
     # 여기서는 기간이 실제로 있는지만 빠르게 확인한다. 팀·합주실 존재 여부나
     # 배정 계산 자체(최대 22.2초, 2026-08-28 실측)는 접수를 막을 이유가 아니라
-    # 배경 작업의 실패 사유이므로 job_runner 가 돌리는 쪽에서 다룬다.
+    # 배경 작업의 실패 사유이므로 job_runner 가 실행하는 쪽에서 다룬다.
     if session.get(Period, period_id) is None:
         raise HTTPException(status_code=422, detail="그런 기간이 없습니다")
 
@@ -295,7 +296,7 @@ def _submit_assign_job(
                 excluded_member_id=excluded_member_id,
             )
             # 사람이 눌러 다시 계산한 것도 시간표를 바꾼다. 저장이 실제로 된 때만
-            # 알린다 — 자리를 못 찾아 조율안만 나온 경우에는 보던 시간표가 그대로다.
+            # 알린다 — 배정할 slot 을 못 찾아 조율안만 나온 경우에는 보던 시간표가 그대로다.
             if result.saved:
                 notify_assignment_updated(job_session, period_id, datetime.now())
             return result
@@ -319,10 +320,10 @@ def assign_period_schedule(
     return _submit_assign_job(period_id, req, session, session_factory, None)
 
 
-# 조율안을 고르는 통로. 계산 결과는 프로세스 메모리에만 있어 서버가 조율안의 배정을
+# 조율안을 고르는 endpoint. 계산 결과는 프로세스 메모리에만 있어 서버가 조율안의 배정을
 # 다시 꺼낼 수 없으므로, 그 사람을 뺀 채로 다시 계산해 저장한다 — /assign 과 같은
 # 입력에 excluded_member_id 만 얹은 것이라 저장 경로가 하나로 유지된다.
-# 계산이 다시 도는 만큼 여기도 202 로 접수하고 결과는 GET /jobs/{id} 로 받는다.
+# 계산이 다시 실행되는 만큼 여기도 202 로 접수하고 결과는 GET /jobs/{id} 로 받는다.
 @app.post(
     "/periods/{period_id}/proposals/{member_id}/confirm",
     response_model=JobEnvelopeOut,
@@ -354,7 +355,7 @@ def read_job(job_id: str) -> JobEnvelopeOut:
 
 
 # 되돌리기가 어느 회차로 갈지 고르는 목록이다. 되돌리기와 같은 자격으로 막는다 —
-# 여기 나오는 회차가 곧 그 통로가 되살릴 대상이다.
+# 여기 나오는 회차가 곧 rollback endpoint 가 되살릴 대상이다.
 @app.get(
     "/periods/{period_id}/backups",
     response_model=BackupsOut,
@@ -405,7 +406,7 @@ def rollback_period_schedule(
 
 # 개발용 — 프로토타입 화면을 API 와 같은 출처로 내보낸다. 출처가 같아야 화면의
 # fetch 가 CORS 에 막히지 않는다. PROTOTYPE_DIR 이 실제 폴더를 가리킬 때만 붙으므로
-# 그 환경변수가 없는 배포에서는 이 자리가 아예 생기지 않는다.
+# 그 환경변수가 없는 배포에서는 이 mount 가 아예 생기지 않는다.
 _prototype_dir = os.environ.get("PROTOTYPE_DIR")
 if _prototype_dir and os.path.isdir(_prototype_dir):
     app.mount(

@@ -18,7 +18,7 @@ const NAV = [
 ] as const;
 
 // needs 중 하나라도 가진 사람에게만 보인다. 설정 화면은 합주실·기간·권한 세 구역이라
-// 그중 하나만 있어도 들어갈 자리가 있다.
+// 그중 하나만 있어도 들어갈 구역이 있다.
 const MANAGER_NAV = [
   { key: "assign", label: "배정 결과 확인", to: "/admin", needs: ["assign_read"] },
   {
@@ -37,7 +37,7 @@ function NavList({ items, current }: { items: readonly NavItem[]; current: NavKe
   return (
     <nav>
       {items.map((item) =>
-        // 아직 만들지 않은 화면은 링크가 아니라 눌리지 않는 글이다.
+        // 아직 만들지 않은 화면은 링크가 아니라 눌리지 않는 단추다.
         item.to === null ? (
           <button key={item.key} type="button" disabled>{item.label}</button>
         ) : (
@@ -65,7 +65,7 @@ export function AppShell(props: {
   page: string;
   /** 사이드바에 없는 화면(프로필 설정)은 아무 항목도 켜지 않도록 비워 둔다. */
   current?: NavKey;
-  /** 상단 오른쪽 — 프로필 버튼과, 있다면 그 말풍선까지. */
+  /** 상단 오른쪽 — 프로필 버튼과, 있다면 프로필 말풍선까지. */
   profile: ReactNode;
   /** 사이드바 맨 아래에 덧붙일 것. */
   sideExtra?: ReactNode;
@@ -158,7 +158,7 @@ export function Tabs<T extends string>(props: {
 }
 
 /** 상단 오른쪽 프로필 단추 + 말풍선. 스케줄러·게시판류 화면이 함께 쓴다.
- *  "프로필 설정"이 이 말풍선에서 `/profile`로 들어가는 유일한 자리다. */
+ *  "프로필 설정"이 이 말풍선에서 `/profile`로 들어가는 유일한 입구다. */
 export function ProfileMenu(props: {
   name: string;
   sub: string;
@@ -172,7 +172,7 @@ export function ProfileMenu(props: {
 
   // 팀마다 그 팀의 명단을 받는다. 명단에서 내 번호와 같은 사람을 찾으면 그 사람이
   // 그 팀에서 맡은 포지션이다 — 이름이 아니라 번호로 가른다(동명이인 규칙).
-  // 질의 이름은 hooks 의 것과 같아, 이미 받아 둔 명단이 있으면 다시 부르지 않는다.
+  // query key 는 hooks 의 것과 같아, 이미 받아 둔 명단이 있으면 다시 부르지 않는다.
   const rosters = useQueries({
     queries: teams.map((team) => ({
       queryKey: ["members", team.id],
@@ -187,7 +187,7 @@ export function ProfileMenu(props: {
     try {
       await logOut();
     } catch {
-      // 위 주석대로 실패해도 로그인 화면으로 넘어간다.
+      // 로그아웃 요청 실패는 무시한다.
     }
     void navigate("/login");
   }
@@ -211,7 +211,7 @@ export function ProfileMenu(props: {
           return (
             <div className="tm" key={team.id}>
               <i style={{ background: `var(--${team.colorKey})` }} />{team.name}
-              {/* 명단이 아직 안 왔으면 자리만 비워 둔다. 없는 포지션을 지어내지 않는다. */}
+              {/* 명단이 아직 안 왔으면 포지션 칸을 비워 둔다. 없는 포지션을 지어내지 않는다. */}
               <small>{mine?.positions.join(", ") ?? ""}</small>
             </div>
           );

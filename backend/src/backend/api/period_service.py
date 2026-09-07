@@ -43,7 +43,7 @@ class PeriodAssignResult:
 
 @dataclass(frozen=True)
 class OpenSlot:
-    """아무 팀도 배정받지 않은 30분 칸 하나. 방 번호와 이름을 함께 들고 있다."""
+    """아무 팀도 배정받지 않은 30분 slot 하나. 방 번호와 이름을 함께 들고 있다."""
 
     room_id: int
     room: str
@@ -63,7 +63,7 @@ def assign_period(
 
     배정이 불가능하면 저장하지 않고 조율안만 담아 돌려준다 — 실패는 오류가 아니다.
     excluded_member_id 를 주면 그 사람을 명단에서 빼고 계산한다. 조율안 확정이
-    이 자리를 쓴다 — 조율안이 지목한 사람을 빼면 조율안과 같은 계산이 된다.
+    이 인자를 쓴다 — 조율안이 지목한 사람을 빼면 조율안과 같은 계산이 된다.
     잘못된 입력(없는 기간·팀·합주실, 상시기간, 명단 밖 사람)은 ValueError로 거부한다.
     """
     period = session.get(Period, period_id)
@@ -143,7 +143,7 @@ def _load_members(
     session: Session, team_ids: list[int]
 ) -> tuple[dict[int, list[int]], dict[int, str]]:
     # 팀별 멤버 번호 목록과, 번호에서 이름을 찾을 대응표를 함께 돌려준다.
-    # 엔진에는 번호만 가고, 이름은 답장을 만들 때만 쓴다.
+    # 엔진에는 번호만 가고, 이름은 응답을 만들 때만 쓴다.
     # 승인 대기(status="pending")는 아직 소속이 아니므로 배정 명단에 넣지 않는다.
     rows = session.execute(
         select(Membership.team_id, Member.id, Member.name)
@@ -176,15 +176,15 @@ def _without_member(
 
 
 def open_slots_in_period(session: Session, period: Period) -> list[OpenSlot]:
-    """그 기간에서 아무 팀도 쓰지 않는 30분 칸을 시작 시각순으로 돌려준다.
+    """그 기간에서 아무 팀도 쓰지 않는 30분 slot 을 시작 시각순으로 돌려준다.
 
-    저장된 배정에 쓰인 합주실의 운영시간을 기간의 날짜마다 칸으로 쪼갠 뒤,
-    배정이 차지한 칸을 뺀다. 배정 계산(resolve)은 여기서 돌리지 않는다.
-    합주실 운영시간이 30분 칸으로 쪼개지지 않으면 ValueError를 올린다.
+    저장된 배정에 쓰인 합주실의 운영시간을 기간의 날짜마다 slot 으로 쪼갠 뒤,
+    배정이 차지한 slot 을 뺀다. 배정 계산(resolve)은 여기서 실행하지 않는다.
+    합주실 운영시간이 30분 slot 으로 쪼개지지 않으면 ValueError를 올린다.
     """
-    # ponytail: 칸을 만들 합주실을 저장된 배정에서 되찾는다 — 배정에 넘긴 합주실
-    # 목록을 남기는 표가 없어서다. 한 칸도 못 받은 합주실은 남는 칸에도 안 나온다.
-    # period_rooms 표가 생기면 여기서 그 목록을 읽는다.
+    # ponytail: slot 을 만들 합주실을 저장된 배정에서 되찾는다 — 배정에 넘긴 합주실
+    # 목록을 남기는 table 이 없어서다. 한 slot 도 못 받은 합주실은 남는 slot 에도 안 나온다.
+    # period_rooms table 이 생기면 여기서 그 목록을 읽는다.
     taken = session.execute(
         select(Assignment.room_id, Assignment.starts_at).where(
             Assignment.period_id == period.id
@@ -238,8 +238,8 @@ def _load_unavailable(
 
 
 def _assignment_rows(assignment: EngineAssignment) -> list[AssignmentRow]:
-    # 엔진이 돌려준 칸을 그대로 저장할 줄로 옮긴다. 팀 번호도 방 번호도
-    # 저장소의 번호 그대로라 되돌릴 것이 없다.
+    # 엔진이 돌려준 slot 을 그대로 저장할 줄로 옮긴다. 팀 번호도 방 번호도
+    # DB 의 번호 그대로라 되돌릴 것이 없다.
     rows: list[AssignmentRow] = []
     for team_id, slots in assignment.slots_by_team.items():
         for room_slot in slots:

@@ -161,8 +161,8 @@ def read_me(
     requester: Member = Depends(require_account), session: Session = Depends(get_session)
 ) -> MeOut:
     # 소속과 신청을 함께 내려준다. 화면이 새로 고쳐진 뒤 "승인 대기 중"을 다시
-    # 그리려면 그 상태를 서버에 물어볼 자리가 있어야 하고, 여기가 이미 화면이
-    # 로그인 직후 한 번 부르는 자리다.
+    # 그리려면 그 상태를 서버에 물어볼 endpoint 가 있어야 하고, 여기가 이미 화면이
+    # 로그인 직후 한 번 부르는 endpoint 다.
     return MeOut(
         account=_account_out(session, requester),
         memberships=[

@@ -17,7 +17,7 @@ from backend.db.models import Member, PasswordResetToken
 RESET_TTL = timedelta(minutes=30)
 
 # 같은 계정으로 이 시간 안에 다시 부르면 토큰을 새로 만들지도, 메일을 보내지도 않는다.
-# 통로가 로그인 없이 열려 있어 누구든 되풀이해 부를 수 있다 — 막지 않으면 남의 메일함에
+# 이 endpoint 가 로그인 없이 열려 있어 누구든 되풀이해 부를 수 있다 — 막지 않으면 남의 메일함에
 # 재설정 링크를 계속 밀어 넣을 수 있고, 살아 있는 토큰도 그만큼 늘어난다.
 RESEND_INTERVAL = timedelta(minutes=1)
 
@@ -53,7 +53,8 @@ def issue_reset_token(session: Session, member_id: int, now: datetime) -> str | 
     """
     # ponytail: 조회와 저장 사이에 잠금이 없다. 같은 계정으로 거의 동시에 들어온 두
     # 요청이 둘 다 이 검사를 지날 수 있고, 그러면 메일이 두 통 나간다. auth_service 의
-    # _commit_signup 이 같은 얼개다. 이것이 문제되면 이 계정 행을 잠그고(FOR UPDATE) 센다.
+    # _commit_signup 이 같은 얼개다. 메일이 두 통 나가는 것이 문제되면 이 계정 행을
+    # 잠그고(FOR UPDATE) 센다.
     latest = session.scalar(
         select(PasswordResetToken.created_at)
         .where(PasswordResetToken.member_id == member_id)
@@ -104,8 +105,8 @@ def request_password_reset(session: Session, email: str, now: datetime) -> None:
     알려주는 셈이 된다.
 
     ponytail: 간격은 계정 단위로만 둔다. 서로 다른 계정을 번갈아 부르면 그만큼 메일이
-    나간다. 이것까지 막으려면 요청을 보낸 쪽(주소) 단위로 세는 자리가 필요한데, 그 자리는
-    통로 앞(gateway)이지 이 함수가 아니다.
+    나간다. 주소마다 막으려면 요청을 보낸 쪽(주소) 단위로 세는 코드가 필요한데, 그것을
+    두는 곳은 gateway 이지 이 함수가 아니다.
     """
     member = _find_account(session, email)
     if member is None or member.email is None:
@@ -145,7 +146,7 @@ def send_id_reminder(session: Session, name: str, email: str) -> None:
     """이름과 이메일이 함께 맞는 계정이 있을 때만 그 주소로 아이디를 알린다.
 
     아이디가 곧 이메일이라 화면에 보여줄 것이 없다 — 가려서 보여줘도 도메인과 앞 글자가
-    새고, 메일함 주인만 볼 수 있는 자리로 보내면 아무것도 새지 않는다.
+    새고, 메일함 주인만 볼 수 있는 곳으로 보내면 아무것도 새지 않는다.
 
     ponytail: 되풀이 호출을 막지 않았다. 이름과 이메일을 둘 다 맞혀야 한 통이 나가고
     그 한 통은 본인 메일함으로만 간다. 같은 주소로 쏟아지는 것이 문제되면

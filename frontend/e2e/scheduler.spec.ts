@@ -30,8 +30,8 @@ type Notification = { id: number; kind: string; created_at: string; read: boolea
 
 // ponytail: 알림을 만드는 곳은 자동 배정 서비스 하나뿐이라(backend/api/auto_assign.py)
 // 브라우저에서 새 알림을 만들어 낼 방법이 없다. 그래서 알림을 새로 만들지 않고,
-// 서버가 가진 것과 화면이 보여주는 것이 같은지만 본다. 화면에서 알림이 생기는 통로가
-// 열리면 그것을 만들어 놓고 확인하는 쪽으로 바꾼다.
+// 서버가 가진 것과 화면이 보여주는 것이 같은지만 본다. 화면에서 알림이 생기는 경로가
+// 열리면 알림을 만들어 놓고 확인하는 쪽으로 바꾼다.
 test("알림 칸이 목록 맨 위에 있고 서버가 준 내 알림과 같은 것을 보여준다", async ({
   page,
   request,

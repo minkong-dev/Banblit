@@ -22,7 +22,7 @@ from backend.db.pipeline import get_session
 
 router = APIRouter()
 
-# 여섯 통로 모두 permission_grant 하나로 막는다. 그 항목이 없으면 남의 권한도
+# 여섯 endpoint 모두 permission_grant 하나로 막는다. 그 항목이 없으면 남의 권한도
 # 자기 권한도 건드리지 못한다 — 본인이냐 남이냐로 가르는 예외는 두지 않는다.
 _grant_only = Depends(require_permission("permission_grant"))
 
@@ -75,8 +75,8 @@ def patch_set(
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
-    # 고친 묶음이 지금 누구에게 붙어 있는지까지 돌려준다 — 화면이 바로 다음에
-    # 보여줄 목록이 그것이다.
+    # 고친 permission set 이 지금 누구에게 붙어 있는지까지 돌려준다 — 화면이 바로
+    # 다음에 보여줄 목록이다.
     return PermissionSetEnvelopeOut(
         permission_set=_set_out(permission_set, set_holders(session, set_id))
     )

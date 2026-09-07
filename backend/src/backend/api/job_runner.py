@@ -1,10 +1,8 @@
-"""배정 계산을 배경 스레드에서, 정해진 개수만큼만 동시에 돌린다.
+"""배정 계산을 배경 스레드에서, 정해진 개수만큼만 동시에 실행한다.
 
 작업 기록(Job)은 프로세스 메모리에만 있다. 서버를 다시 띄우면 진행 중이던 계산과
-그 기록이 함께 사라진다 — 계산 자체가 스레드에 묶여 있어 재시작해도 이어서 돌릴
-방법이 없으므로, 기록만 DB에 남겨도 결과가 복구되지는 않는다. gateway·scheduler·
-store 를 별도 프로세스로 쪼개는 것은 이번 범위 밖이라(AUDIT.md 4부), 지금은
-이 손실을 받아들인다.
+그 기록이 함께 사라진다 — 계산 자체가 스레드에 묶여 있어 재시작해도 이어서 실행할
+방법이 없으므로, 기록만 DB에 남겨도 결과가 복구되지는 않는다.
 """
 
 import logging
@@ -55,7 +53,7 @@ class JobStore(Generic[ResultT]):
 
 
 class JobRunner(Generic[ResultT]):
-    """work 를 접수 즉시 큐에 넣고, 스레드 풀이 자리가 나는 대로 실행한다."""
+    """work 를 접수 즉시 큐에 넣고, 스레드 풀에 여유가 생기는 대로 실행한다."""
 
     def __init__(self, max_concurrent: int) -> None:
         self._executor = ThreadPoolExecutor(max_workers=max_concurrent)
@@ -70,7 +68,7 @@ class JobRunner(Generic[ResultT]):
         )
         self._store.put(job)
         # max_workers 를 넘는 만큼은 ThreadPoolExecutor 내부 대기열에 쌓인다.
-        # 여기서 거부하지 않는다 — job은 "queued"로 남아 자리가 빌 때까지 기다린다.
+        # 여기서 거부하지 않는다 — job은 "queued"로 남아 스레드 풀에 여유가 생길 때까지 기다린다.
         self._executor.submit(self._run, job.id, work)
         return job
 
@@ -81,7 +79,7 @@ class JobRunner(Generic[ResultT]):
         self._mark_running(job_id)
         try:
             result = work()
-        except Exception as error:  # noqa: BLE001 - 실패를 failed 로 남기고 서버는 계속 돈다
+        except Exception as error:  # noqa: BLE001 - 실패를 failed 로 남기고 서버는 계속 동작한다
             self._mark_failed(job_id, error)
             return
         self._mark_done(job_id, result)

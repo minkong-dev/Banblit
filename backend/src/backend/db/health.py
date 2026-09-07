@@ -16,7 +16,7 @@ class DependencyStatus:
 
 def check_database() -> DependencyStatus:
     # 실제로 접속해 SELECT 1 을 던지고, alembic_version 에서 적용된 마이그레이션
-    # 번호를 읽어 detail 에 담는다. 번호가 없으면 표는 있는데 아직 기동 준비가
+    # 번호를 읽어 detail 에 담는다. 번호가 없으면 alembic_version table 은 있는데 아직 기동 준비가
     # 안 끝난 상태다. 접속 대기는 create_db_engine 의 connect_timeout 이 끊는다.
     try:
         with get_engine().connect() as connection:

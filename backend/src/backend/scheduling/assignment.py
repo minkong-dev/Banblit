@@ -18,7 +18,7 @@ class Room:
 
 @dataclass(frozen=True)
 class RoomSlot:
-    """어느 방의 어느 시간 칸인지. 이 둘이 한 칸을 유일하게 가리킨다."""
+    """어느 방의 어느 시간 slot 인지. room_id 와 interval 이 한 slot 을 유일하게 가리킨다."""
 
     room_id: int
     interval: TimeInterval
@@ -32,9 +32,9 @@ class Assignment:
 
 
 def _build_room_slots(rooms: list[Room]) -> list[RoomSlot]:
-    # rooms 의 운영 구간을 generate_slots 로 30분 칸으로 쪼개 한 줄로 잇는다.
-    # 같은 칸이 두 번 나오면 그 자리에서 거부한다. 한 칸이 둘로 세어지면
-    # 한 칸에 한 팀이라는 제약이 두 팀을 같은 자리에 넣는 것을 막지 못한다.
+    # rooms 의 운영 구간을 generate_slots 로 30분 slot 으로 쪼개 한 줄로 잇는다.
+    # 같은 slot 이 두 번 나오면 곧바로 거부한다. 한 slot 이 둘로 세어지면
+    # 한 slot 에 한 팀이라는 제약이 두 팀을 같은 slot 에 넣는 것을 막지 못한다.
     room_slots: list[RoomSlot] = []
     seen: set[RoomSlot] = set()
     for room in rooms:
@@ -90,7 +90,7 @@ def assign(
 ) -> Assignment:
     """각 팀에게, 그 팀이 가능한 시간의 빈 방을 필요한 개수만큼 배정한다.
 
-    한 방의 한 칸에는 팀 하나만 들어간다. 한 팀이 같은 시간에 두 방을 쓸 수 없고,
+    한 방의 한 slot 에는 팀 하나만 들어간다. 한 팀이 같은 시간에 두 방을 쓸 수 없고,
     여러 팀에 속한 사람도 같은 시간에 한 곳에만 있을 수 있다.
     조건을 모두 만족하는 배정을 찾지 못하면 feasible=False로 돌려준다.
     """
@@ -110,7 +110,7 @@ def assign(
             sum(chosen[(team.id, i)] for i, _ in enumerate(room_slots)) == slots_per_team
         )
 
-    # 한 방의 한 칸에는 팀 하나만 들어간다.
+    # 한 방의 한 slot 에는 팀 하나만 들어간다.
     for index, _ in enumerate(room_slots):
         model.add(sum(chosen[(team.id, index)] for team in teams) <= 1)
 

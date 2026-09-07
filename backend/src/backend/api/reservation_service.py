@@ -13,7 +13,7 @@ from backend.db.models import Member, Membership, Period, Reservation, Room, Tea
 from backend.scheduling.pipeline import TimeInterval, generate_slots
 
 # reservations 테이블의 (room_id, starts_at) 유니크 제약 이름. schedule_store.py의
-# _ROOM_TIME_CONFLICT_CONSTRAINT와 같은 얼개 — 먼저 커밋한 쪽이 그 칸을 가져간다.
+# _ROOM_TIME_CONFLICT_CONSTRAINT와 같은 얼개 — 먼저 커밋한 쪽이 그 slot 을 가져간다.
 _ROOM_TIME_CONFLICT_CONSTRAINT = "reservations_room_id_starts_at_key"
 
 ReservationRow = tuple[Reservation, str, str | None, str]
@@ -77,7 +77,7 @@ def _planned_rows(
     ends_at: datetime,
     created_at: datetime,
 ) -> tuple[list[Reservation], Room, Team | None]:
-    """요청한 구간을 검증하고 30분 칸 행들을 만들어, 방·팀과 함께 돌려준다.
+    """요청한 구간을 검증하고 30분 slot 행들을 만들어, 방·팀과 함께 돌려준다.
 
     행은 아직 session에 넣지 않는다 — 넣는 시점과 커밋 범위는 부르는 쪽이 정한다.
     """
@@ -130,9 +130,9 @@ def create_reservation(
     ends_at: datetime,
     created_at: datetime,
 ) -> tuple[list[Reservation], str, str, str | None]:
-    """예약 하나를 30분 칸 행으로 나눠 만든다. 한 칸이라도 이미 찼으면 전부 되돌린다.
+    """예약 하나를 30분 slot 행으로 나눠 만든다. 한 slot 이라도 이미 찼으면 전부 되돌린다.
 
-    선착순은 이 표의 (room_id, starts_at) 유니크 제약이 커밋 시점에 정한다 —
+    선착순은 reservations table 의 (room_id, starts_at) 유니크 제약이 커밋 시점에 정한다 —
     schedule_store.save_schedule과 같은 방식이다. 검증 과정에서 이미 읽은 방·사람·팀의
     이름을 함께 돌려줘, 부르는 쪽이 이름을 붙이려고 다시 조회하지 않게 한다.
     """
@@ -172,9 +172,9 @@ def list_reservations(
 def _get_own_reservation(
     session: Session, reservation_id: int, requester: Member, verb: str
 ) -> Reservation:
-    """reservation_id 칸을 찾아, 그 칸을 예약한 사람이 requester 일 때만 돌려준다.
+    """reservation_id 의 slot 을 찾아, 그 slot 을 예약한 사람이 requester 일 때만 돌려준다.
 
-    없는 칸은 ValueError, 남의 칸은 PermissionError 로 갈라 던진다 — 부르는 쪽이
+    없는 slot 은 ValueError, 남의 slot 은 PermissionError 로 갈라 던진다 — 부르는 쪽이
     "잘못된 요청"과 "권한 없음"을 다른 응답 코드로 내보낸다. verb 는 거절 문구에
     들어가는 동작 이름이다("취소할", "옮길").
     """
@@ -187,11 +187,12 @@ def _get_own_reservation(
 
 
 def cancel_reservation(session: Session, reservation_id: int, requester: Member) -> None:
-    """예약 칸 하나를 취소한다. 그 칸을 예약한 사람 본인만 지울 수 있다.
+    """예약 slot 하나를 취소한다. 그 slot 을 예약한 사람 본인만 지울 수 있다.
 
-    ponytail: 여러 칸을 이어 쓴 예약은 칸마다 id가 달라, 전부 취소하려면 칸마다
-    이 통로를 호출해야 한다. "예약 하나를 통째로 취소" UI가 생기면 그때 묶음 번호를
-    붙인다 — 지금 화면(DayDialog)에는 취소 버튼 자체가 없어 이 통로는 API로만 쓰인다.
+    ponytail: 여러 slot 을 이어 쓴 예약은 slot 마다 id가 달라, 전부 취소하려면 slot 마다
+    이 endpoint 를 호출해야 한다. "예약 하나를 통째로 취소" UI가 생기면 그때 예약을
+    묶는 번호를 붙인다 — 지금 화면(DayDialog)에는 취소 버튼 자체가 없어 이 endpoint 는
+    API로만 쓰인다.
     """
     reservation = _get_own_reservation(session, reservation_id, requester, "취소할")
     session.delete(reservation)
@@ -206,17 +207,17 @@ def update_reservation(
     ends_at: datetime,
     created_at: datetime,
 ) -> tuple[list[Reservation], str, str, str | None]:
-    """예약 칸 하나를 다른 시각으로 옮긴다. 방과 팀은 그대로 두고 시각만 바꾼다.
+    """예약 slot 하나를 다른 시각으로 옮긴다. 방과 팀은 그대로 두고 시각만 바꾼다.
 
-    옛 칸을 지우고 새 칸을 넣는 것을 한 트랜잭션에서 한다. 옮길 자리가 이미 차 있으면
-    커밋이 유니크 제약에 걸리고, 되돌리기가 옛 칸까지 함께 살려 원래 자리를 잃지 않는다.
-    지우기를 먼저 flush 하는 것은 SQLAlchemy 가 기본적으로 INSERT 를 DELETE 보다 먼저
-    보내기 때문이다 — 그대로 두면 겹치는 자리(같은 칸, 이어진 칸)로 옮길 때 자기 자신과
-    부딪힌다.
+    옛 slot 을 지우고 새 slot 을 넣는 것을 한 트랜잭션에서 한다. 옮길 slot 이 이미 차
+    있으면 커밋이 유니크 제약에 걸리고, 되돌리기가 옛 slot 까지 함께 살려 원래 slot 을
+    잃지 않는다. 지우기를 먼저 flush 하는 것은 SQLAlchemy 가 기본적으로 INSERT 를
+    DELETE 보다 먼저 보내기 때문이다 — 그대로 두면 겹치는 slot(같은 slot, 이어진 slot)
+    으로 옮길 때 자기 자신과 부딪힌다.
 
-    ponytail: cancel_reservation 과 같은 한계로, 옮기는 단위는 칸 하나다. 여러 칸을
-    이어 쓴 예약을 통째로 옮기려면 칸마다 이 통로를 호출해야 한다. 다만 새 구간이
-    여러 칸이면 칸 수는 늘어난다 — create_reservation 과 같은 규칙으로 쪼갠다.
+    ponytail: cancel_reservation 과 같은 한계로, 옮기는 단위는 slot 하나다. 여러 slot 을
+    이어 쓴 예약을 통째로 옮기려면 slot 마다 이 endpoint 를 호출해야 한다. 다만 새
+    구간이 여러 slot 이면 slot 수는 늘어난다 — create_reservation 과 같은 규칙으로 쪼갠다.
     """
     reservation = _get_own_reservation(session, reservation_id, requester, "옮길")
     rows, room, team = _planned_rows(
