@@ -60,6 +60,20 @@ docker compose run --rm dev pytest -q
 - **주의점**
   - 내 PC의 `backend/` 폴더가 컨테이너 안에 연결돼 있어, 코드를 고치면 이미지를 다시 만들지 않아도 바로 반영된다.
 
+### 1-2-0. 테스트를 여러 개 동시에 돌릴 때 검사 DB를 갈라 쓰기
+
+```
+docker compose run --rm -e TEST_DB_NAME=banblit_test_a dev pytest -q tests/integration/db/test_room_endpoints.py
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 서로 다른 파일을 동시에 검사할 때 쓴다. 검사는 시작할 때 표를 전부 지우고 마이그레이션을 다시 적용하므로, 두 실행이 같은 DB를 쓰면 서로의 표를 지운다.
+- **옵션**
+  - `-e TEST_DB_NAME=banblit_test_a` — `docker compose run` 이 컨테이너에 넘기는 환경변수다. `backend/tests/conftest.py` 가 이 값으로 검사 전용 DB 이름을 정한다. **생략하면 `banblit_test`** 를 쓴다. 이름은 아무거나 되며, 없으면 첫 실행에서 만든다.
+- **주의점**
+  - 혼자 돌릴 때는 붙이지 않는다. DB 이름이 늘어날수록 `docker compose exec db psql` 로 확인할 때 어느 것이 무엇인지 헷갈린다.
+  - 만들어진 검사용 DB는 자동으로 지워지지 않는다. `1-4`의 `docker compose down -v` 로 저장소를 통째로 비울 때 함께 사라진다.
+
 ### 1-2-1. 아무것도 띄우지 않고 순수 계산 테스트만 돌리기
 
 ```
@@ -306,6 +320,29 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/me -b cookies.txt
   - 개발 구성은 `docker-compose.override.yml`이 `COOKIE_SECURE=false`로 덮으므로 `http`로도 쿠키가 붙는다. 배포 구성(`11-2`)은 `docker-compose.yml`의 `COOKIE_SECURE=true`가 살아 있어, `https`가 아니면 브라우저가 세션 쿠키를 저장하지 않는다.
   - `token` 같은 필드를 응답 본문에서 찾지 않는다. 세션은 본문이 아니라 쿠키로만 오간다 — 헤더에 토큰을 실어 보내던 예전 방식은 더 이상 동작하지 않는다.
 
+
+### 3-6. 게시판 첨부파일 올리고 받아 보기
+
+```
+curl -s -b cookies.txt -X POST http://localhost:8000/posts/31/attachments -F "file=@score.pdf;type=application/pdf"
+curl -s -b cookies.txt -D headers.txt -o got.pdf http://localhost:8000/attachments/1
+cmp score.pdf got.pdf
+docker compose exec api ls -l /var/lib/banblit/attachments
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`, `3-1`로 `api` 서비스가 떠 있고 `3-5`로 받아 둔 `cookies.txt` 가 있어야 한다)
+- **용도**: 파일이 실제로 서버 디스크에 저장되고 그대로 다시 내려오는지 확인한다. 1행이 글 31번에 파일을 붙이고(201), 2행이 그것을 내려받고, 3행이 보낸 것과 받은 것이 한 바이트도 다르지 않은지 비교한다(다르면 메시지가 나오고, 같으면 아무것도 출력하지 않는다). 4행은 컨테이너 안의 저장 폴더를 열어, 서버가 지은 이름으로 파일이 하나 놓였는지 눈으로 본다.
+- **옵션**
+  - `-F "file=@<파일>"` — `multipart/form-data` 로 파일을 보낸다. 항목 이름 `file` 은 서버가 정한 것이라 바꾸면 422 다. `;type=` 을 생략하면 curl 이 확장자를 보고 종류를 정한다. `;filename=` 을 덧붙이면 보낼 이름을 따로 지정할 수 있다.
+  - `-D <파일>` — 응답 머리글을 그 파일에 받는다. `content-disposition: attachment` 와 `x-content-type-options: nosniff` 가 붙었는지 확인하는 데 쓴다. 생략하면 머리글을 볼 수 없다.
+  - `-o <파일>` — 내려받은 내용을 그 파일에 쓴다. 생략하면 이진 파일이 터미널에 그대로 쏟아진다.
+- **주의점**
+  - **글쓴이 본인만 붙이고 지울 수 있다.** 다른 계정의 쿠키로 1행을 보내면 403 이다. 팀 게시판 글이면 내려받기도 그 팀 소속만 된다.
+  - **허용 목록에 없는 확장자는 422 로 거절된다.** 목록은 `backend/src/backend/api/attachment_service.py` 의 `ALLOWED_EXTENSIONS` 한 곳에만 있다.
+  - **Git Bash 에서 `;filename=` 에 한글을 적으면 이름이 깨져 저장된다.** 터미널이 UTF-8 로 보내지 않아서다 — 서버 문제가 아니다. 브라우저와 검사(`tests/integration/db/test_attachment_endpoints.py`)에서는 한글 이름이 그대로 남는다.
+  - **개발 구성에는 앞단(nginx)이 없다.** 크기 상한(`client_max_body_size 300m`)은 배포 구성에서만 걸리므로, 개발에서 300MB 를 넘겨 보내면 그대로 통과한다. 배포 구성으로 확인하려면 `11-2` 를 쓴다.
+  - 저장 폴더는 `banblit-attachments` 볼륨이다. `docker compose down` 으로 내려도 남고, `down -v` 로만 사라진다.
+
 ---
 
 ## 4. 데이터 저장소
@@ -340,6 +377,22 @@ docker compose run --rm dev alembic upgrade head
 - **주의점**
   - `dev` 서비스가 `db`에 `depends_on: service_healthy`로 걸려 있어, 이 명령을 실행하면 `db` 컨테이너가 떠 있지 않던 경우 자동으로 함께 뜨고 healthcheck를 통과한 뒤에 적용이 시작된다. 따로 `4-1`을 먼저 실행할 필요는 없다.
   - 접속 주소는 `backend/migrations/env.py`가 `config.attributes`에 명시된 값을 최우선하고, 없으면 `DATABASE_URL` 환경변수로 접속한다. 이 명령으로 실행하면 컨테이너 환경변수인 `DATABASE_URL`(메인 `banblit` DB)이 그대로 쓰인다 — 테스트 전용 DB(`banblit_test`)는 pytest 실행 시 `backend/tests/conftest.py`가 별도로 다룬다.
+
+### 4-2-1. 마이그레이션을 한 칸 되돌리기 / 지금 어디인지 보기
+
+```
+docker compose run --rm dev alembic current
+docker compose run --rm dev alembic heads
+docker compose run --rm dev alembic downgrade -1
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `alembic current`는 지금 DB에 적용된 마이그레이션 번호를 출력한다. `alembic heads`는 DB가 아니라 `backend/migrations/versions/` 파일들을 읽어 맨 끝 번호를 출력한다 — 새 마이그레이션을 만들기 직전에 어떤 번호 위에 얹을지 확인하는 자리이고, 줄이 두 개 이상 나오면 갈래가 생긴 것이다. `alembic downgrade -1`은 가장 최근에 적용된 마이그레이션 하나의 `downgrade()`를 실행해 그 직전 상태로 되돌린다.
+- **옵션**
+  - `-1` — 되돌릴 칸 수. 숫자 대신 `alembic downgrade <revision>`처럼 되돌아갈 목적지 번호를 직접 적어도 된다. 생략하면 오류다 — 어디까지 되돌릴지 반드시 적어야 한다.
+- **주의점**
+  - **열을 지우는 `downgrade()`는 그 열의 값을 함께 지운다.** 되돌린 뒤 다시 `upgrade`해도 지워진 값은 돌아오지 않는다. 새 마이그레이션을 검증할 때만 쓰고, 값이 든 저장소에서는 먼저 백업한다.
+  - 권한 묶음 마이그레이션(`b7f1a92c4d31`)의 되돌리기는 `members.role`을 다시 만들고, 열한 가지가 전부 켜진 묶음을 가진 사람을 `head_manager`로 되돌린 뒤 두 표를 지운다. 이 왕복은 `backend/tests/integration/db/test_permission_migration.py`가 전용 DB에서 자동으로 확인한다.
 
 ### 4-3. 모델 변경 후 마이그레이션 새로 만들기
 
@@ -677,8 +730,9 @@ docker compose run --rm e2e
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
 - **용도**: `frontend/e2e/` 의 Playwright 검사를 전부 돌린다. 사람이 브라우저에서 하는
-  일(달력 보기, 설정 고치기, 글쓰기·댓글, 배정 다시 계산, 팀 명단 보기)을 흉내내
-  화면·서버·저장소가 실제로 이어져 도는지 확인한다.
+  일(달력 보기, 설정 고치기, 글쓰기·댓글·파일 첨부, 배정 다시 계산, 팀 명단 보기,
+  팀 참가 신청과 승인, 알림 칸 보기)을 흉내내 화면·서버·저장소가 실제로 이어져
+  도는지 확인한다.
 - **옵션**
   - `run --rm` — 일회성 컨테이너를 띄워 명령을 실행하고 끝나면 지운다.
   - `e2e` — `docker-compose.yml` 의 `e2e` 서비스. 공식 이미지 `mcr.microsoft.com/playwright:v1.62.1-noble`
@@ -708,6 +762,9 @@ docker compose run --rm e2e
     컨테이너 부하가 크면 늘어날 수 있다.
   - 검사 중 `frontend/e2e/notices.spec.ts` 가 공지에 글을 하나 남긴다. 지우는
     통로가 없어 돌릴 때마다(제목에 실행 시각을 붙여 구분은 되지만) 계속 쌓인다.
+  - 계정도 마찬가지로 쌓인다 — `account.spec.ts` 와 `teams.spec.ts` 가 가입·참가
+    신청을 확인하려고 매번 새 계정을 만든다. 계정을 지우는 통로가 없어서다. 다만
+    팀 명단과 참가 승인 방식은 검사 끝에 되돌려 놓으므로 다음 실행이 같은 값을 본다.
 
 ### 12-2. 특정 검사 파일만 돌리기
 
@@ -732,9 +789,95 @@ docker compose run --rm --no-deps web npm run lint:e2e
 - **주의점**
   - **`frontend/eslint.config.js` 는 이 저장소의 `config-protection` 훅이 에이전트의
     수정을 막는다.** 그래서 `e2e/` 전용 설정을 `frontend/e2e/lint.config.js` 에
-    따로 두고, `npm run lint`(기본 `eslint .`)에서는 `--ignore-pattern 'e2e/**/*'`
+    따로 두고, `npm run lint`(기본 `eslint .`)에서는 `--ignore-pattern "e2e/**/*"`
     로 그 폴더를 빼는 대신 이 명령으로 따로 검사한다. 두 설정 파일이 나뉜 것은
     선호가 아니라 이 제약 때문이다 — 한 파일로 합치려면 사람이 직접
     `frontend/eslint.config.js` 에 `files: ["e2e/**/*.ts"]` 블록을 더해야 한다.
+    이 걸러내는 값은 **겹따옴표라야 한다.** 홑따옴표로 적으면 Windows 에서 따옴표가
+    그대로 남아 아무 폴더도 안 걸러지고, `e2e/` 가 타입 정보 없이 린트되어 명령이
+    통째로 실패한다(`await-thenable` 규칙이 타입 정보를 요구한다). 컨테이너 안
+    리눅스에서는 홑따옴표도 되므로 이 실패는 호스트에서만 보인다.
   - `npm run typecheck`(`tsc -b --noEmit`)은 `frontend/tsconfig.json` 의 `include`
     에 `e2e` 를 이미 넣어 두어 따로 명령을 안 만들어도 `e2e/` 까지 함께 검사한다.
+
+---
+
+## 13. 자동 배정 서비스
+
+기간에 저장된 연산 시각(`periods.first_run_at`·`second_run_at`)이 지나면 사람이 버튼을
+누르지 않아도 배정을 돌리는 서비스다. `api` 와 같은 이미지를 쓰되 HTTP 통로를 거치지
+않고 `backend/src/backend/api/auto_assign.py` 의 `assign_period` 를 직접 부른다.
+
+### 13-1. 자동 배정 서비스 띄우기
+
+```
+$env:AUTO_ASSIGN_ENABLED = "true"; docker compose up -d auto-assign
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `docker-compose.yml` 의 `auto-assign` 서비스를 백그라운드로 띄운다. 정해진
+  간격마다 깨어나, 오늘이 기간 안에 드는 집중 합주기간 중 연산 시각이 지났는데 아직
+  안 돈 것을 찾아 계산하고 `assignment_runs` 표에 돈 시각을 남긴다.
+- **옵션**
+  - `$env:AUTO_ASSIGN_ENABLED = "true"` — 켜고 끄는 스위치(PowerShell 문법). 개발용
+    설정(`docker-compose.override.yml`)이 이 값을 기본 `false` 로 두므로, 개발 PC 에서
+    눈으로 보려면 이렇게 켜서 띄운다. Git Bash 라면
+    `AUTO_ASSIGN_ENABLED=true docker compose up -d auto-assign` 로 앞에 붙인다.
+    끌 때는 `"false"`(또는 `0`·`no`)를 준다 — 컨테이너가 한 줄 남기고 정상 종료한다.
+    배포용(`docker-compose.yml`)의 기본값은 `true` 다.
+  - `AUTO_ASSIGN_INTERVAL_SECONDS` — 확인 간격(초). 배포 기본 60, 개발 기본 10.
+    숫자가 아니거나 0 이하면 코드가 기본값 60 을 쓴다. 생략해도 된다.
+  - `-d` — 백그라운드로 띄운다. 붙이지 않으면 터미널이 이 서비스의 기록으로 막힌다.
+- **주의점**
+  - **호스트 포트를 열지 않는다.** 이 서비스는 받는 통로가 없고 `db` 로만 나간다.
+  - **자동 실행은 등록된 팀 전부와 합주실 전부를 대상으로 돈다.** 사람이 버튼을 누를
+    때와 달리 골라 줄 화면이 없어서다. 그래서 오늘이 기간 안에 드는 집중 합주기간이
+    둘 이상이면 서로 같은 합주실·같은 시각을 잡으려다 하나는 실패로 기록된다.
+  - **`docker compose up` 을 서비스 이름 없이 실행하면 이것까지 함께 뜬다.** 개발
+    기본값이 `false` 인 것은 그때 검사용 데이터를 건드리지 않게 하려는 것이다.
+  - `backend/pyproject.toml` 또는 `backend/uv.lock` 이 바뀐 뒤라면 `docker compose build dev`
+    로 이미지를 먼저 다시 만든다 — 개발용 `auto-assign` 은 `dev` 이미지를 그대로 쓴다.
+
+### 13-2. 자동 배정 기록 보기
+
+```
+docker compose logs auto-assign --tail 30
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 무엇을 돌렸는지, 어느 기간이 실패했는지 본다. 성공하면
+  `자동 배정: AutoRun(period_id=..., run_on=..., slots=('first',), saved=True, error=None)`
+  한 줄이, 실패하면 `자동 배정이 실패했습니다 (period=...)` 와 원인 추적이 남는다.
+- **옵션**
+  - `--tail 30` — 마지막 30줄만 본다. 생략하면 기동 이후 전부를 출력한다.
+
+### 13-3. 어느 시각이 돌았는지 표로 확인하기
+
+```
+docker compose exec db psql -U banblit -d banblit -c "select * from assignment_runs;"
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `assignment_runs` 는 "이 기간의, 이 날짜의, 이 시각(`first`/`second`)은
+  돌았다" 를 남기는 표다. 서비스는 이 표에 없는 시각만 돌리므로, 같은 시각이 두 번
+  돌지 않는 근거가 여기 있다. `ran_at` 은 계산이 **끝난** 시각이다.
+- **옵션**
+  - `-c "<질의>"` — `4-4` 와 동일. 질의 하나만 실행하고 빠져나온다.
+- **주의점**
+  - `(period_id, run_on, slot)` 에 중복 금지가 걸려 있어 같은 시각이 두 줄로 남지 않는다.
+  - 기간을 지우면 이 표의 줄도 함께 지워진다(`ondelete='CASCADE'`).
+
+### 13-4. 서비스 내리기
+
+```
+docker compose rm -sf auto-assign
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 자동 배정 서비스를 멈추고 컨테이너까지 지운다. `db` 는 그대로 둔다.
+- **옵션**
+  - `-s` — 지우기 전에 먼저 멈춘다. 없으면 도는 컨테이너는 지워지지 않는다.
+  - `-f` — "정말 지울까요" 를 묻지 않는다. 없으면 대답을 기다리며 멈춰 선다.
+- **주의점**
+  - 멈추기만 할 거면 `docker compose stop auto-assign` 을 쓴다. 다음에 `up -d` 하면
+    같은 컨테이너를 다시 쓴다 — 그때는 띄울 때 준 환경변수가 그대로 남아 있다.
