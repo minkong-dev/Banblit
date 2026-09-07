@@ -223,7 +223,7 @@ export function DayDialog(props: {
                           {member.name.slice(0, 2)}
                         </span>
                         <span className="nm">{member.name} <i>{team.name}</i></span>
-                        <span className="ps">{member.positions.join(" · ")}</span>
+                        <span className="ps">{member.cohort === null ? "" : `${member.cohort}기`}</span>
                       </div>
                     ))}
                   </div>

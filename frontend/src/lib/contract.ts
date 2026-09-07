@@ -24,44 +24,59 @@ export type Period = {
   second_run_at: string;
 };
 
-/** 팀 참가를 받는 방식 — 바로 소속이 되는 자동 승인, 사람이 확인하는 직접 승인. */
-export type JoinPolicy = "auto" | "approval";
-
-/** 참가 요청이 놓인 자리 — 소속이 된 것과 승인을 기다리는 것. */
-export type JoinStatus = "approved" | "pending";
-
-export type Team = { id: number; name: string; member_count: number; join_policy: JoinPolicy };
-
-export type Member = { id: number; name: string; positions: string[] };
-
-export type Position = { id: number; name: string };
-
-export type Membership = {
-  member_id: number;
-  member_name: string;
-  team_id: number;
-  position: string;
-  status: JoinStatus;
+/** 되돌릴 수 있는 이전 시간표 회차 하나. 회차를 가르는 값은 저장 시각이다. */
+export type Backup = {
+  /** "2026-09-07T18:03:00" */
+  saved_at: string;
+  slot_count: number;
 };
 
-/** /me 가 함께 주는 내 소속 하나. 승인된 것과 기다리는 것이 status 로 갈린다.
- *  팀 번호 오름차순으로 온다. */
-export type MyMembership = {
+/** 팀이 가질 수 있는 악기. 서버 쪽 정본은 backend/src/backend/db/models.py 의 Instrument 다. */
+export type Instrument = "보컬" | "일렉" | "통기타" | "베이스" | "신디" | "드럼";
+
+export const INSTRUMENTS: Instrument[] = [
+  "보컬",
+  "일렉",
+  "통기타",
+  "베이스",
+  "신디",
+  "드럼",
+];
+
+/** 자리 수와 앉은 수를 함께 준다 — 하나만으로는 몇 자리 비었는지 알 수 없다. */
+export type Team = {
+  id: number;
+  name: string;
+  slot_count: number;
+  filled_count: number;
+};
+
+/** 사람. 동명이인이 있어 화면에서는 이름 옆에 기수를 붙여 가른다. */
+export type Member = { id: number; name: string; cohort: number | null };
+
+/** 팀의 악기 자리 하나. 사람이 없으면 아직 아무도 안 앉은 자리다.
+ *  배정 쪽 Slot(합주실·시각)과는 다른 것이라 이름을 나눈다. */
+export type TeamSlot = {
+  id: number;
+  team_id: number;
+  instrument: Instrument;
+  /** 같은 악기가 여럿일 때 몇 번째인지. 화면은 "일렉 2" 처럼 붙여 보여준다. */
+  ordinal: number;
+  member_id: number | null;
+  member_name: string | null;
+  member_cohort: number | null;
+};
+
+/** /me 가 함께 주는, 내가 앉아 있는 자리 하나. 팀 번호 오름차순으로 온다. */
+export type MyTeam = {
   team_id: number;
   team_name: string;
-  position: string;
-  status: JoinStatus;
+  instrument: Instrument;
+  ordinal: number;
 };
 
-/** /me 응답 전체 — 지금 로그인한 계정과 그 계정의 소속·신청. */
-export type Me = { account: Account; memberships: MyMembership[] };
-
-/** 승인을 기다리는 참가 신청 하나. 화면에는 번호가 아니라 이름과 포지션이 나온다. */
-export type JoinRequest = {
-  member_id: number;
-  member_name: string;
-  position: string;
-};
+/** /me 응답 전체 — 지금 로그인한 계정과 그 계정이 앉아 있는 자리들. */
+export type Me = { account: Account; teams: MyTeam[] };
 
 /** 할 수 있는 일 열한 가지. 서버 쪽 정본은 backend/src/backend/db/models.py 의 Permission 이다. */
 export type Permission =
@@ -69,7 +84,6 @@ export type Permission =
   | "period_manage"
   | "team_manage"
   | "member_remove"
-  | "join_approve"
   | "assign_run"
   | "assign_read"
   | "proposal_confirm"
@@ -84,10 +98,11 @@ export type Account = {
   /** 저장된 값이 아니라 permissions 에서 뽑아낸 값이다 — 열한 가지가 전부 켜져 있으면 head_manager. */
   role: "head_manager" | "member";
   permissions: Permission[];
-  positions: string[];
+  /** 기수. 화면이 동명이인을 가를 때 이름 옆에 붙인다. */
+  cohort: number | null;
 };
 
-/** 켜진 항목을 한 벌로 묶은 것. member_ids 는 이 묶음을 가진 사람들이다. */
+/** 이름 붙인 권한 하나. member_ids 는 이 권한을 가진 사람들이다. */
 export type PermissionSet = {
   id: number;
   name: string;

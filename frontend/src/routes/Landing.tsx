@@ -6,53 +6,45 @@ import { ArrowIcon, CloseIcon, WideMenuIcon } from "../components/icons";
 import { usePage } from "../components/hooks";
 import "../styles/landing.css";
 
-// 미리보기 달력에 찍는 표시 — 날짜마다 어느 팀이 안 되는지 색 점으로만 보인다.
-// 실제 값이 아니라 화면이 어떤 모양인지 보여주는 그림이다.
-const MARKS: Record<number, string[]> = {
-  3: ["off3"], 5: ["off1"], 9: ["off3"], 11: ["off1", "off2"], 14: ["off1"], 15: ["off2"],
-  16: ["off3"], 18: ["off1", "off2"], 21: ["off2"], 23: ["off3"], 25: ["off1"], 26: ["off1", "off2"],
-};
-const MINI_DAYS = 28;
-
 const BOXES = [
   {
-    rail: "자동 배정",
-    title: ["전원이 되는 시간을", "사람이 찾지 않습니다"],
-    body: "공연 전 집중 합주기간에는 팀마다 합주량이 고르게 돌아가도록 자리를 직접 배정합니다. 팀원 전원이 가능한 시간, 합주실이 비어 있는 시간, 한 사람이 두 팀에 겹치지 않는 것까지 한 번에 계산합니다.",
-    num: "0.3초",
-    unit: "2주치 일정을 푸는 데 걸린 시간",
+    rail: "Scheduler Engine",
+    title: ["모두가 가능한 시간을", "찾아 헤매지 않도록"],
+    body: "집중 합주기간에는 팀마다 합주량이 고르게 돌아가도록 자리를 직접 배정해요. 모두가 가능한 시간부터, 합주실이 비어 있는 시간, 여러 팀에 소속된 한명이 끼치는 영향까지 한 번에 계산해요.",
+    num: "0.6초",
+    unit: "확정된 일정을 불러오는 시간",
   },
   {
-    rail: "선착순 예약",
-    title: ["먼저 누른 사람이", "가져갑니다"],
-    body: "상시 기간에는 30분 단위로, 한 시간대에 한 팀만. 눈치 볼 것 없이 비어 있으면 그냥 누르면 됩니다. 취소도 변경도 그 자리에서 됩니다.",
-    num: "12시간",
-    unit: "하루에 여는 시간 · 10시부터 22시까지",
+    rail: "Reservation",
+    title: ["비어있는 시간도", "예약해서 사용하도록"],
+    body: "비어있는 시간은 30분 단위로 예약이 가능해요. 메인 캘린더에도 표시되어 헷갈리지 않고, 취소나 변경도 자유롭게 가능해요.",
+    num: "3단계",
+    unit: "예약 확정까지 소모되는 단계",
   },
   {
-    rail: "안 풀릴 때",
-    title: ["억지로 잡지 않고", "먼저 알려줍니다"],
-    body: "모두가 되는 시간이 없으면 빈 시간표를 내놓지 않습니다. 누구를 빼면 풀리는지 정리해 관리자에게 넘기고, 고르는 것은 사람이 합니다.",
+    rail: "Calender Fix Engine",
+    title: ["모두가 맞는 시간이 없어도", "새로 계산하지 않도록"],
+    body: "한 명만 빼고 진행하면 가능한 날도 있으니까요. 그런 상황도 모두 엔진이 연산해서 제공해드리니, 확인해보시고 결정만 해주시면 돼요.",
     num: "2회",
-    unit: "하루에 다시 계산하는 횟수",
+    unit: "일일 스케줄링 엔진 업데이트 횟수",
   },
 ];
 
 const STEPS = [
   {
     k: "STEP 1",
-    title: "안 되는 시간을 넣는다",
-    body: "달력에서 직접 고르거나 말로 적어도 됩니다. 되는 시간을 서로 맞춰 볼 필요는 없습니다.",
+    title: "불가능한 시간을 추가해주세요",
+    body: "캘린더에서 날짜를 선택하거나, Blit AI에게 말해주세요. 눈치보면서 말하는건 부담스러우니까요.",
   },
   {
     k: "STEP 2",
-    title: "하루 두 번 계산한다",
-    body: "정해진 시각에 모든 팀의 자리를 한 번에 계산합니다. 한 사람의 일정이 바뀌어도 다시 돌면 그만입니다.",
+    title: "스케줄링 엔진을 기다려요",
+    body: "엔진은 정해진 시간에 불가능한 시간을 모아 계산해요. 완료되면 알림도 보내드릴게요.",
   },
   {
     k: "STEP 3",
-    title: "확정되면 달력에 뜬다",
-    body: "내 팀 일정만 모아 보는 화면에서 바로 확인합니다. 단톡방에 다시 물어볼 일이 없습니다.",
+    title: "메인 캘린더를 확인해요",
+    body: "메인 캘린더에서 내 일정을 확인해주세요. 우리 팀 합주시간을 한 눈에 보고, 지각하지 말자구요.",
   },
 ];
 
@@ -112,10 +104,10 @@ export function Landing() {
         <button className="x" aria-label="메뉴 닫기" onClick={() => setMenuOpen(false)}>
           <CloseIcon />
         </button>
-        <a href="#how" onClick={() => setMenuOpen(false)}>어떻게 쓰나요</a>
-        <a href="#auto" onClick={() => setMenuOpen(false)}>자동 배정</a>
-        <a href="#admin" onClick={() => setMenuOpen(false)}>운영하는 사람에게</a>
-        <Link to="/login" onClick={() => setMenuOpen(false)}>로그인</Link>
+        <a href="#how" onClick={() => setMenuOpen(false)}>TITLE</a>
+        <a href="#auto" onClick={() => setMenuOpen(false)}>HOW IT WORKS</a>
+        <a href="#admin" onClick={() => setMenuOpen(false)}>FOR MANAGERS</a>
+        <Link to="/login" onClick={() => setMenuOpen(false)}>JOIN IN</Link>
       </nav>
 
       <section className="hero">
@@ -124,7 +116,7 @@ export function Landing() {
             합주실 예약, 어렵지 않을 때도 됐으니까.<br />
             지금, <span className="mark">BANBLIT.</span>
           </h1>
-          <p className="sub">밴드 여럿이 합주실 하나를 나눠 쓰는 가장 조용한 방법</p>
+          <p className="sub">세상 쉬운 합주 일정 관리, Banblit</p>
           <Link className="go" to="/login">시작하기<ArrowIcon /></Link>
         </div>
         <span className="cue">SCROLL</span>
@@ -132,37 +124,15 @@ export function Landing() {
 
       <section className="sec" id="how">
         <div className="wrap stack">
+          {/* 세로 한 장에 정사각 한 장을 걸쳐 둔다. 배경으로만 넣은 장식이라 읽어 줄
+              글이 없다 — 화면을 읽어 주는 도구는 그냥 지나간다. */}
           <div className="shots rise">
-            <div className="shot back">
-              <div className="mini">
-                <div className="mh">9월<span>새벽 네시 · 오프비트</span></div>
-                <div className="cal">
-                  {Array.from({ length: MINI_DAYS }, (_, i) => i + 1).map((day) => (
-                    <div className="d" key={day}>
-                      {day}
-                      <span style={{ display: "flex", gap: 2 }}>
-                        {(MARKS[day] ?? []).map((mark) => <i className={mark} key={mark} />)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="shot front">
-              <div className="ttl">안 되는 시간</div>
-              <div className="chiprow">
-                <span className="chip">화 19:00–22:00</span>
-                <span className="chip">수 18:30–21:00</span>
-                <span className="chip now">토 종일</span>
-              </div>
-              <div className="said">
-                “화요일 저녁은 학원이라 안 돼”<br />라고 적어도 알아들어요.
-              </div>
-            </div>
+            <div className="shot back" />
+            <div className="shot front" />
           </div>
           <div className="copy rise">
-            <p className="lead">합주 불가능한 시간대만 입력하면,<br />알아서 업데이트 해주니까.</p>
-            <p className="lead">일정 정리란 눈치 볼 필요없이,<br />모든 일정을 하나로</p>
+            <p className="lead">불가능한 시간대만 입력하면,<br />알아서 업데이트 해주니까.</p>
+            <p className="lead">서로 눈치 볼 필요없이,<br />모든 일정을 하나로</p>
           </div>
         </div>
       </section>
@@ -193,7 +163,7 @@ export function Landing() {
       <section className="sec">
         <div className="wrap">
           <p className="eyebrow rise">HOW IT WORKS</p>
-          <p className="lead rise">부원이 하는 일은 하나입니다.<br />안 되는 시간을 알려주는 것.</p>
+          <p className="lead rise">많은 걸 할 필요는 없어요.<br />아래 세 가지로 충분해요.</p>
           <div className="steps">
             {STEPS.map((step) => (
               <div className="step rise" key={step.k}>
@@ -210,20 +180,20 @@ export function Landing() {
       <section className="sec admin" id="admin">
         <div className="wrap row">
           <p className="quote rise">
-            합주실 시간표를 손으로 맞추던 사람이<br />이제 <b>승인 버튼만 누릅니다.</b>
+            합주실이 늘어도,<br></br> 열고 닫는 시간이 변해도 괜찮아요.<br></br><b>설정 페이지만 조금 바꿔주세요.</b>
           </p>
           <ul className="rise">
-            <li><b>합주실</b><span>방마다 운영시간을 정하고, 방을 늘려도 그대로 굴러갑니다</span></li>
-            <li><b>기간</b><span>상시 개방과 집중 합주기간, 계산이 도는 시각을 직접 정합니다</span></li>
-            <li><b>조율</b><span>못 푼 배정은 선택지로 올라옵니다. 고르는 것은 사람입니다</span></li>
+            <li><b>합주실</b><span>합주실마다 운영시간을 정하고, 합주실 수가 늘어나도 괜찮아요.</span></li>
+            <li><b>기간</b><span>상시 개방과 집중 합주기간, 엔진 연산 시간을 직접 정할 수 있어요.</span></li>
+            <li><b>조율</b><span>최선의 수가 없다면, 선택지로 전달할게요. 더 좋은 방향으로 선택해주세요.</span></li>
           </ul>
         </div>
       </section>
 
       <section className="sec end">
         <div className="wrap">
-          <h2 className="rise">이번 공연 준비는<br /><span className="mark">BANBLIT</span>으로.</h2>
-          <p className="rise">동아리 이름과 합주실 하나면 오늘 바로 시작합니다.</p>
+          <h2 className="rise">앞으로의 공연 시간표는<br /><span className="mark">BANBLIT</span>으로.</h2>
+          <p className="rise">복잡한 계산은 여기 두고, 더 좋은 무대를 만들어주세요.</p>
           <Link className="go rise" to="/login">시작하기<ArrowIcon /></Link>
         </div>
       </section>

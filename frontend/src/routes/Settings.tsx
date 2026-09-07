@@ -7,6 +7,8 @@ import { getJSON } from "../lib/api";
 import { checkPeriod, checkRoom, daysBetween, openingHours } from "../lib/pipeline";
 import { useMe, useToast } from "../components/hooks";
 import { can, roleLabel } from "../lib/account";
+import { applyTheme, readSavedTheme } from "../lib/theme";
+import type { Theme } from "../lib/theme";
 import { PermissionCard } from "./SettingsPermissions";
 import {
   Cell,
@@ -22,15 +24,17 @@ import "../styles/settings.css";
 import type { Period, Room, Team } from "../lib/contract";
 
 
-type Tab = "rooms" | "periods" | "permissions";
+type Tab = "rooms" | "periods" | "permissions" | "display";
 
-// 합주실·기간 목록은 계정만 있으면 서버가 보여준다. 그래서 탭은 늘 있고, 고치는
-// 단추만 항목으로 가린다. 권한 탭은 목록을 받는 통로부터 permission_grant 를 요구한다.
+// 탭마다 필요한 항목이 다르다. 가진 것만 보이므로, 아무 관리 항목도 없는 사람에게는
+// 화면 탭 하나만 남는다 — 그 탭이 없으면 볼 것이 없는 빈 화면이 된다.
+// needs 가 없는 탭은 로그인한 사람 누구에게나 보인다.
 const TABS = [
-  { key: "rooms" as const, text: "합주실" },
-  { key: "periods" as const, text: "기간" },
+  { key: "rooms" as const, text: "합주실", needs: "room_manage" as const },
+  { key: "periods" as const, text: "기간", needs: "period_manage" as const },
+  { key: "permissions" as const, text: "권한", needs: "permission_grant" as const },
+  { key: "display" as const, text: "화면", needs: null },
 ];
-const PERMISSION_TAB = { key: "permissions" as const, text: "권한" };
 
 const BLANK_ROOM = { name: "", opens_at: "18:00", closes_at: "23:00" };
 const BLANK_PERIOD = {
@@ -51,14 +55,68 @@ function periodSpan(period: Period): string {
   return `${days} · 계산 ${period.first_run_at} · ${period.second_run_at}`;
 }
 
+/** 화면 밝기. 상단바의 단추였던 것을 여기로 옮겼다 — 한 번 정하면 다시 건드릴 일이
+ *  드문 값이라, 늘 보이는 자리를 계속 차지할 이유가 없었다.
+ *
+ *  고른 것은 브라우저에 남아 다음에 열 때도 그대로 온다. 예전 단추는 남기지 않아
+ *  새로 고칠 때마다 기기 설정으로 되돌아갔다. */
+function ThemeCard() {
+  // 처음 값을 한 번만 읽는다. 이 뒤로는 사람이 고른 것이 정본이다.
+  const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
+
+  const choices: { key: Theme; label: string }[] = [
+    { key: "light", label: "밝게" },
+    { key: "dark", label: "어둡게" },
+  ];
+
+  return (
+    <Card>
+      <div className="sethead">
+        <b>화면</b>
+        <span>이 브라우저에만 남습니다</span>
+      </div>
+      <div className="display">
+        <div className="pick" role="group" aria-label="화면 밝기">
+          {choices.map((choice) => (
+            <button
+              key={choice.key}
+              aria-pressed={theme === choice.key}
+              onClick={() => setTheme(applyTheme(choice.key))}
+            >
+              {choice.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/** 화면 탭에서 오른쪽에 두는 안내. */
+function DisplayNote() {
+  return (
+    <Panel title="화면">
+      <div className="read">
+        <p className="note">
+          고른 밝기는 이 브라우저에만 남습니다.
+          다른 기기에서 열면 그 기기의 설정을 따릅니다.
+        </p>
+        <p className="note">
+          고른 적이 없으면 기기가 밝은 화면인지 어두운 화면인지를 그대로 씁니다.
+        </p>
+      </div>
+    </Panel>
+  );
+}
+
 /** 권한 탭에서 오른쪽에 두는 안내. 합주실·기간 탭의 셈(Readout)이 들어설 자리다. */
 function PermissionNote() {
   return (
     <Panel title="권한" hint="항목 열한 가지">
       <div className="read">
         <p className="note">
-          묶음을 만들어 할 수 있는 일을 켜고, 그 묶음을 사람에게 붙입니다.
-          한 사람이 묶음을 여럿 가지면 켜진 항목이 모두 합쳐집니다.
+          권한을 만들어 할 수 있는 일을 켜고, 그 권한을 사람에게 줍니다.
+          한 사람이 권한을 여럿 가지면 켜진 항목이 모두 합쳐집니다.
         </p>
         <p className="note">
           이 화면이 단추를 감추는 것은 안내일 뿐입니다.
@@ -75,10 +133,10 @@ export function Settings() {
   const client = useQueryClient();
   const { me } = useMe();
 
-  const canGrant = can(me, "permission_grant");
-  const tabs = canGrant ? [...TABS, PERMISSION_TAB] : TABS;
-  // 권한을 잃은 채로 그 탭에 머물러 있지 않게, 없는 탭이면 첫 탭을 보여준다.
-  const shown: Tab = tabs.some((item) => item.key === tab) ? tab : "rooms";
+  const tabs = TABS.filter((item) => item.needs === null || can(me, item.needs));
+  // 권한을 잃은 채로 그 탭에 머물러 있지 않게, 없는 탭이면 남은 것 중 첫 탭을 보여준다.
+  // 화면 탭은 누구에게나 있으므로 tabs 가 비는 일은 없다.
+  const shown: Tab = tabs.some((item) => item.key === tab) ? tab : tabs[0].key;
 
   const rooms = useQuery({
     queryKey: ["rooms"],
@@ -142,13 +200,17 @@ export function Settings() {
             canEdit={can(me, "period_manage")}
             onSaved={saved("periods", "기간을 저장했습니다")}
           />
-        ) : (
+        ) : shown === "permissions" ? (
           <PermissionCard onSay={say} />
+        ) : (
+          <ThemeCard />
         )}
       </div>
 
       <div className="rail">
-        {shown === "permissions" ? (
+        {shown === "display" ? (
+          <DisplayNote />
+        ) : shown === "permissions" ? (
           <PermissionNote />
         ) : (
           <Readout
@@ -300,7 +362,7 @@ function RoomCard(props: { rooms: Room[]; state: string; canEdit: boolean; onSav
     <Card>
       <div className="sethead">
         <b>합주실</b>
-        <span>여닫는 시각은 정시 또는 30분에만 둘 수 있습니다</span>
+        <span>합주실 하나를 씁니다. 여닫는 시각은 정시 또는 30분에만 둘 수 있습니다</span>
       </div>
 
       {state !== "" || rooms.length === 0 ? (
@@ -341,7 +403,10 @@ function RoomCard(props: { rooms: Room[]; state: string; canEdit: boolean; onSav
         </ul>
       )}
 
-      {!canEdit ? null : (
+      {/* 합주실은 하나만 쓴다. 이미 하나 있으면 더하는 서식을 두지 않는다 —
+          저장소와 배정 계산은 여럿을 다룰 수 있게 그대로 두고, 늘리는 길만 닫았다.
+          여러 방을 다시 쓸 일이 생기면 이 조건 하나를 떼면 된다. */}
+      {!canEdit || rooms.length > 0 ? null : (
         <div className="addrow">
           <RoomForm
             start={BLANK_ROOM}
@@ -523,8 +588,9 @@ function PeriodForm(props: {
 function teamLine(teams: Team[], state: string): string {
   if (state === "loading") return "팀 목록을 불러오는 중…";
   if (state !== "") return state;
-  const members = teams.reduce((sum, team) => sum + team.member_count, 0);
-  return `팀 ${teams.length}개 · 소속 인원 ${members}명`;
+  const filled = teams.reduce((sum, team) => sum + team.filled_count, 0);
+  const slots = teams.reduce((sum, team) => sum + team.slot_count, 0);
+  return `팀 ${teams.length}개 · 자리 ${slots}개 중 ${filled}개 참`;
 }
 
 /** 지금 설정이면 실제로 얼마가 열리는지. 집중기간은 모든 팀이 같은 몫을 가져야 한다. */

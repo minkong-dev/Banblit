@@ -1,7 +1,7 @@
 // lib 모듈의 시퀀스 파일. 어느 검사를 어느 순서로 부를지 여기서 정한다.
 // 화면은 기능 파일(settings.ts, calendar.ts, slots.ts)을 직접 부르지 않고 이것만 부른다.
 
-import { getJSON as sendJSON, sendFile as uploadFile } from "./api";
+import { getJSON, sendFile } from "./api";
 import type { Account, Me, Member, Notification, Reservation, Unavailable } from "./contract";
 import {
   datesBetween,
@@ -33,12 +33,11 @@ import {
   titleMessage,
 } from "./boards";
 import {
-  joinPolicyLabel,
-  joinPositionMessage,
-  joinResultMessage,
-  joinStand,
+  memberLabel,
+  myTeamIds,
   peopleOf,
-  teamIdsByStatus,
+  slotCountsMessage,
+  slotName,
   teamNameMessage,
 } from "./roster";
 
@@ -120,16 +119,12 @@ export function checkTeamName(name: string, taken: string[]): string {
   return teamNameMessage(name, taken);
 }
 
-export function checkJoinPosition(positionId: number | null): string {
-  return joinPositionMessage(positionId);
+export function checkSlotCounts(counts: Record<string, number>): string {
+  return slotCountsMessage(counts);
 }
 
-// 참가·승인 방식을 두고 화면이 하는 판단 넷. teamIdsByStatus 가 /me 의 memberships 를
-// 소속과 신청으로 가르고, 그 결과가 joinStand 의 두 입력이 된다 — 순서가 반대일 수 없다.
-// joinResultMessage 는 서버가 돌려준 status 를, joinPolicyLabel 은 팀의 join_policy 를
-// 받는 것이라 앞의 둘과 서로 기다릴 것이 없다.
-export { joinPolicyLabel, joinResultMessage, joinStand, teamIdsByStatus };
-export type { JoinStand } from "./roster";
+// 팀·자리를 두고 화면이 하는 계산. 서로 기다릴 것이 없어 그대로 다시 내보낸다.
+export { memberLabel, myTeamIds, slotCountsMessage, slotName };
 
 // 게시판·공지 화면이 쓰는 계산. postWhen 과 fileSizeLabel 은 order 의존이 없어
 // 그대로 다시 내보낸다.
@@ -145,14 +140,14 @@ export async function runAssignment<T>(periodId: number, body: AssignBody): Prom
   // 접수(POST)가 먼저다 — 서버는 계산을 기다리지 않고 작업 번호만 돌려준다. 그 번호로
   // awaitJob 이 끝날 때까지 되묻는다. 순서가 반대일 수 없고, 접수 응답을 결과로 쓰면
   // 계산이 시작도 안 한 값을 화면에 그리게 된다.
-  const accepted = await sendJSON<{ job: Job<T> }>(`/periods/${periodId}/assign`, {
+  const accepted = await getJSON<{ job: Job<T> }>(`/periods/${periodId}/assign`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   return awaitJob<T>(
     accepted.job.id,
-    (id) => sendJSON<{ job: Job<T> }>(`/jobs/${id}`),
+    (id) => getJSON<{ job: Job<T> }>(`/jobs/${id}`),
     (ms) => new Promise((done) => setTimeout(done, ms)),
     () => Date.now(),
   );
@@ -170,7 +165,7 @@ export async function addUnavailable(
   // 오면 거절하고, 켜져 있으면 기간의 끝까지로 알아서 자른다.
   // ponytail: 끝나는 날을 사람이 직접 정하는 자리는 없다. 필요해지면 화면에 날짜
   // 하나를 더 받아 repeat_until 로 함께 보낸다.
-  const body = await sendJSON<{ time: Unavailable }>(`/members/${memberId}/unavailable`, {
+  const body = await getJSON<{ time: Unavailable }>(`/members/${memberId}/unavailable`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ starts_at: startsAt, ends_at: endsAt, repeats_weekly: repeatsWeekly }),
@@ -205,7 +200,7 @@ export type ReservationForm = {
 };
 
 export async function addReservation(form: ReservationForm): Promise<Reservation[]> {
-  const body = await sendJSON<{ reservations: Reservation[] }>("/reservations", {
+  const body = await getJSON<{ reservations: Reservation[] }>("/reservations", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(form),
@@ -226,13 +221,14 @@ export type { Session } from "./slots";
 export { datesBetween, isRangeFree, monthCells, slotLabel, takenGrid };
 export { hoursLabelOf as hoursLabel };
 export {
+  cohortMessage,
   emailMessage,
   passwordMessage,
   phoneMessage,
   strongPasswordMessage,
 } from "./validate";
 
-export type SignUpForm = { name: string; email: string; password: string; positions: string[] };
+export type SignUpForm = { name: string; email: string; password: string; cohort: number };
 
 export async function signUp(form: SignUpForm): Promise<Account> {
   // 가입 성공 응답은 계정만 담아 온다 — 세션은 서버가 httpOnly 쿠키(banblit_session)로
@@ -284,8 +280,8 @@ export async function resetPassword(token: string, password: string): Promise<vo
 }
 
 export async function fetchMe(): Promise<Me> {
-  // 계정과 함께 내 소속·신청(memberships)이 온다. 팀 명단을 훑어 소속을 가려낼 필요가
-  // 없고, 새로 고쳐도 어디에 신청해 뒀는지가 남는다.
+  // 계정과 함께 내가 앉아 있는 자리(teams)가 온다. 팀 명단을 훑어 소속을 가려낼
+  // 필요가 없다.
   return getJSON<Me>("/me");
 }
 
@@ -304,40 +300,10 @@ export async function logOut(): Promise<void> {
   await getJSON("/logout", { method: "POST" });
 }
 
-// 개발자가 켜는 "연결 끊긴 상태로 보기" 하나. 기능 파일은 state 를 들지 않으므로
-// 시퀀스 파일인 여기서 든다. getJSON 이 fetch 전에 이 값을 본다.
-let devOffline = false;
-
-export function isDevOffline(): boolean {
-  return devOffline;
-}
-
-export function setDevOffline(next: boolean): void {
-  devOffline = next;
-}
-
-export function sendFile<T>(
-  path: string,
-  file: File,
-  onProgress: (percent: number) => void,
-): Promise<T> {
-  // 파일 올리기도 아래 getJSON 과 같은 문을 지난다. 게시판만 "연결 끊긴 상태로 보기"를
-  // 빠져나가면 그 상태를 재현해 확인하는 일이 되지 않는다.
-  if (import.meta.env.DEV && devOffline) {
-    return Promise.reject(new Error("서버에 닿지 못했습니다"));
-  }
-  return uploadFile<T>(path, file, onProgress);
-}
-
-export function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
-  // "연결 끊긴 상태로 보기"가 켜져 있으면 부르기 전에 끊는다. sendJSON 은 값을 들지
-  // 않으므로 그 판단이 여기 있어야 한다. import.meta.env.DEV 가 빌드 때 상수로 접혀,
-  // 배포 묶음에서는 이 분기와 체크박스가 함께 빠진다.
-  if (import.meta.env.DEV && devOffline) {
-    return Promise.reject(new Error("서버에 닿지 못했습니다"));
-  }
-  return sendJSON<T>(path, init);
-}
+// 예전에는 여기에 "연결 끊긴 상태로 보기" 스위치가 있어, 켜면 부르기 전에 실패시켜
+// 오류 화면을 볼 수 있었다. 끊긴 상태를 보려면 실제로 서버를 내리면 되는 일이라
+// 걷어냈다 — 요청마다 지나는 자리에 아무도 켤 수 없는 분기를 둘 이유가 없다.
+export { getJSON, sendFile };
 
 // 주 보기가 쓰는 계산. 달력의 달 옮기기(cursor)와 짝을 이뤄, 몇 주 옮겼는지(shift)만
 // 따로 들고 여기서 날짜로 편다 — 주가 달을 넘어가도 상태를 하나만 보면 된다.

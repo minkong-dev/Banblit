@@ -22,7 +22,7 @@ export function Field(props: {
   type: string;
   placeholder: string;
   autoComplete: string;
-  inputMode?: "email" | "tel";
+  inputMode?: "email" | "tel" | "numeric";
   error?: string;
 }) {
   const { name, label, type, placeholder, autoComplete, inputMode, error } = props;

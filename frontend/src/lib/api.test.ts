@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getJSON, REQUEST_TIMEOUT_MS, sendFile, UPLOAD_TIMEOUT_MS } from "./api";
-import { getJSON as gatedJSON, setDevOffline } from "./pipeline";
 
 /** fetch 를 가짜로 세운다. 단위 테스트는 실제 서버에 닿지 않는다. */
 function stubFetch(handler: () => Promise<Response> | Promise<never>): void {
@@ -21,7 +20,6 @@ const jsonResponse = (body: unknown, status = 200): Response =>
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  setDevOffline(false);
 });
 
 describe("getJSON", () => {
@@ -69,15 +67,6 @@ describe("getJSON", () => {
     stubFetch(async () => new Response("", { status: 503 }));
 
     await expect(getJSON("/health")).rejects.toThrow("503");
-  });
-
-  it("연결 끊긴 상태로 보기가 켜져 있으면 실제로 fetch 하지 않고 실패한다", async () => {
-    const spy = vi.fn();
-    vi.stubGlobal("fetch", spy);
-    setDevOffline(true);
-
-    await expect(gatedJSON("/rooms")).rejects.toThrow("서버에 닿지 못했습니다");
-    expect(spy).not.toHaveBeenCalled();
   });
 
   it("보내는 쪽이 준 설정을 지운 채 부르지 않는다", async () => {

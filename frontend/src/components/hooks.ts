@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { fetchMe, getJSON, teamIdsByStatus } from "../lib/pipeline";
+import { fetchMe, getJSON, myTeamIds } from "../lib/pipeline";
 import type { Account, Team } from "../lib/contract";
 
 /** 화면 CSS 는 body[data-page="..."] 안에 갇혀 있다. data-page 를 걸고 떼는 곳. */
@@ -36,13 +36,12 @@ export function useToast(): { message: string; say: (message: string) => void } 
   return { message, say };
 }
 
-/** 지금 로그인한 계정, 그 계정이 속한 팀 번호들, 승인을 기다리는 팀 번호들.
- *  소속은 /me 가 memberships 로 함께 준다 — 팀 명단을 하나씩 훑지 않고, 새로 고쳐도
- *  어디에 신청해 뒀는지가 남는다. 아직 못 불러왔으면 me 는 null 이다. */
+/** 지금 로그인한 계정과, 그 계정이 자리를 갖고 있는 팀 번호들.
+ *  /me 가 teams 로 함께 준다 — 팀 명단을 하나씩 훑지 않아도 된다.
+ *  아직 못 불러왔으면 me 는 null 이다. */
 export function useMe(): {
   me: Account | null;
   teamIds: number[];
-  pendingTeamIds: number[];
   teams: Team[];
 } {
   const mine = useQuery({ queryKey: ["me"], queryFn: fetchMe, retry: false });
@@ -51,14 +50,11 @@ export function useMe(): {
     queryFn: () => getJSON<{ teams: Team[] }>("/teams"),
   });
 
-  // 낡은 서버가 memberships 없이 답하면 아무 데도 속하지 않은 것으로 본다 —
-  // 잠깐 보였다 사라지는 "내 팀" 배지보다 처음부터 없는 편이 낫다.
-  const memberships = mine.data?.memberships ?? [];
-
+  // 낡은 서버가 teams 없이 답하면 아무 자리도 없는 것으로 본다 — 잠깐 보였다
+  // 사라지는 "내 팀" 배지보다 처음부터 없는 편이 낫다.
   return {
     me: mine.data?.account ?? null,
-    teamIds: teamIdsByStatus(memberships, "approved"),
-    pendingTeamIds: teamIdsByStatus(memberships, "pending"),
+    teamIds: myTeamIds(mine.data?.teams ?? []),
     teams: teamList.data?.teams ?? [],
   };
 }

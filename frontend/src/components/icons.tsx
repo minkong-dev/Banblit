@@ -30,6 +30,16 @@ export function ThemeIcon(props: IconProps) {
   return <Stroke width={1.9} {...props}><path d="M21 13a8.5 8.5 0 1 1-10-10 7 7 0 0 0 10 10Z" /></Stroke>;
 }
 
+/** 알림 종. 흔들리는 몸통과 아래 추 두 획으로 그린다. */
+export function BellIcon(props: IconProps) {
+  return (
+    <Stroke width={1.9} {...props}>
+      <path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6" />
+      <path d="M13.7 20a2 2 0 0 1-3.4 0" />
+    </Stroke>
+  );
+}
+
 export function CloseIcon(props: IconProps) {
   return <Stroke width={2.2} {...props}><path d="M6 6l12 12M18 6L6 18" /></Stroke>;
 }

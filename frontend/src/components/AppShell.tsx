@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
-import { MenuIcon, ThemeIcon } from "./icons";
+import { MenuIcon } from "./icons";
+import { NotificationMenu } from "./NotificationMenu";
 import { useMe, usePage } from "./hooks";
 import { can } from "../lib/account";
 import { getJSON, logOut } from "../lib/pipeline";
 import type { Member, Permission } from "../lib/contract";
+import "../styles/shell.css";
 
 // 사이드바 차림. 두 화면이 같은 것을 보여주고, 지금 보는 곳만 다르게 켠다.
 const NAV = [
@@ -15,18 +17,15 @@ const NAV = [
   { key: "notice", label: "공지사항", to: "/notices" },
   { key: "find-team", label: "팀 찾기", to: "/teams" },
   { key: "board", label: "팀 게시판", to: "/board" },
+  // 설정은 누구에게나 보인다 — 화면 밝기는 권한과 무관한 개인 설정이다. 관리 구역에
+  // 두었을 때는 권한 없는 사람이 밝기를 바꿀 길이 아예 없었다. 안에서 무엇을 볼지는
+  // 설정 화면이 탭 단위로 다시 가린다.
+  { key: "settings", label: "설정", to: "/settings" },
 ] as const;
 
-// needs 중 하나라도 가진 사람에게만 보인다. 설정 화면은 합주실·기간·권한 세 구역이라
-// 그중 하나만 있어도 들어갈 구역이 있다.
+// needs 중 하나라도 가진 사람에게만 보인다.
 const MANAGER_NAV = [
   { key: "assign", label: "배정 결과 확인", to: "/admin", needs: ["assign_read"] },
-  {
-    key: "settings",
-    label: "합주실·기간 설정",
-    to: "/settings",
-    needs: ["room_manage", "period_manage", "permission_grant"],
-  },
 ] as const satisfies readonly { key: string; label: string; to: string; needs: readonly Permission[] }[];
 
 export type NavKey = (typeof NAV)[number]["key"] | (typeof MANAGER_NAV)[number]["key"];
@@ -51,15 +50,6 @@ function NavList({ items, current }: { items: readonly NavItem[]; current: NavKe
   );
 }
 
-/** 화면 설정을 따르던 것을 반대쪽으로 한 번 뒤집는다. */
-function toggleTheme(): "dark" | "light" {
-  const systemDark = matchMedia("(prefers-color-scheme: dark)").matches;
-  const now = document.documentElement.dataset.theme ?? (systemDark ? "dark" : "light");
-  const next = now === "dark" ? "light" : "dark";
-  document.documentElement.dataset.theme = next;
-  return next;
-}
-
 export function AppShell(props: {
   /** 화면 CSS 가 갇혀 있는 이름 — scheduler, admin. */
   page: string;
@@ -80,7 +70,6 @@ export function AppShell(props: {
   const managerNav = MANAGER_NAV.filter((item) => item.needs.some((need) => can(me, need)));
 
   const [navOpen, setNavOpen] = useState(false);
-  const [themeLabel, setThemeLabel] = useState("어두운 화면으로 바꾸기");
 
   // 사이드바를 여는 표시는 원본 CSS 가 body.navopen 으로 읽는다.
   useEffect(() => {
@@ -97,13 +86,9 @@ export function AppShell(props: {
             <MenuIcon />
           </button>
           <div className="logo"><b>Banblit</b><span>IN SIX STRINGS · A실</span></div>
-          <button className="ic" aria-label={themeLabel}
-            onClick={() => {
-              const next = toggleTheme();
-              setThemeLabel(next === "dark" ? "밝은 화면으로 바꾸기" : "어두운 화면으로 바꾸기");
-            }}>
-            <ThemeIcon />
-          </button>
+          {/* 화면 밝기 단추가 있던 자리다. 밝기는 설정 화면으로 옮기고 그 자리에
+              알림을 두었다 — 밝기는 한 번 정하면 끝이지만 알림은 계속 봐야 한다. */}
+          <NotificationMenu />
           {profile}
         </div>
       </header>
@@ -211,8 +196,8 @@ export function ProfileMenu(props: {
           return (
             <div className="tm" key={team.id}>
               <i style={{ background: `var(--${team.colorKey})` }} />{team.name}
-              {/* 명단이 아직 안 왔으면 포지션 칸을 비워 둔다. 없는 포지션을 지어내지 않는다. */}
-              <small>{mine?.positions.join(", ") ?? ""}</small>
+              {/* 명단이 아직 안 왔으면 비워 둔다. 없는 값을 지어내지 않는다. */}
+              <small>{mine?.cohort == null ? "" : `${mine.cohort}기`}</small>
             </div>
           );
         })}

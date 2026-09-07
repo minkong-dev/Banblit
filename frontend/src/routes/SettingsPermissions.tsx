@@ -1,4 +1,4 @@
-// 설정 화면의 권한 구역. 권한 묶음을 만들고·고치고·지우고, 사람에게 붙이고 뗀다.
+// 설정 화면의 권한 구역. 권한을 만들고·수정하고·삭제하고, 사람에게 주고 뺀다.
 // permission_grant 를 가진 사람에게만 그려진다(부르는 자리는 Settings.tsx 가 가린다).
 
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,7 +44,7 @@ export function PermissionCard({ onSay }: { onSay: (message: string) => void }) 
   const state = sets.isPending ? "loading" : sets.isError ? reason(sets.error) : "";
 
   // 저장이 끝나면 목록을 다시 받아온다. 화면이 스스로 값을 지어내지 않게 한다.
-  // 내 계정도 함께 다시 받는다 — 고친 묶음이 내 것이면 내가 가진 항목이 이미 바뀌었고,
+  // 내 계정도 함께 다시 받는다 — 고친 권한이 내 것이면 내가 가진 항목이 이미 바뀌었고,
   // 낡은 값을 들고 있으면 잃은 단추가 화면에 남는다.
   function saved(text: string): void {
     void client.invalidateQueries({ queryKey: SETS_KEY });
@@ -56,11 +56,11 @@ export function PermissionCard({ onSay }: { onSay: (message: string) => void }) 
     <Card>
       <div className="sethead">
         <b>권한</b>
-        <span>켜고 싶은 것만 켜서 묶음을 만들고, 그 묶음을 사람에게 붙입니다</span>
+        <span>켜고 싶은 것만 켜서 권한을 만들고, 그 권한을 사람에게 줍니다</span>
       </div>
 
       {state !== "" || list.length === 0 ? (
-        <CardState state={state} empty="아직 만든 권한 묶음이 없습니다" />
+        <CardState state={state} empty="아직 만든 권한이 없습니다" />
       ) : (
         <ul className="rows">
           {list.map((set) =>
@@ -76,7 +76,7 @@ export function PermissionCard({ onSay }: { onSay: (message: string) => void }) 
                   onCancel={close}
                   onDone={() => {
                     close();
-                    saved("권한 묶음을 저장했습니다");
+                    saved("권한을 저장했습니다");
                   }}
                 />
                 <Holders set={set} people={people} onDone={saved} />
@@ -87,7 +87,7 @@ export function PermissionCard({ onSay }: { onSay: (message: string) => void }) 
                 title={set.name}
                 when={itemsLine(set.permissions)}
                 span={` · ${set.member_ids.length}명`}
-                editLabel={`${set.name} 고치기`}
+                editLabel={`${set.name} 수정`}
                 buttonRef={register(set.id)}
                 onEdit={() => open(set.id)}
                 extra={<DeleteButton set={set} onDone={saved} />}
@@ -103,8 +103,8 @@ export function PermissionCard({ onSay }: { onSay: (message: string) => void }) 
           taken={list.map((set) => set.name)}
           path="/permission-sets"
           method="POST"
-          submit="권한 묶음 추가"
-          onDone={() => saved("권한 묶음을 만들었습니다")}
+          submit="새 권한 추가"
+          onDone={() => saved("권한을 만들었습니다")}
         />
       </div>
     </Card>
@@ -120,28 +120,28 @@ function itemsLine(permissions: Permission[]): string {
 function DeleteButton({ set, onDone }: { set: PermissionSet; onDone: (text: string) => void }) {
   const send = useMutation({
     mutationFn: () => getJSON<null>(`/permission-sets/${set.id}`, { method: "DELETE" }),
-    onSuccess: () => onDone("권한 묶음을 지웠습니다"),
+    onSuccess: () => onDone("권한을 삭제했습니다"),
     onError: (error) => onDone(reason(error)),
   });
 
-  // 지우면 이 묶음을 가졌던 사람의 권한도 함께 사라진다. 무를 수 없어 한 번 되묻는다.
+  // 삭제하면 이 권한을 가졌던 사람도 그 권한을 잃는다. 무를 수 없어 한 번 되묻는다.
   return (
     <button
       className="btn"
       disabled={send.isPending}
-      aria-label={`${set.name} 지우기`}
+      aria-label={`${set.name} 삭제`}
       onClick={() => {
         const holders = set.member_ids.length;
-        const warn = holders === 0 ? "" : ` 이 묶음을 가진 ${holders}명이 그 권한을 잃습니다.`;
-        if (window.confirm(`${set.name} 묶음을 지웁니다.${warn} 지울까요?`)) send.mutate();
+        const warn = holders === 0 ? "" : ` 이 권한을 가진 ${holders}명이 그것을 잃습니다.`;
+        if (window.confirm(`${set.name} 권한을 삭제합니다.${warn} 삭제할까요?`)) send.mutate();
       }}
     >
-      {send.isPending ? "지우는 중…" : "지우기"}
+      {send.isPending ? "삭제하는 중…" : "삭제"}
     </button>
   );
 }
 
-/** 이름 한 칸과 항목 열한 개 토글. 만들기와 고치기가 같은 것을 쓰고 주소만 갈아 끼운다. */
+/** 이름 한 칸과 항목마다 토글 한 개. 만들기와 수정이 같은 것을 쓰고 주소만 갈아 끼운다. */
 function SetForm(props: {
   start: SetDraft;
   taken: string[];
@@ -191,7 +191,7 @@ function SetForm(props: {
       }}
     >
       <div className="fields">
-        <Cell label="묶음 이름" wide htmlFor={at("name")}>
+        <Cell label="권한 이름" wide htmlFor={at("name")}>
           <input
             ref={first}
             value={form.name}
@@ -202,16 +202,29 @@ function SetForm(props: {
             onChange={(event) => setForm({ ...form, name: event.target.value })}
           />
         </Cell>
+      </div>
+
+      {/* 한 줄에 항목 하나. 무엇을 켜는 것인지가 이름만으로는 안 읽혀 설명을 함께 둔다. */}
+      <ul className="switches">
         {PERMISSION_ITEMS.map((item) => (
-          <Cell key={item.key} label={item.label} htmlFor={at(item.key)}>
+          <li key={item.key}>
+            <label htmlFor={at(item.key)}>
+              <b>{item.label}</b>
+              <small>{item.note}</small>
+            </label>
             <input
+              className="sw"
               id={at(item.key)}
               type="checkbox"
+              role="switch"
               checked={form.permissions.includes(item.key)}
               onChange={(event) => toggle(item.key, event.target.checked)}
             />
-          </Cell>
+          </li>
         ))}
+      </ul>
+
+      <div className="fields">
         <FormTail submit={submit} pending={send.isPending} blocked={why !== ""}
             bad={bad} whyId={whyId} onCancel={onCancel} />
       </div>
@@ -219,7 +232,7 @@ function SetForm(props: {
   );
 }
 
-/** 이 묶음을 가진 사람들. 떼기 단추와, 새로 붙일 사람을 고르는 칸이 함께 있다. */
+/** 이 권한을 가진 사람들. 빼는 단추와, 새로 줄 사람을 고르는 칸이 함께 있다. */
 function Holders(props: {
   set: PermissionSet;
   people: Person[];
@@ -233,7 +246,7 @@ function Holders(props: {
       getJSON<null>(`/members/${memberId}/permission-sets/${set.id}`, { method: "POST" }),
     onSuccess: () => {
       setChosen(null);
-      onDone("권한 묶음을 붙였습니다");
+      onDone("권한을 주었습니다");
     },
     onError: (error) => onDone(reason(error)),
   });
@@ -241,7 +254,7 @@ function Holders(props: {
   const revoke = useMutation({
     mutationFn: (memberId: number) =>
       getJSON<null>(`/members/${memberId}/permission-sets/${set.id}`, { method: "DELETE" }),
-    onSuccess: () => onDone("권한 묶음을 뗐습니다"),
+    onSuccess: () => onDone("권한을 뺐습니다"),
     onError: (error) => onDone(reason(error)),
   });
 
@@ -255,7 +268,7 @@ function Holders(props: {
       {/* 가진 사람이 여럿이면 줄이 넘친다. 줄바꿈이 되는 .fields 를 쓴다. */}
       <div className="fields">
         {set.member_ids.length === 0 ? (
-          <span className="span">아직 이 묶음을 가진 사람이 없습니다</span>
+          <span className="span">아직 이 권한을 가진 사람이 없습니다</span>
         ) : (
           set.member_ids.map((memberId) => {
             const person = people.find((one) => one.id === memberId);
