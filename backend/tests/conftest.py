@@ -13,7 +13,9 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import Base
 
-TEST_DB_NAME = "banblit_test"
+# 검사 전용 DB 이름. 여러 검사를 동시에 돌릴 때만 환경변수로 갈라준다 —
+# 같은 이름을 쓰면 서로의 표를 지우며 돈다.
+TEST_DB_NAME = os.environ.get("TEST_DB_NAME", "banblit_test")
 
 
 @pytest.fixture(scope="session")
@@ -86,6 +88,42 @@ def api_client(db_session: Session) -> Iterator[TestClient]:
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()
+
+
+# 계정 하나를 만들어 (계정 번호, 인증 쿠키)를 돌려주는 도우미의 모양. 검사 파일마다
+# 같은 표기를 다시 적지 않도록 여기서 한 번만 적는다.
+AccountFactory = Callable[[str, str], tuple[int, dict[str, str]]]
+
+
+@pytest.fixture()
+def account(api_client: TestClient) -> AccountFactory:
+    """가입시켜 실제 계정을 만들고, (계정 번호, 인증 쿠키)를 돌려준다.
+
+    한 시험 안에서 헤드매니저와 일반 멤버를 오가며 요청해야 하므로, 받은 쿠키를
+    클라이언트 저장소에 남기지 않고 돌려준다 — 호출마다 cookies= 로 골라 실어야
+    나중에 만든 계정이 앞의 계정을 덮어쓰지 않는다.
+
+    맨 처음 가입한 사람이 헤드매니저다(.cluedoc/accounts-and-roles). 그래서 한
+    시험에서 이 함수를 처음 부른 결과가 곧 헤드매니저 계정이다.
+    """
+
+    def make(name: str, email: str) -> tuple[int, dict[str, str]]:
+        body = api_client.post(
+            "/signup",
+            json={
+                "name": name,
+                "email": email,
+                "password": "password123",
+                "positions": ["보컬"],
+            },
+        ).json()
+        token = api_client.cookies.get("banblit_session")
+        if token is None:
+            raise AssertionError(f"가입이 인증 쿠키를 내려주지 않았습니다: {body}")
+        api_client.cookies.clear()
+        return body["account"]["id"], {"banblit_session": token}
+
+    return make
 
 
 @pytest.fixture()

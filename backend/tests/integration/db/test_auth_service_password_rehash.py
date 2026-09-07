@@ -25,7 +25,6 @@ def _add_member(db_session: Session, *, password_hash: str) -> Member:
         name="박서연",
         email="seoyeon@example.com",
         password_hash=password_hash,
-        role="member",
     )
     db_session.add(member)
     db_session.commit()

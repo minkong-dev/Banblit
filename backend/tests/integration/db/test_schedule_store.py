@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team
 from backend.db.schedule_store import (
     AssignmentRow,
+    list_backup_rounds,
     rollback_schedule,
     save_schedule,
 )
@@ -277,3 +278,48 @@ def test_two_periods_do_not_interfere(db_session: Session) -> None:
     ).all()
     assert [b.saved_at for b in backups2] == [datetime(2026, 8, 1, 21, 0)]
     assert [b.starts_at for b in backups2] == [datetime(2026, 8, 1, 19, 0)]
+
+
+def test_backup_rounds_are_listed_newest_first_with_their_slot_counts(
+    db_session: Session,
+) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+
+    # 첫 저장은 현행이 비어 있어 백업 회차를 만들지 않는다.
+    save_schedule(
+        db_session,
+        period_id,
+        [_row(team_id, room_id, 19)],
+        saved_at=datetime(2026, 8, 1, 21, 0),
+    )
+    save_schedule(
+        db_session,
+        period_id,
+        [_row(team_id, room_id, 19), _row(team_id, room_id, 20)],
+        saved_at=datetime(2026, 8, 2, 21, 0),
+    )
+    save_schedule(
+        db_session,
+        period_id,
+        [_row(team_id, room_id, 19)],
+        saved_at=datetime(2026, 8, 3, 21, 0),
+    )
+
+    rounds = list_backup_rounds(db_session, period_id)
+
+    assert rounds == [
+        {"saved_at": datetime(2026, 8, 3, 21, 0), "slot_count": 2},
+        {"saved_at": datetime(2026, 8, 2, 21, 0), "slot_count": 1},
+    ]
+
+
+def test_backup_rounds_are_empty_before_any_reassignment(db_session: Session) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+    save_schedule(
+        db_session,
+        period_id,
+        [_row(team_id, room_id, 19)],
+        saved_at=datetime(2026, 8, 1, 21, 0),
+    )
+
+    assert list_backup_rounds(db_session, period_id) == []

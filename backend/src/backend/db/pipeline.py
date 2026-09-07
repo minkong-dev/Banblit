@@ -6,14 +6,20 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
 from backend.db.engine import create_db_engine
-from backend.db.schedule_store import AssignmentRow, rollback_schedule, save_schedule
+from backend.db.schedule_store import (
+    AssignmentRow,
+    BackupRound,
+    list_backup_rounds,
+    rollback_schedule,
+    save_schedule,
+)
 
 if TYPE_CHECKING:
     from backend.db.health import DependencyStatus
 
 # db 모듈의 시퀀스 파일 — api 는 db 안의 다른 파일을 직접 부르지 않고 이 파일만
-# 참조한다. save_schedule·rollback_schedule·AssignmentRow 는 schedule_store.py 가
-# 이미 가진 것을 그대로 내보낸다.
+# 참조한다. save_schedule·rollback_schedule·list_backup_rounds·AssignmentRow·
+# BackupRound 는 schedule_store.py 가 이미 가진 것을 그대로 내보낸다.
 __all__ = [
     "get_engine",
     "get_session",
@@ -21,7 +27,9 @@ __all__ = [
     "check_database",
     "save_schedule",
     "rollback_schedule",
+    "list_backup_rounds",
     "AssignmentRow",
+    "BackupRound",
 ]
 
 # 접속 주소 하나당 Engine 하나. Engine 은 접속 풀을 통째로 들고 있는 무거운 객체라,

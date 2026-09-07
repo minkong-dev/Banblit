@@ -12,6 +12,7 @@ from backend.api.period_input import (
     expand_unavailable,
 )
 from backend.db.models import (
+    Assignment,
     Member,
     Membership,
     Period,
@@ -21,7 +22,12 @@ from backend.db.models import (
 )
 from backend.db.pipeline import AssignmentRow, save_schedule
 from backend.scheduling.pipeline import Assignment as EngineAssignment
-from backend.scheduling.pipeline import Resolution, TimeInterval, resolve
+from backend.scheduling.pipeline import (
+    Resolution,
+    TimeInterval,
+    generate_slots,
+    resolve,
+)
 
 
 @dataclass(frozen=True)
@@ -35,17 +41,30 @@ class PeriodAssignResult:
     member_names: dict[int, str]
 
 
+@dataclass(frozen=True)
+class OpenSlot:
+    """아무 팀도 배정받지 않은 30분 칸 하나. 방 번호와 이름을 함께 들고 있다."""
+
+    room_id: int
+    room: str
+    start: datetime
+    end: datetime
+
+
 def assign_period(
     session: Session,
     period_id: int,
     team_ids: list[int],
     room_ids: list[int],
     saved_at: datetime,
+    excluded_member_id: int | None = None,
 ) -> PeriodAssignResult:
     """기간 전체의 시간표를 짜고, 성공하면 현행 시간표로 저장한다.
 
     배정이 불가능하면 저장하지 않고 조율안만 담아 돌려준다 — 실패는 오류가 아니다.
-    잘못된 입력(없는 기간·팀·합주실, 상시기간)은 ValueError로 거부한다.
+    excluded_member_id 를 주면 그 사람을 명단에서 빼고 계산한다. 조율안 확정이
+    이 자리를 쓴다 — 조율안이 지목한 사람을 빼면 조율안과 같은 계산이 된다.
+    잘못된 입력(없는 기간·팀·합주실, 상시기간, 명단 밖 사람)은 ValueError로 거부한다.
     """
     period = session.get(Period, period_id)
     if period is None:
@@ -60,6 +79,8 @@ def assign_period(
     rooms = _load_rooms(session, room_ids)
     team_names = _load_team_names(session, team_ids)
     member_ids_by_team, member_names = _load_members(session, team_ids)
+    if excluded_member_id is not None:
+        member_ids_by_team = _without_member(member_ids_by_team, excluded_member_id)
 
     days = dates_in_period(period.starts_on, period.ends_on)
     window_start = datetime.combine(period.starts_on, time())
@@ -123,10 +144,11 @@ def _load_members(
 ) -> tuple[dict[int, list[int]], dict[int, str]]:
     # 팀별 멤버 번호 목록과, 번호에서 이름을 찾을 대응표를 함께 돌려준다.
     # 엔진에는 번호만 가고, 이름은 답장을 만들 때만 쓴다.
+    # 승인 대기(status="pending")는 아직 소속이 아니므로 배정 명단에 넣지 않는다.
     rows = session.execute(
         select(Membership.team_id, Member.id, Member.name)
         .join(Member, Member.id == Membership.member_id)
-        .where(Membership.team_id.in_(team_ids))
+        .where(Membership.team_id.in_(team_ids), Membership.status == "approved")
         .order_by(Membership.team_id, Member.id)
     ).all()
     member_ids_by_team: dict[int, list[int]] = {}
@@ -135,6 +157,64 @@ def _load_members(
         member_ids_by_team.setdefault(team_id, []).append(member_id)
         member_names[member_id] = member_name
     return member_ids_by_team, member_names
+
+
+def _without_member(
+    member_ids_by_team: dict[int, list[int]], excluded_member_id: int
+) -> dict[int, list[int]]:
+    # excluded_member_id 를 뺀 명단을 새로 만들어 돌려준다. 원본은 고치지 않는다.
+    # 어느 팀에도 없는 번호면 조율안이 가리킬 수 없는 사람이므로 여기서 거부한다.
+    in_some_team = any(
+        excluded_member_id in member_ids for member_ids in member_ids_by_team.values()
+    )
+    if not in_some_team:
+        raise ValueError(f"{excluded_member_id}번은 이 팀들의 명단에 없습니다")
+    return {
+        team_id: [i for i in member_ids if i != excluded_member_id]
+        for team_id, member_ids in member_ids_by_team.items()
+    }
+
+
+def open_slots_in_period(session: Session, period: Period) -> list[OpenSlot]:
+    """그 기간에서 아무 팀도 쓰지 않는 30분 칸을 시작 시각순으로 돌려준다.
+
+    저장된 배정에 쓰인 합주실의 운영시간을 기간의 날짜마다 칸으로 쪼갠 뒤,
+    배정이 차지한 칸을 뺀다. 배정 계산(resolve)은 여기서 돌리지 않는다.
+    합주실 운영시간이 30분 칸으로 쪼개지지 않으면 ValueError를 올린다.
+    """
+    # ponytail: 칸을 만들 합주실을 저장된 배정에서 되찾는다 — 배정에 넘긴 합주실
+    # 목록을 남기는 표가 없어서다. 한 칸도 못 받은 합주실은 남는 칸에도 안 나온다.
+    # period_rooms 표가 생기면 여기서 그 목록을 읽는다.
+    taken = session.execute(
+        select(Assignment.room_id, Assignment.starts_at).where(
+            Assignment.period_id == period.id
+        )
+    ).all()
+    if not taken:
+        return []
+
+    occupied = {(room_id, starts_at) for room_id, starts_at in taken}
+    rooms = session.scalars(
+        select(Room).where(Room.id.in_({room_id for room_id, _ in taken}))
+    ).all()
+    room_names = {room.id: room.name for room in rooms}
+
+    days = dates_in_period(period.starts_on, period.ends_on)
+    open_slots: list[OpenSlot] = []
+    for engine_room in build_engine_rooms(list(rooms), days):
+        for interval in generate_slots(engine_room.open_period):
+            if (engine_room.id, interval.start) in occupied:
+                continue
+            open_slots.append(
+                OpenSlot(
+                    room_id=engine_room.id,
+                    room=room_names[engine_room.id],
+                    start=interval.start,
+                    end=interval.end,
+                )
+            )
+    open_slots.sort(key=lambda slot: (slot.start, slot.room))
+    return open_slots
 
 
 def _load_unavailable(

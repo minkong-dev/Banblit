@@ -18,13 +18,37 @@ def _require_team_exists(session: Session, team_id: int) -> None:
 def _require_team_member(session: Session, team_id: int, member_id: int) -> None:
     # 인증된 사람이라도 그 팀 소속이 아니면 권한 문제다(PermissionError) — 팀/글이
     # 아예 없는 경우(ValueError)와는 사람이 다음에 할 일이 다르므로 구분한다.
+    # 승인 대기(status="pending")는 아직 소속이 아니라 신청이므로 통과시키지 않는다.
     row = session.execute(
         select(Membership.id).where(
-            Membership.team_id == team_id, Membership.member_id == member_id
+            Membership.team_id == team_id,
+            Membership.member_id == member_id,
+            Membership.status == "approved",
         )
     ).first()
     if row is None:
         raise PermissionError("그 팀 소속이 아닙니다")
+
+
+def require_post_readable(session: Session, post_id: int, requester: Member) -> Post:
+    """글 하나를 돌려준다. 팀 게시판 글이면 requester 가 그 팀 소속이어야 한다.
+
+    공지(team_id 가 비어 있음)는 로그인한 사람 누구나 읽으므로 소속을 보지 않는다.
+    """
+    post = session.get(Post, post_id)
+    if post is None:
+        raise ValueError("그런 글이 없습니다")
+    if post.team_id is not None:
+        _require_team_member(session, post.team_id, requester.id)
+    return post
+
+
+def require_post_author(session: Session, post_id: int, requester: Member) -> Post:
+    """읽을 수 있는지 먼저 보고, 그 글을 쓴 사람 본인이면 글을 돌려준다."""
+    post = require_post_readable(session, post_id, requester)
+    if post.author_id != requester.id:
+        raise PermissionError("글쓴이만 할 수 있습니다")
+    return post
 
 
 def _comment_counts(session: Session, post_ids: list[int]) -> dict[int, int]:
@@ -64,9 +88,10 @@ def list_notices(session: Session) -> list[PostRow]:
 def create_notice(
     session: Session, title: str, body: str, requester: Member, created_at: datetime
 ) -> tuple[Post, str]:
-    """공지사항 하나를 만든다. 글쓴이는 요청 본문이 아니라 토큰으로 확인한 requester다."""
-    if requester.role != "head_manager":
-        raise PermissionError("헤드매니저만 공지를 작성할 수 있습니다")
+    """공지사항 하나를 만든다. 글쓴이는 요청 본문이 아니라 토큰으로 확인한 requester다.
+
+    누가 쓸 수 있는지는 통로(routers/boards.py)의 notice_write 확인이 가른다.
+    """
     clean_title = require_non_empty(title, "제목")
     clean_body = require_non_empty(body, "내용")
 
@@ -149,11 +174,7 @@ def create_comment(
 ) -> tuple[Comment, str]:
     """댓글 하나를 만든다. 글이 팀 게시판 글이면 글쓰기와 같은 규칙으로 소속을 확인한다."""
     clean_body = require_non_empty(body, "댓글")
-    post = session.get(Post, post_id)
-    if post is None:
-        raise ValueError("그런 글이 없습니다")
-    if post.team_id is not None:
-        _require_team_member(session, post.team_id, requester.id)
+    require_post_readable(session, post_id, requester)
 
     comment = Comment(
         post_id=post_id, body=clean_body, author_id=requester.id, created_at=created_at

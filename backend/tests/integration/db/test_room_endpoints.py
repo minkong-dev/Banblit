@@ -7,6 +7,10 @@ from sqlalchemy.orm import Session
 
 from backend.api.room_service import commit_room
 from backend.db.models import Room
+from conftest import AccountFactory
+
+HEAD = ("박서연", "head@example.com")
+MEMBER = ("김민수", "m@example.com")
 
 
 def _room(session: Session, name: str, opens: time, closes: time) -> Room:
@@ -17,23 +21,29 @@ def _room(session: Session, name: str, opens: time, closes: time) -> Room:
 
 
 def test_rooms_are_listed_in_id_order(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
+    _, head = account(*HEAD)
     second = _room(db_session, "2번방", time(18, 0), time(22, 0))
     first = _room(db_session, "1번방", time(18, 0), time(22, 0))
     db_session.commit()
 
-    response = api_client.get("/rooms")
+    response = api_client.get("/rooms", cookies=head)
 
     assert response.status_code == 200
     ids = [r["id"] for r in response.json()["rooms"]]
     assert ids == sorted([second.id, first.id])
 
 
-def test_room_is_created_with_hh_mm_times(api_client: TestClient) -> None:
+def test_room_is_created_with_hh_mm_times(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+
     response = api_client.post(
         "/rooms",
         json={"name": "1번방", "opens_at": "18:00", "closes_at": "23:00"},
+        cookies=head,
     )
 
     assert response.status_code == 201
@@ -44,10 +54,15 @@ def test_room_is_created_with_hh_mm_times(api_client: TestClient) -> None:
     assert isinstance(room["id"], int)
 
 
-def test_room_creation_rejects_off_grid_minutes(api_client: TestClient) -> None:
+def test_room_creation_rejects_off_grid_minutes(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+
     response = api_client.post(
         "/rooms",
         json={"name": "1번방", "opens_at": "18:20", "closes_at": "23:00"},
+        cookies=head,
     )
 
     assert response.status_code == 422
@@ -55,11 +70,14 @@ def test_room_creation_rejects_off_grid_minutes(api_client: TestClient) -> None:
 
 
 def test_room_creation_rejects_closes_at_not_later_than_opens_at(
-    api_client: TestClient,
+    api_client: TestClient, account: AccountFactory
 ) -> None:
+    _, head = account(*HEAD)
+
     response = api_client.post(
         "/rooms",
         json={"name": "1번방", "opens_at": "23:00", "closes_at": "18:00"},
+        cookies=head,
     )
 
     assert response.status_code == 422
@@ -67,24 +85,31 @@ def test_room_creation_rejects_closes_at_not_later_than_opens_at(
 
 
 def test_room_creation_rejects_a_duplicate_name(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
+    _, head = account(*HEAD)
     _room(db_session, "1번방", time(18, 0), time(22, 0))
     db_session.commit()
 
     response = api_client.post(
         "/rooms",
         json={"name": "1번방", "opens_at": "18:00", "closes_at": "20:00"},
+        cookies=head,
     )
 
     assert response.status_code == 422
     assert "이미" in response.json()["detail"]
 
 
-def test_room_creation_rejects_a_whitespace_only_name(api_client: TestClient) -> None:
+def test_room_creation_rejects_a_whitespace_only_name(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+
     response = api_client.post(
         "/rooms",
         json={"name": "   ", "opens_at": "18:00", "closes_at": "20:00"},
+        cookies=head,
     )
 
     assert response.status_code == 422
@@ -92,11 +117,14 @@ def test_room_creation_rejects_a_whitespace_only_name(api_client: TestClient) ->
 
 
 def test_room_creation_trims_surrounding_whitespace_from_the_name(
-    api_client: TestClient,
+    api_client: TestClient, account: AccountFactory
 ) -> None:
+    _, head = account(*HEAD)
+
     response = api_client.post(
         "/rooms",
         json={"name": "  1번방  ", "opens_at": "18:00", "closes_at": "20:00"},
+        cookies=head,
     )
 
     assert response.status_code == 201
@@ -104,15 +132,17 @@ def test_room_creation_trims_surrounding_whitespace_from_the_name(
 
 
 def test_room_creation_treats_a_whitespace_only_difference_as_a_duplicate(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     # 화면(roomNameMessage)이 앞뒤 공백만 다른 이름도 같은 이름으로 보므로 서버도 맞춘다.
+    _, head = account(*HEAD)
     _room(db_session, "1번방", time(18, 0), time(22, 0))
     db_session.commit()
 
     response = api_client.post(
         "/rooms",
         json={"name": "  1번방  ", "opens_at": "18:00", "closes_at": "20:00"},
+        cookies=head,
     )
 
     assert response.status_code == 422
@@ -145,12 +175,15 @@ def test_room_name_race_at_commit_time_is_translated_not_500(
 
 
 def test_room_is_patched_with_only_the_sent_fields(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
+    _, head = account(*HEAD)
     room = _room(db_session, "1번방", time(18, 0), time(22, 0))
     db_session.commit()
 
-    response = api_client.patch(f"/rooms/{room.id}", json={"closes_at": "23:00"})
+    response = api_client.patch(
+        f"/rooms/{room.id}", json={"closes_at": "23:00"}, cookies=head
+    )
 
     assert response.status_code == 200
     body = response.json()["room"]
@@ -160,12 +193,15 @@ def test_room_is_patched_with_only_the_sent_fields(
 
 
 def test_room_is_patched_with_a_new_opens_at(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
+    _, head = account(*HEAD)
     room = _room(db_session, "1번방", time(18, 0), time(22, 0))
     db_session.commit()
 
-    response = api_client.patch(f"/rooms/{room.id}", json={"opens_at": "17:00"})
+    response = api_client.patch(
+        f"/rooms/{room.id}", json={"opens_at": "17:00"}, cookies=head
+    )
 
     assert response.status_code == 200
     body = response.json()["room"]
@@ -174,44 +210,107 @@ def test_room_is_patched_with_a_new_opens_at(
 
 
 def test_room_patch_keeping_its_own_name_is_not_rejected(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
+    _, head = account(*HEAD)
     room = _room(db_session, "1번방", time(18, 0), time(22, 0))
     db_session.commit()
 
-    response = api_client.patch(f"/rooms/{room.id}", json={"name": "1번방"})
+    response = api_client.patch(
+        f"/rooms/{room.id}", json={"name": "1번방"}, cookies=head
+    )
 
     assert response.status_code == 200
     assert response.json()["room"]["name"] == "1번방"
 
 
 def test_room_patch_rejects_a_name_already_used_by_another_room(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
+    _, head = account(*HEAD)
     _room(db_session, "1번방", time(18, 0), time(22, 0))
     other = _room(db_session, "2번방", time(18, 0), time(22, 0))
     db_session.commit()
 
-    response = api_client.patch(f"/rooms/{other.id}", json={"name": "1번방"})
+    response = api_client.patch(
+        f"/rooms/{other.id}", json={"name": "1번방"}, cookies=head
+    )
 
     assert response.status_code == 422
     assert "이미" in response.json()["detail"]
 
 
 def test_room_patch_rejects_a_whitespace_only_name(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
+    _, head = account(*HEAD)
     room = _room(db_session, "1번방", time(18, 0), time(22, 0))
     db_session.commit()
 
-    response = api_client.patch(f"/rooms/{room.id}", json={"name": "   "})
+    response = api_client.patch(f"/rooms/{room.id}", json={"name": "   "}, cookies=head)
 
     assert response.status_code == 422
     assert "합주실 이름" in response.json()["detail"]
 
 
-def test_room_patch_of_unknown_id_is_rejected(api_client: TestClient) -> None:
-    response = api_client.patch("/rooms/999999", json={"name": "없는방"})
+def test_room_patch_of_unknown_id_is_rejected(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+
+    response = api_client.patch("/rooms/999999", json={"name": "없는방"}, cookies=head)
 
     assert response.status_code == 422
     assert "합주실" in response.json()["detail"]
+
+
+_NEW_ROOM = {"name": "새방", "opens_at": "18:00", "closes_at": "20:00"}
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "body"),
+    [
+        ("GET", "/rooms", None),
+        ("POST", "/rooms", _NEW_ROOM),
+        ("PATCH", "/rooms/1", {"name": "새방"}),
+    ],
+)
+def test_room_endpoints_reject_a_request_without_a_login(
+    api_client: TestClient, method: str, path: str, body: dict[str, str] | None
+) -> None:
+    response = api_client.request(method, path, json=body)
+
+    assert response.status_code == 401
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "body"),
+    [
+        ("POST", "/rooms", _NEW_ROOM),
+        ("PATCH", "/rooms/1", {"name": "새방"}),
+    ],
+)
+def test_room_writes_are_rejected_for_a_plain_member(
+    api_client: TestClient,
+    account: AccountFactory,
+    method: str,
+    path: str,
+    body: dict[str, str],
+) -> None:
+    account(*HEAD)
+    _, member = account(*MEMBER)
+
+    response = api_client.request(method, path, json=body, cookies=member)
+
+    assert response.status_code == 403
+
+
+def test_rooms_are_listed_for_a_plain_member(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    account(*HEAD)
+    _, member = account(*MEMBER)
+
+    response = api_client.get("/rooms", cookies=member)
+
+    assert response.status_code == 200

@@ -1,10 +1,15 @@
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 
-from backend.api.app import app
+from conftest import AccountFactory
 
-client = TestClient(app)
+
+@pytest.fixture()
+def head_cookies(account: AccountFactory) -> dict[str, str]:
+    _, cookies = account("박서연", "head@example.com")
+    return cookies
 
 
 def _feasible_body() -> dict[str, Any]:
@@ -23,8 +28,18 @@ def _feasible_body() -> dict[str, Any]:
     }
 
 
-def test_assign_returns_feasible_assignment() -> None:
-    response = client.post("/assign", json=_feasible_body())
+def test_assign_without_login_is_rejected(api_client: TestClient) -> None:
+    """저장하지 않는 계산이지만 최대 22.2초까지 걸린다 — 아무나 부르면 서버가 묶인다."""
+    response = api_client.post("/assign", json=_feasible_body())
+
+    assert response.status_code == 401
+    assert "로그인" in response.json()["detail"]
+
+
+def test_assign_returns_feasible_assignment(
+    api_client: TestClient, head_cookies: dict[str, str]
+) -> None:
+    response = api_client.post("/assign", json=_feasible_body(), cookies=head_cookies)
 
     assert response.status_code == 200
     data = response.json()
@@ -36,12 +51,14 @@ def test_assign_returns_feasible_assignment() -> None:
     assert data["proposals"] == []
 
 
-def test_leftover_slots_are_returned_as_open_slots() -> None:
+def test_leftover_slots_are_returned_as_open_slots(
+    api_client: TestClient, head_cookies: dict[str, str]
+) -> None:
     # 방에 칸이 2개(18:00, 18:30), 팀이 1칸만 가져가면 남은 1칸이 예약 가능 자리로 나와야 한다.
     body = _feasible_body()
     body["rooms"][0]["open_period"]["end"] = "2026-07-20T19:00:00"
 
-    response = client.post("/assign", json=body)
+    response = api_client.post("/assign", json=body, cookies=head_cookies)
 
     assert response.status_code == 200
     data = response.json()
@@ -58,28 +75,34 @@ def test_leftover_slots_are_returned_as_open_slots() -> None:
     assert starts == ["2026-07-20T18:00:00", "2026-07-20T18:30:00"]
 
 
-def test_duplicate_room_name_is_rejected_as_422() -> None:
+def test_duplicate_room_name_is_rejected_as_422(
+    api_client: TestClient, head_cookies: dict[str, str]
+) -> None:
     body = _feasible_body()
     body["rooms"].append(dict(body["rooms"][0]))  # 같은 이름의 방을 하나 더
 
-    response = client.post("/assign", json=body)
+    response = api_client.post("/assign", json=body, cookies=head_cookies)
 
     assert response.status_code == 422
     assert "합주실 이름이 겹칩니다" in response.json()["detail"]
 
 
-def test_timezone_aware_datetime_is_rejected_as_422() -> None:
+def test_timezone_aware_datetime_is_rejected_as_422(
+    api_client: TestClient, head_cookies: dict[str, str]
+) -> None:
     body = _feasible_body()
     body["rooms"][0]["open_period"]["start"] = "2026-07-20T18:00:00+09:00"
     body["rooms"][0]["open_period"]["end"] = "2026-07-20T18:30:00+09:00"
 
-    response = client.post("/assign", json=body)
+    response = api_client.post("/assign", json=body, cookies=head_cookies)
 
     assert response.status_code == 422
     assert "시간대" in response.json()["detail"]
 
 
-def test_infeasible_request_returns_200_with_proposals() -> None:
+def test_infeasible_request_returns_200_with_proposals(
+    api_client: TestClient, head_cookies: dict[str, str]
+) -> None:
     body = {
         "teams": [
             {
@@ -110,7 +133,7 @@ def test_infeasible_request_returns_200_with_proposals() -> None:
         "slots_per_team": 1,
     }
 
-    response = client.post("/assign", json=body)
+    response = api_client.post("/assign", json=body, cookies=head_cookies)
 
     assert response.status_code == 200
     data = response.json()
@@ -118,7 +141,9 @@ def test_infeasible_request_returns_200_with_proposals() -> None:
     assert [p["excluded_member"] for p in data["proposals"]] == ["blocker"]
 
 
-def test_too_many_teams_is_rejected_as_422() -> None:
+def test_too_many_teams_is_rejected_as_422(
+    api_client: TestClient, head_cookies: dict[str, str]
+) -> None:
     body = {
         "teams": [
             {
@@ -139,12 +164,14 @@ def test_too_many_teams_is_rejected_as_422() -> None:
         "slots_per_team": 1,
     }
 
-    response = client.post("/assign", json=body)
+    response = api_client.post("/assign", json=body, cookies=head_cookies)
 
     assert response.status_code == 422
 
 
-def test_slots_request_exceeding_total_capacity_is_rejected_as_422() -> None:
+def test_slots_request_exceeding_total_capacity_is_rejected_as_422(
+    api_client: TestClient, head_cookies: dict[str, str]
+) -> None:
     body = {
         "teams": [
             {"name": "A", "members": [{"name": "a1", "unavailable": []}]},
@@ -162,7 +189,7 @@ def test_slots_request_exceeding_total_capacity_is_rejected_as_422() -> None:
         "slots_per_team": 2,
     }
 
-    response = client.post("/assign", json=body)
+    response = api_client.post("/assign", json=body, cookies=head_cookies)
 
     assert response.status_code == 422
     assert "전체 칸 수" in response.json()["detail"]
@@ -170,9 +197,6 @@ def test_slots_request_exceeding_total_capacity_is_rejected_as_422() -> None:
 
 def test_value_error_outside_assign_is_not_masked_as_422() -> None:
     # 배정 창구 밖에서 터진 ValueError 는 입력 오류(422)로 둔갑해서는 안 된다.
-    import pytest
-    from fastapi.testclient import TestClient
-
     from backend.api.app import app as prod_app
 
     @prod_app.get("/_boom_for_test")
@@ -189,12 +213,14 @@ def test_value_error_outside_assign_is_not_masked_as_422() -> None:
         ]
 
 
-def test_shape_error_detail_is_a_single_string() -> None:
+def test_shape_error_detail_is_a_single_string(
+    api_client: TestClient, head_cookies: dict[str, str]
+) -> None:
     # 형식 오류도 내용 오류와 같은 모양(detail = 문장 하나)이어야 한다.
     body = _feasible_body()
     body["slots_per_team"] = "많이"  # 숫자 자리에 글자
 
-    response = client.post("/assign", json=body)
+    response = api_client.post("/assign", json=body, cookies=head_cookies)
 
     assert response.status_code == 422
     detail = response.json()["detail"]
