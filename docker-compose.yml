@@ -16,6 +16,41 @@ services:
       # 로그인 세션 쿠키에 Secure를 붙인다. 배포는 https이므로 켠다 — 개발용
       # override(docker-compose.override.yml)가 이 값을 false로 덮는다.
       COOKIE_SECURE: "true"
+      ATTACHMENT_DIR: ${ATTACHMENT_DIR:-/var/lib/banblit/attachments}
+      # 메일 보내기 — 비밀번호 재설정 링크와 아이디 안내가 나가는 계정. 값은 .env 에
+      # 적는다(.env.example 참고). SMTP_HOST 가 비면 실제로 보내지 않고 기록만 남으므로,
+      # 계정을 받기 전에도 이 줄들을 그대로 두고 띄울 수 있다.
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
+      MAIL_FROM: "${MAIL_FROM:-}"
+      # 메일에 담을 재설정 링크의 앞부분. 비면 서버가 http://localhost:5173 을 쓴다.
+      APP_ORIGIN: "${APP_ORIGIN:-}"
+    volumes:
+      # 게시판 첨부파일. DB 데이터와 같은 방식으로 이름 있는 볼륨에 둔다 — 컨테이너를
+      # 다시 만들어도 남는다. 넣는 자리와 서버가 읽는 자리가 어긋나지 않도록 위
+      # ATTACHMENT_DIR 과 같은 값을 쓴다.
+      - banblit-attachments:${ATTACHMENT_DIR:-/var/lib/banblit/attachments}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # 자동 배정 — 기간에 저장된 연산 시각(first_run_at·second_run_at)이 지나면 스스로
+  # 계산을 돌린다. api 와 같은 이미지를 쓰되 통로를 거치지 않고 assign_period 를 직접
+  # 부른다. api 를 여러 대로 늘려도 이 서비스만 한 대로 두면 같은 계산이 겹치지 않는다.
+  # 첨부파일 볼륨은 붙이지 않는다 — 이 서비스는 배정 계산만 하고 게시판을 읽지 않는다.
+  auto-assign:
+    build:
+      context: ./backend
+      target: prod
+    image: banblit-backend:prod
+    command: python -m backend.api.auto_assign
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      AUTO_ASSIGN_ENABLED: "${AUTO_ASSIGN_ENABLED:-true}"
+      AUTO_ASSIGN_INTERVAL_SECONDS: "${AUTO_ASSIGN_INTERVAL_SECONDS:-60}"
     depends_on:
       db:
         condition: service_healthy
@@ -57,5 +92,6 @@ services:
 
 volumes:
   banblit-db-data:
+  banblit-attachments:
   banblit-web-modules:
   banblit-e2e-modules:
