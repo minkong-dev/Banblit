@@ -2,12 +2,14 @@ from collections.abc import Callable
 from datetime import date, datetime, time
 from typing import Any
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.db.models import (
     Assignment,
+    AssignmentBackup,
     Member,
     Membership,
     Period,
@@ -16,6 +18,22 @@ from backend.db.models import (
     Team,
     UnavailableTime,
 )
+from conftest import AccountFactory
+
+
+@pytest.fixture()
+def head_login(
+    api_client: TestClient,
+    account: AccountFactory,
+) -> dict[str, str]:
+    """헤드매니저로 가입시키고, 그 쿠키를 클라이언트 기본값으로 실어 둔다.
+
+    poll_job 은 쿠키를 따로 싣지 않고 /jobs 를 조회하므로, 기본 쿠키가 있어야
+    작업 조회가 인증을 통과한다. 다른 계정으로 부를 때는 cookies= 로 덮어쓴다.
+    """
+    _, cookies = account("박서연", "head@example.com")
+    api_client.cookies.update(cookies)
+    return cookies
 
 
 def _period(session: Session) -> int:
@@ -33,7 +51,7 @@ def _period(session: Session) -> int:
 
 
 def test_schedule_is_empty_before_any_assignment(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, head_login: dict[str, str]
 ) -> None:
     period_id = _period(db_session)
     db_session.commit()
@@ -41,11 +59,11 @@ def test_schedule_is_empty_before_any_assignment(
     response = api_client.get(f"/periods/{period_id}/schedule")
 
     assert response.status_code == 200
-    assert response.json() == {"rows": []}
+    assert response.json() == {"rows": [], "open_slots": []}
 
 
 def test_schedule_lists_current_assignments_with_names(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, head_login: dict[str, str]
 ) -> None:
     period_id = _period(db_session)
     team = Team(name="A")
@@ -66,21 +84,21 @@ def test_schedule_lists_current_assignments_with_names(
     response = api_client.get(f"/periods/{period_id}/schedule")
 
     assert response.status_code == 200
-    assert response.json() == {
-        "rows": [
-            {
-                "team_id": team.id,
-                "team": "A",
-                "room_id": room.id,
-                "room": "1번방",
-                "start": "2026-08-01T19:00:00",
-                "end": "2026-08-01T19:30:00",
-            }
-        ]
-    }
+    assert response.json()["rows"] == [
+        {
+            "team_id": team.id,
+            "team": "A",
+            "room_id": room.id,
+            "room": "1번방",
+            "start": "2026-08-01T19:00:00",
+            "end": "2026-08-01T19:30:00",
+        }
+    ]
 
 
-def test_schedule_of_unknown_period_is_rejected(api_client: TestClient) -> None:
+def test_schedule_of_unknown_period_is_rejected(
+    api_client: TestClient, head_login: dict[str, str]
+) -> None:
     response = api_client.get("/periods/999999/schedule")
 
     assert response.status_code == 422
@@ -88,7 +106,7 @@ def test_schedule_of_unknown_period_is_rejected(api_client: TestClient) -> None:
 
 
 def test_schedule_excludes_other_periods_assignments(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, head_login: dict[str, str]
 ) -> None:
     period_id = _period(db_session)
     other_period = Period(
@@ -130,18 +148,16 @@ def test_schedule_excludes_other_periods_assignments(
     response = api_client.get(f"/periods/{period_id}/schedule")
 
     assert response.status_code == 200
-    assert response.json() == {
-        "rows": [
-            {
-                "team_id": team.id,
-                "team": "A",
-                "room_id": room.id,
-                "room": "1번방",
-                "start": "2026-08-01T19:00:00",
-                "end": "2026-08-01T19:30:00",
-            }
-        ]
-    }
+    assert response.json()["rows"] == [
+        {
+            "team_id": team.id,
+            "team": "A",
+            "room_id": room.id,
+            "room": "1번방",
+            "start": "2026-08-01T19:00:00",
+            "end": "2026-08-01T19:30:00",
+        }
+    ]
 
 
 def _team_with_member(db_session: Session, team_name: str, member_name: str) -> int:
@@ -158,7 +174,10 @@ def _team_with_member(db_session: Session, team_name: str, member_name: str) -> 
 
 
 def test_assign_saves_the_schedule_and_reports_it(
-    api_client: TestClient, db_session: Session, poll_job: Callable[[str], dict[str, Any]]
+    api_client: TestClient,
+    db_session: Session,
+    poll_job: Callable[[str], dict[str, Any]],
+    head_login: dict[str, str],
 ) -> None:
     period_id = _period(db_session)  # 8/1 ~ 8/2
     team_id = _team_with_member(db_session, "A", "김민수")
@@ -189,7 +208,10 @@ def test_assign_saves_the_schedule_and_reports_it(
 
 
 def test_assign_reports_open_slots_with_real_room_names(
-    api_client: TestClient, db_session: Session, poll_job: Callable[[str], dict[str, Any]]
+    api_client: TestClient,
+    db_session: Session,
+    poll_job: Callable[[str], dict[str, Any]],
+    head_login: dict[str, str],
 ) -> None:
     """칸이 팀보다 많이 남는 시나리오 — open_slots가 엔진 키가 아니라 실제 방 정보로 되돌아오는지."""
     period = Period(
@@ -231,7 +253,10 @@ def test_assign_reports_open_slots_with_real_room_names(
 
 
 def test_assign_reports_a_coordination_proposal_with_real_names(
-    api_client: TestClient, db_session: Session, poll_job: Callable[[str], dict[str, Any]]
+    api_client: TestClient,
+    db_session: Session,
+    poll_job: Callable[[str], dict[str, Any]],
+    head_login: dict[str, str],
 ) -> None:
     """배정이 실패해 조율안이 나오는 경로 — 제외 인원과 조율안 안 배정 모두 실제 값으로 되돌아오는지."""
     period = Period(
@@ -304,7 +329,10 @@ def test_assign_reports_a_coordination_proposal_with_real_names(
 
 
 def test_assign_on_an_open_period_is_rejected(
-    api_client: TestClient, db_session: Session, poll_job: Callable[[str], dict[str, Any]]
+    api_client: TestClient,
+    db_session: Session,
+    poll_job: Callable[[str], dict[str, Any]],
+    head_login: dict[str, str],
 ) -> None:
     period = Period(
         kind="open",
@@ -335,7 +363,10 @@ def test_assign_on_an_open_period_is_rejected(
 
 
 def test_rollback_restores_the_previous_schedule(
-    api_client: TestClient, db_session: Session, poll_job: Callable[[str], dict[str, Any]]
+    api_client: TestClient,
+    db_session: Session,
+    poll_job: Callable[[str], dict[str, Any]],
+    head_login: dict[str, str],
 ) -> None:
     """직전 회차가 아니라 엉뚱한 회차를 복원하는 결함을 잡을 수 있어야 한다.
 
@@ -455,7 +486,7 @@ def test_rollback_restores_the_previous_schedule(
 
 
 def test_rollback_without_any_backup_reports_nothing_to_undo(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, head_login: dict[str, str]
 ) -> None:
     period_id = _period(db_session)
     db_session.commit()
@@ -467,7 +498,10 @@ def test_rollback_without_any_backup_reports_nothing_to_undo(
 
 
 def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
-    api_client: TestClient, db_session: Session, poll_job: Callable[[str], dict[str, Any]]
+    api_client: TestClient,
+    db_session: Session,
+    poll_job: Callable[[str], dict[str, Any]],
+    head_login: dict[str, str],
 ) -> None:
     """되돌리려는 백업이 다른 기간이 차지한 방·시각과 겹치면, 저장 제약 위반이
     그대로 새어 나가 500이 되면 안 된다 — 배정 경로와 같은 422로 거부해야 한다.
@@ -524,3 +558,295 @@ def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
     # 실패한 되돌리기가 기간 B의 현행 시간표를 건드리지 않아야 한다.
     b_rows = api_client.get(f"/periods/{period_b.id}/schedule").json()["rows"]
     assert len(b_rows) == 4  # 이틀 × 2칸
+
+
+def test_schedule_without_login_is_rejected(
+    api_client: TestClient, db_session: Session
+) -> None:
+    period_id = _period(db_session)
+    db_session.commit()
+
+    response = api_client.get(f"/periods/{period_id}/schedule")
+
+    assert response.status_code == 401
+    assert "로그인" in response.json()["detail"]
+
+
+def test_assign_needs_assign_run(
+    api_client: TestClient,
+    db_session: Session,
+    account: AccountFactory,
+) -> None:
+    period_id = _period(db_session)
+    db_session.commit()
+    _, head = account("박서연", "head@example.com")
+    _, member = account("김민수", "member@example.com")
+    body = {"team_ids": [1], "room_ids": [1]}
+
+    assert api_client.post(f"/periods/{period_id}/assign", json=body).status_code == 401
+
+    forbidden = api_client.post(
+        f"/periods/{period_id}/assign", json=body, cookies=member
+    )
+    assert forbidden.status_code == 403
+    assert "권한" in forbidden.json()["detail"]
+
+    # 없는 기간으로 불러 계산을 띄우지 않고 인증만 통과하는 것을 본다.
+    passed = api_client.post("/periods/999999/assign", json=body, cookies=head)
+    assert passed.status_code == 422
+    assert "그런 기간이 없습니다" in passed.json()["detail"]
+
+
+def test_rollback_needs_rollback(
+    api_client: TestClient,
+    db_session: Session,
+    account: AccountFactory,
+) -> None:
+    period_id = _period(db_session)
+    db_session.commit()
+    _, head = account("박서연", "head@example.com")
+    _, member = account("김민수", "member@example.com")
+
+    assert api_client.post(f"/periods/{period_id}/rollback").status_code == 401
+
+    forbidden = api_client.post(f"/periods/{period_id}/rollback", cookies=member)
+    assert forbidden.status_code == 403
+    assert "권한" in forbidden.json()["detail"]
+
+    allowed = api_client.post(f"/periods/{period_id}/rollback", cookies=head)
+    assert allowed.status_code == 200
+
+
+def test_schedule_reports_the_slots_left_open_by_the_assignment(
+    api_client: TestClient, db_session: Session, head_login: dict[str, str]
+) -> None:
+    """남는 칸이 시간표와 함께 나온다 — 화면이 그 시간만 예약으로 열 수 있어야 한다."""
+    period_id = _period(db_session)  # 8/1 ~ 8/2
+    team = Team(name="A")
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))  # 하루 2칸
+    db_session.add_all([team, room])
+    db_session.flush()
+    db_session.add(
+        Assignment(
+            period_id=period_id,
+            team_id=team.id,
+            room_id=room.id,
+            starts_at=datetime(2026, 8, 1, 18, 0),
+            ends_at=datetime(2026, 8, 1, 18, 30),
+        )
+    )
+    db_session.commit()
+
+    response = api_client.get(f"/periods/{period_id}/schedule")
+
+    assert response.status_code == 200
+    assert response.json()["open_slots"] == [
+        {
+            "room_id": room.id,
+            "room": "1번방",
+            "start": "2026-08-01T18:30:00",
+            "end": "2026-08-01T19:00:00",
+        },
+        {
+            "room_id": room.id,
+            "room": "1번방",
+            "start": "2026-08-02T18:00:00",
+            "end": "2026-08-02T18:30:00",
+        },
+        {
+            "room_id": room.id,
+            "room": "1번방",
+            "start": "2026-08-02T18:30:00",
+            "end": "2026-08-02T19:00:00",
+        },
+    ]
+
+
+def test_backups_list_each_round_newest_first(
+    api_client: TestClient, db_session: Session, head_login: dict[str, str]
+) -> None:
+    """되돌리기 화면이 고를 회차 목록 — 저장 시각과 칸 수를 최신순으로."""
+    period_id = _period(db_session)
+    team = Team(name="A")
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(22, 0))
+    db_session.add_all([team, room])
+    db_session.flush()
+    db_session.add_all(
+        [
+            AssignmentBackup(
+                period_id=period_id,
+                team_id=team.id,
+                room_id=room.id,
+                starts_at=datetime(2026, 8, 1, 19, 0),
+                ends_at=datetime(2026, 8, 1, 19, 30),
+                saved_at=datetime(2026, 8, 1, 21, 0),
+            ),
+            AssignmentBackup(
+                period_id=period_id,
+                team_id=team.id,
+                room_id=room.id,
+                starts_at=datetime(2026, 8, 1, 20, 0),
+                ends_at=datetime(2026, 8, 1, 20, 30),
+                saved_at=datetime(2026, 8, 2, 21, 0),
+            ),
+            AssignmentBackup(
+                period_id=period_id,
+                team_id=team.id,
+                room_id=room.id,
+                starts_at=datetime(2026, 8, 1, 21, 0),
+                ends_at=datetime(2026, 8, 1, 21, 30),
+                saved_at=datetime(2026, 8, 2, 21, 0),
+            ),
+        ]
+    )
+    db_session.commit()
+
+    response = api_client.get(f"/periods/{period_id}/backups")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "backups": [
+            {"saved_at": "2026-08-02T21:00:00", "slot_count": 2},
+            {"saved_at": "2026-08-01T21:00:00", "slot_count": 1},
+        ]
+    }
+
+
+def test_backups_of_unknown_period_are_rejected(
+    api_client: TestClient, head_login: dict[str, str]
+) -> None:
+    response = api_client.get("/periods/999999/backups")
+
+    assert response.status_code == 422
+    assert "그런 기간이 없습니다" in response.json()["detail"]
+
+
+def test_backups_need_rollback(
+    api_client: TestClient,
+    db_session: Session,
+    account: AccountFactory,
+) -> None:
+    period_id = _period(db_session)
+    db_session.commit()
+    _, head = account("박서연", "head@example.com")
+    _, member = account("김민수", "member@example.com")
+
+    assert api_client.get(f"/periods/{period_id}/backups").status_code == 401
+
+    forbidden = api_client.get(f"/periods/{period_id}/backups", cookies=member)
+    assert forbidden.status_code == 403
+    assert "권한" in forbidden.json()["detail"]
+
+    allowed = api_client.get(f"/periods/{period_id}/backups", cookies=head)
+    assert allowed.status_code == 200
+    assert allowed.json() == {"backups": []}
+
+
+def _blocked_team(db_session: Session) -> tuple[int, int]:
+    """8/1 운영시간 내내 불가능한 사람이 낀 팀을 만들고 (팀 번호, 그 사람 번호)를 돌려준다."""
+    position_id = db_session.scalars(select(Position.id)).first()
+    team = Team(name="A")
+    free = Member(name="김민수")
+    blocked = Member(name="이영희")
+    db_session.add_all([team, free, blocked])
+    db_session.flush()
+    db_session.add_all(
+        [
+            Membership(member_id=free.id, team_id=team.id, position_id=position_id),
+            Membership(member_id=blocked.id, team_id=team.id, position_id=position_id),
+            UnavailableTime(
+                member_id=blocked.id,
+                starts_at=datetime(2026, 8, 1, 18, 0),
+                ends_at=datetime(2026, 8, 1, 19, 0),
+                repeats_weekly=False,
+                repeat_until=None,
+            ),
+        ]
+    )
+    db_session.flush()
+    return team.id, blocked.id
+
+
+def test_confirming_a_proposal_saves_the_schedule_without_that_member(
+    api_client: TestClient,
+    db_session: Session,
+    poll_job: Callable[[str], dict[str, Any]],
+    head_login: dict[str, str],
+) -> None:
+    period_id = _period(db_session)  # 8/1 ~ 8/2
+    team_id, blocked_id = _blocked_team(db_session)
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    db_session.add(room)
+    db_session.flush()
+    db_session.commit()
+    body = {"team_ids": [team_id], "room_ids": [room.id]}
+
+    refused = poll_job(
+        api_client.post(f"/periods/{period_id}/assign", json=body).json()["job"]["id"]
+    )
+    assert refused["result"]["saved"] is False
+    assert refused["result"]["proposals"][0]["excluded_member"]["id"] == blocked_id
+
+    submitted = api_client.post(
+        f"/periods/{period_id}/proposals/{blocked_id}/confirm", json=body
+    )
+    assert submitted.status_code == 202
+
+    job = poll_job(submitted.json()["job"]["id"])
+
+    assert job["status"] == "done"
+    assert job["result"]["saved"] is True
+    assert job["result"]["assignment"]["feasible"] is True
+    saved = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
+    assert len(saved) == 4  # 이틀 × 2칸을 팀 하나가 가져간다
+
+
+def test_confirming_someone_outside_the_roster_fails_the_job(
+    api_client: TestClient,
+    db_session: Session,
+    poll_job: Callable[[str], dict[str, Any]],
+    head_login: dict[str, str],
+) -> None:
+    period_id = _period(db_session)
+    team_id = _team_with_member(db_session, "A", "김민수")
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    db_session.add(room)
+    db_session.flush()
+    db_session.commit()
+
+    submitted = api_client.post(
+        f"/periods/{period_id}/proposals/999999/confirm",
+        json={"team_ids": [team_id], "room_ids": [room.id]},
+    )
+    assert submitted.status_code == 202
+
+    job = poll_job(submitted.json()["job"]["id"])
+
+    assert job["status"] == "failed"
+    assert "명단에 없습니다" in job["error"]
+
+
+def test_confirming_a_proposal_needs_proposal_confirm(
+    api_client: TestClient,
+    db_session: Session,
+    account: AccountFactory,
+) -> None:
+    period_id = _period(db_session)
+    db_session.commit()
+    _, head = account("박서연", "head@example.com")
+    _, member = account("김민수", "member@example.com")
+    path = f"/periods/{period_id}/proposals/1/confirm"
+    body = {"team_ids": [1], "room_ids": [1]}
+
+    assert api_client.post(path, json=body).status_code == 401
+
+    forbidden = api_client.post(path, json=body, cookies=member)
+    assert forbidden.status_code == 403
+    assert "권한" in forbidden.json()["detail"]
+
+    # 없는 기간으로 불러 계산을 띄우지 않고 인증만 통과하는 것을 본다.
+    passed = api_client.post(
+        "/periods/999999/proposals/1/confirm", json=body, cookies=head
+    )
+    assert passed.status_code == 422
+    assert "그런 기간이 없습니다" in passed.json()["detail"]

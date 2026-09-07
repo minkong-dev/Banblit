@@ -15,8 +15,26 @@ from backend.api.auth_session import (
     create_session,
     revoke_session,
 )
-from backend.api.schemas import AccountOut, AuthOut, LoginIn, MeOut, SignupIn
-from backend.db.models import Member
+from backend.api.password_reset import (
+    request_password_reset,
+    reset_password,
+    send_id_reminder,
+)
+from backend.api.permission_service import account_permissions
+from backend.api.roster_service import list_my_memberships
+from backend.api.schemas import (
+    AccountOut,
+    AckOut,
+    AuthOut,
+    FindIdIn,
+    LoginIn,
+    MeOut,
+    MyMembershipOut,
+    PasswordResetConfirmIn,
+    PasswordResetIn,
+    SignupIn,
+)
+from backend.db.models import PERMISSIONS, Member
 from backend.db.pipeline import get_session
 
 router = APIRouter()
@@ -60,11 +78,15 @@ def _clear_session_cookies(response: Response) -> None:
 
 
 def _account_out(session: Session, member: Member) -> AccountOut:
+    # 화면이 아직 role 로 "헤드매니저"/"일반멤버" 글자를 고른다. 역할 열은 없어졌으므로
+    # 열한 가지가 전부 켜졌는지로 그 값을 만들어 내려준다.
+    permissions = account_permissions(session, member.id)
     return AccountOut(
         id=member.id,
         name=member.name,
         email=member.email or "",
-        role=member.role,  # type: ignore[arg-type]
+        role="head_manager" if len(permissions) == len(PERMISSIONS) else "member",
+        permissions=permissions,  # type: ignore[arg-type]
         positions=list_account_positions(session, member.id),
     )
 
@@ -108,8 +130,50 @@ def logout(
     return response
 
 
+@router.post("/find-id", response_model=AckOut)
+def find_id(req: FindIdIn, session: Session = Depends(get_session)) -> AckOut:
+    # 맞는 계정이 있어도 없어도 같은 답이 나간다. 알려주는 것은 응답이 아니라 메일이다.
+    send_id_reminder(session, req.name, req.email)
+    return AckOut()
+
+
+@router.post("/password-reset", response_model=AckOut)
+def start_password_reset(
+    req: PasswordResetIn, session: Session = Depends(get_session)
+) -> AckOut:
+    request_password_reset(session, req.email, datetime.now())
+    return AckOut()
+
+
+@router.post("/password-reset/confirm", response_model=AckOut)
+def confirm_password_reset(
+    req: PasswordResetConfirmIn, session: Session = Depends(get_session)
+) -> AckOut:
+    try:
+        reset_password(session, req.token, req.password, datetime.now())
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return AckOut()
+
+
 @router.get("/me", response_model=MeOut)
 def read_me(
     requester: Member = Depends(require_account), session: Session = Depends(get_session)
 ) -> MeOut:
-    return MeOut(account=_account_out(session, requester))
+    # 소속과 신청을 함께 내려준다. 화면이 새로 고쳐진 뒤 "승인 대기 중"을 다시
+    # 그리려면 그 상태를 서버에 물어볼 자리가 있어야 하고, 여기가 이미 화면이
+    # 로그인 직후 한 번 부르는 자리다.
+    return MeOut(
+        account=_account_out(session, requester),
+        memberships=[
+            MyMembershipOut(
+                team_id=team.id,
+                team_name=team.name,
+                position=position_name,
+                status=status,
+            )
+            for team, position_name, status in list_my_memberships(
+                session, requester.id
+            )
+        ],
+    )

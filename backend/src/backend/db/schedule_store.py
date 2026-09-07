@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import NoReturn, TypedDict
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -125,6 +125,31 @@ def _prune_backups(session: Session, period_id: int) -> None:
         .where(AssignmentBackup.period_id == period_id)
         .where(AssignmentBackup.saved_at.notin_(keep))
     )
+
+
+class BackupRound(TypedDict):
+    """백업 한 회차. saved_at 이 회차를 가르는 값이고, slot_count 는 그 회차의 칸 수다.
+
+    회차 번호를 따로 두는 칼럼은 assignment_backups 에 없다 — 한 번의 저장에서
+    옮겨진 줄들이 같은 saved_at 도장을 나눠 가진다.
+    """
+
+    saved_at: datetime
+    slot_count: int
+
+
+def list_backup_rounds(session: Session, period_id: int) -> list[BackupRound]:
+    """그 기간의 백업 회차를 최신순으로 돌려준다. 되돌릴 회차를 고르는 목록이다."""
+    rows = session.execute(
+        select(AssignmentBackup.saved_at, func.count())
+        .where(AssignmentBackup.period_id == period_id)
+        .group_by(AssignmentBackup.saved_at)
+        .order_by(AssignmentBackup.saved_at.desc())
+    ).all()
+    return [
+        BackupRound(saved_at=saved_at, slot_count=slot_count)
+        for saved_at, slot_count in rows
+    ]
 
 
 def rollback_schedule(session: Session, period_id: int) -> bool:

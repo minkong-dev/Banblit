@@ -3,6 +3,9 @@ from typing import Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field
 
+from backend.db.models import JoinPolicy, MembershipStatus, Permission
+from backend.db.models import NotificationKind
+
 # 배정 결과의 모양은 한 벌만 둔다. 칸과 제외 인원의 타입만 갈아 끼운다 —
 # /assign 은 이름만 주고받고, 기간 배정은 거기에 실제 id 가 붙는다.
 SlotT = TypeVar("SlotT", bound=BaseModel)
@@ -41,6 +44,11 @@ class RoomSlotOut(BaseModel):
     end: datetime
 
 
+class PeriodRoomSlotOut(RoomSlotOut):
+    # 기간 배정은 DB 에 있는 방을 쓰므로 이름과 함께 실제 번호를 돌려준다.
+    room_id: int
+
+
 class AssignmentOut(BaseModel, Generic[SlotT]):
     feasible: bool
     slots_by_team: dict[str, list[SlotT]]
@@ -67,7 +75,9 @@ class ScheduleRowOut(BaseModel):
 
 
 class ScheduleOut(BaseModel):
+    # open_slots 는 아무 팀도 쓰지 않는 30분 칸이다. 화면은 이 시간만 예약으로 연다.
     rows: list[ScheduleRowOut]
+    open_slots: list[PeriodRoomSlotOut]
 
 
 class PeriodAssignIn(BaseModel):
@@ -75,9 +85,14 @@ class PeriodAssignIn(BaseModel):
     room_ids: list[int] = Field(min_length=1, max_length=10)
 
 
-class PeriodRoomSlotOut(RoomSlotOut):
-    # 기간 배정은 DB 에 있는 방을 쓰므로 이름과 함께 실제 번호를 돌려준다.
-    room_id: int
+class BackupOut(BaseModel):
+    # 회차를 가르는 값은 저장 시각이다 — assignment_backups 에 별도 회차 번호가 없다.
+    saved_at: datetime
+    slot_count: int
+
+
+class BackupsOut(BaseModel):
+    backups: list[BackupOut]
 
 
 class ExcludedMemberOut(BaseModel):
@@ -179,6 +194,8 @@ class TeamOut(BaseModel):
     id: int
     name: str
     member_count: int
+    # 이 팀에 참가하면 바로 소속이 되는지("auto"), 승인을 기다리는지("approval").
+    join_policy: JoinPolicy
 
 
 class TeamsOut(BaseModel):
@@ -190,13 +207,14 @@ class TeamEnvelopeOut(BaseModel):
 
 
 class TeamCreateIn(BaseModel):
+    # 만든 사람은 요청 본문이 아니라 인증 쿠키의 주인이다.
     name: str
-    requested_by: int
 
 
 class TeamUpdateIn(BaseModel):
     name: str
-    requested_by: int
+    # 안 보내면 참가 승인 방식은 그대로 둔다.
+    join_policy: JoinPolicy | None = None
 
 
 class MembershipOut(BaseModel):
@@ -204,6 +222,18 @@ class MembershipOut(BaseModel):
     member_name: str
     team_id: int
     position: str
+    # "approved" 면 가입됨, "pending" 이면 신청만 걸린 것이다.
+    status: MembershipStatus
+
+
+class JoinRequestOut(BaseModel):
+    member_id: int
+    member_name: str
+    position: str
+
+
+class JoinRequestsOut(BaseModel):
+    join_requests: list[JoinRequestOut]
 
 
 class MembershipEnvelopeOut(BaseModel):
@@ -211,7 +241,8 @@ class MembershipEnvelopeOut(BaseModel):
 
 
 class MembershipCreateIn(BaseModel):
-    member_id: int
+    # 참가하는 사람은 인증 쿠키의 주인이다. 남을 대신 넣는 자리는 만들지 않았다.
+    # ponytail: 헤드매니저가 남을 팀에 넣는 화면이 생기면 member_id 를 여기 되살린다.
     position_id: int
 
 
@@ -262,9 +293,28 @@ class CommentOut(BaseModel):
     created_at: str
 
 
+class AttachmentOut(BaseModel):
+    id: int
+    post_id: int
+    # 올린 사람이 보낸 이름이다. 저장 이름은 서버가 따로 만들고 밖으로 내보내지 않는다.
+    name: str
+    size: int
+    content_type: str
+    uploaded_at: str
+
+
+class AttachmentsOut(BaseModel):
+    attachments: list[AttachmentOut]
+
+
+class AttachmentEnvelopeOut(BaseModel):
+    attachment: AttachmentOut
+
+
 class PostDetailOut(BaseModel):
     post: PostOut
     comments: list[CommentOut]
+    attachments: list[AttachmentOut]
 
 
 class CommentEnvelopeOut(BaseModel):
@@ -286,16 +336,50 @@ class AccountOut(BaseModel):
     id: int
     name: str
     email: str
+    # role 은 permissions 에서 뽑아낸 값이다 — 열한 가지가 전부 켜져 있으면
+    # head_manager. 화면이 아직 이 값으로 글자를 고르고 있어 함께 내려준다.
     role: Literal["head_manager", "member"]
+    permissions: list[Permission]
     positions: list[str]
+
+
+class PermissionSetIn(BaseModel):
+    name: str = Field(max_length=50)
+    permissions: list[Permission] = Field(max_length=20)
+
+
+class PermissionSetOut(BaseModel):
+    id: int
+    name: str
+    permissions: list[Permission]
+    member_ids: list[int]
+
+
+class PermissionSetsOut(BaseModel):
+    permission_sets: list[PermissionSetOut]
+
+
+class PermissionSetEnvelopeOut(BaseModel):
+    permission_set: PermissionSetOut
 
 
 class AuthOut(BaseModel):
     account: AccountOut
 
 
+class MyMembershipOut(BaseModel):
+    team_id: int
+    team_name: str
+    position: str
+    # "approved" 면 그 팀 소속이고, "pending" 이면 승인을 기다리는 중이다.
+    status: MembershipStatus
+
+
 class MeOut(BaseModel):
     account: AccountOut
+    # 승인된 소속과 대기 중인 신청을 팀 번호 순으로 함께 담는다 — 화면이 새로 고쳐도
+    # 자기가 어디에 신청해 뒀는지 알 수 있는 자리가 여기뿐이다.
+    memberships: list[MyMembershipOut]
 
 
 class SignupIn(BaseModel):
@@ -328,8 +412,6 @@ class UnavailableEnvelopeOut(BaseModel):
 
 
 class UnavailableCreateIn(BaseModel):
-    # 로그인이 붙으면 member_id는 경로가 아니라 토큰의 주인으로 확인한다. 지금은
-    # 요청자를 몰라 URL 의 member_id 를 그대로 믿는다.
     starts_at: datetime
     ends_at: datetime
     repeats_weekly: bool = False
@@ -353,11 +435,49 @@ class ReservationsOut(BaseModel):
 
 
 class ReservationCreateIn(BaseModel):
-    # author_id 처럼 사람 번호를 본문으로 받는다 — 로그인이 붙으면 여기서 토큰의
-    # 주인과 member_id 가 맞는지 확인한다. 지금은 요청한 사람이 누구인지 서버가
-    # 모르므로 이 규칙을 걸 수 없다.
+    # 예약하는 사람은 요청 본문이 아니라 인증 쿠키의 주인이다.
     room_id: int
-    member_id: int
     team_id: int | None = None
     starts_at: datetime
     ends_at: datetime
+
+
+class ReservationUpdateIn(BaseModel):
+    # 옮길 시각만 받는다. 방·팀·주인은 원래 예약의 값을 그대로 쓴다.
+    starts_at: datetime
+    ends_at: datetime
+
+
+class NotificationOut(BaseModel):
+    id: int
+    # 무슨 일이 있었는지만 담는다. 사람이 읽을 문장은 화면이 이 값으로 만든다.
+    kind: NotificationKind
+    created_at: str
+    read: bool
+
+
+class NotificationsOut(BaseModel):
+    notifications: list[NotificationOut]
+
+
+class FindIdIn(BaseModel):
+    # 길이 상한은 SignupIn·LoginIn 과 같은 값이다. 로그인 없이 열려 있는 통로라
+    # 아무 길이나 받으면 큰 글자를 계속 보내는 것만으로 서버를 붙잡아 둘 수 있다.
+    name: str = Field(max_length=100)
+    email: str = Field(max_length=254)
+
+
+class PasswordResetIn(BaseModel):
+    email: str = Field(max_length=254)
+
+
+class PasswordResetConfirmIn(BaseModel):
+    # 토큰은 secrets.token_urlsafe(32) 가 낸 43글자다. 넉넉히 잡아도 100 이면 충분하다.
+    token: str = Field(max_length=100)
+    password: str = Field(max_length=100)
+
+
+class AckOut(BaseModel):
+    # 아이디 찾기와 비밀번호 재설정 요청이 함께 쓴다. 계정이 있든 없든 이 한 가지
+    # 답만 나가야 그 이메일이 가입돼 있는지가 응답으로 새지 않는다.
+    ok: bool = True

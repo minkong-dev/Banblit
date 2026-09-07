@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+import httpx
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -22,7 +23,7 @@ def _signup(api_client: TestClient, **overrides: object) -> dict:
     return api_client.post("/signup", json=body).json()
 
 
-def _set_cookie_headers(response: object) -> list[str]:
+def _set_cookie_headers(response: httpx.Response) -> list[str]:
     # httpx.Headers는 같은 이름(set-cookie)이 여러 번 와도 하나로 합치므로, raw 목록을
     # 직접 훑어야 쿠키 두 개(banblit_session·banblit_signed_in)를 각각 볼 수 있다.
     return [
@@ -250,3 +251,48 @@ def test_logout_succeeds_even_when_not_signed_in(api_client: TestClient) -> None
     response = api_client.post("/logout")
 
     assert response.status_code == 200
+
+
+def _session_count(db_session: Session, member_id: int) -> int:
+    return len(
+        db_session.scalars(
+            select(LoginSession).where(LoginSession.member_id == member_id)
+        ).all()
+    )
+
+
+def test_login_removes_that_accounts_expired_session_row(
+    api_client: TestClient, db_session: Session
+) -> None:
+    body = _signup(api_client)
+    member_id = body["account"]["id"]
+    _session_row(db_session, member_id).expires_at = datetime.now() - timedelta(seconds=1)
+    db_session.commit()
+
+    api_client.post(
+        "/login", json={"email": SIGNUP_BODY["email"], "password": SIGNUP_BODY["password"]}
+    )
+
+    assert _session_count(db_session, member_id) == 1
+
+
+def test_login_removes_only_the_dead_rows_of_that_account(
+    api_client: TestClient, db_session: Session
+) -> None:
+    """끊긴 행은 지우되 남의 계정 행은 건드리지 않아야 한다 — 지우는 조건에
+    계정 번호가 빠지면 다른 사람이 로그인 상태를 잃는다."""
+    first = _signup(api_client)
+    first_id = first["account"]["id"]
+    api_client.post("/logout")
+
+    second = _signup(api_client, email="second@example.com")
+    second_id = second["account"]["id"]
+    _session_row(db_session, second_id).expires_at = datetime.now() - timedelta(seconds=1)
+    db_session.commit()
+
+    api_client.post(
+        "/login", json={"email": SIGNUP_BODY["email"], "password": SIGNUP_BODY["password"]}
+    )
+
+    assert _session_count(db_session, first_id) == 1
+    assert _session_count(db_session, second_id) == 1

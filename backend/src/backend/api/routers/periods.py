@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from backend.api.auth_dependency import require_account, require_permission
 from backend.api.period_crud_input import format_calendar_date
 from backend.api.period_crud_input import format_clock as format_period_clock
 from backend.api.period_crud_service import create_period as create_period_row
@@ -30,14 +31,24 @@ def _period_out(period: Period) -> PeriodOut:
     )
 
 
-@router.get("/periods", response_model=PeriodsOut)
+# 요청한 사람이 누구인지 쓰지 않고 권한만 확인하는 통로는, 쓰이지 않는 인자를
+# 남기지 않도록 dependencies 로 건다.
+@router.get(
+    "/periods", response_model=PeriodsOut, dependencies=[Depends(require_account)]
+)
 def read_periods(session: Session = Depends(get_session)) -> PeriodsOut:
     return PeriodsOut(periods=[_period_out(p) for p in list_periods(session)])
 
 
-@router.post("/periods", response_model=PeriodEnvelopeOut, status_code=201)
+@router.post(
+    "/periods",
+    response_model=PeriodEnvelopeOut,
+    status_code=201,
+    dependencies=[Depends(require_permission("period_manage"))],
+)
 def create_period(
-    req: PeriodCreateIn, session: Session = Depends(get_session)
+    req: PeriodCreateIn,
+    session: Session = Depends(get_session),
 ) -> PeriodEnvelopeOut:
     try:
         period = create_period_row(
@@ -54,9 +65,15 @@ def create_period(
     return PeriodEnvelopeOut(period=_period_out(period))
 
 
-@router.patch("/periods/{period_id}", response_model=PeriodEnvelopeOut)
+@router.patch(
+    "/periods/{period_id}",
+    response_model=PeriodEnvelopeOut,
+    dependencies=[Depends(require_permission("period_manage"))],
+)
 def patch_period(
-    period_id: int, req: PeriodUpdateIn, session: Session = Depends(get_session)
+    period_id: int,
+    req: PeriodUpdateIn,
+    session: Session = Depends(get_session),
 ) -> PeriodEnvelopeOut:
     try:
         period = update_period(

@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.api.auth_input import require_email, require_name, require_password
+from backend.api.permission_service import grant_full_permissions
 from backend.db.models import Member, MemberPosition, Position
 
 # scrypt 는 표준 라이브러리(hashlib)가 제공하는 메모리-하드 KDF다 — bcrypt·argon2용
@@ -81,9 +82,9 @@ def _resolve_positions(session: Session, names: list[str]) -> list[Position]:
 
 
 def _is_first_account(session: Session) -> bool:
-    # 헤드매니저는 인원을 고정하지 않지만(.cluedoc/accounts-and-roles), 아무도 없이
-    # 시작할 수는 없다. 가장 먼저 가입하는 사람을 헤드매니저로 삼아 그다음부터는
-    # 그 사람이 권한을 물려주거나 새로 정의하게 한다.
+    # 권한을 가진 사람은 인원을 고정하지 않지만(.cluedoc/accounts-and-roles), 아무도
+    # 없이 시작할 수는 없다. 가장 먼저 가입하는 사람에게 열한 가지를 전부 주어
+    # 그다음부터는 그 사람이 권한을 나눠 주거나 새로 정의하게 한다.
     already_signed_up = session.scalar(
         select(Member.id).where(Member.password_hash.is_not(None))
     )
@@ -116,15 +117,19 @@ def signup(
     if session.scalar(select(Member.id).where(Member.email == clean_email)) is not None:
         raise ValueError("이미 가입된 이메일입니다")
 
-    role = "head_manager" if _is_first_account(session) else "member"
+    first = _is_first_account(session)
     member = Member(
-        name=clean_name, email=clean_email, password_hash=hash_password(password), role=role
+        name=clean_name, email=clean_email, password_hash=hash_password(password)
     )
     session.add(member)
     session.flush()
     session.add_all(
         MemberPosition(member_id=member.id, position_id=position.id) for position in positions
     )
+    # 계정보다 먼저 판정해 둔 first 를 여기서 쓴다 — 위 flush 로 본인이 이미 들어가
+    # 있어, 지금 다시 세면 "첫 계정"이 아니게 된다.
+    if first:
+        grant_full_permissions(session, member.id)
     _commit_signup(session)
     return member
 

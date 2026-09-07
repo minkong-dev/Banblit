@@ -8,6 +8,9 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import Comment, Member, Membership, Position, Post, Team
 
+# account 픽스처를 부른 순서가 곧 역할이다 — 이 파일의 첫 호출이 헤드매니저다.
+from conftest import AccountFactory
+
 
 def _team(session: Session, name: str) -> Team:
     team = Team(name=name)
@@ -24,38 +27,27 @@ def _member(session: Session, name: str) -> Member:
     return member
 
 
-def _account(api_client: TestClient, name: str, email: str) -> tuple[int, dict[str, str]]:
-    """가입시켜 실제 계정을 만들고, (계정 번호, 인증 쿠키)를 돌려준다.
-
-    이 파일의 첫 _account 호출이 곧 헤드매니저다(맨 처음 가입한 사람이 맡는 규칙).
-    signup 응답의 Set-Cookie를 클라이언트 쿠키 저장소에 그대로 넣지 않는 이유는,
-    한 시험 안에서 여러 계정(헤드매니저·일반 멤버 등)을 오가며 요청해야 해서다 —
-    호출마다 cookies= 로 원하는 계정의 쿠키를 골라 실어야 서로 덮어쓰지 않는다.
-    """
-    body = api_client.post(
-        "/signup",
-        json={"name": name, "email": email, "password": "password123", "positions": ["보컬"]},
-    ).json()
-    session_token = api_client.cookies.get("banblit_session")
-    api_client.cookies.clear()
-    cookies = {"banblit_session": session_token}
-    return body["account"]["id"], cookies
-
-
-def _join(session: Session, member_id: int, team: Team) -> None:
+def _join(
+    session: Session, member_id: int, team: Team, status: str = "approved"
+) -> None:
     position_id = session.scalars(
         select(Position.id).where(Position.name == "보컬")
     ).one()
     session.add(
-        Membership(member_id=member_id, team_id=team.id, position_id=position_id)
+        Membership(
+            member_id=member_id,
+            team_id=team.id,
+            position_id=position_id,
+            status=status,
+        )
     )
     session.flush()
 
 
 def test_notice_is_created_and_listed(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, head = _account(api_client, "박서연", "head@example.com")
+    _, head = account("박서연", "head@example.com")
 
     response = api_client.post(
         "/notices", json={"title": "공지 제목", "body": "공지 내용"}, cookies=head
@@ -68,15 +60,15 @@ def test_notice_is_created_and_listed(
     assert post["author"] == "박서연"
     assert post["comment_count"] == 0
 
-    listed = api_client.get("/notices")
+    listed = api_client.get("/notices", cookies=head)
     assert listed.status_code == 200
     assert [p["id"] for p in listed.json()["posts"]] == [post["id"]]
 
 
 def test_notices_are_listed_newest_first(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, head = _account(api_client, "박서연", "head@example.com")
+    _, head = account("박서연", "head@example.com")
 
     first = api_client.post(
         "/notices", json={"title": "첫 글", "body": "내용"}, cookies=head
@@ -85,16 +77,16 @@ def test_notices_are_listed_newest_first(
         "/notices", json={"title": "둘째 글", "body": "내용"}, cookies=head
     ).json()["post"]
 
-    response = api_client.get("/notices")
+    response = api_client.get("/notices", cookies=head)
 
     ids = [p["id"] for p in response.json()["posts"]]
     assert ids == [second["id"], first["id"]]
 
 
 def test_notice_creation_rejects_an_empty_title(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, head = _account(api_client, "박서연", "head@example.com")
+    _, head = account("박서연", "head@example.com")
 
     response = api_client.post(
         "/notices", json={"title": "  ", "body": "내용"}, cookies=head
@@ -105,9 +97,9 @@ def test_notice_creation_rejects_an_empty_title(
 
 
 def test_notice_creation_rejects_an_empty_body(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, head = _account(api_client, "박서연", "head@example.com")
+    _, head = account("박서연", "head@example.com")
 
     response = api_client.post(
         "/notices", json={"title": "제목", "body": "  "}, cookies=head
@@ -117,11 +109,32 @@ def test_notice_creation_rejects_an_empty_body(
     assert "내용" in response.json()["detail"]
 
 
-def test_notice_creation_requires_a_head_manager(
-    api_client: TestClient, db_session: Session
+def test_notice_reading_requires_authentication(api_client: TestClient) -> None:
+    """공지 목록은 로그인 뒤 메인 캘린더 안에서만 보인다 — 방문자에게는 열지 않는다."""
+    response = api_client.get("/notices")
+
+    assert response.status_code == 401
+
+
+def test_notice_reading_allows_a_member_without_a_team(
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _account(api_client, "박서연", "head@example.com")  # 맨 처음이라 헤드매니저
-    _, member = _account(api_client, "이도현", "member@example.com")
+    """공지의 '전체 공개'는 팀과 무관하다는 뜻이다 — 어느 팀에도 없는 사람이 본다."""
+    _, head = account("박서연", "head@example.com")
+    _, loner = account("이도현", "member@example.com")
+    api_client.post("/notices", json={"title": "공지 제목", "body": "내용"}, cookies=head)
+
+    response = api_client.get("/notices", cookies=loner)
+
+    assert response.status_code == 200
+    assert [post["title"] for post in response.json()["posts"]] == ["공지 제목"]
+
+
+def test_notice_creation_requires_a_head_manager(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    account("박서연", "head@example.com")  # 맨 처음이라 헤드매니저
+    _, member = account("이도현", "member@example.com")
 
     response = api_client.post(
         "/notices", json={"title": "제목", "body": "내용"}, cookies=member
@@ -137,9 +150,9 @@ def test_notice_creation_requires_authentication(api_client: TestClient) -> None
 
 
 def test_notice_creation_rejects_a_title_over_the_length_limit(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, head = _account(api_client, "박서연", "head@example.com")
+    _, head = account("박서연", "head@example.com")
 
     response = api_client.post(
         "/notices", json={"title": "가" * 201, "body": "내용"}, cookies=head
@@ -149,9 +162,9 @@ def test_notice_creation_rejects_a_title_over_the_length_limit(
 
 
 def test_notice_creation_rejects_a_body_over_the_length_limit(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, head = _account(api_client, "박서연", "head@example.com")
+    _, head = account("박서연", "head@example.com")
 
     response = api_client.post(
         "/notices", json={"title": "제목", "body": "가" * 20001}, cookies=head
@@ -161,10 +174,10 @@ def test_notice_creation_rejects_a_body_over_the_length_limit(
 
 
 def test_team_post_is_created_by_a_team_member(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     team = _team(db_session, "새벽 네시")
-    author_id, author = _account(api_client, "박서연", "a@example.com")
+    author_id, author = account("박서연", "a@example.com")
     _join(db_session, author_id, team)
     db_session.commit()
 
@@ -179,10 +192,10 @@ def test_team_post_is_created_by_a_team_member(
 
 
 def test_team_post_creation_rejects_a_non_member_author(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     team = _team(db_session, "새벽 네시")
-    _, outsider = _account(api_client, "이도현", "b@example.com")
+    _, outsider = account("이도현", "b@example.com")
 
     response = api_client.post(
         f"/teams/{team.id}/posts", json={"title": "팀 공지", "body": "내용"}, cookies=outsider
@@ -192,9 +205,9 @@ def test_team_post_creation_rejects_a_non_member_author(
 
 
 def test_team_post_creation_rejects_an_unknown_team(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, author = _account(api_client, "박서연", "a@example.com")
+    _, author = account("박서연", "a@example.com")
 
     response = api_client.post(
         "/teams/999999/posts", json={"title": "제목", "body": "내용"}, cookies=author
@@ -205,11 +218,11 @@ def test_team_post_creation_rejects_an_unknown_team(
 
 
 def test_team_posts_are_listed_only_for_that_team(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     team = _team(db_session, "새벽 네시")
     other = _team(db_session, "파랑주의보")
-    author_id, author = _account(api_client, "박서연", "a@example.com")
+    author_id, author = account("박서연", "a@example.com")
     _join(db_session, author_id, team)
     _join(db_session, author_id, other)
     db_session.commit()
@@ -229,10 +242,10 @@ def test_team_posts_are_listed_only_for_that_team(
 
 
 def test_team_posts_list_is_empty_for_a_team_with_no_posts(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     team = _team(db_session, "새벽 네시")
-    author_id, author = _account(api_client, "박서연", "a@example.com")
+    author_id, author = account("박서연", "a@example.com")
     _join(db_session, author_id, team)
     db_session.commit()
 
@@ -243,9 +256,9 @@ def test_team_posts_list_is_empty_for_a_team_with_no_posts(
 
 
 def test_team_posts_endpoint_rejects_an_unknown_team(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, author = _account(api_client, "박서연", "a@example.com")
+    _, author = account("박서연", "a@example.com")
 
     response = api_client.get("/teams/999999/posts", cookies=author)
 
@@ -254,10 +267,10 @@ def test_team_posts_endpoint_rejects_an_unknown_team(
 
 
 def test_team_posts_read_requires_team_membership(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     team = _team(db_session, "새벽 네시")
-    _, outsider = _account(api_client, "이도현", "b@example.com")
+    _, outsider = account("이도현", "b@example.com")
 
     response = api_client.get(f"/teams/{team.id}/posts", cookies=outsider)
 
@@ -275,9 +288,9 @@ def test_team_posts_read_requires_authentication(
 
 
 def test_post_detail_includes_comments(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, head = _account(api_client, "박서연", "head@example.com")
+    _, head = account("박서연", "head@example.com")
     post_id = api_client.post(
         "/notices", json={"title": "제목", "body": "내용"}, cookies=head
     ).json()["post"]["id"]
@@ -299,9 +312,9 @@ def test_post_detail_includes_comments(
 
 
 def test_post_detail_rejects_an_unknown_post(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, head = _account(api_client, "박서연", "head@example.com")
+    _, head = account("박서연", "head@example.com")
 
     response = api_client.get("/posts/999999", cookies=head)
 
@@ -310,40 +323,40 @@ def test_post_detail_rejects_an_unknown_post(
 
 
 def test_post_detail_of_a_team_post_requires_membership(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     team = _team(db_session, "새벽 네시")
-    author_id, author = _account(api_client, "박서연", "a@example.com")
+    author_id, author = account("박서연", "a@example.com")
     _join(db_session, author_id, team)
     db_session.commit()
     post_id = api_client.post(
         f"/teams/{team.id}/posts", json={"title": "제목", "body": "내용"}, cookies=author
     ).json()["post"]["id"]
 
-    _, outsider = _account(api_client, "이도현", "b@example.com")
+    _, outsider = account("이도현", "b@example.com")
     response = api_client.get(f"/posts/{post_id}", cookies=outsider)
 
     assert response.status_code == 403
 
 
 def test_post_detail_of_a_notice_needs_no_team_membership(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, head = _account(api_client, "박서연", "head@example.com")
+    _, head = account("박서연", "head@example.com")
     post_id = api_client.post(
         "/notices", json={"title": "제목", "body": "내용"}, cookies=head
     ).json()["post"]["id"]
 
-    _, member = _account(api_client, "이도현", "member@example.com")
+    _, member = account("이도현", "member@example.com")
     response = api_client.get(f"/posts/{post_id}", cookies=member)
 
     assert response.status_code == 200
 
 
 def test_comment_creation_rejects_an_empty_body(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, head = _account(api_client, "박서연", "head@example.com")
+    _, head = account("박서연", "head@example.com")
     post_id = api_client.post(
         "/notices", json={"title": "제목", "body": "내용"}, cookies=head
     ).json()["post"]["id"]
@@ -357,17 +370,17 @@ def test_comment_creation_rejects_an_empty_body(
 
 
 def test_comment_creation_rejects_a_non_member_author_on_a_team_post(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     team = _team(db_session, "새벽 네시")
-    author_id, author = _account(api_client, "박서연", "a@example.com")
+    author_id, author = account("박서연", "a@example.com")
     _join(db_session, author_id, team)
     db_session.commit()
     post_id = api_client.post(
         f"/teams/{team.id}/posts", json={"title": "제목", "body": "내용"}, cookies=author
     ).json()["post"]["id"]
 
-    _, outsider = _account(api_client, "이도현", "b@example.com")
+    _, outsider = account("이도현", "b@example.com")
     response = api_client.post(
         f"/posts/{post_id}/comments", json={"body": "댓글"}, cookies=outsider
     )
@@ -376,10 +389,10 @@ def test_comment_creation_rejects_a_non_member_author_on_a_team_post(
 
 
 def test_comment_creation_allows_a_team_member_on_a_team_post(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     team = _team(db_session, "새벽 네시")
-    author_id, author = _account(api_client, "박서연", "a@example.com")
+    author_id, author = account("박서연", "a@example.com")
     _join(db_session, author_id, team)
     db_session.commit()
     post_id = api_client.post(
@@ -394,11 +407,11 @@ def test_comment_creation_allows_a_team_member_on_a_team_post(
 
 
 def test_post_author_is_taken_from_the_token_not_the_request_body(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     # author_id 가 이제 스키마에 없으니 보내도 조용히 무시돼야 한다 — 응답의 글쓴이는
     # 언제나 토큰이 가리키는 계정이다.
-    _, head = _account(api_client, "박서연", "head@example.com")
+    _, head = account("박서연", "head@example.com")
 
     response = api_client.post(
         "/notices",
@@ -411,9 +424,9 @@ def test_post_author_is_taken_from_the_token_not_the_request_body(
 
 
 def test_comment_creation_rejects_a_body_over_the_length_limit(
-    api_client: TestClient, db_session: Session
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, head = _account(api_client, "박서연", "head@example.com")
+    _, head = account("박서연", "head@example.com")
     post_id = api_client.post(
         "/notices", json={"title": "제목", "body": "내용"}, cookies=head
     ).json()["post"]["id"]
@@ -488,3 +501,36 @@ def test_comment_body_blank_after_trim_is_rejected_at_the_database_level(
     )
     with pytest.raises(IntegrityError):
         db_session.commit()
+
+
+def test_a_pending_applicant_cannot_read_the_team_board(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """승인 대기는 아직 소속이 아니다 — 게시판은 소속만 읽는다."""
+    account("박서연", "head@example.com")
+    waiting_id, waiting = account("이도현", "member@example.com")
+    team = _team(db_session, "새벽 네시")
+    _join(db_session, waiting_id, team, status="pending")
+    db_session.commit()
+
+    response = api_client.get(f"/teams/{team.id}/posts", cookies=waiting)
+
+    assert response.status_code == 403
+
+
+def test_a_pending_applicant_cannot_write_on_the_team_board(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    account("박서연", "head@example.com")
+    waiting_id, waiting = account("이도현", "member@example.com")
+    team = _team(db_session, "새벽 네시")
+    _join(db_session, waiting_id, team, status="pending")
+    db_session.commit()
+
+    response = api_client.post(
+        f"/teams/{team.id}/posts",
+        json={"title": "제목", "body": "내용"},
+        cookies=waiting,
+    )
+
+    assert response.status_code == 403

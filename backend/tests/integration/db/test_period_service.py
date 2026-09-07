@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api.period_service import assign_period
+from backend.api.period_service import assign_period, open_slots_in_period
 from backend.db.models import (
     Assignment,
     AssignmentBackup,
@@ -458,3 +458,104 @@ def test_multiple_unavailable_times_for_the_same_person_all_block_assignment(
 
     assert result.resolution.assignment.feasible is False
     assert result.saved is False
+
+
+def test_excluding_the_proposed_member_makes_the_assignment_savable(
+    db_session: Session,
+) -> None:
+    """조율안 확정 경로 — 조율안이 지목한 사람을 빼면 그대로 현행 시간표가 된다."""
+    period_id = _period(db_session)
+    team_id = _team_with_member(db_session, "A", "김민수")
+    blocked = Member(name="이영희")
+    db_session.add(blocked)
+    db_session.flush()
+    db_session.add(
+        Membership(
+            member_id=blocked.id, team_id=team_id, position_id=_position(db_session)
+        )
+    )
+    db_session.add(
+        UnavailableTime(
+            member_id=blocked.id,
+            starts_at=datetime(2026, 8, 1, 18, 0),
+            ends_at=datetime(2026, 8, 1, 19, 0),
+            repeats_weekly=False,
+            repeat_until=None,
+        )
+    )
+    db_session.flush()
+    room_id = _room(db_session, "1번방", time(18, 0), time(19, 0))
+
+    refused = assign_period(
+        db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT
+    )
+    assert refused.saved is False
+
+    result = assign_period(
+        db_session,
+        period_id,
+        [team_id],
+        [room_id],
+        saved_at=SAVED_AT,
+        excluded_member_id=blocked.id,
+    )
+
+    assert result.resolution.assignment.feasible is True
+    assert result.saved is True
+    saved = db_session.scalars(
+        select(Assignment).where(Assignment.period_id == period_id)
+    ).all()
+    assert len(saved) == 2  # 팀 하나가 전체 2칸을 가져간다
+
+
+def test_excluding_someone_outside_the_roster_is_rejected(
+    db_session: Session,
+) -> None:
+    period_id = _period(db_session)
+    team_id = _team_with_member(db_session, "A", "김민수")
+    room_id = _room(db_session, "1번방", time(18, 0), time(19, 0))
+
+    with pytest.raises(ValueError, match="명단에 없습니다"):
+        assign_period(
+            db_session,
+            period_id,
+            [team_id],
+            [room_id],
+            saved_at=SAVED_AT,
+            excluded_member_id=999999,
+        )
+
+
+def test_open_slots_come_from_the_saved_schedule_without_recomputing(
+    db_session: Session,
+) -> None:
+    """남는 칸은 저장된 배정에서 되읽는다 — 배정 계산을 다시 돌리지 않는다."""
+    period_id = _period(db_session)  # 8/1 하루
+    team_a = _team_with_member(db_session, "A", "김민수")
+    team_b = _team_with_member(db_session, "B", "박지훈")
+    room_id = _room(db_session, "1번방", time(18, 0), time(19, 30))  # 3칸
+
+    result = assign_period(
+        db_session, period_id, [team_a, team_b], [room_id], saved_at=SAVED_AT
+    )
+    assert result.saved is True
+    assert len(result.resolution.assignment.open_slots) == 1  # 3칸 - 팀당 1칸 × 2팀
+
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    left_open = open_slots_in_period(db_session, period)
+
+    assert len(left_open) == 1
+    assert left_open[0].room_id == room_id
+    assert left_open[0].room == "1번방"
+    assert left_open[0].end - left_open[0].start == timedelta(minutes=30)
+
+
+def test_open_slots_are_empty_when_nothing_is_assigned(db_session: Session) -> None:
+    period_id = _period(db_session)
+    _room(db_session, "1번방", time(18, 0), time(19, 0))
+    db_session.flush()
+
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    assert open_slots_in_period(db_session, period) == []
