@@ -8,11 +8,10 @@ from sqlalchemy.orm import Session
 from backend.db.models import (
     Assignment,
     Member,
-    Membership,
     Period,
-    Position,
     Room,
     Team,
+    TeamSlot,
     UnavailableTime,
 )
 
@@ -23,16 +22,17 @@ def test_room_closing_before_opening_is_rejected(db_session: Session) -> None:
         db_session.commit()
 
 
-def test_deleting_a_member_removes_their_memberships_and_unavailable_times(
+def test_deleting_a_member_empties_their_slot_but_keeps_it(
     db_session: Session,
 ) -> None:
+    """자리는 팀의 구성이다 — 사람이 나갔다고 팀에 구멍이 나면 안 된다.
+    반면 그 사람이 등록한 못 나오는 시간은 함께 사라진다."""
     member = Member(name="김민수")
     team = Team(name="A")
-    guitar = db_session.scalars(select(Position).where(Position.name == "기타")).one()
     db_session.add_all([member, team])
     db_session.flush()
     db_session.add(
-        Membership(member_id=member.id, team_id=team.id, position_id=guitar.id)
+        TeamSlot(team_id=team.id, instrument="일렉", ordinal=1, member_id=member.id)
     )
     db_session.add(
         UnavailableTime(
@@ -47,13 +47,12 @@ def test_deleting_a_member_removes_their_memberships_and_unavailable_times(
     db_session.execute(delete(Member).where(Member.id == member_id))
     db_session.commit()
 
-    remaining_memberships = db_session.scalars(
-        select(Membership).where(Membership.member_id == member_id)
-    ).all()
+    slots = db_session.scalars(select(TeamSlot)).all()
     remaining_unavailable_times = db_session.scalars(
         select(UnavailableTime).where(UnavailableTime.member_id == member_id)
     ).all()
-    assert remaining_memberships == []
+    assert len(slots) == 1
+    assert slots[0].member_id is None
     assert remaining_unavailable_times == []
 
 
@@ -89,22 +88,6 @@ def test_deleting_a_team_removes_its_assignments(db_session: Session) -> None:
         select(Assignment).where(Assignment.team_id == team_id)
     ).all()
     assert remaining_assignments == []
-
-
-def test_position_in_use_cannot_be_deleted(db_session: Session) -> None:
-    member = Member(name="김민수")
-    team = Team(name="A")
-    guitar = db_session.scalars(select(Position).where(Position.name == "기타")).one()
-    db_session.add_all([member, team])
-    db_session.flush()
-    db_session.add(
-        Membership(member_id=member.id, team_id=team.id, position_id=guitar.id)
-    )
-    db_session.commit()
-
-    with pytest.raises(IntegrityError):
-        db_session.execute(delete(Position).where(Position.id == guitar.id))
-        db_session.commit()
 
 
 def test_period_requires_both_run_times(db_session: Session) -> None:

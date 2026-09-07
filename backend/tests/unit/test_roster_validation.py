@@ -60,10 +60,10 @@ def test_duplicate_message_for_the_team_name_unique_violation() -> None:
     assert duplicate_message(error) == "이미 있는 팀 이름입니다"
 
 
-def test_duplicate_message_for_the_membership_unique_violation() -> None:
-    error = _fake_integrity_error("memberships_member_id_team_id_key")
+def test_duplicate_message_for_the_slot_member_unique_violation() -> None:
+    error = _fake_integrity_error("team_slots_team_id_member_id_key")
 
-    assert duplicate_message(error) == "이미 그 팀 소속입니다"
+    assert duplicate_message(error) == "이미 그 팀의 다른 자리에 있는 사람입니다"
 
 
 def test_duplicate_message_for_a_different_constraint_is_none() -> None:
@@ -90,10 +90,10 @@ def test_commit_roster_turns_a_name_race_into_a_friendly_value_error() -> None:
     assert session.rolled_back
 
 
-def test_commit_roster_turns_a_membership_race_into_a_friendly_value_error() -> None:
-    session = _FakeSession(_fake_integrity_error("memberships_member_id_team_id_key"))
+def test_commit_roster_turns_a_slot_race_into_a_friendly_value_error() -> None:
+    session = _FakeSession(_fake_integrity_error("team_slots_team_id_member_id_key"))
 
-    with pytest.raises(ValueError, match="이미 그 팀 소속입니다"):
+    with pytest.raises(ValueError, match="이미 그 팀의 다른 자리에 있는 사람입니다"):
         commit_roster(cast(Session, session))
 
     assert session.rolled_back

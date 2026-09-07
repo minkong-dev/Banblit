@@ -9,19 +9,15 @@ from backend.db.models import (
     Assignment,
     AssignmentBackup,
     Member,
-    Membership,
     Period,
-    Position,
     Room,
     Team,
+    TeamSlot,
     UnavailableTime,
 )
+from conftest import seat
 
 SAVED_AT = datetime(2026, 8, 1, 9, 0)
-
-
-def _position(session: Session) -> int:
-    return session.scalars(select(Position.id)).first() or 0
 
 
 def _period(session: Session, kind: str = "focused", days: int = 1) -> int:
@@ -44,11 +40,7 @@ def _team_with_member(session: Session, team_name: str, member_name: str) -> int
     member = Member(name=member_name)
     session.add_all([team, member])
     session.flush()
-    session.add(
-        Membership(
-            member_id=member.id, team_id=team.id, position_id=_position(session)
-        )
-    )
+    seat(session, team.id, member.id)
     session.flush()
     return team.id
 
@@ -131,11 +123,7 @@ def test_failed_assignment_saves_nothing_and_names_who_to_exclude(
     other = Member(name="이영희")
     db_session.add(other)
     db_session.flush()
-    db_session.add(
-        Membership(
-            member_id=other.id, team_id=team_id, position_id=_position(db_session)
-        )
-    )
+    seat(db_session, team_id, other.id)
     db_session.add(
         UnavailableTime(
             member_id=other.id,
@@ -379,11 +367,7 @@ def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
     other = Member(name="이영희")
     db_session.add(other)
     db_session.flush()
-    db_session.add(
-        Membership(
-            member_id=other.id, team_id=team_id, position_id=_position(db_session)
-        )
-    )
+    seat(db_session, team_id, other.id)
     # 마지막 날(8/2)에만 걸리는 불가능시간 — 첫날(8/1)에는 아무 제약이 없다.
     db_session.add(
         UnavailableTime(
@@ -469,11 +453,7 @@ def test_excluding_the_proposed_member_makes_the_assignment_savable(
     blocked = Member(name="이영희")
     db_session.add(blocked)
     db_session.flush()
-    db_session.add(
-        Membership(
-            member_id=blocked.id, team_id=team_id, position_id=_position(db_session)
-        )
-    )
+    seat(db_session, team_id, blocked.id)
     db_session.add(
         UnavailableTime(
             member_id=blocked.id,

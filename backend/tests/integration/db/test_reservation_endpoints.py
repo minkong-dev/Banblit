@@ -6,8 +6,8 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 from backend.api.reservation_service import create_reservation
-from backend.db.models import Member, Membership, Period, Position, Room, Team
-from conftest import AccountFactory
+from backend.db.models import Member, Period, Room, Team, TeamSlot
+from conftest import AccountFactory, seat
 
 OPEN_DAY = "2026-09-14"
 
@@ -27,8 +27,7 @@ def _team(session: Session, name: str) -> Team:
 
 
 def _join(session: Session, member_id: int, team: Team) -> None:
-    position_id = session.scalars(select(Position.id).where(Position.name == "보컬")).one()
-    session.add(Membership(member_id=member_id, team_id=team.id, position_id=position_id))
+    seat(session, team.id, member_id)
     session.flush()
 
 

@@ -5,7 +5,6 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account
-from backend.api.auth_service import list_account_positions
 from backend.api.auth_service import login as login_account
 from backend.api.auth_service import signup as signup_account
 from backend.api.auth_session import (
@@ -21,7 +20,7 @@ from backend.api.password_reset import (
     send_id_reminder,
 )
 from backend.api.permission_service import account_permissions
-from backend.api.roster_service import list_my_memberships
+from backend.api.roster_service import list_my_teams
 from backend.api.schemas import (
     AccountOut,
     AckOut,
@@ -29,7 +28,7 @@ from backend.api.schemas import (
     FindIdIn,
     LoginIn,
     MeOut,
-    MyMembershipOut,
+    MyTeamOut,
     PasswordResetConfirmIn,
     PasswordResetIn,
     SignupIn,
@@ -79,7 +78,7 @@ def _clear_session_cookies(response: Response) -> None:
 
 def _account_out(session: Session, member: Member) -> AccountOut:
     # 화면이 아직 role 로 "헤드매니저"/"일반멤버" 글자를 고른다. 역할 열은 없어졌으므로
-    # 열한 가지가 전부 켜졌는지로 그 값을 만들어 내려준다.
+    # 항목이 전부 켜졌는지로 그 값을 만들어 내려준다.
     permissions = account_permissions(session, member.id)
     return AccountOut(
         id=member.id,
@@ -87,7 +86,7 @@ def _account_out(session: Session, member: Member) -> AccountOut:
         email=member.email or "",
         role="head_manager" if len(permissions) == len(PERMISSIONS) else "member",
         permissions=permissions,  # type: ignore[arg-type]
-        positions=list_account_positions(session, member.id),
+        cohort=member.cohort,
     )
 
 
@@ -96,7 +95,7 @@ def signup(
     req: SignupIn, response: Response, session: Session = Depends(get_session)
 ) -> AuthOut:
     try:
-        member = signup_account(session, req.name, req.email, req.password, req.positions)
+        member = signup_account(session, req.name, req.email, req.password, req.cohort)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     token = create_session(session, member.id, datetime.now())
@@ -160,20 +159,17 @@ def confirm_password_reset(
 def read_me(
     requester: Member = Depends(require_account), session: Session = Depends(get_session)
 ) -> MeOut:
-    # 소속과 신청을 함께 내려준다. 화면이 새로 고쳐진 뒤 "승인 대기 중"을 다시
-    # 그리려면 그 상태를 서버에 물어볼 endpoint 가 있어야 하고, 여기가 이미 화면이
-    # 로그인 직후 한 번 부르는 endpoint 다.
+    # 내가 앉아 있는 자리를 함께 내려준다. 화면이 "내 팀"을 가려내는 근거가 여기뿐이고,
+    # 이미 화면이 로그인 직후 한 번 부르는 endpoint 다.
     return MeOut(
         account=_account_out(session, requester),
-        memberships=[
-            MyMembershipOut(
+        teams=[
+            MyTeamOut(
                 team_id=team.id,
                 team_name=team.name,
-                position=position_name,
-                status=status,
+                instrument=slot.instrument,
+                ordinal=slot.ordinal,
             )
-            for team, position_name, status in list_my_memberships(
-                session, requester.id
-            )
+            for team, slot in list_my_teams(session, requester.id)
         ],
     )

@@ -24,18 +24,21 @@ def _stored_files(root: Path) -> list[Path]:
 
 
 def _make_team(api_client: TestClient, head: Cookies, name: str) -> int:
-    team = api_client.post("/teams", json={"name": name}, cookies=head).json()["team"]
+    team = api_client.post(
+        "/teams", json={"name": name, "slots": {"보컬": 4}}, cookies=head
+    ).json()["team"]
     return int(team["id"])
 
 
-def _join_team(api_client: TestClient, cookies: Cookies, team_id: int) -> None:
-    position_id = api_client.get("/positions", cookies=cookies).json()["positions"][0][
-        "id"
-    ]
-    api_client.post(
-        f"/teams/{team_id}/members",
-        json={"position_id": position_id},
-        cookies=cookies,
+def _seat(api_client: TestClient, head: Cookies, team_id: int, member_id: int) -> None:
+    """빈 자리 하나를 찾아 그 사람을 앉힌다. 앉히는 것은 팀 항목을 가진 사람만 할 수
+    있으므로 언제나 헤드매니저의 쿠키로 부른다."""
+    slots = api_client.get(f"/teams/{team_id}/slots", cookies=head).json()["slots"]
+    free = next(slot for slot in slots if slot["member_id"] is None)
+    api_client.put(
+        f"/teams/{team_id}/slots/{free['id']}",
+        json={"member_id": member_id},
+        cookies=head,
     )
 
 
@@ -128,10 +131,10 @@ def test_only_the_author_can_attach_to_a_post(
 def test_non_member_cannot_download_team_board_attachment(
     api_client: TestClient, account: AccountFactory, storage_dir: Path
 ) -> None:
-    _, head = account("박서연", "head@example.com")
+    head_id, head = account("박서연", "head@example.com")
     _, outsider = account("김도윤", "outsider@example.com")
     team_id = _make_team(api_client, head, "밴드가")
-    _join_team(api_client, head, team_id)
+    _seat(api_client, head, team_id, head_id)
     post_id = api_client.post(
         f"/teams/{team_id}/posts",
         json={"title": "팀 글", "body": "팀 내용"},
@@ -158,11 +161,11 @@ def test_non_member_cannot_download_team_board_attachment(
 def test_teammate_who_is_not_the_author_can_read_and_download(
     api_client: TestClient, account: AccountFactory, storage_dir: Path
 ) -> None:
-    _, head = account("박서연", "head@example.com")
-    _, teammate = account("김도윤", "mate@example.com")
+    head_id, head = account("박서연", "head@example.com")
+    mate_id, teammate = account("김도윤", "mate@example.com")
     team_id = _make_team(api_client, head, "밴드가")
-    _join_team(api_client, head, team_id)
-    _join_team(api_client, teammate, team_id)
+    _seat(api_client, head, team_id, head_id)
+    _seat(api_client, head, team_id, mate_id)
     post_id = api_client.post(
         f"/teams/{team_id}/posts",
         json={"title": "팀 글", "body": "팀 내용"},

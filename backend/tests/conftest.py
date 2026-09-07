@@ -7,11 +7,34 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine, text
+from sqlalchemy import Engine, create_engine, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
-from backend.db.models import Base
+from backend.db.models import Base, TeamSlot
+
+def seat(
+    session: Session, team_id: int, member_id: int, instrument: str = "보컬"
+) -> TeamSlot:
+    """팀의 그 악기 다음 번호에 사람을 앉힌다.
+
+    자리 번호는 (팀 + 악기) 안에서만 겹치면 안 되는데, 시험마다 그것을 직접 세면
+    한 팀에 두 사람을 넣을 때마다 번호를 손으로 맞춰야 한다. 여기서 한 번만 센다.
+    """
+    used = session.scalars(
+        select(TeamSlot.ordinal).where(
+            TeamSlot.team_id == team_id, TeamSlot.instrument == instrument
+        )
+    ).all()
+    slot = TeamSlot(
+        team_id=team_id,
+        instrument=instrument,
+        ordinal=max(used, default=0) + 1,
+        member_id=member_id,
+    )
+    session.add(slot)
+    return slot
+
 
 # 검사 전용 DB 이름. 여러 검사를 동시에 돌릴 때만 환경변수로 갈라준다 —
 # 같은 이름을 쓰면 서로의 표를 지우며 돈다.
@@ -37,11 +60,13 @@ def test_engine() -> Iterator[Engine]:
         hide_password=False
     )
     engine = create_engine(test_url)
-    Base.metadata.drop_all(engine)
     with engine.begin() as connection:
-        # drop_all 은 alembic_version 을 안 지운다. 남겨두면 alembic 이 "이미 head"로
-        # 보고 upgrade 를 건너뛰어, 방금 지운 표가 다시 만들어지지 않는다.
-        connection.execute(text("DROP TABLE IF EXISTS alembic_version"))
+        # 스키마를 통째로 비운다. 표 단위로 지우면 모델에서 없어진 옛 표(memberships
+        # 같은 것)를 metadata 가 몰라 남고, 그 표의 외래키가 teams 를 붙들어 다시
+        # 만들 수도 없다. alembic_version 도 여기서 함께 사라져, alembic 이 "이미
+        # head" 로 보고 upgrade 를 건너뛰는 일도 없다.
+        connection.execute(text("DROP SCHEMA public CASCADE"))
+        connection.execute(text("CREATE SCHEMA public"))
 
     alembic_config = Config("alembic.ini")
     alembic_config.set_main_option("sqlalchemy.url", test_url)
@@ -60,11 +85,11 @@ def db_session(test_engine: Engine) -> Iterator[Session]:
     with Session(test_engine) as session:
         yield session
         session.rollback()
-    # 테스트마다 깨끗한 상태로: 심어둔 포지션만 남기고 모든 행을 지운다.
+    # 테스트마다 깨끗한 상태로: 모든 행을 지운다. 예전에는 마이그레이션이 심어둔
+    # 포지션만 남겼는데, 그 표가 없어져 남길 것이 없다.
     with test_engine.begin() as connection:
         for table in reversed(Base.metadata.sorted_tables):
-            if table.name != "positions":
-                connection.execute(table.delete())
+            connection.execute(table.delete())
 
 
 @pytest.fixture()
@@ -114,7 +139,7 @@ def account(api_client: TestClient) -> AccountFactory:
                 "name": name,
                 "email": email,
                 "password": "password123",
-                "positions": ["보컬"],
+                "cohort": 46,
             },
         ).json()
         token = api_client.cookies.get("banblit_session")

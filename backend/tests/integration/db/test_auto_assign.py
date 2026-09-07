@@ -6,16 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.api import auto_assign
-from backend.db.models import (
-    Assignment,
-    AssignmentRun,
-    Member,
-    Membership,
-    Period,
-    Position,
-    Room,
-    Team,
-)
+from backend.db.models import Assignment, AssignmentRun, Member, Period, Room, Team, TeamSlot
 
 TODAY = date(2026, 8, 10)
 FIRST_RUN_AT = time(9, 0)
@@ -46,13 +37,12 @@ def _period(
 
 
 def _team_with_member(session: Session, team_name: str, member_name: str) -> int:
-    position_id = session.scalars(select(Position.id)).first() or 0
     team = Team(name=team_name)
     member = Member(name=member_name)
     session.add_all([team, member])
     session.flush()
     session.add(
-        Membership(member_id=member.id, team_id=team.id, position_id=position_id)
+        TeamSlot(team_id=team.id, instrument="보컬", ordinal=1, member_id=member.id)
     )
     session.flush()
     return team.id

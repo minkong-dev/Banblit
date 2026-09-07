@@ -7,18 +7,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.db.models import (
-    Assignment,
-    AssignmentBackup,
-    Member,
-    Membership,
-    Period,
-    Position,
-    Room,
-    Team,
-    UnavailableTime,
-)
-from conftest import AccountFactory
+from backend.db.models import Assignment, AssignmentBackup, Member, Period, Room, Team, TeamSlot, UnavailableTime
+from conftest import AccountFactory, seat
 
 
 @pytest.fixture()
@@ -161,14 +151,11 @@ def test_schedule_excludes_other_periods_assignments(
 
 
 def _team_with_member(db_session: Session, team_name: str, member_name: str) -> int:
-    position_id = db_session.scalars(select(Position.id)).first()
     team = Team(name=team_name)
     member = Member(name=member_name)
     db_session.add_all([team, member])
     db_session.flush()
-    db_session.add(
-        Membership(member_id=member.id, team_id=team.id, position_id=position_id)
-    )
+    seat(db_session, team.id, member.id)
     db_session.flush()
     return team.id
 
@@ -275,17 +262,8 @@ def test_assign_reports_a_coordination_proposal_with_real_names(
     member_2 = Member(name="이영희")
     db_session.add_all([team, member_1, member_2])
     db_session.flush()
-    position_id = db_session.scalars(select(Position.id)).first()
-    db_session.add_all(
-        [
-            Membership(
-                member_id=member_1.id, team_id=team.id, position_id=position_id
-            ),
-            Membership(
-                member_id=member_2.id, team_id=team.id, position_id=position_id
-            ),
-        ]
-    )
+    seat(db_session, team.id, member_1.id)
+    seat(db_session, team.id, member_2.id)
     # 이영희만 운영시간 내내 불가능하게 만든다.
     db_session.add(
         UnavailableTime(
@@ -744,16 +722,15 @@ def test_backups_need_rollback(
 
 def _blocked_team(db_session: Session) -> tuple[int, int]:
     """8/1 운영시간 내내 불가능한 사람이 낀 팀을 만들고 (팀 번호, 그 사람 번호)를 돌려준다."""
-    position_id = db_session.scalars(select(Position.id)).first()
     team = Team(name="A")
     free = Member(name="김민수")
     blocked = Member(name="이영희")
     db_session.add_all([team, free, blocked])
     db_session.flush()
+    seat(db_session, team.id, free.id)
+    seat(db_session, team.id, blocked.id)
     db_session.add_all(
         [
-            Membership(member_id=free.id, team_id=team.id, position_id=position_id),
-            Membership(member_id=blocked.id, team_id=team.id, position_id=position_id),
             UnavailableTime(
                 member_id=blocked.id,
                 starts_at=datetime(2026, 8, 1, 18, 0),

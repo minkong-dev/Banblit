@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.api import app as app_module
-from backend.db.models import Member, Membership, Period, Position, Room, Team
+from backend.db.models import Member, Period, Room, Team, TeamSlot
 from conftest import AccountFactory
 
 
@@ -44,13 +44,12 @@ def _period(session: Session, kind: str = "focused") -> int:
 
 
 def _team_with_member(db_session: Session, team_name: str, member_name: str) -> int:
-    position_id = db_session.scalars(select(Position.id)).first()
     team = Team(name=team_name)
     member = Member(name=member_name)
     db_session.add_all([team, member])
     db_session.flush()
     db_session.add(
-        Membership(member_id=member.id, team_id=team.id, position_id=position_id)
+        TeamSlot(team_id=team.id, instrument="보컬", ordinal=1, member_id=member.id)
     )
     db_session.flush()
     return team.id

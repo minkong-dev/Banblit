@@ -9,7 +9,7 @@ from backend.api.reservation_input import (
     require_valid_slot_bounds,
     require_within_room_hours,
 )
-from backend.db.models import Member, Membership, Period, Reservation, Room, Team
+from backend.db.models import Member, Period, Reservation, Room, Team, TeamSlot
 from backend.scheduling.pipeline import TimeInterval, generate_slots
 
 # reservations 테이블의 (room_id, starts_at) 유니크 제약 이름. schedule_store.py의
@@ -29,10 +29,9 @@ def _get_room_or_raise(session: Session, room_id: int) -> Room:
 def _require_team_member(session: Session, team_id: int, member_id: int) -> None:
     # 승인 대기(status="pending")는 아직 소속이 아니므로 그 팀 이름으로 예약할 수 없다.
     row = session.execute(
-        select(Membership.id).where(
-            Membership.team_id == team_id,
-            Membership.member_id == member_id,
-            Membership.status == "approved",
+        select(TeamSlot.id).where(
+            TeamSlot.team_id == team_id,
+            TeamSlot.member_id == member_id,
         )
     ).first()
     if row is None:

@@ -6,10 +6,10 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.db.models import Comment, Member, Membership, Position, Post, Team
+from backend.db.models import Comment, Member, Post, Team, TeamSlot
 
 # account 픽스처를 부른 순서가 곧 역할이다 — 이 파일의 첫 호출이 헤드매니저다.
-from conftest import AccountFactory
+from conftest import AccountFactory, seat
 
 
 def _team(session: Session, name: str) -> Team:
@@ -27,20 +27,8 @@ def _member(session: Session, name: str) -> Member:
     return member
 
 
-def _join(
-    session: Session, member_id: int, team: Team, status: str = "approved"
-) -> None:
-    position_id = session.scalars(
-        select(Position.id).where(Position.name == "보컬")
-    ).one()
-    session.add(
-        Membership(
-            member_id=member_id,
-            team_id=team.id,
-            position_id=position_id,
-            status=status,
-        )
-    )
+def _join(session: Session, member_id: int, team: Team) -> None:
+    seat(session, team.id, member_id)
     session.flush()
 
 
@@ -501,36 +489,3 @@ def test_comment_body_blank_after_trim_is_rejected_at_the_database_level(
     )
     with pytest.raises(IntegrityError):
         db_session.commit()
-
-
-def test_a_pending_applicant_cannot_read_the_team_board(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    """승인 대기는 아직 소속이 아니다 — 게시판은 소속만 읽는다."""
-    account("박서연", "head@example.com")
-    waiting_id, waiting = account("이도현", "member@example.com")
-    team = _team(db_session, "새벽 네시")
-    _join(db_session, waiting_id, team, status="pending")
-    db_session.commit()
-
-    response = api_client.get(f"/teams/{team.id}/posts", cookies=waiting)
-
-    assert response.status_code == 403
-
-
-def test_a_pending_applicant_cannot_write_on_the_team_board(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    account("박서연", "head@example.com")
-    waiting_id, waiting = account("이도현", "member@example.com")
-    team = _team(db_session, "새벽 네시")
-    _join(db_session, waiting_id, team, status="pending")
-    db_session.commit()
-
-    response = api_client.post(
-        f"/teams/{team.id}/posts",
-        json={"title": "제목", "body": "내용"},
-        cookies=waiting,
-    )
-
-    assert response.status_code == 403
