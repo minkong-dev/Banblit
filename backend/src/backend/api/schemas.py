@@ -3,7 +3,7 @@ from typing import Generic, Literal, TypeVar
 
 from pydantic import BaseModel, Field
 
-from backend.db.models import JoinPolicy, MembershipStatus, Permission
+from backend.db.models import Instrument, Permission
 from backend.db.models import NotificationKind
 
 # 배정 결과의 모양은 한 벌만 둔다. slot 과 제외 인원의 타입만 갈아 끼운다 —
@@ -193,9 +193,9 @@ class PeriodUpdateIn(BaseModel):
 class TeamOut(BaseModel):
     id: int
     name: str
-    member_count: int
-    # 이 팀에 참가하면 바로 소속이 되는지("auto"), 승인을 기다리는지("approval").
-    join_policy: JoinPolicy
+    # 자리 전체 수와 그중 사람이 앉은 수. 둘을 함께 주어야 화면이 몇 자리가 비었는지 안다.
+    slot_count: int
+    filled_count: int
 
 
 class TeamsOut(BaseModel):
@@ -209,60 +209,53 @@ class TeamEnvelopeOut(BaseModel):
 class TeamCreateIn(BaseModel):
     # 만든 사람은 요청 본문이 아니라 인증 쿠키의 주인이다.
     name: str
+    # 악기마다 몇 자리인지. 0인 악기는 보내도 되고 빼도 된다 — 자리를 만들지 않는다.
+    slots: dict[str, int]
 
 
 class TeamUpdateIn(BaseModel):
     name: str
-    # 안 보내면 참가 승인 방식은 그대로 둔다.
-    join_policy: JoinPolicy | None = None
 
 
-class MembershipOut(BaseModel):
-    member_id: int
-    member_name: str
+class SlotOut(BaseModel):
+    id: int
     team_id: int
-    position: str
-    # "approved" 면 가입됨, "pending" 이면 신청만 걸린 것이다.
-    status: MembershipStatus
+    instrument: Instrument
+    # 같은 악기가 여럿일 때 몇 번째인지. 화면은 "일렉 2" 처럼 붙여 보여준다.
+    ordinal: int
+    # 아직 아무도 안 앉은 자리는 셋 다 비어 있다.
+    member_id: int | None = None
+    member_name: str | None = None
+    member_cohort: int | None = None
 
 
-class JoinRequestOut(BaseModel):
+class SlotsOut(BaseModel):
+    slots: list[SlotOut]
+
+
+class SlotEnvelopeOut(BaseModel):
+    slot: SlotOut
+
+
+class SlotAssignIn(BaseModel):
     member_id: int
-    member_name: str
-    position: str
-
-
-class JoinRequestsOut(BaseModel):
-    join_requests: list[JoinRequestOut]
-
-
-class MembershipEnvelopeOut(BaseModel):
-    membership: MembershipOut
-
-
-class MembershipCreateIn(BaseModel):
-    # 참가하는 사람은 인증 쿠키의 주인이다. 남을 대신 넣는 항목은 만들지 않았다.
-    # ponytail: 헤드매니저가 남을 팀에 넣는 화면이 생기면 member_id 를 여기 되살린다.
-    position_id: int
 
 
 class MemberOut(BaseModel):
     id: int
     name: str
-    positions: list[str]
+    # 동명이인을 화면에서 가르는 값. 아직 가입하지 않은 사람은 비어 있다.
+    cohort: int | None = None
 
 
 class MembersOut(BaseModel):
     members: list[MemberOut]
 
 
-class PositionOut(BaseModel):
-    id: int
-    name: str
+class MemberSearchOut(BaseModel):
+    """자리에 앉힐 사람을 고르는 돋보기의 결과."""
 
-
-class PositionsOut(BaseModel):
-    positions: list[PositionOut]
+    members: list[MemberOut]
 
 
 class PostOut(BaseModel):
@@ -340,7 +333,8 @@ class AccountOut(BaseModel):
     # head_manager. 화면이 아직 이 값으로 글자를 고르고 있어 함께 내려준다.
     role: Literal["head_manager", "member"]
     permissions: list[Permission]
-    positions: list[str]
+    # 기수. 화면이 동명이인을 가를 때 이름 옆에 붙인다.
+    cohort: int | None = None
 
 
 class PermissionSetIn(BaseModel):
@@ -367,26 +361,25 @@ class AuthOut(BaseModel):
     account: AccountOut
 
 
-class MyMembershipOut(BaseModel):
+class MyTeamOut(BaseModel):
     team_id: int
     team_name: str
-    position: str
-    # "approved" 면 그 팀 소속이고, "pending" 이면 승인을 기다리는 중이다.
-    status: MembershipStatus
+    instrument: Instrument
+    ordinal: int
 
 
 class MeOut(BaseModel):
     account: AccountOut
-    # 승인된 소속과 대기 중인 신청을 팀 번호 순으로 함께 담는다 — 화면이 새로 고쳐도
-    # 자기가 어디에 신청해 뒀는지 알 수 있는 곳이 여기뿐이다.
-    memberships: list[MyMembershipOut]
+    # 내가 앉아 있는 자리를 팀 번호 순으로 담는다. 화면이 내 팀을 가려내는 근거다.
+    teams: list[MyTeamOut]
 
 
 class SignupIn(BaseModel):
     name: str = Field(max_length=100)
     email: str = Field(max_length=254)
     password: str = Field(max_length=100)
-    positions: list[str] = Field(min_length=1, max_length=10)
+    # 기수. 1981년이 1기지만 연도로 환산하지 않고 숫자를 그대로 받는다.
+    cohort: int
 
 
 class LoginIn(BaseModel):

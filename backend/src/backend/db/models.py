@@ -41,12 +41,10 @@ _PERMISSION_ARRAY_SQL = "ARRAY[{}]::text[]".format(
     ", ".join(f"'{name}'" for name in PERMISSIONS)
 )
 
-# 팀마다 고르는 참가 승인 방식과, 그 결과로 소속 행이 갖는 상태.
-JoinPolicy = Literal["auto", "approval"]
-JOIN_POLICIES: tuple[JoinPolicy, ...] = get_args(JoinPolicy)
-
-MembershipStatus = Literal["approved", "pending"]
-MEMBERSHIP_STATUSES: tuple[MembershipStatus, ...] = get_args(MembershipStatus)
+# 팀을 만들 때 고르는 악기. 자리 하나가 이 중 하나를 맡는다. 같은 악기를 여럿 두면
+# ordinal 로 갈린다 — 일렉 두 자리는 (일렉, 1) 과 (일렉, 2) 다.
+Instrument = Literal["보컬", "일렉", "통기타", "베이스", "신디", "드럼"]
+INSTRUMENTS: tuple[Instrument, ...] = get_args(Instrument)
 
 
 def _in_sql(column: str, allowed: tuple[str, ...]) -> str:
@@ -63,13 +61,17 @@ class Member(Base):
 
     email·password_hash는 로그인 계정 정보다. 스케줄링에만 쓰이고 아직
     가입하지 않은 사람은 이 둘이 비어 있다 — 가입해야 로그인 계정이 된다.
-    할 수 있는 일은 member_permission_sets 가 가리키는 묶음들이 정한다.
+    할 수 있는 일은 member_permission_sets 가 가리키는 권한들이 정한다.
+
+    cohort 는 기수다. 사람을 가르는 것은 여전히 id 이고, 기수는 동명이인을 화면에서
+    구분해 보여주기 위한 값이다 — 연도로 환산하지 않고 숫자를 그대로 담는다.
     """
 
     __tablename__ = "members"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(Text)
+    cohort: Mapped[int | None] = mapped_column(nullable=True)
     email: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
 
@@ -106,72 +108,51 @@ class MemberPermissionSet(Base):
     __table_args__ = (UniqueConstraint("member_id", "permission_set_id"),)
 
 
-class Position(Base):
-    """악기 포지션. 정해진 목록에서 고른다 — 목록은 데이터로 관리한다."""
-
-    __tablename__ = "positions"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    name: Mapped[str] = mapped_column(Text, unique=True)
-
-
 class Team(Base):
     """팀. 이름이 식별자이므로 겹칠 수 없다.
 
-    join_policy 가 "auto" 면 참가 요청이 바로 소속이 되고, "approval" 이면
-    join_approve 항목을 가진 사람이 승인해야 소속이 된다.
+    팀이 어떤 악기를 몇 자리 갖는지는 team_slots 가 들고 있다 — 팀을 만들 때
+    악기마다 몇 명인지 정하면 그만큼 자리가 생기고, 그 자리를 사람으로 채운다.
     """
 
     __tablename__ = "teams"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(Text, unique=True)
-    join_policy: Mapped[JoinPolicy] = mapped_column(Text, server_default="auto")
-
-    __table_args__ = (CheckConstraint(_in_sql("join_policy", JOIN_POLICIES)),)
 
 
-class Membership(Base):
-    """소속 = 사람 + 팀 + 포지션 한 묶음. 같은 사람이 같은 팀에 두 번 들어갈 수 없다.
+class TeamSlot(Base):
+    """팀의 악기 자리 하나. (팀 + 악기 + 몇 번째) 가 자리를 가리키고, member_id 가
+    그 자리에 앉은 사람이다.
 
-    status 가 "pending" 인 행은 아직 소속이 아니라 신청이다 — 명단·인원 수·게시판·
-    예약·배정 명단 어디에도 들어가지 않는다. 유일 조건은 두 상태를 가리지 않으므로
-    신청과 소속이 겹쳐 생기지도 않는다.
+    member_id 가 비어 있으면 아직 아무도 안 앉은 자리다 — 팀을 만들 때 자리부터
+    생기고 사람은 나중에 채우므로, 사람이 없는 자리가 정상 상태다. 그래서 이 표는
+    "소속"이 아니라 "자리"다.
+
+    사람이 지워지면 그 자리는 비워지되 사라지지는 않는다 — 자리는 팀의 구성이라
+    사람이 나갔다고 팀에 구멍이 나면 안 된다.
+
+    한 사람이 같은 팀의 두 자리를 겸할 수 없다. 겸하면 배정 계산이 그 사람을 같은
+    시간에 두 번 세게 된다. 빈 자리끼리는 이 조건에 걸리지 않는다 — 저장소가 빈 값을
+    서로 다른 값으로 보기 때문이다.
     """
 
-    __tablename__ = "memberships"
+    __tablename__ = "team_slots"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    member_id: Mapped[int] = mapped_column(
-        ForeignKey("members.id", ondelete="CASCADE")
-    )
     team_id: Mapped[int] = mapped_column(ForeignKey("teams.id", ondelete="CASCADE"))
-    position_id: Mapped[int] = mapped_column(
-        ForeignKey("positions.id", ondelete="RESTRICT")
+    instrument: Mapped[Instrument] = mapped_column(Text)
+    ordinal: Mapped[int] = mapped_column()
+    member_id: Mapped[int | None] = mapped_column(
+        ForeignKey("members.id", ondelete="SET NULL"), nullable=True
     )
-    status: Mapped[MembershipStatus] = mapped_column(Text, server_default="approved")
 
     __table_args__ = (
-        UniqueConstraint("member_id", "team_id"),
-        CheckConstraint(_in_sql("status", MEMBERSHIP_STATUSES)),
+        UniqueConstraint("team_id", "instrument", "ordinal"),
+        UniqueConstraint("team_id", "member_id"),
+        CheckConstraint(_in_sql("instrument", INSTRUMENTS)),
+        CheckConstraint("ordinal >= 1"),
     )
-
-
-class MemberPosition(Base):
-    """가입할 때 고른 포지션. 팀마다 다른 Membership.position_id와 달리 팀에 매이지
-    않는, 계정 전체 기준의 포지션 목록이라 다대다 표를 따로 둔다."""
-
-    __tablename__ = "member_positions"
-
-    id: Mapped[int] = mapped_column(primary_key=True)
-    member_id: Mapped[int] = mapped_column(
-        ForeignKey("members.id", ondelete="CASCADE")
-    )
-    position_id: Mapped[int] = mapped_column(
-        ForeignKey("positions.id", ondelete="RESTRICT")
-    )
-
-    __table_args__ = (UniqueConstraint("member_id", "position_id"),)
 
 
 class UnavailableTime(Base):

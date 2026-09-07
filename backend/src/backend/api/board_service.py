@@ -4,7 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from backend.api.board_input import require_non_empty
-from backend.db.models import Comment, Member, Membership, Post, Team
+from backend.db.models import Comment, Member, Post, Team, TeamSlot
 
 PostRow = tuple[Post, str, int]
 CommentRow = tuple[Comment, str]
@@ -20,10 +20,9 @@ def _require_team_member(session: Session, team_id: int, member_id: int) -> None
     # 아예 없는 경우(ValueError)와는 사람이 다음에 할 일이 다르므로 구분한다.
     # 승인 대기(status="pending")는 아직 소속이 아니라 신청이므로 통과시키지 않는다.
     row = session.execute(
-        select(Membership.id).where(
-            Membership.team_id == team_id,
-            Membership.member_id == member_id,
-            Membership.status == "approved",
+        select(TeamSlot.id).where(
+            TeamSlot.team_id == team_id,
+            TeamSlot.member_id == member_id,
         )
     ).first()
     if row is None:

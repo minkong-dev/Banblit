@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from backend.api import auto_assign
 from backend.api.period_service import assign_period
-from backend.db.models import Membership, Notification, Period, Position, Room, Team
+from backend.db.models import Notification, Period, Room, Team, TeamSlot
 
 # account 픽스처를 부른 순서가 곧 역할이다 — 이 파일의 첫 호출이 헤드매니저다.
 from conftest import AccountFactory
@@ -38,14 +38,11 @@ def _period(session: Session) -> int:
 
 
 def _team_with(session: Session, name: str, member_id: int) -> int:
-    position_id = session.scalars(
-        select(Position.id).where(Position.name == "보컬")
-    ).one()
     team = Team(name=name)
     session.add(team)
     session.flush()
     session.add(
-        Membership(member_id=member_id, team_id=team.id, position_id=position_id)
+        TeamSlot(team_id=team.id, instrument="보컬", ordinal=1, member_id=member_id)
     )
     session.flush()
     return team.id

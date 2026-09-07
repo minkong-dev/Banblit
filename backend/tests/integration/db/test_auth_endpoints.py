@@ -11,7 +11,7 @@ SIGNUP_BODY = {
     "name": "박서연",
     "email": "seoyeon@example.com",
     "password": "password123",
-    "positions": ["보컬"],
+    "cohort": 46,
 }
 
 SESSION_COOKIE = "banblit_session"
@@ -49,7 +49,7 @@ def test_signup_creates_an_account_and_does_not_return_a_token(
     account = body["account"]
     assert account["name"] == "박서연"
     assert account["email"] == "seoyeon@example.com"
-    assert account["positions"] == ["보컬"]
+    assert account["cohort"] == 46
     assert "token" not in body
 
 
@@ -115,14 +115,15 @@ def test_signup_rejects_a_short_password(api_client: TestClient) -> None:
     assert response.status_code == 422
 
 
-def test_signup_rejects_an_unknown_position(api_client: TestClient) -> None:
-    response = api_client.post("/signup", json={**SIGNUP_BODY, "positions": ["없는포지션"]})
+def test_signup_rejects_a_cohort_out_of_range(api_client: TestClient) -> None:
+    """기수는 숫자만 받되 오타로 들어온 큰 수는 막는다."""
+    response = api_client.post("/signup", json={**SIGNUP_BODY, "cohort": 9999})
 
     assert response.status_code == 422
 
 
-def test_signup_rejects_an_empty_position_list(api_client: TestClient) -> None:
-    response = api_client.post("/signup", json={**SIGNUP_BODY, "positions": []})
+def test_signup_rejects_a_cohort_below_one(api_client: TestClient) -> None:
+    response = api_client.post("/signup", json={**SIGNUP_BODY, "cohort": 0})
 
     assert response.status_code == 422
 

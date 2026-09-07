@@ -4,165 +4,162 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 from backend.api.roster_service import commit_roster
-from backend.db.models import Member, Membership, Position, Team
+from backend.db.models import Member, Team, TeamSlot
 
 # account 픽스처(tests/conftest.py)를 부른 순서가 곧 역할이다 — 첫 호출이 헤드매니저,
 # 그 뒤는 일반멤버다. 일반멤버 계정이 필요한 검사는 헤드매니저를 먼저 만들어야 한다.
-from conftest import AccountFactory
+from conftest import AccountFactory, seat
 
 
-def _team(session: Session, name: str, join_policy: str = "auto") -> Team:
-    team = Team(name=name, join_policy=join_policy)
+def _team(session: Session, name: str, slots: int = 0) -> Team:
+    """팀 하나와 빈 보컬 자리 slots 개를 만든다."""
+    team = Team(name=name)
     session.add(team)
+    session.flush()
+    for ordinal in range(1, slots + 1):
+        session.add(
+            TeamSlot(team_id=team.id, instrument="보컬", ordinal=ordinal)
+        )
     session.flush()
     return team
 
 
-def _member(session: Session, name: str) -> Member:
-    """로그인과 무관한, 소속만 있는 사람 — 순수 SQLAlchemy 객체로 넣는다."""
-    member = Member(name=name)
+def _member(session: Session, name: str, cohort: int | None = None) -> Member:
+    """로그인과 무관한, 명단에만 있는 사람 — 순수 SQLAlchemy 객체로 넣는다."""
+    member = Member(name=name, cohort=cohort)
     session.add(member)
     session.flush()
     return member
 
 
-def _position_id(session: Session, name: str = "보컬") -> int:
-    return session.scalars(select(Position.id).where(Position.name == name)).one()
+def _slot_ids(api_client: TestClient, cookies: dict[str, str], team_id: int) -> list[int]:
+    body = api_client.get(f"/teams/{team_id}/slots", cookies=cookies).json()
+    return [slot["id"] for slot in body["slots"]]
 
 
-def _join(
-    session: Session,
-    member_id: int,
-    team: Team,
-    position_name: str,
-    status: str = "approved",
-) -> None:
-    session.add(
-        Membership(
-            member_id=member_id,
-            team_id=team.id,
-            position_id=_position_id(session, position_name),
-            status=status,
-        )
-    )
-    session.flush()
+# ── 팀 목록 ────────────────────────────────────────────────────────────────
 
 
 def test_teams_list_requires_authentication(api_client: TestClient) -> None:
-    response = api_client.get("/teams")
-
-    assert response.status_code == 401
+    assert api_client.get("/teams").status_code == 401
 
 
 def test_teams_list_is_empty_when_no_teams(
     api_client: TestClient, account: AccountFactory
 ) -> None:
-    _, head = account("박서연", "head@example.com")
+    _, cookies = account("박서연", "head@example.com")
 
-    response = api_client.get("/teams", cookies=head)
+    body = api_client.get("/teams", cookies=cookies).json()
 
-    assert response.status_code == 200
-    assert response.json()["teams"] == []
+    assert body["teams"] == []
 
 
-def test_teams_are_listed_in_id_order_with_member_counts(
+def test_teams_carry_both_slot_count_and_filled_count(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    reader_id, reader = account("박서연", "head@example.com")
-    second = _team(db_session, "파랑주의보")
-    first = _team(db_session, "새벽 네시")
-    _join(db_session, reader_id, first, "보컬")
+    """자리 수와 앉은 수를 함께 준다 — 하나만 주면 몇 자리 비었는지 화면이 모른다."""
+    _, cookies = account("박서연", "head@example.com")
+    team = _team(db_session, "청산", slots=3)
+    seat(db_session, team.id, _member(db_session, "황찬우").id, instrument="일렉")
     db_session.commit()
 
-    response = api_client.get("/teams", cookies=reader)
+    teams = api_client.get("/teams", cookies=cookies).json()["teams"]
 
-    assert response.status_code == 200
-    teams = response.json()["teams"]
-    assert [t["id"] for t in teams] == sorted([second.id, first.id])
-    by_id = {t["id"]: t for t in teams}
-    assert by_id[first.id]["member_count"] == 1
-    assert by_id[second.id]["member_count"] == 0
+    assert teams[0]["slot_count"] == 4
+    assert teams[0]["filled_count"] == 1
 
 
-def test_team_members_read_requires_authentication(
+# ── 자리 목록 ──────────────────────────────────────────────────────────────
+
+
+def test_team_slots_read_requires_authentication(
     api_client: TestClient, db_session: Session
 ) -> None:
-    team = _team(db_session, "새벽 네시")
+    team = _team(db_session, "청산", slots=1)
     db_session.commit()
 
-    response = api_client.get(f"/teams/{team.id}/members")
-
-    assert response.status_code == 401
+    assert api_client.get(f"/teams/{team.id}/slots").status_code == 401
 
 
-def test_team_members_are_listed_with_positions(
+def test_empty_slots_are_listed_too(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, reader = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시")
-    second = _member(db_session, "이도현")
-    first = _member(db_session, "정하윤")
-    _join(db_session, second.id, team, "기타")
-    _join(db_session, first.id, team, "보컬")
+    """빈 자리를 빼면 화면이 채워야 할 곳을 보여줄 수 없다."""
+    _, cookies = account("박서연", "head@example.com")
+    team = _team(db_session, "청산", slots=1)
+    seat(db_session, team.id, _member(db_session, "황찬우", cohort=44).id)
     db_session.commit()
 
-    response = api_client.get(f"/teams/{team.id}/members", cookies=reader)
+    slots = api_client.get(f"/teams/{team.id}/slots", cookies=cookies).json()["slots"]
 
-    assert response.status_code == 200
-    members = response.json()["members"]
-    assert [m["id"] for m in members] == sorted([second.id, first.id])
-    by_id = {m["id"]: m for m in members}
-    assert by_id[first.id]["positions"] == ["보컬"]
-    assert by_id[second.id]["positions"] == ["기타"]
+    assert len(slots) == 2
+    filled = [slot for slot in slots if slot["member_id"] is not None]
+    assert len(filled) == 1
+    assert filled[0]["member_name"] == "황찬우"
+    assert filled[0]["member_cohort"] == 44
 
 
-def test_team_members_list_is_empty_for_a_team_with_no_members(
+def test_team_slots_endpoint_rejects_an_unknown_team(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, cookies = account("박서연", "head@example.com")
+
+    assert api_client.get("/teams/9999/slots", cookies=cookies).status_code == 422
+
+
+def test_team_members_lists_only_seated_people(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, reader = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시")
+    _, cookies = account("박서연", "head@example.com")
+    team = _team(db_session, "청산", slots=2)
+    seat(db_session, team.id, _member(db_session, "황찬우").id, instrument="일렉")
     db_session.commit()
 
-    response = api_client.get(f"/teams/{team.id}/members", cookies=reader)
+    members = api_client.get(f"/teams/{team.id}/members", cookies=cookies).json()
 
-    assert response.status_code == 200
-    assert response.json()["members"] == []
+    assert [member["name"] for member in members["members"]] == ["황찬우"]
 
 
-def test_team_members_endpoint_rejects_an_unknown_team(
-    api_client: TestClient, account: AccountFactory
+# ── 사람 검색(돋보기) ──────────────────────────────────────────────────────
+
+
+def test_member_search_requires_authentication(api_client: TestClient) -> None:
+    assert api_client.get("/members/search?q=박").status_code == 401
+
+
+def test_member_search_returns_nothing_for_an_empty_query(
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, reader = account("박서연", "head@example.com")
+    """빈 검색어에 전체를 주면 명단을 통째로 내주는 통로가 된다."""
+    _, cookies = account("박서연", "head@example.com")
+    _member(db_session, "황찬우")
+    db_session.commit()
 
-    response = api_client.get("/teams/999999/members", cookies=reader)
+    body = api_client.get("/members/search?q=", cookies=cookies).json()
 
-    assert response.status_code == 422
-    assert "팀" in response.json()["detail"]
-
-
-def test_positions_read_requires_authentication(api_client: TestClient) -> None:
-    response = api_client.get("/positions")
-
-    assert response.status_code == 401
+    assert body["members"] == []
 
 
-def test_positions_are_listed_in_id_order(
-    api_client: TestClient, account: AccountFactory
+def test_member_search_finds_by_partial_name_with_cohort(
+    api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, reader = account("박서연", "head@example.com")
+    """동명이인은 기수로 가른다 — 검색 결과에 기수가 함께 실려야 고를 수 있다."""
+    _, cookies = account("박서연", "head@example.com")
+    _member(db_session, "박민경", cohort=47)
+    _member(db_session, "박민경", cohort=49)
+    _member(db_session, "황찬우", cohort=44)
+    db_session.commit()
 
-    response = api_client.get("/positions", cookies=reader)
+    members = api_client.get("/members/search?q=박민경", cookies=cookies).json()["members"]
 
-    assert response.status_code == 200
-    positions = response.json()["positions"]
-    ids = [p["id"] for p in positions]
-    assert ids == sorted(ids)
-    names = {p["name"] for p in positions}
-    assert {"보컬", "기타", "베이스", "드럼", "키보드"} <= names
+    assert sorted(member["cohort"] for member in members) == [47, 49]
+
+
+# ── 팀 만들기 ──────────────────────────────────────────────────────────────
 
 
 def test_team_creation_requires_authentication(api_client: TestClient) -> None:
-    response = api_client.post("/teams", json={"name": "새 팀"})
+    response = api_client.post("/teams", json={"name": "청산", "slots": {"보컬": 1}})
 
     assert response.status_code == 401
 
@@ -171,38 +168,99 @@ def test_team_creation_rejects_a_plain_member(
     api_client: TestClient, account: AccountFactory
 ) -> None:
     account("박서연", "head@example.com")
-    _, plain = account("김민수", "m@example.com")
+    _, plain = account("이도현", "member@example.com")
 
-    response = api_client.post("/teams", json={"name": "새 팀"}, cookies=plain)
+    response = api_client.post(
+        "/teams", json={"name": "청산", "slots": {"보컬": 1}}, cookies=plain
+    )
 
     assert response.status_code == 403
 
 
-def test_team_is_created_with_a_name(
+def test_team_is_created_with_its_instrument_slots(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """팀과 자리가 한 번에 들어간다 — 자리 없는 팀이 잠깐이라도 저장되면 안 된다."""
+    _, head = account("박서연", "head@example.com")
+
+    created = api_client.post(
+        "/teams",
+        json={"name": "불꽃놀이", "slots": {"일렉": 2, "드럼": 1, "보컬": 0}},
+        cookies=head,
+    )
+
+    assert created.status_code == 201
+    team_id = created.json()["team"]["id"]
+    slots = api_client.get(f"/teams/{team_id}/slots", cookies=head).json()["slots"]
+    assert sorted((slot["instrument"], slot["ordinal"]) for slot in slots) == [
+        ("드럼", 1),
+        ("일렉", 1),
+        ("일렉", 2),
+    ]
+    assert all(slot["member_id"] is None for slot in slots)
+
+
+def test_team_creation_rejects_an_unknown_instrument(
     api_client: TestClient, account: AccountFactory
 ) -> None:
     _, head = account("박서연", "head@example.com")
 
-    response = api_client.post("/teams", json={"name": "새 팀"}, cookies=head)
+    response = api_client.post(
+        "/teams", json={"name": "청산", "slots": {"하프": 1}}, cookies=head
+    )
 
-    assert response.status_code == 201
-    team = response.json()["team"]
-    assert team["name"] == "새 팀"
-    assert team["member_count"] == 0
-    assert isinstance(team["id"], int)
+    assert response.status_code == 422
+
+
+def test_team_creation_rejects_zero_slots(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+
+    response = api_client.post(
+        "/teams", json={"name": "청산", "slots": {"보컬": 0}}, cookies=head
+    )
+
+    assert response.status_code == 422
+
+
+def test_team_creation_rejects_more_slots_than_the_engine_takes(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """배정 계산이 팀당 10명까지만 받는다 — 그보다 많은 자리는 만들어도 못 쓴다."""
+    _, head = account("박서연", "head@example.com")
+
+    response = api_client.post(
+        "/teams", json={"name": "청산", "slots": {"보컬": 11}}, cookies=head
+    )
+
+    assert response.status_code == 422
 
 
 def test_team_creation_rejects_a_duplicate_name(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account("박서연", "head@example.com")
-    _team(db_session, "새벽 네시")
+    _team(db_session, "청산")
     db_session.commit()
 
-    response = api_client.post("/teams", json={"name": "새벽 네시"}, cookies=head)
+    response = api_client.post(
+        "/teams", json={"name": "청산", "slots": {"보컬": 1}}, cookies=head
+    )
 
     assert response.status_code == 422
-    assert "이미" in response.json()["detail"]
+
+
+def test_team_creation_trims_surrounding_whitespace(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+
+    body = api_client.post(
+        "/teams", json={"name": "  청산  ", "slots": {"보컬": 1}}, cookies=head
+    ).json()
+
+    assert body["team"]["name"] == "청산"
 
 
 def test_team_creation_rejects_a_whitespace_only_name(
@@ -210,63 +268,48 @@ def test_team_creation_rejects_a_whitespace_only_name(
 ) -> None:
     _, head = account("박서연", "head@example.com")
 
-    response = api_client.post("/teams", json={"name": "   "}, cookies=head)
+    response = api_client.post(
+        "/teams", json={"name": "   ", "slots": {"보컬": 1}}, cookies=head
+    )
 
     assert response.status_code == 422
-    assert "팀 이름" in response.json()["detail"]
-
-
-def test_team_creation_trims_surrounding_whitespace_from_the_name(
-    api_client: TestClient, account: AccountFactory
-) -> None:
-    _, head = account("박서연", "head@example.com")
-
-    response = api_client.post("/teams", json={"name": "  파랑주의보  "}, cookies=head)
-
-    assert response.status_code == 201
-    assert response.json()["team"]["name"] == "파랑주의보"
 
 
 def test_team_name_race_at_commit_time_is_translated_not_500(
     test_engine: Engine, db_session: Session
 ) -> None:
-    """room_service.test_room_name_race_at_commit_time_is_translated_not_500 과 같은
-    얼개다. 이름 중복 사전 검사와 commit 사이의 경합에서 실제로 나는 예외를 흉내낸다."""
-    session_a = Session(test_engine)
-    session_b = Session(test_engine)
-    try:
-        session_a.add(Team(name="경합팀"))
-        commit_roster(session_a)
+    """사전 검사와 commit 사이에는 잠금이 없다 — 나중 커밋이 제약에 걸린다."""
+    db_session.add(Team(name="청산"))
+    db_session.commit()
 
-        session_b.add(Team(name="경합팀"))
+    with Session(test_engine) as other:
+        other.add(Team(name="청산"))
         with pytest.raises(ValueError, match="이미 있는 팀 이름입니다"):
-            commit_roster(session_b)
-    finally:
-        session_a.close()
-        session_b.close()
+            commit_roster(other)
+
+
+# ── 팀 이름 고치기 ─────────────────────────────────────────────────────────
 
 
 def test_team_patch_requires_authentication(
     api_client: TestClient, db_session: Session
 ) -> None:
-    team = _team(db_session, "새벽 네시")
+    team = _team(db_session, "청산")
     db_session.commit()
 
-    response = api_client.patch(f"/teams/{team.id}", json={"name": "새벽 다섯시"})
-
-    assert response.status_code == 401
+    assert api_client.patch(f"/teams/{team.id}", json={"name": "곰팡이"}).status_code == 401
 
 
 def test_team_patch_rejects_a_plain_member(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     account("박서연", "head@example.com")
-    _, plain = account("김민수", "m@example.com")
-    team = _team(db_session, "새벽 네시")
+    _, plain = account("이도현", "member@example.com")
+    team = _team(db_session, "청산")
     db_session.commit()
 
     response = api_client.patch(
-        f"/teams/{team.id}", json={"name": "새벽 다섯시"}, cookies=plain
+        f"/teams/{team.id}", json={"name": "곰팡이"}, cookies=plain
     )
 
     assert response.status_code == 403
@@ -276,59 +319,41 @@ def test_team_name_is_patched(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시")
+    team = _team(db_session, "청산", slots=2)
     db_session.commit()
 
-    response = api_client.patch(
-        f"/teams/{team.id}", json={"name": "새벽 다섯시"}, cookies=head
-    )
+    body = api_client.patch(
+        f"/teams/{team.id}", json={"name": "곰팡이"}, cookies=head
+    ).json()
 
-    assert response.status_code == 200
-    assert response.json()["team"]["name"] == "새벽 다섯시"
-
-
-def test_team_patch_reflects_the_current_member_count(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    _, head = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시")
-    member = _member(db_session, "이도현")
-    _join(db_session, member.id, team, "기타")
-    db_session.commit()
-
-    response = api_client.patch(
-        f"/teams/{team.id}", json={"name": "새벽 다섯시"}, cookies=head
-    )
-
-    assert response.status_code == 200
-    assert response.json()["team"]["member_count"] == 1
+    assert body["team"]["name"] == "곰팡이"
+    assert body["team"]["slot_count"] == 2
 
 
 def test_team_patch_rejects_a_name_already_used_by_another_team(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account("박서연", "head@example.com")
-    _team(db_session, "새벽 네시")
-    other = _team(db_session, "파랑주의보")
+    _team(db_session, "청산")
+    other = _team(db_session, "곰팡이")
     db_session.commit()
 
     response = api_client.patch(
-        f"/teams/{other.id}", json={"name": "새벽 네시"}, cookies=head
+        f"/teams/{other.id}", json={"name": "청산"}, cookies=head
     )
 
     assert response.status_code == 422
-    assert "이미" in response.json()["detail"]
 
 
 def test_team_patch_keeping_its_own_name_is_not_rejected(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시")
+    team = _team(db_session, "청산")
     db_session.commit()
 
     response = api_client.patch(
-        f"/teams/{team.id}", json={"name": "새벽 네시"}, cookies=head
+        f"/teams/{team.id}", json={"name": "청산"}, cookies=head
     )
 
     assert response.status_code == 200
@@ -339,611 +364,202 @@ def test_team_patch_of_unknown_id_is_rejected(
 ) -> None:
     _, head = account("박서연", "head@example.com")
 
-    response = api_client.patch("/teams/999999", json={"name": "없는팀"}, cookies=head)
+    response = api_client.patch("/teams/9999", json={"name": "청산"}, cookies=head)
 
     assert response.status_code == 422
-    assert "팀" in response.json()["detail"]
 
 
-def test_join_requires_authentication(
+# ── 자리에 사람 앉히기 ─────────────────────────────────────────────────────
+
+
+def test_seating_requires_authentication(
     api_client: TestClient, db_session: Session
 ) -> None:
-    team = _team(db_session, "새벽 네시")
+    team = _team(db_session, "청산", slots=1)
+    slot = db_session.scalars(select(TeamSlot)).one()
     db_session.commit()
-    position_id = _position_id(db_session, "보컬")
 
-    response = api_client.post(
-        f"/teams/{team.id}/members", json={"position_id": position_id}
+    response = api_client.put(
+        f"/teams/{team.id}/slots/{slot.id}", json={"member_id": 1}
     )
 
     assert response.status_code == 401
 
 
-def test_member_joins_a_team_with_a_position(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    joiner_id, joiner = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시")
-    db_session.commit()
-    position_id = _position_id(db_session, "보컬")
-
-    response = api_client.post(
-        f"/teams/{team.id}/members", json={"position_id": position_id}, cookies=joiner
-    )
-
-    assert response.status_code == 201
-    membership = response.json()["membership"]
-    assert membership["member_id"] == joiner_id
-    assert membership["member_name"] == "박서연"
-    assert membership["team_id"] == team.id
-    assert membership["position"] == "보컬"
-
-
-def test_join_puts_in_the_cookie_owner_even_if_another_id_is_sent(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    """남을 대신 넣는 길은 없다 — 본문에 남의 번호를 실어도 쿠키의 주인이 들어간다."""
-    head_id, _ = account("박서연", "head@example.com")
-    joiner_id, joiner = account("김민수", "m@example.com")
-    team = _team(db_session, "새벽 네시")
-    db_session.commit()
-    position_id = _position_id(db_session, "보컬")
-
-    response = api_client.post(
-        f"/teams/{team.id}/members",
-        json={"member_id": head_id, "position_id": position_id},
-        cookies=joiner,
-    )
-
-    assert response.status_code == 201
-    assert response.json()["membership"]["member_id"] == joiner_id
-
-
-def test_join_rejects_an_unknown_team(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    _, joiner = account("박서연", "head@example.com")
-    position_id = _position_id(db_session, "보컬")
-
-    response = api_client.post(
-        "/teams/999999/members", json={"position_id": position_id}, cookies=joiner
-    )
-
-    assert response.status_code == 422
-    assert "팀" in response.json()["detail"]
-
-
-def test_join_rejects_an_unknown_position(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    _, joiner = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시")
-    db_session.commit()
-
-    response = api_client.post(
-        f"/teams/{team.id}/members", json={"position_id": 999999}, cookies=joiner
-    )
-
-    assert response.status_code == 422
-    assert "포지션" in response.json()["detail"]
-
-
-def test_join_rejects_a_member_already_in_the_team(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    joiner_id, joiner = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시")
-    _join(db_session, joiner_id, team, "보컬")
-    db_session.commit()
-    position_id = _position_id(db_session, "기타")
-
-    response = api_client.post(
-        f"/teams/{team.id}/members", json={"position_id": position_id}, cookies=joiner
-    )
-
-    assert response.status_code == 422
-    assert "이미" in response.json()["detail"]
-
-
-def test_leave_requires_authentication(
-    api_client: TestClient, db_session: Session
-) -> None:
-    team = _team(db_session, "새벽 네시")
-    member = _member(db_session, "박서연")
-    _join(db_session, member.id, team, "보컬")
-    db_session.commit()
-
-    response = api_client.delete(f"/teams/{team.id}/members/{member.id}")
-
-    assert response.status_code == 401
-
-
-def test_member_leaves_a_team(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    leaver_id, leaver = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시")
-    _join(db_session, leaver_id, team, "보컬")
-    db_session.commit()
-
-    response = api_client.delete(
-        f"/teams/{team.id}/members/{leaver_id}", cookies=leaver
-    )
-
-    assert response.status_code == 204
-    remaining = db_session.execute(
-        select(Membership).where(
-            Membership.team_id == team.id, Membership.member_id == leaver_id
-        )
-    ).first()
-    assert remaining is None
-
-
-def test_head_manager_removes_someone_elses_membership(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    _, head = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시")
-    target = _member(db_session, "이도현")
-    _join(db_session, target.id, team, "기타")
-    db_session.commit()
-
-    response = api_client.delete(
-        f"/teams/{team.id}/members/{target.id}", cookies=head
-    )
-
-    assert response.status_code == 204
-
-
-def test_plain_member_cannot_remove_someone_elses_membership(
+def test_seating_rejects_a_plain_member(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     account("박서연", "head@example.com")
-    actor_id, actor = account("김민수", "m@example.com")
-    team = _team(db_session, "새벽 네시")
-    target = _member(db_session, "이도현")
-    _join(db_session, actor_id, team, "보컬")
-    _join(db_session, target.id, team, "기타")
+    other_id, plain = account("이도현", "member@example.com")
+    team = _team(db_session, "청산", slots=1)
     db_session.commit()
+    slot_id = _slot_ids(api_client, plain, team.id)[0]
 
-    response = api_client.delete(
-        f"/teams/{team.id}/members/{target.id}", cookies=actor
-    )
-
-    assert response.status_code == 403
-    remaining = db_session.execute(
-        select(Membership).where(
-            Membership.team_id == team.id, Membership.member_id == target.id
-        )
-    ).first()
-    assert remaining is not None
-
-
-def test_leave_rejects_a_member_not_in_the_team(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    leaver_id, leaver = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시")
-    db_session.commit()
-
-    response = api_client.delete(
-        f"/teams/{team.id}/members/{leaver_id}", cookies=leaver
-    )
-
-    assert response.status_code == 422
-    assert "소속이 아닙니다" in response.json()["detail"]
-
-
-def test_leave_rejects_an_unknown_team(
-    api_client: TestClient, account: AccountFactory
-) -> None:
-    leaver_id, leaver = account("박서연", "head@example.com")
-
-    response = api_client.delete(f"/teams/999999/members/{leaver_id}", cookies=leaver)
-
-    assert response.status_code == 422
-    assert "팀" in response.json()["detail"]
-
-
-def test_joining_an_auto_team_is_immediate(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    joiner_id, joiner = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="auto")
-    db_session.commit()
-    position_id = _position_id(db_session, "보컬")
-
-    response = api_client.post(
-        f"/teams/{team.id}/members", json={"position_id": position_id}, cookies=joiner
-    )
-
-    assert response.status_code == 201
-    assert response.json()["membership"]["status"] == "approved"
-    listed = api_client.get(f"/teams/{team.id}/members", cookies=joiner)
-    assert [m["id"] for m in listed.json()["members"]] == [joiner_id]
-
-
-def test_joining_an_approval_team_only_files_a_request(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    _, head = account("박서연", "head@example.com")
-    joiner_id, joiner = account("김민수", "m@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
-    db_session.commit()
-    position_id = _position_id(db_session, "기타")
-
-    response = api_client.post(
-        f"/teams/{team.id}/members", json={"position_id": position_id}, cookies=joiner
-    )
-
-    assert response.status_code == 201
-    assert response.json()["membership"]["status"] == "pending"
-    listed = api_client.get(f"/teams/{team.id}/members", cookies=joiner)
-    assert listed.json()["members"] == []
-    requests = api_client.get(f"/teams/{team.id}/join-requests", cookies=head)
-    assert requests.status_code == 200
-    assert requests.json()["join_requests"] == [
-        {"member_id": joiner_id, "member_name": "김민수", "position": "기타"}
-    ]
-
-
-def test_pending_people_are_not_counted_in_the_member_count(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    _, head = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
-    waiting = _member(db_session, "이도현")
-    joined = _member(db_session, "정하윤")
-    _join(db_session, waiting.id, team, "기타", status="pending")
-    _join(db_session, joined.id, team, "보컬")
-    db_session.commit()
-
-    response = api_client.get("/teams", cookies=head)
-
-    assert response.status_code == 200
-    by_id = {t["id"]: t for t in response.json()["teams"]}
-    assert by_id[team.id]["member_count"] == 1
-
-
-def test_join_requests_list_needs_the_join_approve_permission(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    account("박서연", "head@example.com")
-    _, plain = account("김민수", "m@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
-    db_session.commit()
-
-    response = api_client.get(f"/teams/{team.id}/join-requests", cookies=plain)
-
-    assert response.status_code == 403
-
-
-def test_approving_a_request_puts_the_person_on_the_roster(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    _, head = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
-    waiting = _member(db_session, "이도현")
-    _join(db_session, waiting.id, team, "기타", status="pending")
-    db_session.commit()
-
-    response = api_client.post(
-        f"/teams/{team.id}/join-requests/{waiting.id}/approve", cookies=head
-    )
-
-    assert response.status_code == 200
-    listed = api_client.get(f"/teams/{team.id}/members", cookies=head)
-    assert [m["id"] for m in listed.json()["members"]] == [waiting.id]
-    left = api_client.get(f"/teams/{team.id}/join-requests", cookies=head)
-    assert left.json()["join_requests"] == []
-
-
-def test_approving_needs_the_join_approve_permission(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    account("박서연", "head@example.com")
-    _, plain = account("김민수", "m@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
-    waiting = _member(db_session, "이도현")
-    _join(db_session, waiting.id, team, "기타", status="pending")
-    db_session.commit()
-
-    response = api_client.post(
-        f"/teams/{team.id}/join-requests/{waiting.id}/approve", cookies=plain
+    response = api_client.put(
+        f"/teams/{team.id}/slots/{slot_id}",
+        json={"member_id": other_id},
+        cookies=plain,
     )
 
     assert response.status_code == 403
 
 
-def test_rejecting_a_request_removes_it(
+def test_a_member_is_seated(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
-    waiting = _member(db_session, "이도현")
-    _join(db_session, waiting.id, team, "기타", status="pending")
+    team = _team(db_session, "청산", slots=1)
+    member = _member(db_session, "황찬우", cohort=44)
     db_session.commit()
+    slot_id = _slot_ids(api_client, head, team.id)[0]
 
-    response = api_client.delete(
-        f"/teams/{team.id}/join-requests/{waiting.id}", cookies=head
-    )
+    body = api_client.put(
+        f"/teams/{team.id}/slots/{slot_id}",
+        json={"member_id": member.id},
+        cookies=head,
+    ).json()
 
-    assert response.status_code == 204
-    left = api_client.get(f"/teams/{team.id}/join-requests", cookies=head)
-    assert left.json()["join_requests"] == []
-    remaining = db_session.execute(
-        select(Membership).where(
-            Membership.team_id == team.id, Membership.member_id == waiting.id
-        )
-    ).first()
-    assert remaining is None
+    assert body["slot"]["member_name"] == "황찬우"
+    assert body["slot"]["member_cohort"] == 44
 
 
-def test_rejecting_needs_the_join_approve_permission(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    account("박서연", "head@example.com")
-    _, plain = account("김민수", "m@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
-    waiting = _member(db_session, "이도현")
-    _join(db_session, waiting.id, team, "기타", status="pending")
-    db_session.commit()
-
-    response = api_client.delete(
-        f"/teams/{team.id}/join-requests/{waiting.id}", cookies=plain
-    )
-
-    assert response.status_code == 403
-
-
-def test_the_same_person_cannot_file_two_requests(
+def test_seating_replaces_whoever_sat_there(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account("박서연", "head@example.com")
-    _, joiner = account("김민수", "m@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
+    team = _team(db_session, "청산", slots=1)
+    first = _member(db_session, "황찬우")
+    second = _member(db_session, "유지후")
     db_session.commit()
-    api_client.post(
-        f"/teams/{team.id}/members",
-        json={"position_id": _position_id(db_session, "보컬")},
-        cookies=joiner,
+    slot_id = _slot_ids(api_client, head, team.id)[0]
+    api_client.put(
+        f"/teams/{team.id}/slots/{slot_id}", json={"member_id": first.id}, cookies=head
     )
 
-    response = api_client.post(
-        f"/teams/{team.id}/members",
-        json={"position_id": _position_id(db_session, "기타")},
-        cookies=joiner,
-    )
+    body = api_client.put(
+        f"/teams/{team.id}/slots/{slot_id}",
+        json={"member_id": second.id},
+        cookies=head,
+    ).json()
 
-    assert response.status_code == 422
-    assert "이미" in response.json()["detail"]
-    left = api_client.get(f"/teams/{team.id}/join-requests", cookies=head)
-    assert len(left.json()["join_requests"]) == 1
+    assert body["slot"]["member_name"] == "유지후"
 
 
-def test_an_approved_member_cannot_file_a_request(
+def test_seating_rejects_someone_already_in_another_slot_of_the_team(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    joiner_id, joiner = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
-    _join(db_session, joiner_id, team, "보컬")
-    db_session.commit()
-
-    response = api_client.post(
-        f"/teams/{team.id}/members",
-        json={"position_id": _position_id(db_session, "기타")},
-        cookies=joiner,
-    )
-
-    assert response.status_code == 422
-    assert "이미" in response.json()["detail"]
-
-
-def test_a_pending_person_cancels_their_own_request(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    """신청 취소는 팀에서 빠지는 통로를 그대로 쓴다 — 대기 중인 자기 행을 지운다."""
-    waiting_id, waiting = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
-    _join(db_session, waiting_id, team, "기타", status="pending")
-    db_session.commit()
-
-    response = api_client.delete(
-        f"/teams/{team.id}/members/{waiting_id}", cookies=waiting
-    )
-
-    assert response.status_code == 204
-    remaining = db_session.execute(
-        select(Membership).where(
-            Membership.team_id == team.id, Membership.member_id == waiting_id
-        )
-    ).first()
-    assert remaining is None
-
-
-def test_the_join_policy_is_switched_through_patch(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
+    """한 사람이 같은 팀의 두 자리를 겸하면 배정이 그 사람을 같은 시간에 두 번 센다."""
     _, head = account("박서연", "head@example.com")
-    _, joiner = account("김민수", "m@example.com")
-    team = _team(db_session, "새벽 네시")
+    team = _team(db_session, "청산", slots=2)
+    member = _member(db_session, "황찬우")
     db_session.commit()
-
-    response = api_client.patch(
-        f"/teams/{team.id}",
-        json={"name": "새벽 네시", "join_policy": "approval"},
+    first_id, second_id = _slot_ids(api_client, head, team.id)
+    api_client.put(
+        f"/teams/{team.id}/slots/{first_id}",
+        json={"member_id": member.id},
         cookies=head,
     )
 
-    assert response.status_code == 200
-    joined = api_client.post(
-        f"/teams/{team.id}/members",
-        json={"position_id": _position_id(db_session, "보컬")},
-        cookies=joiner,
-    )
-    assert joined.json()["membership"]["status"] == "pending"
-
-
-def test_patch_without_a_join_policy_leaves_it_alone(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    _, head = account("박서연", "head@example.com")
-    _, joiner = account("김민수", "m@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
-    db_session.commit()
-
-    response = api_client.patch(
-        f"/teams/{team.id}", json={"name": "파랑주의보"}, cookies=head
-    )
-
-    assert response.status_code == 200
-    joined = api_client.post(
-        f"/teams/{team.id}/members",
-        json={"position_id": _position_id(db_session, "보컬")},
-        cookies=joiner,
-    )
-    assert joined.json()["membership"]["status"] == "pending"
-
-
-def test_patch_rejects_an_unknown_join_policy(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    _, head = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시")
-    db_session.commit()
-
-    response = api_client.patch(
-        f"/teams/{team.id}",
-        json={"name": "새벽 네시", "join_policy": "whenever"},
+    response = api_client.put(
+        f"/teams/{team.id}/slots/{second_id}",
+        json={"member_id": member.id},
         cookies=head,
     )
 
     assert response.status_code == 422
 
 
-def test_team_list_carries_the_join_policy(
+def test_seating_rejects_an_unknown_member(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    _, reader = account("박서연", "head@example.com")
-    auto = _team(db_session, "새벽 네시")
-    approval = _team(db_session, "파랑주의보", join_policy="approval")
+    _, head = account("박서연", "head@example.com")
+    team = _team(db_session, "청산", slots=1)
     db_session.commit()
+    slot_id = _slot_ids(api_client, head, team.id)[0]
 
-    response = api_client.get("/teams", cookies=reader)
+    response = api_client.put(
+        f"/teams/{team.id}/slots/{slot_id}", json={"member_id": 9999}, cookies=head
+    )
 
-    assert response.status_code == 200
-    by_id = {t["id"]: t for t in response.json()["teams"]}
-    assert by_id[auto.id]["join_policy"] == "auto"
-    assert by_id[approval.id]["join_policy"] == "approval"
+    assert response.status_code == 422
 
 
-def test_me_carries_my_memberships_with_their_status(
+def test_seating_rejects_a_slot_from_another_team(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """새로 고쳐도 자기가 어느 팀에 신청해 뒀는지 알 수 있어야 한다."""
-    mine_id, mine = account("박서연", "head@example.com")
-    joined = _team(db_session, "새벽 네시")
-    waiting = _team(db_session, "파랑주의보", join_policy="approval")
-    _join(db_session, mine_id, joined, "보컬")
-    _join(db_session, mine_id, waiting, "기타", status="pending")
+    """자리 번호만 맞고 팀이 다르면 없는 것으로 본다."""
+    _, head = account("박서연", "head@example.com")
+    mine = _team(db_session, "청산", slots=1)
+    other = _team(db_session, "곰팡이", slots=1)
+    member = _member(db_session, "황찬우")
+    db_session.commit()
+    other_slot_id = _slot_ids(api_client, head, other.id)[0]
+
+    response = api_client.put(
+        f"/teams/{mine.id}/slots/{other_slot_id}",
+        json={"member_id": member.id},
+        cookies=head,
+    )
+
+    assert response.status_code == 422
+
+
+# ── 자리 비우기 ────────────────────────────────────────────────────────────
+
+
+def test_clearing_a_slot_requires_authentication(
+    api_client: TestClient, db_session: Session
+) -> None:
+    team = _team(db_session, "청산", slots=1)
+    slot = db_session.scalars(select(TeamSlot)).one()
     db_session.commit()
 
-    response = api_client.get("/me", cookies=mine)
-
-    assert response.status_code == 200
-    assert response.json()["memberships"] == [
-        {
-            "team_id": joined.id,
-            "team_name": "새벽 네시",
-            "position": "보컬",
-            "status": "approved",
-        },
-        {
-            "team_id": waiting.id,
-            "team_name": "파랑주의보",
-            "position": "기타",
-            "status": "pending",
-        },
-    ]
+    assert api_client.delete(f"/teams/{team.id}/slots/{slot.id}").status_code == 401
 
 
-def test_me_carries_an_empty_list_for_someone_in_no_team(
-    api_client: TestClient, account: AccountFactory
-) -> None:
-    _, mine = account("박서연", "head@example.com")
-
-    response = api_client.get("/me", cookies=mine)
-
-    assert response.status_code == 200
-    assert response.json()["memberships"] == []
-
-
-def test_me_does_not_leak_someone_elses_memberships(
+def test_a_member_can_leave_their_own_slot_without_any_permission(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    other_id, _ = account("박서연", "head@example.com")
-    _, mine = account("김민수", "m@example.com")
-    team = _team(db_session, "새벽 네시")
-    _join(db_session, other_id, team, "보컬")
+    """스스로 빠지는 것은 항목이 없어도 된다."""
+    account("박서연", "head@example.com")
+    plain_id, plain = account("이도현", "member@example.com")
+    team = _team(db_session, "청산")
+    seat(db_session, team.id, plain_id)
     db_session.commit()
+    slot_id = _slot_ids(api_client, plain, team.id)[0]
 
-    response = api_client.get("/me", cookies=mine)
+    response = api_client.delete(f"/teams/{team.id}/slots/{slot_id}", cookies=plain)
 
-    assert response.json()["memberships"] == []
+    assert response.status_code == 204
 
 
-def test_a_new_join_request_shows_up_on_me(
+def test_a_plain_member_cannot_clear_someone_elses_slot(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     account("박서연", "head@example.com")
-    _, joiner = account("김민수", "m@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
+    _, plain = account("이도현", "member@example.com")
+    team = _team(db_session, "청산")
+    seat(db_session, team.id, _member(db_session, "황찬우").id)
     db_session.commit()
-    api_client.post(
-        f"/teams/{team.id}/members",
-        json={"position_id": _position_id(db_session, "보컬")},
-        cookies=joiner,
-    )
+    slot_id = _slot_ids(api_client, plain, team.id)[0]
 
-    response = api_client.get("/me", cookies=joiner)
+    response = api_client.delete(f"/teams/{team.id}/slots/{slot_id}", cookies=plain)
 
-    memberships = response.json()["memberships"]
-    assert [m["status"] for m in memberships] == ["pending"]
-    assert memberships[0]["team_id"] == team.id
+    assert response.status_code == 403
 
 
-def test_rejecting_cannot_remove_an_already_approved_membership(
+def test_clearing_keeps_the_slot_itself(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """승인이 먼저 끝난 신청은 거절 통로가 건드리지 못한다 — 소속이 조용히 사라지면 안 된다."""
+    """팀 구성이 바뀐 것이 아니라 사람만 빠진 것이다."""
     _, head = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
-    waiting = _member(db_session, "이도현")
-    _join(db_session, waiting.id, team, "기타", status="pending")
+    team = _team(db_session, "청산")
+    seat(db_session, team.id, _member(db_session, "황찬우").id)
     db_session.commit()
-    api_client.post(f"/teams/{team.id}/join-requests/{waiting.id}/approve", cookies=head)
+    slot_id = _slot_ids(api_client, head, team.id)[0]
 
-    response = api_client.delete(
-        f"/teams/{team.id}/join-requests/{waiting.id}", cookies=head
-    )
+    api_client.delete(f"/teams/{team.id}/slots/{slot_id}", cookies=head)
 
-    assert response.status_code == 422
-    listed = api_client.get(f"/teams/{team.id}/members", cookies=head)
-    assert [m["id"] for m in listed.json()["members"]] == [waiting.id]
-
-
-def test_approving_twice_is_rejected_the_second_time(
-    api_client: TestClient, db_session: Session, account: AccountFactory
-) -> None:
-    _, head = account("박서연", "head@example.com")
-    team = _team(db_session, "새벽 네시", join_policy="approval")
-    waiting = _member(db_session, "이도현")
-    _join(db_session, waiting.id, team, "기타", status="pending")
-    db_session.commit()
-    api_client.post(f"/teams/{team.id}/join-requests/{waiting.id}/approve", cookies=head)
-
-    response = api_client.post(
-        f"/teams/{team.id}/join-requests/{waiting.id}/approve", cookies=head
-    )
-
-    assert response.status_code == 422
+    slots = api_client.get(f"/teams/{team.id}/slots", cookies=head).json()["slots"]
+    assert len(slots) == 1
+    assert slots[0]["member_id"] is None

@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from backend.db.models import Assignment, Membership, Notification
+from backend.db.models import Assignment, Notification, TeamSlot
 
 
 def notify_assignment_updated(
@@ -16,12 +16,12 @@ def notify_assignment_updated(
     소속이 아니므로 넣지 않는다. 한 사람이 여러 팀에 있어도 한 줄만 남는다.
     """
     member_ids = session.scalars(
-        select(Membership.member_id)
-        .join(Assignment, Assignment.team_id == Membership.team_id)
+        select(TeamSlot.member_id)
+        .join(Assignment, Assignment.team_id == TeamSlot.team_id)
         .where(Assignment.period_id == period_id)
-        .where(Membership.status == "approved")
+        .where(TeamSlot.member_id.is_not(None))
         .distinct()
-        .order_by(Membership.member_id)
+        .order_by(TeamSlot.member_id)
     ).all()
     if not member_ids:
         return 0

@@ -14,7 +14,7 @@ from backend.api.period_input import (
 from backend.db.models import (
     Assignment,
     Member,
-    Membership,
+    TeamSlot,
     Period,
     Room,
     Team,
@@ -144,12 +144,12 @@ def _load_members(
 ) -> tuple[dict[int, list[int]], dict[int, str]]:
     # 팀별 멤버 번호 목록과, 번호에서 이름을 찾을 대응표를 함께 돌려준다.
     # 엔진에는 번호만 가고, 이름은 응답을 만들 때만 쓴다.
-    # 승인 대기(status="pending")는 아직 소속이 아니므로 배정 명단에 넣지 않는다.
+    # 사람이 앉지 않은 자리는 배정 명단에 넣지 않는다 — 안쪽 조인이 빈 자리를 거른다.
     rows = session.execute(
-        select(Membership.team_id, Member.id, Member.name)
-        .join(Member, Member.id == Membership.member_id)
-        .where(Membership.team_id.in_(team_ids), Membership.status == "approved")
-        .order_by(Membership.team_id, Member.id)
+        select(TeamSlot.team_id, Member.id, Member.name)
+        .join(Member, Member.id == TeamSlot.member_id)
+        .where(TeamSlot.team_id.in_(team_ids))
+        .order_by(TeamSlot.team_id, Member.id)
     ).all()
     member_ids_by_team: dict[int, list[int]] = {}
     member_names: dict[int, str] = {}

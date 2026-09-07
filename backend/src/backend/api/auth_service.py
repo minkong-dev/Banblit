@@ -6,9 +6,14 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.api.auth_input import require_email, require_name, require_password
+from backend.api.auth_input import (
+    require_cohort,
+    require_email,
+    require_name,
+    require_password,
+)
 from backend.api.permission_service import grant_full_permissions
-from backend.db.models import Member, MemberPosition, Position
+from backend.db.models import Member
 
 # scrypt 는 표준 라이브러리(hashlib)가 제공하는 메모리-하드 KDF다 — bcrypt·argon2용
 # 패키지를 새로 깔지 않고도 비밀번호를 안전하게 저장할 수 있어 이 값들을 쓴다.
@@ -72,15 +77,6 @@ def _needs_rehash(stored: str) -> bool:
     return (int(n_text), int(r_text), int(p_text)) != (_SCRYPT_N, _SCRYPT_R, _SCRYPT_P)
 
 
-def _resolve_positions(session: Session, names: list[str]) -> list[Position]:
-    rows = list(session.scalars(select(Position).where(Position.name.in_(names))).all())
-    found = {position.name for position in rows}
-    missing = [name for name in names if name not in found]
-    if missing:
-        raise ValueError("알 수 없는 포지션이 있습니다")
-    return rows
-
-
 def _is_first_account(session: Session) -> bool:
     # 권한을 가진 사람은 인원을 고정하지 않지만(.cluedoc/accounts-and-roles), 아무도
     # 없이 시작할 수는 없다. 가장 먼저 가입하는 사람에게 열한 가지를 전부 주어
@@ -105,27 +101,28 @@ def _commit_signup(session: Session) -> None:
 
 
 def signup(
-    session: Session, name: str, email: str, password: str, position_names: list[str]
+    session: Session, name: str, email: str, password: str, cohort: int
 ) -> Member:
-    """새 계정을 만든다. 이름은 중복을 허용하고, 이메일만 겹칠 수 없다."""
+    """새 계정을 만든다. 이름은 중복을 허용하고, 이메일만 겹칠 수 없다.
+
+    기수를 함께 받는 것은 동명이인 때문이다 — 화면에서 두 사람을 가르는 값이 이름 옆의
+    기수뿐이라, 가입할 때 받아 두지 않으면 나중에 채울 길이 없다."""
     clean_name = require_name(name)
     clean_email = require_email(email)
     require_password(password)
-    if not position_names:
-        raise ValueError("포지션을 하나 이상 선택해 주세요")
-    positions = _resolve_positions(session, position_names)
+    clean_cohort = require_cohort(cohort)
     if session.scalar(select(Member.id).where(Member.email == clean_email)) is not None:
         raise ValueError("이미 가입된 이메일입니다")
 
     first = _is_first_account(session)
     member = Member(
-        name=clean_name, email=clean_email, password_hash=hash_password(password)
+        name=clean_name,
+        cohort=clean_cohort,
+        email=clean_email,
+        password_hash=hash_password(password),
     )
     session.add(member)
     session.flush()
-    session.add_all(
-        MemberPosition(member_id=member.id, position_id=position.id) for position in positions
-    )
     # 계정보다 먼저 판정해 둔 first 를 여기서 쓴다 — 위 flush 로 본인이 이미 들어가
     # 있어, 지금 다시 세면 "첫 계정"이 아니게 된다.
     if first:
@@ -149,13 +146,3 @@ def login(session: Session, email: str, password: str) -> Member:
         session.commit()
     return member
 
-
-def list_account_positions(session: Session, member_id: int) -> list[str]:
-    return list(
-        session.scalars(
-            select(Position.name)
-            .join(MemberPosition, MemberPosition.position_id == Position.id)
-            .where(MemberPosition.member_id == member_id)
-            .order_by(Position.id)
-        ).all()
-    )
