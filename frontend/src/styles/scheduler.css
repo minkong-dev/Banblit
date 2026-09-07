@@ -325,7 +325,7 @@ body[data-page="scheduler"] {
   .msg { margin: 13px 0 0; font-size: 14px; color: var(--red); font-weight: 500; min-height: 21px; }
   .tip { margin: 18px 0 0; padding: 15px 17px; background: var(--card-2); border-radius: 13px; font-size: 13px; color: var(--t2); line-height: 1.65; }
 
-  .toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 150%); z-index: 60; padding: 14px 22px; background: var(--t1); color: var(--card); font-size: 14.5px; font-weight: 500; border-radius: 14px; transition: transform .26s cubic-bezier(.22,1,.36,1); }
+  .toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, calc(100% + 26px)); z-index: 60; padding: 14px 22px; background: var(--t1); color: var(--card); font-size: 14.5px; font-weight: 500; border-radius: 14px; transition: transform .26s cubic-bezier(.22,1,.36,1); }
   .toast.on { transform: translate(-50%, 0); }
 
   /* ===== 창이 좁아지면 배치가 바뀐다 ===== */

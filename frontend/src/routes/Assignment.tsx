@@ -2,14 +2,14 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
-import { DevOfflineToggle } from "../components/DevOfflineToggle";
 import { getJSON } from "../lib/api";
 import { runAssignment } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
 import { useMe, useToast } from "../components/hooks";
 import { can, roleLabel } from "../lib/account";
+import { backupLabel, checkRunTimes, runTimeOptions, slotCountLabel } from "../lib/runs";
 import "../styles/assignment.css";
-import type { AssignOut, Period, Room, ScheduleRow, Slot, Team } from "../lib/contract";
+import type { AssignOut, Backup, Period, Room, ScheduleRow, Slot, Team } from "../lib/contract";
 import { datesBetween, dayOf, hhmm, mergeSessions } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
 
@@ -44,6 +44,9 @@ export function Assignment() {
   const queryClient = useQueryClient();
   const [periodId, setPeriodId] = useState<number | null>(null);
   const [view, setView] = useState("now");
+  // 계산 시각은 고친 것만 여기 담는다. 기간을 바꾸면 담긴 번호가 어긋나므로 그때는
+  // 다시 서버 값으로 돌아간다 — useEffect 로 맞추지 않고 그릴 때마다 번호를 견준다.
+  const [runForm, setRunForm] = useState<{ id: number; first: string; second: string } | null>(null);
 
   const periods = useQuery({
     queryKey: ["periods"],
@@ -86,6 +89,8 @@ export function Assignment() {
     onSuccess: async (result) => {
       // 저장까지 끝났으면 확정 시간표를 다시 받아 화면과 서버를 맞춘다.
       await queryClient.invalidateQueries({ queryKey: ["schedule", activePeriodId] });
+      // 저장이 됐으면 이전 시간표가 회차로 밀려나므로 목록도 다시 받는다.
+      await queryClient.invalidateQueries({ queryKey: ["backups", activePeriodId] });
       setView("now");
       say(
         result.assignment.feasible
@@ -106,11 +111,42 @@ export function Assignment() {
     },
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ["schedule", activePeriodId] });
+      // 되돌린 회차는 목록에서 빠진다.
+      await queryClient.invalidateQueries({ queryKey: ["backups", activePeriodId] });
       setView("now");
       say(result.rolled_back ? "직전 배정으로 되돌렸습니다" : "되돌릴 배정이 없습니다");
     },
     // 서버가 거절한 사유를 그대로 보여준다 — 방·시각이 겹쳐 되돌리지 못하는 경우가 있다.
     onError: (error) => say(error instanceof Error ? error.message : "되돌리지 못했습니다"),
+  });
+
+  // 되돌리기 항목이 없으면 이 목록도 부르지 않는다 — 서버가 같은 항목으로 막고 있어
+  // 불러봐야 403 이고, 화면에도 그 칸을 두지 않는다.
+  const canRollbackNow = can(me, "rollback");
+  const backups = useQuery({
+    queryKey: ["backups", activePeriodId],
+    queryFn: () => {
+      if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
+      return getJSON<{ backups: Backup[] }>(`/periods/${activePeriodId}/backups`);
+    },
+    enabled: activePeriodId !== null && canRollbackNow,
+  });
+
+  const saveRunTimes = useMutation({
+    mutationFn: (body: { first_run_at: string; second_run_at: string }) => {
+      if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
+      return getJSON<{ period: Period }>(`/periods/${activePeriodId}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+    },
+    onSuccess: async () => {
+      // 고친 값을 서버에서 다시 받아 화면과 맞춘다. 받아온 뒤에는 고친 자국을 버린다.
+      await queryClient.invalidateQueries({ queryKey: ["periods"] });
+      setRunForm(null);
+      say("계산 시각을 저장했습니다");
+    },
+    onError: (error) => say(error instanceof Error ? error.message : "저장하지 못했습니다"),
   });
 
   const confirmed = useMemo(
@@ -175,7 +211,7 @@ export function Assignment() {
   // 단추마다 필요한 항목이 다르다 — 계산은 assign_run, 되돌리기는 rollback.
   // 둘 다 없으면 줄 자체를 두지 않는다.
   const canRun = can(me, "assign_run");
-  const canRollback = can(me, "rollback");
+  const canRollback = canRollbackNow;
   const again = !canRun && !canRollback ? null : (
     <div className="act">
       {!canRun ? null : (
@@ -268,6 +304,102 @@ export function Assignment() {
     );
   }
 
+  // ── 오른쪽 칸 ───────────────────────────────────────────────────────────────
+  // 되돌리기 항목이 있는 사람에게만 회차 목록을 보인다. 서버가 같은 항목으로 막고
+  // 있어, 감추는 것은 정리일 뿐 근거가 아니다.
+  const rounds = backups.data?.backups ?? [];
+  let roundList;
+  if (!canRollback) {
+    roundList = <li className="empty">되돌리기 항목이 있어야 볼 수 있습니다.</li>;
+  } else if (backups.isPending) {
+    roundList = <li className="empty">불러오는 중…</li>;
+  } else if (backups.isError) {
+    roundList = <li className="empty">지난 계산을 불러오지 못했습니다.</li>;
+  } else if (rounds.length === 0) {
+    roundList = <li className="empty">아직 밀려난 회차가 없습니다.</li>;
+  } else {
+    // 최근 것이 위로 오게 뒤집는다. 되돌리기는 언제나 맨 위 회차로만 간다.
+    roundList = [...rounds]
+      .sort((a, b) => b.saved_at.localeCompare(a.saved_at))
+      .map((backup, index) => (
+        <li className="round" key={backup.saved_at}>
+          <b>{backupLabel(backup.saved_at)}</b>
+          <small>{slotCountLabel(backup.slot_count)}{index === 0 ? " · 되돌리면 여기로" : ""}</small>
+        </li>
+      ));
+  }
+  const pastRuns = (
+    <Panel title="지난 계산" hint="다시 계산할 때마다 한 회차씩 밀려납니다">
+      <ul>{roundList}</ul>
+    </Panel>
+  );
+
+  // 계산 시각은 기간에 딸린 값이라 기간 항목이 가른다. 설정 화면의 기간 서식과
+  // 같은 값을 같은 통로로 고친다 — 여기서는 두 시각만 따로 손댈 수 있게 둔다.
+  const canManagePeriod = can(me, "period_manage");
+  const activePeriod = focusedPeriods.find((period) => period.id === activePeriodId) ?? null;
+  const shownRun = runForm !== null && runForm.id === activePeriodId
+    ? runForm
+    : { id: activePeriodId ?? 0, first: activePeriod?.first_run_at ?? "", second: activePeriod?.second_run_at ?? "" };
+  const runWhy = checkRunTimes(shownRun.first, shownRun.second);
+  const runChanged = activePeriod !== null
+    && (shownRun.first !== activePeriod.first_run_at || shownRun.second !== activePeriod.second_run_at);
+  const options = runTimeOptions();
+  const runTimes = (
+    <section className="panel">
+      <div className="times">
+        <div className="k">계산이 도는 시각</div>
+        <div className="t">
+          {activePeriod === null
+            ? "고를 기간이 없습니다"
+            : `${activePeriod.first_run_at} · ${activePeriod.second_run_at}`}
+        </div>
+        {activePeriod === null ? null : (
+          <>
+            <div className="rows">
+              <select
+                aria-label="첫 계산 시각"
+                disabled={!canManagePeriod || saveRunTimes.isPending}
+                value={shownRun.first}
+                onChange={(event) => setRunForm({
+                  id: activePeriod.id, first: event.target.value, second: shownRun.second,
+                })}
+              >
+                {options.map((time) => <option key={time} value={time}>{time}</option>)}
+              </select>
+              <select
+                aria-label="두 번째 계산 시각"
+                disabled={!canManagePeriod || saveRunTimes.isPending}
+                value={shownRun.second}
+                onChange={(event) => setRunForm({
+                  id: activePeriod.id, first: shownRun.first, second: event.target.value,
+                })}
+              >
+                {options.map((time) => <option key={time} value={time}>{time}</option>)}
+              </select>
+            </div>
+            {!canManagePeriod ? null : (
+              <button
+                className={runChanged && runWhy === "" ? "save on" : "save"}
+                disabled={!runChanged || runWhy !== "" || saveRunTimes.isPending}
+                onClick={() => saveRunTimes.mutate({
+                  first_run_at: shownRun.first, second_run_at: shownRun.second,
+                })}
+              >
+                {saveRunTimes.isPending ? "저장하는 중…" : "이 시각으로 저장"}
+              </button>
+            )}
+            <p>
+              {runWhy !== "" ? runWhy : canManagePeriod
+                ? "정한 시각이 지나면 사람이 누르지 않아도 계산이 돕니다."
+                : "기간 항목이 있어야 고칠 수 있습니다."}
+            </p>
+          </>
+        )}
+      </div>
+    </section>
+  );
+
   return (
     <AppShell
       page="admin"
@@ -280,7 +412,6 @@ export function Assignment() {
           <span className="role">{me ? roleLabel(me.role) : ""}</span>
         </button>
       }
-      sideExtra={import.meta.env.DEV && <DevOfflineToggle />}
     >
       <Tabs label="배정안" items={tabs} selected={view} onSelect={setView} />
 
@@ -350,20 +481,8 @@ export function Assignment() {
       </div>
 
       <div className="rail">
-        <Panel title="지난 계산" hint="누르면 그때 시간표를 봅니다">
-          <ul>
-            <li style={{ padding: "12px 14px", opacity: .72, lineHeight: 1.6 }}>
-              <b>미연동</b><br />지난 계산 이력을 주는 API 가 아직 없습니다.
-            </li>
-          </ul>
-        </Panel>
-        <section className="panel">
-          <div className="times">
-            <div className="k">계산이 도는 시각</div>
-            <div className="t">미연동</div>
-            <p>읽고 쓸 API 가 아직 없어 이 자리를 잠가 두었습니다.</p>
-          </div>
-        </section>
+        {pastRuns}
+        {runTimes}
       </div>
     </AppShell>
   );

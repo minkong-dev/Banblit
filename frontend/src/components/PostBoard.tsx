@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
 import { apiUrl } from "../lib/api";
+import { clampPage, pageCount, pageSlice, pageWindow } from "../lib/paging";
 import {
   ATTACHMENT_ACCEPT,
   attachmentHint,
@@ -94,8 +95,10 @@ function WriteForm(props: {
   writeNote: string;
   queryKey: unknown[];
   onSay: (message: string) => void;
+  /** 다 쓰고 나면 서식을 접는다 — 목록으로 돌아가는 것이 다음에 할 일이다. */
+  onDone: () => void;
 }) {
-  const { writePath, authorId, writeNote, queryKey, onSay } = props;
+  const { writePath, authorId, writeNote, queryKey, onSay, onDone } = props;
   const client = useQueryClient();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -157,6 +160,7 @@ function WriteForm(props: {
       if (picker.current !== null) picker.current.value = "";
       setTouched(false);
       onSay(said);
+      onDone();
     },
     onSettled: () => {
       // 첨부를 올리다 걸려도 글은 이미 만들어졌다 — 성패와 무관하게 목록을 다시 받는다.
@@ -344,15 +348,57 @@ function AttachmentList(props: {
   );
 }
 
+/** 글을 지우는 단추. 글쓴이 자신에게만 보이고, 서버도 글쓴이만 통과시킨다.
+ *  지우면 붙어 있던 첨부파일도 디스크에서 함께 사라진다 — 무를 수 없어 한 번 되묻는다. */
+function RemovePost(props: {
+  postId: number;
+  listKey: readonly unknown[];
+  onDone: () => void;
+  onSay: (message: string) => void;
+}) {
+  const { postId, listKey, onDone, onSay } = props;
+  const client = useQueryClient();
+
+  const remove = useMutation({
+    mutationFn: () => getJSON(`/posts/${postId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: listKey });
+      onSay("글을 지웠습니다.");
+      // 지운 글의 상세를 계속 열어 둘 수 없으므로 목록으로 돌아간다.
+      onDone();
+    },
+  });
+
+  return (
+    <>
+      <button
+        className="btn"
+        type="button"
+        disabled={remove.isPending}
+        onClick={() => {
+          if (window.confirm("이 글과 붙어 있는 첨부파일을 함께 지웁니다. 지울까요?")) {
+            remove.mutate();
+          }
+        }}
+      >
+        {remove.isPending ? "지우는 중…" : "글 지우기"}
+      </button>
+      {remove.error ? <p className="why" role="alert">{reason(remove.error)}</p> : null}
+    </>
+  );
+}
+
 function PostDetail(props: {
   postId: number;
   /** 아직 누구인지 모르면 null — 그때는 글도 댓글도 쓸 수 없다. */
   authorId: number | null;
+  /** 글을 지운 뒤 다시 받아야 하는 목록 */
+  listKey: readonly unknown[];
   heading: RefObject<HTMLHeadingElement | null>;
   onBack: () => void;
   onSay: (message: string) => void;
 }) {
-  const { postId, authorId, heading, onBack, onSay } = props;
+  const { postId, authorId, listKey, heading, onBack, onSay } = props;
   const detail = useQuery({
     queryKey: ["board", "post", postId],
     // 첨부는 글을 열 때 함께 온다 — 목록을 따로 부르지 않는다.
@@ -367,10 +413,14 @@ function PostDetail(props: {
   if (detail.isError) return <div className="empty">{reason(detail.error)}</div>;
 
   const { post, comments, attachments } = detail.data;
+  const mine = authorId !== null && post.author_id === authorId;
 
   return (
     <div className="thread">
-      <button className="back" onClick={onBack}>‹ 목록으로</button>
+      <div className="threadtop">
+        <button className="back" onClick={onBack}>‹ 목록으로</button>
+        {!mine ? null : <RemovePost postId={post.id} listKey={listKey} onDone={onBack} onSay={onSay} />}
+      </div>
       <h2 tabIndex={-1} ref={heading}>{post.title}</h2>
       <p className="meta">{post.author} · {postWhen(post.created_at)}</p>
       <p className="threadbody">{post.body}</p>
@@ -378,7 +428,7 @@ function PostDetail(props: {
       <AttachmentList
         postId={post.id}
         attachments={attachments}
-        canRemove={authorId !== null && post.author_id === authorId}
+        canRemove={mine}
         onSay={onSay}
       />
 
@@ -422,6 +472,8 @@ export function PostBoard(props: {
   const queryKey = ["board", listPath];
   const focus = useDetailFocus();
   const client = useQueryClient();
+  const [page, setPage] = useState(1);
+  const [writing, setWriting] = useState(false);
 
   const posts = useQuery({
     queryKey,
@@ -429,6 +481,10 @@ export function PostBoard(props: {
   });
   const list = posts.data?.posts ?? [];
   const state = posts.isPending ? "loading" : posts.isError ? reason(posts.error) : "";
+  // 글이 지워져 보던 쪽이 사라질 수 있어, 그릴 때마다 범위 안으로 당긴다.
+  const pages = pageCount(list.length);
+  const shownPage = clampPage(page, pages);
+  const shown = pageSlice(list, shownPage);
 
   // 목록으로 돌아올 때 다시 불러온다 — 댓글을 달고 오면 댓글 수가 목록에도 반영돼야 한다.
   const backToList = (): void => {
@@ -445,26 +501,65 @@ export function PostBoard(props: {
             <span>{hint}</span>
           </div>
           <PostList
-            posts={list}
+            posts={shown}
             state={state}
             emptyText={emptyText}
             onOpen={focus.open}
             buttonRef={focus.register}
           />
-          {!canWrite ? null : (
+
+          {/* 쪽이 하나뿐이면 단추를 두지 않는다 — 누를 곳이 없는 줄을 남길 이유가 없다. */}
+          {state !== "" || pages <= 1 ? null : (
+            <nav className="pager" aria-label="쪽 넘기기">
+              <button
+                aria-label="이전 쪽"
+                disabled={shownPage === 1}
+                onClick={() => setPage(shownPage - 1)}
+              >
+                ‹
+              </button>
+              {pageWindow(shownPage, pages).map((number) => (
+                <button
+                  key={number}
+                  aria-label={`${number}쪽`}
+                  aria-current={number === shownPage ? "page" : undefined}
+                  onClick={() => setPage(number)}
+                >
+                  {number}
+                </button>
+              ))}
+              <button
+                aria-label="다음 쪽"
+                disabled={shownPage === pages}
+                onClick={() => setPage(shownPage + 1)}
+              >
+                ›
+              </button>
+            </nav>
+          )}
+
+          {/* 글쓰기는 목록 맨 아래에 단추로 둔다. 서식을 늘 펼쳐 두면 목록보다 서식이
+              더 길어져, 읽으러 온 사람이 매번 지나쳐야 한다. */}
+          {!canWrite ? null : writing ? (
             <WriteForm
               writePath={writePath}
               authorId={authorId}
               writeNote={writeNote}
               queryKey={queryKey}
               onSay={onSay}
+              onDone={() => setWriting(false)}
             />
+          ) : (
+            <div className="writebar">
+              <button className="btn go" onClick={() => setWriting(true)}>글쓰기</button>
+            </div>
           )}
         </>
       ) : (
         <PostDetail
           postId={focus.openId}
           authorId={authorId}
+          listKey={queryKey}
           heading={focus.heading}
           onBack={backToList}
           onSay={onSay}

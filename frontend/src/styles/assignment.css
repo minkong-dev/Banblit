@@ -195,6 +195,11 @@ body[data-page="admin"] {
   .st.warn { background: var(--amber-tint); color: var(--amber); }
   .st.bad { background: var(--red-tint); color: var(--red); }
   .st.now { background: var(--blue-tint); color: var(--blue); }
+  /* 지난 계산 회차 한 줄 — 아직 그 회차의 시간표를 꺼내 볼 통로가 없어 누르지 않는다. */
+  .panel li.round { padding: 12px 10px; border-radius: 12px; }
+  .panel li.round b { display: block; font-size: 14px; font-weight: 500; }
+  .panel li.round small { font-size: 12.5px; color: var(--t3); }
+  .panel li.empty { padding: 12px 10px; font-size: 13.5px; color: var(--t3); line-height: 1.7; }
 
   .times { padding: 18px; }
   .times .k { font-size: 12.5px; color: var(--t3); }
@@ -214,7 +219,7 @@ body[data-page="admin"] {
   .mf { padding: 18px 26px 24px; display: flex; gap: 10px; }
   .mf .btn { flex: 1; }
 
-  .toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, 160%); z-index: 60; padding: 14px 22px; background: var(--t1); color: var(--card); font-size: 14.5px; font-weight: 500; border-radius: 14px; transition: transform .26s cubic-bezier(.22,1,.36,1); }
+  .toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, calc(100% + 26px)); z-index: 60; padding: 14px 22px; background: var(--t1); color: var(--card); font-size: 14.5px; font-weight: 500; border-radius: 14px; transition: transform .26s cubic-bezier(.22,1,.36,1); }
   .toast.on { transform: translate(-50%, 0); }
   /* 좁은 화면 — 7열 달력을 날짜별 세로 목록으로 바꾼다 */
 

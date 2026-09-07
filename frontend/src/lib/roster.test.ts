@@ -1,29 +1,28 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  joinPolicyLabel,
-  joinPositionMessage,
-  joinResultMessage,
-  joinStand,
+  memberLabel,
+  myTeamIds,
   peopleOf,
-  teamIdsByStatus,
+  slotCountsMessage,
+  slotName,
   teamNameMessage,
   teamsOf,
 } from "./roster";
 
 describe("teamNameMessage", () => {
   it("이미 있는 이름은 받지 않는다", () => {
-    expect(teamNameMessage("새벽 네시", ["새벽 네시", "파랑주의보"]))
+    expect(teamNameMessage("청산", ["청산", "곰팡이"]))
       .toBe("같은 이름의 팀이 이미 있습니다.");
   });
 
   it("앞뒤 공백만 다른 것도 같은 이름으로 본다", () => {
-    expect(teamNameMessage("  새벽 네시 ", ["새벽 네시"]))
+    expect(teamNameMessage("  청산 ", ["청산"]))
       .toBe("같은 이름의 팀이 이미 있습니다.");
   });
 
   it("겹치지 않으면 통과한다", () => {
-    expect(teamNameMessage("새 팀", ["새벽 네시", "파랑주의보"])).toBe("");
+    expect(teamNameMessage("나침반", ["청산"])).toBe("");
   });
 
   it("비어 있으면 채워 달라고 한다", () => {
@@ -31,114 +30,103 @@ describe("teamNameMessage", () => {
   });
 });
 
-describe("joinPositionMessage", () => {
-  it("고르지 않았으면 골라 달라고 한다", () => {
-    expect(joinPositionMessage(null)).toBe("맡을 포지션을 골라 주세요.");
+describe("slotCountsMessage", () => {
+  it("한 자리도 고르지 않았으면 고르라고 한다", () => {
+    expect(slotCountsMessage({ 보컬: 0, 드럼: 0 })).toBe("악기를 하나 이상 골라 주세요.");
   });
 
-  it("골랐으면 통과한다", () => {
-    expect(joinPositionMessage(3)).toBe("");
+  it("열 자리를 넘으면 막는다", () => {
+    // 배정 계산이 팀당 10명까지만 받는다 — 더 만들어도 못 쓴다.
+    expect(slotCountsMessage({ 보컬: 6, 일렉: 5 })).toBe("한 팀의 자리는 10개까지입니다.");
+  });
+
+  it("딱 열 자리는 통과한다", () => {
+    expect(slotCountsMessage({ 보컬: 5, 일렉: 5 })).toBe("");
+  });
+
+  it("한 자리라도 있으면 통과한다", () => {
+    expect(slotCountsMessage({ 보컬: 1, 드럼: 0 })).toBe("");
+  });
+});
+
+describe("slotName", () => {
+  it("같은 악기가 하나뿐이면 번호를 붙이지 않는다", () => {
+    // "드럼 1" 은 군더더기다 — 둘째가 없으면 번호가 아무것도 가르지 않는다.
+    expect(slotName("드럼", 1, 1)).toBe("드럼");
+  });
+
+  it("같은 악기가 여럿이면 번호를 붙인다", () => {
+    expect(slotName("일렉", 2, 2)).toBe("일렉 2");
+  });
+});
+
+describe("memberLabel", () => {
+  it("기수를 이름 옆에 붙인다", () => {
+    expect(memberLabel("박민경", 47)).toBe("박민경 (47기)");
+  });
+
+  it("기수를 모르면 이름만 쓴다 — 없는 값을 지어내지 않는다", () => {
+    expect(memberLabel("황찬우", null)).toBe("황찬우");
+  });
+});
+
+describe("myTeamIds", () => {
+  it("내가 앉아 있는 자리에서 팀 번호만 뽑는다", () => {
+    const teams = [
+      { team_id: 3, team_name: "청산", instrument: "보컬" as const, ordinal: 1 },
+      { team_id: 7, team_name: "곰팡이", instrument: "일렉" as const, ordinal: 2 },
+    ];
+    expect(myTeamIds(teams)).toEqual([3, 7]);
+  });
+
+  it("아무 자리도 없으면 빈 목록이다", () => {
+    expect(myTeamIds([])).toEqual([]);
   });
 });
 
 describe("teamsOf", () => {
   const rows = [
-    { team_id: 11, team: "새벽 네시" },
-    { team_id: 22, team: "파랑주의보" },
-    { team_id: 33, team: "여섯 줄" },
+    { team_id: 2, team: "곰팡이" },
+    { team_id: 1, team: "청산" },
+    { team_id: 2, team: "곰팡이" },
   ];
 
-  it("내 팀은 목록 순서가 아니라 내가 실제로 속한 팀이다", () => {
-    // 앞의 둘을 내 팀으로 치던 자리 — 실제 소속이 뒤쪽이면 그 규칙은 틀린 답을 낸다.
-    expect(teamsOf(rows, [33]).filter((team) => team.mine).map((team) => team.id)).toEqual([33]);
+  it("내 팀은 목록 순서가 아니라 내가 실제로 앉은 팀이다", () => {
+    const got = teamsOf(rows, [2]);
+    expect(got.map((team) => [team.id, team.mine])).toEqual([
+      [1, false],
+      [2, true],
+    ]);
   });
 
-  it("소속을 아직 못 받아왔으면 내 팀이 없다", () => {
-    expect(teamsOf(rows, []).some((team) => team.mine)).toBe(false);
+  it("자리를 아직 못 받아왔으면 내 팀이 없다", () => {
+    expect(teamsOf(rows, []).every((team) => !team.mine)).toBe(true);
   });
 });
 
 describe("peopleOf", () => {
-  const teams = [{ id: 1, name: "새벽 네시" }, { id: 2, name: "여섯줄" }];
+  const teams = [{ id: 1, name: "청산" }, { id: 2, name: "곰팡이" }];
 
   it("팀 명단을 사람 단위로 합치고 이름 순으로 늘어놓는다", () => {
     const got = peopleOf(teams, [
-      [{ id: 7, name: "이지은", positions: ["보컬"] }],
-      [{ id: 3, name: "강민수", positions: ["드럼"] }],
+      [{ id: 7, name: "황찬우", cohort: 44 }],
+      [{ id: 3, name: "김민서", cohort: null }],
     ]);
     expect(got).toEqual([
-      { id: 3, name: "강민수", where: "여섯줄 · 드럼" },
-      { id: 7, name: "이지은", where: "새벽 네시 · 보컬" },
+      { id: 3, name: "김민서", where: "곰팡이" },
+      { id: 7, name: "황찬우 (44기)", where: "청산" },
     ]);
   });
 
   it("두 팀에 걸친 사람은 소속을 이어 붙여 한 줄로 만든다", () => {
     const got = peopleOf(teams, [
-      [{ id: 7, name: "이지은", positions: ["보컬"] }],
-      [{ id: 7, name: "이지은", positions: ["기타"] }],
+      [{ id: 7, name: "황찬우", cohort: 44 }],
+      [{ id: 7, name: "황찬우", cohort: 44 }],
     ]);
-    expect(got).toEqual([{ id: 7, name: "이지은", where: "새벽 네시 · 보컬, 여섯줄 · 기타" }]);
+    expect(got).toEqual([{ id: 7, name: "황찬우 (44기)", where: "청산, 곰팡이" }]);
   });
 
   it("아직 못 받아온 명단은 건너뛴다", () => {
     expect(peopleOf(teams, [undefined, undefined])).toEqual([]);
-  });
-});
-
-describe("joinResultMessage", () => {
-  it("자동 승인인 팀은 바로 참가했다고 알린다", () => {
-    expect(joinResultMessage("approved")).toBe("이 팀에 참가했습니다.");
-  });
-
-  it("직접 승인인 팀은 기다리는 중이라고 알린다", () => {
-    expect(joinResultMessage("pending")).toBe("신청했습니다. 승인을 기다리는 중입니다.");
-  });
-});
-
-describe("joinStand", () => {
-  it("이미 소속이면 나가는 자리를 낸다", () => {
-    expect(joinStand(true, false)).toBe("member");
-  });
-
-  it("신청만 해 둔 상태면 기다리는 자리를 낸다", () => {
-    expect(joinStand(false, true)).toBe("pending");
-  });
-
-  it("소속도 신청도 아니면 참가하는 자리를 낸다", () => {
-    expect(joinStand(false, false)).toBe("join");
-  });
-
-  it("승인이 끝난 뒤에는 신청 자국이 남아 있어도 소속이 이긴다", () => {
-    expect(joinStand(true, true)).toBe("member");
-  });
-});
-
-describe("teamIdsByStatus", () => {
-  const memberships = [
-    { team_id: 3, team_name: "새벽 네시", position: "보컬", status: "approved" as const },
-    { team_id: 5, team_name: "파랑주의보", position: "기타", status: "pending" as const },
-    { team_id: 8, team_name: "여섯 줄", position: "드럼", status: "approved" as const },
-  ];
-
-  it("소속된 팀만 골라낸다 — 승인을 기다리는 팀은 내 팀이 아니다", () => {
-    expect(teamIdsByStatus(memberships, "approved")).toEqual([3, 8]);
-  });
-
-  it("승인을 기다리는 팀만 따로 골라낸다", () => {
-    expect(teamIdsByStatus(memberships, "pending")).toEqual([5]);
-  });
-
-  it("어느 팀에도 없으면 빈 목록이다", () => {
-    expect(teamIdsByStatus([], "approved")).toEqual([]);
-  });
-});
-
-describe("joinPolicyLabel", () => {
-  it("자동 승인인 팀을 그렇게 부른다", () => {
-    expect(joinPolicyLabel("auto")).toBe("자동 승인");
-  });
-
-  it("직접 승인인 팀을 그렇게 부른다", () => {
-    expect(joinPolicyLabel("approval")).toBe("직접 승인");
   });
 });

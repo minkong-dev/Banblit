@@ -16,6 +16,7 @@ import { useToast } from "../components/hooks";
 import { usePage } from "../components/hooks";
 import "../styles/account.css";
 import {
+  cohortMessage,
   emailMessage,
   findId,
   logIn,
@@ -37,7 +38,7 @@ const HEADS: Record<string, { title: string; sub: string }> = {
   "/login": { title: "로그인", sub: "유일무이 버스킹 동아리 여섯줄 안에서." },
   "/signup": { title: "회원가입", sub: "가입에 필요한 양식을 작성해주세요." },
   "/find-id": { title: "아이디 찾기", sub: "가입한 이메일로 찾기" },
-  "/find-password": { title: "비밀번호 찾기", sub: "가입한 이메일로 재설정 링크 받기" },
+  "/find-password": { title: "비밀번호 찾기", sub: "가입한 이메일로 비밀번호 찾기" },
   "/reset-password": { title: "비밀번호 재설정", sub: "대소문자, 숫자, 특수기호 포함 8~20자" },
 };
 
@@ -127,9 +128,9 @@ export function SignIn() {
       )}
     >
       <Field name="mail" label="이메일" type="email" inputMode="email"
-        autoComplete="email" placeholder="name@example.com" error={errors.mail} />
+        autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.mail} />
       <Field name="pw" label="비밀번호" type="password"
-        autoComplete="current-password" placeholder="8자 이상" error={errors.pw} />
+        autoComplete="current-password" placeholder="비밀번호를 입력해주세요" error={errors.pw} />
       <div className="row">
         <label className="keep"><input type="checkbox" name="keep" /> 로그인 상태 유지</label>
         <span className="links">
@@ -156,19 +157,10 @@ export function SignIn() {
   );
 }
 
-const POSITIONS = ["보컬", "기타", "베이스", "드럼", "키보드", "서포터즈"];
-
 export function SignUp() {
   const { say } = useOutletContext<AccountContext>();
   const { errors, submit } = useSubmit();
   const navigate = useNavigate();
-  const [positions, setPositions] = useState<string[]>([]);
-
-  const toggle = (name: string) =>
-    setPositions((chosen) =>
-      chosen.includes(name) ? chosen.filter((item) => item !== name) : [...chosen, name],
-    );
-
   return (
     <form
       aria-label="회원가입"
@@ -181,8 +173,7 @@ export function SignUp() {
             mail2: emailMessage(fieldText(form, "mail2").trim()),
             pw2: passwordMessage(password),
             pw3: fieldText(form, "pw3") === password ? "" : "비밀번호가 일치하지 않아요.",
-            // 포지션은 입력칸이 아니라 누름 단추라 사유를 서식 아래에 따로 띄운다.
-            positions: positions.length ? "" : "포지션을 하나 이상 골라 주세요.",
+            cohort: cohortMessage(fieldText(form, "cohort")),
           };
         },
         async (form) => {
@@ -191,9 +182,9 @@ export function SignUp() {
               name: fieldText(form, "nm").trim(),
               email: fieldText(form, "mail2").trim(),
               password: fieldText(form, "pw2"),
-              positions,
+              cohort: Number(fieldText(form, "cohort")),
             });
-            say(`${account.name}님, 가입됐어요 · ${positions.join(", ")}`);
+            say(`${account.name}님, 가입됐어요 · ${account.cohort}기`);
             void navigate("/scheduler");
           } catch (error) {
             say(reason(error));
@@ -204,20 +195,14 @@ export function SignUp() {
       <Field name="nm" label="이름" type="text"
         autoComplete="name" placeholder="이름을 입력해주세요." error={errors.nm} />
       <Field name="mail2" label="이메일" type="email" inputMode="email"
-        autoComplete="email" placeholder="name@example.com" error={errors.mail2} />
+        autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.mail2} />
       <Field name="pw2" label="비밀번호" type="password" autoComplete="new-password"
-        placeholder="비밀번호는 8자 이상 입력해주세요." error={errors.pw2} />
+        placeholder="비밀번호를 입력해주세요." error={errors.pw2} />
       <Field name="pw3" label="비밀번호 확인" type="password" autoComplete="new-password"
         placeholder="비밀번호를 한 번 더 입력해주세요." error={errors.pw3} />
 
-      <p className="cap">담당 세션 <small>여러 포지션을 고를 수 있어요</small></p>
-      <div className="picks" role="group" aria-label="포지션">
-        {POSITIONS.map((name) => (
-          <button key={name} type="button" aria-pressed={positions.includes(name)}
-            onClick={() => toggle(name)}>{name}</button>
-        ))}
-      </div>
-      <p className={errors.positions ? "posbad on" : "posbad"}>포지션을 하나 이상 골라 주세요.</p>
+      <Field name="cohort" label="기수" type="number" inputMode="numeric"
+        autoComplete="off" placeholder="예: 46" error={errors.cohort} />
 
       <button className="go" type="submit" style={{ marginTop: 22 }}>가입하기</button>
       <p className="foot">이미 계정이 있으신가요? <Link to="/login">로그인</Link></p>
@@ -227,7 +212,7 @@ export function SignUp() {
 
 // 계정이 있든 없든 같은 문구를 보여준다. 갈라 보여주면 그 이메일이 가입돼 있는지를
 // 알려주는 셈이 된다 — 서버도 같은 이유로 같은 응답을 준다.
-const MAIL_SENT = "메일을 보냈어요 · 받은 편지함을 확인해주세요";
+const MAIL_SENT = "메일을 보냈어요 · 전송된 메일을 확인해주세요";
 
 export function FindId() {
   const { say } = useOutletContext<AccountContext>();
@@ -255,7 +240,7 @@ export function FindId() {
       <Field name="fidName" label="이름" type="text"
         autoComplete="name" placeholder="이름을 입력해주세요." error={errors.fidName} />
       <Field name="fidMail" label="이메일" type="email" inputMode="email"
-        autoComplete="email" placeholder="name@example.com" error={errors.fidMail} />
+        autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.fidMail} />
       <button className="go" type="submit" style={{ marginTop: 22 }}>아이디 찾기</button>
       <p className="foot">
         <Link to="/find-password">비밀번호 찾기</Link> · <Link to="/login">로그인</Link>
@@ -289,7 +274,7 @@ export function FindPassword() {
       )}
     >
       <Field name="fpwMail" label="이메일" type="email" inputMode="email"
-        autoComplete="email" placeholder="name@example.com" error={errors.fpwMail} />
+        autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.fpwMail} />
       <button className="go" type="submit" style={{ marginTop: 22 }}>재설정 메일 받기</button>
       <p className="foot">
         <Link to="/find-id">아이디 찾기</Link> · <Link to="/login">로그인</Link>
@@ -330,7 +315,7 @@ export function ResetPassword() {
           }
           try {
             await resetPassword(token, fieldText(form, "rpwNew"));
-            say("비밀번호를 바꿨어요 · 새 비밀번호로 로그인해주세요");
+            say("비밀번호를 변경했어요 · 새 비밀번호로 로그인해주세요");
             // navigate 는 viewTransition 옵션을 줄 때만 Promise 를 돌려준다. 이 화면은
             // 그 옵션을 쓰지 않아 실제로는 항상 void 라 명시적으로 무시한다.
             void navigate("/login");

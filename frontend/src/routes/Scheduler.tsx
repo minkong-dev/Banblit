@@ -4,10 +4,8 @@ import { useNavigate } from "react-router-dom";
 
 import { AppShell, Card, Panel, ProfileMenu, Tabs } from "../components/AppShell";
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from "../components/icons";
-import { DevOfflineToggle } from "../components/DevOfflineToggle";
 import { getJSON } from "../lib/api";
-import { focusedRange, loadNotifications, loadReservationRows, loadUnavailable,
-  markNotificationsRead, notificationText, roomBounds, unreadCount } from "../lib/pipeline";
+import { focusedRange, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
 import type { Entry } from "./DayDialog";
 import { teamsOf } from "../lib/roster";
@@ -70,7 +68,8 @@ type TabKey = (typeof TABS)[number]["key"];
 /** 그날 화면에 보일 것만 고른다 — 내 일정은 내 팀과 내가 안 되는 시간, 전체는 예약된 것 전부. */
 function memberCountLabel(allTeams: Team[], teamId: number): string {
   const found = allTeams.find((team) => team.id === teamId);
-  return found === undefined ? "" : `${found.member_count}명`;
+  // 자리 수와 앉은 수를 함께 보여준다 — 몇 자리 비었는지가 인원 수만큼 중요하다.
+  return found === undefined ? "" : `${found.filled_count}/${found.slot_count}명`;
 }
 
 function visible(entries: Entry[], tab: TabKey, teams: DayTeam[]): Entry[] {
@@ -143,30 +142,6 @@ export function Scheduler() {
     notices.isPending, notices.error, recentNotices.length,
     "아직 등록된 공지가 없습니다", "공지를 못 불러왔습니다",
   );
-
-  // 알림은 언제나 내 것만 온다 — 어느 사람의 것인지는 주소가 아니라 인증 쿠키가 정한다.
-  const notifications = useQuery({
-    queryKey: ["notifications"],
-    queryFn: loadNotifications,
-  });
-  const notificationRows = notifications.data ?? [];
-  const unread = unreadCount(notificationRows);
-  const notificationState = listNote(
-    notifications.isPending, notifications.error, notificationRows.length,
-    "새 알림이 없습니다", "알림을 못 불러왔습니다",
-  );
-
-  // 목록을 눌러 보면 읽은 것이 된다. 서버가 바꾼 뒤 다시 물어야 화면의 안 읽은 수가
-  // 줄어든다 — 화면에 따로 상태를 두면 서버가 거절해도 줄어든 채로 남는다.
-  async function readNotifications(): Promise<void> {
-    try {
-      await markNotificationsRead();
-    } catch (error) {
-      say(error instanceof Error ? error.message : "알림을 읽음으로 표시하지 못했습니다");
-      return;
-    }
-    void queryClient.invalidateQueries({ queryKey: ["notifications"] });
-  }
 
   // query.data 가 없을 때만 매번 새 빈 배열이 생긴다 — 그동안은 아래 useMemo 들이
   // 다시 도는데, 빈 배열을 다루는 계산이라 가벼워 따로 감쌀 만큼은 아니다.
@@ -395,7 +370,6 @@ export function Scheduler() {
       current="schedule"
       profile={profile}
       toast={message}
-      sideExtra={import.meta.env.DEV && <DevOfflineToggle />}
     >
       <Tabs label="보기 모드" items={TABS} selected={tab} onSelect={setTab} />
 
@@ -473,33 +447,9 @@ export function Scheduler() {
         </div>
       </Card>
 
+      {/* 알림은 상단바의 종으로 옮겼다. 이 칸은 달력을 보는 동안에만 보여서
+          게시판이나 설정에 있는 사람에게는 소식이 닿지 않았다. */}
       <div className="rail">
-        <Panel
-          title="알림"
-          hint={unread === 0 ? undefined : `안 읽음 ${unread}`}
-          onOpen={unread === 0 ? undefined : () => void readNotifications()}
-        >
-          {/* 안 읽은 줄에는 목록이 이미 쓰고 있는 빨간 점(.new)을 붙인다. 줄을 눌러도
-              머리글을 눌러도 읽은 것이 되고, 읽을 것이 없으면 눌리지 않는다. */}
-          <ul>
-            {notificationState !== "" ? (
-              <li><button type="button" disabled><b>{notificationState}</b></button></li>
-            ) : notificationRows.map((item) => (
-              <li key={item.id}>
-                <button type="button" disabled={unread === 0}
-                  onClick={() => void readNotifications()}>
-                  <b>
-                    {/* 빈 span 의 aria-label 은 읽히지 않는다. role="img" 를 붙여야
-                        빛깔로만 알리는 점을 소리로도 읽어 준다. */}
-                    {item.read ? null : <span className="new" role="img" aria-label="안 읽음" />}
-                    {notificationText(item.kind)}
-                  </b>
-                  <small>{postWhen(item.created_at)}</small>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Panel>
         <Panel title="공지사항" hint="전체보기 ›" onOpen={() => void navigate("/notices")}>
           {/* 여기서는 제목만 보여주고, 누르면 글을 펼칠 수 있는 공지 화면으로 넘긴다. */}
           <ul>

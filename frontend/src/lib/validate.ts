@@ -41,3 +41,15 @@ export function phoneMessage(value: string): string {
   }
   return "";
 }
+
+/** 기수. 1981년이 1기이고 해마다 하나씩 오르지만, 연도로 환산하지 않고 숫자만 받는다 —
+ *  명단에 적힌 기수를 그대로 넣기 위해서다. 서버도 같은 범위를 다시 거른다. */
+export function cohortMessage(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "기수를 입력해 주세요.";
+  const cohort = Number(trimmed);
+  if (!Number.isInteger(cohort) || cohort < 1 || cohort > 200) {
+    return "기수는 1에서 200 사이의 숫자여야 해요.";
+  }
+  return "";
+}

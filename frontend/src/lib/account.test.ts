@@ -4,7 +4,7 @@ import { PERMISSION_ITEMS, can, permissionLabels, permissionSetNameMessage, role
 import type { Account } from "./contract";
 
 function accountWith(permissions: Account["permissions"]): Account {
-  return { id: 1, name: "김민수", email: "a@b.c", role: "member", permissions, positions: [] };
+  return { id: 1, name: "김민수", email: "a@b.c", role: "member", permissions, cohort: 46 };
 }
 
 describe("roleLabel", () => {
@@ -33,10 +33,11 @@ describe("can", () => {
 });
 
 describe("PERMISSION_ITEMS", () => {
-  it("서버가 고정한 열한 가지를 그 순서대로 든다", () => {
-    expect(PERMISSION_ITEMS).toHaveLength(11);
+  it("서버가 고정한 열 가지를 그 순서대로 든다", () => {
+    // 팀 참가 승인은 참가 신청 자체가 없어지면서 지킬 자리가 사라졌다.
+    expect(PERMISSION_ITEMS).toHaveLength(10);
     expect(PERMISSION_ITEMS[0].key).toBe("room_manage");
-    expect(PERMISSION_ITEMS[10].key).toBe("permission_grant");
+    expect(PERMISSION_ITEMS[9].key).toBe("permission_grant");
   });
 
   it("항목마다 한국어 이름이 있다", () => {
@@ -61,12 +62,12 @@ describe("permissionLabels", () => {
 describe("permissionSetNameMessage", () => {
   it("이미 있는 이름은 받지 않는다", () => {
     expect(permissionSetNameMessage("헤드매니저", ["헤드매니저", "합주실 담당"]))
-      .toBe("같은 이름의 권한 묶음이 이미 있습니다.");
+      .toBe("같은 이름의 권한이 이미 있습니다.");
   });
 
   it("앞뒤 공백만 다른 것도 같은 이름으로 본다", () => {
     expect(permissionSetNameMessage("  헤드매니저 ", ["헤드매니저"]))
-      .toBe("같은 이름의 권한 묶음이 이미 있습니다.");
+      .toBe("같은 이름의 권한이 이미 있습니다.");
   });
 
   it("겹치지 않으면 통과한다", () => {
@@ -74,6 +75,6 @@ describe("permissionSetNameMessage", () => {
   });
 
   it("비어 있으면 채워 달라고 한다", () => {
-    expect(permissionSetNameMessage("   ", [])).toBe("권한 묶음 이름을 입력해 주세요.");
+    expect(permissionSetNameMessage("   ", [])).toBe("권한 이름을 입력해 주세요.");
   });
 });

@@ -30,7 +30,7 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
     if (query.isPending) return { teamName: teamName(id), text: "불러오는 중…" };
     if (query.isError) return { teamName: teamName(id), text: reason(query.error) };
     const mine = me === null ? undefined : query.data.members.find((member) => member.id === me.id);
-    return { teamName: teamName(id), text: mine ? mine.positions.join(" · ") : "명단에서 찾지 못했습니다" };
+    return { teamName: teamName(id), text: mine ? (mine.cohort === null ? "기수 없음" : `${mine.cohort}기`) : "명단에서 찾지 못했습니다" };
   });
 }
 

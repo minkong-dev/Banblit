@@ -1,0 +1,61 @@
+/* 상단바의 알림 종과 그 말풍선. 화면 CSS 는 body[data-page="..."] 안에 갇혀 있는데
+   이것은 모든 화면에 똑같이 붙는 껍데기라 여섯 벌로 베끼지 않고 여기 한 벌만 둔다.
+   쓰는 색·그림자·글자 크기는 전부 화면 CSS 가 이미 세워 둔 변수다 — 밝은 화면과
+   어두운 화면이 따로 손볼 것 없이 함께 따라온다. */
+
+/* 종은 프로필 단추 왼쪽, 예전에 화면 밝기 단추가 있던 자리다. 말풍선을 이 상자에
+   붙여 두므로 프로필 단추 폭이 바뀌어도 화살표가 종 위에 그대로 남는다. */
+.notes { position: relative; display: flex; align-items: center; }
+
+.notes .bell { position: relative; }
+.notes .bell .count {
+  position: absolute; top: 5px; right: 5px;
+  min-width: 17px; height: 17px; padding: 0 4px;
+  display: grid; place-items: center;
+  background: var(--red); color: #fff;
+  font-size: 11px; font-weight: 700; line-height: 1;
+  border-radius: 999px;
+  /* 종 그림과 겹쳐도 숫자가 읽히도록 상단바 바탕색으로 한 겹 두른다. */
+  box-shadow: 0 0 0 2px var(--card);
+}
+
+.notes .notepop {
+  position: absolute; right: 0; top: 52px; z-index: 50;
+  width: 320px; padding: 16px 0 8px;
+  background: var(--card); border-radius: 18px; box-shadow: var(--shadow-up);
+  opacity: 0; transform: translateY(-6px) scale(.98); pointer-events: none;
+  transition: opacity .16s ease, transform .16s ease;
+}
+.notes .notepop.on { opacity: 1; transform: none; pointer-events: auto; }
+/* 종 한가운데를 가리킨다 — 종은 44px 이므로 오른쪽에서 22px 에서 화살표 폭의 절반을 뺀다. */
+.notes .notepop::before {
+  content: ""; position: absolute; right: 15px; top: -7px;
+  width: 14px; height: 14px; background: var(--card);
+  transform: rotate(45deg); border-radius: 3px 0 0 0;
+}
+
+.notes .nhead { display: flex; align-items: center; gap: 10px; padding: 0 18px 12px; }
+.notes .nhead b { font-size: 17px; font-weight: 700; }
+.notes .nhead .readall {
+  margin-left: auto; padding: 6px 8px; border-radius: 8px;
+  color: var(--t2); font-size: 13px; transition: background-color .15s ease, color .15s ease;
+}
+.notes .nhead .readall:hover { background: var(--card-2); color: var(--t1); }
+
+.notes .notepop .quiet { margin: 0; padding: 4px 18px 14px; font-size: 13.5px; color: var(--t3); }
+
+.notes .notepop ul { list-style: none; margin: 0; padding: 0 8px; max-height: 340px; overflow-y: auto; }
+.notes .note { padding: 10px 10px; border-radius: 10px; }
+.notes .note b { display: block; font-size: 14px; font-weight: 500; color: var(--t1); }
+.notes .note small { font-size: 12.5px; color: var(--t3); }
+/* 안 읽은 줄에 붙는 점. 오른쪽 칸 목록이 쓰던 것과 같은 표시다. */
+.notes .note .new {
+  display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--red); vertical-align: 2px; margin-right: 5px;
+}
+.notes .note.unread { background: var(--card-2); }
+
+/* 좁은 화면에서는 상단바 폭을 넘지 않게 붙인다. */
+@media (max-width: 420px) {
+  .notes .notepop { width: min(320px, calc(100vw - 28px)); right: -8px; }
+}
