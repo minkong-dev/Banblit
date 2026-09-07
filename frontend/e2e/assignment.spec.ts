@@ -8,8 +8,8 @@ import { findFocusedPeriods, loginForTests } from "./helpers";
 const ASSIGN_WAIT_MS = 20_000;
 
 test.describe("배정 다시 계산", () => {
-  test.beforeEach(async ({ page }) => {
-    await loginForTests(page);
+  test.beforeEach(async ({ page, request }) => {
+    await loginForTests(page.request, request);
   });
 
   test("기간 고르기는 번호가 아니라 날짜 범위로 나온다", async ({ page }) => {

@@ -4,8 +4,8 @@ import { loginForTests } from "./helpers";
 
 type Room = { id: number; name: string; opens_at: string; closes_at: string };
 
-test.beforeEach(async ({ page }) => {
-  await loginForTests(page);
+test.beforeEach(async ({ page, request }) => {
+  await loginForTests(page.request, request);
 });
 
 const SLOT_MINUTES = 30;

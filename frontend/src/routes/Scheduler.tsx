@@ -1,22 +1,46 @@
 import { Fragment, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 
 import { AppShell, Card, Panel, ProfileMenu, Tabs } from "../components/AppShell";
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from "../components/icons";
 import { DevOfflineToggle } from "../components/DevOfflineToggle";
 import { getJSON } from "../lib/api";
-import { focusedRange, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
+import { focusedRange, loadNotifications, loadReservationRows, loadUnavailable,
+  markNotificationsRead, notificationText, roomBounds, unreadCount } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
-import type { DayTeam, Entry } from "./DayDialog";
+import type { Entry } from "./DayDialog";
+import { teamsOf } from "../lib/roster";
+import { roleLabel } from "../lib/account";
+import type { DayTeam } from "../lib/roster";
 import { useMe, useToast } from "../components/hooks";
 import "../styles/scheduler.css";
-import type { Period, Room, ScheduleRow } from "../lib/contract";
-import { dayOf, hoursLabel, isRangeFree, mergeSessions, monthCells, slotIndex, slotLabel, takenGrid } from "../lib/pipeline";
+import type { Period, Post, Room, ScheduleRow, Team } from "../lib/contract";
+import { dayOf, hoursLabel, isRangeFree, mergeSessions, monthCells, postWhen, slotIndex, slotLabel, takenGrid, weekKeys } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
 
-// "내 팀" 을 가려낼 로그인이 아직 없다. 앞의 두 팀을 내 팀으로 본다.
-const MINE_COUNT = 2;
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+// 오른쪽 공지 칸에 몇 줄까지 보일지. 전체 목록은 공지 화면(routes/Notices)이 그린다.
+const RECENT_NOTICES = 3;
+
+function dayText(dayKey: string): string {
+  // "2026-09-13" 을 "9월 13일" 로 적는다.
+  return `${Number(dayKey.slice(5, 7))}월 ${Number(dayKey.slice(8, 10))}일`;
+}
+
+/** 오른쪽 목록이 아직 못 그릴 상태면 그 사유를 한 줄로 돌려준다. 빈 문자열이면 목록을 그린다. */
+function listNote(
+  isPending: boolean,
+  error: unknown,
+  count: number,
+  emptyText: string,
+  failText: string,
+): string {
+  if (isPending) return "불러오는 중…";
+  if (error !== null) return error instanceof Error ? error.message : failText;
+  return count === 0 ? emptyText : "";
+}
 
 
 
@@ -35,21 +59,6 @@ async function loadRows(periodIds: number[]): Promise<{ rows: ScheduleRow[]; fai
   return { rows, failures };
 }
 
-function teamsOf(rows: ScheduleRow[]): DayTeam[] {
-  const seen = new Map<number, string>();
-  for (const row of rows) {
-    if (!seen.has(row.team_id)) seen.set(row.team_id, row.team);
-  }
-  return [...seen.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([id, name], index) => ({
-      id,
-      name,
-      key: `c${(index % 4) + 1}`,
-      mine: index < MINE_COUNT,
-    }));
-}
-
 const TABS = [
   { key: "me", text: "내 일정" },
   { key: "book", text: "예약" },
@@ -59,6 +68,11 @@ const TABS = [
 type TabKey = (typeof TABS)[number]["key"];
 
 /** 그날 화면에 보일 것만 고른다 — 내 일정은 내 팀과 내가 안 되는 시간, 전체는 예약된 것 전부. */
+function memberCountLabel(allTeams: Team[], teamId: number): string {
+  const found = allTeams.find((team) => team.id === teamId);
+  return found === undefined ? "" : `${found.member_count}명`;
+}
+
 function visible(entries: Entry[], tab: TabKey, teams: DayTeam[]): Entry[] {
   const mine = new Set(teams.filter((team) => team.mine).map((team) => team.key));
   return tab === "me"
@@ -68,11 +82,13 @@ function visible(entries: Entry[], tab: TabKey, teams: DayTeam[]): Entry[] {
 
 export function Scheduler() {
   const { message, say } = useToast();
-  const { me } = useMe();
+  const { me, teamIds, teams: allTeams } = useMe();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<TabKey>("me");
   const [week, setWeek] = useState(false);
   const [cursor, setCursor] = useState({ year: 2026, month: 8 });
+  const [weekShift, setWeekShift] = useState(0);
   const [from, setFrom] = useState<number | null>(null);
   const [to, setTo] = useState<number | null>(null);
   const [openDay, setOpenDay] = useState<string | null>(null);
@@ -92,6 +108,11 @@ export function Scheduler() {
   const monthFrom = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-01`;
   const monthLastDay = new Date(cursor.year, cursor.month + 1, 0).getDate();
   const monthTo = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(monthLastDay).padStart(2, "0")}`;
+  // 주 보기는 달을 벗어난 주로도 넘어간다. 그래서 예약은 달이 아니라 지금 보고 있는
+  // 날짜 범위로 묻는다 — 범위가 열쇠에 들어 있어 주를 옮기면 그 주치를 다시 받는다.
+  const weekDayKeys = weekKeys(cursor.year, cursor.month, weekShift);
+  const rangeFrom = week ? weekDayKeys[0] : monthFrom;
+  const rangeTo = week ? weekDayKeys[6] : monthTo;
 
   // 기간 목록이 오기 전에는 어느 기간의 시간표를 받을지 알 수 없어 쉰다.
   const query = useQuery({
@@ -107,15 +128,51 @@ export function Scheduler() {
   });
   // 방 목록이 와야 어느 방의 예약을 물을지 안다.
   const reservationQuery = useQuery({
-    queryKey: ["reservations", roomIds, monthFrom, monthTo],
-    queryFn: () => loadReservationRows(roomIds, monthFrom, monthTo),
+    queryKey: ["reservations", roomIds, rangeFrom, rangeTo],
+    queryFn: () => loadReservationRows(roomIds, rangeFrom, rangeTo),
     enabled: rooms.data !== undefined,
   });
+  // 공지 화면(routes/Notices → PostBoard)이 쓰는 열쇠·통로를 그대로 쓴다. 두 화면이
+  // 같은 목록을 나눠 쓰므로, 공지를 쓰고 돌아오면 여기도 함께 새로 그려진다.
+  const notices = useQuery({
+    queryKey: ["board", "/notices"],
+    queryFn: () => getJSON<{ posts: Post[] }>("/notices"),
+  });
+  const recentNotices = notices.data?.posts.slice(0, RECENT_NOTICES) ?? [];
+  const noticeState = listNote(
+    notices.isPending, notices.error, recentNotices.length,
+    "아직 등록된 공지가 없습니다", "공지를 못 불러왔습니다",
+  );
+
+  // 알림은 언제나 내 것만 온다 — 어느 사람의 것인지는 주소가 아니라 인증 쿠키가 정한다.
+  const notifications = useQuery({
+    queryKey: ["notifications"],
+    queryFn: loadNotifications,
+  });
+  const notificationRows = notifications.data ?? [];
+  const unread = unreadCount(notificationRows);
+  const notificationState = listNote(
+    notifications.isPending, notifications.error, notificationRows.length,
+    "새 알림이 없습니다", "알림을 못 불러왔습니다",
+  );
+
+  // 목록을 눌러 보면 읽은 것이 된다. 서버가 바꾼 뒤 다시 물어야 화면의 안 읽은 수가
+  // 줄어든다 — 화면에 따로 상태를 두면 서버가 거절해도 줄어든 채로 남는다.
+  async function readNotifications(): Promise<void> {
+    try {
+      await markNotificationsRead();
+    } catch (error) {
+      say(error instanceof Error ? error.message : "알림을 읽음으로 표시하지 못했습니다");
+      return;
+    }
+    void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+  }
+
   // query.data 가 없을 때만 매번 새 빈 배열이 생긴다 — 그동안은 아래 useMemo 들이
   // 다시 도는데, 빈 배열을 다루는 계산이라 가벼워 따로 감쌀 만큼은 아니다.
   const rows = query.data?.rows ?? [];
 
-  const teams = useMemo(() => teamsOf(rows), [rows]);
+  const teams = useMemo(() => teamsOf(rows, teamIds), [rows, teamIds]);
   const { open, close } = roomBounds(rooms.data?.rooms ?? []);
   const focus = focusedRange(periods.data?.periods ?? []);
   const slotCount = (close - open) * 2;
@@ -272,26 +329,24 @@ export function Scheduler() {
     </>
   );
 
-  // 주 보기는 그 달 15일이 든 주를 보여준다. 날짜를 고르는 자리는 아직 없다.
-  const weekStart = new Date(cursor.year, cursor.month, 15);
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-  const weekDays = Array.from({ length: 7 }, (_, i) =>
-    new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + i));
+  // weekKeys 가 일요일부터 이레 치 날짜를 내주므로, 배열 안의 자리가 곧 요일이다.
+  const weekLabel = weekDayKeys[0].slice(5, 7) === weekDayKeys[6].slice(5, 7)
+    ? `${dayText(weekDayKeys[0])} – ${Number(weekDayKeys[6].slice(8, 10))}일`
+    : `${dayText(weekDayKeys[0])} – ${dayText(weekDayKeys[6])}`;
 
   const weekView = (
     <div className="weekscroll">
       <div className="weekgrid">
         <div className="wh" />
-        {weekDays.map((date) => (
-          <div className={date.getDay() === 0 ? "wh sun" : "wh"} key={date.getDate()}>
-            {WEEKDAYS[date.getDay()]}<b>{date.getDate()}</b>
+        {weekDayKeys.map((key, index) => (
+          <div className={index === 0 ? "wh sun" : "wh"} key={key}>
+            {WEEKDAYS[index]}<b>{Number(key.slice(8, 10))}</b>
           </div>
         ))}
         {Array.from({ length: slotCount }, (_, i) => i).map((slot) => (
           <Fragment key={slot}>
             <div className={slot % 2 ? "wt half" : "wt"}>{label(slot)}</div>
-            {weekDays.map((date) => {
-              const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+            {weekDayKeys.map((key) => {
               const entry = visible(entriesOf(key), tab, teams).find((item) => item.a === slot);
               return (
                 <div className={slot % 2 ? "wcell half" : "wcell"} key={`${key}-${slot}`}>
@@ -314,15 +369,22 @@ export function Scheduler() {
   );
 
   const myTeams = teams.filter((team) => team.mine);
+  // 달력 위 화살표 하나가 두 가지를 옮긴다 — 달 보기에서는 달을, 주 보기에서는 주를.
+  // 달을 옮기면 주는 그 달 15일이 든 주로 돌아간다(weekShift 를 0으로 되돌린다).
   const shift = (step: number) => {
+    if (week) {
+      setWeekShift(weekShift + step);
+      return;
+    }
     const moved = new Date(cursor.year, cursor.month + step, 1);
     setCursor({ year: moved.getFullYear(), month: moved.getMonth() });
+    setWeekShift(0);
   };
 
   const profile = (
     <ProfileMenu
-      name="이도현"
-      sub="일반멤버 · 2026년 입부"
+      name={me?.name ?? ""}
+      sub={me ? roleLabel(me.role) : ""}
       teams={myTeams.map((team) => ({ id: team.id, name: team.name, colorKey: team.key }))}
     />
   );
@@ -350,9 +412,13 @@ export function Scheduler() {
 
       <Card>
         <div className="calbar">
-          <button className="navb" aria-label="이전 달" onClick={() => shift(-1)}><ChevronLeftIcon /></button>
-          <span className="ml">{cursor.year}년 {cursor.month + 1}월</span>
-          <button className="navb" aria-label="다음 달" onClick={() => shift(1)}><ChevronRightIcon /></button>
+          <button className="navb" aria-label={week ? "이전 주" : "이전 달"} onClick={() => shift(-1)}>
+            <ChevronLeftIcon />
+          </button>
+          <span className="ml">{week ? weekLabel : `${cursor.year}년 ${cursor.month + 1}월`}</span>
+          <button className="navb" aria-label={week ? "다음 주" : "다음 달"} onClick={() => shift(1)}>
+            <ChevronRightIcon />
+          </button>
           <div className="seg" role="group" aria-label="보기 전환">
             <button aria-pressed={!week} onClick={() => setWeek(false)}>월</button>
             <button aria-pressed={week} onClick={() => setWeek(true)}>주</button>
@@ -408,21 +474,55 @@ export function Scheduler() {
       </Card>
 
       <div className="rail">
-        <Panel title="공지사항" hint="전체보기 ›" onOpen={() => say("공지사항 API 가 아직 없습니다")}>
-          {/* 상세 API 가 없어 각 줄을 실제 글로 보내지 못한다. 눌리는 자리로 두고 사유를 알린다. */}
+        <Panel
+          title="알림"
+          hint={unread === 0 ? undefined : `안 읽음 ${unread}`}
+          onOpen={unread === 0 ? undefined : () => void readNotifications()}
+        >
+          {/* 안 읽은 줄에는 목록이 이미 쓰고 있는 빨간 점(.new)을 붙인다. 줄을 눌러도
+              머리글을 눌러도 읽은 것이 되고, 읽을 것이 없으면 눌리지 않는다. */}
           <ul>
-            <li><button type="button" onClick={() => say("공지사항 API 가 아직 없습니다")}><b><span className="new" aria-hidden="true" />9월 정기공연 순서 안내</b><small>어제 · 헤드매니저</small></button></li>
-            <li><button type="button" onClick={() => say("공지사항 API 가 아직 없습니다")}><b>합주실 청소 당번 바뀝니다</b><small>3일 전 · 헤드매니저</small></button></li>
-            <li><button type="button" onClick={() => say("공지사항 API 가 아직 없습니다")}><b>신입 부원 모집 마감</b><small>1주 전 · 헤드매니저</small></button></li>
+            {notificationState !== "" ? (
+              <li><button type="button" disabled><b>{notificationState}</b></button></li>
+            ) : notificationRows.map((item) => (
+              <li key={item.id}>
+                <button type="button" disabled={unread === 0}
+                  onClick={() => void readNotifications()}>
+                  <b>
+                    {/* 빈 span 의 aria-label 은 읽히지 않는다. role="img" 를 붙여야
+                        빛깔로만 알리는 점을 소리로도 읽어 준다. */}
+                    {item.read ? null : <span className="new" role="img" aria-label="안 읽음" />}
+                    {notificationText(item.kind)}
+                  </b>
+                  <small>{postWhen(item.created_at)}</small>
+                </button>
+              </li>
+            ))}
           </ul>
         </Panel>
-        <Panel title="내 팀" hint="전체보기 ›" onOpen={() => say("팀 명단 API 가 아직 없습니다")}>
+        <Panel title="공지사항" hint="전체보기 ›" onOpen={() => void navigate("/notices")}>
+          {/* 여기서는 제목만 보여주고, 누르면 글을 펼칠 수 있는 공지 화면으로 넘긴다. */}
+          <ul>
+            {noticeState !== "" ? (
+              <li><button type="button" disabled><b>{noticeState}</b></button></li>
+            ) : recentNotices.map((post) => (
+              <li key={post.id}>
+                <button type="button" onClick={() => void navigate("/notices")}>
+                  <b>{post.title}</b>
+                  <small>{postWhen(post.created_at)} · {post.author}</small>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+        <Panel title="내 팀" hint="전체보기 ›" onOpen={() => void navigate("/teams")}>
           <ul>
             {myTeams.map((team) => (
               <li key={team.id}>
-                <button className="teamrow">
+                <button className="teamrow" onClick={() => void navigate("/teams")}>
                   <i style={{ background: `var(--${team.key})` }} />
-                  <b>{team.name}</b><small>명단 API 미연동</small>
+                  <b>{team.name}</b>
+                  <small>{memberCountLabel(allTeams, team.id)}</small>
                 </button>
               </li>
             ))}
@@ -442,9 +542,8 @@ export function Scheduler() {
           fixed={from !== null && to !== null ? { from, to } : null}
           inFocus={inFocus(openDay)}
           memberId={me?.id ?? null}
-          // ponytail: 합주실 여러 개를 고르는 자리가 화면 설계에 아직 없어 첫 번째
-          // 합주실에 고정한다. 방을 고르는 UI가 생기면 여기서 선택값을 받아 바꾼다.
-          roomId={rooms.data?.rooms[0]?.id ?? null}
+          myName={me?.name ?? ""}
+          rooms={rooms.data?.rooms ?? []}
           onSaved={onSaved}
           onSay={say}
           onClose={() => setOpenDay(null)}

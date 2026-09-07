@@ -72,6 +72,7 @@ export function Board() {
               listPath={`/teams/${current.id}/posts`}
               writePath={`/teams/${current.id}/posts`}
               authorId={me?.id ?? null}
+              canWrite
               writeNote={`${current.name} 소속만 쓸 수 있습니다.`}
               emptyText="아직 등록된 글이 없습니다"
               onSay={say}

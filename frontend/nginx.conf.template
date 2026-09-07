@@ -30,6 +30,11 @@ server {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
 
+    # 첨부파일 하나의 크기 상한. nginx 는 기본값이 1m 이라, 이 줄이 없으면 1MB 를
+    # 넘는 파일이 서버에 닿기도 전에 413 으로 거절된다. 화면이 거르는 상한
+    # (frontend/src/lib/boards.ts 의 MAX_ATTACHMENT_BYTES)과 같은 값이어야 한다.
+    client_max_body_size 300m;
+
     # 배정 계산은 조율안까지 가면 22초가 걸린 실측이 있다. 기본값(60초)에 맡기지
     # 않고 명시한다. 이 값을 넘기면 화면이 먼저 끊는 8초와 함께 다시 정해야 한다.
     proxy_connect_timeout 5s;

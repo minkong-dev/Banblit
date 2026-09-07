@@ -24,7 +24,13 @@ export type Period = {
   second_run_at: string;
 };
 
-export type Team = { id: number; name: string; member_count: number };
+/** 팀 참가를 받는 방식 — 바로 소속이 되는 자동 승인, 사람이 확인하는 직접 승인. */
+export type JoinPolicy = "auto" | "approval";
+
+/** 참가 요청이 놓인 자리 — 소속이 된 것과 승인을 기다리는 것. */
+export type JoinStatus = "approved" | "pending";
+
+export type Team = { id: number; name: string; member_count: number; join_policy: JoinPolicy };
 
 export type Member = { id: number; name: string; positions: string[] };
 
@@ -35,14 +41,58 @@ export type Membership = {
   member_name: string;
   team_id: number;
   position: string;
+  status: JoinStatus;
 };
+
+/** /me 가 함께 주는 내 소속 하나. 승인된 것과 기다리는 것이 status 로 갈린다.
+ *  팀 번호 오름차순으로 온다. */
+export type MyMembership = {
+  team_id: number;
+  team_name: string;
+  position: string;
+  status: JoinStatus;
+};
+
+/** /me 응답 전체 — 지금 로그인한 계정과 그 계정의 소속·신청. */
+export type Me = { account: Account; memberships: MyMembership[] };
+
+/** 승인을 기다리는 참가 신청 하나. 화면에는 번호가 아니라 이름과 포지션이 나온다. */
+export type JoinRequest = {
+  member_id: number;
+  member_name: string;
+  position: string;
+};
+
+/** 할 수 있는 일 열한 가지. 서버 쪽 정본은 backend/src/backend/db/models.py 의 Permission 이다. */
+export type Permission =
+  | "room_manage"
+  | "period_manage"
+  | "team_manage"
+  | "member_remove"
+  | "join_approve"
+  | "assign_run"
+  | "assign_read"
+  | "proposal_confirm"
+  | "rollback"
+  | "notice_write"
+  | "permission_grant";
 
 export type Account = {
   id: number;
   name: string;
   email: string;
+  /** 저장된 값이 아니라 permissions 에서 뽑아낸 값이다 — 열한 가지가 전부 켜져 있으면 head_manager. */
   role: "head_manager" | "member";
+  permissions: Permission[];
   positions: string[];
+};
+
+/** 켜진 항목을 한 벌로 묶은 것. member_ids 는 이 묶음을 가진 사람들이다. */
+export type PermissionSet = {
+  id: number;
+  name: string;
+  permissions: Permission[];
+  member_ids: number[];
 };
 
 export type ScheduleRow = {
@@ -85,6 +135,18 @@ export type PostComment = {
   created_at: string;
 };
 
+/** 글에 붙은 파일 하나. 실제 파일은 GET /attachments/{id} 로 내려받는다. */
+export type Attachment = {
+  id: number;
+  post_id: number;
+  /** 올린 사람이 쓰던 이름 — "악보.pdf" */
+  name: string;
+  /** 바이트. 화면에는 fileSizeLabel 로 바꿔 보여준다. */
+  size: number;
+  content_type: string;
+  uploaded_at: string;
+};
+
 export type Unavailable = {
   id: number;
   member_id: number;
@@ -106,4 +168,14 @@ export type Reservation = {
   member: string;
   start: string;
   end: string;
+};
+
+/** 화면 안 알림 하나. 완성된 문구는 담기지 않는다 — kind 로 화면이 문장을 만든다
+ *  (lib/notifications.ts). read 가 거짓이면 아직 안 읽은 것이다. */
+export type Notification = {
+  id: number;
+  kind: "assignment_updated";
+  /** "2026-09-14T18:00:00" */
+  created_at: string;
+  read: boolean;
 };
