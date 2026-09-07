@@ -22,6 +22,20 @@ services:
       COOKIE_SECURE: "false"
     restart: "no"
 
+  # 자동 배정 — 개발에서는 기본으로 꺼 둔다. `docker compose up` 이 이것까지 함께
+  # 띄우는데, 켜져 있으면 검사가 심어 둔 기간을 이 서비스가 제멋대로 다시 계산해
+  # 결과가 흔들린다. 눈으로 볼 때만 AUTO_ASSIGN_ENABLED=true 로 띄운다(COMMAND.md 13-1).
+  auto-assign:
+    build:
+      target: dev
+    image: banblit-backend:dev
+    volumes:
+      - ./backend:/app
+    environment:
+      AUTO_ASSIGN_ENABLED: "${AUTO_ASSIGN_ENABLED:-false}"
+      AUTO_ASSIGN_INTERVAL_SECONDS: "${AUTO_ASSIGN_INTERVAL_SECONDS:-10}"
+    restart: "no"
+
   # 화면 — nginx 대신 Vite 개발 서버가 돈다. node_modules 는 이름 붙은 저장소에
   # 둔다: 윈도우 폴더에 그대로 두면 파일이 많아 눈에 띄게 느려진다.
   web:
