@@ -37,3 +37,6 @@ frontend/tsconfig.tsbuildinfo
 # Playwright 실행 산출물 (실패 화면·추적 파일·보고서)
 frontend/test-results/
 frontend/playwright-report/
+
+# banblit.ps1 check 가 남기는 전체 출력. 판정만 화면에 내고 원문은 여기 쌓인다.
+.logs/
