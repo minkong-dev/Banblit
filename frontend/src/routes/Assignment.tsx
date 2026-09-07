@@ -6,7 +6,8 @@ import { DevOfflineToggle } from "../components/DevOfflineToggle";
 import { getJSON } from "../lib/api";
 import { runAssignment } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
-import { useToast } from "../components/hooks";
+import { useMe, useToast } from "../components/hooks";
+import { can, roleLabel } from "../lib/account";
 import "../styles/assignment.css";
 import type { AssignOut, Period, Room, ScheduleRow, Slot, Team } from "../lib/contract";
 import { datesBetween, dayOf, hhmm, mergeSessions } from "../lib/pipeline";
@@ -39,6 +40,7 @@ function colorsOf(sessions: Session[]): Map<string, string> {
 
 export function Assignment() {
   const { message, say } = useToast();
+  const { me } = useMe();
   const queryClient = useQueryClient();
   const [periodId, setPeriodId] = useState<number | null>(null);
   const [view, setView] = useState("now");
@@ -92,6 +94,23 @@ export function Assignment() {
       );
     },
     onError: () => say("계산하지 못했습니다"),
+  });
+
+  const rollback = useMutation({
+    mutationFn: () => {
+      if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
+      // 회차를 받지 않는 통로다. 언제나 바로 직전 회차로만 되돌아간다.
+      return getJSON<{ rolled_back: boolean }>(`/periods/${activePeriodId}/rollback`, {
+        method: "POST",
+      });
+    },
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["schedule", activePeriodId] });
+      setView("now");
+      say(result.rolled_back ? "직전 배정으로 되돌렸습니다" : "되돌릴 배정이 없습니다");
+    },
+    // 서버가 거절한 사유를 그대로 보여준다 — 방·시각이 겹쳐 되돌리지 못하는 경우가 있다.
+    onError: (error) => say(error instanceof Error ? error.message : "되돌리지 못했습니다"),
   });
 
   const confirmed = useMemo(
@@ -153,12 +172,30 @@ export function Assignment() {
     </div>
   );
 
-  const again = (
+  // 단추마다 필요한 항목이 다르다 — 계산은 assign_run, 되돌리기는 rollback.
+  // 둘 다 없으면 줄 자체를 두지 않는다.
+  const canRun = can(me, "assign_run");
+  const canRollback = can(me, "rollback");
+  const again = !canRun && !canRollback ? null : (
     <div className="act">
-      <button className="btn main" disabled={recompute.isPending || activePeriodId === null}
-        onClick={() => recompute.mutate({ team_ids: teamIds, room_ids: roomIds })}>
-        {recompute.isPending ? "계산하는 중…" : "지금 다시 계산"}
-      </button>
+      {!canRun ? null : (
+        <button className="btn main" disabled={recompute.isPending || activePeriodId === null}
+          onClick={() => recompute.mutate({ team_ids: teamIds, room_ids: roomIds })}>
+          {recompute.isPending ? "계산하는 중…" : "지금 다시 계산"}
+        </button>
+      )}
+      {/* ponytail: 되돌리기는 무를 수 없어 한 번 되묻는다. 이 화면에는 확인 대화상자가
+          없어 브라우저 것을 쓴다. 화면 자체의 대화상자가 생기면 그것으로 옮긴다. */}
+      {!canRollback ? null : (
+        <button className="btn" disabled={rollback.isPending || activePeriodId === null}
+          onClick={() => {
+            if (window.confirm("지금 확정된 시간표를 버리고 직전 배정으로 되돌립니다. 되돌릴까요?")) {
+              rollback.mutate();
+            }
+          }}>
+          {rollback.isPending ? "되돌리는 중…" : "직전 배정으로 되돌리기"}
+        </button>
+      )}
     </div>
   );
 
@@ -200,9 +237,16 @@ export function Assignment() {
           빈 시간표를 내보내지 않고 여기서 멈춰 있습니다.
         </p>
         {counts}
+        {/* 계산 단추를 감춘 사람에게 그 단추를 누르라고 안내하지 않는다. */}
         <div className="note">
-          아래 <b>지금 다시 계산</b>을 누르면 서버가 배정을 돌립니다.
-          풀리지 않으면 누구를 빼면 되는지 <b>A안·B안</b> 탭으로 나옵니다.
+          {canRun ? (
+            <>
+              아래 <b>지금 다시 계산</b>을 누르면 서버가 배정을 돌립니다.
+              풀리지 않으면 누구를 빼면 되는지 <b>A안·B안</b> 탭으로 나옵니다.
+            </>
+          ) : (
+            "배정 계산을 맡은 사람이 다시 돌리면 여기에 시간표가 나옵니다."
+          )}
         </div>
         {again}
       </>
@@ -216,7 +260,9 @@ export function Assignment() {
           합주 {shown.length}번 · 모두 합쳐 {hours.toFixed(1)}시간. 서버에 저장된 배정을 그대로 보여줍니다.
         </p>
         {counts}
-        <div className="note">다시 계산하면 지금 시간표는 백업으로 밀려나고 새 결과가 확정됩니다.</div>
+        {!canRun ? null : (
+          <div className="note">다시 계산하면 지금 시간표는 백업으로 밀려나고 새 결과가 확정됩니다.</div>
+        )}
         {again}
       </>
     );
@@ -229,9 +275,9 @@ export function Assignment() {
       toast={message}
       profile={
         <button className="profbtn">
-          <span className="face" aria-hidden="true">박서</span>
-          <span className="nm">박서연</span>
-          <span className="role">헤드매니저</span>
+          <span className="face" aria-hidden="true">{me?.name.slice(0, 2) ?? ""}</span>
+          <span className="nm">{me?.name ?? ""}</span>
+          <span className="role">{me ? roleLabel(me.role) : ""}</span>
         </button>
       }
       sideExtra={import.meta.env.DEV && <DevOfflineToggle />}

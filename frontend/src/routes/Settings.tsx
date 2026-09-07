@@ -1,21 +1,36 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import type { ReactNode, RefObject } from "react";
+import { useState } from "react";
+import type { RefObject } from "react";
 
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
 import { getJSON } from "../lib/api";
 import { checkPeriod, checkRoom, daysBetween, openingHours } from "../lib/pipeline";
-import { useToast } from "../components/hooks";
+import { useMe, useToast } from "../components/hooks";
+import { can, roleLabel } from "../lib/account";
+import { PermissionCard } from "./SettingsPermissions";
+import {
+  Cell,
+  CardState,
+  FormTail,
+  Row,
+  reason,
+  useFirstField,
+  useForm,
+  useRowFocus,
+} from "./SettingsForm";
 import "../styles/settings.css";
-import type { Period, Room } from "../lib/contract";
+import type { Period, Room, Team } from "../lib/contract";
 
 
-type Tab = "rooms" | "periods";
+type Tab = "rooms" | "periods" | "permissions";
 
+// 합주실·기간 목록은 계정만 있으면 서버가 보여준다. 그래서 탭은 늘 있고, 고치는
+// 단추만 항목으로 가린다. 권한 탭은 목록을 받는 통로부터 permission_grant 를 요구한다.
 const TABS = [
   { key: "rooms" as const, text: "합주실" },
   { key: "periods" as const, text: "기간" },
 ];
+const PERMISSION_TAB = { key: "permissions" as const, text: "권한" };
 
 const BLANK_ROOM = { name: "", opens_at: "18:00", closes_at: "23:00" };
 const BLANK_PERIOD = {
@@ -29,90 +44,41 @@ const BLANK_PERIOD = {
 
 const KIND_TEXT = { open: "상시 개방", focused: "집중 합주" };
 
-function reason(error: unknown): string {
-  return error instanceof Error ? error.message : "저장하지 못했습니다";
+/** 목록 줄 오른쪽에 붙는 한 줄. 집중 합주기간에만 계산 시각 둘이 더 붙는다. */
+function periodSpan(period: Period): string {
+  const days = ` · ${daysBetween(period.starts_on, period.ends_on)}일`;
+  if (period.kind !== "focused") return days;
+  return `${days} · 계산 ${period.first_run_at} · ${period.second_run_at}`;
 }
 
-/** 고치기/취소로 줄이 통째로 갈릴 때 초점이 사라지지 않게, 눌렀던 단추를 기억해 둔다. */
-function useRowFocus(): {
-  editing: number | null;
-  open: (id: number) => void;
-  close: () => void;
-  register: (id: number) => (el: HTMLButtonElement | null) => void;
-} {
-  const [editing, setEditing] = useState<number | null>(null);
-  const buttons = useRef(new Map<number, HTMLButtonElement>());
-  // 되돌아갈 곳은 화면에 그려지는 값이 아니므로 state 로 들지 않는다. state 로 들면
-  // 초점을 옮긴 뒤 그것을 비우려고 다시 그리게 된다.
-  const back = useRef<number | null>(null);
-
-  // 단추는 편집을 떠나며 다시 그려진다. 그려진 뒤에 초점을 옮겨야 잡힌다.
-  useEffect(() => {
-    if (editing !== null || back.current === null) return;
-    buttons.current.get(back.current)?.focus();
-    back.current = null;
-  }, [editing]);
-
-  return {
-    editing,
-    open: (id) => setEditing(id),
-    close: () => {
-      back.current = editing;
-      setEditing(null);
-    },
-    register: (id) => (el) => {
-      if (el === null) buttons.current.delete(id);
-      else buttons.current.set(id, el);
-    },
-  };
-}
-
-/** 고치기로 들어온 서식의 첫 칸에 초점을 옮긴다. autoFocus 는 이 화면에서 걸리지
- *  않아 직접 옮긴다. 추가 서식(editing 이 아닌 것)에는 걸지 않는다 — 화면을 열자마자
- *  아래쪽 서식으로 끌려가면 안 된다. */
-function useFirstField<T extends HTMLElement>(editing: boolean): RefObject<T | null> {
-  const first = useRef<T>(null);
-  useEffect(() => {
-    if (editing) first.current?.focus();
-  }, [editing]);
-  return first;
-}
-
-/** 서식 한 벌의 상태. 사람이 손대기 전에는 빨간 사유를 띄우지 않으려고 touched 를 함께 든다. */
-function useForm<T>(start: T): [T, (next: T) => void, boolean, () => void] {
-  const [value, write] = useState(start);
-  const [touched, setTouched] = useState(false);
-  const set = (next: T): void => {
-    setTouched(true);
-    write(next);
-  };
-  const reset = (): void => {
-    setTouched(false);
-    write(start);
-  };
-  return [value, set, touched, reset];
-}
-
-/** 서식 한 칸. 계정 화면의 Field 는 그쪽 CSS 에 묶여 있어 여기서는 쓰지 않는다. */
-function Cell(props: { label: string; htmlFor: string; wide?: boolean; children: ReactNode }) {
+/** 권한 탭에서 오른쪽에 두는 안내. 합주실·기간 탭의 셈(Readout)이 들어설 자리다. */
+function PermissionNote() {
   return (
-    <label className={props.wide ? "wide" : undefined} htmlFor={props.htmlFor}>
-      {props.label}
-      {props.children}
-    </label>
+    <Panel title="권한" hint="항목 열한 가지">
+      <div className="read">
+        <p className="note">
+          묶음을 만들어 할 수 있는 일을 켜고, 그 묶음을 사람에게 붙입니다.
+          한 사람이 묶음을 여럿 가지면 켜진 항목이 모두 합쳐집니다.
+        </p>
+        <p className="note">
+          이 화면이 단추를 감추는 것은 안내일 뿐입니다.
+          실제로 허용할지는 서버가 요청마다 다시 판정합니다.
+        </p>
+      </div>
+    </Panel>
   );
-}
-
-function CardState({ state, empty }: { state: string; empty: string }) {
-  // 비어 있는 것과 고장 난 것을 구분해서 말한다.
-  if (state === "loading") return <div className="empty">불러오는 중…</div>;
-  return <div className="empty">{state === "" ? empty : state}</div>;
 }
 
 export function Settings() {
   const [tab, setTab] = useState<Tab>("rooms");
   const { message, say } = useToast();
   const client = useQueryClient();
+  const { me } = useMe();
+
+  const canGrant = can(me, "permission_grant");
+  const tabs = canGrant ? [...TABS, PERMISSION_TAB] : TABS;
+  // 권한을 잃은 채로 그 탭에 머물러 있지 않게, 없는 탭이면 첫 탭을 보여준다.
+  const shown: Tab = tabs.some((item) => item.key === tab) ? tab : "rooms";
 
   const rooms = useQuery({
     queryKey: ["rooms"],
@@ -122,9 +88,16 @@ export function Settings() {
     queryKey: ["periods"],
     queryFn: () => getJSON<{ periods: Period[] }>("/periods"),
   });
+  // 팀 목록은 오른쪽 셈에만 쓴다. 질의 이름은 다른 화면이 쓰는 것과 같아, 이미 받아
+  // 둔 목록이 있으면 다시 부르지 않는다.
+  const teams = useQuery({
+    queryKey: ["teams"],
+    queryFn: () => getJSON<{ teams: Team[] }>("/teams"),
+  });
 
   const roomList = rooms.data?.rooms ?? [];
   const periodList = periods.data?.periods ?? [];
+  const teamList = teams.data?.teams ?? [];
 
   // 저장이 끝나면 그 목록을 다시 받아온다. 화면이 스스로 값을 지어내지 않게 한다.
   function saved(key: string, text: string): () => void {
@@ -146,32 +119,46 @@ export function Settings() {
       toast={message}
       profile={
         <button className="profbtn">
-          <span className="face" aria-hidden="true">박서</span>
-          <span className="nm">박서연</span>
-          <span className="role">헤드매니저</span>
+          <span className="face" aria-hidden="true">{me?.name.slice(0, 2) ?? ""}</span>
+          <span className="nm">{me?.name ?? ""}</span>
+          <span className="role">{me ? roleLabel(me.role) : ""}</span>
         </button>
       }
     >
-      <Tabs label="설정" items={TABS} selected={tab} onSelect={setTab} />
+      <Tabs label="설정" items={tabs} selected={shown} onSelect={setTab} />
 
       <div className="main">
-        {tab === "rooms" ? (
+        {shown === "rooms" ? (
           <RoomCard
             rooms={roomList}
             state={stateOf(rooms)}
+            canEdit={can(me, "room_manage")}
             onSaved={saved("rooms", "합주실을 저장했습니다")}
           />
-        ) : (
+        ) : shown === "periods" ? (
           <PeriodCard
             periods={periodList}
             state={stateOf(periods)}
+            canEdit={can(me, "period_manage")}
             onSaved={saved("periods", "기간을 저장했습니다")}
           />
+        ) : (
+          <PermissionCard onSay={say} />
         )}
       </div>
 
       <div className="rail">
-        <Readout rooms={roomList} periods={periodList} tab={tab} />
+        {shown === "permissions" ? (
+          <PermissionNote />
+        ) : (
+          <Readout
+            rooms={roomList}
+            periods={periodList}
+            teams={teamList}
+            teamsState={stateOf(teams)}
+            tab={shown}
+          />
+        )}
       </div>
     </AppShell>
   );
@@ -275,6 +262,14 @@ function PeriodFields(props: {
       </Cell>
       {form.kind === "focused" ? (
         <>
+          <Cell label="매일 (미연동)" htmlFor={at("everyday")}>
+            <input
+              id={at("everyday")}
+              type="checkbox"
+              checked={form.everyday}
+              onChange={(event) => setForm({ ...form, everyday: event.target.checked })}
+            />
+          </Cell>
           <Cell label="첫 계산" htmlFor={at("first")}>
             <input
               id={at("first")}
@@ -297,62 +292,8 @@ function PeriodFields(props: {
   );
 }
 
-/** 목록 한 줄 — 보고 있는 상태. 고치는 중이면 카드가 서식을 대신 그린다. */
-function Row(props: {
-  title: string;
-  when: ReactNode;
-  span: string;
-  editLabel: string;
-  buttonRef: (el: HTMLButtonElement | null) => void;
-  onEdit: () => void;
-}) {
-  const { title, when, span, editLabel, buttonRef, onEdit } = props;
-  return (
-    <li>
-      <div>
-        <div className="nm">{title}</div>
-        <div className="when">
-          {when}
-          <span className="span">{span}</span>
-        </div>
-      </div>
-      <div className="acts">
-        <button className="btn" ref={buttonRef} aria-label={editLabel} onClick={onEdit}>
-          고치기
-        </button>
-      </div>
-    </li>
-  );
-}
-
-/** 서식 꼬리 — 취소·저장 단추와 사유. 두 서식이 같은 것을 쓴다. */
-function FormTail(props: {
-  submit: string;
-  pending: boolean;
-  blocked: boolean;
-  bad: string;
-  whyId: string;
-  onCancel?: () => void;
-}) {
-  const { submit, pending, blocked, bad, whyId, onCancel } = props;
-  return (
-    <>
-      <div className="acts">
-        {onCancel === undefined ? null : (
-          <button className="btn" type="button" onClick={onCancel}>취소</button>
-        )}
-        <button className="btn go" type="submit" disabled={blocked || pending}>
-          {pending ? "저장하는 중…" : submit}
-        </button>
-      </div>
-      {/* role="alert" 이라야 화면을 보지 않는 사람에게도 사유가 전해진다. */}
-      {bad === "" ? null : <p className="why" id={whyId} role="alert">{bad}</p>}
-    </>
-  );
-}
-
-function RoomCard(props: { rooms: Room[]; state: string; onSaved: () => void }) {
-  const { rooms, state, onSaved } = props;
+function RoomCard(props: { rooms: Room[]; state: string; canEdit: boolean; onSaved: () => void }) {
+  const { rooms, state, canEdit, onSaved } = props;
   const { editing, open, close, register } = useRowFocus();
 
   return (
@@ -367,7 +308,7 @@ function RoomCard(props: { rooms: Room[]; state: string; onSaved: () => void }) 
       ) : (
         <ul className="rows">
           {rooms.map((room) =>
-            editing === room.id ? (
+            canEdit && editing === room.id ? (
               <li className="editing" key={room.id}>
                 <RoomForm
                   start={room}
@@ -384,30 +325,34 @@ function RoomCard(props: { rooms: Room[]; state: string; onSaved: () => void }) 
                 />
               </li>
             ) : (
+              // onEdit 이 없으면 Row 가 고치기 단추를 그리지 않는다 — room_manage 가
+              // 없는 사람에게는 목록만 보인다.
               <Row
                 key={room.id}
                 title={room.name}
                 when={<><b>{room.opens_at}</b> 부터 <b>{room.closes_at}</b> 까지</>}
                 span={` · 하루 ${openingHours({ rooms: [room], days: 1, teams: 0 }).perDay}`}
-                editLabel={`${room.name} 고치기`}
-                buttonRef={register(room.id)}
-                onEdit={() => open(room.id)}
+                editLabel={canEdit ? `${room.name} 고치기` : undefined}
+                buttonRef={canEdit ? register(room.id) : undefined}
+                onEdit={canEdit ? () => open(room.id) : undefined}
               />
             ),
           )}
         </ul>
       )}
 
-      <div className="addrow">
-        <RoomForm
-          start={BLANK_ROOM}
-          taken={rooms.map((room) => room.name)}
-          path="/rooms"
-          method="POST"
-          submit="합주실 추가"
-          onDone={onSaved}
-        />
-      </div>
+      {!canEdit ? null : (
+        <div className="addrow">
+          <RoomForm
+            start={BLANK_ROOM}
+            taken={rooms.map((room) => room.name)}
+            path="/rooms"
+            method="POST"
+            submit="합주실 추가"
+            onDone={onSaved}
+          />
+        </div>
+      )}
     </Card>
   );
 }
@@ -463,15 +408,17 @@ function RoomForm(props: {
   );
 }
 
-function PeriodCard(props: { periods: Period[]; state: string; onSaved: () => void }) {
-  const { periods, state, onSaved } = props;
+function PeriodCard(props: { periods: Period[]; state: string; canEdit: boolean; onSaved: () => void }) {
+  const { periods, state, canEdit, onSaved } = props;
   const { editing, open, close, register } = useRowFocus();
 
   return (
     <Card>
       <div className="sethead">
         <b>기간</b>
-        <span>집중 합주기간에만 자동 배정이 돕니다</span>
+        <span>
+          집중 합주기간에만 자동 배정이 돕니다 · 매일은 저장까지만 되고 배정 계산은 아직 이 값을 보지 않습니다
+        </span>
       </div>
 
       {state !== "" || periods.length === 0 ? (
@@ -479,7 +426,7 @@ function PeriodCard(props: { periods: Period[]; state: string; onSaved: () => vo
       ) : (
         <ul className="rows">
           {periods.map((period) =>
-            editing === period.id ? (
+            canEdit && editing === period.id ? (
               <li className="editing" key={period.id}>
                 <PeriodForm
                   start={period}
@@ -494,34 +441,33 @@ function PeriodCard(props: { periods: Period[]; state: string; onSaved: () => vo
                 />
               </li>
             ) : (
+              // onEdit 이 없으면 Row 가 고치기 단추를 그리지 않는다 — period_manage 가
+              // 없는 사람에게는 목록만 보인다.
               <Row
                 key={period.id}
                 title={KIND_TEXT[period.kind] + (period.everyday ? " · 매일" : "")}
                 when={<><b>{period.starts_on}</b> 부터 <b>{period.ends_on}</b> 까지</>}
-                span={
-                  ` · ${daysBetween(period.starts_on, period.ends_on)}일` +
-                  (period.kind === "focused"
-                    ? ` · 계산 ${period.first_run_at} · ${period.second_run_at}`
-                    : "")
-                }
-                editLabel={`${period.starts_on} 부터의 기간 고치기`}
-                buttonRef={register(period.id)}
-                onEdit={() => open(period.id)}
+                span={periodSpan(period)}
+                editLabel={canEdit ? `${period.starts_on} 부터의 기간 고치기` : undefined}
+                buttonRef={canEdit ? register(period.id) : undefined}
+                onEdit={canEdit ? () => open(period.id) : undefined}
               />
             ),
           )}
         </ul>
       )}
 
-      <div className="addrow">
-        <PeriodForm
-          start={BLANK_PERIOD}
-          path="/periods"
-          method="POST"
-          submit="기간 추가"
-          onDone={onSaved}
-        />
-      </div>
+      {!canEdit ? null : (
+        <div className="addrow">
+          <PeriodForm
+            start={BLANK_PERIOD}
+            path="/periods"
+            method="POST"
+            submit="기간 추가"
+            onDone={onSaved}
+          />
+        </div>
+      )}
     </Card>
   );
 }
@@ -573,18 +519,31 @@ function PeriodForm(props: {
   );
 }
 
+/** 팀 목록이 성하면 팀 수와 소속 인원 수를, 아니면 왜 셀 수 없는지 돌려준다. */
+function teamLine(teams: Team[], state: string): string {
+  if (state === "loading") return "팀 목록을 불러오는 중…";
+  if (state !== "") return state;
+  const members = teams.reduce((sum, team) => sum + team.member_count, 0);
+  return `팀 ${teams.length}개 · 소속 인원 ${members}명`;
+}
+
 /** 지금 설정이면 실제로 얼마가 열리는지. 집중기간은 모든 팀이 같은 몫을 가져야 한다. */
-function Readout(props: { rooms: Room[]; periods: Period[]; tab: Tab }) {
-  const { rooms, periods, tab } = props;
-  // 명단 API 가 없어 팀 수를 알 수 없다. 헤드매니저가 직접 넣어 견주게 한다.
-  const [teams, setTeams] = useState("");
+function Readout(props: {
+  rooms: Room[];
+  periods: Period[];
+  teams: Team[];
+  teamsState: string;
+  tab: Tab;
+}) {
+  const { rooms, periods, teams, teamsState, tab } = props;
 
   // 집중기간이 여럿이면 첫 것만 센다. 어느 기간인지는 아래 날짜로 밝히므로 사람이
   // 헷갈리지는 않는다. 여러 개를 견주는 것은 고를 자리를 만든 뒤에 한다.
   const focused = periods.filter((period) => period.kind === "focused");
   const period = tab === "periods" ? focused[0] : undefined;
   const days = period ? daysBetween(period.starts_on, period.ends_on) : 1;
-  const count = Math.max(0, Math.floor(Number(teams) || 0));
+  // 팀 수는 팀 목록 통로가 준다. 아직 못 받았으면 0 이고, 그러면 팀당 몫을 나누지 않는다.
+  const count = teams.length;
   const sum = openingHours({ rooms, days, teams: count });
 
   return (
@@ -612,22 +571,12 @@ function Readout(props: { rooms: Room[]; periods: Period[]; tab: Tab }) {
           ) : null}
         </dl>
 
-        <div className="teams">
-          <label htmlFor="teamCount">팀 수</label>
-          <input
-            id="teamCount"
-            type="number"
-            min={0}
-            value={teams}
-            placeholder="6"
-            onChange={(event) => setTeams(event.target.value)}
-          />
-        </div>
+        <div className="teams">{teamLine(teams, teamsState)}</div>
 
         <p className="note">
           {count > 0
             ? "집중 합주기간에는 모든 팀이 정확히 같은 몫을 갖습니다. 한 팀이라도 채우지 못하면 배정 전체가 실패로 넘어갑니다."
-            : "팀 수를 넣으면 팀마다 얼마씩 돌아가는지 계산합니다. 명단 API 가 아직 없어 직접 넣습니다."}
+            : "셀 팀이 없어 팀마다 얼마씩 돌아가는지는 계산하지 않습니다."}
         </p>
       </div>
     </Panel>

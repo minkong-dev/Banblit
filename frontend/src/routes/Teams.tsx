@@ -1,12 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { FormEvent } from "react";
 
 import { AppShell, Card, Panel, ProfileMenu } from "../components/AppShell";
-import { useMe } from "../components/hooks";
-import { checkJoinPosition, checkTeamName, getJSON } from "../lib/pipeline";
-import type { Member, Membership, Position, Team } from "../lib/contract";
-import { roleLabel } from "../lib/account";
+import { useMe, useToast } from "../components/hooks";
+import {
+  checkJoinPosition,
+  checkTeamName,
+  getJSON,
+  joinPolicyLabel,
+  joinResultMessage,
+  joinStand,
+} from "../lib/pipeline";
+import type { JoinStand } from "../lib/pipeline";
+import type {
+  JoinPolicy,
+  JoinRequest,
+  Member,
+  Membership,
+  Position,
+  Team,
+} from "../lib/contract";
+import { can, roleLabel } from "../lib/account";
 import "../styles/teams.css";
 
 
@@ -22,7 +37,7 @@ function TeamRow(props: { team: Team; selected: boolean; mine: boolean; onOpen: 
         <b>{team.name}</b>
         {mine ? <span className="mine">내 팀</span> : null}
       </button>
-      <span className="cnt">{team.member_count}명</span>
+      <span className="cnt">{team.member_count}명 · {joinPolicyLabel(team.join_policy)}</span>
     </li>
   );
 }
@@ -52,14 +67,13 @@ function Roster(props: { teamId: number | null }) {
   );
 }
 
-/** 팀 만들기 서식. 헤드매니저 권한은 서버가 최종적으로 가린다 — 로그인 붙은 지금도
- *  이 화면은 역할을 미리 감추지 않고, 권한이 없으면 서버가 돌려준 사유를 그대로 보여준다. */
+/** 팀 만들기 서식. team_manage 를 가진 사람에게만 그린다. 감추는 것은 없는 단추를
+ *  보여주지 않는 것일 뿐, 진짜 판정은 서버가 한다. */
 function CreateTeamForm(props: {
   taken: string[];
-  requestedBy: number | null;
   onCreated: () => void;
 }) {
-  const { taken, requestedBy, onCreated } = props;
+  const { taken, onCreated } = props;
   const [name, setName] = useState("");
   const [touched, setTouched] = useState(false);
 
@@ -68,7 +82,7 @@ function CreateTeamForm(props: {
       getJSON<{ team: Team }>("/teams", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, requested_by: requestedBy }),
+        body: JSON.stringify({ name }),
       }),
     onSuccess: () => {
       setName("");
@@ -77,10 +91,7 @@ function CreateTeamForm(props: {
     },
   });
 
-  const why =
-    requestedBy === null
-      ? "내 계정을 확인하지 못해 팀을 만들 수 없습니다"
-      : checkTeamName(name, taken);
+  const why = checkTeamName(name, taken);
   const whyId = "team-create-why";
   const bad = touched && why !== "" ? why : send.error ? reason(send.error) : "";
 
@@ -119,19 +130,22 @@ function CreateTeamForm(props: {
   );
 }
 
-/** 명단 아래의 참가·나가기. 이미 소속이면 나가기 단추만, 아니면 포지션을 골라
- *  참가하는 서식을 보여준다. */
+/** 명단 아래의 참가·나가기. 소속이면 나가기 단추만, 승인을 기다리는 중이면 그 표시와
+ *  신청을 거두는 자리, 둘 다 아니면 포지션을 골라 참가하는 서식을 보여준다. */
 function JoinLeave(props: {
   teamId: number;
-  isMember: boolean;
+  stand: JoinStand;
   memberId: number | null;
+  /** 신청을 거두는 통로가 join_approve 를 요구해, 그 항목이 없으면 거두는 자리가 없다. */
+  canWithdraw: boolean;
   onChanged: () => void;
+  say: (message: string) => void;
 }) {
-  const { teamId, isMember, memberId, onChanged } = props;
+  const { teamId, stand, memberId, canWithdraw, onChanged, say } = props;
   const positions = useQuery({
     queryKey: ["positions"],
     queryFn: () => getJSON<{ positions: Position[] }>("/positions"),
-    enabled: !isMember,
+    enabled: stand === "join",
   });
   const [positionId, setPositionId] = useState<number | null>(null);
 
@@ -141,15 +155,25 @@ function JoinLeave(props: {
     onSuccess: onChanged,
   });
 
+  // 신청을 거두는 통로는 남의 신청을 거절하는 통로와 같다 — 지우는 대상이 나 자신일 뿐이다.
+  const cancel = useMutation({
+    mutationFn: () =>
+      getJSON<null>(`/teams/${teamId}/join-requests/${memberId}`, { method: "DELETE" }),
+    onSuccess: onChanged,
+  });
+
   const join = useMutation({
     mutationFn: () =>
       getJSON<{ membership: Membership }>(`/teams/${teamId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ member_id: memberId, position_id: positionId }),
+        body: JSON.stringify({ position_id: positionId }),
       }),
-    onSuccess: () => {
+    onSuccess: ({ membership }) => {
+      // 자동 승인인지 직접 승인인지는 팀 설정이 정하고 그 결과가 status 로 온다. 화면은
+      // 그 값 하나만 보고 알린다 — 소속인지 기다리는 중인지는 다시 받아온 /me 가 정한다.
       setPositionId(null);
+      say(joinResultMessage(membership.status));
       onChanged();
     },
   });
@@ -157,13 +181,27 @@ function JoinLeave(props: {
   // 내 계정을 못 찾으면(로그인 전, 또는 명단에 없는 사람) 참가·나가기를 보여줄 수 없다.
   if (memberId === null) return null;
 
-  if (isMember) {
+  if (stand === "member") {
     return (
       <div className="joinrow">
         <button className="btn" onClick={() => leave.mutate()} disabled={leave.isPending}>
           {leave.isPending ? "나가는 중…" : "이 팀에서 나가기"}
         </button>
         {leave.error ? <p className="why" role="alert">{reason(leave.error)}</p> : null}
+      </div>
+    );
+  }
+
+  if (stand === "pending") {
+    return (
+      <div className="joinrow">
+        <span className="mine">승인 대기 중</span>
+        {!canWithdraw ? null : (
+          <button className="btn" onClick={() => cancel.mutate()} disabled={cancel.isPending}>
+            {cancel.isPending ? "거두는 중…" : "신청 거두기"}
+          </button>
+        )}
+        {cancel.error ? <p className="why" role="alert">{reason(cancel.error)}</p> : null}
       </div>
     );
   }
@@ -203,12 +241,117 @@ function JoinLeave(props: {
   );
 }
 
+/** 이 팀이 참가를 받는 방식을 바꾸는 자리. team_manage 를 가진 사람에게만 그린다.
+ *  지금 어느 쪽인지는 팀 목록 응답의 join_policy 가 정한다 — 화면이 고른 값을 따로
+ *  들지 않아, 저장이 끝나 팀 목록을 다시 받으면 그 값이 그대로 보인다. */
+function JoinPolicyPicker(props: {
+  team: Team;
+  onChanged: () => void;
+  say: (message: string) => void;
+}) {
+  const { team, onChanged, say } = props;
+
+  const save = useMutation({
+    // 이름은 안 바뀌어도 함께 보낸다 — 서버의 팀 고치기 통로가 이름을 늘 요구한다.
+    mutationFn: (next: JoinPolicy) =>
+      getJSON<{ team: Team }>(`/teams/${team.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: team.name, join_policy: next }),
+      }),
+    onSuccess: ({ team: saved }) => {
+      say(`${saved.name} 팀의 참가 승인 방식을 ${joinPolicyLabel(saved.join_policy)}으로 바꿨습니다.`);
+      onChanged();
+    },
+  });
+
+  return (
+    <div className="joinrow">
+      <label htmlFor="join-policy">
+        참가 승인 방식 바꾸기
+        <select
+          id="join-policy"
+          value={team.join_policy}
+          disabled={save.isPending}
+          onChange={(event) => save.mutate(event.target.value === "approval" ? "approval" : "auto")}
+        >
+          <option value="auto">자동 승인</option>
+          <option value="approval">직접 승인</option>
+        </select>
+      </label>
+      {save.error ? <p className="why" role="alert">{reason(save.error)}</p> : null}
+    </div>
+  );
+}
+
+/** 승인을 기다리는 신청 목록. join_approve 를 가진 사람에게만 그린다. */
+function JoinRequests(props: { teamId: number; onChanged: () => void }) {
+  const { teamId, onChanged } = props;
+  const requests = useQuery({
+    queryKey: ["join-requests", teamId],
+    queryFn: () => getJSON<{ join_requests: JoinRequest[] }>(`/teams/${teamId}/join-requests`),
+  });
+
+  // ponytail: 하나를 처리하는 동안 목록 전체의 단추가 잠긴다. 한 팀에 걸린 신청이
+  // 몇 개 안 되는 동안은 이 편이 겹쳐 누르는 것을 막아 준다. 신청이 길어지면
+  // 처리 중인 사람만 잠그도록 바꾼다.
+  const decide = useMutation({
+    mutationFn: (choice: { memberId: number; approve: boolean }) =>
+      choice.approve
+        ? getJSON<null>(`/teams/${teamId}/join-requests/${choice.memberId}/approve`, {
+            method: "POST",
+          })
+        : getJSON<null>(`/teams/${teamId}/join-requests/${choice.memberId}`, {
+            method: "DELETE",
+          }),
+    onSuccess: onChanged,
+  });
+
+  if (requests.isPending) return <div className="empty">불러오는 중…</div>;
+  if (requests.isError) return <div className="empty">{reason(requests.error)}</div>;
+  if (requests.data.join_requests.length === 0) {
+    return <div className="empty">기다리는 신청이 없습니다</div>;
+  }
+
+  return (
+    <div className="plist">
+      {requests.data.join_requests.map((request) => (
+        <div className="prow" key={request.member_id}>
+          <span className="pic" aria-hidden="true">{request.member_name.slice(0, 2)}</span>
+          <span className="nm">{request.member_name}</span>
+          <span className="ps">{request.position}</span>
+          <button
+            className="btn go"
+            type="button"
+            disabled={decide.isPending}
+            aria-label={`${request.member_name} 참가 승인`}
+            onClick={() => decide.mutate({ memberId: request.member_id, approve: true })}
+          >
+            승인
+          </button>
+          <button
+            className="btn"
+            type="button"
+            disabled={decide.isPending}
+            aria-label={`${request.member_name} 참가 거절`}
+            onClick={() => decide.mutate({ memberId: request.member_id, approve: false })}
+          >
+            거절
+          </button>
+        </div>
+      ))}
+      {decide.error ? <p className="why" role="alert">{reason(decide.error)}</p> : null}
+    </div>
+  );
+}
+
 /** 팀 찾기 — 팀 목록과 인원 수, 고르면 오른쪽에 그 팀 명단(이름·포지션)이 뜬다.
  *  팀 만들기는 왼쪽 카드 아래, 참가·나가기는 오른쪽 명단 아래에 둔다. */
 export function Teams() {
-  const { me, teamIds } = useMe();
+  const { me, teamIds, pendingTeamIds } = useMe();
   const mine = teamIds;
   const client = useQueryClient();
+  const { message, say } = useToast();
   const teams = useQuery({
     queryKey: ["teams"],
     queryFn: () => getJSON<{ teams: Team[] }>("/teams"),
@@ -221,18 +364,21 @@ export function Teams() {
     .map((team, index) => ({ ...team, colorKey: `c${(index % 4) + 1}` }))
     .filter((team) => mine.includes(team.id));
 
-  // 팀 목록·소속·명단이 한꺼번에 바뀌는 일이라 세 캐시를 같이 지운다. 팀 하나만
-  // 지우면 왼쪽 인원 수나 "내 팀" 배지가 낡은 값으로 남는다.
+  // 팀 목록·내 소속·명단·신청 목록이 한꺼번에 바뀌는 일이라 다섯 캐시를 같이 지운다. 팀
+  // 하나만 지우면 왼쪽 인원 수나 "내 팀" 배지, 승인 대기 표시가 낡은 값으로 남는다.
   function refresh(): void {
+    void client.invalidateQueries({ queryKey: ["me"] });
     void client.invalidateQueries({ queryKey: ["teams"] });
     void client.invalidateQueries({ queryKey: ["team-members"] });
     void client.invalidateQueries({ queryKey: ["members"] });
+    void client.invalidateQueries({ queryKey: ["join-requests"] });
   }
 
   return (
     <AppShell
       page="teams"
       current="find-team"
+      toast={message}
       profile={
         <ProfileMenu
           name={me?.name ?? ""}
@@ -266,11 +412,9 @@ export function Teams() {
               ))}
             </ul>
           )}
-          <CreateTeamForm
-            taken={list.map((team) => team.name)}
-            requestedBy={me?.id ?? null}
-            onCreated={refresh}
-          />
+          {!can(me, "team_manage") ? null : (
+            <CreateTeamForm taken={list.map((team) => team.name)} onCreated={refresh} />
+          )}
         </Card>
       </div>
 
@@ -281,14 +425,29 @@ export function Teams() {
         >
           <Roster teamId={current?.id ?? null} />
           {current === null ? null : (
-            <JoinLeave
-              teamId={current.id}
-              isMember={mine.includes(current.id)}
-              memberId={me?.id ?? null}
-              onChanged={refresh}
-            />
+            // key 에 팀 번호를 준다. 이것이 없으면 다른 팀을 골라도 같은 자리의 컴포넌트가
+            // 그대로 남아, 고르던 포지션·실패 문구·처리 중이던 요청이 새 팀으로 넘어온다.
+            // Fragment 는 화면에 아무것도 더하지 않으면서 key 만 받는다.
+            <Fragment key={current.id}>
+              <JoinLeave
+                teamId={current.id}
+                stand={joinStand(mine.includes(current.id), pendingTeamIds.includes(current.id))}
+                memberId={me?.id ?? null}
+                canWithdraw={can(me, "join_approve")}
+                onChanged={refresh}
+                say={say}
+              />
+              {!can(me, "team_manage") ? null : (
+                <JoinPolicyPicker team={current} onChanged={refresh} say={say} />
+              )}
+            </Fragment>
           )}
         </Panel>
+        {current === null || !can(me, "join_approve") ? null : (
+          <Panel title="참가 신청" hint={current.name}>
+            <JoinRequests key={current.id} teamId={current.id} onChanged={refresh} />
+          </Panel>
+        )}
       </div>
     </AppShell>
   );

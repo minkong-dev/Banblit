@@ -2,10 +2,20 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
-import { getJSON } from "../lib/api";
-import { checkComment, checkPost, postWhen } from "../lib/pipeline";
+import { apiUrl } from "../lib/api";
+import {
+  ATTACHMENT_ACCEPT,
+  attachmentHint,
+  checkAttachments,
+  checkComment,
+  checkPost,
+  fileSizeLabel,
+  getJSON,
+  postWhen,
+  sendFile,
+} from "../lib/pipeline";
 import { Card } from "./AppShell";
-import type { Post, PostComment } from "../lib/contract";
+import type { Attachment, Post, PostComment } from "../lib/contract";
 
 
 
@@ -89,26 +99,74 @@ function WriteForm(props: {
   const client = useQueryClient();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  // 올리는 동안 얼마나 갔는지 보여주는 한 줄. 비어 있으면 올리는 중이 아니다.
+  const [stage, setStage] = useState("");
+  // 글은 만들어졌는데 첨부에서 걸렸을 때 그 글 번호. null 이면 아직 만든 글이 없다.
+  const [postedId, setPostedId] = useState<number | null>(null);
   const [touched, setTouched] = useState(false);
+  // 고른 파일은 브라우저가 들고 있어 값을 대신 넣어 줄 수 없다. 다 올린 뒤 비우려면
+  // 그 칸을 직접 잡아야 한다.
+  const picker = useRef<HTMLInputElement>(null);
+
+  const uploadAll = async (postId: number): Promise<void> => {
+    // 고른 순서대로 하나씩 올린다. 한 번에 몰아 보내면 어느 것이 얼마나 갔는지
+    // 사람에게 보여줄 수 없다.
+    for (const [index, file] of files.entries()) {
+      const nth = files.length === 1 ? "" : ` (${index + 1}/${files.length})`;
+      setStage(`${file.name} 올리는 중${nth} 0%`);
+      try {
+        await sendFile(`/posts/${postId}/attachments`, file, (percent) => {
+          setStage(`${file.name} 올리는 중${nth} ${percent}%`);
+        });
+      } catch (error) {
+        // 여기까지 올라간 것은 이미 글에 붙었다. 못 올린 것만 남겨, 다시 누를 때
+        // 같은 파일을 두 번 올리지 않게 한다.
+        setFiles(files.slice(index));
+        throw new Error(
+          `글은 올렸습니다. "${file.name}" 을 올리지 못했습니다 — ${reason(error)}`,
+        );
+      }
+    }
+  };
 
   const send = useMutation({
-    mutationFn: () =>
-      getJSON<{ post: Post }>(writePath, {
-        // author_id 는 안 보낸다 — 서버가 요청에 실린 토큰으로 글쓴이를 정한다.
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body }),
-      }),
+    mutationFn: async () => {
+      // 글이 먼저다 — 첨부는 붙을 글 번호를 받아야 올릴 수 있다. 앞서 만들어 둔 글이
+      // 있으면(첨부에서만 걸린 경우) 다시 만들지 않는다. 그러지 않으면 다시 누를 때
+      // 같은 글이 하나 더 생긴다.
+      let postId = postedId;
+      if (postId === null) {
+        const { post } = await getJSON<{ post: Post }>(writePath, {
+          // author_id 는 안 보낸다 — 서버가 요청에 실린 토큰으로 글쓴이를 정한다.
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, body }),
+        });
+        postId = post.id;
+        setPostedId(postId);
+      }
+      await uploadAll(postId);
+    },
     onSuccess: () => {
+      const said = files.length === 0 ? "글을 올렸습니다." : "글과 첨부파일을 올렸습니다.";
       setTitle("");
       setBody("");
+      setFiles([]);
+      setPostedId(null);
+      if (picker.current !== null) picker.current.value = "";
       setTouched(false);
+      onSay(said);
+    },
+    onSettled: () => {
+      // 첨부를 올리다 걸려도 글은 이미 만들어졌다 — 성패와 무관하게 목록을 다시 받는다.
+      setStage("");
       void client.invalidateQueries({ queryKey });
-      onSay("글을 올렸습니다.");
     },
   });
 
-  const why = checkPost({ title, body });
+  const postWhy = checkPost({ title, body });
+  const why = postWhy !== "" ? postWhy : checkAttachments(files);
   const bad = touched && why !== "" ? why : send.error ? reason(send.error) : "";
 
   return (
@@ -127,6 +185,9 @@ function WriteForm(props: {
           <input
             id="postTitle"
             value={title}
+            // 올리는 중에는 잠근다 — 이미 보낸 값이라 여기서 고쳐도 반영되지 않는다.
+            // 글만 만들어진 채 첨부에서 걸렸을 때도 마찬가지다.
+            disabled={send.isPending || postedId !== null}
             aria-invalid={bad !== ""}
             aria-describedby={bad === "" ? undefined : "postWhy"}
             onChange={(event) => { setTouched(true); setTitle(event.target.value); }}
@@ -137,17 +198,41 @@ function WriteForm(props: {
           <textarea
             id="postBody"
             value={body}
+            disabled={send.isPending || postedId !== null}
             aria-invalid={bad !== ""}
             aria-describedby={bad === "" ? undefined : "postWhy"}
             onChange={(event) => { setTouched(true); setBody(event.target.value); }}
           />
         </label>
+        <label className="wide" htmlFor="postFiles">
+          첨부파일 <span className="meta">{attachmentHint()}</span>
+          <input
+            id="postFiles"
+            type="file"
+            multiple
+            accept={ATTACHMENT_ACCEPT}
+            ref={picker}
+            disabled={send.isPending}
+            aria-invalid={bad !== ""}
+            aria-describedby={bad === "" ? undefined : "postWhy"}
+            onChange={(event) => {
+              setTouched(true);
+              setFiles([...(event.target.files ?? [])]);
+            }}
+          />
+        </label>
       </div>
+      {files.length === 0 ? null : (
+        <p className="note">
+          {files.map((file) => `${file.name} ${fileSizeLabel(file.size)}`).join(", ")}
+        </p>
+      )}
       <div className="acts">
         <button className="btn go" type="submit" disabled={send.isPending || authorId === null}>
-          {send.isPending ? "올리는 중…" : "글쓰기"}
+          {send.isPending ? "올리는 중…" : postedId === null ? "글쓰기" : "남은 첨부 다시 올리기"}
         </button>
       </div>
+      {stage === "" ? null : <p className="note" role="status">{stage}</p>}
       {bad === "" ? null : <p className="why" id="postWhy" role="alert">{bad}</p>}
     </form>
   );
@@ -204,6 +289,61 @@ function CommentForm(props: { postId: number; authorId: number | null; onSay: (m
   );
 }
 
+/** 글에 붙은 파일 목록. 이름을 누르면 받고, 글쓴이 자신에게만 지우는 자리가 보인다. */
+function AttachmentList(props: {
+  postId: number;
+  attachments: Attachment[];
+  canRemove: boolean;
+  onSay: (message: string) => void;
+}) {
+  const { postId, attachments, canRemove, onSay } = props;
+  const client = useQueryClient();
+
+  const remove = useMutation({
+    mutationFn: (attachmentId: number) =>
+      getJSON(`/attachments/${attachmentId}`, { method: "DELETE" }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["board", "post", postId] });
+      onSay("첨부파일을 지웠습니다.");
+    },
+  });
+
+  if (attachments.length === 0) return null;
+
+  return (
+    <div className="comments">
+      <p className="cap2">첨부파일 {attachments.length}개</p>
+      <ul>
+        {attachments.map((file) => (
+          <li key={file.id} className="comment">
+            {/* download 를 붙이면 브라우저가 화면에 펼치지 않고 받는다. */}
+            <a href={apiUrl(`/attachments/${file.id}`)} download={file.name}>{file.name}</a>
+            {" "}
+            <span className="meta">{fileSizeLabel(file.size)}</span>
+            {!canRemove ? null : (
+              <>
+                {" "}
+                <button
+                  className="btn"
+                  type="button"
+                  // 줄마다 "지우기" 가 같은 글자라, 화면을 읽어 주는 도구에는 어느
+                  // 파일의 것인지 이름을 붙여 알린다.
+                  aria-label={`${file.name} 지우기`}
+                  disabled={remove.isPending}
+                  onClick={() => remove.mutate(file.id)}
+                >
+                  지우기
+                </button>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+      {remove.error ? <p className="why" role="alert">{reason(remove.error)}</p> : null}
+    </div>
+  );
+}
+
 function PostDetail(props: {
   postId: number;
   /** 아직 누구인지 모르면 null — 그때는 글도 댓글도 쓸 수 없다. */
@@ -215,13 +355,18 @@ function PostDetail(props: {
   const { postId, authorId, heading, onBack, onSay } = props;
   const detail = useQuery({
     queryKey: ["board", "post", postId],
-    queryFn: () => getJSON<{ post: Post; comments: PostComment[] }>(`/posts/${postId}`),
+    // 첨부는 글을 열 때 함께 온다 — 목록을 따로 부르지 않는다.
+    // 서버 쪽 정본은 backend/src/backend/api/schemas.py 의 PostDetailOut 이다.
+    queryFn: () =>
+      getJSON<{ post: Post; comments: PostComment[]; attachments: Attachment[] }>(
+        `/posts/${postId}`,
+      ),
   });
 
   if (detail.isPending) return <div className="empty">불러오는 중…</div>;
   if (detail.isError) return <div className="empty">{reason(detail.error)}</div>;
 
-  const { post, comments } = detail.data;
+  const { post, comments, attachments } = detail.data;
 
   return (
     <div className="thread">
@@ -229,6 +374,13 @@ function PostDetail(props: {
       <h2 tabIndex={-1} ref={heading}>{post.title}</h2>
       <p className="meta">{post.author} · {postWhen(post.created_at)}</p>
       <p className="threadbody">{post.body}</p>
+
+      <AttachmentList
+        postId={post.id}
+        attachments={attachments}
+        canRemove={authorId !== null && post.author_id === authorId}
+        onSay={onSay}
+      />
 
       <div className="comments">
         <p className="cap2">댓글 {comments.length}개</p>
@@ -260,11 +412,13 @@ export function PostBoard(props: {
   writePath: string;
   /** 아직 누구인지 모르면 null — 그때는 글도 댓글도 쓸 수 없다. */
   authorId: number | null;
+  /** 글쓰기 서식을 그릴지. 공지는 notice_write 를 가진 사람만이고, 팀 게시판은 소속이면 쓴다. */
+  canWrite: boolean;
   writeNote: string;
   emptyText: string;
   onSay: (message: string) => void;
 }) {
-  const { title, hint, listPath, writePath, authorId, writeNote, emptyText, onSay } = props;
+  const { title, hint, listPath, writePath, authorId, canWrite, writeNote, emptyText, onSay } = props;
   const queryKey = ["board", listPath];
   const focus = useDetailFocus();
   const client = useQueryClient();
@@ -297,13 +451,15 @@ export function PostBoard(props: {
             onOpen={focus.open}
             buttonRef={focus.register}
           />
-          <WriteForm
-            writePath={writePath}
-            authorId={authorId}
-            writeNote={writeNote}
-            queryKey={queryKey}
-            onSay={onSay}
-          />
+          {!canWrite ? null : (
+            <WriteForm
+              writePath={writePath}
+              authorId={authorId}
+              writeNote={writeNote}
+              queryKey={queryKey}
+              onSay={onSay}
+            />
+          )}
         </>
       ) : (
         <PostDetail

@@ -1,10 +1,10 @@
 // 화면이 함께 쓰는 훅. 흩어져 있던 네 파일을 한 기능 파일로 묶었다.
 // 서버를 부르는 것은 시퀀스 파일(lib/pipeline)을 거친다.
 
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { fetchMe, getJSON } from "../lib/pipeline";
+import { fetchMe, getJSON, teamIdsByStatus } from "../lib/pipeline";
 import type { Account, Team } from "../lib/contract";
 
 /** 화면 CSS 는 body[data-page="..."] 안에 갇혀 있다. 그 표시를 걸고 떼는 자리. */
@@ -37,38 +37,31 @@ export function useToast(): { message: string; say: (message: string) => void } 
   return { message, say };
 }
 
-/** 지금 로그인한 계정과 그 계정이 속한 팀 번호들. /me 로 계정을 받고, 그 계정의
- *  번호(id)가 어느 팀 명단에 있는지를 훑어 소속을 가려낸다 — 이름이 아니라 번호로
- *  가른다(동명이인 규칙). 아직 못 불러왔으면 me 는 null 이다. */
-export function useMe(): { me: Account | null; teamIds: number[]; teams: Team[] } {
-  const account = useQuery({ queryKey: ["me"], queryFn: fetchMe, retry: false });
+/** 지금 로그인한 계정, 그 계정이 속한 팀 번호들, 승인을 기다리는 팀 번호들.
+ *  소속은 /me 가 memberships 로 함께 준다 — 팀 명단을 하나씩 훑지 않고, 새로 고쳐도
+ *  어디에 신청해 뒀는지가 남는다. 아직 못 불러왔으면 me 는 null 이다. */
+export function useMe(): {
+  me: Account | null;
+  teamIds: number[];
+  pendingTeamIds: number[];
+  teams: Team[];
+} {
+  const mine = useQuery({ queryKey: ["me"], queryFn: fetchMe, retry: false });
   const teamList = useQuery({
     queryKey: ["teams"],
     queryFn: () => getJSON<{ teams: Team[] }>("/teams"),
   });
-  const teams = teamList.data?.teams ?? [];
 
-  // 팀 목록을 먼저 받아야 명단을 물을 곳을 안다. 그래서 팀이 오기 전에는 아무것도
-  // 묻지 않는다 — 순서가 반대일 수 없다.
-  const rosters = useQueries({
-    queries: teams.map((team) => ({
-      queryKey: ["members", team.id],
-      queryFn: () =>
-        getJSON<{ members: { id: number; name: string }[] }>(`/teams/${team.id}/members`),
-    })),
-  });
+  // 낡은 서버가 memberships 없이 답하면 아무 데도 속하지 않은 것으로 본다 —
+  // 잠깐 보였다 사라지는 "내 팀" 배지보다 처음부터 없는 편이 낫다.
+  const memberships = mine.data?.memberships ?? [];
 
-  const me = account.data ?? null;
-  const teamIds: number[] = [];
-  if (me !== null) {
-    rosters.forEach((query, index) => {
-      const team = teams[index];
-      if (team === undefined || query.data === undefined) return;
-      if (query.data.members.some((member) => member.id === me.id)) teamIds.push(team.id);
-    });
-  }
-
-  return { me, teamIds: [...teamIds].sort((a, b) => a - b), teams };
+  return {
+    me: mine.data?.account ?? null,
+    teamIds: teamIdsByStatus(memberships, "approved"),
+    pendingTeamIds: teamIdsByStatus(memberships, "pending"),
+    teams: teamList.data?.teams ?? [],
+  };
 }
 
 export type MyTeam = { id: number; name: string; colorKey: string };

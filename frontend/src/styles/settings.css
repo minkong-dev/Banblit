@@ -131,6 +131,8 @@ body[data-page="settings"] {
   .fields label { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--t3); }
   .fields input, .fields select { min-height: 44px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--card); color: var(--t1); font: inherit; letter-spacing: inherit; }
   .fields input:focus-visible, .fields select:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+  /* 위 높이·테두리는 글씨를 넣는 칸의 것이다. 체크박스에 걸면 네모가 늘어난다. */
+  .fields input[type="checkbox"] { min-height: 0; width: 18px; height: 18px; margin: 12px 0; padding: 0; border: none; accent-color: var(--blue); }
   .fields .wide { flex: 1 1 180px; }
   .fields .wide input { width: 100%; }
 
@@ -158,7 +160,6 @@ body[data-page="settings"] {
   .read dd { margin: 0; text-align: right; font-weight: 700; }
   .read dd.left { color: var(--amber); }
   .read .teams { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--t2); border-top: 1px solid var(--line); padding-top: 14px; }
-  .read .teams input { width: 76px; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--card); color: var(--t1); font: inherit; }
   .read .note { margin: 0; font-size: 12.5px; color: var(--t3); line-height: 1.6; }
 
   /* ===== 창이 좁아지면 요소가 움직인다 ===== */

@@ -1,6 +1,13 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { Link, Outlet, useLocation, useNavigate, useOutletContext } from "react-router-dom";
+import {
+  Link,
+  Outlet,
+  useLocation,
+  useNavigate,
+  useOutletContext,
+  useSearchParams,
+} from "react-router-dom";
 
 import { Field, failures, fieldText } from "../components/Field";
 import type { Errors } from "../components/Field";
@@ -10,9 +17,11 @@ import { usePage } from "../components/hooks";
 import "../styles/account.css";
 import {
   emailMessage,
+  findId,
   logIn,
   passwordMessage,
-  phoneMessage,
+  requestPasswordReset,
+  resetPassword,
   signUp,
   strongPasswordMessage,
 } from "../lib/pipeline";
@@ -28,7 +37,7 @@ const HEADS: Record<string, { title: string; sub: string }> = {
   "/login": { title: "로그인", sub: "유일무이 버스킹 동아리 여섯줄 안에서." },
   "/signup": { title: "회원가입", sub: "가입에 필요한 양식을 작성해주세요." },
   "/find-id": { title: "아이디 찾기", sub: "가입한 이메일로 찾기" },
-  "/find-password": { title: "비밀번호 찾기", sub: "가입한 휴대전화 번호로 찾기" },
+  "/find-password": { title: "비밀번호 찾기", sub: "가입한 이메일로 재설정 링크 받기" },
   "/reset-password": { title: "비밀번호 재설정", sub: "대소문자, 숫자, 특수기호 포함 8~20자" },
 };
 
@@ -216,6 +225,10 @@ export function SignUp() {
   );
 }
 
+// 계정이 있든 없든 같은 문구를 보여준다. 갈라 보여주면 그 이메일이 가입돼 있는지를
+// 알려주는 셈이 된다 — 서버도 같은 이유로 같은 응답을 준다.
+const MAIL_SENT = "메일을 보냈어요 · 받은 편지함을 확인해주세요";
+
 export function FindId() {
   const { say } = useOutletContext<AccountContext>();
   const { errors, submit } = useSubmit();
@@ -229,7 +242,14 @@ export function FindId() {
           fidName: fieldText(form, "fidName").trim() ? "" : "이름을 입력해주세요.",
           fidMail: emailMessage(fieldText(form, "fidMail").trim()),
         }),
-        () => say("가입한 이메일로 아이디를 보냈어요"),
+        async (form) => {
+          try {
+            await findId(fieldText(form, "fidName").trim(), fieldText(form, "fidMail").trim());
+            say(MAIL_SENT);
+          } catch (error) {
+            say(reason(error));
+          }
+        },
       )}
     >
       <Field name="fidName" label="이름" type="text"
@@ -247,7 +267,6 @@ export function FindId() {
 export function FindPassword() {
   const { say } = useOutletContext<AccountContext>();
   const { errors, submit } = useSubmit();
-  const navigate = useNavigate();
 
   return (
     <form
@@ -255,24 +274,23 @@ export function FindPassword() {
       noValidate
       onSubmit={submit(
         (form) => ({
-          fpwId: fieldText(form, "fpwId").trim() ? "" : "아이디를 입력해주세요.",
-          fpwTel: phoneMessage(fieldText(form, "fpwTel")),
+          fpwMail: emailMessage(fieldText(form, "fpwMail").trim()),
         }),
-        () => {
-          // 본인 확인이 끝나야 재설정 화면으로 넘어간다. 서버가 생기면 이 자리에서
-          // 받은 토큰을 주소에 실어 넘긴다 — 지금은 확인만 하고 넘긴다.
-          say("본인 확인이 끝났어요 · 새 비밀번호를 정해주세요");
-          // navigate 는 viewTransition 옵션을 줄 때만 Promise 를 돌려준다. 이 화면은
-          // 그 옵션을 쓰지 않아 실제로는 항상 void 라 명시적으로 무시한다.
-          void navigate("/reset-password");
+        async (form) => {
+          try {
+            // 재설정 화면으로 바로 넘기지 않는다. 토큰은 메일로 가고, 그 메일의 링크가
+            // 토큰을 주소에 달고 재설정 화면을 연다.
+            await requestPasswordReset(fieldText(form, "fpwMail").trim());
+            say(MAIL_SENT);
+          } catch (error) {
+            say(reason(error));
+          }
         },
       )}
     >
-      <Field name="fpwId" label="아이디" type="text"
-        autoComplete="username" placeholder="아이디를 입력해주세요." error={errors.fpwId} />
-      <Field name="fpwTel" label="전화번호" type="tel" inputMode="tel"
-        autoComplete="tel" placeholder="숫자만 입력해주세요." error={errors.fpwTel} />
-      <button className="go" type="submit" style={{ marginTop: 22 }}>휴대전화 인증</button>
+      <Field name="fpwMail" label="이메일" type="email" inputMode="email"
+        autoComplete="email" placeholder="name@example.com" error={errors.fpwMail} />
+      <button className="go" type="submit" style={{ marginTop: 22 }}>재설정 메일 받기</button>
       <p className="foot">
         <Link to="/find-id">아이디 찾기</Link> · <Link to="/login">로그인</Link>
       </p>
@@ -284,6 +302,9 @@ export function ResetPassword() {
   const { say } = useOutletContext<AccountContext>();
   const { errors, submit } = useSubmit();
   const navigate = useNavigate();
+  // 메일의 링크가 /reset-password?token=... 으로 들어온다. 입력칸으로 받지 않는다 —
+  // 43글자짜리 무작위 문자열을 사람이 옮겨 적을 자리가 아니다.
+  const token = useSearchParams()[0].get("token") ?? "";
 
   return (
     <form
@@ -302,11 +323,22 @@ export function ResetPassword() {
                 : "비밀번호가 일치하지 않아요.",
           };
         },
-        () => {
-          say("비밀번호를 바꿨어요 · 새 비밀번호로 로그인해주세요");
-          // navigate 는 viewTransition 옵션을 줄 때만 Promise 를 돌려준다. 이 화면은
-          // 그 옵션을 쓰지 않아 실제로는 항상 void 라 명시적으로 무시한다.
-          void navigate("/login");
+        async (form) => {
+          if (!token) {
+            say("재설정 링크가 올바르지 않아요 · 비밀번호 찾기부터 다시 해주세요");
+            return;
+          }
+          try {
+            await resetPassword(token, fieldText(form, "rpwNew"));
+            say("비밀번호를 바꿨어요 · 새 비밀번호로 로그인해주세요");
+            // navigate 는 viewTransition 옵션을 줄 때만 Promise 를 돌려준다. 이 화면은
+            // 그 옵션을 쓰지 않아 실제로는 항상 void 라 명시적으로 무시한다.
+            void navigate("/login");
+          } catch (error) {
+            // 만료됐거나 이미 쓴 링크는 입력이 틀린 것이 아니라 서버가 거절한 것이다 —
+            // 로그인 화면이 서버 거절을 알리는 자리와 같은 자리에 띄운다.
+            say(reason(error));
+          }
         },
       )}
     >

@@ -7,7 +7,7 @@
     "build": "tsc -b && vite build",
     "test": "vitest run",
     "typecheck": "tsc -b --noEmit",
-    "lint": "eslint . --ignore-pattern 'e2e/**/*'",
+    "lint": "eslint . --ignore-pattern \"e2e/**/*\"",
     "lint:e2e": "eslint --config e2e/lint.config.js \"e2e/**/*.ts\"",
     "e2e": "playwright test"
   },

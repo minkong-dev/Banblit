@@ -1,10 +1,13 @@
+import { useQueries } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { MenuIcon, ThemeIcon } from "./icons";
-import { usePage } from "./hooks";
-import { logOut } from "../lib/pipeline";
+import { useMe, usePage } from "./hooks";
+import { can } from "../lib/account";
+import { getJSON, logOut } from "../lib/pipeline";
+import type { Member, Permission } from "../lib/contract";
 
 // 사이드바 차림. 두 화면이 같은 것을 보여주고, 지금 보는 곳만 다르게 켠다.
 const NAV = [
@@ -14,10 +17,17 @@ const NAV = [
   { key: "board", label: "팀 게시판", to: "/board" },
 ] as const;
 
+// needs 중 하나라도 가진 사람에게만 보인다. 설정 화면은 합주실·기간·권한 세 구역이라
+// 그중 하나만 있어도 들어갈 자리가 있다.
 const MANAGER_NAV = [
-  { key: "assign", label: "배정 결과 확인", to: "/admin" },
-  { key: "settings", label: "합주실·기간 설정", to: "/settings" },
-] as const;
+  { key: "assign", label: "배정 결과 확인", to: "/admin", needs: ["assign_read"] },
+  {
+    key: "settings",
+    label: "합주실·기간 설정",
+    to: "/settings",
+    needs: ["room_manage", "period_manage", "permission_grant"],
+  },
+] as const satisfies readonly { key: string; label: string; to: string; needs: readonly Permission[] }[];
 
 export type NavKey = (typeof NAV)[number]["key"] | (typeof MANAGER_NAV)[number]["key"];
 
@@ -64,6 +74,10 @@ export function AppShell(props: {
 }) {
   const { page, current, profile, sideExtra, toast, children } = props;
   usePage(page);
+  const { me } = useMe();
+
+  // 가진 항목으로 가린다. 계정을 아직 못 받았으면 아무것도 보이지 않는다.
+  const managerNav = MANAGER_NAV.filter((item) => item.needs.some((need) => can(me, need)));
 
   const [navOpen, setNavOpen] = useState(false);
   const [themeLabel, setThemeLabel] = useState("어두운 화면으로 바꾸기");
@@ -98,9 +112,13 @@ export function AppShell(props: {
         <aside className="side" aria-label="메뉴">
           <div className="inner">
             <NavList items={NAV} current={current} />
-            <div className="sep" />
-            <div className="cap">헤드매니저</div>
-            <NavList items={MANAGER_NAV} current={current} />
+            {managerNav.length === 0 ? null : (
+              <>
+                <div className="sep" />
+                <div className="cap">관리</div>
+                <NavList items={managerNav} current={current} />
+              </>
+            )}
             {sideExtra}
           </div>
         </aside>
@@ -150,6 +168,17 @@ export function ProfileMenu(props: {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const initial = name.slice(0, 2);
+  const { me } = useMe();
+
+  // 팀마다 그 팀의 명단을 받는다. 명단에서 내 번호와 같은 사람을 찾으면 그 사람이
+  // 그 팀에서 맡은 포지션이다 — 이름이 아니라 번호로 가른다(동명이인 규칙).
+  // 질의 이름은 hooks 의 것과 같아, 이미 받아 둔 명단이 있으면 다시 부르지 않는다.
+  const rosters = useQueries({
+    queries: teams.map((team) => ({
+      queryKey: ["members", team.id],
+      queryFn: () => getJSON<{ members: Member[] }>(`/teams/${team.id}/members`),
+    })),
+  });
 
   // 서버 호출이 실패해도 로그인 화면으로는 보낸다 — 표시용 쿠키가 남아 있어도
   // 다음 요청은 401로 거절되니 화면을 붙잡아 둘 이유가 없다.
@@ -177,11 +206,16 @@ export function ProfileMenu(props: {
         </div>
         <hr />
         <div className="cap">소속 팀 {teams.length}개</div>
-        {teams.map((team) => (
-          <div className="tm" key={team.id}>
-            <i style={{ background: `var(--${team.colorKey})` }} />{team.name}<small>미연동</small>
-          </div>
-        ))}
+        {teams.map((team, index) => {
+          const mine = rosters[index]?.data?.members.find((member) => member.id === me?.id);
+          return (
+            <div className="tm" key={team.id}>
+              <i style={{ background: `var(--${team.colorKey})` }} />{team.name}
+              {/* 명단이 아직 안 왔으면 자리만 비워 둔다. 없는 포지션을 지어내지 않는다. */}
+              <small>{mine?.positions.join(", ") ?? ""}</small>
+            </div>
+          );
+        })}
         <hr />
         <button className="act" onClick={() => { setOpen(false); void navigate("/profile"); }}>
           프로필 설정<span>›</span>

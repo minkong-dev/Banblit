@@ -2,7 +2,7 @@
 // 찾는 API 호출. 시드 번호(팀·기간 id)가 재시딩마다 바뀌므로, 화면에 보이는
 // 값이나 그때그때 부른 /api/... 응답으로 찾는다.
 
-import type { APIRequestContext, Page } from "@playwright/test";
+import type { APIRequestContext } from "@playwright/test";
 
 const WEEKDAYS_KR = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -12,15 +12,19 @@ export const E2E_ACCOUNT_EMAIL = "e2e@banblit.test";
 export const E2E_ACCOUNT_PASSWORD = "e2e-password1";
 export const E2E_ACCOUNT_TEAM = "새벽 네시";
 
-/** 로그인 화면을 실제로 누르는 대신, API를 미리 불러 세션 쿠키를 받아 둔다.
- *  page.request 는 page 의 브라우저 컨텍스트와 쿠키 저장소를 공유하므로, 여기서
- *  받은 쿠키(banblit_session·banblit_signed_in)가 이어지는 page.goto 에도 실린다.
+/** 넘긴 통신 창구마다 /api/login 을 불러 세션 쿠키를 받아 둔다.
+ *  page.request 는 page 의 브라우저 컨텍스트와 쿠키 저장소를 공유하므로 거기에
+ *  받은 쿠키(banblit_session·banblit_signed_in)는 이어지는 page.goto 에도 실린다.
+ *  반면 검사가 받는 request 는 그와 별개의 쿠키 저장소다 — 화면과 API를 함께 보는
+ *  검사는 `loginForTests(page.request, request)` 처럼 둘 다 넘겨야 한다.
  *  로그인 서식 자체가 되는지는 account.spec.ts가 따로 확인한다 — 나머지 검사들은
  *  로그인된 다음 화면만 보면 되므로 매번 서식을 채우지 않는다. */
-export async function loginForTests(page: Page): Promise<void> {
-  await page.request.post("/api/login", {
-    data: { email: E2E_ACCOUNT_EMAIL, password: E2E_ACCOUNT_PASSWORD },
-  });
+export async function loginForTests(...contexts: APIRequestContext[]): Promise<void> {
+  for (const context of contexts) {
+    await context.post("/api/login", {
+      data: { email: E2E_ACCOUNT_EMAIL, password: E2E_ACCOUNT_PASSWORD },
+    });
+  }
 }
 
 /** ISO 시각 문자열에서 시간대 변환 없이 날짜 부분만 뗀다.

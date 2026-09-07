@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { escapeRegExp, loginForTests } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
-  await loginForTests(page);
+  await loginForTests(page.request);
 });
 
 // 지우는 통로가 없어 이 검사가 남긴 글은 계속 쌓인다. 매번 다른 제목을 써서
