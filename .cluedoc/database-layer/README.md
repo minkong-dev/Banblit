@@ -110,7 +110,7 @@ erDiagram
 - [게시판과 공지](../boards/README.md) — 글 하나로 팀 게시판과 공지를 겸하는 구조의 근거
 - [기간 자동 배정](../scheduling-api/period-assignment/README.md) — 여기 저장된 데이터를 읽어 배정을 계산하고, 성공하면 그 결과를 다시 여기 남기는 통로
 - [자동 배정](../auto-assignment/README.md) — 그 통로가 부르는 계산 자체의 규칙
-- [개발용 시드 데이터](../screens/dev-seed/README.md) — 화면을 열어보려고 이 표들을 미리 채우는 장치
+- [개발 환경 실행](../dev-environment/README.md) — 이 표들을 최신 상태로 맞춘 뒤 서비스를 띄우는 절차
 - [배정 이력과 롤백](./schedule-versioning/README.md) — 현재 시간표를 다시 짤 때 이전 시간표를 백업으로 보관하고 되돌리는 저장 규칙(하위 기능)
 
 ## Description

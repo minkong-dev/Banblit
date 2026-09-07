@@ -29,7 +29,6 @@ flowchart LR
     B -->|정해진 경로만| W
     W -->|API 경로를 대신 넘긴다| A[스케줄링 API<br/>8000]
     A --> D[(데이터 저장소)]
-    S[개발용 시드] -.미리 채운다.-> D
     A -->|시간표 · 조율안| B
     A -.개발용 별도 주소.-> P[확정 설계 원본<br/>손대지 않는 사본]
 ```
@@ -49,7 +48,7 @@ flowchart LR
 ## Related Work
 
 - [Banblit 개요](../README.md) — 전체 기능 지도
-- [개발용 시드 데이터](./dev-seed/README.md) — 이 화면들이 띄울 데이터를 미리 채워두는 하위 기능
+- [개발 환경 실행](../dev-environment/README.md) — 이 화면을 띄우는 서비스와 그 기동 절차
 - [스케줄링 API](../scheduling-api/README.md) — 화면이 값을 받아오는 통로
 - [기간 자동 배정](../scheduling-api/period-assignment/README.md) — 배정 화면이 부르는 "다시 계산"과 "확정된 시간표"의 실체
 - [스케줄러](../scheduler/README.md) — 달력 화면의 설계 정본
@@ -305,4 +304,4 @@ flowchart LR
 
 ## Conclusion
 
-화면은 이제 설계를 확인하는 장치가 아니라 제품 그 자체다. 그래도 가장 값진 산출물은 여전히 **"화면이 스스로 메우는 자리"** 표다. 그 표의 항목이 하나씩 지워지는 것이 곧 서버가 완성되어 가는 과정이다. 화면에 띄울 데이터를 어떻게 만드는지는 [개발용 시드 데이터](./dev-seed/README.md)에서, 화면이 부르는 통로의 규칙은 [기간 자동 배정](../scheduling-api/period-assignment/README.md)에서 이어진다.
+화면은 이제 설계를 확인하는 장치가 아니라 제품 그 자체다. 그래도 가장 값진 산출물은 여전히 **"화면이 스스로 메우는 자리"** 표다. 그 표의 항목이 하나씩 지워지는 것이 곧 서버가 완성되어 가는 과정이다. 이 화면을 띄우는 절차는 [개발 환경 실행](../dev-environment/README.md)에서, 화면이 부르는 통로의 규칙은 [기간 자동 배정](../scheduling-api/period-assignment/README.md)에서 이어진다.

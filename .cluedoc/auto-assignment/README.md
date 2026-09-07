@@ -54,7 +54,6 @@ flowchart TD
 - [스케줄러](../scheduler/README.md) — 확정된 배정이 표시되는 화면
 - [스케줄링 API](../scheduling-api/README.md) — 이 계산을 바깥에서 호출할 수 있게 여는 서버 통로
 - [화면](../screens/README.md) — 확정된 시간표와 조율안이 실제로 그려지는 화면
-- [개발용 시드 데이터](../screens/dev-seed/README.md) — 성사와 불가 두 경우를 일부러 함께 만들어 이 계산을 눈으로 확인하는 장치
 
 ## Description
 
