@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account, require_permission
-from backend.api.period_crud_input import format_calendar_date
-from backend.api.period_crud_input import format_clock as format_period_clock
+from backend.api.input import format_calendar_date
+from backend.api.input import format_clock
 from backend.api.period_crud_service import create_period as create_period_row
 from backend.api.period_crud_service import list_periods, update_period
 from backend.api.schemas import (
@@ -26,8 +26,8 @@ def _period_out(period: Period) -> PeriodOut:
         starts_on=format_calendar_date(period.starts_on),
         ends_on=format_calendar_date(period.ends_on),
         everyday=period.everyday,
-        first_run_at=format_period_clock(period.first_run_at),
-        second_run_at=format_period_clock(period.second_run_at),
+        first_run_at=format_clock(period.first_run_at),
+        second_run_at=format_clock(period.second_run_at),
     )
 
 
@@ -50,18 +50,15 @@ def create_period(
     req: PeriodCreateIn,
     session: Session = Depends(get_session),
 ) -> PeriodEnvelopeOut:
-    try:
-        period = create_period_row(
-            session,
-            req.kind,
-            req.starts_on,
-            req.ends_on,
-            req.everyday,
-            req.first_run_at,
-            req.second_run_at,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    period = create_period_row(
+        session,
+        req.kind,
+        req.starts_on,
+        req.ends_on,
+        req.everyday,
+        req.first_run_at,
+        req.second_run_at,
+    )
     return PeriodEnvelopeOut(period=_period_out(period))
 
 
@@ -75,17 +72,14 @@ def patch_period(
     req: PeriodUpdateIn,
     session: Session = Depends(get_session),
 ) -> PeriodEnvelopeOut:
-    try:
-        period = update_period(
-            session,
-            period_id,
-            req.kind,
-            req.starts_on,
-            req.ends_on,
-            req.everyday,
-            req.first_run_at,
-            req.second_run_at,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    period = update_period(
+        session,
+        period_id,
+        req.kind,
+        req.starts_on,
+        req.ends_on,
+        req.everyday,
+        req.first_run_at,
+        req.second_run_at,
+    )
     return PeriodEnvelopeOut(period=_period_out(period))

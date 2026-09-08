@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_permission
@@ -56,10 +56,7 @@ def read_permission_sets(session: Session = Depends(get_session)) -> PermissionS
 def create_set(
     req: PermissionSetIn, session: Session = Depends(get_session)
 ) -> PermissionSetEnvelopeOut:
-    try:
-        permission_set = create_permission_set(session, req.name, req.description, list(req.permissions))
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    permission_set = create_permission_set(session, req.name, req.description, list(req.permissions))
     return PermissionSetEnvelopeOut(permission_set=_set_out(permission_set, []))
 
 
@@ -71,12 +68,9 @@ def create_set(
 def patch_set(
     set_id: int, req: PermissionSetIn, session: Session = Depends(get_session)
 ) -> PermissionSetEnvelopeOut:
-    try:
-        permission_set = update_permission_set(
-            session, set_id, req.name, req.description, list(req.permissions)
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    permission_set = update_permission_set(
+        session, set_id, req.name, req.description, list(req.permissions)
+    )
     # 고친 permission set 이 지금 누구에게 붙어 있는지까지 돌려준다 — 화면이 바로
     # 다음에 보여줄 목록이다.
     return PermissionSetEnvelopeOut(
@@ -86,10 +80,7 @@ def patch_set(
 
 @router.delete("/permission-sets/{set_id}", status_code=204, dependencies=[_manage_only])
 def delete_set(set_id: int, session: Session = Depends(get_session)) -> None:
-    try:
-        delete_permission_set(session, set_id)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    delete_permission_set(session, set_id)
 
 
 @router.post(
@@ -100,10 +91,7 @@ def delete_set(set_id: int, session: Session = Depends(get_session)) -> None:
 def grant_set(
     member_id: int, set_id: int, session: Session = Depends(get_session)
 ) -> None:
-    try:
-        grant_permission_set(session, member_id, set_id)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    grant_permission_set(session, member_id, set_id)
 
 
 @router.delete(
@@ -114,7 +102,4 @@ def grant_set(
 def revoke_set(
     member_id: int, set_id: int, session: Session = Depends(get_session)
 ) -> None:
-    try:
-        revoke_permission_set(session, member_id, set_id)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    revoke_permission_set(session, member_id, set_id)

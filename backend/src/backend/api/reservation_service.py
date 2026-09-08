@@ -1,21 +1,22 @@
 from datetime import date, datetime, time
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.api.reservation_input import (
+from backend.api.input import (
     require_same_day,
     require_valid_slot_bounds,
     require_within_room_hours,
 )
 from backend.api.permission_service import account_permissions
 from backend.db.models import Member, Period, Reservation, Room, Team, TeamSlot
+from backend.db.pipeline import commit_translating
 from backend.scheduling.pipeline import TimeInterval, generate_slots
 
-# reservations 테이블의 (room_id, starts_at) 유니크 제약 이름. schedule_store.py의
-# _ROOM_TIME_CONFLICT_CONSTRAINT와 같은 얼개 — 먼저 커밋한 쪽이 그 slot 을 가져간다.
-_ROOM_TIME_CONFLICT_CONSTRAINT = "reservations_room_id_starts_at_key"
+# 선착순은 (room_id, starts_at) 유니크 제약이 커밋 시점에 정한다 — 먼저 커밋한 쪽이 그 slot 을 가져간다.
+RESERVATION_MESSAGES = {
+    "reservations_room_id_starts_at_key": "이미 다른 사람이 예약한 시간입니다. 다른 시간을 골라 주세요",
+}
 
 ReservationRow = tuple[Reservation, str, str | None, str]
 
@@ -28,7 +29,6 @@ def _get_room_or_raise(session: Session, room_id: int) -> Room:
 
 
 def _require_team_member(session: Session, team_id: int, member_id: int) -> None:
-    # 승인 대기(status="pending")는 아직 소속이 아니므로 그 팀 이름으로 예약할 수 없다.
     row = session.execute(
         select(TeamSlot.id).where(
             TeamSlot.team_id == team_id,
@@ -69,14 +69,6 @@ def _require_not_in_focused_period(session: Session, day: date) -> None:
         raise ValueError("집중 합주기간이라 예약할 수 없습니다")
 
 
-def _conflict_message_for(error: IntegrityError) -> str | None:
-    diag = getattr(error.orig, "diag", None)
-    constraint_name = getattr(diag, "constraint_name", None)
-    if constraint_name != _ROOM_TIME_CONFLICT_CONSTRAINT:
-        return None
-    return "이미 다른 사람이 예약한 시간입니다. 다른 시간을 골라 주세요"
-
-
 def _planned_rows(
     session: Session,
     room_id: int,
@@ -115,21 +107,6 @@ def _planned_rows(
     return rows, room, team
 
 
-def _commit_or_translate_conflict(session: Session) -> None:
-    """커밋한다. (room_id, starts_at) 유니크 제약에 걸리면 되돌리고 ValueError로 바꾼다.
-
-    되돌리기가 트랜잭션 전체를 물리므로, 같은 트랜잭션에서 지운 행도 함께 살아난다.
-    """
-    try:
-        session.commit()
-    except IntegrityError as error:
-        session.rollback()
-        message = _conflict_message_for(error)
-        if message is None:
-            raise
-        raise ValueError(message) from error
-
-
 def create_reservation(
     session: Session,
     room_id: int,
@@ -149,13 +126,13 @@ def create_reservation(
         session, room_id, requester, team_id, starts_at, ends_at, created_at
     )
     session.add_all(rows)
-    _commit_or_translate_conflict(session)
+    commit_translating(session, RESERVATION_MESSAGES)
     return rows, room.name, requester.name, team.name if team is not None else None
 
 
 def list_reservations(
     session: Session, room_id: int, from_date: date, to_date: date
-) -> tuple[Room, list[ReservationRow]]:
+) -> list[ReservationRow]:
     """room_id 하나의 [from_date, to_date] 범위 예약을 시작 시각 순으로 돌려준다.
 
     행마다 방 이름·팀 이름(팀 예약이 아니면 None)·예약한 사람 이름을 함께 붙인다.
@@ -172,7 +149,7 @@ def list_reservations(
         .where(Reservation.starts_at <= range_end)
         .order_by(Reservation.starts_at)
     ).all()
-    return room, [
+    return [
         (reservation, room.name, team_name, member_name)
         for reservation, team_name, member_name in rows
     ]
@@ -245,5 +222,5 @@ def update_reservation(
     session.delete(reservation)
     session.flush()
     session.add_all(rows)
-    _commit_or_translate_conflict(session)
+    commit_translating(session, RESERVATION_MESSAGES)
     return rows, room.name, requester.name, team.name if team is not None else None

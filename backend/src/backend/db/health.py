@@ -1,9 +1,7 @@
 import logging
 from dataclasses import dataclass
 
-from sqlalchemy import text
-
-from backend.db.pipeline import get_engine
+from sqlalchemy import Engine, text
 
 logger = logging.getLogger(__name__)
 
@@ -14,19 +12,21 @@ class DependencyStatus:
     detail: str
 
 
-def check_database() -> DependencyStatus:
+def check_database(engine: Engine) -> DependencyStatus:
     # 실제로 접속해 SELECT 1 을 던지고, alembic_version 에서 적용된 마이그레이션
     # 번호를 읽어 detail 에 담는다. 번호가 없으면 alembic_version table 은 있는데 아직 기동 준비가
     # 안 끝난 상태다. 접속 대기는 create_db_engine 의 connect_timeout 이 끊는다.
     try:
-        with get_engine().connect() as connection:
+        with engine.connect() as connection:
             connection.execute(text("SELECT 1"))
             revision = connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar()
     except Exception as error:
+        # 드라이버 문장에는 호스트·사용자·비밀번호가 섞인다. /health 는 인증 없이
+        # 열려 있으므로 원문은 기록에만 남기고 응답에는 한 줄만 싣는다.
         logger.warning("데이터베이스 정상 확인 실패: %s", error)
-        return DependencyStatus(ok=False, detail=str(error))
+        return DependencyStatus(ok=False, detail="데이터베이스에 접속하지 못했습니다")
 
     if revision is None:
         return DependencyStatus(ok=False, detail="마이그레이션이 적용되지 않았습니다")

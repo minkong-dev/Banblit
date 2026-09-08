@@ -5,7 +5,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api import auto_assign
+from backend.jobs import auto_assign
 from backend.db.models import Assignment, AssignmentRun, Member, Period, Room, Team, TeamSlot
 
 TODAY = date(2026, 8, 10)

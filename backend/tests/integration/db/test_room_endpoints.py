@@ -5,7 +5,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
-from backend.api.room_service import commit_room
+from backend.api.room_service import ROOM_MESSAGES
+from backend.db.pipeline import commit_translating
 from backend.db.models import Room
 from conftest import AccountFactory
 
@@ -164,11 +165,11 @@ def test_room_name_race_at_commit_time_is_translated_not_500(
     session_b = Session(test_engine)
     try:
         session_a.add(Room(name="경합방", opens_at=time(18, 0), closes_at=time(22, 0)))
-        commit_room(session_a)
+        commit_translating(session_a, ROOM_MESSAGES)
 
         session_b.add(Room(name="경합방", opens_at=time(18, 0), closes_at=time(22, 0)))
         with pytest.raises(ValueError, match="이미 있는 합주실 이름입니다"):
-            commit_room(session_b)
+            commit_translating(session_b, ROOM_MESSAGES)
     finally:
         session_a.close()
         session_b.close()

@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api import auto_assign
+from backend.jobs import auto_assign
 from backend.api.period_service import assign_period
 from backend.db.models import Notification, Period, Room, Team, TeamSlot
 

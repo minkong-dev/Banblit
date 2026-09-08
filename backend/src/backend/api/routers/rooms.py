@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account, require_permission
-from backend.api.room_input import format_clock as format_room_clock
+from backend.api.input import format_clock
 from backend.api.room_service import create_room as create_room_row
 from backend.api.room_service import list_rooms, update_room
 from backend.api.schemas import RoomCreateIn, RoomEnvelopeOut, RoomOut, RoomsOut, RoomUpdateIn
@@ -16,8 +16,8 @@ def _room_out(room: Room) -> RoomOut:
     return RoomOut(
         id=room.id,
         name=room.name,
-        opens_at=format_room_clock(room.opens_at),
-        closes_at=format_room_clock(room.closes_at),
+        opens_at=format_clock(room.opens_at),
+        closes_at=format_clock(room.closes_at),
     )
 
 
@@ -38,10 +38,7 @@ def create_room(
     req: RoomCreateIn,
     session: Session = Depends(get_session),
 ) -> RoomEnvelopeOut:
-    try:
-        room = create_room_row(session, req.name, req.opens_at, req.closes_at)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    room = create_room_row(session, req.name, req.opens_at, req.closes_at)
     return RoomEnvelopeOut(room=_room_out(room))
 
 
@@ -55,8 +52,5 @@ def patch_room(
     req: RoomUpdateIn,
     session: Session = Depends(get_session),
 ) -> RoomEnvelopeOut:
-    try:
-        room = update_room(session, room_id, req.name, req.opens_at, req.closes_at)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    room = update_room(session, room_id, req.name, req.opens_at, req.closes_at)
     return RoomEnvelopeOut(room=_room_out(room))

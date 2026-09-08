@@ -119,7 +119,9 @@ def downgrade() -> None:
         sa.ForeignKeyConstraint(["position_id"], ["positions.id"], ondelete="RESTRICT"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("member_id", "team_id"),
-        sa.CheckConstraint("status IN ('approved', 'pending')"),
+        sa.CheckConstraint(
+            "status IN ('approved', 'pending')", name="memberships_status_valid"
+        ),
     )
 
     # 아무도 앉지 않은 자리는 소속으로 되돌릴 수 없다 — 사람이 없는 소속은 없다.
@@ -139,8 +141,9 @@ def downgrade() -> None:
         "teams",
         sa.Column("join_policy", sa.Text(), nullable=False, server_default="auto"),
     )
+    # 이름은 c4a7d2e91b83 의 되돌리기가 지우는 이름과 같아야 한다.
     op.create_check_constraint(
-        "teams_join_policy_check", "teams", "join_policy IN ('auto', 'approval')"
+        "teams_join_policy_valid", "teams", "join_policy IN ('auto', 'approval')"
     )
 
     op.drop_column("members", "cohort")

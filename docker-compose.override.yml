@@ -3,8 +3,7 @@
 # 여기 적힌 것이 곧 "개발에만 있는 것" 이다.
 
 services:
-  # 소스를 컨테이너에 걸고, 고치면 서버가 다시 뜬다. 프로토타입 원본을 내보내는
-  # 자리도 여기서만 생긴다(PROTOTYPE_DIR 이 없으면 그 자리가 아예 안 만들어진다).
+  # 소스를 컨테이너에 걸고, 고치면 서버가 다시 뜬다.
   api:
     build:
       target: dev
@@ -14,12 +13,12 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-      - ./frontend/prototypes:/proto:ro
     environment:
-      PROTOTYPE_DIR: /proto
       # 개발은 http라서 Secure 쿠키가 아예 안 붙는다. base(docker-compose.yml)의
       # true를 여기서 false로 덮는다.
       COOKIE_SECURE: "false"
+      # SMTP 가 없을 때 메일 본문(재설정 링크)을 기록에 남긴다 — 개발에서만.
+      MAIL_LOG_BODY: "true"
     restart: "no"
 
   # 자동 배정 — 개발에서는 기본으로 꺼 둔다. `docker compose up` 이 이것까지 함께

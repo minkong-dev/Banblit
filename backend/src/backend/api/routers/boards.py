@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -13,7 +13,7 @@ from backend.api.attachment_service import (
     save_attachment,
 )
 from backend.api.auth_dependency import require_account, require_permission
-from backend.api.board_input import format_created_at
+from backend.api.input import format_created_at
 from backend.api.board_service import (
     PostRow,
     create_comment,
@@ -100,12 +100,7 @@ def create_notice_post(
     requester: Member = Depends(require_permission("notice_write")),
     session: Session = Depends(get_session),
 ) -> PostEnvelopeOut:
-    try:
-        post, author = create_notice(session, req.title, req.body, requester, datetime.now())
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    post, author = create_notice(session, req.title, req.body, requester, datetime.now())
     return PostEnvelopeOut(post=_post_out(post, author, 0))
 
 
@@ -115,12 +110,7 @@ def read_team_posts(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> PostsOut:
-    try:
-        rows = list_team_posts(session, team_id, requester)
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    rows = list_team_posts(session, team_id, requester)
     return _posts_out(rows)
 
 
@@ -131,14 +121,9 @@ def create_team_post_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> PostEnvelopeOut:
-    try:
-        post, author = create_team_post(
-            session, team_id, req.title, req.body, requester, datetime.now()
-        )
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    post, author = create_team_post(
+        session, team_id, req.title, req.body, requester, datetime.now()
+    )
     return PostEnvelopeOut(post=_post_out(post, author, 0))
 
 
@@ -148,16 +133,11 @@ def read_post_detail(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> PostDetailOut:
-    try:
-        post, author, comment_count, comment_rows = get_post_with_comments(
-            session, post_id, requester
-        )
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    post, author, comment_rows = get_post_with_comments(
+        session, post_id, requester
+    )
     return PostDetailOut(
-        post=_post_out(post, author, comment_count),
+        post=_post_out(post, author, len(comment_rows)),
         comments=[_comment_out(comment, author) for comment, author in comment_rows],
         # 볼 자격은 바로 위 get_post_with_comments 가 이미 확인했다. 여기서 다시
         # 확인하는 함수를 쓰면 같은 소속 조회가 한 요청에 두 번 실행된다.
@@ -174,12 +154,7 @@ def create_post_comment(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> CommentEnvelopeOut:
-    try:
-        comment, author = create_comment(session, post_id, req.body, requester, datetime.now())
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    comment, author = create_comment(session, post_id, req.body, requester, datetime.now())
     return CommentEnvelopeOut(comment=_comment_out(comment, author))
 
 
@@ -191,12 +166,7 @@ def edit_post(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> PostEnvelopeOut:
-    try:
-        post, author = update_post(session, post_id, req.title, req.body, requester)
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    post, author = update_post(session, post_id, req.title, req.body, requester)
     return PostEnvelopeOut(post=_post_out(post, author, 0))
 
 
@@ -207,12 +177,7 @@ def edit_comment(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> CommentEnvelopeOut:
-    try:
-        comment, author = update_comment(session, comment_id, req.body, requester)
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    comment, author = update_comment(session, comment_id, req.body, requester)
     return CommentEnvelopeOut(comment=_comment_out(comment, author))
 
 
@@ -222,12 +187,7 @@ def delete_comment_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> None:
-    try:
-        delete_comment(session, comment_id, requester)
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    delete_comment(session, comment_id, requester)
 
 
 @router.post(
@@ -241,24 +201,19 @@ def upload_attachment(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> AttachmentEnvelopeOut:
-    try:
-        # file.file 은 프레임워크가 이미 임시 파일로 받아 둔 것을 가리킨다. 서비스에는
-        # UploadFile 이 아니라 읽을 수 있는 것만 넘긴다 — 서비스가 endpoint 형식을 모르게 둔다.
-        # 크기 상한 검사를 여기 두지 않는다. 이 함수에 닿기 전에 nginx 의
-        # client_max_body_size(frontend/nginx.conf.template)가 이미 거절한다.
-        attachment = save_attachment(
-            session,
-            post_id,
-            file.filename or "",
-            file.content_type,
-            file.file,
-            requester,
-            datetime.now(),
-        )
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    # file.file 은 프레임워크가 이미 임시 파일로 받아 둔 것을 가리킨다. 서비스에는
+    # UploadFile 이 아니라 읽을 수 있는 것만 넘긴다 — 서비스가 endpoint 형식을 모르게 둔다.
+    # 크기 상한 검사를 여기 두지 않는다. 이 함수에 닿기 전에 nginx 의
+    # client_max_body_size(frontend/nginx.conf.template)가 이미 거절한다.
+    attachment = save_attachment(
+        session,
+        post_id,
+        file.filename or "",
+        file.content_type,
+        file.file,
+        requester,
+        datetime.now(),
+    )
     return AttachmentEnvelopeOut(attachment=_attachment_out(attachment))
 
 
@@ -268,12 +223,7 @@ def read_attachments(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> AttachmentsOut:
-    try:
-        rows = list_attachments(session, post_id, requester)
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    rows = list_attachments(session, post_id, requester)
     return AttachmentsOut(attachments=[_attachment_out(row) for row in rows])
 
 
@@ -283,12 +233,7 @@ def download_attachment(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> FileResponse:
-    try:
-        attachment, path = attachment_for_download(session, attachment_id, requester)
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    attachment, path = attachment_for_download(session, attachment_id, requester)
     # filename 을 주면 FileResponse 가 Content-Disposition: attachment 를 붙인다 —
     # 브라우저가 내용을 열지 않고 받는다. 종류도 octet-stream 하나로 내려 보내고
     # nosniff 를 붙여, 브라우저가 내용을 보고 종류를 다시 정하지 못하게 한다.
@@ -306,12 +251,7 @@ def delete_attachment_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> None:
-    try:
-        delete_attachment(session, attachment_id, requester)
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    delete_attachment(session, attachment_id, requester)
 
 
 @router.delete("/posts/{post_id}", status_code=204)
@@ -320,14 +260,9 @@ def delete_post_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> None:
-    try:
-        post = require_post_author(session, post_id, requester)
-        # attachments table 의 행이 사라지기 전에 디스크의 파일부터 지운다. 순서를 바꾸면
-        # 어느 파일이 이 게시글의 것이었는지 알 방법이 없어져, 아무도 못 지우는 파일이 남는다.
-        remove_post_files(session, post_id)
-        session.delete(post)
-        session.commit()
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    post = require_post_author(session, post_id, requester)
+    # attachments table 의 행이 사라지기 전에 디스크의 파일부터 지운다. 순서를 바꾸면
+    # 어느 파일이 이 게시글의 것이었는지 알 방법이 없어져, 아무도 못 지우는 파일이 남는다.
+    remove_post_files(session, post_id)
+    session.delete(post)
+    session.commit()

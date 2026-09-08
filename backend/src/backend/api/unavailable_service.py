@@ -3,7 +3,7 @@ from datetime import date, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api.unavailable_input import (
+from backend.api.input import (
     require_repeat_until_only_when_weekly,
     require_valid_slot_bounds,
 )

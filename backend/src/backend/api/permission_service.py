@@ -1,13 +1,17 @@
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api.board_input import require_non_empty
+from backend.api.input import require_non_empty
 from backend.db.models import (
     PERMISSIONS,
     Member,
     MemberPermissionSet,
     PermissionSet,
 )
+from backend.db.pipeline import commit_translating
+
+# 걸릴 수 있는 제약과 그때 사람에게 보일 문장. 이름은 마이그레이션이 만든 것이다.
+SET_MESSAGES = {"permission_sets_name_key": "이미 있는 권한 묶음 이름입니다"}
 
 # 아무도 없는 DB 에 처음 가입한 사람이 받는 permission set 의 이름. 마이그레이션이
 # 심는 permission set 도 같은 이름을 쓴다(migrations/versions/b7f1a92c4d31_permission_sets.py).
@@ -29,16 +33,6 @@ def _get_set_or_raise(session: Session, set_id: int) -> PermissionSet:
     if permission_set is None:
         raise ValueError("그런 권한 묶음이 없습니다")
     return permission_set
-
-
-def _require_unique_name(session: Session, name: str, exclude_id: int | None) -> None:
-    taken = session.scalar(
-        select(PermissionSet.id).where(
-            PermissionSet.name == name, PermissionSet.id != exclude_id
-        )
-    )
-    if taken is not None:
-        raise ValueError("이미 있는 권한 묶음 이름입니다")
 
 
 def account_permissions(session: Session, member_id: int) -> list[str]:
@@ -89,16 +83,13 @@ def create_permission_set(
     session: Session, name: str, description: str, permissions: list[str]
 ) -> PermissionSet:
     """name 으로 permission set 을 새로 만든다. 빈 이름과 이미 있는 이름을 거절한다."""
-    clean_name = require_non_empty(name, "이름")
-    _require_unique_name(session, clean_name, exclude_id=None)
-
     permission_set = PermissionSet(
-        name=clean_name,
+        name=require_non_empty(name, "이름"),
         description=require_non_empty(description, "설명"),
         permissions=_clean_permissions(permissions),
     )
     session.add(permission_set)
-    session.commit()
+    commit_translating(session, SET_MESSAGES)
     return permission_set
 
 
@@ -107,13 +98,10 @@ def update_permission_set(
 ) -> PermissionSet:
     """set_id permission set 의 이름과 켜진 항목을 통째로 갈아 끼운다."""
     permission_set = _get_set_or_raise(session, set_id)
-    clean_name = require_non_empty(name, "이름")
-    _require_unique_name(session, clean_name, exclude_id=set_id)
-
-    permission_set.name = clean_name
+    permission_set.name = require_non_empty(name, "이름")
     permission_set.description = require_non_empty(description, "설명")
     permission_set.permissions = _clean_permissions(permissions)
-    session.commit()
+    commit_translating(session, SET_MESSAGES)
     return permission_set
 
 

@@ -102,18 +102,15 @@ def _account_out(session: Session, member: Member) -> AccountOut:
 def signup(
     req: SignupIn, response: Response, session: Session = Depends(get_session)
 ) -> AuthOut:
-    try:
-        member = signup_account(
-            session,
-            req.name,
-            req.department,
-            req.student_no,
-            req.email,
-            req.password,
-            req.cohort,
-        )
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    member = signup_account(
+        session,
+        req.name,
+        req.department,
+        req.student_no,
+        req.email,
+        req.password,
+        req.cohort,
+    )
     token = create_session(session, member.id, datetime.now())
     _set_session_cookies(response, token)
     return AuthOut(account=_account_out(session, member))
@@ -138,10 +135,7 @@ def edit_me(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> AuthOut:
-    try:
-        member = update_profile(session, requester, req.name, req.cohort)
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    member = update_profile(session, requester, req.name, req.cohort)
     return AuthOut(account=_account_out(session, member))
 
 
@@ -167,7 +161,7 @@ def leave(
 ) -> None:
     """탈퇴한다. 그 사람이 남긴 글·댓글·예약도 함께 사라진다(사용자 결정).
 
-    포지션은 남고 그 자리가 비워진다 — 자리는 팀의 구성이라 사람이 나갔다고 팀에
+    포지션은 남고 비워진다 — 포지션은 팀의 구성이라 사람이 나갔다고 팀에
     구멍이 나면 안 된다. 지우는 규칙은 저장소가 든다(db/models.py 의 ondelete).
     """
     session.delete(requester)
@@ -177,7 +171,7 @@ def leave(
 
 @router.post("/logout")
 def logout(
-    banblit_session: str | None = Cookie(default=None),
+    banblit_session: str | None = Cookie(default=None, alias=SESSION_COOKIE),
     session: Session = Depends(get_session),
 ) -> Response:
     # 로그인 상태가 아니어도 200으로 끝낸다 — 이미 로그아웃된 것과 구분할 이유가 없다.
@@ -218,7 +212,7 @@ def confirm_password_reset(
 def read_me(
     requester: Member = Depends(require_account), session: Session = Depends(get_session)
 ) -> MeOut:
-    # 내가 앉아 있는 자리를 함께 내려준다. 화면이 "내 팀"을 가려내는 근거가 여기뿐이고,
+    # 내가 들어가 있는 포지션을 함께 내려준다. 화면이 "내 팀"을 가려내는 근거가 여기뿐이고,
     # 이미 화면이 로그인 직후 한 번 부르는 endpoint 다.
     return MeOut(
         account=_account_out(session, requester),
