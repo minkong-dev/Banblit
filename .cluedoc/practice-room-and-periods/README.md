@@ -4,9 +4,8 @@ sources:
   - backend/src/backend/scheduling/slots.py       # 운영 시간을 1시간 slot으로 쪼갬 — 칸 길이를 정하는 한 자리
   - backend/src/backend/scheduling/assignment.py  # 합주실(이름 + 운영 시간) 정의
   - backend/src/backend/db/models.py              # Room·Period 테이블
-  - backend/src/backend/api/room_input.py         # 여닫는 시각·이름의 경계 검증
+  - backend/src/backend/api/input.py              # 여닫는 시각·이름·기간 날짜를 비롯한 모든 입력의 경계 검증
   - backend/src/backend/api/room_service.py       # 합주실 읽기·만들기·고치기
-  - backend/src/backend/api/period_crud_input.py  # 기간 종류·날짜의 경계 검증
   - backend/src/backend/api/period_crud_service.py # 기간 읽기·만들기·고치기
   - backend/src/backend/api/routers/rooms.py      # 합주실 endpoint마다 권한을 확인하는 자리
   - backend/src/backend/api/routers/periods.py    # 기간 endpoint마다 권한을 확인하는 자리
@@ -124,7 +123,7 @@ slot은 **정시에만** 시작합니다. 운영 시간도 정시에 맞춰야 �
 
 못 나오는 시간은 항목을 다 가진 사람도 남의 것을 보지 못합니다. 기획의 역할 표에 일반멤버가 하는 일로 "자신의 불가능 시간 관리"라고만 적혀 있고, 배정 계산은 서버가 저장소를 직접 읽으므로 남의 것을 endpoint로 꺼내 볼 이유가 없습니다. endpoint를 열지 않으면 새어 나갈 곳도 없으니, 필요해지는 날이 오면 그때 무엇을 위해 여는지부터 정하려고 합니다.
 
-확인은 서버 테스트 501개가 모두 통과하고 화면 테스트 200개와 타입 검사가 이상 없는 것으로 했습니다. 위 표의 갈림은 합주실·기간·예약·못 나오는 시간마다 따로 있는 테스트 파일이 맡는데, 로그인하지 않은 요청과 로그인했지만 권한이 없는 요청을 서로 다른 응답으로 가르는지까지 함께 봅니다.
+확인은 서버 테스트 468개가 모두 통과하고 화면 테스트 202개와 타입 검사가 이상 없는 것으로 했습니다. 위 표의 갈림은 합주실·기간·예약·못 나오는 시간마다 따로 있는 테스트 파일이 맡는데, 로그인하지 않은 요청과 로그인했지만 권한이 없는 요청을 서로 다른 응답으로 가르는지까지 함께 봅니다.
 
 ## Conclusion
 

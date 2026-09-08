@@ -3,7 +3,8 @@ title: 기간 자동 배정 (DB 연결)
 sources:
   - backend/src/backend/api/period_input.py     # 기간 펼치기, 합주실 × 날짜 펼치기, 팀당 slot 산정, 팀·사람 변환
   - backend/src/backend/api/period_service.py   # 읽기·조립·계산·저장의 순서와 거부 조건
-  - backend/src/backend/api/app.py              # 배정·조회·되돌리기 세 엔드포인트
+  - backend/src/backend/api/routers/schedule.py # 배정·조회·되돌리기 세 엔드포인트
+  - backend/src/backend/api/schedule_service.py # 시간표를 읽어 화면이 쓰는 모양으로 만드는 자리
   - backend/src/backend/api/auth_dependency.py  # 세 endpoint가 물고 있는 로그인·권한 항목 확인 자리
   - backend/src/backend/api/notification_service.py  # 시간표가 바뀐 뒤 누구에게 알림을 남기는지
   - backend/tests/integration/db/test_notifications.py  # 다시 계산·되돌리기에도 알림이 남는지의 시나리오
@@ -166,13 +167,13 @@ flowchart TD
 docker compose run --rm dev pytest tests/unit/test_period_input.py tests/integration/db/test_period_service.py tests/integration/db/test_period_endpoints.py -q
 ```
 
-전체 스위트 기준으로는 486개가 통과합니다:
+전체 스위트 기준으로는 468개가 통과합니다:
 
 ```
 docker compose run --rm dev pytest -q
 ```
 
-타입 표기는 `docker compose run --rm --no-deps dev mypy` 로 따로 확인하며, 104개 파일에서 이상이 없습니다.
+타입 표기는 `docker compose run --rm --no-deps dev mypy` 로 따로 확인하며, 94개 파일에서 이상이 없습니다.
 
 ### 성능을 함께 쟀습니다
 

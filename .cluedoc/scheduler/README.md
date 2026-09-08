@@ -1,10 +1,10 @@
 ---
 title: 스케줄러
 sources:
-  - frontend/prototypes/scheduler.html   # 확정된 화면 설계 원본 — 손대지 않는다
   - frontend/src/routes/Scheduler.tsx    # 이 설계를 실제 응답으로 그리는 화면
   - frontend/src/routes/DayDialog.tsx    # 날짜를 눌렀을 때 뜨는 확인 모달
-  - frontend/src/lib/calendar.ts         # 달력 칸과 남은 시간, 합주실 여닫는 시각과 집중기간 범위를 세는 계산
+  - frontend/src/lib/calendar.ts         # 달력 칸과 남은 시간, 합주실 여닫는 시각과 집중기간 범위, 날짜·요일 표기
+  - frontend/src/components/Modal.tsx    # 날짜 모달이 다른 화면과 함께 쓰는 껍데기
   - frontend/src/components/hooks.ts     # 내 계정과 내가 속한 팀을 받아오는 자리
   - frontend/src/lib/pipeline.ts         # 예약·못 나오는 시간·알림을 서버와 주고받는 순서
   - frontend/src/lib/slots.ts            # slot을 합주 한 번으로 잇는 계산
