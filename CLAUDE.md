@@ -166,7 +166,7 @@ PDF·PPT·Word·Excel은 `document-skills` 스킬을 포맷에 맞게 쓴다.
 - 서버 — Python 3.14, FastAPI, uv, SQLAlchemy, Alembic, pytest
 - 배정 계산 — OR-Tools(CP-SAT)
 - 데이터베이스 — PostgreSQL 17
-- 화면 — React + Vite + TypeScript (React Router, TanStack Query, Vitest) — 아직 코드 없음
+- 화면 — React + Vite + TypeScript (React Router, TanStack Query, Vitest)
 - LLM — Claude API — 아직 연동 전
 - 실행 — Docker Compose
 
@@ -191,7 +191,8 @@ PDF·PPT·Word·Excel은 `document-skills` 스킬을 포맷에 맞게 쓴다.
   충돌을 피하려고 컨테이너 내부망(`db:5432`)만 쓴다. 확인은 `docker compose exec db` 로 한다.
 - **시각에 시간대를 붙이지 않는다.** 배정 엔진이 시간대 없는 값만 받는다. 여름시간제까지
   같이 설계하기 전에는 시간대 지원을 열지 않는다.
-- **점유 단위는 30분 칸 고정이다.** 칸당 선착순 하나. 배정도 예약도 같은 구조를 쓴다.
+- **점유 단위는 한 시간 칸 고정이다.** 칸당 선착순 하나. 배정도 예약도 같은 구조를 쓴다.
+  서버 쪽 정본은 `backend/src/backend/scheduling/slots.py` 의 `SLOT_MINUTES` 다.
 - **사람은 이름이 아니라 번호로 구분한다.** 동명이인이 있다.
 
 ---
