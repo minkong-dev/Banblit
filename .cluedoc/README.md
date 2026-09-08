@@ -40,6 +40,7 @@ Banblit은 하나의 합주실을 여러 밴드 팀이 나눠 쓸 때 생기는 
 - [게시판과 공지](./boards/README.md) — 팀 게시판과 전체 공지
 - [화면](./screens/README.md) — 사람이 실제로 쓰는 앱과, 화면들이 함께 쓰는 모양·계산
 - [개발 환경 실행](./dev-environment/README.md) — 명령 하나로 서비스를 띄우고 준비 여부를 확인하는 절차
+- [배포](./deployment/README.md) — 앞단·백업·요청 제한을 얹어 실제로 서비스하는 구성
 
 ## Description
 

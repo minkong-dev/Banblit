@@ -11,6 +11,7 @@ from sqlalchemy import Engine, create_engine, select, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
+from backend.api.rate_limit import reset_all
 from backend.db.models import Base, TeamSlot
 
 def seat(
@@ -200,3 +201,13 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
                 f"{item.nodeid} 은 tests/unit 에 있으면서 실제 DB 를 씁니다. "
                 "tests/integration/db 로 옮기십시오"
             )
+
+
+@pytest.fixture(autouse=True)
+def _forget_rate_limits() -> None:
+    """검사와 검사 사이에 요청 제한 셈을 지운다.
+
+    문지기는 process 안에서 세므로, 지우지 않으면 앞 검사가 쓴 횟수가 뒤 검사에
+    그대로 남아 로그인 검사부터 429 로 막힌다.
+    """
+    reset_all()

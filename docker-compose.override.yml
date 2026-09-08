@@ -86,3 +86,11 @@ services:
 
   db:
     restart: "no"
+
+  # 앞단과 백업은 배포에만 있는 것이다. profile 을 붙여 개발에서는 뜨지 않게 한다 —
+  # 지우면 base(배포용)에서도 사라지므로 여기서 끄기만 한다.
+  caddy:
+    profiles: ["deploy-only"]
+
+  backup:
+    profiles: ["deploy-only"]
