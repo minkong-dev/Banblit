@@ -21,6 +21,7 @@ from backend.api.password_reset import (
     send_id_reminder,
 )
 from backend.api.permission_service import account_permissions
+from backend.api.rate_limit import limit_guesses
 from backend.api.roster_service import list_my_teams
 from backend.api.schemas import (
     AccountOut,
@@ -40,6 +41,14 @@ from backend.db.models import PERMISSIONS, Member
 from backend.db.pipeline import get_session
 
 router = APIRouter()
+
+# 값을 맞혀 보는 자리에 거는 문지기. 한 번에 하나씩 넣어 보는 것을 막지 못하면 짧은
+# 비밀번호는 시간 문제로 뚫린다. 메일을 내보내는 자리는 상한을 더 낮게 둔다 — 남의
+# 주소로 메일을 퍼붓는 데 쓰일 수 있어서다.
+_login_guard = Depends(limit_guesses(limit=10, window_seconds=300))
+_signup_guard = Depends(limit_guesses(limit=5, window_seconds=3600))
+_mail_guard = Depends(limit_guesses(limit=5, window_seconds=3600))
+_reset_guard = Depends(limit_guesses(limit=10, window_seconds=3600))
 
 # 로그인 상태 유지를 켠 사람의 쿠키 수명. 끈 사람에게는 수명을 아예 싣지 않는다 —
 # 그러면 브라우저를 닫을 때 쿠키가 사라진다. 서버 쪽 행의 수명(auth_session)과 같은
@@ -98,7 +107,9 @@ def _account_out(session: Session, member: Member) -> AccountOut:
     )
 
 
-@router.post("/signup", response_model=AuthOut, status_code=201)
+@router.post(
+    "/signup", response_model=AuthOut, status_code=201, dependencies=[_signup_guard]
+)
 def signup(
     req: SignupIn, response: Response, session: Session = Depends(get_session)
 ) -> AuthOut:
@@ -116,7 +127,7 @@ def signup(
     return AuthOut(account=_account_out(session, member))
 
 
-@router.post("/login", response_model=AuthOut)
+@router.post("/login", response_model=AuthOut, dependencies=[_login_guard])
 def login(
     req: LoginIn, response: Response, session: Session = Depends(get_session)
 ) -> AuthOut:
@@ -182,14 +193,14 @@ def logout(
     return response
 
 
-@router.post("/find-id", response_model=AckOut)
+@router.post("/find-id", response_model=AckOut, dependencies=[_mail_guard])
 def find_id(req: FindIdIn, session: Session = Depends(get_session)) -> AckOut:
     # 맞는 계정이 있어도 없어도 같은 답이 나간다. 알려주는 것은 응답이 아니라 메일이다.
     send_id_reminder(session, req.name, req.email)
     return AckOut()
 
 
-@router.post("/password-reset", response_model=AckOut)
+@router.post("/password-reset", response_model=AckOut, dependencies=[_mail_guard])
 def start_password_reset(
     req: PasswordResetIn, session: Session = Depends(get_session)
 ) -> AckOut:
@@ -197,7 +208,9 @@ def start_password_reset(
     return AckOut()
 
 
-@router.post("/password-reset/confirm", response_model=AckOut)
+@router.post(
+    "/password-reset/confirm", response_model=AckOut, dependencies=[_reset_guard]
+)
 def confirm_password_reset(
     req: PasswordResetConfirmIn, session: Session = Depends(get_session)
 ) -> AckOut:

@@ -44,6 +44,8 @@ flowchart TD
 
 ## Related Work
 
+- [배포](../deployment/README.md) — 같은 구성에서 개발용 덮개를 걷어낸 상태
+
 - [Banblit 개요](../README.md) — 전체 기능 지도
 - [데이터 저장소](../database-layer/README.md) — 기동 전에 최신으로 맞추는 table 과 그 규칙
 - [스케줄링 API](../scheduling-api/README.md) — 응답을 확인하는 대상 중 하나

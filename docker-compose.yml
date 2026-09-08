@@ -67,10 +67,57 @@ services:
       API_ORIGIN: http://api:8000
       # 이것 없이 두면 nginx 가 제 설정의 $$uri·$$host 까지 빈 값으로 지운다.
       NGINX_ENVSUBST_FILTER: "^API_ORIGIN$$"
+    # 바깥에서 직접 닿지 않게 한다 — 들어오는 문은 caddy 하나다. localhost 로 묶어
+    # 두는 것은 서버에 SSH 로 들어가 확인할 자리를 남기려는 것이다.
     ports:
-      - "${WEB_PORT:-8080}:80"
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
     depends_on:
       - api
+    restart: unless-stopped
+
+  # 앞단 — 인증서를 스스로 받고 갱신하며 https 로 받는다. 설정은 deploy/Caddyfile.
+  # 이것이 없으면 로그인이 성립하지 않는다: 위 api 가 쿠키에 Secure 를 붙이는데
+  # 브라우저는 http 로 온 Secure 쿠키를 저장하지 않는다.
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      # 개발에서는 caddy 가 뜨지 않아 비어 있어도 된다. 배포에서는 반드시 채운다.
+      BANBLIT_DOMAIN: ${BANBLIT_DOMAIN:-}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # 받아 둔 인증서. 이것이 사라지면 다시 받는데, 같은 주소로 자주 받으면
+      # 발급처가 한동안 거절한다.
+      - banblit-caddy-data:/data
+      - banblit-caddy-config:/config
+      - banblit-caddy-logs:/var/log/caddy
+    depends_on:
+      - web
+    restart: unless-stopped
+
+  # 정기 백업 — 데이터베이스와 첨부파일을 host 폴더에 한 벌씩 떠 둔다.
+  # db 와 같은 이미지를 쓰는 것은 pg_dump 판이 서버와 맞아야 하기 때문이다.
+  backup:
+    image: postgres:17
+    entrypoint: ["/bin/sh", "/backup.sh"]
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-6}
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - ./deploy/backup.sh:/backup.sh:ro
+      # 뜬 파일은 volume 이 아니라 host 폴더에 둔다 — volume 이 사라지는 것이
+      # 백업이 막아야 할 바로 그 상황이다.
+      - ${BACKUP_DIR:-./backups}:/backups
+      - banblit-attachments:/attachments:ro
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   # 데이터 저장소. 호스트 포트는 열지 않는다 — 이 PC 에 다른 프로덕트의 postgres 가
@@ -91,6 +138,9 @@ services:
     restart: unless-stopped
 
 volumes:
+  banblit-caddy-data:
+  banblit-caddy-config:
+  banblit-caddy-logs:
   banblit-db-data:
   banblit-attachments:
   banblit-web-modules:

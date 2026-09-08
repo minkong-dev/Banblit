@@ -289,7 +289,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/me -b cookies.txt
   - 한글이 든 본문을 인라인(`-d '...'`)으로 넘기면 Git Bash에서 인코딩이 깨집니다. 그래서 `--data-binary @파일`을 씁니다 — 자세한 사유는 `3-2`의 주의점에 적어 두었습니다.
   - **쿠키 파일은 로그인한 상태 그 자체입니다.** 확인이 끝나면 지우고, 저장소에 올리지 않습니다.
   - 같은 이메일로 1행을 두 번 실행하면 `422`("이미 가입된 이메일입니다")가 돌아옵니다. 다시 확인할 때는 이메일을 바꿉니다.
-  - 개발 구성은 `docker-compose.override.yml`이 `COOKIE_SECURE=false`로 덮으므로 `http`로도 쿠키가 붙습니다. 배포 구성(`11-2`)은 `docker-compose.yml`의 `COOKIE_SECURE=true`가 살아 있어, `https`가 아니면 브라우저가 세션 쿠키를 저장하지 않습니다.
+  - 개발 구성은 `docker-compose.override.yml`이 `COOKIE_SECURE=false`로 덮으므로 `http`로도 쿠키가 붙습니다. 배포 구성(`11-1`)은 `docker-compose.yml`의 `COOKIE_SECURE=true`가 살아 있어, `https`가 아니면 브라우저가 세션 쿠키를 저장하지 않습니다.
   - `token` 같은 필드를 응답 본문에서 찾지 않습니다. 세션은 본문이 아니라 쿠키로만 오갑니다 — 헤더에 토큰을 실어 보내던 예전 방식은 더 이상 동작하지 않습니다.
 
 
@@ -312,7 +312,7 @@ docker compose exec api ls -l /var/lib/banblit/attachments
   - **글쓴이 본인만 붙이고 지울 수 있습니다.** 다른 계정의 쿠키로 1행을 보내면 403 입니다. 팀 게시판 글이면 내려받기도 그 팀 소속만 됩니다.
   - **허용 목록에 없는 확장자는 422 로 거절됩니다.** 목록은 `backend/src/backend/api/attachment_service.py` 의 `ALLOWED_EXTENSIONS` 한 곳에만 있습니다.
   - **Git Bash 에서 `;filename=` 에 한글을 적으면 이름이 깨져 저장됩니다.** 터미널이 UTF-8 로 보내지 않아서입니다 — 서버 문제가 아닙니다. 브라우저와 검사(`tests/integration/db/test_attachment_endpoints.py`)에서는 한글 이름이 그대로 남습니다.
-  - **개발 구성에는 앞단(nginx)이 없습니다.** 크기 상한(`client_max_body_size 300m`)은 배포 구성에서만 걸리므로, 개발에서 300MB 를 넘겨 보내면 그대로 통과합니다. 배포 구성으로 확인하려면 `11-2` 를 씁니다.
+  - **개발 구성에는 앞단(nginx)이 없습니다.** 크기 상한(`client_max_body_size 300m`)은 배포 구성에서만 걸리므로, 개발에서 300MB 를 넘겨 보내면 그대로 통과합니다. 배포 구성으로 확인하려면 `11-1` 로 띄운 곳에서 봅니다.
   - 저장 폴더는 `banblit-attachments` 볼륨입니다. `docker compose down` 으로 내려도 남고, `down -v` 로만 사라집니다.
 
 ---
@@ -630,44 +630,131 @@ docker compose run --rm --no-deps web npm run build
 
 ---
 
-## 11. 배포용 구성
+## 11. 배포
 
-### 11-1. 배포용 이미지 만들기
+`docker-compose.yml` 이 **배포용 정본**입니다. 개발에서는 `docker-compose.override.yml` 이
+자동으로 얹혀 그 위를 덮습니다. 그래서 배포에서는 `-f docker-compose.yml` 로 override 를
+빼고 부르고, 개발에서는 아무것도 붙이지 않습니다.
+
+배포에만 있는 서비스가 둘입니다 — 앞단 `caddy` 와 정기 백업 `backup`. 개발 override 가
+이 둘에 profile 을 붙여 두어 개발에서는 뜨지 않습니다.
 
 ```
-docker compose -f docker-compose.prod.yml build
+        배포 (-f docker-compose.yml)        개발 (그냥 docker compose)
+        caddy   ← 443 을 받는 유일한 문      —
+        web     ← 127.0.0.1 로만 열림        web  ← vite, 5173
+        api                                  api
+        db                                   db
+        auto-assign                          auto-assign (꺼짐)
+        backup                               —
 ```
 
-- **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 배포용 이미지 두 개를 만듭니다. 서버는 `backend/Dockerfile` 의 `prod` 단계(테스트 도구가 빠진 것), 화면은 `frontend/Dockerfile` 의 `prod` 단계(묶은 파일을 nginx 가 내보내는 것)다.
+### 11-1. 서버에 처음 올리기
+
+```
+git clone https://github.com/minkong-dev/Banblit.git
+cd Banblit
+cp .env.example .env
+nano .env
+docker compose -f docker-compose.yml up -d --build
+docker compose -f docker-compose.yml run --rm api alembic upgrade head
+```
+
+- **실행 경로**: 서버의 저장소 루트
+- **용도**: 클론한 저장소를 실제로 서비스하는 상태까지 올립니다.
+- **`.env` 에서 반드시 채울 것**
+  - `POSTGRES_PASSWORD` — 견본의 개발용 값을 그대로 두지 않습니다.
+  - `BANBLIT_DOMAIN` — 이 이름으로 인증서를 받습니다. 이 이름이 **이미 이 서버를 가리키고
+    있어야** 발급이 됩니다. 먼저 DNS 를 걸고 전파를 확인한 뒤에 띄웁니다.
+  - `BACKUP_DIR` — 백업을 남길 host 폴더. 데이터베이스 volume 과 **다른 디스크**에 두는
+    것이 좋습니다. 같은 디스크에 두면 그 디스크가 죽을 때 백업도 함께 갑니다.
+  - `SMTP_*` — 비우면 비밀번호 재설정 메일이 나가지 않습니다. 비밀번호를 잊은 사람이
+    스스로 되찾을 길이 없어집니다.
+  - `APP_ORIGIN` — 메일에 담을 링크의 앞부분. 비우면 `http://localhost:5173` 이 실려 나가
+    받는 사람이 누를 수 없는 링크가 됩니다.
 - **옵션**
-  - `-f docker-compose.prod.yml` — 개발용(`docker-compose.yml`) 대신 이 파일을 씁니다. 생략하면 개발용이 대상이 되어 화면 이미지가 아예 없습니다.
-  - 서비스 이름을 뒤에 붙이면 그것만 만든다 (`... build web`).
+  - `-f docker-compose.yml` — 개발용 override 를 빼고 배포용만 씁니다. **빠뜨리면 개발
+    설정이 얹혀 쿠키의 Secure 가 꺼지고 caddy·backup 이 뜨지 않습니다.**
+  - `--build` — 서버에서 이미지를 직접 만듭니다. 처음에는 화면 묶기까지 돌아 몇 분 걸립니다.
+  - `run --rm api alembic upgrade head` — 표를 만들고 최신으로 맞춥니다. 개발의 `banblit up`
+    이 자동으로 하던 것을 배포에서는 손으로 합니다 — 데이터가 있는 곳에서 자동으로 도는
+    마이그레이션은 되돌릴 자리가 없습니다.
 - **주의점**
-  - 화면 이미지는 컨테이너 안에서 `npm ci` 와 `npm run build` 를 새로 돌립니다. 처음에는 몇 분 걸립니다.
-  - 개발용 이미지와 이름이 다릅니다(`banblit-frontend:prod`, `banblit-backend:prod`). 개발용을 덮어쓰지 않습니다.
+  - **80·443 이 열려 있어야 합니다.** Oracle Cloud 는 기본으로 막혀 있어 보안 목록(Security
+    List)과 인스턴스 안 방화벽(`iptables`) 양쪽을 모두 열어야 합니다.
+  - **Cloudflare 를 쓴다면** 이 이름만 프록시를 끄거나(DNS only), 켜 둘 것이면 SSL 모드를
+    Full (strict) 로 둡니다. Flexible 로 두면 Cloudflare 가 서버에 http 로 붙어, 서버는
+    자기가 http 로 서비스 중이라고 보고 로그인 쿠키를 붙이지 않습니다.
+  - **첫 계정이 권한을 전부 받습니다**(`auth_service.py` 의 `_is_first_account`). 띄운
+    직후에 관리자가 먼저 가입하십시오. 주소를 알리는 것은 그다음입니다.
 
-### 11-2. 배포용 구성이 실제로 도는지 확인
+### 11-2. 배포한 것을 새 판으로 올리기
 
 ```
-docker run -d --rm --name banblit-prod-smoke --network banblit_default   -e API_ORIGIN=http://api:8000 -e NGINX_ENVSUBST_FILTER='^API_ORIGIN$'   -p 8080:80 banblit-frontend:prod
-curl -s -o /dev/null -w "%{http_code}
-" http://localhost:8080/scheduler
-curl -s http://localhost:8080/api/health
-docker rm -f banblit-prod-smoke
+git pull
+docker compose -f docker-compose.yml build
+docker compose -f docker-compose.yml run --rm api alembic upgrade head
+docker compose -f docker-compose.yml up -d
 ```
 
-- **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 배포용 화면 이미지만 따로 띄워, 개발 서버가 하던 두 가지를 nginx 가 대신하는지 봅니다 — 주소를 직접 쳤을 때 화면이 나오는지, `/api` 가 서버로 넘어가는지.
-- **옵션**
-  - `--network banblit_default` — **개발용으로 이미 떠 있는 `api` 컨테이너에 닿으려고 그 망에 붙입니다.** 이것 없이는 `api` 라는 이름을 못 찾아 502 가 납니다. 망 이름은 `docker network ls` 로 확인합니다.
-  - `-e API_ORIGIN` — nginx 가 넘길 주소. 코드에 박혀 있지 않고 여기서 줍니다.
-  - `-e NGINX_ENVSUBST_FILTER='^API_ORIGIN$'` — **채울 이름을 이것 하나로 못박습니다.** 없이 두면 nginx 가 제 설정 안의 `$uri`·`$host` 까지 빈 값으로 지워 설정이 깨집니다.
-  - `--rm` — 멈추면 지워집니다. 확인용이라 남길 이유가 없습니다.
-  - `-p 8080:80` — 컨테이너 안 80번을 이 PC 의 8080 으로 엽니다. 개발 서버(5173)와 부딪히지 않습니다.
+- **실행 경로**: 서버의 저장소 루트
+- **용도**: 코드를 최신으로 올립니다. 마이그레이션을 먼저 넣고 서비스를 바꿉니다.
 - **주의점**
-  - **`docker compose -f docker-compose.prod.yml up` 을 그냥 쓰면 안 됩니다.** 프로젝트 이름이 개발용과 같아 떠 있는 개발 컨테이너를 갈아치웁니다. 나란히 띄우려면 `-p banblit-prod` 로 프로젝트 이름을 따로 줍니다.
-  - 이 확인은 화면과 넘기기만 봅니다. 데이터가 보이려면 `4-2` 마이그레이션이 들어가 있고 팀·기간·배정이 실제로 등록돼 있어야 합니다.
+  - **마이그레이션이 먼저입니다.** 새 코드가 먼저 뜨면 아직 없는 열을 읽어 500 이 납니다
+    (개발에서 실제로 겪었습니다 — `column members.department does not exist`).
+  - `up -d` 는 바뀐 서비스만 다시 만듭니다. `db` 는 대개 그대로 남습니다.
+  - 되돌려야 하면 마이그레이션도 함께 되돌려야 합니다(`4-2-1`). 데이터가 있는 곳에서는
+    되돌리기가 값을 잃을 수 있으니, 되돌리기 전에 `11-4` 로 한 벌 떠 둡니다.
+
+### 11-3. 앞단이 인증서를 받았는지 보기
+
+```
+docker compose -f docker-compose.yml logs caddy --since 5m
+curl -sI https://in-six-strings.banblit.com | head -3
+```
+
+- **실행 경로**: 서버의 저장소 루트
+- **용도**: 인증서 발급이 됐는지, https 로 실제 응답이 오는지 봅니다.
+- **주의점**
+  - `obtained certificate` 가 기록에 뜨면 성공입니다. 실패하면 대개 DNS 가 아직 이 서버를
+    가리키지 않거나 80 번이 막혀 있는 것입니다 — 발급처가 80 번으로 확인하러 옵니다.
+  - **실패를 반복하지 마십시오.** 같은 이름으로 짧은 시간에 여러 번 받으려 하면 발급처가
+    한동안 거절합니다. 원인을 고친 뒤에 다시 띄웁니다.
+
+### 11-4. 백업 확인하고 지금 한 벌 뜨기
+
+```
+ls -lh /srv/banblit/backups
+docker compose -f docker-compose.yml logs backup --since 12h
+docker compose -f docker-compose.yml exec -T db pg_dump --clean --if-exists -U banblit -d banblit | gzip > manual-$(date -u +%Y%m%dT%H%M%SZ).sql.gz
+```
+
+- **실행 경로**: 서버의 저장소 루트
+- **용도**: 정기 백업이 실제로 쌓이고 있는지 보고, 구조를 바꾸기 직전처럼 필요할 때 손으로
+  한 벌 뜹니다.
+- **주의점**
+  - `backup` 서비스는 기본 6시간마다 뜨고 14일치를 남깁니다(`BACKUP_INTERVAL_HOURS`,
+    `BACKUP_KEEP_DAYS`). 데이터베이스와 게시판 첨부파일을 각각 뜹니다.
+  - **뜨는 것만으로는 백업이 아닙니다.** 되살려 본 적 없는 백업은 백업이 아닙니다 —
+    `11-5` 를 한 번은 해 보십시오.
+  - 뜬 파일은 서버 안에 있습니다. 서버째 잃는 경우까지 막으려면 다른 곳으로 내려받는
+    자리가 따로 있어야 합니다. 지금은 없습니다.
+
+### 11-5. 백업으로 되살리기
+
+```
+gunzip -c /srv/banblit/backups/db-20260909T000000Z.sql.gz | docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit
+docker run --rm -v banblit-attachments:/dst -v /srv/banblit/backups:/src alpine sh -c "tar -xzf /src/files-20260909T000000Z.tar.gz -C /dst"
+```
+
+- **실행 경로**: 서버의 저장소 루트
+- **용도**: 뜬 파일로 데이터베이스와 첨부파일을 되돌립니다.
+- **주의점**
+  - **덮어씁니다.** 뜬 파일이 `--clean --if-exists` 로 만들어져 있어 지금 들어 있는 표를
+    지우고 다시 만듭니다. 되살리기 전에 지금 상태를 한 벌 떠 두십시오.
+  - 되살리는 동안 `api` 를 내려 두는 편이 안전합니다 — 표가 사라졌다 생기는 사이에 들어온
+    요청이 무엇을 볼지 정해져 있지 않습니다.
+  - 첨부파일 되살리기는 volume 에 직접 풉니다. 지금 들어 있는 같은 이름 파일을 덮습니다.
 
 ---
 
