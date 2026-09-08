@@ -19,10 +19,13 @@ from backend.api.board_service import (
     create_comment,
     create_notice,
     create_team_post,
+    delete_comment,
     get_post_with_comments,
     list_notices,
     list_team_posts,
     require_post_author,
+    update_comment,
+    update_post,
 )
 from backend.api.schemas import (
     AttachmentEnvelopeOut,
@@ -178,6 +181,53 @@ def create_post_comment(
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return CommentEnvelopeOut(comment=_comment_out(comment, author))
+
+
+@router.patch("/posts/{post_id}", response_model=PostEnvelopeOut)
+def edit_post(
+    post_id: int,
+    # 만들 때와 받는 항목·길이 제한이 같아 같은 스키마를 쓴다.
+    req: PostCreateIn,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> PostEnvelopeOut:
+    try:
+        post, author = update_post(session, post_id, req.title, req.body, requester)
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return PostEnvelopeOut(post=_post_out(post, author, 0))
+
+
+@router.patch("/comments/{comment_id}", response_model=CommentEnvelopeOut)
+def edit_comment(
+    comment_id: int,
+    req: CommentCreateIn,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> CommentEnvelopeOut:
+    try:
+        comment, author = update_comment(session, comment_id, req.body, requester)
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return CommentEnvelopeOut(comment=_comment_out(comment, author))
+
+
+@router.delete("/comments/{comment_id}", status_code=204)
+def delete_comment_endpoint(
+    comment_id: int,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> None:
+    try:
+        delete_comment(session, comment_id, requester)
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
 
 @router.post(

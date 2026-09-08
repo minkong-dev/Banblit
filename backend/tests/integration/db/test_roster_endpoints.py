@@ -563,3 +563,52 @@ def test_clearing_keeps_the_slot_itself(
     slots = api_client.get(f"/teams/{team.id}/slots", cookies=head).json()["slots"]
     assert len(slots) == 1
     assert slots[0]["member_id"] is None
+
+
+# ── 팀 삭제 ────────────────────────────────────────────────────────────────
+
+
+def test_deleting_a_team_requires_authentication(
+    api_client: TestClient, db_session: Session
+) -> None:
+    team = _team(db_session, "청산")
+    db_session.commit()
+
+    assert api_client.delete(f"/teams/{team.id}").status_code == 401
+
+
+def test_deleting_a_team_requires_team_manage(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    account("박서연", "head@example.com")
+    _, plain = account("이도현", "member@example.com")
+    team = _team(db_session, "청산")
+    db_session.commit()
+
+    assert api_client.delete(f"/teams/{team.id}", cookies=plain).status_code == 403
+
+
+def test_deleting_a_team_removes_its_slots_too(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """자리는 팀의 구성이라 팀이 사라지면 함께 사라진다."""
+    _, head = account("박서연", "head@example.com")
+    team = _team(db_session, "청산", slots=2)
+    db_session.commit()
+    team_id = team.id
+
+    assert api_client.delete(f"/teams/{team_id}", cookies=head).status_code == 204
+    # 없는 팀을 물으면 422 다 — 이 저장소가 "그런 것이 없다"를 답하는 방식이다.
+    assert api_client.get(f"/teams/{team_id}/slots", cookies=head).status_code == 422
+    assert db_session.scalars(
+        select(TeamSlot).where(TeamSlot.team_id == team_id)
+    ).all() == []
+
+
+def test_deleting_a_team_that_is_gone_says_so(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    db_session.commit()
+
+    assert api_client.delete("/teams/9999", cookies=head).status_code == 422

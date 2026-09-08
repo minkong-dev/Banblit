@@ -489,3 +489,157 @@ def test_comment_body_blank_after_trim_is_rejected_at_the_database_level(
     )
     with pytest.raises(IntegrityError):
         db_session.commit()
+
+
+# ── 글 수정 ────────────────────────────────────────────────────────────────
+
+
+def test_editing_a_post_requires_authentication(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    author_id, head = account("박서연", "head@example.com")
+    made = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()
+
+    response = api_client.patch(
+        f"/posts/{made['post']['id']}", json={"title": "새 제목", "body": "새 본문"}
+    )
+
+    assert response.status_code == 401
+    assert author_id is not None
+
+
+def test_only_the_author_can_edit_a_post(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    _, other = account("이도현", "member@example.com")
+    made = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()
+
+    response = api_client.patch(
+        f"/posts/{made['post']['id']}",
+        json={"title": "가로챈 제목", "body": "본문"},
+        cookies=other,
+    )
+
+    assert response.status_code == 403
+
+
+def test_the_author_can_edit_their_own_post(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    made = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()
+    post_id = made["post"]["id"]
+
+    response = api_client.patch(
+        f"/posts/{post_id}", json={"title": "고친 제목", "body": "고친 본문"}, cookies=head
+    )
+
+    assert response.status_code == 200
+    assert response.json()["post"]["title"] == "고친 제목"
+    assert api_client.get(f"/posts/{post_id}", cookies=head).json()["post"]["body"] == "고친 본문"
+
+
+def test_editing_a_post_rejects_an_empty_title(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    made = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()
+
+    response = api_client.patch(
+        f"/posts/{made['post']['id']}", json={"title": "   ", "body": "본문"}, cookies=head
+    )
+
+    assert response.status_code == 422
+
+
+# ── 댓글 수정·삭제 ─────────────────────────────────────────────────────────
+
+
+def _comment(api_client: TestClient, cookies: dict[str, str], post_id: int) -> int:
+    made = api_client.post(
+        f"/posts/{post_id}/comments", json={"body": "댓글"}, cookies=cookies
+    )
+    return int(made.json()["comment"]["id"])
+
+
+def test_only_the_author_can_edit_a_comment(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    _, other = account("이도현", "member@example.com")
+    post_id = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()["post"]["id"]
+    comment_id = _comment(api_client, head, post_id)
+
+    response = api_client.patch(
+        f"/comments/{comment_id}", json={"body": "가로챈 댓글"}, cookies=other
+    )
+
+    assert response.status_code == 403
+
+
+def test_the_author_can_edit_their_own_comment(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    post_id = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()["post"]["id"]
+    comment_id = _comment(api_client, head, post_id)
+
+    response = api_client.patch(
+        f"/comments/{comment_id}", json={"body": "고친 댓글"}, cookies=head
+    )
+
+    assert response.status_code == 200
+    assert response.json()["comment"]["body"] == "고친 댓글"
+
+
+def test_editing_a_comment_rejects_an_empty_body(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    post_id = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()["post"]["id"]
+    comment_id = _comment(api_client, head, post_id)
+
+    response = api_client.patch(f"/comments/{comment_id}", json={"body": " "}, cookies=head)
+
+    assert response.status_code == 422
+
+
+def test_only_the_author_can_delete_a_comment(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    _, other = account("이도현", "member@example.com")
+    post_id = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()["post"]["id"]
+    comment_id = _comment(api_client, head, post_id)
+
+    assert api_client.delete(f"/comments/{comment_id}", cookies=other).status_code == 403
+
+
+def test_the_author_can_delete_their_own_comment(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    post_id = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()["post"]["id"]
+    comment_id = _comment(api_client, head, post_id)
+
+    assert api_client.delete(f"/comments/{comment_id}", cookies=head).status_code == 204
+    assert db_session.get(Comment, comment_id) is None

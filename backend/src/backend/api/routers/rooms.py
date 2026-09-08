@@ -32,7 +32,7 @@ def read_rooms(session: Session = Depends(get_session)) -> RoomsOut:
     "/rooms",
     response_model=RoomEnvelopeOut,
     status_code=201,
-    dependencies=[Depends(require_permission("room_manage"))],
+    dependencies=[Depends(require_permission("room_create"))],
 )
 def create_room(
     req: RoomCreateIn,
@@ -48,7 +48,7 @@ def create_room(
 @router.patch(
     "/rooms/{room_id}",
     response_model=RoomEnvelopeOut,
-    dependencies=[Depends(require_permission("room_manage"))],
+    dependencies=[Depends(require_permission("room_edit"))],
 )
 def patch_room(
     room_id: int,

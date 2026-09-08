@@ -18,20 +18,28 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-# 할 수 있는 일 열한 가지. 항목이 늘면 그것을 막는 서버 코드도 같이 늘어나므로
-# 데이터가 아니라 여기에 고정한다. 켜고 끄는 것만 permission_sets 에 저장한다.
+# 할 수 있는 일. 만들기·수정·삭제·주기를 따로 두어, 권한을 만드는 사람이 필요한 것만
+# 골라 묶을 수 있게 한다. 항목이 늘면 그것을 막는 서버 코드도 같이 늘어나므로 데이터가
+# 아니라 여기에 고정한다. 켜고 끄는 것만 permission_sets 에 저장한다.
 Permission = Literal[
-    "room_manage",  # 합주실 만들기·고치기
-    "period_manage",  # 기간 만들기·고치기
-    "team_manage",  # 팀 만들기·이름 바꾸기
-    "member_remove",  # 팀에서 남을 빼기
-    "join_approve",  # 팀 참가 신청 보기·승인·거절
+    "room_create",  # 합주실 만들기
+    "room_edit",  # 합주실 여닫는 시각 고치기
+    "period_create",  # 기간 만들기
+    "period_edit",  # 기간 고치기
+    "team_create",  # 팀 만들기
+    "team_edit",  # 팀 이름 바꾸기
+    "team_delete",  # 팀 지우기
+    "member_add",  # 팀 자리에 사람 넣기
+    "member_remove",  # 남이 앉은 자리 비우기
+    "notice_write",  # 공지 쓰기
+    "board_moderate",  # 남의 글·댓글 수정·삭제
+    "reservation_manage",  # 남의 예약 수정·취소
     "assign_run",  # 배정 계산 실행
     "assign_read",  # 계산 결과·조율안 보기
     "proposal_confirm",  # 조율안 확정
     "rollback",  # 되돌리기
-    "notice_write",  # 공지 쓰기
-    "permission_grant",  # 남에게 권한 주기
+    "permission_manage",  # 권한 만들기·수정·삭제
+    "permission_grant",  # 사람에게 권한 주고 뺏기
 ]
 
 PERMISSIONS: tuple[Permission, ...] = get_args(Permission)
