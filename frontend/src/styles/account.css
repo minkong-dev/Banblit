@@ -4,7 +4,7 @@
     --ink: #0E0F11; --ink-2: #4E5460; --ink-3: #8B9099;
     --paper: #FFFFFF; --paper-2: #F5F6F7;
     --edge: #E4E6E9; --edge-2: #CDD1D6;
-    --coral: #FF6161; --coral-press: #E84B4B; --coral-tint: #FFEFEF;
+    --brand: var(--coral); --brand-press: var(--coral-press); --brand-tint: var(--coral-soft); --brand-on: var(--coral-ink);
     --red: #E03B3B;
     --kakao: #FEE500; --kakao-ink: #191600;
   }
@@ -22,7 +22,7 @@
   body[data-page="account"] :where(button, input) { font: inherit; color: inherit; letter-spacing: inherit; }
   body[data-page="account"] button { cursor: pointer; background: none; border: none; padding: 0; }
   body[data-page="account"] a { color: inherit; }
-  body[data-page="account"] :where(a, button, input):focus-visible { outline: 2px solid var(--coral); outline-offset: 3px; border-radius: 6px; }
+  body[data-page="account"] :where(a, button, input):focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 6px; }
 
 body[data-page="account"] {
 
@@ -42,7 +42,7 @@ body[data-page="account"] {
     margin: 0; font-size: clamp(24px, 2.4vw, 34px); font-weight: 700;
     line-height: 1.5; letter-spacing: -.045em;
   }
-  .stage .say h1 em { font-style: normal; color: var(--coral); font-weight: 900; letter-spacing: .04em; }
+  .stage .say h1 em { font-style: normal; color: var(--brand); font-weight: 900; letter-spacing: .04em; }
   .stage .say p { margin: 16px 0 0; font-size: 14.5px; font-weight: 300; color: #C6CAD0; }
 
   /* ===== 오른쪽 서식 ===== */
@@ -73,6 +73,16 @@ body[data-page="account"] {
     font-size: 15.5px;
     transition: border-color .16s ease, background-color .16s ease;
   }
+  .hold { position: relative; }
+  .peekable input { padding-right: 52px; }
+  .peek {
+    position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+    width: 40px; height: 40px; display: grid; place-items: center;
+    color: var(--ink-3); border-radius: 10px;
+    transition: color .15s ease, background-color .15s ease;
+  }
+  .peek:hover { color: var(--ink); background: #EDEEF0; }
+  .peek svg { width: 20px; height: 20px; }
   .field input::placeholder { color: var(--ink-3); }
   .field input:hover { background: #F0F1F3; }
   .field input:focus { background: var(--paper); border-color: var(--ink); outline: none; }
@@ -82,18 +92,20 @@ body[data-page="account"] {
 
   .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 22px; }
   .keep { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; min-height: 44px; }
-  .keep input { width: 17px; height: 17px; accent-color: var(--coral); cursor: pointer; }
+  .keep input { width: 17px; height: 17px; accent-color: var(--brand); cursor: pointer; }
   .row .links { display: flex; gap: 14px; }
   .row a { font-size: 13.5px; color: var(--ink-3); text-decoration: none; }
   .row a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
+  /* 밝은 코랄 위에 흰 글자는 2.8:1 이라 읽히지 않는다. 코랄을 살리려고 글자를
+     어두운 쪽으로 뒤집었다 — 같은 코랄에 6.3:1 이다. */
   .go {
     width: 100%; min-height: 54px; padding: 15px;
-    background: var(--coral); color: #fff; border-radius: 12px;
+    background: var(--brand); color: var(--brand-on); border-radius: 12px;
     font-size: 16px; font-weight: 700;
     transition: background-color .16s ease;
   }
-  .go:hover { background: var(--coral-press); }
+  .go:hover { background: var(--brand-press); }
 
   .or { display: flex; align-items: center; gap: 14px; margin: 28px 0 18px; color: var(--ink-3); font-size: 12.5px; }
   .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--edge); }
@@ -123,7 +135,7 @@ body[data-page="account"] {
     transition: background-color .16s ease, color .16s ease;
   }
   .picks button:hover { background: #EDEEF0; color: var(--ink); }
-  .picks button[aria-pressed="true"] { background: var(--coral-tint); color: var(--coral-press); font-weight: 700; }
+  .picks button[aria-pressed="true"] { background: var(--brand); color: var(--brand-on); font-weight: 700; }
   .posbad { display: none; margin: 9px 0 0; font-size: 12.5px; color: var(--red); font-weight: 500; }
   .posbad.on { display: block; }
 

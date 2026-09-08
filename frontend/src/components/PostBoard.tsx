@@ -16,6 +16,10 @@ import {
   sendFile,
 } from "../lib/pipeline";
 import { Card } from "./AppShell";
+import { useFitCount } from "./hooks";
+import { Modal } from "./Modal";
+import { PencilIcon, TrashIcon } from "./icons";
+import { askDelete } from "../lib/confirm";
 import type { Attachment, Post, PostComment } from "../lib/contract";
 
 
@@ -62,28 +66,32 @@ function useDetailFocus(): {
   };
 }
 
+/** 글 목록. 비었거나 불러오는 중이어도 상자는 그대로 둔다 — 상자 높이를 재서
+ *  한 쪽에 몇 줄을 둘지 정하므로, 상자가 사라지면 잴 것이 없어진다. */
 function PostList(props: {
   posts: Post[];
   state: string;
   emptyText: string;
   onOpen: (id: number) => void;
   buttonRef: (id: number) => (el: HTMLButtonElement | null) => void;
+  boxRef: RefObject<HTMLUListElement | null>;
 }) {
-  const { posts, state, emptyText, onOpen, buttonRef } = props;
-  if (state !== "" || posts.length === 0) {
-    return <div className="empty">{state === "loading" ? "불러오는 중…" : state || emptyText}</div>;
-  }
+  const { posts, state, emptyText, onOpen, buttonRef, boxRef } = props;
   return (
-    <ul className="rows">
-      {posts.map((post) => (
-        <li key={post.id}>
-          <button className="postrow" ref={buttonRef(post.id)} onClick={() => onOpen(post.id)}>
-            <b>{post.title}</b>
-            <span className="meta">{post.author} · {postWhen(post.created_at)}</span>
-          </button>
-          <span className="cnt">댓글 {post.comment_count}</span>
-        </li>
-      ))}
+    <ul className="rows" ref={boxRef}>
+      {state !== "" || posts.length === 0 ? (
+        <li className="empty">{state === "loading" ? "불러오는 중…" : state || emptyText}</li>
+      ) : (
+        posts.map((post) => (
+          <li key={post.id}>
+            <button className="postrow" ref={buttonRef(post.id)} onClick={() => onOpen(post.id)}>
+              <b>{post.title}</b>
+              <span className="meta">{post.author} · {postWhen(post.created_at)}</span>
+            </button>
+            <span className="cnt">댓글 {post.comment_count}</span>
+          </li>
+        ))
+      )}
     </ul>
   );
 }
@@ -330,13 +338,13 @@ function AttachmentList(props: {
                 <button
                   className="btn"
                   type="button"
-                  // 줄마다 "지우기" 가 같은 글자라, 화면을 읽어 주는 도구에는 어느
+                  // 줄마다 "삭제" 가 같은 글자라, 화면을 읽어 주는 도구에는 어느
                   // 파일의 것인지 이름을 붙여 알린다.
-                  aria-label={`${file.name} 지우기`}
+                  aria-label={`${file.name} 삭제`}
                   disabled={remove.isPending}
                   onClick={() => remove.mutate(file.id)}
                 >
-                  지우기
+                  삭제
                 </button>
               </>
             )}
@@ -363,7 +371,7 @@ function RemovePost(props: {
     mutationFn: () => getJSON(`/posts/${postId}`, { method: "DELETE" }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: listKey });
-      onSay("글을 지웠습니다.");
+      onSay("글을 삭제했습니다.");
       // 지운 글의 상세를 계속 열어 둘 수 없으므로 목록으로 돌아간다.
       onDone();
     },
@@ -372,19 +380,163 @@ function RemovePost(props: {
   return (
     <>
       <button
-        className="btn"
+        className="ic danger"
         type="button"
+        aria-label="글 삭제"
         disabled={remove.isPending}
         onClick={() => {
-          if (window.confirm("이 글과 붙어 있는 첨부파일을 함께 지웁니다. 지울까요?")) {
+          if (window.confirm("이 글과 붙어 있는 첨부파일을 함께 지웁니다. 삭제할까요?")) {
             remove.mutate();
           }
         }}
       >
-        {remove.isPending ? "지우는 중…" : "글 지우기"}
+        <TrashIcon />
       </button>
       {remove.error ? <p className="why" role="alert">{reason(remove.error)}</p> : null}
     </>
+  );
+}
+
+/** 글 수정 — 쓸 때와 같은 두 칸을 값이 담긴 채로 다시 연다. */
+function EditPost(props: {
+  post: Post;
+  listKey: readonly unknown[];
+  onClose: () => void;
+  onSay: (message: string) => void;
+}) {
+  const { post, listKey, onClose, onSay } = props;
+  const client = useQueryClient();
+  const [title, setTitle] = useState(post.title);
+  const [body, setBody] = useState(post.body);
+  const [bad, setBad] = useState("");
+
+  const send = useMutation({
+    mutationFn: () =>
+      getJSON<{ post: Post }>(`/posts/${post.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ title: title.trim(), body: body.trim() }),
+      }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: listKey });
+      void client.invalidateQueries({ queryKey: ["board", "post", post.id] });
+      onClose();
+      onSay("글을 고쳤습니다.");
+    },
+    onError: (error) => setBad(reason(error)),
+  });
+
+  return (
+    <Modal title="글 수정" onClose={onClose}
+      foot={
+        <>
+          <button className="ghost" onClick={onClose}>취소</button>
+          <button className="primary" disabled={send.isPending}
+            onClick={() => {
+              const why = checkPost({ title, body });
+              setBad(why);
+              if (why === "") send.mutate();
+            }}
+          >
+            {send.isPending ? "저장하는 중…" : "저장"}
+          </button>
+        </>
+      }
+    >
+      <div className="fields">
+        <label className="wide" htmlFor="editTitle">
+          제목
+          <input id="editTitle" autoFocus value={title}
+            onChange={(event) => setTitle(event.target.value)} />
+        </label>
+        <label className="wide" htmlFor="editBody">
+          내용
+          <textarea id="editBody" value={body}
+            onChange={(event) => setBody(event.target.value)} />
+        </label>
+      </div>
+      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+    </Modal>
+  );
+}
+
+/** 댓글 한 줄. 자기 댓글이면 오른쪽 끝에 연필과 쓰레기통이 선다. */
+function CommentRow(props: {
+  comment: PostComment;
+  mine: boolean;
+  postId: number;
+  onSay: (message: string) => void;
+}) {
+  const { comment, mine, postId, onSay } = props;
+  const client = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [body, setBody] = useState(comment.body);
+  const [bad, setBad] = useState("");
+
+  const refresh = (): void => {
+    void client.invalidateQueries({ queryKey: ["board", "post", postId] });
+  };
+
+  const save = useMutation({
+    mutationFn: () =>
+      getJSON<{ comment: PostComment }>(`/comments/${comment.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ body: body.trim() }),
+      }),
+    onSuccess: () => { setEditing(false); refresh(); onSay("댓글을 고쳤습니다."); },
+    onError: (error) => setBad(reason(error)),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => getJSON<null>(`/comments/${comment.id}`, { method: "DELETE" }),
+    onSuccess: () => { refresh(); onSay("댓글을 삭제했습니다."); },
+    onError: (error) => onSay(reason(error)),
+  });
+
+  return (
+    <li className="comment">
+      <span className="meta">{comment.author} · {postWhen(comment.created_at)}</span>
+      <p>{comment.body}</p>
+      {!mine ? null : (
+        <span className="acts">
+          <button className="ic" aria-label="댓글 수정"
+            onClick={() => { setBody(comment.body); setBad(""); setEditing(true); }}>
+            <PencilIcon />
+          </button>
+          <button className="ic danger" aria-label="댓글 삭제" disabled={remove.isPending}
+            onClick={() => { if (askDelete("댓글")) remove.mutate(); }}>
+            <TrashIcon />
+          </button>
+        </span>
+      )}
+
+      {!editing ? null : (
+        <Modal title="댓글 수정" onClose={() => setEditing(false)}
+          foot={
+            <>
+              <button className="ghost" onClick={() => setEditing(false)}>취소</button>
+              <button className="primary" disabled={save.isPending}
+                onClick={() => {
+                  const why = checkComment(body);
+                  setBad(why);
+                  if (why === "") save.mutate();
+                }}
+              >
+                {save.isPending ? "저장하는 중…" : "저장"}
+              </button>
+            </>
+          }
+        >
+          <div className="fields">
+            <label className="wide" htmlFor="editComment">
+              댓글
+              <textarea id="editComment" autoFocus value={body}
+                onChange={(event) => setBody(event.target.value)} />
+            </label>
+          </div>
+          {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+        </Modal>
+      )}
+    </li>
   );
 }
 
@@ -399,6 +551,7 @@ function PostDetail(props: {
   onSay: (message: string) => void;
 }) {
   const { postId, authorId, listKey, heading, onBack, onSay } = props;
+  const [editing, setEditing] = useState(false);
   const detail = useQuery({
     queryKey: ["board", "post", postId],
     // 첨부는 글을 열 때 함께 온다 — 목록을 따로 부르지 않는다.
@@ -419,7 +572,14 @@ function PostDetail(props: {
     <div className="thread">
       <div className="threadtop">
         <button className="back" onClick={onBack}>‹ 목록으로</button>
-        {!mine ? null : <RemovePost postId={post.id} listKey={listKey} onDone={onBack} onSay={onSay} />}
+        {!mine ? null : (
+          <span className="acts">
+            <button className="ic" aria-label="글 수정" onClick={() => setEditing(true)}>
+              <PencilIcon />
+            </button>
+            <RemovePost postId={post.id} listKey={listKey} onDone={onBack} onSay={onSay} />
+          </span>
+        )}
       </div>
       <h2 tabIndex={-1} ref={heading}>{post.title}</h2>
       <p className="meta">{post.author} · {postWhen(post.created_at)}</p>
@@ -439,16 +599,23 @@ function PostDetail(props: {
         ) : (
           <ul>
             {comments.map((comment) => (
-              <li key={comment.id} className="comment">
-                <span className="meta">{comment.author} · {postWhen(comment.created_at)}</span>
-                <p>{comment.body}</p>
-              </li>
+              <CommentRow
+                key={comment.id}
+                comment={comment}
+                mine={authorId !== null && comment.author_id === authorId}
+                postId={post.id}
+                onSay={onSay}
+              />
             ))}
           </ul>
         )}
       </div>
 
       <CommentForm postId={post.id} authorId={authorId} onSay={onSay} />
+
+      {!editing ? null : (
+        <EditPost post={post} listKey={listKey} onClose={() => setEditing(false)} onSay={onSay} />
+      )}
     </div>
   );
 }
@@ -481,10 +648,12 @@ export function PostBoard(props: {
   });
   const list = posts.data?.posts ?? [];
   const state = posts.isPending ? "loading" : posts.isError ? reason(posts.error) : "";
+  // 한 쪽에 몇 줄을 둘지는 상자 높이가 정한다. 스크롤하지 않고 쪽으로 넘긴다.
+  const [box, perPage] = useFitCount(76);
   // 글이 지워져 보던 쪽이 사라질 수 있어, 그릴 때마다 범위 안으로 당긴다.
-  const pages = pageCount(list.length);
+  const pages = pageCount(list.length, perPage);
   const shownPage = clampPage(page, pages);
-  const shown = pageSlice(list, shownPage);
+  const shown = pageSlice(list, shownPage, perPage);
 
   // 목록으로 돌아올 때 다시 불러온다 — 댓글을 달고 오면 댓글 수가 목록에도 반영돼야 한다.
   const backToList = (): void => {
@@ -506,10 +675,15 @@ export function PostBoard(props: {
             emptyText={emptyText}
             onOpen={focus.open}
             buttonRef={focus.register}
+            boxRef={box}
           />
 
-          {/* 쪽이 하나뿐이면 단추를 두지 않는다 — 누를 곳이 없는 줄을 남길 이유가 없다. */}
-          {state !== "" || pages <= 1 ? null : (
+          {/* 쪽 넘기기와 글쓰기가 목록 아래 한 줄에 함께 선다. 쪽이 하나뿐이어도
+              쪽 넘기기를 그린다 — 글이 늘고 줄 때마다 줄이 생겼다 없어지면 글쓰기
+              단추가 위아래로 움직인다. */}
+          {writing ? null : (
+          <div className="listfoot">
+          {state !== "" ? null : (
             <nav className="pager" aria-label="쪽 넘기기">
               <button
                 aria-label="이전 쪽"
@@ -538,9 +712,15 @@ export function PostBoard(props: {
             </nav>
           )}
 
-          {/* 글쓰기는 목록 맨 아래에 단추로 둔다. 서식을 늘 펼쳐 두면 목록보다 서식이
+          {!canWrite ? null : (
+            <button className="new" onClick={() => setWriting(true)}>글쓰기</button>
+          )}
+          </div>
+          )}
+
+          {/* 글쓰기 서식은 단추를 눌렀을 때만 나온다. 늘 펼쳐 두면 목록보다 서식이
               더 길어져, 읽으러 온 사람이 매번 지나쳐야 한다. */}
-          {!canWrite ? null : writing ? (
+          {!writing ? null : (
             <WriteForm
               writePath={writePath}
               authorId={authorId}
@@ -549,10 +729,6 @@ export function PostBoard(props: {
               onSay={onSay}
               onDone={() => setWriting(false)}
             />
-          ) : (
-            <div className="writebar">
-              <button className="btn go" onClick={() => setWriting(true)}>글쓰기</button>
-            </div>
           )}
         </>
       ) : (

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 
 import { fetchMe, getJSON, myTeamIds } from "../lib/pipeline";
 import type { Account, Team } from "../lib/contract";
@@ -69,4 +70,34 @@ export function useMyTeams(): MyTeam[] {
   return teams
     .map((team, index) => ({ ...team, colorKey: `c${(index % 4) + 1}` }))
     .filter((team) => teamIds.includes(team.id));
+}
+
+/** 목록 상자에 몇 줄이 들어가는지 재서 돌려준다.
+ *
+ *  목록을 스크롤하지 않는다 — 들어가는 만큼만 보여주고 나머지는 쪽으로 넘긴다.
+ *  그래야 쪽 넘기기와 만드는 단추가 화면에서 늘 같은 자리에 있다.
+ *
+ *  줄 높이는 첫 줄을 실제로 재서 쓴다. 글자 크기나 여백을 고치면 값이 저절로 따라온다.
+ *  아직 줄이 하나도 없으면 fallback 을 쓴다. 창 크기가 바뀌면 다시 잰다. */
+export function useFitCount(fallbackRowHeight: number): [RefObject<HTMLUListElement | null>, number] {
+  const box = useRef<HTMLUListElement | null>(null);
+  const [count, setCount] = useState(1);
+
+  useEffect(() => {
+    const target = box.current;
+    if (target === null) return;
+
+    const measure = (): void => {
+      const row = target.querySelector("li");
+      const height = row?.getBoundingClientRect().height || fallbackRowHeight;
+      setCount(Math.max(1, Math.floor(target.clientHeight / height)));
+    };
+
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(target);
+    return () => watch.disconnect();
+  }, [fallbackRowHeight]);
+
+  return [box, count];
 }

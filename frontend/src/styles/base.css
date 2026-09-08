@@ -6,3 +6,29 @@
 html { overflow: auto; }
 body { margin: 0; }
 [hidden] { display: none !important; }
+
+/* 이 제품의 색. 사용자가 정한 값에 "지정" 표시를 붙였다.
+   코랄은 하나뿐이다 — 강조가 필요한 자리는 어디서나 --coral 을 그대로 쓰고,
+   자리마다 밝기를 바꾸지 않는다. 코랄 위에 글자가 얹히면 언제나 --coral-ink 다.
+   --coral-press 는 다른 코랄이 아니라 눌렸을 때만 쓰는 같은 색의 어두운 단계다. */
+:root {
+  --coral: #FF7F50;       /* 지정 — 주색 */
+  --coral-press: #E8683A;
+  --coral-ink: #2E1006;
+  --coral-lite: #FFB4A2;  /* 지정 — 어두운 바탕에서 코랄을 더 띄울 때 */
+  --coral-soft: #FFF1E6;  /* 지정 — 코랄 계열의 옅은 바탕 */
+  --coral-soft-dark: #3A211A;
+
+  /* 캘린더 칩은 색 자체가 팀을 가리키는 자리라 파랑·보라·금색과 한 벌로 움직인다.
+     주색으로서의 코랄이 아니라 그 네 칸 중 첫 칸이므로 다른 셋과 같은 규칙
+     — 옅은 바탕에 읽히는 글자 — 을 따른다. */
+  --coral-chip: #FFE8DD;
+  --coral-chip-ink: #B3451E;
+  --coral-chip-dark: #43201A;
+
+  /* 세이지 — 확정·성공 신호. 코랄이 주색이라 초록에 신호 자리가 났다. */
+  --sage: #3A5A40;        /* 지정 */
+  --sage-lite: #6B9080;   /* 지정 */
+  --sage-soft: #E7EFEA;
+  --sage-soft-dark: #1B2A22;
+}

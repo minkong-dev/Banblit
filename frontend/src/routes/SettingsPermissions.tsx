@@ -1,5 +1,6 @@
 // 설정 화면의 권한 구역. 권한을 만들고·수정하고·삭제하고, 사람에게 주고 뺀다.
-// permission_grant 를 가진 사람에게만 그려진다(부르는 자리는 Settings.tsx 가 가린다).
+// permission_manage 나 permission_grant 를 가진 사람에게만 그려진다(부르는 자리는
+// Settings.tsx 가 가린다). 만들고 고치는 것과 사람에게 주는 것은 항목이 갈린다.
 
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -10,6 +11,8 @@ import { getJSON, peopleOf } from "../lib/pipeline";
 import type { Person } from "../lib/pipeline";
 import type { Member, Permission, PermissionSet } from "../lib/contract";
 import { Card } from "../components/AppShell";
+import { Modal } from "../components/Modal";
+import { TrashIcon } from "../components/icons";
 import { Cell, CardState, FormTail, Row, reason, useFirstField, useForm, useRowFocus } from "./SettingsForm";
 
 const SETS_KEY = ["permission-sets"];
@@ -35,6 +38,7 @@ export function PermissionCard({ onSay }: { onSay: (message: string) => void }) 
   const client = useQueryClient();
   const { editing, open, close, register } = useRowFocus();
   const people = usePeople();
+  const [making, setMaking] = useState(false);
 
   const sets = useQuery({
     queryKey: SETS_KEY,
@@ -97,16 +101,24 @@ export function PermissionCard({ onSay }: { onSay: (message: string) => void }) 
         </ul>
       )}
 
-      <div className="addrow">
-        <SetForm
-          start={BLANK_SET}
-          taken={list.map((set) => set.name)}
-          path="/permission-sets"
-          method="POST"
-          submit="새 권한 추가"
-          onDone={() => saved("권한을 만들었습니다")}
-        />
+      <div className="listfoot">
+        <button className="new" onClick={() => setMaking(true)}>+ 새 권한</button>
       </div>
+
+      {!making ? null : (
+        <Modal title="새 권한" hint="켜고 싶은 것만 켜서 권한을 만듭니다"
+          onClose={() => setMaking(false)}>
+          <SetForm
+            start={BLANK_SET}
+            taken={list.map((set) => set.name)}
+            path="/permission-sets"
+            method="POST"
+            submit="권한 추가"
+            onCancel={() => setMaking(false)}
+            onDone={() => { setMaking(false); saved("권한을 만들었습니다"); }}
+          />
+        </Modal>
+      )}
     </Card>
   );
 }
@@ -127,7 +139,7 @@ function DeleteButton({ set, onDone }: { set: PermissionSet; onDone: (text: stri
   // 삭제하면 이 권한을 가졌던 사람도 그 권한을 잃는다. 무를 수 없어 한 번 되묻는다.
   return (
     <button
-      className="btn"
+      className="ic danger"
       disabled={send.isPending}
       aria-label={`${set.name} 삭제`}
       onClick={() => {
@@ -136,7 +148,7 @@ function DeleteButton({ set, onDone }: { set: PermissionSet; onDone: (text: stri
         if (window.confirm(`${set.name} 권한을 삭제합니다.${warn} 삭제할까요?`)) send.mutate();
       }}
     >
-      {send.isPending ? "삭제하는 중…" : "삭제"}
+      <TrashIcon />
     </button>
   );
 }

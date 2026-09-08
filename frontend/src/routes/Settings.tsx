@@ -3,10 +3,11 @@ import { useState } from "react";
 import type { RefObject } from "react";
 
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
+import { Modal } from "../components/Modal";
 import { getJSON } from "../lib/api";
 import { checkPeriod, checkRoom, daysBetween, openingHours } from "../lib/pipeline";
 import { useMe, useToast } from "../components/hooks";
-import { can, roleLabel } from "../lib/account";
+import { PERMISSION_ITEMS, can, roleLabel } from "../lib/account";
 import { applyTheme, readSavedTheme } from "../lib/theme";
 import type { Theme } from "../lib/theme";
 import { PermissionCard } from "./SettingsPermissions";
@@ -30,9 +31,9 @@ type Tab = "rooms" | "periods" | "permissions" | "display";
 // 화면 탭 하나만 남는다 — 그 탭이 없으면 볼 것이 없는 빈 화면이 된다.
 // needs 가 없는 탭은 로그인한 사람 누구에게나 보인다.
 const TABS = [
-  { key: "rooms" as const, text: "합주실", needs: "room_manage" as const },
-  { key: "periods" as const, text: "기간", needs: "period_manage" as const },
-  { key: "permissions" as const, text: "권한", needs: "permission_grant" as const },
+  { key: "rooms" as const, text: "합주실", needs: ["room_create", "room_edit"] as const },
+  { key: "periods" as const, text: "기간", needs: ["period_create", "period_edit"] as const },
+  { key: "permissions" as const, text: "권한", needs: ["permission_manage", "permission_grant"] as const },
   { key: "display" as const, text: "화면", needs: null },
 ];
 
@@ -112,7 +113,7 @@ function DisplayNote() {
 /** 권한 탭에서 오른쪽에 두는 안내. 합주실·기간 탭의 셈(Readout)이 들어설 자리다. */
 function PermissionNote() {
   return (
-    <Panel title="권한" hint="항목 열한 가지">
+    <Panel title="권한" hint={`항목 ${PERMISSION_ITEMS.length}가지`}>
       <div className="read">
         <p className="note">
           권한을 만들어 할 수 있는 일을 켜고, 그 권한을 사람에게 줍니다.
@@ -133,7 +134,10 @@ export function Settings() {
   const client = useQueryClient();
   const { me } = useMe();
 
-  const tabs = TABS.filter((item) => item.needs === null || can(me, item.needs));
+  // 항목 하나만 있어도 그 탭을 연다 — 만들 수만 있고 못 고치는 사람도 목록은 봐야 한다.
+  const tabs = TABS.filter(
+    (item) => item.needs === null || item.needs.some((need) => can(me, need)),
+  );
   // 권한을 잃은 채로 그 탭에 머물러 있지 않게, 없는 탭이면 남은 것 중 첫 탭을 보여준다.
   // 화면 탭은 누구에게나 있으므로 tabs 가 비는 일은 없다.
   const shown: Tab = tabs.some((item) => item.key === tab) ? tab : tabs[0].key;
@@ -190,14 +194,16 @@ export function Settings() {
           <RoomCard
             rooms={roomList}
             state={stateOf(rooms)}
-            canEdit={can(me, "room_manage")}
+            canEdit={can(me, "room_edit")}
+            canCreate={can(me, "room_create")}
             onSaved={saved("rooms", "합주실을 저장했습니다")}
           />
         ) : shown === "periods" ? (
           <PeriodCard
             periods={periodList}
             state={stateOf(periods)}
-            canEdit={can(me, "period_manage")}
+            canEdit={can(me, "period_edit")}
+            canCreate={can(me, "period_create")}
             onSaved={saved("periods", "기간을 저장했습니다")}
           />
         ) : shown === "permissions" ? (
@@ -354,9 +360,12 @@ function PeriodFields(props: {
   );
 }
 
-function RoomCard(props: { rooms: Room[]; state: string; canEdit: boolean; onSaved: () => void }) {
-  const { rooms, state, canEdit, onSaved } = props;
+function RoomCard(props: {
+  rooms: Room[]; state: string; canEdit: boolean; canCreate: boolean; onSaved: () => void;
+}) {
+  const { rooms, state, canEdit, canCreate, onSaved } = props;
   const { editing, open, close, register } = useRowFocus();
+  const [making, setMaking] = useState(false);
 
   return (
     <Card>
@@ -387,14 +396,14 @@ function RoomCard(props: { rooms: Room[]; state: string; canEdit: boolean; onSav
                 />
               </li>
             ) : (
-              // onEdit 이 없으면 Row 가 고치기 단추를 그리지 않는다 — room_manage 가
+              // onEdit 이 없으면 Row 가 연필을 그리지 않는다 — room_edit 이
               // 없는 사람에게는 목록만 보인다.
               <Row
                 key={room.id}
                 title={room.name}
                 when={<><b>{room.opens_at}</b> 부터 <b>{room.closes_at}</b> 까지</>}
                 span={` · 하루 ${openingHours({ rooms: [room], days: 1, teams: 0 }).perDay}`}
-                editLabel={canEdit ? `${room.name} 고치기` : undefined}
+                editLabel={canEdit ? `${room.name} 수정` : undefined}
                 buttonRef={canEdit ? register(room.id) : undefined}
                 onEdit={canEdit ? () => open(room.id) : undefined}
               />
@@ -403,20 +412,28 @@ function RoomCard(props: { rooms: Room[]; state: string; canEdit: boolean; onSav
         </ul>
       )}
 
-      {/* 합주실은 하나만 쓴다. 이미 하나 있으면 더하는 서식을 두지 않는다 —
+      {/* 합주실은 하나만 쓴다. 이미 하나 있으면 더하는 길을 두지 않는다 —
           저장소와 배정 계산은 여럿을 다룰 수 있게 그대로 두고, 늘리는 길만 닫았다.
           여러 방을 다시 쓸 일이 생기면 이 조건 하나를 떼면 된다. */}
-      {!canEdit || rooms.length > 0 ? null : (
-        <div className="addrow">
+      {!canCreate || rooms.length > 0 ? null : (
+        <div className="listfoot">
+          <button className="new" onClick={() => setMaking(true)}>+ 새 합주실</button>
+        </div>
+      )}
+
+      {!making ? null : (
+        <Modal title="새 합주실" hint="이름과 여닫는 시각을 정합니다"
+          onClose={() => setMaking(false)}>
           <RoomForm
             start={BLANK_ROOM}
             taken={rooms.map((room) => room.name)}
             path="/rooms"
             method="POST"
             submit="합주실 추가"
-            onDone={onSaved}
+            onCancel={() => setMaking(false)}
+            onDone={() => { setMaking(false); onSaved(); }}
           />
-        </div>
+        </Modal>
       )}
     </Card>
   );
@@ -439,7 +456,6 @@ function RoomForm(props: {
     mutationFn: () =>
       getJSON<{ room: Room }>(path, {
         method,
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       }),
     onSuccess: () => {
@@ -473,9 +489,12 @@ function RoomForm(props: {
   );
 }
 
-function PeriodCard(props: { periods: Period[]; state: string; canEdit: boolean; onSaved: () => void }) {
-  const { periods, state, canEdit, onSaved } = props;
+function PeriodCard(props: {
+  periods: Period[]; state: string; canEdit: boolean; canCreate: boolean; onSaved: () => void;
+}) {
+  const { periods, state, canEdit, canCreate, onSaved } = props;
   const { editing, open, close, register } = useRowFocus();
+  const [making, setMaking] = useState(false);
 
   return (
     <Card>
@@ -506,14 +525,14 @@ function PeriodCard(props: { periods: Period[]; state: string; canEdit: boolean;
                 />
               </li>
             ) : (
-              // onEdit 이 없으면 Row 가 고치기 단추를 그리지 않는다 — period_manage 가
+              // onEdit 이 없으면 Row 가 연필을 그리지 않는다 — period_edit 이
               // 없는 사람에게는 목록만 보인다.
               <Row
                 key={period.id}
                 title={KIND_TEXT[period.kind] + (period.everyday ? " · 매일" : "")}
                 when={<><b>{period.starts_on}</b> 부터 <b>{period.ends_on}</b> 까지</>}
                 span={periodSpan(period)}
-                editLabel={canEdit ? `${period.starts_on} 부터의 기간 고치기` : undefined}
+                editLabel={canEdit ? `${period.starts_on} 부터의 기간 수정` : undefined}
                 buttonRef={canEdit ? register(period.id) : undefined}
                 onEdit={canEdit ? () => open(period.id) : undefined}
               />
@@ -522,16 +541,24 @@ function PeriodCard(props: { periods: Period[]; state: string; canEdit: boolean;
         </ul>
       )}
 
-      {!canEdit ? null : (
-        <div className="addrow">
+      {!canCreate ? null : (
+        <div className="listfoot">
+          <button className="new" onClick={() => setMaking(true)}>+ 새 기간</button>
+        </div>
+      )}
+
+      {!making ? null : (
+        <Modal title="새 기간" hint="언제부터 언제까지인지, 어떤 기간인지 정합니다"
+          onClose={() => setMaking(false)}>
           <PeriodForm
             start={BLANK_PERIOD}
             path="/periods"
             method="POST"
             submit="기간 추가"
-            onDone={onSaved}
+            onCancel={() => setMaking(false)}
+            onDone={() => { setMaking(false); onSaved(); }}
           />
-        </div>
+        </Modal>
       )}
     </Card>
   );
@@ -553,7 +580,6 @@ function PeriodForm(props: {
     mutationFn: () =>
       getJSON<{ period: Period }>(path, {
         method,
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       }),
     onSuccess: () => {

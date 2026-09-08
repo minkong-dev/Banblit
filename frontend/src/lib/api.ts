@@ -29,6 +29,14 @@ export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
     // TimeoutError 인 예외를 던진다. fetch 자체에는 시간 제한이 없다.
     res = await fetch(API_PREFIX + path, {
       ...init,
+      // 본문을 실었으면 JSON 이라고 알린다. 이것이 없으면 브라우저가 text/plain 으로
+      // 보내고 서버는 본문을 못 읽어 422 로 거절한다. 부르는 곳마다 붙이면 한 곳이
+      // 빠졌을 때 그 화면만 조용히 깨지므로 여기서 한 번에 붙인다.
+      // 파일 올리기는 sendFile 이 따로 맡는다 — multipart 는 경계 문자열이 필요해
+      // 브라우저가 직접 정해야 한다.
+      headers: init?.body === undefined
+        ? init?.headers
+        : { "Content-Type": "application/json", ...init.headers },
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (error) {

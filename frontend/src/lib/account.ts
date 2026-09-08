@@ -16,24 +16,64 @@ export const PERMISSION_ITEMS: readonly {
   note: string;
 }[] = [
   {
-    key: "room_manage",
-    label: "합주실 관리",
-    note: "합주실을 만들고 여닫는 시각을 고칩니다.",
+    key: "room_create",
+    label: "합주실 만들기",
+    note: "합주실을 새로 만듭니다.",
   },
   {
-    key: "period_manage",
-    label: "기간 관리",
-    note: "상시·집중 기간과 계산이 도는 시각을 정합니다.",
+    key: "room_edit",
+    label: "합주실 수정",
+    note: "합주실 이름과 여닫는 시각을 고칩니다.",
   },
   {
-    key: "team_manage",
-    label: "팀 관리",
-    note: "팀을 만들고 이름을 바꾸며, 자리에 사람을 앉힙니다.",
+    key: "period_create",
+    label: "기간 만들기",
+    note: "상시 개방기간과 집중 합주기간을 새로 만듭니다.",
+  },
+  {
+    key: "period_edit",
+    label: "기간 수정",
+    note: "기간의 날짜와 계산이 도는 시각을 고칩니다.",
+  },
+  {
+    key: "team_create",
+    label: "팀 만들기",
+    note: "팀을 새로 만들고 악기 자리를 정합니다.",
+  },
+  {
+    key: "team_edit",
+    label: "팀 수정",
+    note: "팀 이름을 바꿉니다.",
+  },
+  {
+    key: "team_delete",
+    label: "팀 삭제",
+    note: "팀을 지웁니다. 그 팀의 자리도 함께 사라집니다.",
+  },
+  {
+    key: "member_add",
+    label: "자리에 사람 추가",
+    note: "팀의 빈 자리에 사람을 넣습니다.",
   },
   {
     key: "member_remove",
     label: "남을 자리에서 빼기",
     note: "다른 사람이 앉은 자리를 비웁니다. 자기 자리는 이 권한 없이도 뺄 수 있습니다.",
+  },
+  {
+    key: "notice_write",
+    label: "공지 쓰기",
+    note: "모두가 보는 공지사항에 글을 올립니다.",
+  },
+  {
+    key: "board_moderate",
+    label: "남의 글·댓글 다루기",
+    note: "다른 사람이 쓴 글과 댓글을 고치거나 지웁니다. 자기 글은 이 권한 없이도 다룹니다.",
+  },
+  {
+    key: "reservation_manage",
+    label: "남의 예약 다루기",
+    note: "다른 사람이 잡은 예약을 옮기거나 취소합니다. 자기 예약은 이 권한 없이도 다룹니다.",
   },
   {
     key: "assign_run",
@@ -56,14 +96,14 @@ export const PERMISSION_ITEMS: readonly {
     note: "지난 계산 회차 목록을 보고, 시간표를 직전 회차로 되돌립니다.",
   },
   {
-    key: "notice_write",
-    label: "공지 쓰기",
-    note: "모두가 보는 공지사항에 글을 올립니다.",
+    key: "permission_manage",
+    label: "권한 만들기·수정·삭제",
+    note: "권한 묶음 자체를 만들고 고치고 지웁니다. 자기 권한도 이 항목으로 다룹니다.",
   },
   {
     key: "permission_grant",
-    label: "권한 변경",
-    note: "권한을 만들고 사람에게 주거나 뺍니다. 자기 권한도 이 항목으로 다룹니다.",
+    label: "권한 주고 뺏기",
+    note: "만들어 둔 권한을 사람에게 주거나 뺍니다.",
   },
 ];
 
