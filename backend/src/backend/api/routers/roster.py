@@ -133,7 +133,7 @@ def search_member_list(
     session: Session = Depends(get_session),
 ) -> MemberSearchOut:
     """포지션에 넣을 사람을 이름으로 찾는다. 빈 검색어에는 아무것도 주지 않는다 —
-    명단을 통째로 내주는 통로가 되면 안 된다."""
+    명단을 통째로 내주는 자리가 되면 안 된다."""
     return MemberSearchOut(
         members=[_member_out(member) for member in search_members(session, q)]
     )

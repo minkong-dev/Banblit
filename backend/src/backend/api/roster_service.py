@@ -54,8 +54,8 @@ def list_slots(session: Session, team_id: int) -> list[tuple[TeamSlot, Member | 
         .outerjoin(Member, Member.id == TeamSlot.member_id)
         .where(TeamSlot.team_id == team_id)
         .order_by(TeamSlot.instrument, TeamSlot.ordinal)
-    ).all()
-    return list(rows)
+    ).tuples().all()
+    return [(slot, member) for slot, member in rows]
 
 
 def list_my_teams(session: Session, member_id: int) -> list[tuple[Team, TeamSlot]]:
@@ -65,8 +65,8 @@ def list_my_teams(session: Session, member_id: int) -> list[tuple[Team, TeamSlot
         .join(TeamSlot, TeamSlot.team_id == Team.id)
         .where(TeamSlot.member_id == member_id)
         .order_by(Team.id)
-    ).all()
-    return list(rows)
+    ).tuples().all()
+    return [(team, slot) for team, slot in rows]
 
 
 def list_members(
@@ -100,7 +100,7 @@ def list_members(
 def search_members(session: Session, query: str, limit: int = 20) -> list[Member]:
     """이름으로 사람을 찾는다. 포지션에 넣을 사람을 고르는 돋보기가 쓴다.
 
-    빈 검색어에 전체를 돌려주지 않는다 — 명단을 통째로 내주는 통로가 되면 안 된다.
+    빈 검색어에 전체를 돌려주지 않는다 — 명단을 통째로 내주는 자리가 되면 안 된다.
     동명이인이 있으므로 결과에는 기수가 함께 실린다(부르는 쪽이 붙인다).
     """
     trimmed = query.strip()
@@ -173,7 +173,7 @@ def create_team(session: Session, name: str, counts: dict[str, int]) -> Team:
 
 
 def update_team(session: Session, team_id: int, name: str) -> Team:
-    """팀 이름을 바꾼다. 포지션 구성을 바꾸는 것은 포지션 쪽 통로가 맡는다."""
+    """팀 이름을 바꾼다. 포지션 구성을 바꾸는 것은 포지션 쪽 endpoint 가 맡는다."""
     team = _get_team_or_raise(session, team_id)
     team.name = require_non_empty(name, "팀 이름")
     commit_translating(session, ROSTER_MESSAGES)

@@ -131,7 +131,8 @@ def change_password(
 ) -> None:
     """비밀번호를 바꾼다. 지금 비밀번호를 먼저 묻는다 — 남이 켜 둔 화면 앞에 앉은
     사람이 그대로 비밀번호를 갈아 끼우지 못하게 한다."""
-    if not verify_password(current, member.password_hash):
+    # password_hash 가 비어 있는 계정은 이 길로 비밀번호를 바꿀 수 없다 — 견줄 것이 없다.
+    if member.password_hash is None or not verify_password(current, member.password_hash):
         raise PermissionError("지금 비밀번호가 맞지 않습니다")
     require_password(next_password)
     member.password_hash = hash_password(next_password)

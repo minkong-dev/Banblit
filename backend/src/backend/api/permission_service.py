@@ -147,7 +147,7 @@ def revoke_permission_set(session: Session, member_id: int, set_id: int) -> None
 
 
 def grant_full_permissions(session: Session, member_id: int) -> None:
-    """member_id 에게 열한 가지가 전부 켜진 permission set 을 붙인다. 그런 permission set 이 없으면 만든다.
+    """member_id 에게 열여덟 가지가 전부 켜진 permission set 을 붙인다. 그런 permission set 이 없으면 만든다.
 
     커밋은 부르는 쪽이 한다 — 가입은 계정·포지션·권한을 한 번에 커밋한다.
     """
