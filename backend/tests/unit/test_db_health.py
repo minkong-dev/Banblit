@@ -1,8 +1,11 @@
+from typing import NoReturn
+
 from backend.db import health
 
 
 class _BrokenEngine:
-    def connect(self):  # noqa: ANN201 - 가짜 엔진, 접속 자체가 터진다
+    def connect(self) -> NoReturn:
+        """접속 자체가 터지는 가짜 엔진. 돌려주는 값이 없어 NoReturn 이다."""
         raise RuntimeError('connection failed: host="db" user="banblit" password="secret"')
 
 

@@ -1,9 +1,12 @@
 from fastapi.testclient import TestClient
+from httpx import Response
 
 from backend.api.app import app
 
 
-def _with_route(path: str, raiser):  # noqa: ANN001, ANN202 - 검사용 임시 경로
+def _with_route(path: str, raiser: Exception) -> Response:
+    """path 에 raiser 를 던지는 임시 경로를 달아 한 번 부르고 다시 뗀다."""
+
     @app.get(path)
     def boom() -> None:
         raise raiser

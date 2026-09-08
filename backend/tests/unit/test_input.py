@@ -74,16 +74,17 @@ def test_require_password_rejects_fewer_than_eight_characters() -> None:
     with pytest.raises(ValueError, match="비밀번호"):
         require_password("1234567")
 
-def test_parse_clock_reads_hour_and_minute() -> None:
+
+def test_parse_clock_reads_a_room_time() -> None:
     assert parse_clock("19:00", "여는 시각") == time(19, 0)
 
 
-def test_parse_clock_rejects_bad_format() -> None:
+def test_parse_clock_rejects_a_bad_room_time() -> None:
     with pytest.raises(ValueError, match="여는 시각"):
         parse_clock("18시정각", "여는 시각")
 
 
-def test_format_clock_writes_hh_mm() -> None:
+def test_format_clock_writes_a_room_time() -> None:
     assert format_clock(time(9, 0)) == "09:00"
 
 
@@ -124,11 +125,12 @@ def test_require_room_name_rejects_a_whitespace_only_string() -> None:
     with pytest.raises(ValueError, match="합주실 이름"):
         require_non_empty("   ", "합주실 이름")
 
-def test_parse_clock_reads_hour_and_minute() -> None:
+
+def test_parse_clock_reads_a_run_time() -> None:
     assert parse_clock("09:00", "1차 연산 시각") == time(9, 0)
 
 
-def test_parse_clock_rejects_bad_format() -> None:
+def test_parse_clock_rejects_a_bad_run_time() -> None:
     with pytest.raises(ValueError, match="1차 연산 시각"):
         parse_clock("아침 9시", "1차 연산 시각")
 
@@ -138,7 +140,7 @@ def test_parse_clock_does_not_require_a_on_the_hour() -> None:
     assert parse_clock("09:17", "1차 연산 시각") == time(9, 17)
 
 
-def test_format_clock_writes_hh_mm() -> None:
+def test_format_clock_writes_a_run_time() -> None:
     assert format_clock(time(21, 0)) == "21:00"
 
 
@@ -173,14 +175,6 @@ def test_ends_on_before_starts_on_is_rejected() -> None:
 def test_ends_on_equal_to_starts_on_is_accepted() -> None:
     require_ends_not_before_starts(date(2026, 9, 14), date(2026, 9, 14))
 
-def test_accepts_a_valid_on_the_hour_aligned_interval() -> None:
-    require_valid_slot_bounds(datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 20))
-
-
-def test_rejects_off_grid_minutes() -> None:
-    with pytest.raises(ValueError, match="정시"):
-        require_valid_slot_bounds(datetime(2026, 9, 14, 18, 15), datetime(2026, 9, 14, 19, 0))
-
 
 def test_accepts_a_same_day_interval() -> None:
     require_same_day(datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 19, 0))
@@ -209,6 +203,7 @@ def test_rejects_ending_after_the_room_closes() -> None:
         require_within_room_hours(
             time(18, 0), time(22, 0), datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 23)
         )
+
 
 def test_accepts_a_valid_on_the_hour_aligned_interval() -> None:
     require_valid_slot_bounds(datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 20))

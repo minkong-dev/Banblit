@@ -157,8 +157,8 @@ def get_post_with_comments(
         .join(Member, Member.id == Comment.author_id)
         .where(Comment.post_id == post_id)
         .order_by(Comment.created_at, Comment.id)
-    ).all()
-    return post, post_author, list(comment_rows)
+    ).tuples().all()
+    return post, post_author, [(comment, author) for comment, author in comment_rows]
 
 
 def update_post(

@@ -82,7 +82,9 @@ class JobRunner(Generic[ResultT]):
         return None if entry is None else self._snapshot(job_id, entry)
 
     def _snapshot(self, job_id: str, entry: _Entry[ResultT]) -> Job[ResultT]:
-        base = Job(id=job_id, period_id=entry.period_id, status="queued", requested_at=entry.requested_at)
+        base: Job[ResultT] = Job(
+            id=job_id, period_id=entry.period_id, status="queued", requested_at=entry.requested_at
+        )
         if not entry.future.done():
             return replace(base, status="running") if entry.started else base
         error = entry.future.exception()

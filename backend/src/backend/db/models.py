@@ -295,7 +295,7 @@ class Assignment(Base):
 class Post(Base):
     """게시판 글. team_id 가 있으면 그 팀 게시판 글, NULL 이면 공지사항이다.
 
-    같은 표를 두 화면이 공유하므로 화면·통로도 한 벌만 두면 된다.
+    같은 표를 두 화면이 공유하므로 화면·endpoint 도 한 벌만 두면 된다.
     """
 
     __tablename__ = "posts"

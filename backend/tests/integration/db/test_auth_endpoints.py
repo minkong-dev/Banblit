@@ -1,3 +1,4 @@
+from httpx import Response
 from datetime import datetime, timedelta
 
 import httpx
@@ -319,7 +320,7 @@ def test_login_removes_only_the_dead_rows_of_that_account(
 # ── 로그인 상태 유지 ───────────────────────────────────────────────────────
 
 
-def _session_max_age(response) -> int:
+def _session_max_age(response: Response) -> int:
     """Set-Cookie 에 실린 Max-Age 를 꺼낸다. 없으면 브라우저 닫을 때까지다."""
     for raw in response.headers.get_list("set-cookie"):
         if raw.startswith(f"{SESSION_COOKIE}="):

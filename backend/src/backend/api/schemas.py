@@ -171,7 +171,7 @@ class TeamEnvelopeOut(BaseModel):
 
 
 class TeamSlotsIn(BaseModel):
-    """포지션 구성만 받는다. 팀 이름은 팀을 고치는 통로가 따로 맡는다."""
+    """포지션 구성만 받는다. 팀 이름은 팀을 고치는 endpoint 가 따로 맡는다."""
 
     slots: dict[str, int]
 
@@ -312,7 +312,7 @@ class AccountOut(BaseModel):
     id: int
     name: str
     email: str
-    # role 은 permissions 에서 뽑아낸 값이다 — 열한 가지가 전부 켜져 있으면
+    # role 은 permissions 에서 뽑아낸 값이다 — 열여덟 가지가 전부 켜져 있으면
     # head_manager. 화면이 아직 이 값으로 글자를 고르고 있어 함께 내려준다.
     role: Literal["head_manager", "member"]
     permissions: list[Permission]
