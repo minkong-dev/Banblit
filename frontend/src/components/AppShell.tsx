@@ -1,10 +1,10 @@
 import { useQueries } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { NotificationMenu } from "./NotificationMenu";
-import { useMe, useMyTeams, usePage } from "./hooks";
+import { useDismissible, useMe, useMyTeams, usePage } from "./hooks";
 import { useToast } from "../lib/toast";
 import { can, roleLabel } from "../lib/account";
 import { getJSON, logOut } from "../lib/pipeline";
@@ -128,7 +128,7 @@ export function Tabs<T extends string>(props: {
 /** 상단 오른쪽 프로필 단추 + 말풍선. 스케줄러·게시판류 화면이 함께 쓴다.
  *  "프로필 설정"이 이 말풍선에서 `/profile`로 들어가는 유일한 입구다. */
 export function ProfileMenu() {
-  const [open, setOpen] = useState(false);
+  const { open, setOpen, toggle, box } = useDismissible();
   const navigate = useNavigate();
   const { me } = useMe();
   const teams = useMyTeams();
@@ -159,8 +159,10 @@ export function ProfileMenu() {
   }
 
   return (
-    <>
-      <button className="profbtn" aria-expanded={open} onClick={() => setOpen((on) => !on)}>
+    // display:contents 라 자리를 차지하지 않는다 — 상단바의 배치는 그대로 두고,
+    // 바깥을 눌렀는지 세는 데 쓸 자리만 만든다.
+    <div className="profwrap" ref={box}>
+      <button className="profbtn" aria-expanded={open} onClick={toggle}>
         <span className="face" aria-hidden="true">{initial}</span>
         <span className="nm">{name}</span>
         <span className="ar" aria-hidden="true">▾</span>
@@ -188,7 +190,7 @@ export function ProfileMenu() {
         </button>
         <button className="act quit" onClick={() => void handleLogOut()}>로그아웃</button>
       </div>
-    </>
+    </div>
   );
 }
 

@@ -3,18 +3,20 @@ import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
 import { apiUrl, reason } from "../lib/api";
+import { formError, loadState, stateText } from "../lib/loading";
+import type { LoadState } from "../lib/loading";
 import { say } from "../lib/toast";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import {
   ATTACHMENT_ACCEPT,
-  attachmentHint,
+  ATTACHMENT_HINT,
   checkAttachments,
   checkComment,
   checkPost,
   fileSizeLabel,
   getJSON,
-  postWhen,
   sendFile,
+  stampLabel,
 } from "../lib/pipeline";
 import { Card } from "./AppShell";
 import { Pager } from "./Pager";
@@ -69,7 +71,7 @@ function useDetailFocus(): {
  *  한 쪽에 몇 줄을 둘지 정하므로, 상자가 사라지면 잴 것이 없어진다. */
 function PostList(props: {
   posts: Post[];
-  state: string;
+  state: LoadState;
   emptyText: string;
   onOpen: (id: number) => void;
   buttonRef: (id: number) => (el: HTMLButtonElement | null) => void;
@@ -78,14 +80,14 @@ function PostList(props: {
   const { posts, state, emptyText, onOpen, buttonRef, boxRef } = props;
   return (
     <ul className="rows" ref={boxRef}>
-      {state !== "" || posts.length === 0 ? (
-        <li className="empty">{state === "loading" ? "불러오는 중…" : state || emptyText}</li>
+      {state.kind !== "ready" || posts.length === 0 ? (
+        <li className="empty">{stateText(state, emptyText)}</li>
       ) : (
         posts.map((post) => (
           <li key={post.id}>
             <button className="postrow" ref={buttonRef(post.id)} onClick={() => onOpen(post.id)}>
               <b>{post.title}</b>
-              <span className="meta">{post.author} · {postWhen(post.created_at)}</span>
+              <span className="meta">{post.author} · {stampLabel(post.created_at)}</span>
             </button>
             <span className="cnt">댓글 {post.comment_count}</span>
           </li>
@@ -177,7 +179,7 @@ function WriteForm(props: {
 
   const postWhy = checkPost({ title, body });
   const why = postWhy !== "" ? postWhy : checkAttachments(files);
-  const bad = touched && why !== "" ? why : send.error ? reason(send.error) : "";
+  const bad = formError(touched, why, send.error);
 
   return (
     <form
@@ -215,7 +217,7 @@ function WriteForm(props: {
           />
         </label>
         <label className="wide" htmlFor="postFiles">
-          첨부파일 <span className="meta">{attachmentHint()}</span>
+          첨부파일 <span className="meta">{ATTACHMENT_HINT}</span>
           <input
             id="postFiles"
             type="file"
@@ -270,7 +272,7 @@ function CommentForm(props: { postId: number; authorId: number | null }) {
   });
 
   const why = checkComment(body);
-  const bad = touched && why !== "" ? why : send.error ? reason(send.error) : "";
+  const bad = formError(touched, why, send.error);
 
   return (
     <form
@@ -488,7 +490,7 @@ function CommentRow(props: {
 
   return (
     <li className="comment">
-      <span className="meta">{comment.author} · {postWhen(comment.created_at)}</span>
+      <span className="meta">{comment.author} · {stampLabel(comment.created_at)}</span>
       <p>{comment.body}</p>
       {!mine ? null : (
         <span className="acts">
@@ -575,7 +577,7 @@ function PostDetail(props: {
         )}
       </div>
       <h2 tabIndex={-1} ref={heading}>{post.title}</h2>
-      <p className="meta">{post.author} · {postWhen(post.created_at)}</p>
+      <p className="meta">{post.author} · {stampLabel(post.created_at)}</p>
       <p className="threadbody">{post.body}</p>
 
       <AttachmentList
@@ -637,7 +639,7 @@ export function PostBoard(props: {
     queryFn: () => getJSON<{ posts: Post[] }>(listPath),
   });
   const list = posts.data?.posts ?? [];
-  const state = posts.isPending ? "loading" : posts.isError ? reason(posts.error) : "";
+  const state = loadState(posts);
   // 한 쪽에 몇 줄을 둘지는 상자 높이가 정한다. 스크롤하지 않고 쪽으로 넘긴다.
   const [box, perPage] = useFitCount(76);
   // 글이 지워져 보던 쪽이 사라질 수 있어, 그릴 때마다 범위 안으로 당긴다.
@@ -673,7 +675,7 @@ export function PostBoard(props: {
               단추가 위아래로 움직인다. */}
           {writing ? null : (
           <div className="listfoot">
-          {state !== "" ? null : (
+          {state.kind !== "ready" || list.length === 0 ? null : (
             <Pager page={shownPage} pages={pages} onPage={setPage} />
           )}
 

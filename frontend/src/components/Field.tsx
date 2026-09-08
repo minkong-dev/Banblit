@@ -13,10 +13,10 @@ export function failures(checked: Errors): Errors {
   return Object.fromEntries(Object.entries(checked).filter(([, message]) => message !== ""));
 }
 
-/** 서식에서 이름으로 값을 꺼낸다. 없거나 파일이면 빈 문자열 — 이 서식들에는 파일
- *  입력이 없으니, 값이 진짜 문자열일 때만 쓴다. */
-export function fieldText(form: HTMLFormElement, name: string): string {
-  const value = new FormData(form).get(name);
+/** 보낸 서식 값에서 이름으로 값을 꺼낸다. 없거나 파일이면 빈 문자열 — 이 서식들에는
+ *  파일 입력이 없으니, 값이 진짜 문자열일 때만 쓴다. */
+export function fieldText(data: FormData, name: string): string {
+  const value = data.get(name);
   return typeof value === "string" ? value : "";
 }
 

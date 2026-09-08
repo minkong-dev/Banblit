@@ -15,3 +15,9 @@ export function objectParticle(word: string): string {
 export function askDelete(name: string): boolean {
   return window.confirm(`${name}${objectParticle(name)} 삭제할까요?`);
 }
+
+/** "여섯줄 18:00–21:00 예약을 취소할까요?" 처럼 묻는다. 예약에는 삭제가 아니라 취소라고
+ *  말한다 — 단추·물음·알림이 같은 말을 써야 무엇이 일어났는지가 이어진다. */
+export function askCancel(name: string): boolean {
+  return window.confirm(`${name}${objectParticle(name)} 취소할까요?`);
+}

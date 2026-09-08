@@ -14,7 +14,7 @@ export type Job<T> = {
 export const JOB_POLL_MS = 700;
 
 /** 여기까지도 안 끝나면 기다리기를 그만둔다(밀리초).
- *  2026-08-28 실측으로 조율안까지 22.2초가 걸린 적이 있어 그 세 배쯤을 둔다. */
+ *  조율안까지 20초대가 나온 적이 있어 그 세 배쯤을 둔다. */
 export const JOB_DEADLINE_MS = 60000;
 
 export async function awaitJob<T>(

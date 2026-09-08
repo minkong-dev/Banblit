@@ -4,8 +4,42 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
-import { fetchMe, getJSON, myTeamIds } from "../lib/pipeline";
+import { colorKey, fetchMe, getJSON, myTeamIds } from "../lib/pipeline";
 import type { Account, Period, Room, Team } from "../lib/contract";
+
+/** 눌러서 여는 말풍선 하나. 열려 있는 동안 바깥을 누르거나 Escape 를 누르면 닫힌다.
+ *  돌려주는 box 는 여는 단추와 말풍선을 함께 감싼 자리에 건다 — 단추를 누른 것까지
+ *  바깥으로 세면, 닫고 곧바로 다시 여는 것이 되어 말풍선이 닫히지 않는다. */
+export function useDismissible(): {
+  open: boolean;
+  setOpen: (next: boolean) => void;
+  toggle: () => void;
+  box: RefObject<HTMLDivElement | null>;
+} {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent): void => {
+      if (box.current !== null && !box.current.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    // mousedown 으로 듣는다. click 으로 들으면 누른 자리의 단추가 먼저 반응해,
+    // 닫으려고 누른 것이 그 단추를 누른 것으로도 세어진다.
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+    // setOpen 은 늘 같은 함수라 열고 닫힐 때만 다시 건다.
+  }, [open]);
+
+  return { open, setOpen, toggle: () => setOpen((on) => !on), box };
+}
 
 /** 화면 CSS 는 body[data-page="..."] 안에 갇혀 있다. data-page 를 걸고 떼는 곳. */
 export function usePage(page: string): void {
@@ -56,7 +90,7 @@ export type MyTeam = { id: number; name: string; colorKey: string };
 export function useMyTeams(): MyTeam[] {
   const { teamIds, teams } = useMe();
   return teams
-    .map((team, index) => ({ ...team, colorKey: `c${(index % 4) + 1}` }))
+    .map((team, index) => ({ ...team, colorKey: colorKey(index) }))
     .filter((team) => teamIds.includes(team.id));
 }
 

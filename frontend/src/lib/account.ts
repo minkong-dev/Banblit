@@ -7,7 +7,7 @@ export function roleLabel(role: Account["role"]): string {
   return role === "head_manager" ? "헤드매니저" : "일반멤버";
 }
 
-/** 항목 열 가지와 그 한국어 이름·설명. 순서는 서버가 고정한 선언 순서 그대로다.
+/** 항목 열여덟 가지와 그 한국어 이름·설명. 순서는 서버가 고정한 선언 순서 그대로다.
  *  설명은 켜면 무엇을 할 수 있게 되는지를 한 줄로 적는다 — 이름만으로는 "되돌리기"가
  *  무엇을 되돌리는지 알 수 없다. */
 export const PERMISSION_ITEMS: readonly {

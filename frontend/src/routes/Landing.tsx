@@ -73,41 +73,43 @@ function useRiseOnScroll(scope: RefObject<HTMLDivElement | null>): void {
   }, [scope]);
 }
 
+// 메뉴를 여는 단추와 메뉴가 서로를 popoverTarget 으로 가리킨다. 이름을 적는 자리는 하나다.
+const MENU_ID = "landingMenu";
+
 export function Landing() {
   usePage("landing");
 
   const scope = useRef<HTMLDivElement>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [openBox, setOpenBox] = useState(0);
 
   useRiseOnScroll(scope);
 
-  useEffect(() => {
-    const close = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuOpen(false);
-    };
-    document.addEventListener("keydown", close);
-    return () => document.removeEventListener("keydown", close);
-  }, []);
-
   return (
     <div ref={scope}>
       <header className="nav">
-        <button className="menu" aria-label="메뉴 열기" onClick={() => setMenuOpen(true)}>
+        <button className="menu" aria-label="메뉴 열기" popoverTarget={MENU_ID}>
           <WideMenuIcon />
         </button>
         <span className="brand">BANBLIT</span>
         <Link className="login" to="/login">LOGIN</Link>
       </header>
 
-      <nav className={menuOpen ? "sheet on" : "sheet"} aria-label="전체 메뉴">
-        <button className="x" aria-label="메뉴 닫기" onClick={() => setMenuOpen(false)}>
+      {/* popover 는 여닫기·Escape·맨 앞에 띄우기를 브라우저가 맡는다.
+          링크는 popoverTarget 을 걸 수 없어(단추만 된다) 눌리면 여기서 닫는다. */}
+      <nav
+        id={MENU_ID}
+        popover="auto"
+        className="sheet"
+        aria-label="전체 메뉴"
+        onClick={(event) => event.currentTarget.hidePopover()}
+      >
+        <button className="x" aria-label="메뉴 닫기" popoverTarget={MENU_ID} popoverTargetAction="hide">
           <CloseIcon />
         </button>
-        <a href="#how" onClick={() => setMenuOpen(false)}>TITLE</a>
-        <a href="#auto" onClick={() => setMenuOpen(false)}>HOW IT WORKS</a>
-        <a href="#admin" onClick={() => setMenuOpen(false)}>FOR MANAGERS</a>
-        <Link to="/login" onClick={() => setMenuOpen(false)}>JOIN IN</Link>
+        <a href="#how">TITLE</a>
+        <a href="#auto">HOW IT WORKS</a>
+        <a href="#admin">FOR MANAGERS</a>
+        <Link to="/login">JOIN IN</Link>
       </nav>
 
       <section className="hero">

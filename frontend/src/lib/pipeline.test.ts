@@ -2,10 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   addUnavailable,
+  cancelBooking,
   checkAttachments,
   findId,
   isSignedIn,
   logOut,
+  removeUnavailable,
   requestPasswordReset,
   resetPassword,
   weekKeys,
@@ -192,5 +194,55 @@ describe("아이디 찾기와 비밀번호 재설정", () => {
     const [url, init] = spy.mock.calls[0];
     expect(url).toBe("/api/password-reset/confirm");
     expect(sentBody(init)).toEqual({ token: "tok-en", password: "Newpass1!" });
+  });
+});
+
+describe("cancelBooking", () => {
+  it("이어 잡은 칸을 번호마다 하나씩 지운다", async () => {
+    // Arrange — 서버는 칸 하나씩만 지운다. 한 건이 세 칸이면 세 번 불러야 한다.
+    const spy = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(null, { status: 204 }),
+    );
+    vi.stubGlobal("fetch", spy);
+
+    // Act
+    await cancelBooking([11, 12, 13]);
+
+    // Assert
+    expect(spy.mock.calls.map(([url]) => url)).toEqual([
+      "/api/reservations/11",
+      "/api/reservations/12",
+      "/api/reservations/13",
+    ]);
+    expect(spy.mock.calls.every(([, init]) => init?.method === "DELETE")).toBe(true);
+  });
+
+  it("한 칸이 걸리면 거기서 멈추고 사유를 올린다", async () => {
+    // 이미 지운 칸은 되살리지 않는다 — 다시 눌러 남은 것을 마저 지우면 된다.
+    const spy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) =>
+      String(input).endsWith("/12")
+        ? new Response(JSON.stringify({ detail: "취소할 예약이 없습니다" }), { status: 404 })
+        : new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", spy);
+
+    await expect(cancelBooking([11, 12, 13])).rejects.toThrow("취소할 예약이 없습니다");
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("removeUnavailable", () => {
+  it("내 번호와 일정 번호를 주소에 실어 지운다", async () => {
+    const spy = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(null, { status: 204 }),
+    );
+    vi.stubGlobal("fetch", spy);
+
+    await removeUnavailable(7, 42);
+
+    const [url, init] = spy.mock.calls[0];
+    expect(url).toBe("/api/members/7/unavailable/42");
+    expect(init?.method).toBe("DELETE");
   });
 });

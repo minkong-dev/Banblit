@@ -3,13 +3,18 @@ import { describe, expect, it } from "vitest";
 import {
   currentMonth,
   datesBetween,
+  dayLabel,
+  dayWithWeekday,
   focusedRange,
   hoursLabel,
   isRangeFree,
   monthCells,
   roomBounds,
+  slotCountOf,
   slotLabel,
+  stampLabel,
   takenGrid,
+  WEEKDAY_NAMES,
 } from "./calendar";
 
 describe("monthCells — 한 달을 7칸씩 나눠 담는다", () => {
@@ -137,5 +142,77 @@ describe("focusedRange — 집중 합주기간의 날짜 범위", () => {
 describe("currentMonth", () => {
   it("달력은 오늘이 든 달로 연다 — month 는 0부터 센다", () => {
     expect(currentMonth(new Date(2027, 0, 15))).toEqual({ year: 2027, month: 0 });
+  });
+});
+
+describe("dayLabel — 날짜 열쇠를 사람이 읽는 날짜로", () => {
+  it("월과 일만 적는다", () => {
+    expect(dayLabel("2026-09-13")).toBe("9월 13일");
+  });
+
+  it("앞에 붙은 0 은 떼고 적는다", () => {
+    expect(dayLabel("2026-01-05")).toBe("1월 5일");
+  });
+
+  it("뒤에 시각이 붙어 있어도 날짜만 읽는다", () => {
+    expect(dayLabel("2026-09-13T18:00:00")).toBe("9월 13일");
+  });
+
+  it("모양이 다르면 받은 값을 그대로 돌려준다", () => {
+    expect(dayLabel("모르는 값")).toBe("모르는 값");
+  });
+});
+
+describe("dayWithWeekday — 날짜에 요일을 붙인다", () => {
+  it("요일까지 적는다", () => {
+    // 2026년 9월 13일은 일요일이다.
+    expect(dayWithWeekday("2026-09-13")).toBe("9월 13일 일요일");
+  });
+
+  it("모양이 다르면 받은 값을 그대로 돌려준다", () => {
+    expect(dayWithWeekday("")).toBe("");
+  });
+});
+
+describe("stampLabel — 적힌 시각을 사람이 읽는 값으로", () => {
+  it("날짜 뒤에 시각을 붙인다", () => {
+    expect(stampLabel("2026-09-04T14:30:00")).toBe("9월 4일 14:30");
+  });
+
+  it("시각은 두 자리로 맞춰 적는다", () => {
+    expect(stampLabel("2026-01-05T09:05:00")).toBe("1월 5일 09:05");
+  });
+
+  it("뒤에 시간대가 붙어 와도 적힌 시각을 그대로 쓴다", () => {
+    // 브라우저의 시간대로 옮기면 이 값이 하루 앞뒤로 밀 수 있다.
+    expect(stampLabel("2026-01-31T23:30:00+09:00")).toBe("1월 31일 23:30");
+  });
+
+  it("시각이 없으면 날짜만 적는다", () => {
+    expect(stampLabel("2026-09-04")).toBe("9월 4일");
+  });
+
+  it("모양이 다르면 받은 값을 그대로 돌려준다", () => {
+    expect(stampLabel("모르는 값")).toBe("모르는 값");
+  });
+});
+
+describe("WEEKDAY_NAMES — 달력 머리글의 요일 이름", () => {
+  it("일요일부터 이레를 한 글자로 든다", () => {
+    expect(WEEKDAY_NAMES).toEqual(["일", "월", "화", "수", "목", "금", "토"]);
+  });
+});
+
+describe("slotCountOf — 여닫는 시각 사이의 칸 수", () => {
+  it("칸 하나가 한 시간이라 시각 차이가 곧 칸 수다", () => {
+    // 10시에 열고 22시에 닫으면 열두 칸이다. 30분 칸이던 때의 스물넷이 아니다.
+    expect(slotCountOf(10, 22)).toBe(12);
+  });
+
+  it("마지막 칸은 닫는 시각에 끝난다", () => {
+    // 마지막 칸 번호로 만든 시각이 닫는 시각과 맞아야 그 뒤로 칸이 남지 않는다.
+    const count = slotCountOf(10, 22);
+    expect(slotLabel(count - 1, 10)).toBe("21:00");
+    expect(slotLabel(count, 10)).toBe("22:00");
   });
 });

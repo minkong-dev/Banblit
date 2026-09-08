@@ -34,6 +34,18 @@ export function memberLabel(name: string, cohort: number | null): string {
 }
 
 export type TeamRow = { team_id: number; team: string };
+
+// 달력·목록에 쓰는 팀 색은 네 가지를 돌려 쓴다. CSS 변수 --c1~--c4 와 짝이다.
+const TEAM_COLORS = 4;
+
+/** 목록에서 index 번째 팀에 줄 색 이름. 목록 안 순서가 곧 색이라, 같은 목록을
+ *  다시 그리면 같은 색이 나온다. */
+export function colorKey(index: number): string {
+  return `c${(index % TEAM_COLORS) + 1}`;
+}
+
+/** 달력이 그리는 팀 — 서버 규격(lib/contract 의 Team)이 아니라 확정 시간표에서
+ *  만들어 쓰는 것이다. 색(key)과 내 팀인지(mine)를 함께 든다. */
 export type DayTeam = { id: number; name: string; key: string; mine: boolean };
 
 export function teamsOf(rows: TeamRow[], myTeamIds: number[]): DayTeam[] {
@@ -49,7 +61,7 @@ export function teamsOf(rows: TeamRow[], myTeamIds: number[]): DayTeam[] {
     .map(([id, name], index) => ({
       id,
       name,
-      key: `c${(index % 4) + 1}`,
+      key: colorKey(index),
       mine: mine.has(id),
     }));
 }

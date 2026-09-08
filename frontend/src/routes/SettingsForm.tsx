@@ -4,6 +4,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 
+import { stateText } from "../lib/loading";
+import type { LoadState } from "../lib/loading";
 import { PencilIcon } from "../components/icons";
 
 
@@ -77,16 +79,14 @@ export function Cell(props: { label: string; htmlFor: string; wide?: boolean; ch
   );
 }
 
-export function CardState({ state, empty }: { state: string; empty: string }) {
-  // 비어 있는 것과 고장 난 것을 구분해서 말한다.
-  if (state === "loading") return <div className="empty">불러오는 중…</div>;
-  return <div className="empty">{state === "" ? empty : state}</div>;
+export function CardState({ state, empty }: { state: LoadState; empty: string }) {
+  return <div className="empty">{stateText(state, empty)}</div>;
 }
 
 /** 목록 한 줄 — 보고 있는 상태. 고치는 중이면 카드가 서식을 대신 그린다.
- *  onEdit 이 없으면 값만 보여준다 — 고칠 항목이 없는 사람에게 그리는 줄이다. */
-/** 목록 한 줄. 오른쪽 끝에 연필(수정)과 쓰레기통(삭제)이 선다.
- *  줄마다 같은 그림이라 무엇을 가리키는지는 aria-label 이 말한다. */
+ *  오른쪽 끝에 연필(수정)이 서고, onEdit 이 없으면 값만 보여준다 — 고칠 항목이
+ *  없는 사람에게 그리는 줄이다. 줄마다 같은 그림이라 무엇을 가리키는지는
+ *  aria-label 이 말한다. */
 export function Row(props: {
   title: string;
   when: ReactNode;
@@ -94,12 +94,8 @@ export function Row(props: {
   editLabel?: string;
   buttonRef?: (el: HTMLButtonElement | null) => void;
   onEdit?: () => void;
-  /** 연필 왼쪽에 붙일 단추. 권한 묶음의 "+ 멤버" 가 이 자리를 쓴다. */
-  before?: ReactNode;
-  /** 연필 오른쪽에 붙일 단추. 권한 묶음의 쓰레기통이 이 자리를 쓴다. */
-  extra?: ReactNode;
 }) {
-  const { title, when, span, editLabel, buttonRef, onEdit, before, extra } = props;
+  const { title, when, span, editLabel, buttonRef, onEdit } = props;
   return (
     <li>
       <div>
@@ -109,15 +105,11 @@ export function Row(props: {
           <span className="span">{span}</span>
         </div>
       </div>
-      {onEdit === undefined && before === undefined && extra === undefined ? null : (
+      {onEdit === undefined ? null : (
         <div className="acts">
-          {before}
-          {onEdit === undefined ? null : (
-            <button className="ic" ref={buttonRef} aria-label={editLabel} onClick={onEdit}>
-              <PencilIcon />
-            </button>
-          )}
-          {extra}
+          <button className="ic" ref={buttonRef} aria-label={editLabel} onClick={onEdit}>
+            <PencilIcon />
+          </button>
         </div>
       )}
     </li>

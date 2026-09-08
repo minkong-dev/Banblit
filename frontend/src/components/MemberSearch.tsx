@@ -2,7 +2,7 @@
 // 껍데기는 Modal 이 맡는다 — 이 부품은 입력칸과 결과 목록만 그린다.
 //
 // 빈 검색어에는 아무것도 나오지 않는다. 서버가 그렇게 답하기도 하고, 명단을 통째로
-// 내주는 통로가 아니기 때문이다.
+// 내주는 자리가 아니기 때문이다.
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
