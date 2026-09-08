@@ -95,6 +95,12 @@ class BackupsOut(BaseModel):
     backups: list[BackupOut]
 
 
+class BackupRoundOut(BaseModel):
+    # 지난 회차의 시간표. 확정 시간표(ScheduleOut)와 줄 서식은 같지만 open_slots 가
+    # 없다 — 지나간 회차에 예약을 열 자리는 없다.
+    rows: list[ScheduleRowOut]
+
+
 class ExcludedMemberOut(BaseModel):
     id: int
     name: str
@@ -206,6 +212,12 @@ class TeamEnvelopeOut(BaseModel):
     team: TeamOut
 
 
+class TeamSlotsIn(BaseModel):
+    """포지션 구성만 받는다. 팀 이름은 팀을 고치는 통로가 따로 맡는다."""
+
+    slots: dict[str, int]
+
+
 class TeamCreateIn(BaseModel):
     # 만든 사람은 요청 본문이 아니라 인증 쿠키의 주인이다.
     name: str
@@ -244,8 +256,21 @@ class SlotAssignIn(BaseModel):
 class MemberOut(BaseModel):
     id: int
     name: str
-    # 동명이인을 화면에서 가르는 값. 아직 가입하지 않은 사람은 비어 있다.
+    # 사람이 사람을 가르는 값 — 이름·학과·학번·기수 네 가지다. 이 조건이 생기기
+    # 전에 들어온 사람은 학과·학번이 비어 있다.
+    department: str | None = None
+    student_no: str | None = None
     cohort: int | None = None
+
+
+class MemberRowOut(MemberOut):
+    """멤버 화면의 한 줄. 가진 권한 묶음 이름이 함께 온다."""
+
+    permission_sets: list[str]
+
+
+class MemberRowsOut(BaseModel):
+    members: list[MemberRowOut]
 
 
 class MembersOut(BaseModel):
@@ -339,12 +364,15 @@ class AccountOut(BaseModel):
 
 class PermissionSetIn(BaseModel):
     name: str = Field(max_length=50)
+    # 무엇을 하는 사람에게 주는 권한인지. 반드시 적는다(사용자 결정).
+    description: str = Field(max_length=200)
     permissions: list[Permission] = Field(max_length=20)
 
 
 class PermissionSetOut(BaseModel):
     id: int
     name: str
+    description: str
     permissions: list[Permission]
     member_ids: list[int]
 
@@ -376,15 +404,29 @@ class MeOut(BaseModel):
 
 class SignupIn(BaseModel):
     name: str = Field(max_length=100)
+    department: str = Field(max_length=50)
+    student_no: str = Field(max_length=20)
     email: str = Field(max_length=254)
     password: str = Field(max_length=100)
     # 기수. 1981년이 1기지만 연도로 환산하지 않고 숫자를 그대로 받는다.
     cohort: int
 
 
+class ProfileEditIn(BaseModel):
+    name: str = Field(max_length=50)
+    cohort: int | None = None
+
+
+class PasswordChangeIn(BaseModel):
+    current: str = Field(max_length=100)
+    next: str = Field(max_length=100)
+
+
 class LoginIn(BaseModel):
     email: str = Field(max_length=254)
     password: str = Field(max_length=100)
+    # 로그인 상태 유지. 끄면 브라우저를 닫을 때 풀린다.
+    keep: bool = False
 
 
 class UnavailableOut(BaseModel):

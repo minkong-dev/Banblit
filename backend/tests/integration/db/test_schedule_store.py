@@ -23,7 +23,7 @@ def _scaffold(session: Session) -> tuple[int, int, int]:
         second_run_at=time(21, 0),
     )
     team = Team(name="A")
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(22, 0))
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
     session.add_all([period, team, room])
     session.flush()
     return period.id, team.id, room.id
@@ -35,7 +35,7 @@ def _row(team_id: int, room_id: int, hour: int) -> AssignmentRow:
         "team_id": team_id,
         "room_id": room_id,
         "starts_at": datetime(2026, 8, 1, hour, 0),
-        "ends_at": datetime(2026, 8, 1, hour, 30),
+        "ends_at": datetime(2026, 8, 1, hour + 1),
     }
 
 
@@ -47,7 +47,7 @@ def test_assignment_backup_round_trips(db_session: Session) -> None:
             team_id=team_id,
             room_id=room_id,
             starts_at=datetime(2026, 8, 1, 19, 0),
-            ends_at=datetime(2026, 8, 1, 19, 30),
+            ends_at=datetime(2026, 8, 1, 20),
             saved_at=datetime(2026, 8, 1, 21, 0),
         )
     )
@@ -218,7 +218,7 @@ def test_two_periods_do_not_interfere(db_session: Session) -> None:
         second_run_at=time(21, 0),
     )
     team2 = Team(name="B")
-    room2 = Room(name="2번방", opens_at=time(18, 0), closes_at=time(22, 0))
+    room2 = Room(name="2번방", opens_at=time(18, 0), closes_at=time(23, 0))
     db_session.add_all([period2, team2, room2])
     db_session.flush()
     period2_id, team2_id, room2_id = period2.id, team2.id, room2.id

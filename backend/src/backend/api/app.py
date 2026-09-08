@@ -34,6 +34,7 @@ from backend.api.routers import (
 from backend.api.schemas import (
     AssignRequest,
     BackupOut,
+    BackupRoundOut,
     BackupsOut,
     ExcludedMemberOut,
     JobEnvelopeOut,
@@ -49,7 +50,7 @@ from backend.api.schemas import (
     ScheduleOut,
     ScheduleRowOut,
 )
-from backend.db.models import Assignment, Period, Room, Team
+from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team
 from backend.db.pipeline import (
     check_database,
     get_session,
@@ -373,6 +374,49 @@ def read_period_backups(
         backups=[
             BackupOut(saved_at=round_["saved_at"], slot_count=round_["slot_count"])
             for round_ in rounds
+        ]
+    )
+
+
+# 회차 하나를 눌러 그때 시간표를 본다. 목록과 같은 자격으로 막는다 — 목록에서
+# 이어지는 화면이라 자격이 갈리면 목록만 보이고 눌러도 안 열린다.
+@app.get(
+    "/periods/{period_id}/backups/{saved_at}",
+    response_model=BackupRoundOut,
+    dependencies=[Depends(require_permission("rollback"))],
+)
+def read_period_backup_round(
+    period_id: int,
+    saved_at: datetime,
+    session: Session = Depends(get_session),
+) -> BackupRoundOut:
+    if session.get(Period, period_id) is None:
+        raise HTTPException(status_code=422, detail="그런 기간이 없습니다")
+
+    rows = session.execute(
+        select(AssignmentBackup, Team.name, Room.name)
+        .join(Team, Team.id == AssignmentBackup.team_id)
+        .join(Room, Room.id == AssignmentBackup.room_id)
+        .where(AssignmentBackup.period_id == period_id)
+        .where(AssignmentBackup.saved_at == saved_at)
+        .order_by(AssignmentBackup.starts_at, Room.name)
+    ).all()
+    # 칸이 하나도 없는 회차는 애초에 저장되지 않는다. 빈 결과는 "그런 회차가 없다"는
+    # 뜻이므로, 빈 시간표를 돌려주는 대신 거절한다.
+    if not rows:
+        raise HTTPException(status_code=422, detail="그런 회차가 없습니다")
+
+    return BackupRoundOut(
+        rows=[
+            ScheduleRowOut(
+                team_id=backup.team_id,
+                team=team_name,
+                room_id=backup.room_id,
+                room=room_name,
+                start=backup.starts_at,
+                end=backup.ends_at,
+            )
+            for backup, team_name, room_name in rows
         ]
     )
 

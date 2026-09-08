@@ -17,7 +17,7 @@ from backend.db.models import (
 
 
 def test_room_closing_before_opening_is_rejected(db_session: Session) -> None:
-    db_session.add(Room(name="1번방", opens_at=time(20, 0), closes_at=time(18, 0)))
+    db_session.add(Room(name="1번방", opens_at=time(20, 0), closes_at=time(16, 0)))
     with pytest.raises(IntegrityError):
         db_session.commit()
 
@@ -65,7 +65,7 @@ def test_deleting_a_team_removes_its_assignments(db_session: Session) -> None:
         first_run_at=time(9, 0),
         second_run_at=time(21, 0),
     )
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(22, 0))
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
     team = Team(name="A")
     db_session.add_all([period, room, team])
     db_session.flush()
@@ -75,7 +75,7 @@ def test_deleting_a_team_removes_its_assignments(db_session: Session) -> None:
             team_id=team.id,
             room_id=room.id,
             starts_at=datetime(2026, 8, 1, 19, 0),
-            ends_at=datetime(2026, 8, 1, 19, 30),
+            ends_at=datetime(2026, 8, 1, 20),
         )
     )
     db_session.commit()

@@ -9,7 +9,7 @@ def _make_set(
 ) -> int:
     response = api_client.post(
         "/permission-sets",
-        json={"name": name, "permissions": permissions},
+        json={"name": name, "description": f"{name} 용 권한", "permissions": permissions},
         cookies=cookies,
     )
     assert response.status_code == 201, response.text
@@ -132,7 +132,7 @@ def test_permission_grant_holder_changes_their_own_set(
 
     changed = api_client.patch(
         f"/permission-sets/{own['id']}",
-        json={"name": own["name"], "permissions": ["permission_grant"]},
+        json={"name": own["name"], "description": own["description"], "permissions": ["permission_grant"]},
         cookies=head,
     )
 

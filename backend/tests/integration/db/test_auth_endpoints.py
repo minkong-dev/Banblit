@@ -5,9 +5,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.db.models import LoginSession, Member
+from backend.db.models import LoginSession, Member, Post
 
 SIGNUP_BODY = {
+    "department": "실용음악과",
+    "student_no": "20260001",
     "name": "박서연",
     "email": "seoyeon@example.com",
     "password": "password123",
@@ -78,20 +80,35 @@ def test_a_later_account_becomes_a_member(api_client: TestClient) -> None:
     _signup(api_client)
 
     response = api_client.post(
-        "/signup", json={**SIGNUP_BODY, "email": "second@example.com"}
+        "/signup", json={**SIGNUP_BODY, "email": "second@example.com", "student_no": "second"}
     )
 
     assert response.json()["account"]["role"] == "member"
 
 
 def test_signup_allows_a_duplicate_name(api_client: TestClient) -> None:
+    """이름이 같아도 학번이 다르면 다른 사람이다 — 동명이인은 흔하다."""
     _signup(api_client)
 
+    response = api_client.post(
+        "/signup",
+        json={**SIGNUP_BODY, "email": "second@example.com", "student_no": "20260002"},
+    )
+
+    assert response.status_code == 201
+
+
+def test_signup_refuses_the_same_person_twice(api_client: TestClient) -> None:
+    """이름·학과·학번·기수가 모두 같으면 같은 사람이다(사용자 결정)."""
+    _signup(api_client)
+
+    # 이메일만 다르고 나머지 네 값이 같다.
     response = api_client.post(
         "/signup", json={**SIGNUP_BODY, "email": "second@example.com"}
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 422
+    assert "이미" in response.json()["detail"]
 
 
 def test_signup_rejects_a_duplicate_email(api_client: TestClient) -> None:
@@ -104,7 +121,7 @@ def test_signup_rejects_a_duplicate_email(api_client: TestClient) -> None:
 
 
 def test_signup_rejects_a_malformed_email(api_client: TestClient) -> None:
-    response = api_client.post("/signup", json={**SIGNUP_BODY, "email": "not-an-email"})
+    response = api_client.post("/signup", json={**SIGNUP_BODY, "email": "not-an-email", "student_no": "not-an-email"})
 
     assert response.status_code == 422
 
@@ -286,7 +303,7 @@ def test_login_removes_only_the_dead_rows_of_that_account(
     first_id = first["account"]["id"]
     api_client.post("/logout")
 
-    second = _signup(api_client, email="second@example.com")
+    second = _signup(api_client, email="second@example.com", student_no="second")
     second_id = second["account"]["id"]
     _session_row(db_session, second_id).expires_at = datetime.now() - timedelta(seconds=1)
     db_session.commit()
@@ -297,3 +314,165 @@ def test_login_removes_only_the_dead_rows_of_that_account(
 
     assert _session_count(db_session, first_id) == 1
     assert _session_count(db_session, second_id) == 1
+
+
+# ── 로그인 상태 유지 ───────────────────────────────────────────────────────
+
+
+def _session_max_age(response) -> int:
+    """Set-Cookie 에 실린 Max-Age 를 꺼낸다. 없으면 브라우저 닫을 때까지다."""
+    for raw in response.headers.get_list("set-cookie"):
+        if raw.startswith(f"{SESSION_COOKIE}="):
+            for part in raw.split(";"):
+                key, _, value = part.strip().partition("=")
+                if key.lower() == "max-age":
+                    return int(value)
+            return 0
+    raise AssertionError(f"세션 쿠키가 없습니다: {response.headers}")
+
+
+def test_login_without_keep_lasts_only_for_the_browser_session(
+    api_client: TestClient, db_session: Session
+) -> None:
+    """체크를 끄면 브라우저를 닫을 때 로그인이 풀린다 — 쿠키에 수명을 싣지 않는다."""
+    _signup(api_client)
+
+    response = api_client.post(
+        "/login",
+        json={"email": SIGNUP_BODY["email"], "password": SIGNUP_BODY["password"]},
+    )
+
+    assert response.status_code == 200
+    assert _session_max_age(response) == 0
+
+
+def test_login_with_keep_lasts_far_longer(
+    api_client: TestClient, db_session: Session
+) -> None:
+    _signup(api_client)
+
+    response = api_client.post(
+        "/login",
+        json={
+            "email": SIGNUP_BODY["email"],
+            "password": SIGNUP_BODY["password"],
+            "keep": True,
+        },
+    )
+
+    assert response.status_code == 200
+    assert _session_max_age(response) >= 30 * 24 * 60 * 60
+
+
+def test_keeping_the_login_also_stretches_the_row_on_the_server(
+    api_client: TestClient, db_session: Session
+) -> None:
+    """쿠키만 늘리면 서버 쪽 행이 먼저 만료돼 로그인이 풀린다. 둘이 함께 늘어야 한다."""
+    _signup(api_client)
+    api_client.post(
+        "/login",
+        json={
+            "email": SIGNUP_BODY["email"],
+            "password": SIGNUP_BODY["password"],
+            "keep": True,
+        },
+    )
+
+    rows = db_session.scalars(select(LoginSession)).all()
+    longest = max(row.expires_at - row.created_at for row in rows)
+    assert longest >= timedelta(days=30)
+
+
+# ── 회원 탈퇴 ──────────────────────────────────────────────────────────────
+
+
+def test_leaving_requires_login(api_client: TestClient) -> None:
+    assert api_client.delete("/me").status_code == 401
+
+
+def test_leaving_removes_the_account_and_everything_it_left(
+    api_client: TestClient, db_session: Session
+) -> None:
+    """탈퇴하면 그 사람이 남긴 것도 함께 사라진다(사용자 결정).
+
+    글·댓글·예약을 남겨 두면 쓴 사람이 없는 글이 되고, 이름 자리에 무엇을 적을지를
+    또 정해야 한다. 통째로 지우는 쪽을 골랐다.
+    """
+    _signup(api_client)
+    me = api_client.get("/me").json()["account"]
+    api_client.post("/notices", json={"title": "공지", "body": "본문"})
+
+    response = api_client.delete("/me")
+
+    assert response.status_code == 204
+    assert db_session.get(Member, me["id"]) is None
+    assert db_session.scalars(select(Post)).all() == []
+    # 쿠키도 함께 지워져 그 자리에서 로그아웃된다.
+    assert api_client.get("/me").status_code == 401
+
+
+# ── 내 정보 고치기 ─────────────────────────────────────────────────────────
+
+
+def test_editing_my_profile_requires_login(api_client: TestClient) -> None:
+    assert api_client.patch("/me", json={"name": "새 이름", "cohort": 47}).status_code == 401
+
+
+def test_i_can_change_my_name_and_cohort(
+    api_client: TestClient, db_session: Session
+) -> None:
+    _signup(api_client)
+
+    response = api_client.patch("/me", json={"name": "고친 이름", "cohort": 47})
+
+    assert response.status_code == 200, response.text
+    body = response.json()["account"]
+    assert body["name"] == "고친 이름"
+    assert body["cohort"] == 47
+
+
+def test_editing_my_profile_rejects_an_empty_name(api_client: TestClient) -> None:
+    _signup(api_client)
+
+    assert api_client.patch("/me", json={"name": "  ", "cohort": 47}).status_code == 422
+
+
+# ── 비밀번호 바꾸기 ────────────────────────────────────────────────────────
+
+
+def test_changing_my_password_needs_the_current_one(api_client: TestClient) -> None:
+    _signup(api_client)
+
+    response = api_client.post(
+        "/me/password", json={"current": "틀린비밀번호1", "next": "newpass12345"}
+    )
+
+    assert response.status_code == 401
+
+
+def test_changing_my_password_lets_me_log_in_with_the_new_one(
+    api_client: TestClient,
+) -> None:
+    _signup(api_client)
+
+    changed = api_client.post(
+        "/me/password",
+        json={"current": SIGNUP_BODY["password"], "next": "newpass12345"},
+    )
+
+    assert changed.status_code == 204, changed.text
+    api_client.post("/logout")
+    again = api_client.post(
+        "/login", json={"email": SIGNUP_BODY["email"], "password": "newpass12345"}
+    )
+    assert again.status_code == 200
+
+
+def test_changing_my_password_rejects_a_weak_one(api_client: TestClient) -> None:
+    _signup(api_client)
+
+    response = api_client.post(
+        "/me/password", json={"current": SIGNUP_BODY["password"], "next": "짧다"}
+    )
+
+    assert response.status_code == 422

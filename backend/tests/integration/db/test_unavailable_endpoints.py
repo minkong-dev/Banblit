@@ -82,14 +82,14 @@ def test_unavailable_times_are_listed_for_a_member_in_time_order(
     assert starts == ["2026-09-14T18:00:00", "2026-09-20T18:00:00"]
 
 
-def test_unavailable_time_is_created_with_half_hour_bounds(
+def test_unavailable_time_is_created_with_on_the_hour_bounds(
     api_client: TestClient, account: AccountFactory
 ) -> None:
     owner_id, owner = account("이도현", "dohyun@example.com")
 
     response = api_client.post(
         f"/members/{owner_id}/unavailable",
-        json={"starts_at": "2026-09-14T18:00:00", "ends_at": "2026-09-14T19:30:00"},
+        json={"starts_at": "2026-09-14T18:00:00", "ends_at": "2026-09-14T20:00:00"},
         cookies=owner,
     )
 
@@ -97,7 +97,7 @@ def test_unavailable_time_is_created_with_half_hour_bounds(
     body = response.json()["time"]
     assert body["member_id"] == owner_id
     assert body["starts_at"] == "2026-09-14T18:00:00"
-    assert body["ends_at"] == "2026-09-14T19:30:00"
+    assert body["ends_at"] == "2026-09-14T20:00:00"
     assert body["repeats_weekly"] is False
     assert body["repeat_until"] is None
 
@@ -114,7 +114,7 @@ def test_unavailable_time_creation_rejects_off_grid_minutes(
     )
 
     assert response.status_code == 422
-    assert "30분" in response.json()["detail"]
+    assert "정시" in response.json()["detail"]
 
 
 def test_unavailable_time_creation_rejects_an_end_not_after_the_start(

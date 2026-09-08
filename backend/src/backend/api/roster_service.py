@@ -2,6 +2,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from backend.db.models import MemberPermissionSet, PermissionSet
 from backend.db.models import INSTRUMENTS, Instrument, Member, Team, TeamSlot
 
 # 실제 DB에서 확인한 유니크 제약
@@ -57,6 +58,34 @@ def list_my_teams(session: Session, member_id: int) -> list[tuple[Team, TeamSlot
         .order_by(Team.id)
     ).all()
     return [(team, slot) for team, slot in rows]
+
+
+def list_members(
+    session: Session, after: int | None, limit: int
+) -> list[tuple[Member, list[str]]]:
+    """모든 사람을 번호순으로 돌려준다. 사람마다 가진 권한 묶음 이름이 함께 온다.
+
+    무한 스크롤이라 쪽 번호가 아니라 "마지막으로 받은 번호 다음부터"로 이어 받는다 —
+    보는 중에 사람이 늘거나 줄어도 이미 본 줄이 다시 나오거나 건너뛰지 않는다.
+    """
+    rows = session.scalars(
+        select(Member)
+        .where(Member.id > (after or 0))
+        .order_by(Member.id)
+        .limit(limit)
+    ).all()
+    if not rows:
+        return []
+
+    held: dict[int, list[str]] = {row.id: [] for row in rows}
+    for member_id, name in session.execute(
+        select(MemberPermissionSet.member_id, PermissionSet.name)
+        .join(PermissionSet, PermissionSet.id == MemberPermissionSet.permission_set_id)
+        .where(MemberPermissionSet.member_id.in_(held))
+        .order_by(PermissionSet.name)
+    ).all():
+        held[member_id].append(name)
+    return [(row, held[row.id]) for row in rows]
 
 
 def search_members(session: Session, query: str, limit: int = 20) -> list[Member]:
@@ -194,6 +223,38 @@ def update_team(session: Session, team_id: int, name: str) -> Team:
     team.name = clean_name
     commit_roster(session)
     return team
+
+
+def replace_slots(session: Session, team_id: int, counts: dict[str, int]) -> None:
+    """팀의 포지션 구성을 통째로 다시 세운다.
+
+    악기마다 몇 자리인지만 받고, 그 수에 맞춰 자리를 더하거나 뺀다. 이미 있던
+    (악기, 번호) 는 그대로 두어 그 자리에 있던 사람이 남는다 — 드럼을 하나에서 둘로
+    늘렸다고 원래 드럼을 치던 사람이 자리를 잃으면 안 된다.
+
+    줄일 때는 번호가 큰 자리부터 없앤다. 거기 있던 사람은 팀에서 빠진다.
+    """
+    _get_team_or_raise(session, team_id)
+    checked = require_slot_counts(counts)
+
+    keep: set[tuple[str, int]] = {
+        (instrument, ordinal)
+        for instrument, count in checked.items()
+        for ordinal in range(1, count + 1)
+    }
+    rows = session.scalars(
+        select(TeamSlot).where(TeamSlot.team_id == team_id)
+    ).all()
+    have = {(row.instrument, row.ordinal) for row in rows}
+
+    for row in rows:
+        if (row.instrument, row.ordinal) not in keep:
+            session.delete(row)
+    session.add_all(
+        TeamSlot(team_id=team_id, instrument=instrument, ordinal=ordinal)
+        for instrument, ordinal in sorted(keep - have)
+    )
+    commit_roster(session)
 
 
 def delete_team(session: Session, team_id: int) -> None:

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from backend.api.room_input import (
     parse_clock,
     require_closes_after_opens,
-    require_half_hour_grid,
+    require_on_the_hour,
     require_room_name,
 )
 from backend.db.models import Room
@@ -102,7 +102,7 @@ def commit_room(session: Session) -> None:
 
 def _parse_room_clock(value: str, field_label: str) -> time:
     clock = parse_clock(value, field_label)
-    require_half_hour_grid(clock, field_label)
+    require_on_the_hour(clock, field_label)
     return clock
 
 

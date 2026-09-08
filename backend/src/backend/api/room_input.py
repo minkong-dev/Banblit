@@ -15,11 +15,11 @@ def format_clock(value: time) -> str:
     return value.strftime(CLOCK_FORMAT)
 
 
-def require_half_hour_grid(value: time, field_label: str) -> None:
-    # DB 의 CheckConstraint(30분·0초 격자)와 같은 규칙을 경계에서 먼저 본다 —
+def require_on_the_hour(value: time, field_label: str) -> None:
+    # DB 의 CheckConstraint(정시·0초 격자)와 같은 규칙을 경계에서 먼저 본다 —
     # 어겨도 DB 오류가 아니라 사람이 읽을 문장으로 거절한다.
-    if value.minute not in (0, 30) or value.second != 0:
-        raise ValueError(f"{field_label}은 30분 단위여야 합니다")
+    if value.minute != 0 or value.second != 0:
+        raise ValueError(f"{field_label}은 정시여야 합니다")
 
 
 def require_closes_after_opens(opens_at: time, closes_at: time) -> None:

@@ -7,10 +7,18 @@ from backend.api.roster_service import assign_slot as assign_slot_row
 from backend.api.roster_service import clear_slot as clear_slot_row
 from backend.api.roster_service import create_team as create_team_row
 from backend.api.roster_service import delete_team as delete_team_row
-from backend.api.roster_service import list_slots, list_teams, search_members
+from backend.api.roster_service import replace_slots as replace_slots_rows
+from backend.api.roster_service import (
+    list_members,
+    list_slots,
+    list_teams,
+    search_members,
+)
 from backend.api.roster_service import update_team as update_team_row
 from backend.api.schemas import (
     MemberOut,
+    MemberRowOut,
+    MemberRowsOut,
     MembersOut,
     MemberSearchOut,
     SlotAssignIn,
@@ -18,6 +26,7 @@ from backend.api.schemas import (
     SlotOut,
     SlotsOut,
     TeamCreateIn,
+    TeamSlotsIn,
     TeamEnvelopeOut,
     TeamOut,
     TeamsOut,
@@ -36,7 +45,13 @@ def _team_out(team: Team, slot_count: int, filled_count: int) -> TeamOut:
 
 
 def _member_out(member: Member) -> MemberOut:
-    return MemberOut(id=member.id, name=member.name, cohort=member.cohort)
+    return MemberOut(
+        id=member.id,
+        name=member.name,
+        department=member.department,
+        student_no=member.student_no,
+        cohort=member.cohort,
+    )
 
 
 def _slot_out(slot: TeamSlot, member: Member | None) -> SlotOut:
@@ -94,6 +109,23 @@ def read_team_members(
         raise HTTPException(status_code=422, detail=str(error)) from error
     return MembersOut(
         members=[_member_out(member) for _, member in rows if member is not None]
+    )
+
+
+@router.get(
+    "/members", response_model=MemberRowsOut, dependencies=[Depends(require_account)]
+)
+def read_members(
+    after: int | None = None,
+    limit: int = Query(default=50, ge=1, le=200),
+    session: Session = Depends(get_session),
+) -> MemberRowsOut:
+    """모든 사람을 번호순으로 돌려준다. 화면이 아래로 내리면서 이어 받는다."""
+    return MemberRowsOut(
+        members=[
+            MemberRowOut(**_member_out(member).model_dump(), permission_sets=sets)
+            for member, sets in list_members(session, after, limit)
+        ]
     )
 
 
@@ -158,6 +190,23 @@ def delete_team_endpoint(team_id: int, session: Session = Depends(get_session)) 
         delete_team_row(session, team_id)
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.put(
+    "/teams/{team_id}/slots",
+    response_model=SlotsOut,
+    dependencies=[Depends(require_permission("team_edit"))],
+)
+def put_team_slots(
+    team_id: int, req: TeamSlotsIn, session: Session = Depends(get_session)
+) -> SlotsOut:
+    """포지션 구성을 통째로 다시 세운다. 자리에 있던 사람은 그 자리가 남으면 함께 남는다."""
+    try:
+        replace_slots_rows(session, team_id, req.slots)
+        rows = list_slots(session, team_id)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return SlotsOut(slots=[_slot_out(slot, member) for slot, member in rows])
 
 
 @router.put(

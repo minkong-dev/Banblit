@@ -9,8 +9,13 @@ from backend.db.models import LoginSession
 
 # 로그인 상태를 얼마나 유지할지. 화면의 "로그인 상태 유지" 체크는 지금 이 값을
 # 갈아 끼우지 않는다 — 켜고 꺼도 만료 시각은 항상 같다.
-# ponytail: remember-me로 만료를 달리하려면 로그인 요청에 값을 태워 create_session에 넘긴다.
+# 로그인 상태 유지를 끈 사람의 수명. 브라우저를 닫으면 쿠키가 사라지므로 이 값은
+# "브라우저를 계속 켜 둔 사람"에게만 걸린다.
 SESSION_TTL = timedelta(days=7)
+
+# 로그인 상태 유지를 켠 사람의 수명. 쿠키에도 같은 값을 실어야 한다 — 한쪽만 길면
+# 짧은 쪽이 먼저 끝나 로그인이 풀린다.
+KEEP_TTL = timedelta(days=90)
 
 SESSION_COOKIE = "banblit_session"
 SIGNED_IN_COOKIE = "banblit_signed_in"
@@ -34,7 +39,9 @@ def _delete_dead_sessions(session: Session, member_id: int, now: datetime) -> No
     )
 
 
-def create_session(session: Session, member_id: int, now: datetime) -> str:
+def create_session(
+    session: Session, member_id: int, now: datetime, keep: bool = False
+) -> str:
     """새 세션 토큰을 만들어 저장하고, 토큰 원문을 돌려준다.
 
     쌓인 죽은 행은 새 행과 같은 커밋에서 함께 지운다 — 로그인·가입이 login_sessions
@@ -49,7 +56,7 @@ def create_session(session: Session, member_id: int, now: datetime) -> str:
         LoginSession(
             token_hash=hash_token(token),
             member_id=member_id,
-            expires_at=now + SESSION_TTL,
+            expires_at=now + (KEEP_TTL if keep else SESSION_TTL),
             created_at=now,
         )
     )

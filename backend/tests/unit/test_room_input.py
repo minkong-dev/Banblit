@@ -6,32 +6,32 @@ from backend.api.room_input import (
     format_clock,
     parse_clock,
     require_closes_after_opens,
-    require_half_hour_grid,
+    require_on_the_hour,
     require_room_name,
 )
 
 
 def test_parse_clock_reads_hour_and_minute() -> None:
-    assert parse_clock("18:30", "여는 시각") == time(18, 30)
+    assert parse_clock("19:00", "여는 시각") == time(19, 0)
 
 
 def test_parse_clock_rejects_bad_format() -> None:
     with pytest.raises(ValueError, match="여는 시각"):
-        parse_clock("18시30분", "여는 시각")
+        parse_clock("18시정각", "여는 시각")
 
 
 def test_format_clock_writes_hh_mm() -> None:
     assert format_clock(time(9, 0)) == "09:00"
 
 
-def test_half_hour_grid_accepts_on_grid_minutes() -> None:
-    require_half_hour_grid(time(18, 0), "여는 시각")
-    require_half_hour_grid(time(18, 30), "여는 시각")
+def test_on_the_hour_accepts_on_grid_minutes() -> None:
+    require_on_the_hour(time(18, 0), "여는 시각")
+    require_on_the_hour(time(19, 0), "여는 시각")
 
 
-def test_half_hour_grid_rejects_off_grid_minute() -> None:
-    with pytest.raises(ValueError, match="30분"):
-        require_half_hour_grid(time(18, 20), "여는 시각")
+def test_on_the_hour_rejects_off_grid_minute() -> None:
+    with pytest.raises(ValueError, match="정시"):
+        require_on_the_hour(time(18, 20), "여는 시각")
 
 
 def test_closes_after_opens_rejects_equal_times() -> None:

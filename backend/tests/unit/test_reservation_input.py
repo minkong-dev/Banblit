@@ -9,12 +9,12 @@ from backend.api.reservation_input import (
 )
 
 
-def test_accepts_a_valid_half_hour_aligned_interval() -> None:
-    require_valid_slot_bounds(datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 19, 30))
+def test_accepts_a_valid_on_the_hour_aligned_interval() -> None:
+    require_valid_slot_bounds(datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 20))
 
 
 def test_rejects_off_grid_minutes() -> None:
-    with pytest.raises(ValueError, match="30분"):
+    with pytest.raises(ValueError, match="정시"):
         require_valid_slot_bounds(datetime(2026, 9, 14, 18, 15), datetime(2026, 9, 14, 19, 0))
 
 
@@ -36,12 +36,12 @@ def test_accepts_an_interval_within_room_hours() -> None:
 def test_rejects_starting_before_the_room_opens() -> None:
     with pytest.raises(ValueError, match="운영 시간"):
         require_within_room_hours(
-            time(18, 0), time(22, 0), datetime(2026, 9, 14, 17, 30), datetime(2026, 9, 14, 19, 0)
+            time(18, 0), time(22, 0), datetime(2026, 9, 14, 17), datetime(2026, 9, 14, 19, 0)
         )
 
 
 def test_rejects_ending_after_the_room_closes() -> None:
     with pytest.raises(ValueError, match="운영 시간"):
         require_within_room_hours(
-            time(18, 0), time(22, 0), datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 22, 30)
+            time(18, 0), time(22, 0), datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 23)
         )

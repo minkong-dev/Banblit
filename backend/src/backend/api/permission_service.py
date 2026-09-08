@@ -12,6 +12,7 @@ from backend.db.models import (
 # 아무도 없는 DB 에 처음 가입한 사람이 받는 permission set 의 이름. 마이그레이션이
 # 심는 permission set 도 같은 이름을 쓴다(migrations/versions/b7f1a92c4d31_permission_sets.py).
 FULL_SET_NAME = "헤드매니저"
+FULL_SET_NOTE = "모든 권한을 가진 멤버입니다"
 
 
 def _clean_permissions(names: list[str]) -> list[str]:
@@ -85,14 +86,16 @@ def set_holders(session: Session, set_id: int) -> list[int]:
 
 
 def create_permission_set(
-    session: Session, name: str, permissions: list[str]
+    session: Session, name: str, description: str, permissions: list[str]
 ) -> PermissionSet:
     """name 으로 permission set 을 새로 만든다. 빈 이름과 이미 있는 이름을 거절한다."""
     clean_name = require_non_empty(name, "이름")
     _require_unique_name(session, clean_name, exclude_id=None)
 
     permission_set = PermissionSet(
-        name=clean_name, permissions=_clean_permissions(permissions)
+        name=clean_name,
+        description=require_non_empty(description, "설명"),
+        permissions=_clean_permissions(permissions),
     )
     session.add(permission_set)
     session.commit()
@@ -100,7 +103,7 @@ def create_permission_set(
 
 
 def update_permission_set(
-    session: Session, set_id: int, name: str, permissions: list[str]
+    session: Session, set_id: int, name: str, description: str, permissions: list[str]
 ) -> PermissionSet:
     """set_id permission set 의 이름과 켜진 항목을 통째로 갈아 끼운다."""
     permission_set = _get_set_or_raise(session, set_id)
@@ -108,6 +111,7 @@ def update_permission_set(
     _require_unique_name(session, clean_name, exclude_id=set_id)
 
     permission_set.name = clean_name
+    permission_set.description = require_non_empty(description, "설명")
     permission_set.permissions = _clean_permissions(permissions)
     session.commit()
     return permission_set
@@ -166,7 +170,11 @@ def grant_full_permissions(session: Session, member_id: int) -> None:
         .limit(1)
     ).first()
     if full is None:
-        full = PermissionSet(name=FULL_SET_NAME, permissions=list(PERMISSIONS))
+        full = PermissionSet(
+            name=FULL_SET_NAME,
+            description=FULL_SET_NOTE,
+            permissions=list(PERMISSIONS),
+        )
         session.add(full)
         session.flush()
     session.add(

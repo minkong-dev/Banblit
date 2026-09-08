@@ -202,7 +202,7 @@ def test_rooms_with_the_same_name_stay_separate() -> None:
 
 
 def test_slots_per_team_is_the_whole_grid_divided_by_team_count() -> None:
-    rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]  # 하루 4칸
+    rooms = [_room(1, "1번방", time(18, 0), time(22, 0))]  # 하루 4칸
     engine_rooms = build_engine_rooms(
         rooms, [date(2026, 8, 1), date(2026, 8, 2)]
     )  # 8칸
@@ -211,7 +211,7 @@ def test_slots_per_team_is_the_whole_grid_divided_by_team_count() -> None:
 
 
 def test_slots_per_team_is_rejected_when_no_team_can_get_a_slot() -> None:
-    rooms = [_room(1, "1번방", time(18, 0), time(19, 0))]  # 2칸
+    rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]  # 2칸
     engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
 
     with pytest.raises(ValueError, match="한 칸도"):

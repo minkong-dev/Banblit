@@ -21,7 +21,7 @@ def test_parse_clock_rejects_bad_format() -> None:
         parse_clock("아침 9시", "1차 연산 시각")
 
 
-def test_parse_clock_does_not_require_a_half_hour_grid() -> None:
+def test_parse_clock_does_not_require_a_on_the_hour() -> None:
     # 자동 연산 시각은 격자 제약이 없다 — 09:17 같은 값도 받아들여야 한다.
     assert parse_clock("09:17", "1차 연산 시각") == time(9, 17)
 

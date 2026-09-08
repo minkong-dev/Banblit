@@ -24,8 +24,8 @@ def test_rooms_are_listed_in_id_order(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account(*HEAD)
-    second = _room(db_session, "2번방", time(18, 0), time(22, 0))
-    first = _room(db_session, "1번방", time(18, 0), time(22, 0))
+    second = _room(db_session, "2번방", time(18, 0), time(23, 0))
+    first = _room(db_session, "1번방", time(18, 0), time(23, 0))
     db_session.commit()
 
     response = api_client.get("/rooms", cookies=head)
@@ -66,7 +66,7 @@ def test_room_creation_rejects_off_grid_minutes(
     )
 
     assert response.status_code == 422
-    assert "30분" in response.json()["detail"]
+    assert "정시" in response.json()["detail"]
 
 
 def test_room_creation_rejects_closes_at_not_later_than_opens_at(
@@ -88,7 +88,7 @@ def test_room_creation_rejects_a_duplicate_name(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account(*HEAD)
-    _room(db_session, "1번방", time(18, 0), time(22, 0))
+    _room(db_session, "1번방", time(18, 0), time(23, 0))
     db_session.commit()
 
     response = api_client.post(
@@ -136,7 +136,7 @@ def test_room_creation_treats_a_whitespace_only_difference_as_a_duplicate(
 ) -> None:
     # 화면(roomNameMessage)이 앞뒤 공백만 다른 이름도 같은 이름으로 보므로 서버도 맞춘다.
     _, head = account(*HEAD)
-    _room(db_session, "1번방", time(18, 0), time(22, 0))
+    _room(db_session, "1번방", time(18, 0), time(23, 0))
     db_session.commit()
 
     response = api_client.post(
@@ -163,10 +163,10 @@ def test_room_name_race_at_commit_time_is_translated_not_500(
     session_a = Session(test_engine)
     session_b = Session(test_engine)
     try:
-        session_a.add(Room(name="경합방", opens_at=time(18, 0), closes_at=time(20, 0)))
+        session_a.add(Room(name="경합방", opens_at=time(18, 0), closes_at=time(22, 0)))
         commit_room(session_a)
 
-        session_b.add(Room(name="경합방", opens_at=time(18, 0), closes_at=time(20, 0)))
+        session_b.add(Room(name="경합방", opens_at=time(18, 0), closes_at=time(22, 0)))
         with pytest.raises(ValueError, match="이미 있는 합주실 이름입니다"):
             commit_room(session_b)
     finally:
@@ -178,7 +178,7 @@ def test_room_is_patched_with_only_the_sent_fields(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account(*HEAD)
-    room = _room(db_session, "1번방", time(18, 0), time(22, 0))
+    room = _room(db_session, "1번방", time(18, 0), time(23, 0))
     db_session.commit()
 
     response = api_client.patch(
@@ -196,7 +196,7 @@ def test_room_is_patched_with_a_new_opens_at(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account(*HEAD)
-    room = _room(db_session, "1번방", time(18, 0), time(22, 0))
+    room = _room(db_session, "1번방", time(18, 0), time(23, 0))
     db_session.commit()
 
     response = api_client.patch(
@@ -206,14 +206,14 @@ def test_room_is_patched_with_a_new_opens_at(
     assert response.status_code == 200
     body = response.json()["room"]
     assert body["opens_at"] == "17:00"
-    assert body["closes_at"] == "22:00"
+    assert body["closes_at"] == "23:00"
 
 
 def test_room_patch_keeping_its_own_name_is_not_rejected(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account(*HEAD)
-    room = _room(db_session, "1번방", time(18, 0), time(22, 0))
+    room = _room(db_session, "1번방", time(18, 0), time(23, 0))
     db_session.commit()
 
     response = api_client.patch(
@@ -228,8 +228,8 @@ def test_room_patch_rejects_a_name_already_used_by_another_room(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account(*HEAD)
-    _room(db_session, "1번방", time(18, 0), time(22, 0))
-    other = _room(db_session, "2번방", time(18, 0), time(22, 0))
+    _room(db_session, "1번방", time(18, 0), time(23, 0))
+    other = _room(db_session, "2번방", time(18, 0), time(23, 0))
     db_session.commit()
 
     response = api_client.patch(
@@ -244,7 +244,7 @@ def test_room_patch_rejects_a_whitespace_only_name(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     _, head = account(*HEAD)
-    room = _room(db_session, "1번방", time(18, 0), time(22, 0))
+    room = _room(db_session, "1번방", time(18, 0), time(23, 0))
     db_session.commit()
 
     response = api_client.patch(f"/rooms/{room.id}", json={"name": "   "}, cookies=head)

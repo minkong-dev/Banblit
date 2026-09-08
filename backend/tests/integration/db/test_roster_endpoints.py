@@ -612,3 +612,143 @@ def test_deleting_a_team_that_is_gone_says_so(
     db_session.commit()
 
     assert api_client.delete("/teams/9999", cookies=head).status_code == 422
+
+
+# ── 포지션 구성 변경 ───────────────────────────────────────────────────────
+
+
+def test_changing_the_lineup_requires_team_edit(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    account("박서연", "head@example.com")
+    _, plain = account("이도현", "member@example.com")
+    team = _team(db_session, "청산", slots=1)
+    db_session.commit()
+
+    response = api_client.put(
+        f"/teams/{team.id}/slots", json={"slots": {"보컬": 2}}, cookies=plain
+    )
+
+    assert response.status_code == 403
+
+
+def test_adding_a_position_keeps_the_people_already_there(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """드럼이 하나에서 둘로 늘어도, 이미 있던 사람은 그 자리에 남는다."""
+    head_id, head = account("박서연", "head@example.com")
+    team = _team(db_session, "청산")
+    db_session.add(TeamSlot(team_id=team.id, instrument="드럼", ordinal=1))
+    db_session.commit()
+    slot_id = _slot_ids(api_client, head, team.id)[0]
+    api_client.put(
+        f"/teams/{team.id}/slots/{slot_id}", json={"member_id": head_id}, cookies=head
+    )
+
+    response = api_client.put(
+        f"/teams/{team.id}/slots", json={"slots": {"드럼": 2}}, cookies=head
+    )
+
+    assert response.status_code == 200, response.text
+    slots = response.json()["slots"]
+    assert [(s["instrument"], s["ordinal"]) for s in slots] == [("드럼", 1), ("드럼", 2)]
+    assert slots[0]["member_id"] == head_id
+    assert slots[1]["member_id"] is None
+
+
+def test_removing_a_position_drops_the_last_one(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """드럼이 둘에서 하나로 줄면 번호가 큰 자리가 사라진다."""
+    _, head = account("박서연", "head@example.com")
+    team = _team(db_session, "청산")
+    db_session.add_all(
+        [
+            TeamSlot(team_id=team.id, instrument="드럼", ordinal=1),
+            TeamSlot(team_id=team.id, instrument="드럼", ordinal=2),
+        ]
+    )
+    db_session.commit()
+
+    response = api_client.put(
+        f"/teams/{team.id}/slots", json={"slots": {"드럼": 1}}, cookies=head
+    )
+
+    assert response.status_code == 200, response.text
+    assert [(s["instrument"], s["ordinal"]) for s in response.json()["slots"]] == [
+        ("드럼", 1)
+    ]
+
+
+def test_changing_the_lineup_can_swap_instruments(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    team = _team(db_session, "청산")
+    db_session.add(TeamSlot(team_id=team.id, instrument="드럼", ordinal=1))
+    db_session.commit()
+
+    response = api_client.put(
+        f"/teams/{team.id}/slots", json={"slots": {"베이스": 1, "보컬": 1}}, cookies=head
+    )
+
+    assert response.status_code == 200, response.text
+    got = {(s["instrument"], s["ordinal"]) for s in response.json()["slots"]}
+    assert got == {("베이스", 1), ("보컬", 1)}
+
+
+def test_changing_the_lineup_rejects_an_empty_composition(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    team = _team(db_session, "청산", slots=1)
+    db_session.commit()
+
+    response = api_client.put(
+        f"/teams/{team.id}/slots", json={"slots": {}}, cookies=head
+    )
+
+    assert response.status_code == 422
+
+
+# ── 전체 멤버 목록 ─────────────────────────────────────────────────────────
+
+
+def test_the_member_list_requires_login(api_client: TestClient) -> None:
+    assert api_client.get("/members").status_code == 401
+
+
+def test_the_member_list_gives_everyone_with_their_permission_sets(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """멤버 화면이 한 줄에 이름·학과·학번·기수·권한을 함께 그린다."""
+    _, head = account("박서연", "head@example.com")
+    account("이도현", "member@example.com")
+    db_session.commit()
+
+    body = api_client.get("/members", cookies=head).json()
+
+    assert [row["name"] for row in body["members"]] == ["박서연", "이도현"]
+    first = body["members"][0]
+    assert first["department"] == "실용음악과"
+    assert first["cohort"] == 46
+    assert first["permission_sets"] == ["헤드매니저"]
+    assert body["members"][1]["permission_sets"] == []
+
+
+def test_the_member_list_pages_from_the_end_of_the_last_one(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """무한 스크롤은 마지막으로 받은 번호 다음부터 이어 받는다."""
+    _, head = account("박서연", "head@example.com")
+    account("이도현", "member@example.com")
+    account("최유진", "third@example.com")
+    db_session.commit()
+
+    first = api_client.get("/members?limit=2", cookies=head).json()
+    assert len(first["members"]) == 2
+
+    rest = api_client.get(
+        f"/members?limit=2&after={first['members'][-1]['id']}", cookies=head
+    ).json()
+    assert [row["name"] for row in rest["members"]] == ["최유진"]

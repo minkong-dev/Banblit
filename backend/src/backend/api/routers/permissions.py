@@ -32,6 +32,7 @@ def _set_out(permission_set: PermissionSet, member_ids: list[int]) -> Permission
     return PermissionSetOut(
         id=permission_set.id,
         name=permission_set.name,
+        description=permission_set.description,
         permissions=permission_set.permissions,  # type: ignore[arg-type]
         member_ids=member_ids,
     )
@@ -56,7 +57,7 @@ def create_set(
     req: PermissionSetIn, session: Session = Depends(get_session)
 ) -> PermissionSetEnvelopeOut:
     try:
-        permission_set = create_permission_set(session, req.name, list(req.permissions))
+        permission_set = create_permission_set(session, req.name, req.description, list(req.permissions))
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     return PermissionSetEnvelopeOut(permission_set=_set_out(permission_set, []))
@@ -72,7 +73,7 @@ def patch_set(
 ) -> PermissionSetEnvelopeOut:
     try:
         permission_set = update_permission_set(
-            session, set_id, req.name, list(req.permissions)
+            session, set_id, req.name, req.description, list(req.permissions)
         )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

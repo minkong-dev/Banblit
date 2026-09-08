@@ -26,7 +26,7 @@ def test_request_maps_to_engine_objects() -> None:
                             "unavailable": [
                                 {
                                     "start": "2026-07-20T18:00:00",
-                                    "end": "2026-07-20T18:30:00",
+                                    "end": "2026-07-20T19:00:00",
                                 }
                             ],
                         }
@@ -38,7 +38,7 @@ def test_request_maps_to_engine_objects() -> None:
                     "name": "1번방",
                     "open_period": {
                         "start": "2026-07-20T18:00:00",
-                        "end": "2026-07-20T19:00:00",
+                        "end": "2026-07-20T20:00:00",
                     },
                 }
             ],
@@ -57,7 +57,7 @@ def test_request_maps_to_engine_objects() -> None:
                     unavailable=[
                         TimeInterval(
                             datetime(2026, 7, 20, 18, 0),
-                            datetime(2026, 7, 20, 18, 30),
+                            datetime(2026, 7, 20, 19),
                         )
                     ],
                 )
@@ -68,7 +68,7 @@ def test_request_maps_to_engine_objects() -> None:
         Room(
             id=0,
             open_period=TimeInterval(
-                datetime(2026, 7, 20, 18, 0), datetime(2026, 7, 20, 19, 0)
+                datetime(2026, 7, 20, 18, 0), datetime(2026, 7, 20, 20, 0)
             ),
         )
     ]
@@ -90,7 +90,7 @@ def test_the_same_person_in_two_teams_gets_one_number() -> None:
                     "name": "1번방",
                     "open_period": {
                         "start": "2026-07-20T18:00:00",
-                        "end": "2026-07-20T19:00:00",
+                        "end": "2026-07-20T20:00:00",
                     },
                 }
             ],
@@ -117,7 +117,7 @@ def test_duplicate_team_names_are_rejected() -> None:
                     "name": "1번방",
                     "open_period": {
                         "start": "2026-07-20T18:00:00",
-                        "end": "2026-07-20T19:00:00",
+                        "end": "2026-07-20T20:00:00",
                     },
                 }
             ],
@@ -155,7 +155,7 @@ def _one_slot() -> RoomSlot:
     return RoomSlot(
         room_id=0,
         interval=TimeInterval(
-            datetime(2026, 7, 20, 18, 0), datetime(2026, 7, 20, 18, 30)
+            datetime(2026, 7, 20, 18, 0), datetime(2026, 7, 20, 19)
         ),
     )
 
@@ -178,7 +178,7 @@ def test_feasible_resolution_maps_to_out() -> None:
     assert out.assignment.feasible is True
     assert out.assignment.slots_by_team["A"][0].room == "1번방"
     assert out.assignment.slots_by_team["A"][0].start == datetime(2026, 7, 20, 18, 0)
-    assert out.assignment.slots_by_team["A"][0].end == datetime(2026, 7, 20, 18, 30)
+    assert out.assignment.slots_by_team["A"][0].end == datetime(2026, 7, 20, 19)
     assert out.proposals == []
 
 

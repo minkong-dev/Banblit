@@ -46,18 +46,27 @@ def _get_team_or_raise(session: Session, team_id: int) -> Team:
     return team
 
 
-def _require_within_open_period(session: Session, day: date) -> None:
-    # 상시 개방기간 안에서만 예약을 받는다. 집중 합주기간은 자동 배정 대상이라
-    # 예약 화면에서 언제나 잠겨 있다(.cluedoc/scheduler README, 예약 모드 표).
+def _require_not_in_focused_period(session: Session, day: date) -> None:
+    """집중 합주기간이 아니면 예약을 받는다.
+
+    막는 것은 집중 합주기간뿐이다 — 그 기간만 자동 배정이 자리를 통째로 나눠 갖는다.
+    기간을 아무것도 정해 두지 않은 날도 예약제다. "상시 개방" 기간을 따로 등록해야만
+    예약이 열리던 규칙을 뒤집은 것이다(사용자 결정) — 그 등록을 잊으면 아무도 예약을
+    못 하는데, 그것이 기본값일 이유가 없다.
+
+    집중 합주기간이라도 "매일" 옵션이 켜져 있으면 막지 않는다. 그 옵션은 상시처럼
+    쓰겠다는 뜻이라, 자동 배정이 자리를 다 가져가지 않는다.
+    """
     covered = session.execute(
         select(Period.id).where(
-            Period.kind == "open",
+            Period.kind == "focused",
+            Period.everyday.is_(False),
             Period.starts_on <= day,
             Period.ends_on >= day,
         )
     ).first()
-    if covered is None:
-        raise ValueError("상시 개방기간이 아니어서 예약할 수 없습니다")
+    if covered is not None:
+        raise ValueError("집중 합주기간이라 예약할 수 없습니다")
 
 
 def _conflict_message_for(error: IntegrityError) -> str | None:
@@ -89,7 +98,7 @@ def _planned_rows(
     if team_id is not None:
         team = _get_team_or_raise(session, team_id)
         _require_team_member(session, team_id, requester.id)
-    _require_within_open_period(session, starts_at.date())
+    _require_not_in_focused_period(session, starts_at.date())
 
     slots = generate_slots(TimeInterval(start=starts_at, end=ends_at))
     rows = [
