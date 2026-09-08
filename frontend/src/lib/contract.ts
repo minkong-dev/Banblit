@@ -78,7 +78,7 @@ export type MyTeam = {
 /** /me 응답 전체 — 지금 로그인한 계정과 그 계정이 앉아 있는 자리들. */
 export type Me = { account: Account; teams: MyTeam[] };
 
-/** 할 수 있는 일 열한 가지. 서버 쪽 정본은 backend/src/backend/db/models.py 의 Permission 이다. */
+/** 할 수 있는 일 열여덟 가지. 서버 쪽 정본은 backend/src/backend/db/models.py 의 Permission 이다. */
 export type Permission =
   | "room_create"
   | "room_edit"
@@ -103,7 +103,7 @@ export type Account = {
   id: number;
   name: string;
   email: string;
-  /** 저장된 값이 아니라 permissions 에서 뽑아낸 값이다 — 열한 가지가 전부 켜져 있으면 head_manager. */
+  /** 저장된 값이 아니라 permissions 에서 뽑아낸 값이다 — 열여덟 가지가 전부 켜져 있으면 head_manager. */
   role: "head_manager" | "member";
   permissions: Permission[];
   /** 기수. 화면이 동명이인을 가를 때 이름 옆에 붙인다. */

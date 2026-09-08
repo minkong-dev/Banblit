@@ -1,4 +1,4 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
@@ -13,19 +13,12 @@ import { teamsOf } from "../lib/roster";
 import type { DayTeam } from "../lib/roster";
 import { useMe, usePeriods, useRooms } from "../components/hooks";
 import "../styles/scheduler.css";
-import type { Post, ScheduleRow, Team } from "../lib/contract";
-import { dayOf, hoursLabel, isRangeFree, mergeSessions, monthCells, postWhen, slotIndex, slotLabel, takenGrid, weekKeys } from "../lib/pipeline";
+import type { Post, Reservation, ScheduleRow, Team, Unavailable } from "../lib/contract";
+import { dayLabel, dayOf, dayWithWeekday, hoursLabel, isRangeFree, mergeReservations, mergeSessions, monthCells, slotCountOf, slotIndex, slotLabel, stampLabel, takenGrid, WEEKDAY_NAMES, weekKeys } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
-
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 // 오른쪽 공지 칸에 몇 줄까지 보일지. 전체 목록은 공지 화면(routes/Notices)이 그린다.
 const RECENT_NOTICES = 3;
-
-function dayText(dayKey: string): string {
-  // "2026-09-13" 을 "9월 13일" 로 적는다.
-  return `${Number(dayKey.slice(5, 7))}월 ${Number(dayKey.slice(8, 10))}일`;
-}
 
 /** 오른쪽 목록이 아직 못 그릴 상태면 그 사유를 한 줄로 돌려준다. 빈 문자열이면 목록을 그린다. */
 function listNote(
@@ -65,18 +58,92 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
-/** 그날 화면에 보일 것만 고른다 — 내 일정은 내 팀과 내가 안 되는 시간, 전체는 예약된 것 전부. */
+/** 팀 하나의 자리를 "3/5명" 으로 적는다. 목록에 없는 팀이면 빈 문자열. */
 function memberCountLabel(allTeams: Team[], teamId: number): string {
   const found = allTeams.find((team) => team.id === teamId);
   // 자리 수와 앉은 수를 함께 보여준다 — 몇 자리 비었는지가 인원 수만큼 중요하다.
   return found === undefined ? "" : `${found.filled_count}/${found.slot_count}명`;
 }
 
+/** 그날 화면에 보일 것만 고른다 — 내 일정은 내 팀과 내가 안 되는 시간, 전체는 예약된 것 전부. */
 function visible(entries: Entry[], tab: TabKey, teams: DayTeam[]): Entry[] {
   const mine = new Set(teams.filter((team) => team.mine).map((team) => team.key));
   return tab === "me"
     ? entries.filter((entry) => entry.kind === "off" || (entry.team !== null && mine.has(entry.team)))
     : entries.filter((entry) => entry.kind !== "off");
+}
+
+type DayEntries = Record<string, Entry[]>;
+
+/** 확정된 시간표를 합주 한 번씩으로 합친 뒤 날짜별로 담는다. 서버는 한 시간짜리
+ *  칸으로 주므로 맞닿은 칸을 먼저 이어 붙여야 사람이 읽는 한 번이 된다. */
+function assignedByDay(rows: ScheduleRow[], teams: DayTeam[], openHour: number): DayEntries {
+  const sessions: Session[] = rows.map((row) => ({
+    team: row.team, room: row.room, start: row.start, end: row.end,
+  }));
+  const byDay: DayEntries = {};
+  for (const session of mergeSessions(sessions)) {
+    const team = teams.find((item) => item.name === session.team);
+    (byDay[dayOf(session.start)] ??= []).push({
+      kind: "assign",
+      team: team?.key ?? null,
+      room: session.room,
+      a: slotIndex(session.start, openHour),
+      b: slotIndex(session.end, openHour),
+    });
+  }
+  return byDay;
+}
+
+/** 내가 못 나오는 시간을 날짜별로 담는다. 서버에 저장된 값을 그대로 옮긴다.
+ *  받아오는 것이 내 것뿐이라 전부 내가 지울 수 있다. */
+function offByDay(times: Unavailable[], openHour: number): DayEntries {
+  const byDay: DayEntries = {};
+  for (const item of times) {
+    (byDay[dayOf(item.starts_at)] ??= []).push({
+      kind: "off",
+      team: null,
+      who: "직접 등록",
+      a: slotIndex(item.starts_at, openHour),
+      b: slotIndex(item.ends_at, openHour),
+      removeIds: [item.id],
+    });
+  }
+  return byDay;
+}
+
+/** 상시 개방기간 예약을 날짜별로 담는다. 서버는 한 시간짜리 칸을 하나씩 주므로 맞닿은
+ *  칸을 먼저 한 건으로 이어야 사람이 보는 예약 한 번이 된다. team_id 로 실제 팀을
+ *  찾는다 — 이름 대조보다 정확하다. 동명이인 규칙과 같은 이유로 사람도 팀도 번호로 가른다.
+ *  내가 잡은 건에만 지울 번호를 실어, 남의 예약에는 취소가 뜨지 않게 한다. */
+function bookedByDay(
+  rows: Reservation[], teams: DayTeam[], openHour: number, myMemberId: number | null,
+): DayEntries {
+  const bookings = mergeReservations(rows.map((row) => ({
+    id: row.id,
+    room: row.room,
+    teamId: row.team_id,
+    team: row.team,
+    memberId: row.member_id,
+    member: row.member,
+    start: row.start,
+    end: row.end,
+  })));
+
+  const byDay: DayEntries = {};
+  for (const booking of bookings) {
+    const team = teams.find((item) => item.id === booking.teamId);
+    (byDay[dayOf(booking.start)] ??= []).push({
+      kind: "book",
+      team: team?.key ?? null,
+      room: booking.room,
+      who: booking.team ?? booking.member,
+      a: slotIndex(booking.start, openHour),
+      b: slotIndex(booking.end, openHour),
+      removeIds: booking.memberId === myMemberId ? booking.ids : undefined,
+    });
+  }
+  return byDay;
 }
 
 export function Scheduler() {
@@ -124,7 +191,7 @@ export function Scheduler() {
     queryFn: () => loadReservationRows(roomIds, rangeFrom, rangeTo),
     enabled: rooms.data !== undefined,
   });
-  // 공지 화면(routes/Notices → PostBoard)이 쓰는 열쇠·통로를 그대로 쓴다. 두 화면이
+  // 공지 화면(routes/Notices → PostBoard)이 쓰는 열쇠·주소를 그대로 쓴다. 두 화면이
   // 같은 목록을 나눠 쓰므로, 공지를 쓰고 돌아오면 여기도 함께 새로 그려진다.
   const notices = useQuery({
     queryKey: ["board", "/notices"],
@@ -140,61 +207,14 @@ export function Scheduler() {
   // 다시 도는데, 빈 배열을 다루는 계산이라 가벼워 따로 감쌀 만큼은 아니다.
   const rows = query.data?.rows ?? [];
 
-  const teams = useMemo(() => teamsOf(rows, teamIds), [rows, teamIds]);
+  const teams = teamsOf(rows, teamIds);
   const { open, close } = roomBounds(rooms.data?.rooms ?? []);
   const focus = focusedRange(periods.data?.periods ?? []);
-  const slotCount = (close - open) * 2;
+  const slotCount = slotCountOf(open, close);
 
-  // 서버가 준 30분 조각을 합주 한 번으로 합쳐 날짜별로 담는다.
-  const assigned = useMemo(() => {
-    const sessions: Session[] = rows.map((row) => ({
-      team: row.team, room: row.room, start: row.start, end: row.end,
-    }));
-    const byDay: Record<string, Entry[]> = {};
-    for (const session of mergeSessions(sessions)) {
-      const team = teams.find((item) => item.name === session.team);
-      (byDay[dayOf(session.start)] ??= []).push({
-        kind: "assign",
-        team: team?.key ?? null,
-        room: session.room,
-        a: slotIndex(session.start, open),
-        b: slotIndex(session.end, open),
-      });
-    }
-    return byDay;
-  }, [rows, teams, open]);
-
-  // 내가 못 나오는 시간 — 서버에 저장된 값을 그대로 날짜별로 담는다.
-  const offEntries = useMemo(() => {
-    const byDay: Record<string, Entry[]> = {};
-    for (const item of unavailableQuery.data ?? []) {
-      (byDay[dayOf(item.starts_at)] ??= []).push({
-        kind: "off",
-        team: null,
-        who: "직접 등록",
-        a: slotIndex(item.starts_at, open),
-        b: slotIndex(item.ends_at, open),
-      });
-    }
-    return byDay;
-  }, [unavailableQuery.data, open]);
-
-  // 상시 개방기간 예약 — team_id 로 실제 팀을 찾아 매칭한다(이름 대조보다 정확하다).
-  const bookEntries = useMemo(() => {
-    const byDay: Record<string, Entry[]> = {};
-    for (const row of reservationQuery.data?.rows ?? []) {
-      const team = teams.find((item) => item.id === row.team_id);
-      (byDay[dayOf(row.start)] ??= []).push({
-        kind: "book",
-        team: team?.key ?? null,
-        room: row.room,
-        who: row.team ?? row.member,
-        a: slotIndex(row.start, open),
-        b: slotIndex(row.end, open),
-      });
-    }
-    return byDay;
-  }, [reservationQuery.data, teams, open]);
+  const assigned = assignedByDay(rows, teams, open);
+  const offEntries = offByDay(unavailableQuery.data ?? [], open);
+  const bookEntries = bookedByDay(reservationQuery.data?.rows ?? [], teams, open, me?.id ?? null);
 
   const entriesOf = (key: string): Entry[] =>
     [...(assigned[key] ?? []), ...(offEntries[key] ?? []), ...(bookEntries[key] ?? [])]
@@ -221,7 +241,7 @@ export function Scheduler() {
   const monthView = (
     <>
       <div className="dow">
-        {WEEKDAYS.map((name) => <span key={name}>{name}</span>)}
+        {WEEKDAY_NAMES.map((name) => <span key={name}>{name}</span>)}
       </div>
       <div className="grid">
         {cells.map((day, index) => {
@@ -285,7 +305,7 @@ export function Scheduler() {
               key={key}
               className={["cell", ...marks].join(" ")}
               disabled={blocked}
-              aria-label={`${cursor.month + 1}월 ${day}일 ${WEEKDAYS[weekday]}요일`}
+              aria-label={dayWithWeekday(key)}
               onClick={() => setOpenDay(key)}
             >
               <span className="n">{day}</span>
@@ -299,8 +319,8 @@ export function Scheduler() {
 
   // weekKeys 가 일요일부터 이레 치 날짜를 내주므로, 배열 안의 자리가 곧 요일이다.
   const weekLabel = weekDayKeys[0].slice(5, 7) === weekDayKeys[6].slice(5, 7)
-    ? `${dayText(weekDayKeys[0])} – ${Number(weekDayKeys[6].slice(8, 10))}일`
-    : `${dayText(weekDayKeys[0])} – ${dayText(weekDayKeys[6])}`;
+    ? `${dayLabel(weekDayKeys[0])} – ${Number(weekDayKeys[6].slice(8, 10))}일`
+    : `${dayLabel(weekDayKeys[0])} – ${dayLabel(weekDayKeys[6])}`;
 
   const weekView = (
     <div className="weekscroll">
@@ -308,7 +328,7 @@ export function Scheduler() {
         <div className="wh" />
         {weekDayKeys.map((key, index) => (
           <div className={index === 0 ? "wh sun" : "wh"} key={key}>
-            {WEEKDAYS[index]}<b>{Number(key.slice(8, 10))}</b>
+            {WEEKDAY_NAMES[index]}<b>{Number(key.slice(8, 10))}</b>
           </div>
         ))}
         {Array.from({ length: slotCount }, (_, i) => i).map((slot) => (
@@ -442,7 +462,7 @@ export function Scheduler() {
               <li key={post.id}>
                 <button type="button" onClick={() => void navigate("/notices")}>
                   <b>{post.title}</b>
-                  <small>{postWhen(post.created_at)} · {post.author}</small>
+                  <small>{stampLabel(post.created_at)} · {post.author}</small>
                 </button>
               </li>
             ))}

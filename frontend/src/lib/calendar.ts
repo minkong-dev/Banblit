@@ -3,6 +3,9 @@
 // 칸 하나가 한 시간이다(사용자 결정). 서버 쪽 정본은
 // backend/src/backend/scheduling/slots.py 의 SLOT_MINUTES 다.
 const DAYS_PER_WEEK = 7;
+// 날짜만 있는 값을 Date 로 세울 때 쓰는 시각. 자정으로 세우면 여름시간제가 있는
+// 지역에서 하루가 23시간인 날에 날짜가 하루씩 밀 수 있다.
+const NOON_HOUR = 12;
 // 합주실이 하나도 없을 때 쓸 여닫는 시각 — 달력을 그릴 시간 범위가 아예 없을 수는 없다.
 const FALLBACK_OPEN_HOUR = 10;
 const FALLBACK_CLOSE_HOUR = 22;
@@ -28,6 +31,12 @@ export function slotLabel(index: number, openHour: number): string {
   // 여는 시각을 0번으로 둔 칸 번호를 "18:00" 으로 적는다.
   const hour = openHour + index;
   return `${String(hour).padStart(2, "0")}:00`;
+}
+
+/** 여는 시각부터 닫는 시각까지 들어가는 칸 수. 칸 하나가 한 시간이라 시각 차이가
+ *  곧 칸 수다 — 30분 칸이던 때의 두 배가 아니다. */
+export function slotCountOf(openHour: number, closeHour: number): number {
+  return closeHour - openHour;
 }
 
 export function hoursLabel(slots: number): string {
@@ -90,19 +99,17 @@ export function dayKey(date: Date): string {
 }
 
 /** year 년 month 월(0부터 센다) 15일이 든 주를 shift 주만큼 옮겨, 일요일부터 토요일까지
- *  이레 치 날짜 열쇠를 돌려준다. 정오를 기준으로 센다 — 자정으로 세면 여름시간제가
- *  있는 지역에서 날짜가 하루씩 밀 수 있다. */
+ *  이레 치 날짜 열쇠를 돌려준다. */
 export function weekKeys(year: number, month: number, shift: number): string[] {
-  const sunday = new Date(year, month, 15 + shift * 7, 12);
+  const sunday = new Date(year, month, 15 + shift * DAYS_PER_WEEK, NOON_HOUR);
   sunday.setDate(sunday.getDate() - sunday.getDay());
-  return Array.from({ length: 7 }, (_, i) =>
-    dayKey(new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + i, 12)));
+  return Array.from({ length: DAYS_PER_WEEK }, (_, i) =>
+    dayKey(new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + i, NOON_HOUR)));
 }
 
 export function datesBetween(from: string, to: string): string[] {
   // "2026-09-14" 부터 "2026-09-17" 까지의 날짜를 양 끝 포함해 잇는다.
-  // 정오를 기준으로 하루씩 더해 나간다. 자정으로 세면 여름시간제가 있는 지역에서
-  // 하루가 23시간인 날에 날짜 하나를 건너뛴다.
+  // 정오에서 하루씩 더해 나간다(NOON_HOUR).
   const cursor = new Date(`${from}T12:00:00`);
   const last = new Date(`${to}T12:00:00`);
   const days: string[] = [];
@@ -112,3 +119,59 @@ export function datesBetween(from: string, to: string): string[] {
   }
   return days;
 }
+
+// ===== 날짜를 사람이 읽는 글로 =====
+// 달·요일 이름을 배열로 들고 있지 않고 Intl 에 맡긴다. 화면 넷이 각자 자르던 것을
+// 여기 셋으로 모았다.
+
+const MONTH_DAY = new Intl.DateTimeFormat("ko", { month: "long", day: "numeric" });
+const MONTH_DAY_WEEKDAY = new Intl.DateTimeFormat("ko", {
+  month: "long",
+  day: "numeric",
+  weekday: "long",
+});
+const WEEKDAY = new Intl.DateTimeFormat("ko", { weekday: "short" });
+
+// "2026-09-04" 와 "2026-09-04T14:30:00" 을 함께 받는다. 뒤에 시간대가 붙어 와도
+// 여기서 잘려 나간다 — 서버는 시간대 없는 값을 주고, 붙어 온 값도 적힌 그대로 읽는다.
+const STAMP = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/;
+
+/** 적힌 날짜를 그대로 담은 Date. 형식이 아니면 null.
+ *  정오로 세운다 — 자정으로 세우면 여름시간제가 있는 지역에서 하루 밀 수 있다. */
+function dayDate(text: string): Date | null {
+  const parsed = STAMP.exec(text);
+  if (parsed === null) return null;
+  const [, year, month, day] = parsed;
+  return new Date(Number(year), Number(month) - 1, Number(day), NOON_HOUR);
+}
+
+/** "2026-09-13" 을 "9월 13일" 로. 뒤에 시각이 붙어 있어도 날짜만 읽는다.
+ *  형식이 아니면 받은 값을 그대로 돌려준다. */
+export function dayLabel(key: string): string {
+  const date = dayDate(key);
+  return date === null ? key : MONTH_DAY.format(date);
+}
+
+/** "2026-09-13" 을 "9월 13일 일요일" 로. */
+export function dayWithWeekday(key: string): string {
+  const date = dayDate(key);
+  return date === null ? key : MONTH_DAY_WEEKDAY.format(date);
+}
+
+/** "2026-09-04T14:30:00" 을 "9월 4일 14:30" 으로. 시각이 없으면 날짜만 적는다.
+ *  시각은 적힌 글자를 그대로 쓴다 — Intl 에 넘기려면 Date 를 만들어야 하고, 그러면
+ *  여름시간제로 없는 시각(새벽 2시)이 한 시간 뒤로 밀려 적힌 값과 달라진다. */
+export function stampLabel(text: string): string {
+  const parsed = STAMP.exec(text);
+  if (parsed === null) return text;
+  const [, , , , hour, minute] = parsed;
+  const day = dayLabel(text);
+  return hour === undefined ? day : `${day} ${hour}:${minute}`;
+}
+
+// Intl 에 요일 이름을 물으려면 날짜가 있어야 한다. 2024년 1월 7일이 일요일이다.
+const A_SUNDAY = { year: 2024, month: 0, day: 7 };
+
+/** 달력 머리글의 요일 이름 일곱 — 일요일부터 토요일까지. 달력 격자도 같은 순서다. */
+export const WEEKDAY_NAMES: string[] = Array.from({ length: DAYS_PER_WEEK }, (_, index) =>
+  WEEKDAY.format(new Date(A_SUNDAY.year, A_SUNDAY.month, A_SUNDAY.day + index, NOON_HOUR)));

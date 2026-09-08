@@ -8,7 +8,7 @@ function accountWith(permissions: Account["permissions"]): Account {
 }
 
 describe("roleLabel", () => {
-  it("열한 가지가 전부 켜진 사람만 헤드매니저로 부른다", () => {
+  it("열여덟 가지가 전부 켜진 사람만 헤드매니저로 부른다", () => {
     expect(roleLabel("head_manager")).toBe("헤드매니저");
     expect(roleLabel("member")).toBe("일반멤버");
   });

@@ -2,20 +2,20 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
-import { getJSON } from "../lib/api";
+import { getJSON, reason } from "../lib/api";
 import { say } from "../lib/toast";
 import { runAssignment } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
 import { useMe, usePeriods, useRooms, useTeams } from "../components/hooks";
 import { can } from "../lib/account";
-import { backupLabel, checkRunTimes, runTimeOptions, slotCountLabel } from "../lib/runs";
+import { checkRunTimes, slotCountLabel } from "../lib/runs";
 import "../styles/assignment.css";
 import type { AssignOut, Backup, Period, ScheduleRow, Slot } from "../lib/contract";
-import { datesBetween, dayOf, hhmm, mergeSessions } from "../lib/pipeline";
+import { colorKey, datesBetween, dayOf, hhmm, mergeSessions, stampLabel, WEEKDAY_NAMES } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
 
-const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 const MINUTES_PER_HOUR = 60;
+const HALF_HOUR_SECONDS = 1800;
 
 /** 달력이 보이는 것 — 지금 확정된 시간표, 조율안 n번, 지난 회차 하나. */
 type View = { kind: "now" } | { kind: "proposal"; index: number } | { kind: "round"; at: string };
@@ -48,10 +48,18 @@ function minutesOf(session: Session): number {
   return (new Date(session.end).getTime() - new Date(session.start).getTime()) / 60000;
 }
 
+/** 계산이 끝난 뒤 알릴 한 줄. 자리를 다 채웠는지, 채웠으면 저장까지 됐는지로 갈린다. */
+function runResultText(result: AssignOut): string {
+  if (!result.assignment.feasible) {
+    return `자리를 다 채우지 못했습니다 · 조율안 ${result.proposals.length}개`;
+  }
+  return result.saved ? "배정을 새로 확정했습니다" : "배정은 됐지만 저장되지 않았습니다";
+}
+
 /** 팀 이름에 색을 하나씩 매긴다. 이름 순으로 매겨야 다시 그려도 색이 안 바뀐다. */
 function colorsOf(sessions: Session[]): Map<string, string> {
   const names = [...new Set(sessions.map((session) => session.team))].sort();
-  return new Map(names.map((name, index) => [name, `c${(index % 4) + 1}`]));
+  return new Map(names.map((name, index) => [name, colorKey(index)]));
 }
 
 export function Assignment() {
@@ -98,11 +106,7 @@ export function Assignment() {
       // 저장이 됐으면 이전 시간표가 회차로 밀려나므로 목록도 다시 받는다.
       await queryClient.invalidateQueries({ queryKey: ["backups", activePeriodId] });
       setView(NOW);
-      say(
-        result.assignment.feasible
-          ? result.saved ? "배정을 새로 확정했습니다" : "배정은 됐지만 저장되지 않았습니다"
-          : `자리를 다 채우지 못했습니다 · 조율안 ${result.proposals.length}개`,
-      );
+      say(runResultText(result));
     },
     onError: () => say("계산하지 못했습니다"),
   });
@@ -128,7 +132,7 @@ export function Assignment() {
   const rollback = useMutation({
     mutationFn: () => {
       if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
-      // 회차를 받지 않는 통로다. 언제나 바로 직전 회차로만 되돌아간다.
+      // 회차를 받지 않는 endpoint 다. 언제나 바로 직전 회차로만 되돌아간다.
       return getJSON<{ rolled_back: boolean }>(`/periods/${activePeriodId}/rollback`, {
         method: "POST",
       });
@@ -214,7 +218,7 @@ export function Assignment() {
   const colors = useMemo(() => colorsOf([...confirmed, ...shown]), [confirmed, shown]);
 
   // 확정 시간표에 나온 번호를 재계산에 그대로 넘긴다. 아직 아무것도 확정되지 않았으면
-  // 목록 통로가 준 전체를 쓴다.
+  // 목록 endpoint 가 준 전체를 쓴다.
   const uniqueSorted = (values: number[]) => [...new Set(values)].sort((a, b) => a - b);
   const teamIds = rows.length
     ? uniqueSorted(rows.map((row) => row.team_id))
@@ -229,7 +233,7 @@ export function Assignment() {
       key: `p${index}`,
       text: `${String.fromCharCode(65 + index)}안`,
     })),
-    ...(roundAt === null ? [] : [{ key: `r:${roundAt}`, text: backupLabel(roundAt) }]),
+    ...(roundAt === null ? [] : [{ key: `r:${roundAt}`, text: stampLabel(roundAt) }]),
   ];
 
   const days = shown.length
@@ -295,12 +299,12 @@ export function Assignment() {
     const hours = shown.reduce((sum, session) => sum + minutesOf(session), 0) / MINUTES_PER_HOUR;
     under = (
       <>
-        <h2>{backupLabel(roundAt)}에 밀려난 시간표입니다</h2>
+        <h2>{stampLabel(roundAt)}에 밀려난 시간표입니다</h2>
         <p className="sub">
           {round.isPending
             ? "불러오는 중…"
             : round.isError
-              ? round.error instanceof Error ? round.error.message : "이 회차를 불러오지 못했습니다"
+              ? reason(round.error, "이 회차를 불러오지 못했습니다")
               : `합주 ${shown.length}번 · 모두 합쳐 ${hours.toFixed(1)}시간. 지나간 회차라 보기만 합니다.`}
         </p>
         {counts}
@@ -398,7 +402,7 @@ export function Assignment() {
             aria-pressed={roundAt === backup.saved_at}
             onClick={() => setView({ kind: "round", at: backup.saved_at })}
           >
-            <b>{backupLabel(backup.saved_at)}</b>
+            <b>{stampLabel(backup.saved_at)}</b>
             <small>{slotCountLabel(backup.slot_count)}{index === 0 ? " · 되돌리면 여기로" : ""}</small>
           </button>
         </li>
@@ -411,7 +415,7 @@ export function Assignment() {
   );
 
   // 계산 시각은 기간에 딸린 값이라 기간 항목이 가른다. 설정 화면의 기간 서식과
-  // 같은 값을 같은 통로로 고친다 — 여기서는 두 시각만 따로 손댈 수 있게 둔다.
+  // 같은 값을 같은 endpoint 로 고친다 — 여기서는 두 시각만 따로 손댈 수 있게 둔다.
   const canManagePeriod = can(me, "period_edit");
   const activePeriod = focusedPeriods.find((period) => period.id === activePeriodId) ?? null;
   const shownRun = runForm !== null && runForm.id === activePeriodId
@@ -420,7 +424,6 @@ export function Assignment() {
   const runWhy = checkRunTimes(shownRun.first, shownRun.second);
   const runChanged = activePeriod !== null
     && (shownRun.first !== activePeriod.first_run_at || shownRun.second !== activePeriod.second_run_at);
-  const options = runTimeOptions();
   const runTimes = (
     <section className="panel">
       <div className="times">
@@ -433,26 +436,27 @@ export function Assignment() {
         {activePeriod === null ? null : (
           <>
             <div className="rows">
-              <select
+              {/* step 은 초 단위다 — 1800 이면 30분마다 고를 수 있다. */}
+              <input
+                type="time"
+                step={HALF_HOUR_SECONDS}
                 aria-label="첫 계산 시각"
                 disabled={!canManagePeriod || saveRunTimes.isPending}
                 value={shownRun.first}
                 onChange={(event) => setRunForm({
                   id: activePeriod.id, first: event.target.value, second: shownRun.second,
                 })}
-              >
-                {options.map((time) => <option key={time} value={time}>{time}</option>)}
-              </select>
-              <select
+              />
+              <input
+                type="time"
+                step={HALF_HOUR_SECONDS}
                 aria-label="두 번째 계산 시각"
                 disabled={!canManagePeriod || saveRunTimes.isPending}
                 value={shownRun.second}
                 onChange={(event) => setRunForm({
                   id: activePeriod.id, first: shownRun.first, second: event.target.value,
                 })}
-              >
-                {options.map((time) => <option key={time} value={time}>{time}</option>)}
-              </select>
+              />
             </div>
             {!canManagePeriod ? null : (
               <button
@@ -507,7 +511,7 @@ export function Assignment() {
             </div>
           </div>
 
-          <div className="dow">{WEEKDAYS.map((name) => <span key={name}>{name}</span>)}</div>
+          <div className="dow">{WEEKDAY_NAMES.map((name) => <span key={name}>{name}</span>)}</div>
 
           <div className="grid">
             {days.length === 0 ? (
@@ -516,9 +520,10 @@ export function Assignment() {
               </div>
             ) : (
               <>
-                {/* 요일 머리글이 월요일부터라 첫 주의 앞쪽을 빈 칸으로 채운다. */}
+                {/* 요일 머리글이 일요일부터라 첫 주의 앞쪽을 빈 칸으로 채운다.
+                    getDay() 는 일요일을 0으로 세므로 그 값이 곧 빈 칸 수다. */}
                 {Array.from(
-                  { length: (new Date(`${days[0]}T12:00:00`).getDay() + 6) % 7 },
+                  { length: new Date(`${days[0]}T12:00:00`).getDay() },
                   (_, i) => <div className="day" aria-hidden="true" key={`pad-${i}`} />,
                 )}
                 {days.map((key) => {

@@ -4,13 +4,18 @@ import { getJSON, sendFile } from "./api";
 import type { Account, Me, Member, Notification, Reservation, Unavailable } from "./contract";
 import {
   datesBetween,
+  dayLabel,
+  dayWithWeekday,
   focusedRange,
   hoursLabel,
   isRangeFree,
   monthCells,
   roomBounds,
+  slotCountOf,
   slotLabel,
+  stampLabel,
   takenGrid,
+  WEEKDAY_NAMES,
   weekKeys,
 } from "./calendar";
 import {
@@ -24,15 +29,15 @@ import type { Job } from "./jobs";
 import type { Capacity } from "./settings";
 import {
   ATTACHMENT_ACCEPT,
-  attachmentHint,
+  ATTACHMENT_HINT,
   attachmentMessage,
   bodyMessage,
   commentMessage,
   fileSizeLabel,
-  postWhen,
   titleMessage,
 } from "./boards";
 import {
+  colorKey,
   memberLabel,
   myTeamIds,
   slotCountsMessage,
@@ -114,12 +119,11 @@ export function checkAttachments(files: { name: string; size: number }[]): strin
 }
 
 // 팀·포지션을 두고 화면이 하는 계산. 서로 기다릴 것이 없어 그대로 다시 내보낸다.
-export { memberLabel, myTeamIds, slotName };
+export { colorKey, memberLabel, myTeamIds, slotName };
 export { teamNameMessage as checkTeamName, slotCountsMessage as checkSlotCounts };
 
-// 게시판·공지 화면이 쓰는 계산. postWhen 과 fileSizeLabel 은 order 의존이 없어
-// 그대로 다시 내보낸다.
-export { ATTACHMENT_ACCEPT, attachmentHint, fileSizeLabel, postWhen };
+// 게시판·공지 화면이 쓰는 계산. fileSizeLabel 은 order 의존이 없어 그대로 다시 내보낸다.
+export { ATTACHMENT_ACCEPT, ATTACHMENT_HINT, fileSizeLabel };
 
 
 export type AssignBody = { team_ids: number[]; room_ids: number[] };
@@ -193,6 +197,20 @@ export type ReservationForm = {
   ends_at: string;
 };
 
+/** 예약 한 건을 취소한다. 서버는 칸 하나씩만 지우므로 그 건이 든 번호를 차례로 지운다.
+ *  한 칸이 걸리면 거기서 멈춘다 — 이미 지운 칸을 되살리는 자리가 서버에 없고, 되살릴
+ *  이유도 없다. 다시 누르면 남은 칸을 마저 지운다. */
+export async function cancelBooking(reservationIds: readonly number[]): Promise<void> {
+  for (const id of reservationIds) {
+    await getJSON(`/reservations/${id}`, { method: "DELETE" });
+  }
+}
+
+/** 내가 등록한 못 나오는 시간 하나를 지운다. 남의 것은 서버가 없는 것과 같게 거절한다. */
+export async function removeUnavailable(memberId: number, timeId: number): Promise<void> {
+  await getJSON(`/members/${memberId}/unavailable/${timeId}`, { method: "DELETE" });
+}
+
 export async function addReservation(form: ReservationForm): Promise<Reservation[]> {
   const body = await getJSON<{ reservations: Reservation[] }>("/reservations", {
     method: "POST",
@@ -202,16 +220,18 @@ export async function addReservation(form: ReservationForm): Promise<Reservation
 }
 
 // 아래는 화면이 그대로 쓰는 것들이다. 순서를 정할 것이 없어 그냥 내보내되, 화면이
-// 기능 파일을 직접 부르지 않게 통로를 여기 하나로 모은다.
+// 기능 파일을 직접 부르지 않게 부르는 자리를 여기 하나로 모은다.
 export {
   dayOf,
   hhmm,
   isoAt,
+  mergeReservations,
   mergeSessions,
   slotIndex,
 } from "./slots";
-export type { Session } from "./slots";
-export { datesBetween, isRangeFree, monthCells, slotLabel, takenGrid, weekKeys };
+export type { Booking, Session } from "./slots";
+export { datesBetween, isRangeFree, monthCells, slotCountOf, slotLabel, takenGrid, weekKeys };
+export { dayLabel, dayWithWeekday, stampLabel, WEEKDAY_NAMES };
 export { hoursLabel };
 export {
   cohortMessage,

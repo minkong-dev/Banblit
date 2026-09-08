@@ -6,15 +6,15 @@
 // 서버가 답하지 않을 때 화면이 끝없이 기다리지 않도록 끊는 시각(밀리초).
 export const REQUEST_TIMEOUT_MS = 8000;
 
-// 서버 통로 앞에 붙이는 말. 화면 주소와 서버 통로가 같은 이름을 두고 부딪히는 것을
-// 막는다 — /teams 는 팀 찾기 화면이면서 팀 목록 통로이기도 했다. 붙이는 자리는 여기
-// 하나이고, 떼는 자리도 하나다(개발은 vite.config.ts, 배포는 frontend/nginx.conf.template).
+// 서버 주소 앞에 붙이는 말. 화면 주소와 서버 주소가 같은 이름으로 부딪히는 것을 막는다
+// — /teams 만으로는 팀 찾기 화면인지 팀 목록 endpoint 인지 가릴 수 없다. 붙이는 자리는
+// 여기 하나이고, 떼는 자리도 하나다(개발은 vite.config.ts, 배포는 frontend/nginx.conf.template).
 const API_PREFIX = "/api";
 
 // 파일 하나를 다 올릴 때까지 기다려 주는 시간(밀리초).
 export const UPLOAD_TIMEOUT_MS = 30 * 60 * 1000;
 
-/** 서버 통로의 전체 주소. 파일을 내려받는 <a href> 처럼 fetch 를 거치지 않는 자리에 쓴다. */
+/** 서버 endpoint 의 전체 주소. 파일을 내려받는 <a href> 처럼 fetch 를 거치지 않는 자리에 쓴다. */
 export function apiUrl(path: string): string {
   return API_PREFIX + path;
 }

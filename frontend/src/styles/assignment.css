@@ -15,7 +15,7 @@ body[data-page="admin"] {
 
   .dow { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--line); }
   .dow span { padding: 9px 0; text-align: center; font-size: 12.5px; color: var(--t3); }
-  .dow span:last-child { color: var(--red); }
+  .dow span:first-child { color: var(--red); }
   .grid { display: grid; grid-template-columns: repeat(7, 1fr); }
   .day { min-height: 118px; padding: 9px 8px 10px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 5px; }
   .day:nth-child(7n) { border-right: none; }
@@ -68,7 +68,7 @@ body[data-page="admin"] {
   .times .k { font-size: 12.5px; color: var(--t3); }
   .times .t { font-size: 22px; font-weight: 700; letter-spacing: -.04em; margin: 4px 0 14px; }
   .times .rows { display: flex; gap: 10px; }
-  .times select { flex: 1; min-height: 48px; padding: 12px 14px; background: var(--card-2); border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .times input[type="time"] { flex: 1; min-height: 48px; padding: 12px 14px; background: var(--card-2); border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; }
   .times .save { width: 100%; margin-top: 12px; min-height: 46px; border-radius: 12px; background: var(--card-2); color: var(--t2); font-size: 14px; font-weight: 700; }
   .times .save:hover { color: var(--t1); }
   .times .save.on { background: var(--brand); color: var(--brand-on); }

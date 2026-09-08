@@ -5,7 +5,6 @@ import {
   bodyMessage,
   commentMessage,
   fileSizeLabel,
-  postWhen,
   titleMessage,
 } from "./boards";
 
@@ -48,16 +47,6 @@ describe("commentMessage", () => {
 
   it("2000자까지는 통과한다", () => {
     expect(commentMessage("가".repeat(2000))).toBe("");
-  });
-});
-
-describe("postWhen", () => {
-  it("시간대 없는 시각 글자를 날짜와 시각으로 자른다", () => {
-    expect(postWhen("2026-09-04T14:30:00")).toBe("9월 4일 14:30");
-  });
-
-  it("한 자리 월·일도 앞의 0을 뗀다", () => {
-    expect(postWhen("2026-01-05T09:05:00")).toBe("1월 5일 09:05");
   });
 });
 

@@ -4,7 +4,9 @@ import type { RefObject } from "react";
 
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
 import { Modal } from "../components/Modal";
-import { getJSON, reason } from "../lib/api";
+import { getJSON } from "../lib/api";
+import { formError, loadState } from "../lib/loading";
+import type { LoadState } from "../lib/loading";
 import { say } from "../lib/toast";
 import { checkPeriod, checkRoom, daysBetween, openingHours } from "../lib/pipeline";
 import { useMe, usePeriods, useRooms, useTeams } from "../components/hooks";
@@ -58,11 +60,7 @@ function periodSpan(period: Period): string {
   return `${days} · 계산 ${period.first_run_at} · ${period.second_run_at}`;
 }
 
-/** 화면 밝기. 상단바의 단추였던 것을 여기로 옮겼다 — 한 번 정하면 다시 건드릴 일이
- *  드문 값이라, 늘 보이는 자리를 계속 차지할 이유가 없었다.
- *
- *  고른 것은 브라우저에 남아 다음에 열 때도 그대로 온다. 예전 단추는 남기지 않아
- *  새로 고칠 때마다 기기 설정으로 되돌아갔다. */
+/** 화면 밝기를 고르는 카드. 고른 값은 브라우저에 남아 다음에 열 때도 그대로 온다. */
 function ThemeCard() {
   // 처음 값을 한 번만 읽는다. 이 뒤로는 사람이 고른 것이 정본이다.
   const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
@@ -126,11 +124,6 @@ export function Settings() {
     };
   }
 
-  function stateOf(query: { isPending: boolean; error: unknown }): string {
-    if (query.isPending) return "loading";
-    return query.error ? reason(query.error) : "";
-  }
-
   return (
     <AppShell
       page="settings"
@@ -142,7 +135,7 @@ export function Settings() {
         {shown === "rooms" ? (
           <RoomCard
             rooms={roomList}
-            state={stateOf(rooms)}
+            state={loadState(rooms)}
             canEdit={can(me, "room_edit")}
             canCreate={can(me, "room_create")}
             onSaved={saved("rooms", "합주실을 저장했습니다")}
@@ -150,7 +143,7 @@ export function Settings() {
         ) : shown === "periods" ? (
           <PeriodCard
             periods={periodList}
-            state={stateOf(periods)}
+            state={loadState(periods)}
             canEdit={can(me, "period_edit")}
             canCreate={can(me, "period_create")}
             onSaved={saved("periods", "기간을 저장했습니다")}
@@ -168,7 +161,7 @@ export function Settings() {
             rooms={roomList}
             periods={periodList}
             teams={teamList}
-            teamsState={stateOf(teams)}
+            teamsState={loadState(teams)}
             tab={shown}
           />
         </div>
@@ -306,7 +299,7 @@ function PeriodFields(props: {
 }
 
 function RoomCard(props: {
-  rooms: Room[]; state: string; canEdit: boolean; canCreate: boolean; onSaved: () => void;
+  rooms: Room[]; state: LoadState; canEdit: boolean; canCreate: boolean; onSaved: () => void;
 }) {
   const { rooms, state, canEdit, canCreate, onSaved } = props;
   const { editing, open, close, register } = useRowFocus();
@@ -319,7 +312,7 @@ function RoomCard(props: {
         <span>합주실 하나를 씁니다. 여닫는 시각은 정시에만 둘 수 있습니다</span>
       </div>
 
-      {state !== "" || rooms.length === 0 ? (
+      {state.kind !== "ready" || rooms.length === 0 ? (
         <CardState state={state} empty="아직 등록된 합주실이 없습니다" />
       ) : (
         <ul className="rows">
@@ -416,7 +409,7 @@ function RoomForm(props: {
   // 흐려지지 않도록 화면 안 식별자를 서식마다 다르게 짓는다.
   const at = (field: string): string => `${path}-${field}`;
   const whyId = at("why");
-  const bad = touched && why !== "" ? why : send.error ? reason(send.error) : "";
+  const bad = formError(touched, why, send.error);
 
   return (
     <form
@@ -435,7 +428,7 @@ function RoomForm(props: {
 }
 
 function PeriodCard(props: {
-  periods: Period[]; state: string; canEdit: boolean; canCreate: boolean; onSaved: () => void;
+  periods: Period[]; state: LoadState; canEdit: boolean; canCreate: boolean; onSaved: () => void;
 }) {
   const { periods, state, canEdit, canCreate, onSaved } = props;
   const { editing, open, close, register } = useRowFocus();
@@ -450,7 +443,7 @@ function PeriodCard(props: {
         </span>
       </div>
 
-      {state !== "" || periods.length === 0 ? (
+      {state.kind !== "ready" || periods.length === 0 ? (
         <CardState state={state} empty="아직 등록된 기간이 없습니다" />
       ) : (
         <ul className="rows">
@@ -537,7 +530,7 @@ function PeriodForm(props: {
 
   const at = (field: string): string => `${path}-${field}`;
   const whyId = at("why");
-  const bad = touched && why !== "" ? why : send.error ? reason(send.error) : "";
+  const bad = formError(touched, why, send.error);
 
   return (
     <form
@@ -556,9 +549,9 @@ function PeriodForm(props: {
 }
 
 /** 팀 목록이 성하면 팀 수와 소속 인원 수를, 아니면 왜 셀 수 없는지 돌려준다. */
-function teamLine(teams: Team[], state: string): string {
-  if (state === "loading") return "팀 목록을 불러오는 중…";
-  if (state !== "") return state;
+function teamLine(teams: Team[], state: LoadState): string {
+  if (state.kind === "loading") return "팀 목록을 불러오는 중…";
+  if (state.kind === "failed") return state.why;
   const filled = teams.reduce((sum, team) => sum + team.filled_count, 0);
   const slots = teams.reduce((sum, team) => sum + team.slot_count, 0);
   return `팀 ${teams.length}개 · 포지션 ${slots}개 중 ${filled}개 참`;
@@ -569,7 +562,7 @@ function Readout(props: {
   rooms: Room[];
   periods: Period[];
   teams: Team[];
-  teamsState: string;
+  teamsState: LoadState;
   tab: Tab;
 }) {
   const { rooms, periods, teams, teamsState, tab } = props;
@@ -579,7 +572,7 @@ function Readout(props: {
   const focused = periods.filter((period) => period.kind === "focused");
   const period = tab === "periods" ? focused[0] : undefined;
   const days = period ? daysBetween(period.starts_on, period.ends_on) : 1;
-  // 팀 수는 팀 목록 통로가 준다. 아직 못 받았으면 0 이고, 그러면 팀당 몫을 나누지 않는다.
+  // 팀 수는 팀 목록 endpoint 가 준다. 아직 못 받았으면 0 이고, 그러면 팀당 몫을 나누지 않는다.
   const count = teams.length;
   const sum = openingHours({ rooms, days, teams: count });
 

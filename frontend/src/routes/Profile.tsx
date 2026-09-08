@@ -21,16 +21,22 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
     })),
   });
 
+  /** 명단에서 찾은 나 — 기수를 적는다. 못 찾았거나 기수가 없으면 그 사유를 적는다. */
+  function cohortText(mine: Member | undefined): string {
+    if (mine === undefined) return "명단에서 찾지 못했습니다";
+    return mine.cohort === null ? "기수 없음" : `${mine.cohort}기`;
+  }
+
   return memberQueries.map((query, index) => {
     const id = teamIds[index] ?? 0;
     if (query.isPending) return { teamName: teamName(id), text: "불러오는 중…" };
     if (query.isError) return { teamName: teamName(id), text: reason(query.error) };
     const mine = me === null ? undefined : query.data.members.find((member) => member.id === me.id);
-    return { teamName: teamName(id), text: mine ? (mine.cohort === null ? "기수 없음" : `${mine.cohort}기`) : "명단에서 찾지 못했습니다" };
+    return { teamName: teamName(id), text: cohortText(mine) };
   });
 }
 
-/** 프로필 설정 — 내 이름과 소속 팀별 포지션을 보여준다. 고치는 통로가 아직 없다. */
+/** 프로필 설정 — 내 이름과 소속 팀별 포지션을 보여준다. 고치는 endpoint 가 아직 없다. */
 export function Profile() {
   const { me, teamIds, teams } = useMe();
   const affiliations = useMyAffiliations(me, teamIds, teams);
@@ -61,7 +67,7 @@ export function Profile() {
               ))}
             </dl>
             <p className="note">
-              정보를 고치는 통로가 아직 없어 보여주기만 합니다.
+              정보를 고치는 자리가 아직 없어 보여주기만 합니다.
             </p>
           </div>
         </Card>

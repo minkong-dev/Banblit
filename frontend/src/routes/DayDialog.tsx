@@ -1,25 +1,25 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 
-import { CloseIcon } from "../components/icons";
+import { Modal } from "../components/Modal";
+import { TrashIcon } from "../components/icons";
+import { askCancel, askDelete } from "../lib/confirm";
 import {
   addReservation,
   addUnavailable,
+  cancelBooking,
+  dayWithWeekday,
   isoAt,
   loadTeamMembers,
+  removeUnavailable,
   slotLabel,
   takenGrid,
 } from "../lib/pipeline";
 import type { Room } from "../lib/contract";
 import { say } from "../lib/toast";
-
-
-/** 하루에 놓인 것 하나. 배정은 서버가 준 것이고, 예약과 못 나오는 시간은 화면이 넣은 것이다. */
-/** 달력이 그리는 팀 — 서버 규격(lib/contract 의 Team)이 아니라 이 화면이
- *  확정 시간표에서 만들어 쓰는 것이다. 색(key)과 내 팀인지(mine)를 함께 든다. */
-export type { DayTeam } from "../lib/roster";
 import type { DayTeam } from "../lib/roster";
 
+/** 하루에 놓인 것 하나. 배정은 서버가 준 것이고, 예약과 못 나오는 시간은 화면이 넣은 것이다. */
 export type Entry = {
   kind: "assign" | "book" | "off";
   team: string | null;
@@ -27,14 +27,15 @@ export type Entry = {
   who?: string;
   a: number;
   b: number;
+  /** 내가 지울 수 있는 것이면 지울 때 서버에 넘길 번호. 예약은 칸마다 번호가 달라
+   *  여럿이다. 없으면 남의 것이거나 서버가 배정한 것이라 화면에서 지우지 못한다. */
+  removeIds?: number[];
 };
 
-const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const PIXELS_PER_SLOT = 17;
 
-function dayTitle(key: string): string {
-  const date = new Date(`${key}T00:00:00`);
-  return `${date.getMonth() + 1}월 ${date.getDate()}일 ${WEEKDAYS[date.getDay()]}요일`;
+function hourText(hour: number): string {
+  return `${String(hour).padStart(2, "0")}:00`;
 }
 
 function kindLabel(entry: Entry): string {
@@ -65,7 +66,6 @@ export function DayDialog(props: {
   const { dayKey, tab, teams, entries, openHour, closeHour, slotCount, fixed, inFocus } = props;
   const { memberId, myName, rooms, onSaved, onClose } = props;
 
-  const dialog = useRef<HTMLDialogElement>(null);
   const [error, setError] = useState("");
   const [who, setWho] = useState("me");
   const [roomId, setRoomId] = useState<number | null>(null);
@@ -76,11 +76,6 @@ export function DayDialog(props: {
 
   // 아직 아무것도 안 골랐으면 목록의 첫 합주실이다 — 대화상자를 열자마자 어딘가는 정해져 있어야 한다.
   const room = rooms.find((item) => item.id === roomId) ?? rooms[0] ?? null;
-
-  // <dialog> 는 showModal 로 열어야 뒤쪽을 가리고 초점이 안으로 들어간다.
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
 
   const label = (index: number) => slotLabel(index, openHour);
   const endLabel = (index: number) => (index >= slotCount ? `${closeHour}:00` : label(index));
@@ -95,9 +90,15 @@ export function DayDialog(props: {
     booked.filter((entry) => room !== null && entry.room === room.name),
     slotCount,
   );
+  // 내 팀에 잡힌 배정과, 내가 직접 걸어 둔 것(removeIds 가 실린 것). 개인 이름으로 잡은
+  // 예약은 팀이 없어 팀만 보고는 가려낼 수 없다.
   const mine = entries.filter(
-    (entry) => entry.kind === "off" || (entry.team !== null && teams.some((t) => t.key === entry.team && t.mine)),
+    (entry) => entry.removeIds !== undefined
+      || (entry.team !== null && teams.some((t) => t.key === entry.team && t.mine)),
   );
+
+  // 내가 지울 수 있는 것만 모은다. 남의 예약과 서버가 배정한 것에는 removeIds 가 없다.
+  const removable = entries.filter((entry) => entry.removeIds !== undefined);
 
   /** 하루를 세로 띠로 그린다. 시각은 왼쪽에 시간 단위로만 적는다. */
   const timeline = (list: Entry[]) => (
@@ -170,6 +171,56 @@ export function DayDialog(props: {
     </div>
   );
 
+  /** 걸어 둔 것 하나를 지운다. 예약은 칸마다 번호가 달라 여러 번을 한 번에 넘긴다. */
+  const removeEntry = async (entry: Entry) => {
+    const ids = entry.removeIds;
+    if (ids === undefined || memberId === null) return;
+    const when = `${label(entry.a)}–${endLabel(entry.b)}`;
+    const booking = entry.kind === "book";
+    if (!(booking ? askCancel(`${nameOf(entry)} ${when} 예약`) : askDelete(`${when} 안 되는 시간`))) {
+      return;
+    }
+    try {
+      await (booking ? cancelBooking(ids) : removeUnavailable(memberId, ids[0]));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "지우지 못했어요.");
+      // 걸려도 서버 값을 다시 받는다. 예약은 칸마다 지우므로 앞쪽 몇 칸은 이미 지워졌을
+      // 수 있는데, 화면이 옛 번호를 그대로 들고 있으면 다시 눌러도 이미 없는 칸부터
+      // 지우려다 같은 자리에서 멈춘다.
+      onSaved();
+      return;
+    }
+    setError("");
+    onSaved();
+    say(booking ? "예약을 취소했어요" : "안 되는 시간을 지웠어요");
+  };
+
+  /** 타임라인 아래에 서는 목록. 내가 이 날 걸어 둔 것만 줄로 세워 지울 수 있게 한다.
+   *  막대 안에 지우기를 넣지 않는 것은 한 칸짜리 막대가 14px 이라 누를 자리가 없어서다. */
+  const myList = removable.length === 0 ? null : (
+    <div className="people">
+      <h3>내가 걸어 둔 것</h3>
+      <ul className="mlist">
+        {removable.map((entry) => (
+          <li className="prow" key={`${entry.kind}-${entry.removeIds?.[0] ?? entry.a}`}>
+            <i className={`dot ${entry.team ?? "off"}`} aria-hidden="true" />
+            <span className="nm">{entry.kind === "book" ? nameOf(entry) : "안 되는 시간"}</span>
+            <span className="ps">{label(entry.a)}–{endLabel(entry.b)}</span>
+            <button
+              className="ic danger"
+              aria-label={entry.kind === "book"
+                ? `${nameOf(entry)} ${label(entry.a)}–${endLabel(entry.b)} 예약 취소`
+                : `${label(entry.a)}–${endLabel(entry.b)} 안 되는 시간 삭제`}
+              onClick={() => { void removeEntry(entry); }}
+            >
+              <TrashIcon />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
   const addOff = async () => {
     const { a, b } = off;
     if (b <= a) { setError("끝나는 시각이 시작보다 뒤여야 해요."); return; }
@@ -213,7 +264,7 @@ export function DayDialog(props: {
       return;
     }
     onSaved();
-    say(`${dayTitle(dayKey)} ${label(a)}–${endLabel(b)} 예약했어요`);
+    say(`${dayWithWeekday(dayKey)} ${label(a)}–${endLabel(b)} 예약했어요`);
     onClose();
   };
 
@@ -252,6 +303,7 @@ export function DayDialog(props: {
         {mine.length
           ? timeline(mine)
           : <div className="blank"><b>이날은 등록한 일정이 없어요</b><p>아래에서 안 되는 시간을 알려주세요.</p></div>}
+        {myList}
         <p className="cap2">안 되는 시간</p>
         {picker("off", off, setOff, false)}
         <label className="rep">
@@ -295,36 +347,29 @@ export function DayDialog(props: {
           ))}
         </div>
         <p className="msg">{error}</p>
-        {fixed ? <p className="tip">먼저 누른 사람이 가져가요. 예약한 뒤에도 취소하거나 시간을 바꿀 수 있어요.</p> : null}
+        {fixed ? <p className="tip">먼저 누른 사람이 가져가요. 예약한 뒤에는 내 일정에서 취소할 수 있어요.</p> : null}
       </>
     );
 
+  const hint = `${roomsLabel || "합주실"} · ${hourText(openHour)}–${hourText(closeHour)}`
+    + ` · 1시간 단위 · ${inFocus ? "배정된 기간" : "배정 없음"}`;
+
+  // 보기만 하는 탭(all)에는 아래 단추 줄을 주지 않는다 — Modal 이 줄 자체를 그리지 않는다.
+  const foot = tab === "all" ? undefined : (
+    <>
+      <button className="ghost" onClick={onClose}>닫기</button>
+      <button
+        className="primary"
+        onClick={() => { void (tab === "me" ? addOff() : addBooking()); }}
+      >
+        {tab === "me" ? "등록하기" : "예약하기"}
+      </button>
+    </>
+  );
+
   return (
-    <dialog ref={dialog} aria-labelledby="modalTitle" onClose={onClose}>
-      <div className="mhead">
-        <div>
-          <h2 id="modalTitle">{dayTitle(dayKey)}</h2>
-          <p>
-            {roomsLabel || "합주실"} · {String(openHour).padStart(2, "0")}:00–{String(closeHour).padStart(2, "0")}:00
-            {" · 1시간 단위 · "}{inFocus ? "배정된 기간" : "배정 없음"}
-          </p>
-        </div>
-        <button aria-label="닫기" onClick={() => dialog.current?.close()}><CloseIcon /></button>
-      </div>
-
-      <div className="mbody">{body}</div>
-
-      {tab === "all" ? null : (
-        <div className="mfoot">
-          <button className="ghost" onClick={() => dialog.current?.close()}>닫기</button>
-          <button
-            className="primary"
-            onClick={() => { void (tab === "me" ? addOff() : addBooking()); }}
-          >
-            {tab === "me" ? "등록하기" : "예약하기"}
-          </button>
-        </div>
-      )}
-    </dialog>
+    <Modal title={dayWithWeekday(dayKey)} hint={hint} foot={foot} onClose={onClose}>
+      {body}
+    </Modal>
   );
 }

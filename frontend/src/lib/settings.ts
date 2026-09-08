@@ -45,7 +45,7 @@ export function dateRangeMessage(from: string, to: string): string {
 }
 
 export function slotsBetween(opens: string, closes: string): number {
-  // 여는 시각부터 닫는 시각까지 들어가는 30분 자리의 개수. 성하지 않으면 0.
+  // 여는 시각부터 닫는 시각까지 들어가는 한 시간짜리 자리의 개수. 성하지 않으면 0.
   if (openHoursMessage(opens, closes) !== "") return 0;
   const from = minutesOf(opens);
   const to = minutesOf(closes);
@@ -54,13 +54,13 @@ export function slotsBetween(opens: string, closes: string): number {
 }
 
 export type Capacity = {
-  /** 하루에 열리는 30분 자리 — 방을 모두 더한 것. */
+  /** 하루에 열리는 한 시간짜리 자리 — 방을 모두 더한 것. */
   perDay: number;
-  /** 기간 전체의 30분 자리. */
+  /** 기간 전체의 한 시간짜리 자리. */
   total: number;
-  /** 팀 하나가 갖는 30분 자리. 집중기간은 모든 팀이 정확히 같은 개수를 갖는다. */
+  /** 팀 하나가 갖는 한 시간짜리 자리. 집중기간은 모든 팀이 정확히 같은 개수를 갖는다. */
   perTeam: number;
-  /** 팀에 고르게 나눠주고 남는 30분 자리. 예약으로 쓸 수 있다. */
+  /** 팀에 고르게 나눠주고 남는 한 시간짜리 자리. 예약으로 쓸 수 있다. */
   leftover: number;
 };
 

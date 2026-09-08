@@ -11,6 +11,7 @@ import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { say } from "../lib/toast";
 import { askDelete } from "../lib/confirm";
 import { getJSON, reason } from "../lib/api";
+import { loadState, stateText } from "../lib/loading";
 import { can } from "../lib/account";
 import { checkSlotCounts, checkTeamName, memberLabel, slotName } from "../lib/pipeline";
 import { INSTRUMENTS } from "../lib/contract";
@@ -477,13 +478,9 @@ export function Teams() {
   const canCreate = can(me, "team_create");
   const canRename = can(me, "team_edit");
   const canDrop = can(me, "team_delete");
-  const state = teams.isPending
-    ? "불러오는 중…"
-    : teams.isError
-      ? reason(teams.error)
-      : list.length === 0
-        ? "아직 팀이 없습니다."
-        : "";
+  const state = loadState(teams);
+  // 목록을 그리지 못하는 자리 — 아직 안 왔거나, 걸렸거나, 성한데 비었거나.
+  const noList = state.kind !== "ready" || list.length === 0;
 
   // 한 쪽에 몇 줄을 둘지는 상자 높이가 정한다. 목록은 스크롤하지 않고 쪽으로 넘긴다.
   const [box, perPage] = useFitCount(64);
@@ -506,8 +503,8 @@ export function Teams() {
           {/* 비었거나 불러오는 중이어도 상자는 그대로 둔다 — 상자 높이를 재서 한 쪽에
               몇 줄을 둘지 정하므로, 상자가 사라지면 잴 것이 없어진다. */}
           <ul className="rows" ref={box}>
-            {state !== "" ? (
-              <li className="empty">{state}</li>
+            {noList ? (
+              <li className="empty">{stateText(state, "아직 팀이 없습니다.")}</li>
             ) : (
               pageSlice(list, shownPage, perPage).map((team) => (
                 <li key={team.id}>
@@ -525,7 +522,7 @@ export function Teams() {
           </ul>
 
           <div className="listfoot">
-            {state !== "" ? null : (
+            {noList ? null : (
               <Pager page={shownPage} pages={pages} onPage={setPage} />
             )}
             {!canCreate ? null : (

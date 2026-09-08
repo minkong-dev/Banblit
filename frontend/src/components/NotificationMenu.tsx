@@ -1,21 +1,22 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
 
 import { BellIcon } from "./icons";
+import { useDismissible } from "./hooks";
 import {
   loadNotifications,
   markNotificationsRead,
   notificationText,
-  postWhen,
+  stampLabel,
   unreadCount,
 } from "../lib/pipeline";
 
 /** 상단바의 알림 종과 그 아래 말풍선. 프로필 말풍선과 같은 언어를 쓰되, 종에는
  *  안 읽은 개수를 얹는다 — 어느 화면에 있든 시간표가 바뀐 것을 알 수 있어야 한다. */
 export function NotificationMenu() {
-  const [open, setOpen] = useState(false);
+  // 말풍선 바깥을 누르면 닫는다 — 목록이 길어 화면을 많이 덮으므로, 닫을 길이
+  // 종 하나뿐이면 갇힌 느낌이 든다.
+  const { open, toggle, box } = useDismissible();
   const queryClient = useQueryClient();
-  const boxRef = useRef<HTMLDivElement>(null);
 
   // 알림은 언제나 내 것만 온다 — 어느 사람의 것인지는 주소가 아니라 인증 쿠키가 정한다.
   const notifications = useQuery({
@@ -24,26 +25,6 @@ export function NotificationMenu() {
   });
   const rows = notifications.data ?? [];
   const unread = unreadCount(rows);
-
-  // 말풍선 바깥을 누르면 닫는다. 프로필 말풍선에는 없던 것인데, 이쪽은 목록이 길어
-  // 화면을 많이 덮으므로 닫을 길이 종 하나뿐이면 갇힌 느낌이 든다.
-  useEffect(() => {
-    if (!open) return;
-    function handlePointerDown(event: MouseEvent): void {
-      if (boxRef.current !== null && !boxRef.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-    function handleEscape(event: KeyboardEvent): void {
-      if (event.key === "Escape") setOpen(false);
-    }
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [open]);
 
   async function readAll(): Promise<void> {
     try {
@@ -70,7 +51,7 @@ export function NotificationMenu() {
                 빛깔로만 알리는 점을 소리로도 읽어 준다. */}
             {item.read ? null : <span className="new" role="img" aria-label="안 읽음" />}
             <b>{notificationText(item.kind)}</b>
-            <small>{postWhen(item.created_at)}</small>
+            <small>{stampLabel(item.created_at)}</small>
           </li>
         ))}
       </ul>
@@ -78,12 +59,12 @@ export function NotificationMenu() {
   }
 
   return (
-    <div className="notes" ref={boxRef}>
+    <div className="notes" ref={box}>
       <button
         className="ic bell"
         aria-expanded={open}
         aria-label={unread === 0 ? "알림" : `알림 · 안 읽음 ${unread}개`}
-        onClick={() => setOpen((on) => !on)}
+        onClick={toggle}
       >
         <BellIcon />
         {unread === 0 ? null : (

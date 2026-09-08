@@ -156,6 +156,19 @@ body[data-page="scheduler"] {
   .prow .nm i { font-style: normal; color: var(--t3); font-weight: 400; }
   .prow .ps { margin-left: auto; font-size: 12.5px; color: var(--t3); }
 
+  /* 내가 걸어 둔 것 — 한 줄에 하나씩 세운다. 나오는 사람 목록(.plist)은 두 칸으로
+     나누지만 이쪽은 오른쪽 끝에 지우기가 서서 나눌 자리가 없다. */
+  .mlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .mlist .prow { gap: 12px; }
+  .mlist .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--t3); }
+  .mlist .dot.c1 { background: var(--c1); }
+  .mlist .dot.c2 { background: var(--c2); }
+  .mlist .dot.c3 { background: var(--c3); }
+  .mlist .dot.c4 { background: var(--c4); }
+  .mlist .ps { margin-left: auto; }
+  .mlist .ic { width: 36px; height: 36px; flex: none; }
+  .mlist .ic svg { width: 17px; height: 17px; }
+
   .cap2 { font-size: 13.5px; color: var(--t2); font-weight: 500; margin: 22px 0 10px; }
   .pick { display: flex; gap: 12px; }
   .pick .fld { flex: 1; }
