@@ -3,18 +3,17 @@ import hmac
 import secrets
 
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.api.board_input import require_non_empty
-from backend.api.auth_input import (
+from backend.api.input import (
     require_cohort,
     require_email,
-    require_name,
+    require_non_empty,
     require_password,
 )
 from backend.api.permission_service import grant_full_permissions
 from backend.db.models import Member
+from backend.db.pipeline import commit_translating
 
 # scrypt 는 표준 라이브러리(hashlib)가 제공하는 메모리-하드 KDF다 — bcrypt·argon2용
 # 패키지를 새로 깔지 않고도 비밀번호를 안전하게 저장할 수 있어 이 값들을 쓴다.
@@ -24,15 +23,12 @@ _SCRYPT_R = 8
 _SCRYPT_P = 1
 _SCRYPT_DKLEN = 32
 
-# 옛 형식("소금$파생값" 두 토막)은 강도를 저장하지 않았다 — 그 시절엔 이 값으로
-# 계산했다. 위 _SCRYPT_* 를 나중에 올려도 이 값은 그대로 둬야 옛 계정을 검증할 수 있다.
-_LEGACY_SCRYPT_N = 2**14
-_LEGACY_SCRYPT_R = 8
-_LEGACY_SCRYPT_P = 1
-
-MEMBERS_EMAIL_CONSTRAINT = "members_email_key"
-# 이름·학과·학번·기수가 모두 같으면 같은 사람이다. 그 조합을 막는 조건의 이름이다.
-MEMBERS_IDENTITY_CONSTRAINT = "members_name_department_student_no_cohort_key"
+# 걸릴 수 있는 제약과 그때 사람에게 보일 문장. 이메일은 계정 하나에 하나이고,
+# 이름·학과·학번·기수가 모두 같으면 같은 사람이다.
+MEMBER_MESSAGES = {
+    "members_email_key": "이미 가입된 이메일입니다",
+    "members_name_department_student_no_cohort_key": "이미 가입된 사람입니다 — 이름·학과·학번·기수가 같습니다",
+}
 
 
 def hash_password(password: str) -> str:
@@ -50,15 +46,10 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, stored: str) -> bool:
-    """토막 수로 형식을 가른다 — 두 토막이면 옛 형식(고정 강도), 여섯 토막이면 새
-    형식(저장된 강도)이다. dklen은 저장하지 않고 파생값 길이로 그대로 알아낸다."""
-    parts = stored.split("$")
-    if len(parts) == 2:
-        salt_hex, derived_hex = parts
-        n, r, p = _LEGACY_SCRYPT_N, _LEGACY_SCRYPT_R, _LEGACY_SCRYPT_P
-    else:
-        _, n_text, r_text, p_text, salt_hex, derived_hex = parts
-        n, r, p = int(n_text), int(r_text), int(p_text)
+    """저장된 값에 적힌 강도(n·r·p)로 다시 계산해 견준다. dklen 은 저장하지 않고
+    파생값 길이로 그대로 알아낸다."""
+    _, n_text, r_text, p_text, salt_hex, derived_hex = stored.split("$")
+    n, r, p = int(n_text), int(r_text), int(p_text)
     dklen = len(bytes.fromhex(derived_hex))
     candidate = hashlib.scrypt(
         password.encode(), salt=bytes.fromhex(salt_hex), n=n, r=r, p=p, dklen=dklen
@@ -69,48 +60,19 @@ def verify_password(password: str, stored: str) -> bool:
 
 
 def _needs_rehash(stored: str) -> bool:
-    """저장된 문자열만 보고, 지금 강도(_SCRYPT_N/R/P)와 다른지 판정한다.
-
-    옛 두 토막 형식은 강도 표기가 아예 없으므로 무조건 다시 계산해야 한다.
-    """
-    parts = stored.split("$")
-    if len(parts) != 6:
-        return True
-    _, n_text, r_text, p_text, _, _ = parts
+    """저장된 문자열에 적힌 강도가 지금 강도(_SCRYPT_N/R/P)와 다른지 판정한다."""
+    _, n_text, r_text, p_text, _, _ = stored.split("$")
     return (int(n_text), int(r_text), int(p_text)) != (_SCRYPT_N, _SCRYPT_R, _SCRYPT_P)
 
 
 def _is_first_account(session: Session) -> bool:
     # 권한을 가진 사람은 인원을 고정하지 않지만(.cluedoc/accounts-and-roles), 아무도
-    # 없이 시작할 수는 없다. 가장 먼저 가입하는 사람에게 열한 가지를 전부 주어
+    # 없이 시작할 수는 없다. 가장 먼저 가입하는 사람에게 항목을 전부 주어
     # 그다음부터는 그 사람이 권한을 나눠 주거나 새로 정의하게 한다.
     already_signed_up = session.scalar(
         select(Member.id).where(Member.password_hash.is_not(None))
     )
     return already_signed_up is None
-
-
-def _signup_conflict(error: IntegrityError) -> ValueError | None:
-    """어긴 조건을 사람이 읽을 문장으로 바꾼다. 우리가 아는 조건이 아니면 None."""
-    constraint = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
-    if constraint == MEMBERS_EMAIL_CONSTRAINT:
-        return ValueError("이미 가입된 이메일입니다")
-    if constraint == MEMBERS_IDENTITY_CONSTRAINT:
-        return ValueError("이미 가입된 사람입니다 — 이름·학과·학번·기수가 같습니다")
-    return None
-
-
-def _commit_signup(session: Session) -> None:
-    """이메일 중복 사전 검사와 commit 사이에는 잠금이 없다. room_service.commit_room과
-    같은 얼개로, 동시에 들어온 같은 이메일 가입 중 나중 커밋만 여기서 잡는다."""
-    try:
-        session.commit()
-    except IntegrityError as error:
-        session.rollback()
-        known = _signup_conflict(error)
-        if known is None:
-            raise
-        raise known from error
 
 
 def signup(
@@ -126,14 +88,12 @@ def signup(
 
     기수를 함께 받는 것은 동명이인 때문이다 — 화면에서 두 사람을 가르는 값이 이름 옆의
     기수뿐이라, 가입할 때 받아 두지 않으면 나중에 채울 길이 없다."""
-    clean_name = require_name(name)
+    clean_name = require_non_empty(name, "이름")
     clean_department = require_non_empty(department, "학과")
     clean_student_no = require_non_empty(student_no, "학번")
     clean_email = require_email(email)
     require_password(password)
     clean_cohort = require_cohort(cohort)
-    if session.scalar(select(Member.id).where(Member.email == clean_email)) is not None:
-        raise ValueError("이미 가입된 이메일입니다")
 
     first = _is_first_account(session)
     member = Member(
@@ -145,20 +105,13 @@ def signup(
         password_hash=hash_password(password),
     )
     session.add(member)
-    try:
-        # 신원 조건(이름·학과·학번·기수)은 여기서 터진다 — 아래 커밋보다 앞이다.
-        session.flush()
-    except IntegrityError as error:
-        session.rollback()
-        known = _signup_conflict(error)
-        if known is None:
-            raise
-        raise known from error
+    # 이메일·신원 조건은 여기서 걸린다 — 아래 커밋보다 앞이다.
+    commit_translating(session, MEMBER_MESSAGES, session.flush)
     # 계정보다 먼저 판정해 둔 first 를 여기서 쓴다 — 위 flush 로 본인이 이미 들어가
     # 있어, 지금 다시 세면 "첫 계정"이 아니게 된다.
     if first:
         grant_full_permissions(session, member.id)
-    _commit_signup(session)
+    commit_translating(session, MEMBER_MESSAGES)
     return member
 
 
@@ -167,7 +120,7 @@ def update_profile(
 ) -> Member:
     """내 이름과 기수를 고친다. 이메일은 여기서 다루지 않는다 — 로그인 식별자라
     바꾸려면 새 주소가 내 것인지 확인하는 절차가 따로 있어야 한다."""
-    member.name = require_name(name)
+    member.name = require_non_empty(name, "이름")
     member.cohort = None if cohort is None else require_cohort(cohort)
     session.commit()
     return member

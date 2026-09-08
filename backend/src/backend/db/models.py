@@ -51,6 +51,10 @@ _PERMISSION_ARRAY_SQL = "ARRAY[{}]::text[]".format(
 
 # 팀을 만들 때 고르는 악기. 자리 하나가 이 중 하나를 맡는다. 같은 악기를 여럿 두면
 # ordinal 로 갈린다 — 일렉 두 자리는 (일렉, 1) 과 (일렉, 2) 다.
+# 기간의 종류. 집중 합주기간(focused)만 자동 배정이 돈다.
+PeriodKind = Literal["open", "focused"]
+PERIOD_KINDS: tuple[PeriodKind, ...] = get_args(PeriodKind)
+
 Instrument = Literal["보컬", "일렉", "통기타", "베이스", "신디", "드럼"]
 INSTRUMENTS: tuple[Instrument, ...] = get_args(Instrument)
 
@@ -240,7 +244,7 @@ class Period(Base):
     second_run_at: Mapped[time] = mapped_column(Time)
 
     __table_args__ = (
-        CheckConstraint("kind IN ('open', 'focused')"),
+        CheckConstraint(_in_sql("kind", PERIOD_KINDS)),
         CheckConstraint("ends_on >= starts_on"),
     )
 
@@ -359,11 +363,11 @@ class Attachment(Base):
 
 
 class Reservation(Base):
-    """상시 개방기간의 한 시간 자리 예약 한 칸.
+    """예약 한 칸 — 집중 합주기간이 아닌 날의 한 시간.
 
     Assignment와 같은 결로 방·시각당 하나만 존재한다(room_id, starts_at 유니크).
-    여러 칸을 이어 쓴 예약은 이 표에 칸 수만큼 행으로 남는다 — 화면의 mergeSessions가
-    Assignment 조각을 잇는 것과 같은 방식으로 이어붙일 수 있게 하려는 것이다.
+    여러 칸을 이어 쓴 예약은 이 표에 칸 수만큼 행으로 남는다 — 화면이 Assignment 조각을
+    잇는 것과 같은 방식으로 이어붙인다.
     team_id가 있으면 팀 예약, 없으면 member_id 개인이 직접 잡은 예약이다.
     """
 
@@ -429,7 +433,7 @@ class AssignmentBackup(Base):
 
 
 # 알릴 만한 일의 종류. 문구는 여기 두지 않는다 — 표에는 종류만 남기고 사람이 읽을
-# 문장은 화면(frontend/src/lib/notifications.ts)이 만든다. 문구를 고칠 때 이미 쌓인
+# 문장은 화면이 만든다. 문구를 고칠 때 이미 쌓인
 # 줄까지 함께 바뀌고, 표에 손댈 일도 없다.
 NotificationKind = Literal["assignment_updated"]
 NOTIFICATION_KINDS: tuple[NotificationKind, ...] = get_args(NotificationKind)

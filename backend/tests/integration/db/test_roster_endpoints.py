@@ -3,7 +3,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
-from backend.api.roster_service import commit_roster
+from backend.api.roster_service import ROSTER_MESSAGES
+from backend.db.pipeline import commit_translating
 from backend.db.models import Member, Team, TeamSlot
 
 # account 픽스처(tests/conftest.py)를 부른 순서가 곧 역할이다 — 첫 호출이 헤드매니저,
@@ -285,7 +286,7 @@ def test_team_name_race_at_commit_time_is_translated_not_500(
     with Session(test_engine) as other:
         other.add(Team(name="청산"))
         with pytest.raises(ValueError, match="이미 있는 팀 이름입니다"):
-            commit_roster(other)
+            commit_translating(other, ROSTER_MESSAGES)
 
 
 # ── 팀 이름 고치기 ─────────────────────────────────────────────────────────

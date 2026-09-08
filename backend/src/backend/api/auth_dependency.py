@@ -16,7 +16,7 @@ UNAUTHORIZED_DETAIL = "로그인이 필요합니다"
 
 
 def require_account(
-    banblit_session: str | None = Cookie(default=None),
+    banblit_session: str | None = Cookie(default=None, alias=SESSION_COOKIE),
     session: Session = Depends(get_session),
 ) -> Member:
     if banblit_session is None:

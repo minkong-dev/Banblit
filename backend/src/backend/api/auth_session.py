@@ -7,8 +7,6 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import LoginSession
 
-# 로그인 상태를 얼마나 유지할지. 화면의 "로그인 상태 유지" 체크는 지금 이 값을
-# 갈아 끼우지 않는다 — 켜고 꺼도 만료 시각은 항상 같다.
 # 로그인 상태 유지를 끈 사람의 수명. 브라우저를 닫으면 쿠키가 사라지므로 이 값은
 # "브라우저를 계속 켜 둔 사람"에게만 걸린다.
 SESSION_TTL = timedelta(days=7)

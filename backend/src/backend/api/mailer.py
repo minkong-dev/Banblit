@@ -14,13 +14,10 @@ DEFAULT_SMTP_PORT = 587
 DEFAULT_SENDER = "banblit@localhost"
 
 
-def _is_deployment() -> bool:
-    """지금 실행 중인 것이 배포인지 개발인지 돌려준다.
-
-    둘을 가르는 표시는 이 저장소에 하나뿐이다 — 쿠키에 Secure 를 붙이는
-    COOKIE_SECURE(docker-compose.yml 에서 true, 개발 override 에서 false).
-    """
-    return os.environ.get("COOKIE_SECURE", "false").lower() == "true"
+def _log_body() -> bool:
+    """SMTP 가 없을 때 본문까지 기록에 남길지. 개발 override 가 MAIL_LOG_BODY=true 로 켠다 —
+    배포에서는 재설정 링크가 기록에 남으면 안 된다."""
+    return os.environ.get("MAIL_LOG_BODY", "false").lower() == "true"
 
 
 def _deliver(message: EmailMessage, host: str, port: int, user: str, password: str) -> None:
@@ -56,7 +53,7 @@ def send_mail(to: str, subject: str, body: str) -> None:
     user = os.environ.get("SMTP_USER", "")
     sender = os.environ.get("MAIL_FROM") or user or DEFAULT_SENDER
     if not host:
-        if _is_deployment():
+        if not _log_body():
             logger.error(
                 "SMTP_HOST 가 없어 메일을 보내지 못했습니다 — 받는 사람 %s / 제목 %s", to, subject
             )

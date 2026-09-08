@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from backend.api.board_input import require_non_empty
+from backend.api.input import require_non_empty
 from backend.api.permission_service import account_permissions
 from backend.db.models import Comment, Member, Post, Team, TeamSlot
 
@@ -19,7 +19,6 @@ def _require_team_exists(session: Session, team_id: int) -> None:
 def _require_team_member(session: Session, team_id: int, member_id: int) -> None:
     # 인증된 사람이라도 그 팀 소속이 아니면 권한 문제다(PermissionError) — 팀/게시글이
     # 아예 없는 경우(ValueError)와는 사람이 다음에 할 일이 다르므로 구분한다.
-    # 승인 대기(status="pending")는 아직 소속이 아니라 신청이므로 통과시키지 않는다.
     row = session.execute(
         select(TeamSlot.id).where(
             TeamSlot.team_id == team_id,
@@ -50,7 +49,9 @@ def require_post_author(session: Session, post_id: int, requester: Member) -> Po
     치우지 못하는 상태를 두지 않기 위해서다.
     """
     post = require_post_readable(session, post_id, requester)
-    if post.author_id != requester.id and not "board_moderate" in account_permissions(session, requester.id):
+    if post.author_id != requester.id and "board_moderate" not in account_permissions(
+        session, requester.id
+    ):
         raise PermissionError("글쓴이만 할 수 있습니다")
     return post
 
@@ -146,22 +147,10 @@ def create_team_post(
 
 def get_post_with_comments(
     session: Session, post_id: int, requester: Member
-) -> tuple[Post, str, int, list[CommentRow]]:
-    """게시글 하나(작성자 이름 포함)와 댓글 목록(오래된 순, 작성자 이름 포함)을 돌려준다.
-
-    팀 게시판 게시글이면 requester가 그 팀 소속이어야 본다 — 공지(team_id 없음)는
-    누구나 볼 수 있어 이 확인을 건너뛴다.
-    """
-    row = session.execute(
-        select(Post, Member.name)
-        .join(Member, Member.id == Post.author_id)
-        .where(Post.id == post_id)
-    ).first()
-    if row is None:
-        raise ValueError("그런 글이 없습니다")
-    post, post_author = row
-    if post.team_id is not None:
-        _require_team_member(session, post.team_id, requester.id)
+) -> tuple[Post, str, list[CommentRow]]:
+    """게시글 하나(작성자 이름 포함)와 댓글 목록(오래된 순, 작성자 이름 포함)을 돌려준다."""
+    post = require_post_readable(session, post_id, requester)
+    post_author = session.scalar(select(Member.name).where(Member.id == post.author_id)) or ""
 
     comment_rows = session.execute(
         select(Comment, Member.name)
@@ -169,8 +158,7 @@ def get_post_with_comments(
         .where(Comment.post_id == post_id)
         .order_by(Comment.created_at, Comment.id)
     ).all()
-    comments = [(comment, author) for comment, author in comment_rows]
-    return post, post_author, len(comments), comments
+    return post, post_author, list(comment_rows)
 
 
 def update_post(

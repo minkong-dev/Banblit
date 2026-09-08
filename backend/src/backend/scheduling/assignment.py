@@ -1,7 +1,10 @@
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from ortools.sat.python import cp_model
+
+# 한 번의 계산에 허락하는 시간. 넘기면 지금까지 찾은 것으로 답한다.
+SOLVER_TIME_LIMIT_SECONDS = 60.0
 
 from backend.scheduling.availability import Team, is_team_available
 from backend.scheduling.interval import TimeInterval
@@ -28,11 +31,11 @@ class RoomSlot:
 class Assignment:
     feasible: bool
     slots_by_team: dict[int, list[RoomSlot]]
-    open_slots: list[RoomSlot] = field(default_factory=list)
+    open_slots: list[RoomSlot]
 
 
 def _build_room_slots(rooms: list[Room]) -> list[RoomSlot]:
-    # rooms 의 운영 구간을 generate_slots 로 30분 slot 으로 쪼개 한 줄로 잇는다.
+    # rooms 의 운영 구간을 generate_slots 로 한 시간 slot 으로 쪼개 한 줄로 잇는다.
     # 같은 slot 이 두 번 나오면 곧바로 거부한다. 한 slot 이 둘로 세어지면
     # 한 slot 에 한 팀이라는 제약이 두 팀을 같은 slot 에 넣는 것을 막지 못한다.
     room_slots: list[RoomSlot] = []
@@ -139,6 +142,9 @@ def assign(
             )
 
     solver = cp_model.CpSolver()
+    # 상한이 없으면 풀리지 않는 입력 하나가 워커를 영영 쥔다. 실측 최댓값(약 22초)의
+    # 세 배쯤에서 끊고, 그때까지 못 찾았으면 "못 찾았다"로 답한다.
+    solver.parameters.max_time_in_seconds = SOLVER_TIME_LIMIT_SECONDS
     status = solver.solve(model)
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         return Assignment(feasible=False, slots_by_team={}, open_slots=[])

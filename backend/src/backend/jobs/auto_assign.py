@@ -187,7 +187,7 @@ def main() -> None:
     open_session = get_session_factory()
     logger.info("자동 배정을 시작합니다 (확인 간격 %s초)", interval)
     while True:
-        # 한 스레드에서 순서대로 실행한다 — 계산(최대 22.2초, 2026-08-28 실측)이 확인
+        # 한 스레드에서 순서대로 실행한다 — 계산(최대 약 22초)이 확인
         # 간격보다 길어도, 이 줄이 끝나야 다음 sleep 으로 넘어가므로 겹치지 않는다.
         try:
             with open_session() as session:

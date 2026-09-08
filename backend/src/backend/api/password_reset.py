@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
-from backend.api.auth_input import require_password
+from backend.api.input import require_password
 from backend.api.auth_service import hash_password
 from backend.api.auth_session import hash_token, revoke_member_sessions
 from backend.api.mailer import send_mail

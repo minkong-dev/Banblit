@@ -1,68 +1,33 @@
 from datetime import date, datetime
-from typing import Generic, Literal, TypeVar
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from backend.db.models import Instrument, Permission
 from backend.db.models import NotificationKind
 
-# 배정 결과의 모양은 한 벌만 둔다. slot 과 제외 인원의 타입만 갈아 끼운다 —
-# /assign 은 이름만 주고받고, 기간 배정은 거기에 실제 id 가 붙는다.
-SlotT = TypeVar("SlotT", bound=BaseModel)
-ExcludedT = TypeVar("ExcludedT")
-
-
-class IntervalIn(BaseModel):
-    start: datetime
-    end: datetime
-
-
-class MemberIn(BaseModel):
-    name: str
-    unavailable: list[IntervalIn] = Field(default_factory=list, max_length=100)
-
-
-class TeamIn(BaseModel):
-    name: str
-    members: list[MemberIn] = Field(min_length=1, max_length=10)
-
-
-class RoomIn(BaseModel):
-    name: str
-    open_period: IntervalIn
-
-
-class AssignRequest(BaseModel):
-    teams: list[TeamIn] = Field(min_length=1, max_length=20)
-    rooms: list[RoomIn] = Field(min_length=1, max_length=10)
-    slots_per_team: int
-
-
 class RoomSlotOut(BaseModel):
+    # 배정 한 칸. 방은 DB 의 번호와 이름을 함께 돌려준다.
+    room_id: int
     room: str
     start: datetime
     end: datetime
 
 
-class PeriodRoomSlotOut(RoomSlotOut):
-    # 기간 배정은 DB 에 있는 방을 쓰므로 이름과 함께 실제 번호를 돌려준다.
-    room_id: int
+class ExcludedMemberOut(BaseModel):
+    id: int
+    name: str
 
 
-class AssignmentOut(BaseModel, Generic[SlotT]):
+class AssignmentOut(BaseModel):
     feasible: bool
-    slots_by_team: dict[str, list[SlotT]]
-    open_slots: list[SlotT]
+    slots_by_team: dict[str, list[RoomSlotOut]]
+    open_slots: list[RoomSlotOut]
 
 
-class ProposalOut(BaseModel, Generic[SlotT, ExcludedT]):
-    excluded_member: ExcludedT
-    assignment: AssignmentOut[SlotT]
-
-
-class ResolutionOut(BaseModel, Generic[SlotT, ExcludedT]):
-    assignment: AssignmentOut[SlotT]
-    proposals: list[ProposalOut[SlotT, ExcludedT]]
+class ProposalOut(BaseModel):
+    excluded_member: ExcludedMemberOut
+    assignment: AssignmentOut
 
 
 class ScheduleRowOut(BaseModel):
@@ -77,7 +42,7 @@ class ScheduleRowOut(BaseModel):
 class ScheduleOut(BaseModel):
     # open_slots 는 아무 팀도 쓰지 않는 30분 slot 이다. 화면은 open_slots 의 시간만 예약으로 연다.
     rows: list[ScheduleRowOut]
-    open_slots: list[PeriodRoomSlotOut]
+    open_slots: list[RoomSlotOut]
 
 
 class PeriodAssignIn(BaseModel):
@@ -101,16 +66,9 @@ class BackupRoundOut(BaseModel):
     rows: list[ScheduleRowOut]
 
 
-class ExcludedMemberOut(BaseModel):
-    id: int
-    name: str
-
-
-PeriodAssignmentOut = AssignmentOut[PeriodRoomSlotOut]
-PeriodProposalOut = ProposalOut[PeriodRoomSlotOut, ExcludedMemberOut]
-
-
-class PeriodAssignOut(ResolutionOut[PeriodRoomSlotOut, ExcludedMemberOut]):
+class PeriodAssignOut(BaseModel):
+    assignment: AssignmentOut
+    proposals: list[ProposalOut]
     saved: bool
 
 
@@ -199,7 +157,7 @@ class PeriodUpdateIn(BaseModel):
 class TeamOut(BaseModel):
     id: int
     name: str
-    # 자리 전체 수와 그중 사람이 앉은 수. 둘을 함께 주어야 화면이 몇 자리가 비었는지 안다.
+    # 포지션 전체 수와 그중 사람이 들어간 수. 둘을 함께 주어야 화면이 몇 포지션이 비었는지 안다.
     slot_count: int
     filled_count: int
 
@@ -221,7 +179,7 @@ class TeamSlotsIn(BaseModel):
 class TeamCreateIn(BaseModel):
     # 만든 사람은 요청 본문이 아니라 인증 쿠키의 주인이다.
     name: str
-    # 악기마다 몇 자리인지. 0인 악기는 보내도 되고 빼도 된다 — 자리를 만들지 않는다.
+    # 악기마다 몇 포지션인지. 0인 악기는 보내도 되고 빼도 된다 — 포지션을 만들지 않는다.
     slots: dict[str, int]
 
 
@@ -235,7 +193,7 @@ class SlotOut(BaseModel):
     instrument: Instrument
     # 같은 악기가 여럿일 때 몇 번째인지. 화면은 "일렉 2" 처럼 붙여 보여준다.
     ordinal: int
-    # 아직 아무도 안 앉은 자리는 셋 다 비어 있다.
+    # 아직 아무도 안 들어간 포지션은 셋 다 비어 있다.
     member_id: int | None = None
     member_name: str | None = None
     member_cohort: int | None = None
@@ -278,7 +236,7 @@ class MembersOut(BaseModel):
 
 
 class MemberSearchOut(BaseModel):
-    """자리에 앉힐 사람을 고르는 돋보기의 결과."""
+    """포지션에 넣을 사람을 고르는 돋보기의 결과."""
 
     members: list[MemberOut]
 
@@ -398,7 +356,7 @@ class MyTeamOut(BaseModel):
 
 class MeOut(BaseModel):
     account: AccountOut
-    # 내가 앉아 있는 자리를 팀 번호 순으로 담는다. 화면이 내 팀을 가려내는 근거다.
+    # 내가 들어가 있는 포지션을 팀 번호 순으로 담는다. 화면이 내 팀을 가려내는 근거다.
     teams: list[MyTeamOut]
 
 

@@ -16,8 +16,6 @@ def generate_slots(period: TimeInterval) -> list[TimeInterval]:
     운영 시간은 정시에서 시작하고 끝나야 한다.
     격자를 벗어나면 자투리를 버리지 않고 잘못된 설정으로 거부한다.
     """
-    if period.end <= period.start:
-        raise ValueError("운영 시간의 끝은 시작보다 뒤여야 합니다")
     if not _is_on_grid(period.start):
         raise ValueError("운영 시간은 정시에서 시작해야 합니다")
     if not _is_on_grid(period.end):

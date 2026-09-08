@@ -1,11 +1,13 @@
 import os
 from collections.abc import Callable, Iterator
-from typing import TYPE_CHECKING
+from functools import lru_cache
 
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
+from backend.db.commit import commit_translating
 from backend.db.engine import create_db_engine
+from backend.db.health import DependencyStatus, check_database as _check_database
 from backend.db.schedule_store import (
     AssignmentRow,
     BackupRound,
@@ -14,8 +16,6 @@ from backend.db.schedule_store import (
     save_schedule,
 )
 
-if TYPE_CHECKING:
-    from backend.db.health import DependencyStatus
 
 # db 모듈의 시퀀스 파일 — api 는 db 안의 다른 파일을 직접 부르지 않고 이 파일만
 # 참조한다. save_schedule·rollback_schedule·list_backup_rounds·AssignmentRow·
@@ -25,6 +25,7 @@ __all__ = [
     "get_session",
     "get_session_factory",
     "check_database",
+    "commit_translating",
     "save_schedule",
     "rollback_schedule",
     "list_backup_rounds",
@@ -33,20 +34,20 @@ __all__ = [
 ]
 
 # 접속 주소 하나당 Engine 하나. Engine 은 접속 풀을 통째로 들고 있는 무거운 객체라,
-# 요청마다 새로 만들면 요청 수만큼 풀이 열려 DB 접속이 고갈된다.
-_engines: dict[str, Engine] = {}
+# 요청마다 새로 만들면 요청 수만큼 풀이 열려 DB 접속이 고갈된다. lru_cache 가 같은
+# 주소에는 같은 Engine 을 돌려준다.
+@lru_cache
+def _engine_for(url: str) -> Engine:
+    # create_db_engine 을 여기서만 부른다. 시간 제한이 붙지 않은 Engine 이
+    # 다른 경로로 만들어지지 않도록, 만드는 곳을 여기 하나로 묶는다.
+    return create_db_engine(url)
 
 
 def get_engine() -> Engine:
     url = os.environ.get("DATABASE_URL")
     if not url:
         raise RuntimeError("DATABASE_URL 환경변수가 설정되지 않았습니다")
-
-    if url not in _engines:
-        # create_db_engine 을 여기서만 부른다. 시간 제한이 붙지 않은 Engine 이
-        # 다른 경로로 만들어지지 않도록, 만드는 곳을 여기 하나로 묶는다.
-        _engines[url] = create_db_engine(url)
-    return _engines[url]
+    return _engine_for(url)
 
 
 def get_session() -> Iterator[Session]:
@@ -63,10 +64,6 @@ def get_session_factory() -> Callable[[], Session]:
     return lambda: Session(get_engine())
 
 
-def check_database() -> "DependencyStatus":
-    # health.py 는 이 파일의 get_engine 을 가져다 쓴다. 그래서 이 파일이 health.py를
-    # 모듈 맨 위에서 가져오면, 서로가 서로의 이름이 다 만들어지기 전에 상대를
-    # 찾다가 순환 import 로 막힌다. 실제로 부를 때만 안에서 가져와 피한다.
-    from backend.db.health import check_database as _check_database
-
-    return _check_database()
+def check_database() -> DependencyStatus:
+    # 지금 엔진으로 실제 접속과 마이그레이션 적용 여부를 본다.
+    return _check_database(get_engine())

@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import NoReturn, TypedDict
+from typing import TypedDict
 
 from sqlalchemy import delete, func, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from backend.db.commit import commit_translating
 from backend.db.models import Assignment, AssignmentBackup
 
 BACKUP_KEEP = 2  # 남길 백업 회차 수. 하루 2회 연산 = 하루치.
@@ -22,10 +22,6 @@ class AssignmentRow(TypedDict):
     starts_at: datetime
     ends_at: datetime
 
-# assignments 테이블의 (room_id, starts_at) 유니크 제약 이름.
-_ROOM_TIME_CONFLICT_CONSTRAINT = "assignments_room_id_starts_at_key"
-
-
 class ScheduleConflict(ValueError):
     """이미 차 있는 방·시각에 저장하려 했다는 뜻.
 
@@ -33,36 +29,14 @@ class ScheduleConflict(ValueError):
     """
 
 
-def conflict_message_for(error: IntegrityError) -> str | None:
-    # error.orig.diag.constraint_name 이 방·시각 유니크 제약이면 사용자용 문장을,
-    # 아니면 None 을 돌려준다. None 이면 부르는 쪽이 원래 예외를 그대로 올린다.
-    orig = error.orig
-    diag = getattr(orig, "diag", None)
-    constraint_name = getattr(diag, "constraint_name", None)
-    if constraint_name != _ROOM_TIME_CONFLICT_CONSTRAINT:
-        return None
-    return (
+# 걸릴 수 있는 제약과 그때 사람에게 보일 문장. "다른 기간이 같은 방·시각을 쓰는 경우"와
+# "같은 기간을 동시에 두 번 저장하는 경우"가 같은 제약에 걸려 문장이 둘을 다 담는다.
+SCHEDULE_MESSAGES = {
+    "assignments_room_id_starts_at_key": (
         "다른 기간이거나 같은 기간의 동시 실행이 이미 같은 합주실의 같은 시간을 "
         "쓰고 있습니다. 기간이 겹치지 않게 하거나 합주실을 나누십시오"
-    )
-
-
-def _raise_translated(session: Session, error: IntegrityError) -> NoReturn:
-    # 쓰다 만 것을 되돌리고, 방·시각 충돌이면 ScheduleConflict 로 바꿔 올린다.
-    # 원인이 다르면 원래 예외를 그대로 올려 500으로 드러나게 둔다.
-    session.rollback()
-    message = conflict_message_for(error)
-    if message is None:
-        raise error
-    raise ScheduleConflict(message) from error
-
-
-def commit_schedule(session: Session) -> None:
-    # session.commit 으로 저장을 확정한다. 확정 시점에 제약이 걸리는 경우를 받는다.
-    try:
-        session.commit()
-    except IntegrityError as error:
-        _raise_translated(session, error)
+    ),
+}
 
 
 def save_schedule(
@@ -77,7 +51,7 @@ def save_schedule(
     rows 의 항목은 AssignmentRow 가 정한다. 확정까지 여기서 한다.
     이미 차 있는 방·시각이면 ScheduleConflict(ValueError)를 올린다.
     """
-    try:
+    def write() -> None:
         # _archive_current 가 delete 보다 먼저다. 뒤집으면 현행이 지워진 뒤에
         # 복사하게 되어 백업이 통째로 빈다.
         _archive_current(session, period_id, saved_at)
@@ -86,10 +60,10 @@ def save_schedule(
             session.add(Assignment(period_id=period_id, **row))
         # _prune_backups 는 새 회차가 쌓인 뒤에 세어야 회차 수가 맞는다.
         _prune_backups(session, period_id)
-    except IntegrityError as error:
-        # 쓰는 도중 자동 flush 로 제약이 걸리는 경우를 여기서 받는다.
-        _raise_translated(session, error)
-    commit_schedule(session)
+        session.commit()
+
+    # 쓰는 도중의 자동 flush 와 마지막 commit 이 같은 제약에 걸릴 수 있어 한 자리에서 받는다.
+    commit_translating(session, SCHEDULE_MESSAGES, write, ScheduleConflict)
 
 
 def _archive_current(session: Session, period_id: int, saved_at: datetime) -> None:
@@ -117,9 +91,6 @@ def _prune_backups(session: Session, period_id: int) -> None:
         .order_by(AssignmentBackup.saved_at.desc())
     ).all()
     keep = saved_times[:BACKUP_KEEP]
-    if not keep:
-        # keep이 비면 notin_([])이 항상 참이 되어 그 기간의 백업이 통째로 지워진다 — 방어.
-        return
     session.execute(
         delete(AssignmentBackup)
         .where(AssignmentBackup.period_id == period_id)
@@ -166,7 +137,7 @@ def rollback_schedule(session: Session, period_id: int) -> bool:
     if latest is None:
         return False
 
-    try:
+    def write() -> None:
         session.execute(delete(Assignment).where(Assignment.period_id == period_id))
         batch = session.scalars(
             select(AssignmentBackup)
@@ -189,7 +160,7 @@ def rollback_schedule(session: Session, period_id: int) -> bool:
             .where(AssignmentBackup.period_id == period_id)
             .where(AssignmentBackup.saved_at == latest)
         )
-    except IntegrityError as error:
-        _raise_translated(session, error)
-    commit_schedule(session)
+        session.commit()
+
+    commit_translating(session, SCHEDULE_MESSAGES, write, ScheduleConflict)
     return True

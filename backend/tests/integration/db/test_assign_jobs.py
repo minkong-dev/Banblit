@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api import app as app_module
+from backend.api.routers import schedule as app_module
 from backend.db.models import Member, Period, Room, Team, TeamSlot
 from conftest import AccountFactory
 

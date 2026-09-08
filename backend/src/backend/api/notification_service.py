@@ -12,8 +12,7 @@ def notify_assignment_updated(
     """그 기간에 slot 을 받은 팀들의 소속 사람 전부에게 알림을 남기고, 남긴 수를 돌려준다.
 
     저장된 배정(assignments)에서 팀 번호를 되찾아 명단을 편다 — 계산에 넘긴 팀 목록이
-    아니라 실제로 slot 을 받은 팀이 기준이다. 승인 대기(status="pending")는 아직
-    소속이 아니므로 넣지 않는다. 한 사람이 여러 팀에 있어도 한 줄만 남는다.
+    아니라 실제로 slot 을 받은 팀이 기준이다. 한 사람이 여러 팀에 있어도 한 줄만 남는다.
     """
     member_ids = session.scalars(
         select(TeamSlot.member_id)

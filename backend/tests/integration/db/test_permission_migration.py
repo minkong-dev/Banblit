@@ -15,9 +15,8 @@ BEFORE = "010cbf76a692"
 # "할 수 있는 일 전부"를 들고 있어야 하므로, 한 지점이 아니라 끝까지 올려 견준다.
 AFTER = "head"
 
-# 되돌리기 검사는 이 migration 하나만 오간다. 끝까지 올렸다 내리면 팀 자리 migration
-# (b2d94f7a1c05) 의 되돌리기가 없는 제약을 지우려다 멈춘다 — 이 작업과 무관한 별개의
-# 문제이고, 여기서 함께 고치면 이 검사가 무엇을 보는지 흐려진다.
+# 역할 되돌리기 검사는 이 migration 하나만 오간다 — 무엇을 보는지 좁게 둔다.
+# 사슬 전체가 끝까지 내려가는지는 맨 아래 검사가 따로 본다.
 MOVED = "b7f1a92c4d31"
 
 
@@ -95,3 +94,44 @@ def test_the_downgrade_puts_the_role_back(
         rows = connection.execute(text("SELECT name, role FROM members")).all()
     roles: dict[str, str] = {name: role for name, role in rows}
     assert roles == {"헤드": "head_manager", "멤버": "member"}
+
+
+# 항목을 동작 단위로 쪼갠 migration. 되돌릴 때 옛 이름으로 다시 합친다.
+SPLIT_PER_ACTION = "c1d5e83f4a29"
+BEFORE_SPLIT = "b2d94f7a1c05"
+
+
+def test_downgrading_the_split_keeps_permission_grant(
+    migration_db: tuple[Engine, Config]
+) -> None:
+    """permission_grant 는 쪼개기 전에도 있던 이름이다. 쪼갠 조각을 걷어낼 때 이
+    이름까지 같이 걷어내면 되돌린 뒤 아무도 권한을 줄 수 없다."""
+    engine, config = migration_db
+    command.upgrade(config, "head")
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO permission_sets (name, description, permissions)"
+                " VALUES ('전부', '모든 항목', :permissions)"
+            ),
+            {"permissions": list(PERMISSIONS)},
+        )
+
+    command.downgrade(config, BEFORE_SPLIT)
+
+    with engine.connect() as connection:
+        permissions = connection.execute(
+            text("SELECT permissions FROM permission_sets WHERE name = '전부'")
+        ).scalar_one()
+    assert "permission_grant" in permissions
+    assert "room_manage" in permissions
+
+
+def test_the_whole_chain_can_be_downgraded_to_base(
+    migration_db: tuple[Engine, Config]
+) -> None:
+    """되돌리기가 어디선가 멈추면 그 아래 migration 은 전부 되돌릴 수 없는 것이다."""
+    _, config = migration_db
+    command.upgrade(config, "head")
+
+    command.downgrade(config, "base")

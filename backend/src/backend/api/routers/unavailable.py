@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account
@@ -36,12 +36,7 @@ def read_unavailable(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> UnavailableTimesOut:
-    try:
-        rows = list_unavailable(session, member_id, requester)
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    rows = list_unavailable(session, member_id, requester)
     return UnavailableTimesOut(times=[_unavailable_out(row) for row in rows])
 
 
@@ -56,20 +51,15 @@ def create_unavailable_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> UnavailableEnvelopeOut:
-    try:
-        row = create_unavailable(
-            session,
-            member_id,
-            requester,
-            req.starts_at,
-            req.ends_at,
-            req.repeats_weekly,
-            req.repeat_until,
-        )
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    row = create_unavailable(
+        session,
+        member_id,
+        requester,
+        req.starts_at,
+        req.ends_at,
+        req.repeats_weekly,
+        req.repeat_until,
+    )
     return UnavailableEnvelopeOut(time=_unavailable_out(row))
 
 
@@ -80,9 +70,4 @@ def delete_unavailable_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> None:
-    try:
-        delete_unavailable(session, member_id, requester, time_id)
-    except PermissionError as error:
-        raise HTTPException(status_code=403, detail=str(error)) from error
-    except ValueError as error:
-        raise HTTPException(status_code=422, detail=str(error)) from error
+    delete_unavailable(session, member_id, requester, time_id)

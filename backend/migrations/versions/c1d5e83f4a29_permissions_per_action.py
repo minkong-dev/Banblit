@@ -101,7 +101,11 @@ def downgrade() -> None:
             f" WHERE permissions && {_array(parts)}"
         )
 
-    dropped = tuple(name for parts in SPLIT.values() for name in parts)
+    # 쪼갠 조각 중 permission_grant 는 옛 이름이기도 하다 — 걷어내면 되돌린 뒤
+    # 아무도 권한을 줄 수 없다. 옛 목록에 없는 조각만 걷어낸다.
+    dropped = tuple(
+        name for parts in SPLIT.values() for name in parts if name not in OLD
+    )
     dropped += ("board_moderate", "reservation_manage")
     op.execute(
         "UPDATE permission_sets SET permissions = ("
