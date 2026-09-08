@@ -32,7 +32,7 @@ def _join(session: Session, member_id: int, team: Team) -> None:
 
 
 def _room(session: Session, name: str = "1번방") -> Room:
-    room = Room(name=name, opens_at=time(18, 0), closes_at=time(22, 0))
+    room = Room(name=name, opens_at=time(18, 0), closes_at=time(23, 0))
     session.add(room)
     session.flush()
     return room
@@ -85,7 +85,7 @@ def test_reservation_endpoints_require_login(
             json={
                 "room_id": room.id,
                 "starts_at": f"{OPEN_DAY}T18:00:00",
-                "ends_at": f"{OPEN_DAY}T18:30:00",
+                "ends_at": f"{OPEN_DAY}T19:00:00",
             },
         ).status_code
         == 401
@@ -95,7 +95,7 @@ def test_reservation_endpoints_require_login(
             "/reservations/1",
             json={
                 "starts_at": f"{OPEN_DAY}T18:00:00",
-                "ends_at": f"{OPEN_DAY}T18:30:00",
+                "ends_at": f"{OPEN_DAY}T19:00:00",
             },
         ).status_code
         == 401
@@ -103,7 +103,7 @@ def test_reservation_endpoints_require_login(
     assert api_client.delete("/reservations/1").status_code == 401
 
 
-def test_a_personal_reservation_is_created_as_30_minute_rows(
+def test_a_personal_reservation_is_created_as_hourly_rows(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     owner_id, owner = account("이도현", "dohyun@example.com")
@@ -116,14 +116,14 @@ def test_a_personal_reservation_is_created_as_30_minute_rows(
         json={
             "room_id": room.id,
             "starts_at": f"{OPEN_DAY}T18:00:00",
-            "ends_at": f"{OPEN_DAY}T19:00:00",
+            "ends_at": f"{OPEN_DAY}T20:00:00",
         },
         cookies=owner,
     )
 
     assert response.status_code == 201
     rows = response.json()["reservations"]
-    assert [r["start"] for r in rows] == [f"{OPEN_DAY}T18:00:00", f"{OPEN_DAY}T18:30:00"]
+    assert [r["start"] for r in rows] == [f"{OPEN_DAY}T18:00:00", f"{OPEN_DAY}T19:00:00"]
     assert all(r["team_id"] is None and r["member_id"] == owner_id for r in rows)
 
 
@@ -141,7 +141,7 @@ def test_a_reservation_belongs_to_the_cookie_owner_not_the_first_account(
         json={
             "room_id": room.id,
             "starts_at": f"{OPEN_DAY}T18:00:00",
-            "ends_at": f"{OPEN_DAY}T18:30:00",
+            "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=booker,
     )
@@ -169,7 +169,7 @@ def test_a_team_reservation_records_the_team(
             "room_id": room.id,
             "team_id": team.id,
             "starts_at": f"{OPEN_DAY}T18:00:00",
-            "ends_at": f"{OPEN_DAY}T18:30:00",
+            "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     )
@@ -197,7 +197,7 @@ def test_a_team_reservation_rejects_someone_outside_the_team(
             "room_id": room.id,
             "team_id": team.id,
             "starts_at": f"{OPEN_DAY}T18:00:00",
-            "ends_at": f"{OPEN_DAY}T18:30:00",
+            "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=outsider,
     )
@@ -219,7 +219,7 @@ def test_reservation_creation_rejects_a_slot_already_taken(
         json={
             "room_id": room.id,
             "starts_at": f"{OPEN_DAY}T18:00:00",
-            "ends_at": f"{OPEN_DAY}T18:30:00",
+            "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     )
@@ -246,9 +246,13 @@ def test_reservation_creation_rejects_a_slot_already_taken(
     assert len(remaining) == 1
 
 
-def test_reservation_creation_rejects_a_day_outside_any_open_period(
+def test_a_day_with_no_period_at_all_is_open_for_reservation(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
+    """기간을 아무것도 정해 두지 않은 날은 예약제다.
+
+    막는 것은 집중 합주기간뿐이다 — 그 기간만 자동 배정이 자리를 나눠 갖는다.
+    """
     _, owner = account("이도현", "dohyun@example.com")
     room = _room(db_session)
     db_session.commit()
@@ -258,13 +262,12 @@ def test_reservation_creation_rejects_a_day_outside_any_open_period(
         json={
             "room_id": room.id,
             "starts_at": f"{OPEN_DAY}T18:00:00",
-            "ends_at": f"{OPEN_DAY}T18:30:00",
+            "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     )
 
-    assert response.status_code == 422
-    assert "상시 개방기간" in response.json()["detail"]
+    assert response.status_code == 201, response.text
 
 
 def test_reservation_creation_rejects_a_day_inside_a_focused_period(
@@ -280,13 +283,13 @@ def test_reservation_creation_rejects_a_day_inside_a_focused_period(
         json={
             "room_id": room.id,
             "starts_at": "2026-09-21T18:00:00",
-            "ends_at": "2026-09-21T18:30:00",
+            "ends_at": "2026-09-21T19:00:00",
         },
         cookies=owner,
     )
 
     assert response.status_code == 422
-    assert "상시 개방기간" in response.json()["detail"]
+    assert "집중 합주기간" in response.json()["detail"]
 
 
 def test_reservation_creation_rejects_a_time_outside_room_hours(
@@ -301,14 +304,13 @@ def test_reservation_creation_rejects_a_time_outside_room_hours(
         "/reservations",
         json={
             "room_id": room.id,
-            "starts_at": f"{OPEN_DAY}T22:00:00",
-            "ends_at": f"{OPEN_DAY}T22:30:00",
+            "starts_at": f"{OPEN_DAY}T23:00:00",
+            "ends_at": f"{OPEN_DAY}T23:00:00",
         },
         cookies=owner,
     )
 
     assert response.status_code == 422
-    assert "운영 시간" in response.json()["detail"]
 
 
 def test_reservation_creation_rejects_an_unknown_team(
@@ -325,7 +327,7 @@ def test_reservation_creation_rejects_an_unknown_team(
             "room_id": room.id,
             "team_id": 999999,
             "starts_at": f"{OPEN_DAY}T18:00:00",
-            "ends_at": f"{OPEN_DAY}T18:30:00",
+            "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     )
@@ -347,7 +349,7 @@ def test_reservations_in_a_room_are_listed_for_a_date_range(
         "/reservations",
         json={
             "room_id": room.id,
-            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T18:30:00",
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     )
@@ -355,7 +357,7 @@ def test_reservations_in_a_room_are_listed_for_a_date_range(
         "/reservations",
         json={
             "room_id": other_room.id,
-            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T18:30:00",
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     )
@@ -385,7 +387,7 @@ def test_anyone_signed_in_can_read_another_members_reservations(
         "/reservations",
         json={
             "room_id": room.id,
-            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T18:30:00",
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     )
@@ -412,7 +414,7 @@ def test_a_reservation_slot_is_cancelled_by_its_owner(
         "/reservations",
         json={
             "room_id": room.id,
-            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T18:30:00",
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     ).json()["reservations"][0]
@@ -441,7 +443,7 @@ def test_a_reservation_slot_cancellation_rejects_someone_else(
         "/reservations",
         json={
             "room_id": room.id,
-            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T18:30:00",
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     ).json()["reservations"][0]
@@ -470,7 +472,7 @@ def test_reservation_slot_race_at_commit_time_is_translated_not_500(
     db_session.commit()
 
     slot_start = datetime(2026, 9, 14, 18, 0)
-    slot_end = datetime(2026, 9, 14, 18, 30)
+    slot_end = datetime(2026, 9, 14, 19)
     created_at = datetime(2026, 9, 14, 0, 0)
 
     session_a = Session(test_engine)
@@ -498,14 +500,14 @@ def test_a_reservation_slot_is_moved_to_a_free_time_by_its_owner(
         "/reservations",
         json={
             "room_id": room.id,
-            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T18:30:00",
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     ).json()["reservations"][0]
 
     response = api_client.patch(
         f"/reservations/{created['id']}",
-        json={"starts_at": f"{OPEN_DAY}T19:00:00", "ends_at": f"{OPEN_DAY}T19:30:00"},
+        json={"starts_at": f"{OPEN_DAY}T19:00:00", "ends_at": f"{OPEN_DAY}T20:00:00"},
         cookies=owner,
     )
 
@@ -535,7 +537,7 @@ def test_moving_a_reservation_slot_onto_a_taken_time_keeps_the_original(
         "/reservations",
         json={
             "room_id": room.id,
-            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T18:30:00",
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     ).json()["reservations"][0]
@@ -543,14 +545,14 @@ def test_moving_a_reservation_slot_onto_a_taken_time_keeps_the_original(
         "/reservations",
         json={
             "room_id": room.id,
-            "starts_at": f"{OPEN_DAY}T19:00:00", "ends_at": f"{OPEN_DAY}T19:30:00",
+            "starts_at": f"{OPEN_DAY}T19:00:00", "ends_at": f"{OPEN_DAY}T20:00:00",
         },
         cookies=someone_else,
     )
 
     response = api_client.patch(
         f"/reservations/{created['id']}",
-        json={"starts_at": f"{OPEN_DAY}T19:00:00", "ends_at": f"{OPEN_DAY}T19:30:00"},
+        json={"starts_at": f"{OPEN_DAY}T19:00:00", "ends_at": f"{OPEN_DAY}T20:00:00"},
         cookies=owner,
     )
 
@@ -578,14 +580,14 @@ def test_moving_someone_elses_reservation_slot_is_rejected(
         "/reservations",
         json={
             "room_id": room.id,
-            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T18:30:00",
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     ).json()["reservations"][0]
 
     response = api_client.patch(
         f"/reservations/{created['id']}",
-        json={"starts_at": f"{OPEN_DAY}T19:00:00", "ends_at": f"{OPEN_DAY}T19:30:00"},
+        json={"starts_at": f"{OPEN_DAY}T19:00:00", "ends_at": f"{OPEN_DAY}T20:00:00"},
         cookies=someone_else,
     )
 
@@ -605,14 +607,14 @@ def test_moving_a_reservation_slot_outside_room_hours_is_rejected(
         "/reservations",
         json={
             "room_id": room.id,
-            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T18:30:00",
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     ).json()["reservations"][0]
 
     response = api_client.patch(
         f"/reservations/{created['id']}",
-        json={"starts_at": f"{OPEN_DAY}T22:00:00", "ends_at": f"{OPEN_DAY}T22:30:00"},
+        json={"starts_at": f"{OPEN_DAY}T17:00:00", "ends_at": f"{OPEN_DAY}T18:00:00"},
         cookies=owner,
     )
 
@@ -634,19 +636,19 @@ def test_a_reservation_slot_can_be_stretched_over_its_own_time(
         "/reservations",
         json={
             "room_id": room.id,
-            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T18:30:00",
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
         },
         cookies=owner,
     ).json()["reservations"][0]
 
     response = api_client.patch(
         f"/reservations/{created['id']}",
-        json={"starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00"},
+        json={"starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T20:00:00"},
         cookies=owner,
     )
 
     assert response.status_code == 200
     assert [r["start"] for r in response.json()["reservations"]] == [
         f"{OPEN_DAY}T18:00:00",
-        f"{OPEN_DAY}T18:30:00",
+        f"{OPEN_DAY}T19:00:00",
     ]

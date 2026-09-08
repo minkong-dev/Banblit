@@ -49,7 +49,7 @@ def _team_with_member(session: Session, team_name: str, member_name: str) -> int
 
 
 def _room(session: Session, name: str) -> int:
-    room = Room(name=name, opens_at=time(18, 0), closes_at=time(19, 0))  # 2칸
+    room = Room(name=name, opens_at=time(18, 0), closes_at=time(20, 0))  # 2칸
     session.add(room)
     session.flush()
     return room.id

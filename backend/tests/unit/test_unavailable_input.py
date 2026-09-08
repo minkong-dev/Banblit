@@ -8,12 +8,12 @@ from backend.api.unavailable_input import (
 )
 
 
-def test_accepts_a_valid_half_hour_aligned_interval() -> None:
-    require_valid_slot_bounds(datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 19, 30))
+def test_accepts_a_valid_on_the_hour_aligned_interval() -> None:
+    require_valid_slot_bounds(datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 20))
 
 
 def test_rejects_off_grid_minutes() -> None:
-    with pytest.raises(ValueError, match="30분"):
+    with pytest.raises(ValueError, match="정시"):
         require_valid_slot_bounds(datetime(2026, 9, 14, 18, 10), datetime(2026, 9, 14, 19, 0))
 
 

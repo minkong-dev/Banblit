@@ -20,7 +20,7 @@ def _feasible_body() -> dict[str, Any]:
                 "name": "1번방",
                 "open_period": {
                     "start": "2026-07-20T18:00:00",
-                    "end": "2026-07-20T18:30:00",
+                    "end": "2026-07-20T19:00:00",
                 },
             }
         ],
@@ -47,16 +47,16 @@ def test_assign_returns_feasible_assignment(
     slot = data["assignment"]["slots_by_team"]["A"][0]
     assert slot["room"] == "1번방"
     assert slot["start"] == "2026-07-20T18:00:00"
-    assert slot["end"] == "2026-07-20T18:30:00"
+    assert slot["end"] == "2026-07-20T19:00:00"
     assert data["proposals"] == []
 
 
 def test_leftover_slots_are_returned_as_open_slots(
     api_client: TestClient, head_cookies: dict[str, str]
 ) -> None:
-    # 방에 칸이 2개(18:00, 18:30), 팀이 1칸만 가져가면 남은 1칸이 예약 가능 자리로 나와야 한다.
+    # 방에 칸이 2개(18:00, 19:00), 팀이 1칸만 가져가면 남은 1칸이 예약 가능 자리로 나와야 한다.
     body = _feasible_body()
-    body["rooms"][0]["open_period"]["end"] = "2026-07-20T19:00:00"
+    body["rooms"][0]["open_period"]["end"] = "2026-07-20T20:00:00"
 
     response = api_client.post("/assign", json=body, cookies=head_cookies)
 
@@ -70,9 +70,9 @@ def test_leftover_slots_are_returned_as_open_slots(
     assert len(open_slots) == 1
     assert open_slots[0]["room"] == "1번방"
 
-    # 가져간 칸과 남은 칸을 합치면 정확히 18:00, 18:30 두 칸이어야 한다.
+    # 가져간 칸과 남은 칸을 합치면 정확히 18:00, 19:00 두 칸이어야 한다.
     starts = sorted(slot["start"] for slot in taken + open_slots)
-    assert starts == ["2026-07-20T18:00:00", "2026-07-20T18:30:00"]
+    assert starts == ["2026-07-20T18:00:00", "2026-07-20T19:00:00"]
 
 
 def test_duplicate_room_name_is_rejected_as_422(
@@ -92,7 +92,7 @@ def test_timezone_aware_datetime_is_rejected_as_422(
 ) -> None:
     body = _feasible_body()
     body["rooms"][0]["open_period"]["start"] = "2026-07-20T18:00:00+09:00"
-    body["rooms"][0]["open_period"]["end"] = "2026-07-20T18:30:00+09:00"
+    body["rooms"][0]["open_period"]["end"] = "2026-07-20T19:00:00+09:00"
 
     response = api_client.post("/assign", json=body, cookies=head_cookies)
 
@@ -113,7 +113,7 @@ def test_infeasible_request_returns_200_with_proposals(
                         "unavailable": [
                             {
                                 "start": "2026-07-20T18:00:00",
-                                "end": "2026-07-20T18:30:00",
+                                "end": "2026-07-20T19:00:00",
                             }
                         ],
                     },
@@ -126,7 +126,7 @@ def test_infeasible_request_returns_200_with_proposals(
                 "name": "1번방",
                 "open_period": {
                     "start": "2026-07-20T18:00:00",
-                    "end": "2026-07-20T18:30:00",
+                    "end": "2026-07-20T19:00:00",
                 },
             }
         ],
@@ -157,7 +157,7 @@ def test_too_many_teams_is_rejected_as_422(
                 "name": "1번방",
                 "open_period": {
                     "start": "2026-07-20T18:00:00",
-                    "end": "2026-07-20T18:30:00",
+                    "end": "2026-07-20T19:00:00",
                 },
             }
         ],

@@ -11,7 +11,7 @@ def _at(hour: int, minute: int = 0) -> datetime:
 
 
 def _one_slot_room(room_id: int = 1) -> Room:
-    return Room(id=room_id, open_period=TimeInterval(_at(18), _at(18, 30)))
+    return Room(id=room_id, open_period=TimeInterval(_at(18), _at(19)))
 
 
 def test_successful_assignment_returns_no_proposals() -> None:
@@ -25,7 +25,7 @@ def test_successful_assignment_returns_no_proposals() -> None:
 
 def test_proposes_excluding_the_member_who_blocks_the_team() -> None:
     # 1번이 유일한 칸에 불가능 → 팀 전원 가능이 성립하지 못한다.
-    blocker = Member(id=1, unavailable=[TimeInterval(_at(18), _at(18, 30))])
+    blocker = Member(id=1, unavailable=[TimeInterval(_at(18), _at(19))])
     free = Member(id=2, unavailable=[])
     team = Team(id=10, members=[blocker, free])
 
@@ -38,7 +38,7 @@ def test_proposes_excluding_the_member_who_blocks_the_team() -> None:
 
 def test_does_not_propose_excluding_a_member_when_it_would_empty_their_team() -> None:
     # 팀에 한 명뿐이고 그 사람이 유일한 칸에 불가능 → 빼면 팀이 사라진다.
-    blocker = Member(id=1, unavailable=[TimeInterval(_at(18), _at(18, 30))])
+    blocker = Member(id=1, unavailable=[TimeInterval(_at(18), _at(19))])
     team = Team(id=10, members=[blocker])
 
     result = resolve(teams=[team], rooms=[_one_slot_room()], slots_per_team=1)

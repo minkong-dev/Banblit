@@ -137,6 +137,10 @@ def account(api_client: TestClient) -> AccountFactory:
             "/signup",
             json={
                 "name": name,
+                # 학과·학번은 사람을 가르는 값의 일부다. 이메일이 계정마다 다르므로
+                # 학번도 그것으로 지어, 같은 이름이 여럿 나와도 부딪히지 않게 한다.
+                "department": "실용음악과",
+                "student_no": email.split("@")[0],
                 "email": email,
                 "password": "password123",
                 "cohort": 46,

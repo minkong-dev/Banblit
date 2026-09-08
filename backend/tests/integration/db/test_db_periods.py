@@ -36,13 +36,13 @@ def test_unknown_period_kind_is_rejected(db_session: Session) -> None:
 
 def test_same_room_and_start_cannot_be_assigned_twice(db_session: Session) -> None:
     period = _focused_period()
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(22, 0))
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
     team_a, team_b = Team(name="A"), Team(name="B")
     db_session.add_all([period, room, team_a, team_b])
     db_session.flush()
 
     slot_start = datetime(2026, 8, 1, 19, 0)
-    slot_end = datetime(2026, 8, 1, 19, 30)
+    slot_end = datetime(2026, 8, 1, 20)
     db_session.add(
         Assignment(
             period_id=period.id, team_id=team_a.id, room_id=room.id,

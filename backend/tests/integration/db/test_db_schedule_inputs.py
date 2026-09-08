@@ -45,15 +45,15 @@ def test_reversed_unavailable_interval_is_rejected(db_session: Session) -> None:
 def test_room_name_must_be_unique(db_session: Session) -> None:
     db_session.add_all(
         [
-            Room(name="1번방", opens_at=time(18, 0), closes_at=time(22, 0)),
-            Room(name="1번방", opens_at=time(10, 0), closes_at=time(12, 0)),
+            Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0)),
+            Room(name="1번방", opens_at=time(10, 0), closes_at=time(14, 0)),
         ]
     )
     with pytest.raises(IntegrityError):
         db_session.commit()
 
 
-def test_room_hours_off_the_half_hour_grid_are_rejected(db_session: Session) -> None:
+def test_room_hours_off_the_on_the_hour_are_rejected(db_session: Session) -> None:
     db_session.add(Room(name="1번방", opens_at=time(18, 20), closes_at=time(20, 0)))
     with pytest.raises(IntegrityError):
         db_session.commit()

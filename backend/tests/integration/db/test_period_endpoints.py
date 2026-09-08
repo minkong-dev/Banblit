@@ -57,7 +57,7 @@ def test_schedule_lists_current_assignments_with_names(
 ) -> None:
     period_id = _period(db_session)
     team = Team(name="A")
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(22, 0))
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
     db_session.add_all([team, room])
     db_session.flush()
     db_session.add(
@@ -66,7 +66,7 @@ def test_schedule_lists_current_assignments_with_names(
             team_id=team.id,
             room_id=room.id,
             starts_at=datetime(2026, 8, 1, 19, 0),
-            ends_at=datetime(2026, 8, 1, 19, 30),
+            ends_at=datetime(2026, 8, 1, 20),
         )
     )
     db_session.commit()
@@ -81,7 +81,7 @@ def test_schedule_lists_current_assignments_with_names(
             "room_id": room.id,
             "room": "1번방",
             "start": "2026-08-01T19:00:00",
-            "end": "2026-08-01T19:30:00",
+            "end": "2026-08-01T20:00:00",
         }
     ]
 
@@ -111,8 +111,8 @@ def test_schedule_excludes_other_periods_assignments(
     db_session.flush()
 
     team = Team(name="A")
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(22, 0))
-    other_room = Room(name="2번방", opens_at=time(18, 0), closes_at=time(22, 0))
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
+    other_room = Room(name="2번방", opens_at=time(18, 0), closes_at=time(23, 0))
     db_session.add_all([team, room, other_room])
     db_session.flush()
     db_session.add_all(
@@ -122,14 +122,14 @@ def test_schedule_excludes_other_periods_assignments(
                 team_id=team.id,
                 room_id=room.id,
                 starts_at=datetime(2026, 8, 1, 19, 0),
-                ends_at=datetime(2026, 8, 1, 19, 30),
+                ends_at=datetime(2026, 8, 1, 20),
             ),
             Assignment(
                 period_id=other_period.id,
                 team_id=team.id,
                 room_id=other_room.id,
                 starts_at=datetime(2026, 9, 1, 19, 0),
-                ends_at=datetime(2026, 9, 1, 19, 30),
+                ends_at=datetime(2026, 9, 1, 20),
             ),
         ]
     )
@@ -145,7 +145,7 @@ def test_schedule_excludes_other_periods_assignments(
             "room_id": room.id,
             "room": "1번방",
             "start": "2026-08-01T19:00:00",
-            "end": "2026-08-01T19:30:00",
+            "end": "2026-08-01T20:00:00",
         }
     ]
 
@@ -168,7 +168,7 @@ def test_assign_saves_the_schedule_and_reports_it(
 ) -> None:
     period_id = _period(db_session)  # 8/1 ~ 8/2
     team_id = _team_with_member(db_session, "A", "김민수")
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
     db_session.add(room)
     db_session.flush()
     db_session.commit()
@@ -213,8 +213,8 @@ def test_assign_reports_open_slots_with_real_room_names(
     db_session.flush()
     team_a = _team_with_member(db_session, "A", "김민수")
     team_b = _team_with_member(db_session, "B", "박지훈")
-    room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 30))  # 3칸
-    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(21, 0))  # 2칸
+    room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(21, 0))  # 3칸
+    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(22, 0))  # 2칸
     db_session.add_all([room_1, room_2])
     db_session.flush()
     db_session.commit()
@@ -274,7 +274,7 @@ def test_assign_reports_a_coordination_proposal_with_real_names(
             repeat_until=None,
         )
     )
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
     db_session.add(room)
     db_session.flush()
     db_session.commit()
@@ -323,7 +323,7 @@ def test_assign_on_an_open_period_is_rejected(
     db_session.add(period)
     db_session.flush()
     team_id = _team_with_member(db_session, "A", "김민수")
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
     db_session.add(room)
     db_session.flush()
     db_session.commit()
@@ -360,8 +360,8 @@ def test_rollback_restores_the_previous_schedule(
     """
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
-    room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
-    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(21, 0))
+    room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
+    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(22, 0))
     db_session.add_all([room_1, room_2])
     db_session.flush()
     db_session.commit()
@@ -402,15 +402,15 @@ def test_rollback_restores_the_previous_schedule(
             "room_id": room_1.id,
             "room": "1번방",
             "start": "2026-08-01T18:00:00",
-            "end": "2026-08-01T18:30:00",
+            "end": "2026-08-01T19:00:00",
         },
         {
             "team_id": team_id,
             "team": "A",
             "room_id": room_1.id,
             "room": "1번방",
-            "start": "2026-08-01T18:30:00",
-            "end": "2026-08-01T19:00:00",
+            "start": "2026-08-01T19:00:00",
+            "end": "2026-08-01T20:00:00",
         },
         {
             "team_id": team_id,
@@ -418,15 +418,15 @@ def test_rollback_restores_the_previous_schedule(
             "room_id": room_2.id,
             "room": "2번방",
             "start": "2026-08-01T20:00:00",
-            "end": "2026-08-01T20:30:00",
+            "end": "2026-08-01T21:00:00",
         },
         {
             "team_id": team_id,
             "team": "A",
             "room_id": room_2.id,
             "room": "2번방",
-            "start": "2026-08-01T20:30:00",
-            "end": "2026-08-01T21:00:00",
+            "start": "2026-08-01T21:00:00",
+            "end": "2026-08-01T22:00:00",
         },
         {
             "team_id": team_id,
@@ -434,15 +434,15 @@ def test_rollback_restores_the_previous_schedule(
             "room_id": room_1.id,
             "room": "1번방",
             "start": "2026-08-02T18:00:00",
-            "end": "2026-08-02T18:30:00",
+            "end": "2026-08-02T19:00:00",
         },
         {
             "team_id": team_id,
             "team": "A",
             "room_id": room_1.id,
             "room": "1번방",
-            "start": "2026-08-02T18:30:00",
-            "end": "2026-08-02T19:00:00",
+            "start": "2026-08-02T19:00:00",
+            "end": "2026-08-02T20:00:00",
         },
         {
             "team_id": team_id,
@@ -450,15 +450,15 @@ def test_rollback_restores_the_previous_schedule(
             "room_id": room_2.id,
             "room": "2번방",
             "start": "2026-08-02T20:00:00",
-            "end": "2026-08-02T20:30:00",
+            "end": "2026-08-02T21:00:00",
         },
         {
             "team_id": team_id,
             "team": "A",
             "room_id": room_2.id,
             "room": "2번방",
-            "start": "2026-08-02T20:30:00",
-            "end": "2026-08-02T21:00:00",
+            "start": "2026-08-02T21:00:00",
+            "end": "2026-08-02T22:00:00",
         },
     ]
 
@@ -504,8 +504,8 @@ def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
 
     team_a = _team_with_member(db_session, "A", "김민수")
     team_b = _team_with_member(db_session, "B", "이영희")
-    room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
-    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(21, 0))
+    room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
+    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(22, 0))
     db_session.add_all([room_1, room_2])
     db_session.flush()
     db_session.commit()
@@ -601,7 +601,7 @@ def test_schedule_reports_the_slots_left_open_by_the_assignment(
     """남는 칸이 시간표와 함께 나온다 — 화면이 그 시간만 예약으로 열 수 있어야 한다."""
     period_id = _period(db_session)  # 8/1 ~ 8/2
     team = Team(name="A")
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))  # 하루 2칸
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))  # 하루 2칸
     db_session.add_all([team, room])
     db_session.flush()
     db_session.add(
@@ -610,7 +610,7 @@ def test_schedule_reports_the_slots_left_open_by_the_assignment(
             team_id=team.id,
             room_id=room.id,
             starts_at=datetime(2026, 8, 1, 18, 0),
-            ends_at=datetime(2026, 8, 1, 18, 30),
+            ends_at=datetime(2026, 8, 1, 19),
         )
     )
     db_session.commit()
@@ -622,20 +622,20 @@ def test_schedule_reports_the_slots_left_open_by_the_assignment(
         {
             "room_id": room.id,
             "room": "1번방",
-            "start": "2026-08-01T18:30:00",
-            "end": "2026-08-01T19:00:00",
+            "start": "2026-08-01T19:00:00",
+            "end": "2026-08-01T20:00:00",
         },
         {
             "room_id": room.id,
             "room": "1번방",
             "start": "2026-08-02T18:00:00",
-            "end": "2026-08-02T18:30:00",
+            "end": "2026-08-02T19:00:00",
         },
         {
             "room_id": room.id,
             "room": "1번방",
-            "start": "2026-08-02T18:30:00",
-            "end": "2026-08-02T19:00:00",
+            "start": "2026-08-02T19:00:00",
+            "end": "2026-08-02T20:00:00",
         },
     ]
 
@@ -646,7 +646,7 @@ def test_backups_list_each_round_newest_first(
     """되돌리기 화면이 고를 회차 목록 — 저장 시각과 칸 수를 최신순으로."""
     period_id = _period(db_session)
     team = Team(name="A")
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(22, 0))
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
     db_session.add_all([team, room])
     db_session.flush()
     db_session.add_all(
@@ -656,7 +656,7 @@ def test_backups_list_each_round_newest_first(
                 team_id=team.id,
                 room_id=room.id,
                 starts_at=datetime(2026, 8, 1, 19, 0),
-                ends_at=datetime(2026, 8, 1, 19, 30),
+                ends_at=datetime(2026, 8, 1, 20),
                 saved_at=datetime(2026, 8, 1, 21, 0),
             ),
             AssignmentBackup(
@@ -664,7 +664,7 @@ def test_backups_list_each_round_newest_first(
                 team_id=team.id,
                 room_id=room.id,
                 starts_at=datetime(2026, 8, 1, 20, 0),
-                ends_at=datetime(2026, 8, 1, 20, 30),
+                ends_at=datetime(2026, 8, 1, 21),
                 saved_at=datetime(2026, 8, 2, 21, 0),
             ),
             AssignmentBackup(
@@ -672,7 +672,7 @@ def test_backups_list_each_round_newest_first(
                 team_id=team.id,
                 room_id=room.id,
                 starts_at=datetime(2026, 8, 1, 21, 0),
-                ends_at=datetime(2026, 8, 1, 21, 30),
+                ends_at=datetime(2026, 8, 1, 22),
                 saved_at=datetime(2026, 8, 2, 21, 0),
             ),
         ]
@@ -688,6 +688,89 @@ def test_backups_list_each_round_newest_first(
             {"saved_at": "2026-08-01T21:00:00", "slot_count": 1},
         ]
     }
+
+
+def test_backup_round_shows_the_schedule_of_that_round(
+    api_client: TestClient, db_session: Session, head_login: dict[str, str]
+) -> None:
+    """회차를 누르면 그때의 시간표가 나온다 — 다른 회차의 칸은 섞이지 않는다."""
+    period_id = _period(db_session)
+    team = Team(name="A")
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
+    db_session.add_all([team, room])
+    db_session.flush()
+    db_session.add_all(
+        [
+            AssignmentBackup(
+                period_id=period_id,
+                team_id=team.id,
+                room_id=room.id,
+                starts_at=datetime(2026, 8, 1, 19, 0),
+                ends_at=datetime(2026, 8, 1, 20),
+                saved_at=datetime(2026, 8, 1, 21, 0),
+            ),
+            AssignmentBackup(
+                period_id=period_id,
+                team_id=team.id,
+                room_id=room.id,
+                starts_at=datetime(2026, 8, 1, 20, 0),
+                ends_at=datetime(2026, 8, 1, 21),
+                saved_at=datetime(2026, 8, 2, 21, 0),
+            ),
+        ]
+    )
+    db_session.commit()
+
+    response = api_client.get(
+        f"/periods/{period_id}/backups/2026-08-01T21:00:00"
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "rows": [
+            {
+                "team_id": team.id,
+                "team": "A",
+                "room_id": room.id,
+                "room": "1번방",
+                "start": "2026-08-01T19:00:00",
+                "end": "2026-08-01T20:00:00",
+            }
+        ]
+    }
+
+
+def test_backup_round_that_never_happened_is_rejected(
+    api_client: TestClient, db_session: Session, head_login: dict[str, str]
+) -> None:
+    """없는 회차는 빈 시간표가 아니라 거절이다 — 빈 것과 없는 것은 다르다."""
+    period_id = _period(db_session)
+    db_session.commit()
+
+    response = api_client.get(
+        f"/periods/{period_id}/backups/2026-08-01T21:00:00"
+    )
+
+    assert response.status_code == 422
+    assert "그런 회차가 없습니다" in response.json()["detail"]
+
+
+def test_backup_round_needs_rollback(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    period_id = _period(db_session)
+    db_session.commit()
+    # 맨 처음 가입한 사람이 모든 항목을 받는다. 자격이 없는 사람을 만들려면
+    # 그 앞에 한 명이 먼저 있어야 한다.
+    account("박서연", "head@example.com")
+    _, member = account("김민수", "member@example.com")
+    path = f"/periods/{period_id}/backups/2026-08-01T21:00:00"
+
+    assert api_client.get(path).status_code == 401
+
+    forbidden = api_client.get(path, cookies=member)
+    assert forbidden.status_code == 403
+    assert "권한" in forbidden.json()["detail"]
 
 
 def test_backups_of_unknown_period_are_rejected(
@@ -752,7 +835,7 @@ def test_confirming_a_proposal_saves_the_schedule_without_that_member(
 ) -> None:
     period_id = _period(db_session)  # 8/1 ~ 8/2
     team_id, blocked_id = _blocked_team(db_session)
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
     db_session.add(room)
     db_session.flush()
     db_session.commit()
@@ -786,7 +869,7 @@ def test_confirming_someone_outside_the_roster_fails_the_job(
 ) -> None:
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(19, 0))
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
     db_session.add(room)
     db_session.flush()
     db_session.commit()

@@ -5,7 +5,7 @@ from backend.scheduling.interval import TimeInterval
 
 
 def test_team_unavailable_when_any_member_is_unavailable() -> None:
-    slot = TimeInterval(datetime(2026, 7, 20, 19, 0), datetime(2026, 7, 20, 19, 30))
+    slot = TimeInterval(datetime(2026, 7, 20, 19, 0), datetime(2026, 7, 20, 20))
     busy = Member(
         id=1,
         unavailable=[TimeInterval(datetime(2026, 7, 20, 18, 0), datetime(2026, 7, 20, 20, 0))],
@@ -17,7 +17,7 @@ def test_team_unavailable_when_any_member_is_unavailable() -> None:
 
 
 def test_team_available_when_all_members_are_available() -> None:
-    slot = TimeInterval(datetime(2026, 7, 20, 19, 0), datetime(2026, 7, 20, 19, 30))
+    slot = TimeInterval(datetime(2026, 7, 20, 19, 0), datetime(2026, 7, 20, 20))
     a = Member(id=1, unavailable=[])
     b = Member(
         id=2,

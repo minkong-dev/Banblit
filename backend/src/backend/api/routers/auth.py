@@ -5,11 +5,12 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account
+from backend.api.auth_service import change_password, update_profile
 from backend.api.auth_service import login as login_account
 from backend.api.auth_service import signup as signup_account
 from backend.api.auth_session import (
+    KEEP_TTL,
     SESSION_COOKIE,
-    SESSION_TTL,
     SIGNED_IN_COOKIE,
     create_session,
     revoke_session,
@@ -27,6 +28,8 @@ from backend.api.schemas import (
     AuthOut,
     FindIdIn,
     LoginIn,
+    PasswordChangeIn,
+    ProfileEditIn,
     MeOut,
     MyTeamOut,
     PasswordResetConfirmIn,
@@ -38,7 +41,10 @@ from backend.db.pipeline import get_session
 
 router = APIRouter()
 
-_COOKIE_MAX_AGE = int(SESSION_TTL.total_seconds())
+# 로그인 상태 유지를 켠 사람의 쿠키 수명. 끈 사람에게는 수명을 아예 싣지 않는다 —
+# 그러면 브라우저를 닫을 때 쿠키가 사라진다. 서버 쪽 행의 수명(auth_session)과 같은
+# 값이어야 한다. 한쪽만 길면 짧은 쪽이 먼저 끝나 로그인이 풀린다.
+_KEEP_MAX_AGE = int(KEEP_TTL.total_seconds())
 
 
 def _cookie_secure() -> bool:
@@ -47,15 +53,17 @@ def _cookie_secure() -> bool:
     return os.environ.get("COOKIE_SECURE", "false").lower() == "true"
 
 
-def _set_session_cookies(response: Response, token: str) -> None:
+def _set_session_cookies(response: Response, token: str, keep: bool = False) -> None:
     secure = _cookie_secure()
+    # max_age 가 None 이면 브라우저를 닫을 때까지만 남는다.
+    max_age = _KEEP_MAX_AGE if keep else None
     response.set_cookie(
         SESSION_COOKIE,
         token,
         httponly=True,
         samesite="lax",
         path="/",
-        max_age=_COOKIE_MAX_AGE,
+        max_age=max_age,
         secure=secure,
     )
     # 화면이 로그인 여부를 판단하려고 읽는 값이라 httponly가 아니다. 비밀이 아니므로
@@ -66,7 +74,7 @@ def _set_session_cookies(response: Response, token: str) -> None:
         httponly=False,
         samesite="lax",
         path="/",
-        max_age=_COOKIE_MAX_AGE,
+        max_age=max_age,
         secure=secure,
     )
 
@@ -95,7 +103,15 @@ def signup(
     req: SignupIn, response: Response, session: Session = Depends(get_session)
 ) -> AuthOut:
     try:
-        member = signup_account(session, req.name, req.email, req.password, req.cohort)
+        member = signup_account(
+            session,
+            req.name,
+            req.department,
+            req.student_no,
+            req.email,
+            req.password,
+            req.cohort,
+        )
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error
     token = create_session(session, member.id, datetime.now())
@@ -111,9 +127,52 @@ def login(
         member = login_account(session, req.email, req.password)
     except ValueError as error:
         raise HTTPException(status_code=401, detail=str(error)) from error
-    token = create_session(session, member.id, datetime.now())
-    _set_session_cookies(response, token)
+    token = create_session(session, member.id, datetime.now(), keep=req.keep)
+    _set_session_cookies(response, token, keep=req.keep)
     return AuthOut(account=_account_out(session, member))
+
+
+@router.patch("/me", response_model=AuthOut)
+def edit_me(
+    req: ProfileEditIn,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> AuthOut:
+    try:
+        member = update_profile(session, requester, req.name, req.cohort)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    return AuthOut(account=_account_out(session, member))
+
+
+@router.post("/me/password", status_code=204)
+def edit_my_password(
+    req: PasswordChangeIn,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> None:
+    try:
+        change_password(session, requester, req.current, req.next)
+    except PermissionError as error:
+        raise HTTPException(status_code=401, detail=str(error)) from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
+@router.delete("/me", status_code=204)
+def leave(
+    response: Response,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> None:
+    """탈퇴한다. 그 사람이 남긴 글·댓글·예약도 함께 사라진다(사용자 결정).
+
+    포지션은 남고 그 자리가 비워진다 — 자리는 팀의 구성이라 사람이 나갔다고 팀에
+    구멍이 나면 안 된다. 지우는 규칙은 저장소가 든다(db/models.py 의 ondelete).
+    """
+    session.delete(requester)
+    session.commit()
+    _clear_session_cookies(response)
 
 
 @router.post("/logout")

@@ -29,8 +29,8 @@ Permission = Literal[
     "team_create",  # 팀 만들기
     "team_edit",  # 팀 이름 바꾸기
     "team_delete",  # 팀 지우기
-    "member_add",  # 팀 자리에 사람 넣기
-    "member_remove",  # 남이 앉은 자리 비우기
+    "member_add",  # 팀 포지션에 사람 넣기
+    "member_remove",  # 팀 포지션에서 사람 빼기
     "notice_write",  # 공지 쓰기
     "board_moderate",  # 남의 글·댓글 수정·삭제
     "reservation_manage",  # 남의 예약 수정·취소
@@ -71,26 +71,43 @@ class Member(Base):
     가입하지 않은 사람은 이 둘이 비어 있다 — 가입해야 로그인 계정이 된다.
     할 수 있는 일은 member_permission_sets 가 가리키는 권한들이 정한다.
 
-    cohort 는 기수다. 사람을 가르는 것은 여전히 id 이고, 기수는 동명이인을 화면에서
-    구분해 보여주기 위한 값이다 — 연도로 환산하지 않고 숫자를 그대로 담는다.
+    cohort 는 기수다 — 연도로 환산하지 않고 숫자를 그대로 담는다.
+
+    사람을 가르는 것은 id 이지만, 사람이 사람을 가르는 값은 이름·학과·학번·기수 네
+    가지다(사용자 결정). 그 조합에 고유 조건을 걸어 같은 사람이 두 번 들어오지 않게
+    한다. 이름 하나만으로는 동명이인이 갈리지 않는다.
+
+    학과·학번은 이 조건이 생기기 전에 들어온 행에는 비어 있다. Postgres 는 NULL 이
+    낀 조합을 겹침으로 보지 않으므로, 옛 행들이 서로 부딪히지 않는다.
     """
 
     __tablename__ = "members"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(Text)
+    department: Mapped[str | None] = mapped_column(Text, nullable=True)
+    student_no: Mapped[str | None] = mapped_column(Text, nullable=True)
     cohort: Mapped[int | None] = mapped_column(nullable=True)
     email: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    __table_args__ = (
+        UniqueConstraint("name", "department", "student_no", "cohort"),
+    )
+
 
 class PermissionSet(Base):
-    """권한 묶음. 이름이 식별자라 겹칠 수 없고, permissions 는 켜진 항목 목록이다."""
+    """권한 묶음. 이름이 식별자라 겹칠 수 없고, permissions 는 켜진 항목 목록이다.
+
+    description 은 이 권한이 무엇을 하는 사람에게 주는 것인지를 적는 자리다. 항목
+    목록만으로는 "왜 이 묶음이 있는가"가 남지 않아, 만들 때 반드시 적게 한다.
+    """
 
     __tablename__ = "permission_sets"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(Text, unique=True)
+    description: Mapped[str] = mapped_column(Text)
     permissions: Mapped[list[str]] = mapped_column(ARRAY(Text))
 
     # <@ 는 왼쪽 배열이 오른쪽 배열에 전부 들어 있는지 보는 연산자다. Permission 에
@@ -184,7 +201,7 @@ class UnavailableTime(Base):
 
 
 class Room(Base):
-    """합주실. 이름이 식별자라 겹칠 수 없고, 여닫는 시각은 30분 격자 위여야 한다."""
+    """합주실. 이름이 식별자라 겹칠 수 없고, 여닫는 시각은 정시여야 한다."""
 
     __tablename__ = "rooms"
 
@@ -195,11 +212,11 @@ class Room(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "date_part('minute', opens_at) IN (0, 30)"
+            "date_part('minute', opens_at) = 0"
             " AND date_part('second', opens_at) = 0"
         ),
         CheckConstraint(
-            "date_part('minute', closes_at) IN (0, 30)"
+            "date_part('minute', closes_at) = 0"
             " AND date_part('second', closes_at) = 0"
         ),
         CheckConstraint("closes_at > opens_at"),
@@ -289,7 +306,7 @@ class Post(Base):
     title: Mapped[str] = mapped_column(Text)
     body: Mapped[str] = mapped_column(Text)
     author_id: Mapped[int] = mapped_column(
-        ForeignKey("members.id", ondelete="RESTRICT")
+        ForeignKey("members.id", ondelete="CASCADE")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime)
 
@@ -310,7 +327,7 @@ class Comment(Base):
     )
     body: Mapped[str] = mapped_column(Text)
     author_id: Mapped[int] = mapped_column(
-        ForeignKey("members.id", ondelete="RESTRICT")
+        ForeignKey("members.id", ondelete="CASCADE")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime)
 
@@ -342,7 +359,7 @@ class Attachment(Base):
 
 
 class Reservation(Base):
-    """상시 개방기간의 30분 자리 예약 한 칸.
+    """상시 개방기간의 한 시간 자리 예약 한 칸.
 
     Assignment와 같은 결로 방·시각당 하나만 존재한다(room_id, starts_at 유니크).
     여러 칸을 이어 쓴 예약은 이 표에 칸 수만큼 행으로 남는다 — 화면의 mergeSessions가
@@ -358,7 +375,7 @@ class Reservation(Base):
         ForeignKey("teams.id", ondelete="CASCADE"), nullable=True
     )
     member_id: Mapped[int] = mapped_column(
-        ForeignKey("members.id", ondelete="RESTRICT")
+        ForeignKey("members.id", ondelete="CASCADE")
     )
     starts_at: Mapped[datetime] = mapped_column(DateTime)
     ends_at: Mapped[datetime] = mapped_column(DateTime)

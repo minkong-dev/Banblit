@@ -50,7 +50,7 @@ def _team_with(session: Session, name: str, member_id: int) -> int:
 
 def _room(session: Session, name: str) -> None:
     # 여닫는 시각이 한 시간이면 30분 칸 둘이다.
-    session.add(Room(name=name, opens_at=time(18, 0), closes_at=time(19, 0)))
+    session.add(Room(name=name, opens_at=time(18, 0), closes_at=time(20, 0)))
     session.flush()
 
 
