@@ -37,7 +37,7 @@ flowchart TD
 ## Related Work
 
 - [Banblit 개요](../README.md) — 전체 기능 지도
-- [팀과 소속](../teams/README.md) — 게시판 접근을 가르는 소속
+- [팀과 포지션](../teams/README.md) — 팀 게시판 접근을 가르는 기준
 - [계정과 역할](../accounts-and-roles/README.md) — 요청한 사람을 가려내는 로그인 세션과 항목별 권한
 - [화면](../screens/README.md) — 이 글들이 실제로 그려지는 자리
 - [데이터 저장소](../database-layer/README.md) — 글·댓글·첨부가 남는 자리와 거기 걸린 제약
