@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  currentMonth,
   datesBetween,
   focusedRange,
   hoursLabel,
@@ -130,5 +131,11 @@ describe("focusedRange — 집중 합주기간의 날짜 범위", () => {
 
   it("집중기간이 없으면 null", () => {
     expect(focusedRange([{ kind: "open", starts_on: "2026-01-01", ends_on: "2026-12-31" }])).toBeNull();
+  });
+});
+
+describe("currentMonth", () => {
+  it("달력은 오늘이 든 달로 연다 — month 는 0부터 센다", () => {
+    expect(currentMonth(new Date(2027, 0, 15))).toEqual({ year: 2027, month: 0 });
   });
 });

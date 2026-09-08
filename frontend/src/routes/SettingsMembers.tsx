@@ -3,7 +3,7 @@
 // 위 — 권한 묶음. 정사각형 카드가 가로로 늘어서고, 한 화면에 다 안 들어가면 ‹ › 로 넘긴다.
 // 아래 — 가입한 모든 사람. 권한으로 걸러 보고, 아래로 내리면 이어 받는다.
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { Card } from "../components/AppShell";
@@ -16,19 +16,17 @@ import {
   PlusIcon,
   TrashIcon,
 } from "../components/icons";
-import { getJSON } from "../lib/api";
+import { getJSON, reason } from "../lib/api";
+import { say } from "../lib/toast";
 import { PERMISSION_ITEMS } from "../lib/account";
 import { askDelete } from "../lib/confirm";
 import type { MemberRow, Permission, PermissionSet } from "../lib/contract";
 
 const SETS_KEY = ["permission-sets"];
-const MEMBERS_KEY = ["members"];
+const MEMBERS_KEY = ["member-roster"];
 /** 한 번에 받아 오는 사람 수. 아래로 내리면 이만큼씩 이어 받는다. */
 const PAGE = 50;
 
-function reason(error: unknown): string {
-  return error instanceof Error ? error.message : "알 수 없는 오류가 났습니다.";
-}
 
 type Draft = { name: string; description: string; permissions: Permission[] };
 
@@ -241,8 +239,8 @@ function SetTile(props: {
 }
 
 /** 권한 카드 줄. 가로로 늘어서고, 한 화면에 다 안 들어가면 ‹ › 로 넘긴다. */
-function SetRail(props: { people: MemberRow[]; onSay: (text: string) => void }) {
-  const { people, onSay } = props;
+function SetRail(props: { people: MemberRow[] }) {
+  const { people } = props;
   const client = useQueryClient();
   const track = useRef<HTMLUListElement | null>(null);
   const [making, setMaking] = useState(false);
@@ -258,14 +256,14 @@ function SetRail(props: { people: MemberRow[]; onSay: (text: string) => void }) 
   const saved = (text: string): void => {
     void client.invalidateQueries({ queryKey: SETS_KEY });
     void client.invalidateQueries({ queryKey: MEMBERS_KEY });
-    onSay(text);
+    say(text);
   };
 
   const drop = useMutation({
     mutationFn: (set: PermissionSet) =>
       getJSON<null>(`/permission-sets/${set.id}`, { method: "DELETE" }),
     onSuccess: () => saved("권한을 삭제했습니다"),
-    onError: (error) => onSay(reason(error)),
+    onError: (error) => say(reason(error)),
   });
 
   // 한 번에 카드 하나 폭만큼 민다. 창 폭이 바뀌어도 카드를 재서 쓴다.
@@ -348,7 +346,7 @@ function SetRail(props: { people: MemberRow[]; onSay: (text: string) => void }) 
 function MemberRoster(props: {
   rows: MemberRow[];
   done: boolean;
-  onMore: () => void;
+  onMore: () => unknown;
   sets: string[];
 }) {
   const { rows, done, onMore, sets } = props;
@@ -423,45 +421,31 @@ function MemberRoster(props: {
   );
 }
 
-export function MemberCards({ onSay }: { onSay: (text: string) => void }) {
-  const [pages, setPages] = useState<MemberRow[][]>([]);
-  const [after, setAfter] = useState<number | null>(null);
-  const [done, setDone] = useState(false);
-
-  const page = useQuery({
-    queryKey: [...MEMBERS_KEY, after],
-    queryFn: () =>
+export function MemberCards() {
+  // 쪽을 이어 붙이는 것은 TanStack 이 한다. 마지막 줄의 번호 다음부터 받는다 —
+  // 보는 중에 사람이 늘거나 줄어도 이미 본 줄이 다시 나오거나 건너뛰지 않는다.
+  const list = useInfiniteQuery({
+    queryKey: MEMBERS_KEY,
+    initialPageParam: null as number | null,
+    queryFn: ({ pageParam }) =>
       getJSON<{ members: MemberRow[] }>(
-        `/members?limit=${PAGE}${after === null ? "" : `&after=${after}`}`,
+        `/members?limit=${PAGE}${pageParam === null ? "" : `&after=${pageParam}`}`,
       ),
+    getNextPageParam: (last) =>
+      last.members.length < PAGE ? undefined : (last.members.at(-1)?.id ?? undefined),
   });
 
-  useEffect(() => {
-    if (page.data === undefined) return;
-    setPages((now) => {
-      // 같은 쪽을 두 번 붙이지 않는다 — 다시 그려질 때마다 늘어나면 안 된다.
-      const last = now.at(-1)?.at(-1)?.id ?? null;
-      const head = page.data.members[0]?.id ?? null;
-      if (head !== null && last !== null && head <= last) return now;
-      return [...now, page.data.members];
-    });
-    if (page.data.members.length < PAGE) setDone(true);
-  }, [page.data]);
-
-  const rows = pages.flat();
+  const rows = list.data?.pages.flatMap((page) => page.members) ?? [];
   const sets = [...new Set(rows.flatMap((row) => row.permission_sets))].sort();
 
   return (
     <>
-      <SetRail people={rows} onSay={onSay} />
+      <SetRail people={rows} />
       <MemberRoster
         rows={rows}
-        done={done}
+        done={!list.hasNextPage}
         sets={sets}
-        onMore={() => {
-          const last = rows.at(-1);
-          if (last !== undefined) setAfter(last.id);
-        }}
+        onMore={list.fetchNextPage}
       />
     </>
   );

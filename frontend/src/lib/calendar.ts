@@ -7,6 +7,11 @@ const DAYS_PER_WEEK = 7;
 const FALLBACK_OPEN_HOUR = 10;
 const FALLBACK_CLOSE_HOUR = 22;
 
+/** 달력이 처음 여는 달. month 는 Date 와 같이 0부터 센다. */
+export function currentMonth(now: Date = new Date()): { year: number; month: number } {
+  return { year: now.getFullYear(), month: now.getMonth() };
+}
+
 export function monthCells(year: number, month: number): (number | null)[] {
   // year 년 month 월(0부터 센다)을 7의 배수 길이 배열로 돌려준다.
   // 첫날의 요일만큼 앞을 비우고, 마지막 주가 모자라면 뒤를 비워 채운다.
@@ -79,6 +84,21 @@ export function focusedRange(
   return first ? { from: first.starts_on, to: first.ends_on } : null;
 }
 
+/** Date 를 "YYYY-MM-DD" 로. 달력 열쇠는 전부 이 모양이다. */
+export function dayKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+/** year 년 month 월(0부터 센다) 15일이 든 주를 shift 주만큼 옮겨, 일요일부터 토요일까지
+ *  이레 치 날짜 열쇠를 돌려준다. 정오를 기준으로 센다 — 자정으로 세면 여름시간제가
+ *  있는 지역에서 날짜가 하루씩 밀 수 있다. */
+export function weekKeys(year: number, month: number, shift: number): string[] {
+  const sunday = new Date(year, month, 15 + shift * 7, 12);
+  sunday.setDate(sunday.getDate() - sunday.getDay());
+  return Array.from({ length: 7 }, (_, i) =>
+    dayKey(new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + i, 12)));
+}
+
 export function datesBetween(from: string, to: string): string[] {
   // "2026-09-14" 부터 "2026-09-17" 까지의 날짜를 양 끝 포함해 잇는다.
   // 정오를 기준으로 하루씩 더해 나간다. 자정으로 세면 여름시간제가 있는 지역에서
@@ -87,9 +107,7 @@ export function datesBetween(from: string, to: string): string[] {
   const last = new Date(`${to}T12:00:00`);
   const days: string[] = [];
   while (cursor <= last) {
-    days.push(
-      `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`,
-    );
+    days.push(dayKey(cursor));
     cursor.setDate(cursor.getDate() + 1);
   }
   return days;

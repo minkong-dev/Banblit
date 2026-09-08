@@ -43,3 +43,36 @@ body { margin: 0; }
   --sage-soft: #E7EFEA;
   --sage-soft-dark: #1B2A22;
 }
+
+/* 화면 팔레트 — 여섯 화면이 같은 값을 쓴다. light-dark(밝은 값, 어두운 값) 은 그 값을
+   쓰는 자리의 color-scheme 을 보고 하나를 고른다. 어느 쪽인지는 shell.css 가 body 에
+   정한다(main.tsx 가 첫 그림 전에 html 의 data-theme 을 박는다). */
+:root {
+  --bg: light-dark(#F2F4F6, #0E1013);
+  --card: light-dark(#FFFFFF, #191C20);
+  --card-2: light-dark(#F7F8FA, #212529);
+  --line: light-dark(#E9ECEF, #2A2F35);
+  --line-2: light-dark(#D6DBE0, #3A4148);
+  --t1: light-dark(#191F28, #E9EDF0);
+  --t2: light-dark(#4E5968, #A0AAB4);
+  --t3: light-dark(#8B95A1, #6E7882);
+  /* 코랄과 그 위 글자색은 밝은 화면과 어두운 화면이 같다. 바탕만 갈린다. */
+  --brand: var(--coral); --brand-press: var(--coral-press); --brand-on: var(--coral-ink);
+  --brand-tint: light-dark(var(--coral-soft), var(--coral-soft-dark));
+  --green: light-dark(var(--sage), var(--sage-lite));
+  --green-tint: light-dark(var(--sage-soft), var(--sage-soft-dark));
+  --amber: light-dark(#E8890C, #FFB84D); --amber-tint: light-dark(#FFF4E0, #33270D);
+  --red: light-dark(#F04452, #FF6B75); --red-tint: light-dark(#FDECEE, #331A1D);
+  /* 달력의 팀 색 네 칸 */
+  --c1: light-dark(var(--coral-chip-ink), var(--coral-lite)); --c1-tint: light-dark(var(--coral-chip), var(--coral-chip-dark));
+  --c2: light-dark(#43679B, #8FB3E0); --c2-tint: light-dark(#E5EDF7, #17222F);
+  --c3: light-dark(#715599, #B49BE0); --c3-tint: light-dark(#EDE8F7, #241E33);
+  --c4: light-dark(#8A6516, #D9B85C); --c4-tint: light-dark(#F6EED9, #332B12);
+  --off: light-dark(#ADB5BD, #5E6870); --off-tint: light-dark(#EEF0F3, #22262B);
+  --shadow: 0 1px 2px light-dark(rgba(0,23,51,.04), rgba(0,0,0,.4)), 0 8px 24px light-dark(rgba(0,23,51,.07), rgba(0,0,0,.35));
+  --shadow-up: 0 12px 48px light-dark(rgba(0,23,51,.18), rgba(0,0,0,.6));
+
+  /* 왼쪽 메뉴 폭과 창의 가로 하한. 하한 아래에서는 배치를 바꾸지 않고 문서가 구른다. */
+  --side: clamp(232px, 15%, 300px);
+  --minw: 1060px;
+}

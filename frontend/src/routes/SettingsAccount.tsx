@@ -10,15 +10,13 @@ import { useNavigate } from "react-router-dom";
 
 import { Card } from "../components/AppShell";
 import { useMe } from "../components/hooks";
-import { getJSON } from "../lib/api";
+import { getJSON, reason } from "../lib/api";
+import { say } from "../lib/toast";
 import type { Account } from "../lib/contract";
 
-function reason(error: unknown): string {
-  return error instanceof Error ? error.message : "알 수 없는 오류가 났습니다.";
-}
 
 /** 내 이름과 기수. */
-function MyProfile({ me, onSay }: { me: Account; onSay: (text: string) => void }) {
+function MyProfile({ me }: { me: Account }) {
   const client = useQueryClient();
   const [name, setName] = useState(me.name);
   const [cohort, setCohort] = useState(me.cohort === null ? "" : String(me.cohort));
@@ -35,7 +33,7 @@ function MyProfile({ me, onSay }: { me: Account; onSay: (text: string) => void }
       }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["me"] });
-      onSay("내 정보를 고쳤어요.");
+      say("내 정보를 고쳤어요.");
     },
     onError: (error) => setBad(reason(error)),
   });
@@ -82,7 +80,7 @@ function MyProfile({ me, onSay }: { me: Account; onSay: (text: string) => void }
 }
 
 /** 비밀번호 바꾸기. 지금 비밀번호를 먼저 묻는 것은 서버도 같다. */
-function MyPassword({ onSay }: { onSay: (text: string) => void }) {
+function MyPassword() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [again, setAgain] = useState("");
@@ -99,7 +97,7 @@ function MyPassword({ onSay }: { onSay: (text: string) => void }) {
       setNext("");
       setAgain("");
       setBad("");
-      onSay("비밀번호를 바꿨어요.");
+      say("비밀번호를 바꿨어요.");
     },
     onError: (error) => setBad(reason(error)),
   });
@@ -163,7 +161,7 @@ function MyPassword({ onSay }: { onSay: (text: string) => void }) {
 }
 
 /** 회원 탈퇴. 되돌릴 수 없어 이름을 직접 적게 한다 — 실수로 눌린 것과 가른다. */
-function Leave({ me, onSay }: { me: Account; onSay: (text: string) => void }) {
+function Leave({ me }: { me: Account }) {
   const navigate = useNavigate();
   const [typed, setTyped] = useState("");
   const matched = typed.trim() === me.name;
@@ -171,7 +169,7 @@ function Leave({ me, onSay }: { me: Account; onSay: (text: string) => void }) {
   const leave = useMutation({
     mutationFn: () => getJSON<null>("/me", { method: "DELETE" }),
     onSuccess: () => { void navigate("/"); },
-    onError: (error) => onSay(reason(error)),
+    onError: (error) => say(reason(error)),
   });
 
   return (
@@ -205,20 +203,19 @@ function Leave({ me, onSay }: { me: Account; onSay: (text: string) => void }) {
 }
 
 export function AccountCards(props: {
-  onSay: (text: string) => void;
   /** 화면 밝기 카드. 밝기는 이 브라우저에만 남는 값이라 서버를 부르지 않아,
    *  계정 구역과 다른 자리(Settings.tsx)가 그리고 여기서는 놓기만 한다. */
   theme: React.ReactNode;
 }) {
-  const { onSay, theme } = props;
+  const { theme } = props;
   const { me } = useMe();
   if (me === null) return <div className="empty">불러오는 중…</div>;
   return (
     <>
-      <MyProfile me={me} onSay={onSay} />
-      <MyPassword onSay={onSay} />
+      <MyProfile me={me} />
+      <MyPassword />
       {theme}
-      <Leave me={me} onSay={onSay} />
+      <Leave me={me} />
     </>
   );
 }

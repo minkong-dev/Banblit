@@ -7,13 +7,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { getJSON } from "../lib/api";
+import { getJSON, reason } from "../lib/api";
 import { memberLabel } from "../lib/pipeline";
 import type { Member } from "../lib/contract";
 
-function reason(error: unknown): string {
-  return error instanceof Error ? error.message : "알 수 없는 오류가 났습니다.";
-}
 
 export function MemberSearch(props: {
   onPick: (member: Member) => void;

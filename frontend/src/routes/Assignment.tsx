@@ -3,18 +3,34 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
 import { getJSON } from "../lib/api";
+import { say } from "../lib/toast";
 import { runAssignment } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
-import { useMe, useToast } from "../components/hooks";
-import { can, roleLabel } from "../lib/account";
+import { useMe, usePeriods, useRooms, useTeams } from "../components/hooks";
+import { can } from "../lib/account";
 import { backupLabel, checkRunTimes, runTimeOptions, slotCountLabel } from "../lib/runs";
 import "../styles/assignment.css";
-import type { AssignOut, Backup, Period, Room, ScheduleRow, Slot, Team } from "../lib/contract";
+import type { AssignOut, Backup, Period, ScheduleRow, Slot } from "../lib/contract";
 import { datesBetween, dayOf, hhmm, mergeSessions } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
 
 const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 const MINUTES_PER_HOUR = 60;
+
+/** 달력이 보이는 것 — 지금 확정된 시간표, 조율안 n번, 지난 회차 하나. */
+type View = { kind: "now" } | { kind: "proposal"; index: number } | { kind: "round"; at: string };
+const NOW: View = { kind: "now" };
+
+// 탭은 글자 키만 받는다. 글자와 View 를 오가는 곳은 아래 둘뿐이다.
+function tabKey(view: View): string {
+  if (view.kind === "proposal") return `p${view.index}`;
+  return view.kind === "round" ? `r:${view.at}` : "now";
+}
+
+function viewOf(key: string): View {
+  if (key.startsWith("p")) return { kind: "proposal", index: Number(key.slice(1)) };
+  return key.startsWith("r:") ? { kind: "round", at: key.slice(2) } : NOW;
+}
 
 
 /** 팀별로 나뉘어 온 칸을 한 줄로 펴서 합주 한 번씩으로 합친다. */
@@ -39,34 +55,24 @@ function colorsOf(sessions: Session[]): Map<string, string> {
 }
 
 export function Assignment() {
-  const { message, say } = useToast();
   const { me } = useMe();
   const queryClient = useQueryClient();
   const [periodId, setPeriodId] = useState<number | null>(null);
-  const [view, setView] = useState("now");
+  const [view, setView] = useState<View>(NOW);
   // 계산 시각은 고친 것만 여기 담는다. 기간을 바꾸면 담긴 번호가 어긋나므로 그때는
   // 다시 서버 값으로 돌아간다 — useEffect 로 맞추지 않고 그릴 때마다 번호를 견준다.
   const [runForm, setRunForm] = useState<{ id: number; first: string; second: string } | null>(null);
 
-  const periods = useQuery({
-    queryKey: ["periods"],
-    queryFn: () => getJSON<{ periods: Period[] }>("/periods"),
-  });
+  const periods = usePeriods();
   // 이 화면은 집중 합주기간만 다룬다 — 상시 개방 기간은 자동 배정 대상이 아니다.
   const focusedPeriods = (periods.data?.periods ?? []).filter((period) => period.kind === "focused");
   // 사람이 아직 고르지 않았으면 목록의 첫 기간을 쓴다. useEffect 로 동기화하지 않고
   // 그릴 때마다 이렇게 계산한다.
   const activePeriodId = periodId ?? focusedPeriods[0]?.id ?? null;
 
-  const rooms = useQuery({
-    queryKey: ["rooms"],
-    queryFn: () => getJSON<{ rooms: Room[] }>("/rooms"),
-  });
+  const rooms = useRooms();
 
-  const teams = useQuery({
-    queryKey: ["teams"],
-    queryFn: () => getJSON<{ teams: Team[] }>("/teams"),
-  });
+  const teams = useTeams();
 
   const schedule = useQuery({
     queryKey: ["schedule", activePeriodId],
@@ -91,7 +97,7 @@ export function Assignment() {
       await queryClient.invalidateQueries({ queryKey: ["schedule", activePeriodId] });
       // 저장이 됐으면 이전 시간표가 회차로 밀려나므로 목록도 다시 받는다.
       await queryClient.invalidateQueries({ queryKey: ["backups", activePeriodId] });
-      setView("now");
+      setView(NOW);
       say(
         result.assignment.feasible
           ? result.saved ? "배정을 새로 확정했습니다" : "배정은 됐지만 저장되지 않았습니다"
@@ -99,6 +105,24 @@ export function Assignment() {
       );
     },
     onError: () => say("계산하지 못했습니다"),
+  });
+
+  // 조율안 확정 — 그 사람을 뺀 채로 같은 계산을 다시 돌려 저장한다. 서버 경로가
+  // 다를 뿐 결과를 받는 방식은 재계산과 같다.
+  const confirm = useMutation({
+    mutationFn: (memberId: number) => {
+      if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
+      return runAssignment<AssignOut>(
+        activePeriodId, { team_ids: teamIds, room_ids: roomIds }, memberId,
+      );
+    },
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["schedule", activePeriodId] });
+      await queryClient.invalidateQueries({ queryKey: ["backups", activePeriodId] });
+      setView(NOW);
+      say(result.saved ? "이 안으로 확정했습니다" : "확정하지 못했습니다");
+    },
+    onError: () => say("확정하지 못했습니다"),
   });
 
   const rollback = useMutation({
@@ -113,7 +137,7 @@ export function Assignment() {
       await queryClient.invalidateQueries({ queryKey: ["schedule", activePeriodId] });
       // 되돌린 회차는 목록에서 빠진다.
       await queryClient.invalidateQueries({ queryKey: ["backups", activePeriodId] });
-      setView("now");
+      setView(NOW);
       say(result.rolled_back ? "직전 배정으로 되돌렸습니다" : "되돌릴 배정이 없습니다");
     },
     // 서버가 거절한 사유를 그대로 보여준다 — 방·시각이 겹쳐 되돌리지 못하는 경우가 있다.
@@ -132,9 +156,8 @@ export function Assignment() {
     enabled: activePeriodId !== null && canRollbackNow,
   });
 
-  // 고른 회차. 탭 값이 "r:" 로 시작하면 그 뒤가 저장 시각이다 — 조율안(p0·p1)과 같은
-  // 자리를 쓰므로 달력·아래 설명·탭이 한 값만 보고 갈린다.
-  const roundAt = view.startsWith("r:") ? view.slice(2) : null;
+  // 고른 회차. 조율안과 같은 view 하나를 쓰므로 달력·아래 설명·탭이 한 값만 보고 갈린다.
+  const roundAt = view.kind === "round" ? view.at : null;
   const round = useQuery({
     queryKey: ["backup-round", activePeriodId, roundAt],
     queryFn: () => {
@@ -173,7 +196,7 @@ export function Assignment() {
   // recompute.data 가 없을 때만 매번 새 빈 배열이 생긴다 — 재계산 전에는 proposals 를
   // 쓰는 곳도 없어 아래 useMemo 가 다시 돌아도 비용이 없다.
   const proposals = recompute.data?.proposals ?? [];
-  const proposalIndex = view.startsWith("p") ? Number(view.slice(1)) : null;
+  const proposalIndex = view.kind === "proposal" ? view.index : null;
   const roundRows = round.data?.rows ?? [];
   const roundSessions = useMemo(
     () => mergeSessions(roundRows.map((row) => ({
@@ -282,7 +305,7 @@ export function Assignment() {
         </p>
         {counts}
         <div className="act">
-          <button className="btn" onClick={() => setView("now")}>지금 것으로 돌아가기</button>
+          <button className="btn" onClick={() => setView(NOW)}>지금 것으로 돌아가기</button>
         </div>
       </>
     );
@@ -298,10 +321,16 @@ export function Assignment() {
         {counts}
         <div className="note">
           달력이 이 안대로 바뀐 시간표를 보여주고 있습니다.
-          고르기(확정) 기능은 아직 서버에 없어 지금은 보기만 합니다.
+          확정하면 이 사람을 뺀 채로 다시 계산해 저장합니다.
         </div>
         <div className="act">
-          <button className="btn" onClick={() => setView("now")}>지금 것으로 돌아가기</button>
+          {!can(me, "proposal_confirm") ? null : (
+            <button className="btn main" disabled={confirm.isPending}
+              onClick={() => confirm.mutate(who.id)}>
+              {confirm.isPending ? "확정하는 중…" : "이 안으로 확정"}
+            </button>
+          )}
+          <button className="btn" onClick={() => setView(NOW)}>지금 것으로 돌아가기</button>
         </div>
       </>
     );
@@ -365,9 +394,9 @@ export function Assignment() {
       .map((backup, index) => (
         <li key={backup.saved_at}>
           <button
-            className={view === `r:${backup.saved_at}` ? "round on" : "round"}
-            aria-pressed={view === `r:${backup.saved_at}`}
-            onClick={() => setView(`r:${backup.saved_at}`)}
+            className={roundAt === backup.saved_at ? "round on" : "round"}
+            aria-pressed={roundAt === backup.saved_at}
+            onClick={() => setView({ kind: "round", at: backup.saved_at })}
           >
             <b>{backupLabel(backup.saved_at)}</b>
             <small>{slotCountLabel(backup.slot_count)}{index === 0 ? " · 되돌리면 여기로" : ""}</small>
@@ -451,16 +480,8 @@ export function Assignment() {
     <AppShell
       page="admin"
       current="assign"
-      toast={message}
-      profile={
-        <button className="profbtn">
-          <span className="face" aria-hidden="true">{me?.name.slice(0, 2) ?? ""}</span>
-          <span className="nm">{me?.name ?? ""}</span>
-          <span className="role">{me ? roleLabel(me.role) : ""}</span>
-        </button>
-      }
     >
-      <Tabs label="배정안" items={tabs} selected={view} onSelect={setView} />
+      <Tabs label="배정안" items={tabs} selected={tabKey(view)} onSelect={(key) => setView(viewOf(key))} />
 
       <div className="main">
         <Card>
@@ -470,7 +491,7 @@ export function Assignment() {
               {days.length ? `${days[0]} – ${days[days.length - 1]}` : "표시할 일정 없음"}
               {" · 기간 "}
               <select value={activePeriodId ?? ""} aria-label="기간 고르기"
-                onChange={(event) => { setPeriodId(Number(event.target.value)); setView("now"); }}>
+                onChange={(event) => { setPeriodId(Number(event.target.value)); setView(NOW); }}>
                 {/* 번호가 아니라 날짜 범위로 보여준다 — 사람·기간을 번호로 부르지 않는다. */}
                 {focusedPeriods.map((period) => (
                   <option value={period.id} key={period.id}>

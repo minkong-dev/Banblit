@@ -1,28 +1,36 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import { AppShell, Card, ProfileMenu } from "../components/AppShell";
+import { AppShell, Card } from "../components/AppShell";
+import { Pager } from "../components/Pager";
 import { Modal, Stepper } from "../components/Modal";
 import { MemberSearch } from "../components/MemberSearch";
 import { PencilIcon, SearchIcon, TrashIcon } from "../components/icons";
-import { useFitCount, useMe, useMyTeams, useToast } from "../components/hooks";
-import { clampPage, pageCount, pageSlice, pageWindow } from "../lib/paging";
+import { useFitCount, useMe, useTeams } from "../components/hooks";
+import { clampPage, pageCount, pageSlice } from "../lib/paging";
+import { say } from "../lib/toast";
 import { askDelete } from "../lib/confirm";
-import { getJSON } from "../lib/api";
-import { can, roleLabel } from "../lib/account";
+import { getJSON, reason } from "../lib/api";
+import { can } from "../lib/account";
 import { checkSlotCounts, checkTeamName, memberLabel, slotName } from "../lib/pipeline";
 import { INSTRUMENTS } from "../lib/contract";
 import { MAX_SLOTS_PER_TEAM } from "../lib/roster";
 import type { Instrument, Member, Team, TeamSlot } from "../lib/contract";
 import "../styles/teams.css";
 
-function reason(error: unknown): string {
-  return error instanceof Error ? error.message : "알 수 없는 오류가 났습니다.";
-}
 
 type Counts = Record<string, number>;
 
 const NO_SLOTS: Counts = Object.fromEntries(INSTRUMENTS.map((name) => [name, 0]));
+
+/** 서버가 준 포지션 목록을 악기별 수로 센다. 아직 못 받았으면 null 이다. */
+function countsFromSlots(data: { slots: TeamSlot[] } | undefined): Counts | null {
+  if (data === undefined) return null;
+  return data.slots.reduce(
+    (acc, slot) => ({ ...acc, [slot.instrument]: acc[slot.instrument] + 1 }),
+    NO_SLOTS,
+  );
+}
 
 /** 포지션을 악기별로 묶어 이름을 붙인다. 같은 악기가 하나뿐이면 번호를 떼고 "드럼" 으로 둔다. */
 function labelled(slots: TeamSlot[]): { slot: TeamSlot; label: string }[] {
@@ -97,14 +105,11 @@ function EditTeam(props: {
     queryFn: () => getJSON<{ slots: TeamSlot[] }>(`/teams/${team.id}/slots`),
   });
 
-  useEffect(() => {
-    if (slots.data === undefined || counts !== null) return;
-    const now = { ...NO_SLOTS };
-    for (const slot of slots.data.slots) now[slot.instrument] += 1;
-    setCounts(now);
-  }, [slots.data, counts]);
+  // 아직 손대지 않았으면 서버 구성을 그대로 보인다. 상태로 복사해 두지 않는다 —
+  // 복사하면 "받았는데 아직 안 옮긴" 순간이 생긴다.
+  const shownCounts = counts ?? countsFromSlots(slots.data);
 
-  const total = Object.values(counts ?? NO_SLOTS).reduce((sum, count) => sum + count, 0);
+  const total = Object.values(shownCounts ?? NO_SLOTS).reduce((sum, count) => sum + count, 0);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -116,7 +121,7 @@ function EditTeam(props: {
       }
       await getJSON(`/teams/${team.id}/slots`, {
         method: "PUT",
-        body: JSON.stringify({ slots: counts }),
+        body: JSON.stringify({ slots: shownCounts }),
       });
     },
     onSuccess: () => {
@@ -134,9 +139,9 @@ function EditTeam(props: {
           <button className="ghost" onClick={onClose}>취소</button>
           <button
             className="primary"
-            disabled={save.isPending || counts === null}
+            disabled={save.isPending || shownCounts === null}
             onClick={() => {
-              const why = checkTeamName(name, taken) || checkSlotCounts(counts ?? NO_SLOTS);
+              const why = checkTeamName(name, taken) || checkSlotCounts(shownCounts ?? NO_SLOTS);
               setBad(why);
               if (why === "") save.mutate();
             }}
@@ -158,7 +163,7 @@ function EditTeam(props: {
         </label>
       </div>
 
-      {counts === null ? (
+      {shownCounts === null ? (
         <p className="empty">불러오는 중…</p>
       ) : (
         <>
@@ -166,10 +171,10 @@ function EditTeam(props: {
             <Stepper
               key={instrument}
               label={instrument}
-              value={counts[instrument] ?? 0}
+              value={shownCounts[instrument] ?? 0}
               min={0}
-              max={(counts[instrument] ?? 0) + Math.max(0, MAX_SLOTS_PER_TEAM - total)}
-              onChange={(next) => setCounts({ ...counts, [instrument]: next })}
+              max={(shownCounts[instrument] ?? 0) + Math.max(0, MAX_SLOTS_PER_TEAM - total)}
+              onChange={(next) => setCounts({ ...shownCounts, [instrument]: next })}
             />
           ))}
           <p className="note">포지션 {total}개</p>
@@ -187,9 +192,8 @@ function Lineup(props: {
   canAdd: boolean;
   /** 남이 있는 포지션을 비울 수 있는가 */
   canRemove: boolean;
-  onSay: (message: string) => void;
 }) {
-  const { teamId, canAdd, canRemove, onSay } = props;
+  const { teamId, canAdd, canRemove } = props;
   const client = useQueryClient();
   const [seeking, setSeeking] = useState<number | null>(null);
 
@@ -214,14 +218,14 @@ function Lineup(props: {
       setSeeking(null);
       refresh();
     },
-    onError: (error) => onSay(reason(error)),
+    onError: (error) => say(reason(error)),
   });
 
   const clear = useMutation({
     mutationFn: (slotId: number) =>
       getJSON(`/teams/${teamId}/slots/${slotId}`, { method: "DELETE" }),
     onSuccess: refresh,
-    onError: (error) => onSay(reason(error)),
+    onError: (error) => say(reason(error)),
   });
 
   if (slots.isPending) return <div className="empty">불러오는 중…</div>;
@@ -450,9 +454,7 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
 }
 
 export function Teams() {
-  const { message, say } = useToast();
   const { me, teamIds } = useMe();
-  const myTeams = useMyTeams();
   const [openId, setOpenId] = useState<number | null>(null);
   const [making, setMaking] = useState(false);
   const [renaming, setRenaming] = useState<Team | null>(null);
@@ -470,10 +472,7 @@ export function Teams() {
     onError: (error) => say(reason(error)),
   });
 
-  const teams = useQuery({
-    queryKey: ["teams"],
-    queryFn: () => getJSON<{ teams: Team[] }>("/teams"),
-  });
+  const teams = useTeams();
   const list = teams.data?.teams ?? [];
   const canCreate = can(me, "team_create");
   const canRename = can(me, "team_edit");
@@ -496,14 +495,6 @@ export function Teams() {
     <AppShell
       page="teams"
       current="find-team"
-      toast={message}
-      profile={
-        <ProfileMenu
-          name={me?.name ?? ""}
-          sub={me ? roleLabel(me.role) : ""}
-          teams={myTeams}
-        />
-      }
     >
       <div className="main">
         <Card>
@@ -535,17 +526,7 @@ export function Teams() {
 
           <div className="listfoot">
             {state !== "" ? null : (
-              <nav className="pager" aria-label="쪽 넘기기">
-                <button aria-label="이전 쪽" disabled={shownPage === 1}
-                  onClick={() => setPage(shownPage - 1)}>‹</button>
-                {pageWindow(shownPage, pages).map((number) => (
-                  <button key={number} aria-label={`${number}쪽`}
-                    aria-current={number === shownPage ? "page" : undefined}
-                    onClick={() => setPage(number)}>{number}</button>
-                ))}
-                <button aria-label="다음 쪽" disabled={shownPage === pages}
-                  onClick={() => setPage(shownPage + 1)}>›</button>
-              </nav>
+              <Pager page={shownPage} pages={pages} onPage={setPage} />
             )}
             {!canCreate ? null : (
               <button className="new" onClick={() => setMaking(true)}>+ 새 팀</button>
@@ -581,7 +562,6 @@ export function Teams() {
             teamId={opened.id}
             canAdd={can(me, "member_add")}
             canRemove={can(me, "member_remove")}
-            onSay={say}
           />
         </Modal>
       )}

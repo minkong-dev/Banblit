@@ -1,13 +1,14 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { RefObject } from "react";
 
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
 import { Modal } from "../components/Modal";
-import { getJSON } from "../lib/api";
+import { getJSON, reason } from "../lib/api";
+import { say } from "../lib/toast";
 import { checkPeriod, checkRoom, daysBetween, openingHours } from "../lib/pipeline";
-import { useMe, useToast } from "../components/hooks";
-import { can, roleLabel } from "../lib/account";
+import { useMe, usePeriods, useRooms, useTeams } from "../components/hooks";
+import { can } from "../lib/account";
 import { applyTheme, readSavedTheme } from "../lib/theme";
 import type { Theme } from "../lib/theme";
 import { MemberCards } from "./SettingsMembers";
@@ -17,7 +18,6 @@ import {
   CardState,
   FormTail,
   Row,
-  reason,
   useFirstField,
   useForm,
   useRowFocus,
@@ -97,7 +97,6 @@ function ThemeCard() {
 
 export function Settings() {
   const [tab, setTab] = useState<Tab>("rooms");
-  const { message, say } = useToast();
   const client = useQueryClient();
   const { me } = useMe();
 
@@ -109,20 +108,11 @@ export function Settings() {
   // 화면 탭은 누구에게나 있으므로 tabs 가 비는 일은 없다.
   const shown: Tab = tabs.some((item) => item.key === tab) ? tab : tabs[0].key;
 
-  const rooms = useQuery({
-    queryKey: ["rooms"],
-    queryFn: () => getJSON<{ rooms: Room[] }>("/rooms"),
-  });
-  const periods = useQuery({
-    queryKey: ["periods"],
-    queryFn: () => getJSON<{ periods: Period[] }>("/periods"),
-  });
+  const rooms = useRooms();
+  const periods = usePeriods();
   // 팀 목록은 오른쪽 셈에만 쓴다. 질의 이름은 다른 화면이 쓰는 것과 같아, 이미 받아
   // 둔 목록이 있으면 다시 부르지 않는다.
-  const teams = useQuery({
-    queryKey: ["teams"],
-    queryFn: () => getJSON<{ teams: Team[] }>("/teams"),
-  });
+  const teams = useTeams();
 
   const roomList = rooms.data?.rooms ?? [];
   const periodList = periods.data?.periods ?? [];
@@ -145,14 +135,6 @@ export function Settings() {
     <AppShell
       page="settings"
       current="settings"
-      toast={message}
-      profile={
-        <button className="profbtn">
-          <span className="face" aria-hidden="true">{me?.name.slice(0, 2) ?? ""}</span>
-          <span className="nm">{me?.name ?? ""}</span>
-          <span className="role">{me ? roleLabel(me.role) : ""}</span>
-        </button>
-      }
     >
       <Tabs label="설정" items={tabs} selected={shown} onSelect={setTab} />
 
@@ -174,9 +156,9 @@ export function Settings() {
             onSaved={saved("periods", "기간을 저장했습니다")}
           />
         ) : shown === "members" ? (
-          <MemberCards onSay={say} />
+          <MemberCards />
         ) : (
-          <AccountCards onSay={say} theme={<ThemeCard />} />
+          <AccountCards theme={<ThemeCard />} />
         )}
       </div>
 

@@ -113,18 +113,3 @@ export const PERMISSION_ITEMS: readonly {
 export function can(me: Account | null, item: Permission): boolean {
   return me?.permissions?.includes(item) ?? false;
 }
-
-/** keys 를 항목 선언 순서로 정렬해 한국어 이름으로 바꾼다. 모르는 이름은 버린다. */
-export function permissionLabels(keys: string[]): string[] {
-  const chosen = new Set(keys);
-  return PERMISSION_ITEMS.filter((item) => chosen.has(item.key)).map((item) => item.label);
-}
-
-/** name 을 taken 과 견줘, 비었거나 겹치면 그 사유를 돌려준다.
- *  앞뒤 공백을 뗀 뒤 견주므로 공백만 다른 이름도 겹친 것으로 본다. */
-export function permissionSetNameMessage(name: string, taken: string[]): string {
-  const trimmed = name.trim();
-  if (!trimmed) return "권한 이름을 입력해 주세요.";
-  const clash = taken.some((other) => other.trim() === trimmed);
-  return clash ? "같은 이름의 권한이 이미 있습니다." : "";
-}

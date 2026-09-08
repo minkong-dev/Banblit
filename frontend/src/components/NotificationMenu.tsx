@@ -11,10 +11,7 @@ import {
 } from "../lib/pipeline";
 
 /** 상단바의 알림 종과 그 아래 말풍선. 프로필 말풍선과 같은 언어를 쓰되, 종에는
- *  안 읽은 개수를 얹는다 — 어느 화면에 있든 시간표가 바뀐 것을 알 수 있어야 한다.
- *
- *  달력 오른쪽 칸에 있던 것을 여기로 옮겼다. 그 자리는 달력을 보는 동안에만 보여,
- *  게시판이나 설정에 있는 사람에게는 소식이 닿지 않았다. */
+ *  안 읽은 개수를 얹는다 — 어느 화면에 있든 시간표가 바뀐 것을 알 수 있어야 한다. */
 export function NotificationMenu() {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();

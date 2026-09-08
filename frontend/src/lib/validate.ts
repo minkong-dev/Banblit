@@ -5,8 +5,6 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PASSWORD_MIN = 8;
 const STRONG_MIN = 8;
 const STRONG_MAX = 20;
-const PHONE_MIN_DIGITS = 10;
-const PHONE_MAX_DIGITS = 11;
 
 export function emailMessage(value: string): string {
   // 골뱅이 앞뒤에 공백 없는 글자가 있고, 점 뒤가 두 글자 이상이어야 한다.
@@ -32,16 +30,6 @@ export function strongPasswordMessage(value: string): string {
   return "";
 }
 
-export function phoneMessage(value: string): string {
-  // 사람은 붙임표를 넣어 적으므로 숫자만 세어 자릿수를 본다.
-  const digits = value.replace(/[^0-9]/g, "");
-  if (!digits) return "전화번호를 입력해주세요.";
-  if (digits.length < PHONE_MIN_DIGITS || digits.length > PHONE_MAX_DIGITS) {
-    return "전화번호가 맞는지 확인해주세요.";
-  }
-  return "";
-}
-
 /** 기수. 1981년이 1기이고 해마다 하나씩 오르지만, 연도로 환산하지 않고 숫자만 받는다 —
  *  명단에 적힌 기수를 그대로 넣기 위해서다. 서버도 같은 범위를 다시 거른다. */
 export function cohortMessage(value: string): string {
@@ -52,4 +40,13 @@ export function cohortMessage(value: string): string {
     return "기수는 1에서 200 사이의 숫자여야 해요.";
   }
   return "";
+}
+
+/** name 을 taken 과 견줘, 비었거나 겹치면 그 사유를 돌려준다. what 은 "합주실"·"팀"처럼
+ *  문장에 들어갈 이름이다. 앞뒤 공백을 뗀 뒤 견주므로 공백만 다른 이름도 겹친 것으로 본다. */
+export function uniqueNameMessage(name: string, taken: string[], what: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return `${what} 이름을 입력해 주세요.`;
+  const clash = taken.some((other) => other.trim() === trimmed);
+  return clash ? `같은 이름의 ${what}이 이미 있습니다.` : "";
 }

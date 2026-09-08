@@ -116,3 +116,8 @@ function parseJSON(text: string): unknown {
     return null;
   }
 }
+
+/** 오류를 화면에 띄울 한 줄로. Error 면 그 문장, 아니면 fallback. */
+export function reason(error: unknown, fallback = "알 수 없는 오류가 났습니다"): string {
+  return error instanceof Error ? error.message : fallback;
+}
