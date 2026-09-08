@@ -295,7 +295,7 @@ export function DayDialog(props: {
           <h2 id="modalTitle">{dayTitle(dayKey)}</h2>
           <p>
             {roomsLabel || "합주실"} · {String(openHour).padStart(2, "0")}:00–{String(closeHour).padStart(2, "0")}:00
-            {" · 30분 단위 · "}{inFocus ? "배정된 기간" : "배정 없음"}
+            {" · 1시간 단위 · "}{inFocus ? "배정된 기간" : "배정 없음"}
           </p>
         </div>
         <button aria-label="닫기" onClick={() => dialog.current?.close()}><CloseIcon /></button>

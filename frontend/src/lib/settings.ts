@@ -2,7 +2,9 @@
 // 검사 함수는 값이 성하면 빈 문자열을, 아니면 사람이 읽을 사유를 돌려준다.
 // 부르는 순서는 pipeline.ts 가 정한다.
 
-const SLOT_MINUTES = 30;
+// 칸 하나가 한 시간이다(사용자 결정). 서버 쪽 정본은
+// backend/src/backend/scheduling/slots.py 의 SLOT_MINUTES 다.
+const SLOT_MINUTES = 60;
 const MINUTES_PER_HOUR = 60;
 
 /** "18:30" 을 자정부터의 분으로 바꾼다. 모양이 아니면 null. */
@@ -16,14 +18,14 @@ function onGrid(minutes: number): boolean {
 }
 
 export function openHoursMessage(opens: string, closes: string): string {
-  // opens·closes 를 받아, 30분 격자를 벗어났거나 순서가 뒤집혔으면 그 사유를 돌려준다.
+  // opens·closes 를 받아, 정시가 아니거나 순서가 뒤집혔으면 그 사유를 돌려준다.
   if (!opens) return "여는 시각을 입력해 주세요.";
   if (!closes) return "닫는 시각을 입력해 주세요.";
 
   const from = minutesOf(opens);
   const to = minutesOf(closes);
-  if (from === null || !onGrid(from)) return "여는 시각은 정시 또는 30분이어야 합니다.";
-  if (to === null || !onGrid(to)) return "닫는 시각은 정시 또는 30분이어야 합니다.";
+  if (from === null || !onGrid(from)) return "여는 시각은 정시여야 합니다.";
+  if (to === null || !onGrid(to)) return "닫는 시각은 정시여야 합니다.";
   if (to <= from) return "닫는 시각은 여는 시각보다 늦어야 합니다.";
   return "";
 }

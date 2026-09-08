@@ -1,6 +1,7 @@
 // 달력이 쓰는 계산. 날짜와 칸 번호만 다루고 화면도 서버도 건드리지 않는다.
 
-const SLOTS_PER_HOUR = 2;
+// 칸 하나가 한 시간이다(사용자 결정). 서버 쪽 정본은
+// backend/src/backend/scheduling/slots.py 의 SLOT_MINUTES 다.
 const DAYS_PER_WEEK = 7;
 // 합주실이 하나도 없을 때 쓸 여닫는 시각 — 달력을 그릴 시간 범위가 아예 없을 수는 없다.
 const FALLBACK_OPEN_HOUR = 10;
@@ -19,16 +20,14 @@ export function monthCells(year: number, month: number): (number | null)[] {
 }
 
 export function slotLabel(index: number, openHour: number): string {
-  // 여는 시각을 0번으로 둔 칸 번호를 "18:30" 으로 적는다.
-  const hour = openHour + Math.floor(index / SLOTS_PER_HOUR);
-  const minute = index % SLOTS_PER_HOUR ? "30" : "00";
-  return `${String(hour).padStart(2, "0")}:${minute}`;
+  // 여는 시각을 0번으로 둔 칸 번호를 "18:00" 으로 적는다.
+  const hour = openHour + index;
+  return `${String(hour).padStart(2, "0")}:00`;
 }
 
 export function hoursLabel(slots: number): string {
-  // 30분 칸 개수를 "3시간 30분" 으로 적는다. 화면에는 칸이 아니라 시각으로 말한다.
-  const hours = Math.floor(slots / SLOTS_PER_HOUR);
-  return slots % SLOTS_PER_HOUR ? `${hours}시간 30분` : `${hours}시간`;
+  // 칸 개수를 "3시간" 으로 적는다. 화면에는 칸이 아니라 시각으로 말한다.
+  return `${slots}시간`;
 }
 
 export function takenGrid(spans: { a: number; b: number }[], slotCount: number): boolean[] {
@@ -59,7 +58,7 @@ export function roomBounds(rooms: { opens_at: string; closes_at: string }[]): {
   let close = 0;
   for (const room of rooms) {
     open = Math.min(open, Number(room.opens_at.slice(0, 2)));
-    // 22시 30분에 닫으면 23시까지 칸이 그려져야 그 자리가 보인다.
+    // 닫는 시각이 정시가 아니면 다음 정시까지 칸을 그려야 그 자리가 보인다.
     const closeHour =
       Number(room.closes_at.slice(0, 2)) + (room.closes_at.slice(3, 5) === "00" ? 0 : 1);
     close = Math.max(close, closeHour);

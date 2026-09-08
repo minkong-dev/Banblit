@@ -115,6 +115,12 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
   gap: 12px; padding: 14px 20px 18px; border-top: 1px solid var(--line);
 }
 .listfoot .pager { grid-column: 2; padding: 0; }
+.pager { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 14px 0 4px; }
+.pager button { min-width: 34px; height: 34px; padding: 0 8px; border-radius: 9px; font-size: 13.5px; color: var(--t2); transition: background-color .15s ease, color .15s ease; }
+.pager button:hover:not(:disabled) { background: var(--card-2); color: var(--t1); }
+.pager button[aria-current="page"] { background: var(--brand); color: var(--brand-on); font-weight: 700; }
+.pager button:disabled { opacity: .35; cursor: default; }
+
 .listfoot .new {
   grid-column: 3; justify-self: end;
   min-height: 44px; padding: 11px 18px; border-radius: 10px;
@@ -123,3 +129,47 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
   transition: background-color .15s ease;
 }
 .listfoot .new:hover { background: var(--brand-press); }
+/* 되돌릴 수 없는 단추. 색으로도 다른 동작임을 말한다. */
+.listfoot .new.danger { background: var(--red); }
+.listfoot .new[disabled] { opacity: .45; cursor: default; }
+
+/* ===== 사람 찾기 =====
+   팀 만들기 위에 한 겹 더 뜨는 모달의 알맹이다. 빈 검색어에는 아무것도 나오지 않는다. */
+.seek input {
+  width: 100%; min-height: 50px; padding: 13px 15px;
+  background: var(--card-2); color: var(--t1);
+  border: 1px solid var(--line); border-radius: 13px;
+  font: inherit; font-size: 15px;
+}
+.seek input:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.seek .empty { padding: 26px 0; text-align: center; }
+/* 자체 스크롤을 두지 않는다. 모달 몸통이 이미 남는 높이를 다 쓰고 넘칠 때만
+   스크롤하므로, 여기에 또 상한을 두면 스크롤 안에 스크롤이 생긴다. */
+.found { list-style: none; margin: 12px 0 0; padding: 0; }
+.found li + li { border-top: 1px solid var(--line); }
+.found button {
+  width: 100%; text-align: left; min-height: 50px; padding: 13px 12px;
+  border-radius: 10px; font-size: 14.5px; font-weight: 500;
+  transition: background-color .15s ease;
+}
+.found button:hover { background: var(--card-2); }
+
+/* ===== 자리표 =====
+   팀의 자리를 한 줄씩 세운다. 빈 자리도 함께 나온다 — 채워야 할 곳을 보여주는 것이
+   이 표의 일이다. 팀 만들기 모달의 2단계도 같은 표를 쓴다. */
+.lineup { list-style: none; margin: 0; padding: 0; }
+.seat {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 18px; min-height: 56px;
+  border-top: 1px solid var(--line);
+}
+.seat:first-child { border-top: none; }
+.seat .part { flex: none; width: 84px; font-size: 13px; font-weight: 700; color: var(--t2); }
+.seat .who { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seat .who.none { color: var(--t3); font-weight: 400; }
+.seat .acts { flex: none; display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.mbody .seat { padding-left: 0; padding-right: 0; }
+.mbody .lineup { margin: 0; }
+
+/* 모달 안의 작은 소제목. 목록과 그 아래 입력칸을 가른다. */
+.mbody .cap2 { margin: 18px 0 8px; font-size: 13px; font-weight: 700; color: var(--t2); }

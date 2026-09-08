@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AppShell, Card, ProfileMenu } from "../components/AppShell";
 import { Modal, Stepper } from "../components/Modal";
+import { MemberSearch } from "../components/MemberSearch";
 import { PencilIcon, SearchIcon, TrashIcon } from "../components/icons";
 import { useFitCount, useMe, useMyTeams, useToast } from "../components/hooks";
 import { clampPage, pageCount, pageSlice, pageWindow } from "../lib/paging";
@@ -23,7 +24,7 @@ type Counts = Record<string, number>;
 
 const NO_SLOTS: Counts = Object.fromEntries(INSTRUMENTS.map((name) => [name, 0]));
 
-/** 자리를 악기별로 묶어 이름을 붙인다. 같은 악기가 하나뿐이면 번호를 떼고 "드럼" 으로 둔다. */
+/** 포지션을 악기별로 묶어 이름을 붙인다. 같은 악기가 하나뿐이면 번호를 떼고 "드럼" 으로 둔다. */
 function labelled(slots: TeamSlot[]): { slot: TeamSlot; label: string }[] {
   const perInstrument = new Map<Instrument, number>();
   for (const slot of slots) {
@@ -35,7 +36,7 @@ function labelled(slots: TeamSlot[]): { slot: TeamSlot; label: string }[] {
   }));
 }
 
-/** 팀 목록의 한 줄. 줄을 누르면 자리표가 열리고, 오른쪽 끝의 연필·쓰레기통은
+/** 팀 목록의 한 줄. 줄을 누르면 포지션 구성이 열리고, 오른쪽 끝의 연필·쓰레기통은
  *  팀을 다룰 수 있는 사람에게만 보인다. */
 function TeamRow(props: {
   team: Team;
@@ -73,8 +74,12 @@ function TeamRow(props: {
   );
 }
 
-/** 팀 이름 바꾸기. 자리 구성은 건드리지 않는다 — 서버가 이름만 받는다. */
-function RenameTeam(props: {
+/** 팀 수정 — 이름과 포지션 구성을 함께 고친다.
+ *
+ *  구성은 저장할 때 통째로 다시 세운다. 이미 사람이 있던 (악기, 번호) 는 그대로
+ *  남으므로, 드럼을 하나에서 둘로 늘려도 원래 드럼을 치던 사람은 포지션을 잃지 않는다.
+ *  줄이면 번호가 큰 포지션부터 사라지고 거기 있던 사람은 팀에서 빠진다. */
+function EditTeam(props: {
   team: Team;
   taken: string[];
   onDone: (message: string) => void;
@@ -83,36 +88,60 @@ function RenameTeam(props: {
   const { team, taken, onDone, onClose } = props;
   const client = useQueryClient();
   const [name, setName] = useState(team.name);
+  const [counts, setCounts] = useState<Counts | null>(null);
   const [bad, setBad] = useState("");
 
-  const send = useMutation({
-    mutationFn: () =>
-      getJSON<{ team: Team }>(`/teams/${team.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ name: name.trim() }),
-      }),
-    onSuccess: (body) => {
+  // 지금 구성을 서버에서 받아 그대로 띄운다. 화면이 값을 지어내지 않는다.
+  const slots = useQuery({
+    queryKey: ["slots", team.id],
+    queryFn: () => getJSON<{ slots: TeamSlot[] }>(`/teams/${team.id}/slots`),
+  });
+
+  useEffect(() => {
+    if (slots.data === undefined || counts !== null) return;
+    const now = { ...NO_SLOTS };
+    for (const slot of slots.data.slots) now[slot.instrument] += 1;
+    setCounts(now);
+  }, [slots.data, counts]);
+
+  const total = Object.values(counts ?? NO_SLOTS).reduce((sum, count) => sum + count, 0);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (name.trim() !== team.name) {
+        await getJSON(`/teams/${team.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ name: name.trim() }),
+        });
+      }
+      await getJSON(`/teams/${team.id}/slots`, {
+        method: "PUT",
+        body: JSON.stringify({ slots: counts }),
+      });
+    },
+    onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["teams"] });
-      onDone(`${body.team.name} 으로 바꿨어요.`);
+      void client.invalidateQueries({ queryKey: ["slots", team.id] });
+      onDone(`${name.trim()} 을(를) 고쳤어요.`);
     },
     onError: (error) => setBad(reason(error)),
   });
 
   return (
-    <Modal title="팀 수정" hint="이름을 바꿉니다" onClose={onClose}
+    <Modal title="팀 수정" hint="이름과 포지션 구성을 고칩니다" onClose={onClose}
       foot={
         <>
           <button className="ghost" onClick={onClose}>취소</button>
           <button
             className="primary"
-            disabled={send.isPending}
+            disabled={save.isPending || counts === null}
             onClick={() => {
-              const why = checkTeamName(name, taken);
+              const why = checkTeamName(name, taken) || checkSlotCounts(counts ?? NO_SLOTS);
               setBad(why);
-              if (why === "") send.mutate();
+              if (why === "") save.mutate();
             }}
           >
-            {send.isPending ? "저장하는 중…" : "저장"}
+            {save.isPending ? "저장하는 중…" : "저장"}
           </button>
         </>
       }
@@ -128,71 +157,35 @@ function RenameTeam(props: {
           />
         </label>
       </div>
+
+      {counts === null ? (
+        <p className="empty">불러오는 중…</p>
+      ) : (
+        <>
+          {INSTRUMENTS.map((instrument) => (
+            <Stepper
+              key={instrument}
+              label={instrument}
+              value={counts[instrument] ?? 0}
+              min={0}
+              max={(counts[instrument] ?? 0) + Math.max(0, MAX_SLOTS_PER_TEAM - total)}
+              onChange={(next) => setCounts({ ...counts, [instrument]: next })}
+            />
+          ))}
+          <p className="note">포지션 {total}개</p>
+        </>
+      )}
       {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
     </Modal>
   );
 }
 
-/** 사람을 이름으로 찾는 알맹이. 빈 검색어에는 아무것도 나오지 않는다 —
- *  명단을 통째로 내주는 통로가 아니기 때문이다.
- *  껍데기는 Modal 이 맡는다. 팀 만들기와 자리표가 같은 것을 쓴다. */
-function MemberSearch(props: { onPick: (member: Member) => void }) {
-  const { onPick } = props;
-  const [text, setText] = useState("");
-  const query = text.trim();
-
-  const found = useQuery({
-    queryKey: ["member-search", query],
-    queryFn: () =>
-      getJSON<{ members: Member[] }>(`/members/search?q=${encodeURIComponent(query)}`),
-    enabled: query !== "",
-  });
-  const members = found.data?.members ?? [];
-
-  let body;
-  if (query === "") {
-    body = <p className="empty">이름을 입력하면 찾아 드려요.</p>;
-  } else if (found.isPending) {
-    body = <p className="empty">찾는 중…</p>;
-  } else if (found.isError) {
-    body = <p className="empty">{reason(found.error)}</p>;
-  } else if (members.length === 0) {
-    body = <p className="empty">그런 이름을 찾지 못했어요.</p>;
-  } else {
-    body = (
-      <ul className="found">
-        {members.map((member) => (
-          <li key={member.id}>
-            <button onClick={() => onPick(member)}>
-              {memberLabel(member.name, member.cohort)}
-            </button>
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
-  return (
-    <div className="seek">
-      <input
-        autoFocus
-        type="search"
-        value={text}
-        aria-label="찾을 이름"
-        placeholder="이름"
-        onChange={(event) => setText(event.target.value)}
-      />
-      {body}
-    </div>
-  );
-}
-
-/** 고른 팀의 자리표. 빈 자리도 함께 보인다 — 채워야 할 곳을 보여주는 것이 이 화면의 일이다. */
+/** 고른 팀의 포지션 구성. 빈 포지션도 함께 보인다 — 채워야 할 곳을 보여주는 것이 이 화면의 일이다. */
 function Lineup(props: {
   teamId: number;
-  /** 빈 자리에 사람을 넣을 수 있는가 */
+  /** 빈 포지션에 사람을 넣을 수 있는가 */
   canAdd: boolean;
-  /** 남이 앉은 자리를 비울 수 있는가 */
+  /** 남이 있는 포지션을 비울 수 있는가 */
   canRemove: boolean;
   onSay: (message: string) => void;
 }) {
@@ -249,7 +242,7 @@ function Lineup(props: {
               {!canAdd ? null : (
                 <button
                   className="ic"
-                  aria-label={`${label} 자리에 넣을 사람 찾기`}
+                  aria-label={`${label} 포지션에 넣을 사람 찾기`}
                   onClick={() => setSeeking(slot.id)}
                 >
                   <SearchIcon />
@@ -279,10 +272,10 @@ function Lineup(props: {
   );
 }
 
-/** 만들려는 자리 한 칸. 아직 저장 전이라 id 가 없고, 악기와 번호로만 가리킨다. */
+/** 만들려는 포지션 하나. 아직 저장 전이라 id 가 없고, 악기와 번호로만 가리킨다. */
 type Draft = { instrument: Instrument; ordinal: number; label: string; member: Member | null };
 
-/** 정한 수만큼 자리를 펼친다. 같은 악기가 하나뿐이면 번호를 떼고 "드럼" 으로 둔다. */
+/** 정한 수만큼 포지션을 펼친다. 같은 악기가 하나뿐이면 번호를 떼고 "드럼" 으로 둔다. */
 function spread(counts: Counts): Draft[] {
   return INSTRUMENTS.flatMap((instrument) => {
     const count = counts[instrument] ?? 0;
@@ -295,11 +288,11 @@ function spread(counts: Counts): Draft[] {
   });
 }
 
-/** 팀 만들기. 두 단계다 — 먼저 악기마다 몇 자리인지 정하고, 그다음 자리마다 사람을 넣는다.
+/** 팀 만들기. 두 단계다 — 먼저 악기마다 몇 명인지 정하고, 그다음 포지션마다 사람을 넣는다.
  *
- *  저장은 마지막 한 번에 일어난다. 서버는 팀과 자리를 함께 만들고(POST /teams) 사람은
- *  자리마다 따로 받으므로(PUT .../slots/{id}), 만든 뒤 자리 목록을 받아 악기·번호로
- *  짝을 지어 채운다. 자리 순서를 짐작하지 않는 것은 서버가 정렬을 바꿔도 어긋나지
+ *  저장은 마지막 한 번에 일어난다. 서버는 팀과 포지션을 함께 만들고(POST /teams) 사람은
+ *  포지션마다 따로 받으므로(PUT .../slots/{id}), 만든 뒤 포지션 목록을 받아 악기·번호로
+ *  짝을 지어 채운다. 순서를 짐작하지 않는 것은 서버가 정렬을 바꿔도 어긋나지
  *  않게 하기 위해서다. */
 function NewTeam(props: { taken: string[]; onDone: (message: string) => void; onClose: () => void }) {
   const { taken, onDone, onClose } = props;
@@ -340,7 +333,7 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
     onError: (error) => setBad(reason(error)),
   });
 
-  // 1단계 — 악기마다 몇 자리인지 정한다.
+  // 1단계 — 악기마다 몇 명인지 정한다.
   if (drafts === null) {
     return (
       <Modal title="새 팀" hint="악기마다 몇 명이 들어가는지 정합니다" onClose={onClose}
@@ -383,15 +376,15 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
           />
         ))}
 
-        <p className="note">자리 {total}개</p>
+        <p className="note">포지션 {total}개</p>
         {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
       </Modal>
     );
   }
 
-  // 2단계 — 자리마다 사람을 넣는다. 비워 둔 자리는 그대로 빈 자리로 만들어진다.
+  // 2단계 — 포지션마다 사람을 넣는다. 비워 둔 곳은 그대로 빈 포지션으로 만들어진다.
   return (
-    <Modal title={name.trim()} hint="돋보기를 눌러 자리에 넣을 사람을 찾습니다" onClose={onClose}
+    <Modal title={name.trim()} hint="돋보기를 눌러 포지션에 넣을 사람을 찾습니다" onClose={onClose}
       foot={
         <>
           <button className="ghost" onClick={() => setDrafts(null)}>이전</button>
@@ -417,7 +410,7 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
             <span className="acts">
               <button
                 className="ic"
-                aria-label={`${draft.label} 자리에 넣을 사람 찾기`}
+                aria-label={`${draft.label} 포지션에 넣을 사람 찾기`}
                 onClick={() => setSeeking(index)}
               >
                 <SearchIcon />
@@ -469,7 +462,7 @@ export function Teams() {
   const drop = useMutation({
     mutationFn: (team: Team) => getJSON<null>(`/teams/${team.id}`, { method: "DELETE" }),
     onSuccess: (_body, team) => {
-      // 지운 팀의 자리표가 열려 있으면 함께 닫는다.
+      // 지운 팀의 포지션 구성이 열려 있으면 함께 닫는다.
       setOpenId((now) => (now === team.id ? null : now));
       void client.invalidateQueries({ queryKey: ["teams"] });
       say(`${team.name} 팀을 삭제했어요.`);
@@ -516,7 +509,7 @@ export function Teams() {
         <Card>
           <div className="sethead">
             <b>팀</b>
-            <span>팀을 누르면 자리가 보입니다</span>
+            <span>팀을 누르면 포지션 구성이 보입니다</span>
           </div>
 
           {/* 비었거나 불러오는 중이어도 상자는 그대로 둔다 — 상자 높이를 재서 한 쪽에
@@ -570,7 +563,7 @@ export function Teams() {
       )}
 
       {renaming === null ? null : (
-        <RenameTeam
+        <EditTeam
           team={renaming}
           taken={list.filter((team) => team.id !== renaming.id).map((team) => team.name)}
           onClose={() => setRenaming(null)}
@@ -581,7 +574,7 @@ export function Teams() {
       {opened === null ? null : (
         <Modal
           title={opened.name}
-          hint={`자리 ${opened.slot_count}개 중 ${opened.filled_count}개 참`}
+          hint={`포지션 ${opened.slot_count}개 중 ${opened.filled_count}개 참`}
           onClose={() => setOpenId(null)}
         >
           <Lineup

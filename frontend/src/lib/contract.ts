@@ -114,8 +114,21 @@ export type Account = {
 export type PermissionSet = {
   id: number;
   name: string;
+  /** 무엇을 하는 사람에게 주는 권한인지. 만들 때 반드시 적는다. */
+  description: string;
   permissions: Permission[];
   member_ids: number[];
+};
+
+/** 멤버 목록의 한 줄. 사람을 가르는 네 값과 가진 권한 묶음 이름이 함께 온다.
+ *  서버 쪽 정본은 backend/src/backend/api/schemas.py 의 MemberRowOut 이다. */
+export type MemberRow = {
+  id: number;
+  name: string;
+  department: string | null;
+  student_no: string | null;
+  cohort: number | null;
+  permission_sets: string[];
 };
 
 export type ScheduleRow = {

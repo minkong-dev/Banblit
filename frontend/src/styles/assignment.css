@@ -12,7 +12,7 @@
     --c4: #8A6516; --c4-tint: #F6EED9;
     --shadow: 0 1px 2px rgba(0,23,51,.04), 0 8px 24px rgba(0,23,51,.07);
     --shadow-up: 0 12px 48px rgba(0,23,51,.18);
-    --side: 296px;
+    --side: clamp(232px, 15%, 300px);
   }
   @media (prefers-color-scheme: dark) {
     html:not([data-theme="light"]) body[data-page="admin"] {
@@ -86,7 +86,7 @@ body[data-page="admin"] {
 
   .shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); height: calc(100vh - 62px); }
   .side { overflow: hidden auto; background: var(--card); border-right: 1px solid var(--line); }
-  .side .inner { width: 296px; height: 100%; padding: 20px 14px; display: flex; flex-direction: column; gap: 18px; }
+  .side .inner { width: 100%; height: 100%; padding: 20px 14px; display: flex; flex-direction: column; gap: 18px; }
   .side nav { display: flex; flex-direction: column; gap: 2px; }
   .side nav :is(a, button) { display: flex; align-items: center; text-align: left; padding: 12px; min-height: 46px; color: var(--t1); text-decoration: none; font-size: 15px; font-weight: 500; border-radius: 10px; white-space: nowrap; }
   .side nav a:hover { background: var(--card-2); }
@@ -99,7 +99,7 @@ body[data-page="admin"] {
   .side label { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 12px; font-size: 13px; color: var(--t2); cursor: pointer; white-space: nowrap; }
   .side label input { width: 17px; height: 17px; accent-color: var(--brand); cursor: pointer; }
 
-  .page { height: 100%; padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr) 380px; grid-template-rows: auto minmax(0, 1fr); column-gap: 18px; min-height: 0; }
+  .page { height: 100%; padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr) clamp(280px, 24%, 400px); grid-template-rows: auto minmax(0, 1fr); column-gap: 18px; min-height: 0; }
   .tabs { grid-column: 1; grid-row: 1; display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .tab { padding: 10px 18px; min-height: 44px; border-radius: 999px; background: var(--card); color: var(--t2); font-size: 14.5px; font-weight: 500; box-shadow: var(--shadow); transition: background-color .15s ease, color .15s ease; }
   .tab:hover { color: var(--t1); }
@@ -194,9 +194,16 @@ body[data-page="admin"] {
   .st.bad { background: var(--red-tint); color: var(--red); }
   .st.now { background: var(--brand); color: var(--brand-on); }
   /* 지난 계산 회차 한 줄 — 아직 그 회차의 시간표를 꺼내 볼 통로가 없어 누르지 않는다. */
-  .panel li.round { padding: 12px 10px; border-radius: 12px; }
-  .panel li.round b { display: block; font-size: 14px; font-weight: 500; }
-  .panel li.round small { font-size: 12.5px; color: var(--t3); }
+  /* 회차는 눌러서 그때 시간표를 여는 자리다 — 줄 전체가 단추다. */
+  .panel .round {
+    display: block; width: 100%; text-align: left;
+    padding: 12px 10px; border-radius: 12px;
+    transition: background-color .15s ease;
+  }
+  .panel .round:hover { background: var(--card-2); }
+  .panel .round.on { background: var(--brand-tint); }
+  .panel .round b { display: block; font-size: 14px; font-weight: 500; }
+  .panel .round small { font-size: 12.5px; color: var(--t3); }
   .panel li.empty { padding: 12px 10px; font-size: 13.5px; color: var(--t3); line-height: 1.7; }
 
   .times { padding: 18px; }
@@ -223,8 +230,7 @@ body[data-page="admin"] {
 
   /* ===== 창이 좁아지면 요소가 움직인다 ===== */
   @media (max-width: 1240px) {
-    .shell { --side: 264px; }
-    .page { grid-template-columns: minmax(0, 1fr) 316px; column-gap: 14px; padding: 14px; }
+    .page { column-gap: 14px; padding: 14px; }
     .panel > .ph { padding: 13px 15px; font-size: 14.5px; }
     .panel li a { padding: 9px; font-size: 13.5px; }
   }
