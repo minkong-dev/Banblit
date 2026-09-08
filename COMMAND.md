@@ -391,7 +391,7 @@ docker compose run --rm dev alembic downgrade -1
   - `-1` — 되돌릴 칸 수. 숫자 대신 `alembic downgrade <revision>`처럼 되돌아갈 목적지 번호를 직접 적어도 됩니다. 생략하면 오류입니다 — 어디까지 되돌릴지 반드시 적어야 합니다.
 - **주의점**
   - **열을 지우는 `downgrade()`는 그 열의 값을 함께 지웁니다.** 되돌린 뒤 다시 `upgrade`해도 지워진 값은 돌아오지 않습니다. 새 마이그레이션을 검증할 때만 쓰고, 값이 든 저장소에서는 먼저 백업합니다.
-  - 권한 묶음 마이그레이션(`b7f1a92c4d31`)의 되돌리기는 `members.role`을 다시 만들고, 열한 가지가 전부 켜진 묶음을 가진 사람을 `head_manager`로 되돌린 뒤 두 표를 지웁니다. 이 왕복은 `backend/tests/integration/db/test_permission_migration.py`가 전용 DB에서 자동으로 확인합니다.
+  - 권한 묶음 마이그레이션(`b7f1a92c4d31`)의 되돌리기는 `members.role`을 다시 만들고, 항목이 전부 켜진 묶음을 가진 사람을 `head_manager`로 되돌린 뒤 두 표를 지웁니다. 이 왕복은 `backend/tests/integration/db/test_permission_migration.py`가 전용 DB에서 자동으로 확인합니다.
 
 ### 4-3. 모델 변경 후 마이그레이션 새로 만들기
 
@@ -406,7 +406,7 @@ docker compose run --rm dev alembic revision --autogenerate -m "<제목>"
   - `--autogenerate` — 현재 DB에 이미 적용된 스키마와 `models.py`가 정의한 목표 스키마를 비교해, 그 차이를 채운 `upgrade()`/`downgrade()` 초안을 자동으로 써 줍니다.
   - `-m "<제목>"` — 마이그레이션 파일 이름에 들어갈 설명. 생략하면 제목 없는 파일이 되어 나중에 무슨 변경인지 알아보기 어렵습니다.
 - **주의점**
-  - **autogenerate는 `CheckConstraint`를 감지하지 못할 수 있습니다.** 실제로 `rooms`(30분 격자), `periods`(kind 목록), `assignments`(시간 역전 방지) 테이블의 `CheckConstraint`가 자동 생성된 초안에 빠졌던 적이 있어, 파일을 열어 직접 확인하고 빠졌으면 `op.create_check_constraint`로 채워 넣어야 합니다.
+  - **autogenerate는 `CheckConstraint`를 감지하지 못할 수 있습니다.** 실제로 `rooms`(정시 격자), `periods`(kind 목록), `assignments`(시간 역전 방지) 테이블의 `CheckConstraint`가 자동 생성된 초안에 빠졌던 적이 있어, 파일을 열어 직접 확인하고 빠졌으면 `op.create_check_constraint`로 채워 넣어야 합니다.
   - 자동 생성된 파일은 초안일 뿐입니다. 실행하기 전에 반드시 내용을 읽고, 기본값 데이터를 심어야 하는 경우(예: `positions` 기본 5종)는 `upgrade()` 끝에 `op.bulk_insert`를 직접 추가해야 합니다.
   - 생성만 하고 적용은 되지 않습니다. 적용하려면 `4-2`의 `alembic upgrade head`를 이어서 실행해야 합니다.
 
@@ -616,7 +616,7 @@ docker compose run --rm --no-deps web npm test
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 화면 쪽 검사를 돌립니다. 지금 덮는 것은 순수 계산과 입력 검증이다 — 서버 호출 감싸개, 달력 칸 계산, 30분 조각을 합주로 잇는 계산, 계정 서식 입력 검사. 통과하면 `Tests 55 passed` 가 나옵니다. 화면을 실제로 띄워 보는 검사는 아직 없습니다.
+- **용도**: 화면 쪽 검사를 돌립니다. 지금 덮는 것은 순수 계산과 입력 검증이다 — 서버 호출 감싸개, 달력 칸 계산, slot 조각을 합주로 잇는 계산, 계정 서식 입력 검사, 삭제 확인 문구의 조사 붙이기. 통과하면 `Tests 200 passed` 가 나옵니다. 화면을 실제로 띄워 보는 검사는 아직 없습니다.
 - **옵션**
   - `run` — 일회용 컨테이너를 만들어 명령 하나만 돌리고 끝냅니다. 개발 서버를 띄운 채로도 따로 돌릴 수 있습니다.
   - `--rm` — 끝나면 그 컨테이너를 지웁니다. 붙이지 않으면 돌릴 때마다 찌꺼기가 쌓입니다.
@@ -740,9 +740,12 @@ docker compose run --rm e2e
     컨테이너 부하가 크면 늘어날 수 있습니다.
   - 검사 중 `frontend/e2e/notices.spec.ts` 가 공지에 글을 하나 남깁니다. 지우는
     지우는 자리가 없어 돌릴 때마다(제목에 실행 시각을 붙여 구분은 되지만) 계속 쌓입니다.
-  - 계정도 마찬가지로 쌓입니다 — `account.spec.ts` 와 `teams.spec.ts` 가 가입·참가
-    신청을 확인하려고 매번 새 계정을 만듭니다. 계정을 지우는 통로가 없어서입니다. 다만
-    팀 명단과 참가 승인 방식은 검사 끝에 되돌려 놓으므로 다음 실행이 같은 값을 봅니다.
+  - 계정도 마찬가지로 쌓입니다 — `account.spec.ts` 와 `teams.spec.ts` 가 가입을
+    확인하려고 매번 새 계정을 만듭니다. 다만 이제는 탈퇴 통로(`DELETE /me`)가 있어
+    검사 끝에 지울 수 있습니다. 팀 명단은 검사 끝에 되돌려 놓으므로 다음 실행이 같은
+    값을 봅니다.
+  - **이 검사는 지금 깨져 있습니다.** 시드가 만들던 `e2e@banblit.test` 계정이
+    없어졌습니다. 고치기 전에는 통과하지 않습니다.
 
 ### 12-2. 특정 테스트 파일만 돌리기
 
