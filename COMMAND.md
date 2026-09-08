@@ -787,7 +787,7 @@ docker compose run --rm --no-deps web npm run lint:e2e
 
 기간에 저장된 연산 시각(`periods.first_run_at`·`second_run_at`)이 지나면 사람이 버튼을
 누르지 않아도 배정을 돌리는 서비스입니다. `api` 와 같은 이미지를 쓰되 HTTP endpoint 를 거치지
-않고 `backend/src/backend/api/auto_assign.py` 의 `assign_period` 를 직접 부릅니다.
+않고 `backend/src/backend/jobs/auto_assign.py` 의 `assign_period` 를 직접 부릅니다.
 
 ### 13-1. 자동 배정 서비스 띄우기
 

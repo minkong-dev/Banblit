@@ -34,7 +34,7 @@ Banblit은 하나의 합주실을 여러 밴드 팀이 나눠 쓸 때 생기는 
 - [합주실과 기간](./practice-room-and-periods/README.md) — 합주실 설정과 집중 합주기간, 그 밖의 날은 예약제
 - [스케줄러](./scheduler/README.md) — 메인 캘린더의 보기와 상호작용
 - [자동 배정](./auto-assignment/README.md) — 집중 합주기간의 배정과 실패 시 조율안
-- [스케줄링 API](./scheduling-api/README.md) — 자동 배정 계산을 바깥에서 부를 수 있게 여는 서버 endpoint
+- [스케줄링 API](./scheduling-api/README.md) — 서버 endpoint 전체가 따르는 공통 규칙, 그 아래 기간 자동 배정 endpoint
 - [데이터 저장소](./database-layer/README.md) — 팀·소속·불가능시간·합주실·기간·배정을 남겨두고 규칙을 지키는 층
 - [LLM 도우미](./llm-assistant/README.md) — 자연어 입력과 충돌 조율
 - [게시판과 공지](./boards/README.md) — 팀 게시판과 전체 공지
