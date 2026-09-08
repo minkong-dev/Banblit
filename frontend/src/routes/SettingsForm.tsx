@@ -4,12 +4,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 
+import { PencilIcon } from "../components/icons";
+
 export function reason(error: unknown): string {
   // error 를 받아 화면에 띄울 한 줄을 돌려준다.
   return error instanceof Error ? error.message : "저장하지 못했습니다";
 }
 
-/** 고치기/취소로 줄이 통째로 갈릴 때 초점이 사라지지 않게, 눌렀던 단추를 기억해 둔다. */
+/** 수정/취소로 줄이 통째로 갈릴 때 초점이 사라지지 않게, 눌렀던 단추를 기억해 둔다. */
 export function useRowFocus(): {
   editing: number | null;
   open: (id: number) => void;
@@ -43,7 +45,7 @@ export function useRowFocus(): {
   };
 }
 
-/** 고치기로 들어온 서식의 첫 칸에 초점을 옮긴다. autoFocus 는 이 화면에서 걸리지
+/** 수정으로 들어온 서식의 첫 칸에 초점을 옮긴다. autoFocus 는 이 화면에서 걸리지
  *  않아 직접 옮긴다. 추가 서식(editing 이 아닌 것)에는 걸지 않는다 — 화면을 열자마자
  *  아래쪽 서식으로 끌려가면 안 된다. */
 export function useFirstField<T extends HTMLElement>(editing: boolean): RefObject<T | null> {
@@ -87,6 +89,8 @@ export function CardState({ state, empty }: { state: string; empty: string }) {
 
 /** 목록 한 줄 — 보고 있는 상태. 고치는 중이면 카드가 서식을 대신 그린다.
  *  onEdit 이 없으면 값만 보여준다 — 고칠 항목이 없는 사람에게 그리는 줄이다. */
+/** 목록 한 줄. 오른쪽 끝에 연필(수정)과 쓰레기통(삭제)이 선다.
+ *  줄마다 같은 그림이라 무엇을 가리키는지는 aria-label 이 말한다. */
 export function Row(props: {
   title: string;
   when: ReactNode;
@@ -94,7 +98,7 @@ export function Row(props: {
   editLabel?: string;
   buttonRef?: (el: HTMLButtonElement | null) => void;
   onEdit?: () => void;
-  /** 고치기 옆에 더 붙일 단추. 권한 묶음의 지우기가 이 자리를 쓴다. */
+  /** 연필 옆에 더 붙일 단추. 권한 묶음의 쓰레기통이 이 자리를 쓴다. */
   extra?: ReactNode;
 }) {
   const { title, when, span, editLabel, buttonRef, onEdit, extra } = props;
@@ -107,11 +111,13 @@ export function Row(props: {
           <span className="span">{span}</span>
         </div>
       </div>
-      {onEdit === undefined ? null : (
+      {onEdit === undefined && extra === undefined ? null : (
         <div className="acts">
-          <button className="btn" ref={buttonRef} aria-label={editLabel} onClick={onEdit}>
-            고치기
-          </button>
+          {onEdit === undefined ? null : (
+            <button className="ic" ref={buttonRef} aria-label={editLabel} onClick={onEdit}>
+              <PencilIcon />
+            </button>
+          )}
           {extra}
         </div>
       )}

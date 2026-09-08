@@ -16,28 +16,29 @@ describe("roleLabel", () => {
 
 describe("can", () => {
   it("가진 항목이면 참, 아니면 거짓이다", () => {
-    const me = accountWith(["room_manage", "notice_write"]);
-    expect(can(me, "room_manage")).toBe(true);
-    expect(can(me, "period_manage")).toBe(false);
+    const me = accountWith(["room_edit", "notice_write"]);
+    expect(can(me, "room_edit")).toBe(true);
+    expect(can(me, "period_edit")).toBe(false);
   });
 
   it("아직 못 받아온 계정은 아무것도 가지지 않은 것으로 본다", () => {
-    expect(can(null, "room_manage")).toBe(false);
+    expect(can(null, "room_edit")).toBe(false);
   });
 
   it("permissions 항목이 아예 없는 응답도 없는 것으로 본다", () => {
     // 낡은 서버가 permissions 없이 답하는 경우다. 타입에는 있지만 값이 없을 수 있다.
     const stale = { id: 1, name: "김민수", email: "a@b.c", role: "member", positions: [] };
-    expect(can(stale as unknown as Account, "room_manage")).toBe(false);
+    expect(can(stale as unknown as Account, "room_edit")).toBe(false);
   });
 });
 
 describe("PERMISSION_ITEMS", () => {
-  it("서버가 고정한 열 가지를 그 순서대로 든다", () => {
-    // 팀 참가 승인은 참가 신청 자체가 없어지면서 지킬 자리가 사라졌다.
-    expect(PERMISSION_ITEMS).toHaveLength(10);
-    expect(PERMISSION_ITEMS[0].key).toBe("room_manage");
-    expect(PERMISSION_ITEMS[9].key).toBe("permission_grant");
+  it("서버가 고정한 열여덟 가지를 그 순서대로 든다", () => {
+    // 만들기·수정·삭제·주기를 따로 둔다. 서버 쪽 정본은 backend/db/models.py 의
+    // Permission 이고, 이 목록이 그것과 개수가 어긋나면 화면에 못 켜는 항목이 생긴다.
+    expect(PERMISSION_ITEMS).toHaveLength(18);
+    expect(PERMISSION_ITEMS[0].key).toBe("room_create");
+    expect(PERMISSION_ITEMS[PERMISSION_ITEMS.length - 1].key).toBe("permission_grant");
   });
 
   it("항목마다 한국어 이름이 있다", () => {
@@ -47,11 +48,11 @@ describe("PERMISSION_ITEMS", () => {
 
 describe("permissionLabels", () => {
   it("고른 순서와 무관하게 항목 선언 순서로 한국어 이름을 돌려준다", () => {
-    expect(permissionLabels(["notice_write", "room_manage"])).toEqual(["합주실 관리", "공지 쓰기"]);
+    expect(permissionLabels(["notice_write", "room_edit"])).toEqual(["합주실 수정", "공지 쓰기"]);
   });
 
   it("모르는 이름은 버린다", () => {
-    expect(permissionLabels(["room_manage", "무언가"])).toEqual(["합주실 관리"]);
+    expect(permissionLabels(["room_edit", "무언가"])).toEqual(["합주실 수정"]);
   });
 
   it("빈 목록은 빈 목록이다", () => {

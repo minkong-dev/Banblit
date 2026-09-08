@@ -2,11 +2,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { AppShell, Card, ProfileMenu } from "../components/AppShell";
-import { useMe, useMyTeams, useToast } from "../components/hooks";
+import { Modal, Stepper } from "../components/Modal";
+import { PencilIcon, SearchIcon, TrashIcon } from "../components/icons";
+import { useFitCount, useMe, useMyTeams, useToast } from "../components/hooks";
+import { clampPage, pageCount, pageSlice, pageWindow } from "../lib/paging";
+import { askDelete } from "../lib/confirm";
 import { getJSON } from "../lib/api";
 import { can, roleLabel } from "../lib/account";
 import { checkSlotCounts, checkTeamName, memberLabel, slotName } from "../lib/pipeline";
 import { INSTRUMENTS } from "../lib/contract";
+import { MAX_SLOTS_PER_TEAM } from "../lib/roster";
 import type { Instrument, Member, Team, TeamSlot } from "../lib/contract";
 import "../styles/teams.css";
 
@@ -30,28 +35,109 @@ function labelled(slots: TeamSlot[]): { slot: TeamSlot; label: string }[] {
   }));
 }
 
-/** 팀 목록의 한 줄. 자리가 몇 개 찼는지를 이름 옆에 함께 둔다. */
-function TeamRow(props: { team: Team; selected: boolean; mine: boolean; onOpen: () => void }) {
-  const { team, selected, mine, onOpen } = props;
+/** 팀 목록의 한 줄. 줄을 누르면 자리표가 열리고, 오른쪽 끝의 연필·쓰레기통은
+ *  팀을 다룰 수 있는 사람에게만 보인다. */
+function TeamRow(props: {
+  team: Team;
+  selected: boolean;
+  mine: boolean;
+  onOpen: () => void;
+  onRename?: () => void;
+  onDelete?: () => void;
+}) {
+  const { team, selected, mine, onOpen, onRename, onDelete } = props;
   return (
-    <button
-      className={selected ? "teamrow2 on" : "teamrow2"}
-      aria-current={selected ? "true" : undefined}
-      onClick={onOpen}
-    >
-      <b>{team.name}</b>
-      {mine ? <span className="mine">내 팀</span> : null}
-      <span className="cnt">
-        {team.filled_count}/{team.slot_count}
-      </span>
-    </button>
+    <div className="teamline">
+      <button
+        className={selected ? "teamrow2 on" : "teamrow2"}
+        aria-current={selected ? "true" : undefined}
+        onClick={onOpen}
+      >
+        <b>{team.name}</b>
+        {mine ? <span className="mine">내 팀</span> : null}
+        <span className="cnt">
+          {team.filled_count}/{team.slot_count}
+        </span>
+      </button>
+      {onRename === undefined ? null : (
+        <span className="acts">
+          <button className="ic" aria-label={`${team.name} 수정`} onClick={onRename}>
+            <PencilIcon />
+          </button>
+          <button className="ic danger" aria-label={`${team.name} 삭제`} onClick={onDelete}>
+            <TrashIcon />
+          </button>
+        </span>
+      )}
+    </div>
   );
 }
 
-/** 자리에 앉힐 사람을 이름으로 찾는 자리. 빈 검색어에는 아무것도 나오지 않는다 —
- *  명단을 통째로 내주는 통로가 아니기 때문이다. */
-function MemberSearch(props: { onPick: (member: Member) => void; onClose: () => void }) {
-  const { onPick, onClose } = props;
+/** 팀 이름 바꾸기. 자리 구성은 건드리지 않는다 — 서버가 이름만 받는다. */
+function RenameTeam(props: {
+  team: Team;
+  taken: string[];
+  onDone: (message: string) => void;
+  onClose: () => void;
+}) {
+  const { team, taken, onDone, onClose } = props;
+  const client = useQueryClient();
+  const [name, setName] = useState(team.name);
+  const [bad, setBad] = useState("");
+
+  const send = useMutation({
+    mutationFn: () =>
+      getJSON<{ team: Team }>(`/teams/${team.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: name.trim() }),
+      }),
+    onSuccess: (body) => {
+      void client.invalidateQueries({ queryKey: ["teams"] });
+      onDone(`${body.team.name} 으로 바꿨어요.`);
+    },
+    onError: (error) => setBad(reason(error)),
+  });
+
+  return (
+    <Modal title="팀 수정" hint="이름을 바꿉니다" onClose={onClose}
+      foot={
+        <>
+          <button className="ghost" onClick={onClose}>취소</button>
+          <button
+            className="primary"
+            disabled={send.isPending}
+            onClick={() => {
+              const why = checkTeamName(name, taken);
+              setBad(why);
+              if (why === "") send.mutate();
+            }}
+          >
+            {send.isPending ? "저장하는 중…" : "저장"}
+          </button>
+        </>
+      }
+    >
+      <div className="fields">
+        <label className="wide" htmlFor="teamRename">
+          팀 이름
+          <input
+            id="teamRename"
+            autoFocus
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+          />
+        </label>
+      </div>
+      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+    </Modal>
+  );
+}
+
+/** 사람을 이름으로 찾는 알맹이. 빈 검색어에는 아무것도 나오지 않는다 —
+ *  명단을 통째로 내주는 통로가 아니기 때문이다.
+ *  껍데기는 Modal 이 맡는다. 팀 만들기와 자리표가 같은 것을 쓴다. */
+function MemberSearch(props: { onPick: (member: Member) => void }) {
+  const { onPick } = props;
   const [text, setText] = useState("");
   const query = text.trim();
 
@@ -87,26 +173,30 @@ function MemberSearch(props: { onPick: (member: Member) => void; onClose: () => 
   }
 
   return (
-    <div className="seek" role="dialog" aria-label="사람 찾기">
-      <div className="seekhead">
-        <input
-          autoFocus
-          type="search"
-          value={text}
-          aria-label="찾을 이름"
-          placeholder="이름"
-          onChange={(event) => setText(event.target.value)}
-        />
-        <button className="btn" onClick={onClose}>닫기</button>
-      </div>
+    <div className="seek">
+      <input
+        autoFocus
+        type="search"
+        value={text}
+        aria-label="찾을 이름"
+        placeholder="이름"
+        onChange={(event) => setText(event.target.value)}
+      />
       {body}
     </div>
   );
 }
 
 /** 고른 팀의 자리표. 빈 자리도 함께 보인다 — 채워야 할 곳을 보여주는 것이 이 화면의 일이다. */
-function Lineup(props: { teamId: number; canEdit: boolean; onSay: (message: string) => void }) {
-  const { teamId, canEdit, onSay } = props;
+function Lineup(props: {
+  teamId: number;
+  /** 빈 자리에 사람을 넣을 수 있는가 */
+  canAdd: boolean;
+  /** 남이 앉은 자리를 비울 수 있는가 */
+  canRemove: boolean;
+  onSay: (message: string) => void;
+}) {
+  const { teamId, canAdd, canRemove, onSay } = props;
   const client = useQueryClient();
   const [seeking, setSeeking] = useState<number | null>(null);
 
@@ -154,31 +244,34 @@ function Lineup(props: { teamId: number; canEdit: boolean; onSay: (message: stri
           ) : (
             <span className="who">{memberLabel(slot.member_name ?? "", slot.member_cohort)}</span>
           )}
-          {!canEdit ? null : (
+          {!canAdd && !canRemove ? null : (
             <span className="acts">
-              <button
-                className="ic"
-                aria-label={`${label} 자리에 앉힐 사람 찾기`}
-                onClick={() => setSeeking(seeking === slot.id ? null : slot.id)}
-              >
-                🔍
-              </button>
-              {slot.member_id === null ? null : (
+              {!canAdd ? null : (
+                <button
+                  className="ic"
+                  aria-label={`${label} 자리에 넣을 사람 찾기`}
+                  onClick={() => setSeeking(slot.id)}
+                >
+                  <SearchIcon />
+                </button>
+              )}
+              {slot.member_id === null || !canRemove ? null : (
                 <button
                   className="btn"
                   disabled={clear.isPending}
                   onClick={() => clear.mutate(slot.id)}
                 >
-                  비우기
+                  삭제
                 </button>
               )}
             </span>
           )}
           {seeking !== slot.id ? null : (
-            <MemberSearch
-              onClose={() => setSeeking(null)}
-              onPick={(member) => sit.mutate({ slotId: slot.id, memberId: member.id })}
-            />
+            <Modal title="사람 찾기" hint={label} onClose={() => setSeeking(null)}>
+              <MemberSearch
+                onPick={(member) => sit.mutate({ slotId: slot.id, memberId: member.id })}
+              />
+            </Modal>
           )}
         </li>
       ))}
@@ -186,93 +279,180 @@ function Lineup(props: { teamId: number; canEdit: boolean; onSay: (message: stri
   );
 }
 
-/** 팀 만들기 — 이름을 적고 악기마다 몇 자리인지 +/- 로 정한다. 자리는 팀과 함께 생긴다. */
-function CreateTeam(props: { taken: string[]; onSay: (message: string) => void }) {
-  const { taken, onSay } = props;
+/** 만들려는 자리 한 칸. 아직 저장 전이라 id 가 없고, 악기와 번호로만 가리킨다. */
+type Draft = { instrument: Instrument; ordinal: number; label: string; member: Member | null };
+
+/** 정한 수만큼 자리를 펼친다. 같은 악기가 하나뿐이면 번호를 떼고 "드럼" 으로 둔다. */
+function spread(counts: Counts): Draft[] {
+  return INSTRUMENTS.flatMap((instrument) => {
+    const count = counts[instrument] ?? 0;
+    return Array.from({ length: count }, (_unused, index) => ({
+      instrument,
+      ordinal: index + 1,
+      label: slotName(instrument, index + 1, count),
+      member: null,
+    }));
+  });
+}
+
+/** 팀 만들기. 두 단계다 — 먼저 악기마다 몇 자리인지 정하고, 그다음 자리마다 사람을 넣는다.
+ *
+ *  저장은 마지막 한 번에 일어난다. 서버는 팀과 자리를 함께 만들고(POST /teams) 사람은
+ *  자리마다 따로 받으므로(PUT .../slots/{id}), 만든 뒤 자리 목록을 받아 악기·번호로
+ *  짝을 지어 채운다. 자리 순서를 짐작하지 않는 것은 서버가 정렬을 바꿔도 어긋나지
+ *  않게 하기 위해서다. */
+function NewTeam(props: { taken: string[]; onDone: (message: string) => void; onClose: () => void }) {
+  const { taken, onDone, onClose } = props;
   const client = useQueryClient();
   const [name, setName] = useState("");
   const [counts, setCounts] = useState<Counts>(NO_SLOTS);
+  const [drafts, setDrafts] = useState<Draft[] | null>(null);
+  const [seeking, setSeeking] = useState<number | null>(null);
   const [bad, setBad] = useState("");
 
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
 
   const create = useMutation({
-    mutationFn: () =>
-      getJSON<{ team: Team }>("/teams", {
+    mutationFn: async (seats: Draft[]) => {
+      const made = await getJSON<{ team: Team }>("/teams", {
         method: "POST",
         body: JSON.stringify({ name: name.trim(), slots: counts }),
-      }),
-    onSuccess: (body) => {
-      setName("");
-      setCounts(NO_SLOTS);
-      setBad("");
-      onSay(`${body.team.name} 팀을 만들었어요.`);
+      });
+      const teamId = made.team.id;
+      const saved = await getJSON<{ slots: TeamSlot[] }>(`/teams/${teamId}/slots`);
+      for (const seat of seats) {
+        if (seat.member === null) continue;
+        const slot = saved.slots.find(
+          (row) => row.instrument === seat.instrument && row.ordinal === seat.ordinal,
+        );
+        if (slot === undefined) continue;
+        await getJSON(`/teams/${teamId}/slots/${slot.id}`, {
+          method: "PUT",
+          body: JSON.stringify({ member_id: seat.member.id }),
+        });
+      }
+      return made.team;
+    },
+    onSuccess: (team) => {
       void client.invalidateQueries({ queryKey: ["teams"] });
+      onDone(`${team.name} 팀을 만들었어요.`);
     },
     onError: (error) => setBad(reason(error)),
   });
 
-  const bump = (instrument: Instrument, step: number): void =>
-    setCounts((now) => ({
-      ...now,
-      [instrument]: Math.max(0, (now[instrument] ?? 0) + step),
-    }));
+  // 1단계 — 악기마다 몇 자리인지 정한다.
+  if (drafts === null) {
+    return (
+      <Modal title="새 팀" hint="악기마다 몇 명이 들어가는지 정합니다" onClose={onClose}
+        foot={
+          <>
+            <button className="ghost" onClick={onClose}>취소</button>
+            <button
+              className="primary"
+              onClick={() => {
+                const why = checkTeamName(name, taken) || checkSlotCounts(counts);
+                setBad(why);
+                if (why === "") setDrafts(spread(counts));
+              }}
+            >
+              구성 확정
+            </button>
+          </>
+        }
+      >
+        <div className="fields">
+          <label className="wide" htmlFor="teamName">
+            팀 이름
+            <input
+              id="teamName"
+              value={name}
+              placeholder="곡 이름"
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+        </div>
 
-  return (
-    <form
-      className="addrow"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const why = checkTeamName(name, taken) || checkSlotCounts(counts);
-        setBad(why);
-        if (why === "") create.mutate();
-      }}
-    >
-      <p className="note">악기마다 몇 명이 들어가는지 정하면 그만큼 자리가 생깁니다.</p>
-      <div className="fields">
-        <label className="wide" htmlFor="teamName">
-          팀 이름
-          <input
-            id="teamName"
-            value={name}
-            placeholder="곡 이름"
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-      </div>
-
-      <ul className="counter">
         {INSTRUMENTS.map((instrument) => (
-          <li key={instrument}>
-            <span className="part">{instrument}</span>
-            <button
-              type="button"
-              aria-label={`${instrument} 한 자리 줄이기`}
-              disabled={counts[instrument] === 0}
-              onClick={() => bump(instrument, -1)}
-            >
-              −
-            </button>
-            <b aria-live="polite">{counts[instrument]}</b>
-            <button
-              type="button"
-              aria-label={`${instrument} 한 자리 늘리기`}
-              onClick={() => bump(instrument, 1)}
-            >
-              +
-            </button>
+          <Stepper
+            key={instrument}
+            label={instrument}
+            value={counts[instrument] ?? 0}
+            min={0}
+            max={(counts[instrument] ?? 0) + Math.max(0, MAX_SLOTS_PER_TEAM - total)}
+            onChange={(next) => setCounts((now) => ({ ...now, [instrument]: next }))}
+          />
+        ))}
+
+        <p className="note">자리 {total}개</p>
+        {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+      </Modal>
+    );
+  }
+
+  // 2단계 — 자리마다 사람을 넣는다. 비워 둔 자리는 그대로 빈 자리로 만들어진다.
+  return (
+    <Modal title={name.trim()} hint="돋보기를 눌러 자리에 넣을 사람을 찾습니다" onClose={onClose}
+      foot={
+        <>
+          <button className="ghost" onClick={() => setDrafts(null)}>이전</button>
+          <button
+            className="primary"
+            disabled={create.isPending}
+            onClick={() => create.mutate(drafts)}
+          >
+            {create.isPending ? "만드는 중…" : "팀 생성"}
+          </button>
+        </>
+      }
+    >
+      <ul className="lineup">
+        {drafts.map((draft, index) => (
+          <li className={draft.member === null ? "seat open" : "seat"} key={draft.label}>
+            <span className="part">{draft.label}</span>
+            {draft.member === null ? (
+              <span className="who none">비어 있음</span>
+            ) : (
+              <span className="who">{memberLabel(draft.member.name, draft.member.cohort)}</span>
+            )}
+            <span className="acts">
+              <button
+                className="ic"
+                aria-label={`${draft.label} 자리에 넣을 사람 찾기`}
+                onClick={() => setSeeking(index)}
+              >
+                <SearchIcon />
+              </button>
+              {draft.member === null ? null : (
+                <button
+                  className="btn"
+                  onClick={() =>
+                    setDrafts((now) =>
+                      (now ?? []).map((row, at) => (at === index ? { ...row, member: null } : row)),
+                    )
+                  }
+                >
+                  삭제
+                </button>
+              )}
+            </span>
           </li>
         ))}
       </ul>
-
-      <div className="acts">
-        <span className="note">자리 {total}개</span>
-        <button className="btn go" type="submit" disabled={create.isPending}>
-          {create.isPending ? "만드는 중…" : "팀 만들기"}
-        </button>
-      </div>
       {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
-    </form>
+
+      {seeking === null ? null : (
+        <Modal title="사람 찾기" hint={drafts[seeking]?.label} onClose={() => setSeeking(null)}>
+          <MemberSearch
+            onPick={(member) => {
+              setDrafts((now) =>
+                (now ?? []).map((row, at) => (at === seeking ? { ...row, member } : row)),
+              );
+              setSeeking(null);
+            }}
+          />
+        </Modal>
+      )}
+    </Modal>
   );
 }
 
@@ -281,38 +461,43 @@ export function Teams() {
   const { me, teamIds } = useMe();
   const myTeams = useMyTeams();
   const [openId, setOpenId] = useState<number | null>(null);
+  const [making, setMaking] = useState(false);
+  const [renaming, setRenaming] = useState<Team | null>(null);
+  const [page, setPage] = useState(1);
+  const client = useQueryClient();
+
+  const drop = useMutation({
+    mutationFn: (team: Team) => getJSON<null>(`/teams/${team.id}`, { method: "DELETE" }),
+    onSuccess: (_body, team) => {
+      // 지운 팀의 자리표가 열려 있으면 함께 닫는다.
+      setOpenId((now) => (now === team.id ? null : now));
+      void client.invalidateQueries({ queryKey: ["teams"] });
+      say(`${team.name} 팀을 삭제했어요.`);
+    },
+    onError: (error) => say(reason(error)),
+  });
 
   const teams = useQuery({
     queryKey: ["teams"],
     queryFn: () => getJSON<{ teams: Team[] }>("/teams"),
   });
   const list = teams.data?.teams ?? [];
-  const shown = openId ?? list[0]?.id ?? null;
-  const canEdit = can(me, "team_manage");
+  const canCreate = can(me, "team_create");
+  const canRename = can(me, "team_edit");
+  const canDrop = can(me, "team_delete");
+  const state = teams.isPending
+    ? "불러오는 중…"
+    : teams.isError
+      ? reason(teams.error)
+      : list.length === 0
+        ? "아직 팀이 없습니다."
+        : "";
 
-  let panel;
-  if (teams.isPending) {
-    panel = <div className="empty">불러오는 중…</div>;
-  } else if (teams.isError) {
-    panel = <div className="empty">{reason(teams.error)}</div>;
-  } else if (list.length === 0) {
-    panel = <div className="empty">아직 팀이 없습니다.</div>;
-  } else {
-    panel = (
-      <ul className="rows">
-        {list.map((team) => (
-          <li key={team.id}>
-            <TeamRow
-              team={team}
-              selected={team.id === shown}
-              mine={teamIds.includes(team.id)}
-              onOpen={() => setOpenId(team.id)}
-            />
-          </li>
-        ))}
-      </ul>
-    );
-  }
+  // 한 쪽에 몇 줄을 둘지는 상자 높이가 정한다. 목록은 스크롤하지 않고 쪽으로 넘긴다.
+  const [box, perPage] = useFitCount(64);
+  const pages = pageCount(list.length, perPage);
+  const shownPage = clampPage(page, pages);
+  const opened = list.find((team) => team.id === openId) ?? null;
 
   return (
     <AppShell
@@ -331,34 +516,82 @@ export function Teams() {
         <Card>
           <div className="sethead">
             <b>팀</b>
-            <span>자리마다 누가 앉아 있는지 보여줍니다</span>
+            <span>팀을 누르면 자리가 보입니다</span>
           </div>
-          {panel}
+
+          {/* 비었거나 불러오는 중이어도 상자는 그대로 둔다 — 상자 높이를 재서 한 쪽에
+              몇 줄을 둘지 정하므로, 상자가 사라지면 잴 것이 없어진다. */}
+          <ul className="rows" ref={box}>
+            {state !== "" ? (
+              <li className="empty">{state}</li>
+            ) : (
+              pageSlice(list, shownPage, perPage).map((team) => (
+                <li key={team.id}>
+                  <TeamRow
+                    team={team}
+                    selected={team.id === openId}
+                    mine={teamIds.includes(team.id)}
+                    onOpen={() => setOpenId(team.id)}
+                    onRename={canRename ? () => setRenaming(team) : undefined}
+                    onDelete={!canDrop ? undefined : () => { if (askDelete(team.name)) drop.mutate(team); }}
+                  />
+                </li>
+              ))
+            )}
+          </ul>
+
+          <div className="listfoot">
+            {state !== "" ? null : (
+              <nav className="pager" aria-label="쪽 넘기기">
+                <button aria-label="이전 쪽" disabled={shownPage === 1}
+                  onClick={() => setPage(shownPage - 1)}>‹</button>
+                {pageWindow(shownPage, pages).map((number) => (
+                  <button key={number} aria-label={`${number}쪽`}
+                    aria-current={number === shownPage ? "page" : undefined}
+                    onClick={() => setPage(number)}>{number}</button>
+                ))}
+                <button aria-label="다음 쪽" disabled={shownPage === pages}
+                  onClick={() => setPage(shownPage + 1)}>›</button>
+              </nav>
+            )}
+            {!canCreate ? null : (
+              <button className="new" onClick={() => setMaking(true)}>+ 새 팀</button>
+            )}
+          </div>
         </Card>
-
-        {!canEdit ? null : (
-          <Card>
-            <div className="sethead">
-              <b>새 팀</b>
-              <span>이름과 악기 구성을 정합니다</span>
-            </div>
-            <CreateTeam taken={list.map((team) => team.name)} onSay={say} />
-          </Card>
-        )}
       </div>
 
-      <div className="rail">
-        <section className="panel">
-          <div className="ph">
-            {list.find((team) => team.id === shown)?.name ?? "자리"}
-          </div>
-          {shown === null ? (
-            <div className="empty">팀을 고르면 자리가 보입니다.</div>
-          ) : (
-            <Lineup teamId={shown} canEdit={canEdit} onSay={say} />
-          )}
-        </section>
-      </div>
+      {!making ? null : (
+        <NewTeam
+          taken={list.map((team) => team.name)}
+          onClose={() => setMaking(false)}
+          onDone={(text) => { setMaking(false); say(text); }}
+        />
+      )}
+
+      {renaming === null ? null : (
+        <RenameTeam
+          team={renaming}
+          taken={list.filter((team) => team.id !== renaming.id).map((team) => team.name)}
+          onClose={() => setRenaming(null)}
+          onDone={(text) => { setRenaming(null); say(text); }}
+        />
+      )}
+
+      {opened === null ? null : (
+        <Modal
+          title={opened.name}
+          hint={`자리 ${opened.slot_count}개 중 ${opened.filled_count}개 참`}
+          onClose={() => setOpenId(null)}
+        >
+          <Lineup
+            teamId={opened.id}
+            canAdd={can(me, "member_add")}
+            canRemove={can(me, "member_remove")}
+            onSay={say}
+          />
+        </Modal>
+      )}
     </AppShell>
   );
 }

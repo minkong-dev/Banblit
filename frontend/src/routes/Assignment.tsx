@@ -336,7 +336,7 @@ export function Assignment() {
 
   // 계산 시각은 기간에 딸린 값이라 기간 항목이 가른다. 설정 화면의 기간 서식과
   // 같은 값을 같은 통로로 고친다 — 여기서는 두 시각만 따로 손댈 수 있게 둔다.
-  const canManagePeriod = can(me, "period_manage");
+  const canManagePeriod = can(me, "period_edit");
   const activePeriod = focusedPeriods.find((period) => period.id === activePeriodId) ?? null;
   const shownRun = runForm !== null && runForm.id === activePeriodId
     ? runForm

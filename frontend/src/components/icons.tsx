@@ -44,6 +44,48 @@ export function CloseIcon(props: IconProps) {
   return <Stroke width={2.2} {...props}><path d="M6 6l12 12M18 6L6 18" /></Stroke>;
 }
 
+export function SearchIcon(props: IconProps) {
+  return <Stroke width={2.2} {...props}><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></Stroke>;
+}
+
+export function EyeIcon(props: IconProps) {
+  return (
+    <Stroke width={2} {...props}>
+      <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+    </Stroke>
+  );
+}
+
+/** 가려진 상태. 뜬 눈에 사선을 그어 지금 안 보인다는 것을 말한다. */
+export function EyeOffIcon(props: IconProps) {
+  return (
+    <Stroke width={2} {...props}>
+      <path d="M2 12s3.6-6.5 10-6.5c1.7 0 3.2.4 4.5 1M22 12s-3.6 6.5-10 6.5c-1.7 0-3.2-.4-4.5-1" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      <path d="M3 3l18 18" />
+    </Stroke>
+  );
+}
+
+export function PencilIcon(props: IconProps) {
+  return (
+    <Stroke width={2} {...props}>
+      <path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3z" />
+      <path d="M14.5 5.5l4 4" />
+    </Stroke>
+  );
+}
+
+export function TrashIcon(props: IconProps) {
+  return (
+    <Stroke width={2} {...props}>
+      <path d="M4 7h16M10 7V5h4v2M6 7l1 13h10l1-13" />
+      <path d="M10 11v6M14 11v6" />
+    </Stroke>
+  );
+}
+
 export function ChevronLeftIcon(props: IconProps) {
   return <Stroke width={2.4} {...props}><path d="M15 5l-7 7 7 7" /></Stroke>;
 }

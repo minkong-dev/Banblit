@@ -80,15 +80,23 @@ export type Me = { account: Account; teams: MyTeam[] };
 
 /** 할 수 있는 일 열한 가지. 서버 쪽 정본은 backend/src/backend/db/models.py 의 Permission 이다. */
 export type Permission =
-  | "room_manage"
-  | "period_manage"
-  | "team_manage"
+  | "room_create"
+  | "room_edit"
+  | "period_create"
+  | "period_edit"
+  | "team_create"
+  | "team_edit"
+  | "team_delete"
+  | "member_add"
   | "member_remove"
+  | "notice_write"
+  | "board_moderate"
+  | "reservation_manage"
   | "assign_run"
   | "assign_read"
   | "proposal_confirm"
   | "rollback"
-  | "notice_write"
+  | "permission_manage"
   | "permission_grant";
 
 export type Account = {

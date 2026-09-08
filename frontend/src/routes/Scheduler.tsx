@@ -421,7 +421,7 @@ export function Scheduler() {
                 ))}
               </select>
             </div>
-            <button className="clear" onClick={() => { setFrom(null); setTo(null); }}>시간 지우기</button>
+            <button className="clear" onClick={() => { setFrom(null); setTo(null); }}>시간 선택 취소</button>
             <span className="state">
               {from === null || to === null
                 ? "시간을 고르면 그 시간이 비어 있는 날짜만 켜집니다"
