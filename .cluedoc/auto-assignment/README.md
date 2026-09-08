@@ -8,7 +8,7 @@ sources:
   - backend/src/backend/scheduling/interval.py       # 시간 구간과 그 유효성
   - backend/src/backend/api/auth_dependency.py       # 계산을 시키고·되묻고·되돌리는 자리에 걸린 권한 항목 확인
   - backend/src/backend/api/app.py                   # 그 네 자리에 어떤 항목을 요구하는지 붙여둔 곳, 사람이 눌러 다시 계산하거나 되돌렸을 때 알림을 남기는 자리
-  - backend/src/backend/api/auto_assign.py           # 정해진 시각이 지나면 스스로 도는 별도 서비스
+  - backend/src/backend/jobs/auto_assign.py           # 정해진 시각이 지나면 스스로 도는 별도 서비스
   - backend/src/backend/api/notification_service.py  # 시간표가 저장된 뒤 누구에게 알림을 남기는지
   - backend/src/backend/db/models.py                 # 자동 실행 기록 테이블(assignment_runs)과 알림 테이블(notifications)
   - backend/migrations/versions/0e65e95acef3_assignment_runs.py  # 그 테이블을 만드는 마이그레이션
@@ -52,7 +52,7 @@ flowchart TD
 - [계정과 역할](../accounts-and-roles/README.md) — 계산·결과 보기·확정·되돌리기를 가르는 권한 항목의 정본
 - [데이터 저장소](../database-layer/README.md) — 배정 결과와 자동 실행 기록이 남는 자리
 - [스케줄러](../scheduler/README.md) — 확정된 배정이 표시되는 화면
-- [스케줄링 API](../scheduling-api/README.md) — 이 계산을 바깥에서 호출할 수 있게 여는 서버 endpoint
+- [스케줄링 API](../scheduling-api/README.md) — 서버 endpoint 전체가 따르는 공통 규칙(문·오류 모양·상태 확인)
 - [화면](../screens/README.md) — 확정된 시간표와 조율안이 실제로 그려지는 화면
 
 ## Description
@@ -120,7 +120,7 @@ slot 하나를 가리키는 값
 
 시간대는 현재 지원하지 않습니다. 지원하려면 여름시간제까지 함께 다뤄야 하므로 어설프게 허용하는 대신 명시적으로 거부하기로 했습니다.
 
-이 계산은 이제 [스케줄링 API](../scheduling-api/README.md)를 통해 같은 프로그램 바깥에서도 호출할 수 있습니다. 그 endpoint는 요청의 형태만 확인하고 계산이 쓰는 값으로 옮길 뿐 위 표의 검증 규칙을 다시 만들지 않고, 계산이 거부한 입력은 그 endpoint에서도 그대로 거부된 것으로 전달됩니다. 다만 그 endpoint를 아무나 부를 수 있는 것은 아닌데, 아래에서 다룹니다.
+이 계산은 [기간 자동 배정](../scheduling-api/period-assignment/README.md) endpoint 가 저장된 팀·합주실·못 나오는 시간을 읽어 부릅니다. 그 endpoint 는 위 표의 검증 규칙을 다시 만들지 않고, 계산이 거부한 입력은 그대로 거부된 것으로 전달됩니다. 이름으로 직접 적어 보내던 옛 입구(`POST /assign`)는 2026-09-08 에 걷어냈습니다. 그 endpoint 를 아무나 부를 수 있는 것은 아닌데, 아래에서 다룹니다.
 
 ### 계산을 기다리는 방식 (2026-09-04)
 
