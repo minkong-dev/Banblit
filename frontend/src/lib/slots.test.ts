@@ -88,21 +88,20 @@ describe("시각은 글자 그대로 자른다", () => {
 });
 
 describe("slotIndex — 여는 시각을 0번으로 둔 30분 칸 번호", () => {
-  it("여는 시각이 0번이고 30분마다 하나씩 늘어난다", () => {
+  it("여는 시각이 0번이고 한 시간마다 하나씩 늘어난다", () => {
     expect(slotIndex("2026-09-14T18:00:00", 18)).toBe(0);
-    expect(slotIndex("2026-09-14T18:30:00", 18)).toBe(1);
-    expect(slotIndex("2026-09-14T19:00:00", 18)).toBe(2);
-    expect(slotIndex("2026-09-14T22:00:00", 18)).toBe(8);
+    expect(slotIndex("2026-09-14T19:00:00", 18)).toBe(1);
+    expect(slotIndex("2026-09-14T22:00:00", 18)).toBe(4);
   });
 
   it("여는 시각이 바뀌면 번호도 함께 밀린다", () => {
-    expect(slotIndex("2026-09-14T18:00:00", 10)).toBe(16);
+    expect(slotIndex("2026-09-14T18:00:00", 10)).toBe(8);
   });
 });
 
 describe("isoAt — slotIndex 의 반대 방향", () => {
   it("날짜와 칸 번호를 시간대 없는 시각 문자열로 합친다", () => {
-    expect(isoAt("2026-09-14", 4, 18)).toBe("2026-09-14T20:00:00");
+    expect(isoAt("2026-09-14", 4, 18)).toBe("2026-09-14T22:00:00");
   });
 
   it("slotIndex 로 되돌리면 원래 칸 번호가 나온다", () => {

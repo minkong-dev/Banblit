@@ -69,7 +69,7 @@ export function openingHours(input: Opening): {
   leftover: string;
   raw: Capacity;
 } {
-  // capacity 로 30분 자리 개수를 먼저 내고, 그것을 hoursLabel 로 시각으로 바꾼다.
+  // capacity 로 칸 개수를 먼저 내고, 그것을 hoursLabel 로 시각으로 바꾼다.
   // 순서가 반대일 수 없다 — 화면은 자리 개수를 그대로 보여주지 않는다.
   const raw = capacity(input);
   return {
@@ -228,7 +228,15 @@ export {
   strongPasswordMessage,
 } from "./validate";
 
-export type SignUpForm = { name: string; email: string; password: string; cohort: number };
+export type SignUpForm = {
+  name: string;
+  // 사람을 가르는 값의 일부다 — 이름·학과·학번·기수 넷이 같으면 같은 사람이다.
+  department: string;
+  student_no: string;
+  email: string;
+  password: string;
+  cohort: number;
+};
 
 export async function signUp(form: SignUpForm): Promise<Account> {
   // 가입 성공 응답은 계정만 담아 온다 — 세션은 서버가 httpOnly 쿠키(banblit_session)로
@@ -241,11 +249,15 @@ export async function signUp(form: SignUpForm): Promise<Account> {
   return account;
 }
 
-export async function logIn(email: string, password: string): Promise<Account> {
+export async function logIn(
+  email: string,
+  password: string,
+  /** 로그인 상태 유지. 끄면 브라우저를 닫을 때 풀린다 — 수명은 서버가 정한다. */
+  keep: boolean,
+): Promise<Account> {
   const { account } = await getJSON<{ account: Account }>("/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, keep }),
   });
   return account;
 }

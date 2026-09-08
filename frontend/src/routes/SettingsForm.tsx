@@ -98,10 +98,12 @@ export function Row(props: {
   editLabel?: string;
   buttonRef?: (el: HTMLButtonElement | null) => void;
   onEdit?: () => void;
-  /** 연필 옆에 더 붙일 단추. 권한 묶음의 쓰레기통이 이 자리를 쓴다. */
+  /** 연필 왼쪽에 붙일 단추. 권한 묶음의 "+ 멤버" 가 이 자리를 쓴다. */
+  before?: ReactNode;
+  /** 연필 오른쪽에 붙일 단추. 권한 묶음의 쓰레기통이 이 자리를 쓴다. */
   extra?: ReactNode;
 }) {
-  const { title, when, span, editLabel, buttonRef, onEdit, extra } = props;
+  const { title, when, span, editLabel, buttonRef, onEdit, before, extra } = props;
   return (
     <li>
       <div>
@@ -111,8 +113,9 @@ export function Row(props: {
           <span className="span">{span}</span>
         </div>
       </div>
-      {onEdit === undefined && extra === undefined ? null : (
+      {onEdit === undefined && before === undefined && extra === undefined ? null : (
         <div className="acts">
+          {before}
           {onEdit === undefined ? null : (
             <button className="ic" ref={buttonRef} aria-label={editLabel} onClick={onEdit}>
               <PencilIcon />

@@ -12,7 +12,7 @@
     --c4: #8A6516; --c4-tint: #F6EED9;
     --shadow: 0 1px 2px rgba(0,23,51,.04), 0 8px 24px rgba(0,23,51,.07);
     --shadow-up: 0 12px 48px rgba(0,23,51,.18);
-    --side: 296px;
+    --side: clamp(232px, 15%, 300px);
   }
   @media (prefers-color-scheme: dark) {
     html:not([data-theme="light"]) body[data-page="settings"] {
@@ -84,7 +84,7 @@ body[data-page="settings"] {
 
   .shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); height: calc(100vh - 62px); }
   .side { overflow: hidden auto; background: var(--card); border-right: 1px solid var(--line); }
-  .side .inner { width: 296px; height: 100%; padding: 20px 14px; display: flex; flex-direction: column; gap: 18px; }
+  .side .inner { width: 100%; height: 100%; padding: 20px 14px; display: flex; flex-direction: column; gap: 18px; }
   .side nav { display: flex; flex-direction: column; gap: 2px; }
   .side nav :is(a, button) { display: flex; align-items: center; text-align: left; padding: 12px; min-height: 46px; color: var(--t1); text-decoration: none; font-size: 15px; font-weight: 500; border-radius: 10px; white-space: nowrap; }
   .side nav a:hover { background: var(--card-2); }
@@ -93,7 +93,10 @@ body[data-page="settings"] {
   .side .cap { font-size: 12px; color: var(--t3); padding: 0 12px; }
   .side .sep { border-top: 1px solid var(--line); }
 
-  .page { height: 100%; padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr) 380px; grid-template-rows: auto minmax(0, 1fr); column-gap: 18px; min-height: 0; }
+  .page { height: 100%; padding: 18px; width: 100%; max-width: var(--content); margin-inline: auto; display: grid; grid-template-columns: minmax(0, 1fr) clamp(280px, 24%, 400px); grid-template-rows: auto minmax(0, 1fr); column-gap: 18px; min-height: 0; }
+  /* 오른쪽 칸이 없는 탭(권한·화면)은 한 칸이다. 두 칸으로 두면 비어 있는 380px 이
+     자리만 차지한다. */
+  .page:not(:has(.rail)) { grid-template-columns: minmax(0, 1fr); column-gap: 0; }
   .tabs { grid-column: 1; grid-row: 1; display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .tab { padding: 10px 18px; min-height: 44px; border-radius: 999px; background: var(--card); color: var(--t2); font-size: 14.5px; font-weight: 500; box-shadow: var(--shadow); transition: background-color .15s ease, color .15s ease; }
   .tab:hover { color: var(--t1); }
@@ -101,11 +104,20 @@ body[data-page="settings"] {
   .tab.ghost[aria-selected="true"] { background: var(--t1); color: var(--card); }
 
   /* 목록은 스크롤하지 않는다 — 들어가는 만큼만 보여주고 나머지는 쪽으로 넘긴다.
-     그래서 쪽 넘기기 줄이 창 크기와 상관없이 늘 카드 바닥에 있다. */
+     그래서 쪽 넘기기 줄이 창 크기와 상관없이 늘 카드 바닥에 있다.
+     카드가 여럿인 화면(계정)은 쪽으로 나눌 것이 아니라 죽 이어 읽는 것이므로
+     여기서 스크롤한다. */
   .main { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; min-height: 0; gap: 14px; overflow: hidden; }
-  .main > .card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-  .main > .card > .rows { flex: 1; min-height: 0; overflow: hidden; }
-  .main > .card > .listfoot { margin-top: auto; }
+  .main:has(> .card ~ .card) { overflow-y: auto; }
+  /* flex 세로줄에서 자식은 기본으로 줄어든다. 그대로 두면 카드 넷이 창 높이에 맞춰
+     찌그러지고 넘치는 부분이 카드의 overflow:hidden 에 잘린다. */
+  .main > .card { flex: none; }
+  /* 카드가 하나뿐일 때만 세로를 채운다. 목록 화면이 그렇다 — 쪽 넘기기 줄을 카드
+     바닥에 붙이려면 카드가 남는 높이를 가져야 한다. 카드가 여럿인 화면(설정의 계정)에
+     걸면 넷이 높이를 나눠 갖고 넘치는 부분이 잘린다. */
+  .main > .card:only-child { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .main > .card:only-child > .rows { flex: 1; min-height: 0; overflow: hidden; }
+  .main > .card:only-child > .listfoot { margin-top: auto; }
   .rail { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
   .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
   .panel { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
@@ -131,12 +143,15 @@ body[data-page="settings"] {
 
   /* 고치는 중인 줄은 값 대신 입력칸이 들어선다. */
   .rows li.editing { grid-template-columns: minmax(0, 1fr); }
+  /* 카드 안쪽 여백. sethead·listfoot 과 같은 20px 을 써서 세로로 줄이 맞는다. */
+  .card > .fields { padding: 4px 20px 14px; }
   .fields { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
   .fields label { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--t3); }
   .fields input, .fields select { min-height: 44px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--card); color: var(--t1); font: inherit; letter-spacing: inherit; }
   .fields input:focus-visible, .fields select:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
   /* 위 높이·테두리는 글씨를 넣는 칸의 것이다. 체크박스에 걸면 네모가 늘어난다. */
   .fields input[type="checkbox"] { min-height: 0; width: 18px; height: 18px; margin: 12px 0; padding: 0; border: none; accent-color: var(--brand); }
+  /* 여백을 뺀 나머지를 고르게 나눠 갖는다. 한 줄에 둘이면 반씩, 셋이면 삼분의 일씩이다. */
   .fields .wide { flex: 1 1 180px; }
   .fields .wide input { width: 100%; }
 
@@ -195,8 +210,8 @@ body[data-page="settings"] {
 
   /* ===== 창이 좁아지면 요소가 움직인다 ===== */
   @media (max-width: 1240px) {
-    .shell { --side: 264px; }
-    .page { grid-template-columns: minmax(0, 1fr) 316px; column-gap: 14px; padding: 14px; }
+    .page { column-gap: 14px; padding: 14px; }
+    .page:not(:has(.rail)) { grid-template-columns: minmax(0, 1fr); column-gap: 0; }
     .panel > .ph { padding: 13px 15px; font-size: 14.5px; }
   }
   /* 1040px·860px 이하 규칙은 걷어냈다. 본문이 min-width 아래로 내려가지 않으므로
@@ -204,4 +219,76 @@ body[data-page="settings"] {
      아니라 문서가 굴러간다. */
   @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; } }
 
+}
+
+body[data-page="settings"] {
+
+  /* ===== 권한 카드 줄 =====
+     정사각형 카드가 가로로 늘어선다. 한 화면에 다 안 들어가면 ‹ › 로 민다 —
+     세로로 쌓으면 권한이 몇 개인지가 한눈에 안 들어온다. */
+  .sethead .railnav { margin-left: auto; display: flex; gap: 2px; }
+  .sethead .railfilter {
+    margin-left: auto; min-height: 40px; padding: 8px 12px;
+    border: 1px solid var(--line-2); border-radius: 10px;
+    background: var(--card); color: var(--t1); font: inherit;
+  }
+
+  .tiles {
+    list-style: none; margin: 0; padding: 4px 20px 18px;
+    display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+    /* 카드 폭을 재는 기준점. 아래 cqi 는 창이 아니라 이 줄의 폭을 뜻한다 —
+       창 크기를 기준으로 하면 곁칸이 열리고 닫힐 때 타일 크기가 같이 흔들린다. */
+    container-type: inline-size;
+  }
+  .tile {
+    /* 타일 크기는 개수와 상관없이 같다. 몇 장뿐일 때 늘려 줄을 채우면 정사각형이
+       화면 높이만큼 커진다 — 늘리지 않고, 넘칠 때만 ‹ › 로 민다. */
+    flex: 0 0 clamp(180px, 22cqi, 260px); aspect-ratio: 1; scroll-snap-align: start;
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 16px; border: 1px solid var(--line); border-radius: 16px;
+    background: var(--card-2);
+  }
+  .tilehead { display: flex; align-items: baseline; gap: 8px; }
+  .tilehead b { font-size: 15.5px; font-weight: 700; }
+  .tilehead span { font-size: 13px; color: var(--t3); }
+  /* 켜진 항목은 카드에 적지 않는다 — 카드는 "무엇을 하는 사람인가" 만 말한다.
+     항목 목록은 연필로 열어 본다. */
+  .tilenote { margin: 0; flex: 1; min-height: 0; overflow: hidden; font-size: 13.5px; color: var(--t2); line-height: 1.5; }
+  .tileacts { display: flex; gap: 2px; margin-top: auto; }
+
+  .tile.add { display: grid; place-items: center; border-style: dashed; background: none; }
+  .tile.add button { width: 100%; height: 100%; color: var(--t2); font-size: 14.5px; font-weight: 700; }
+  .tile.add button:hover { color: var(--brand); }
+
+  /* ===== 멤버 표 =====
+     아래로 내리면 이어 받는다. 카드 안에서만 스크롤하고 화면은 그대로 있다. */
+  /* 명단은 카드가 가진 높이를 남김없이 쓰고 그 안에서만 구른다. 높이를 픽셀로
+     박아 두면 큰 모니터에서 아래가 통째로 빈다. */
+  .roster { padding: 0 20px 18px; flex: 1; min-height: 0; overflow-y: auto; }
+  /* 권한 줄 + 명단 두 장이 있는 탭은 화면이 통째로 구르지 않는다 — 아래 카드가
+     남는 높이를 가져가고, 구르는 것은 그 안의 표뿐이다. */
+  .main:has(.roster) { overflow: hidden; }
+  .main:has(.roster) > .card:last-child {
+    flex: 1; display: flex; flex-direction: column; min-height: 0;
+  }
+  .roster table { width: 100%; border-collapse: collapse; }
+  .roster th {
+    position: sticky; top: 0; background: var(--card); z-index: 1;
+    text-align: left; padding: 8px 10px; font-size: 12.5px; font-weight: 700;
+    color: var(--t3); border-bottom: 1px solid var(--line);
+  }
+  .roster td { padding: 11px 10px; font-size: 14px; border-bottom: 1px solid var(--line); }
+  /* 칸은 값이 차지하는 만큼만 쓰고, 남는 가로는 맨 끝의 빈 칸이 전부 먹는다.
+     그러지 않으면 넓은 화면에서 이름과 학과 사이가 손가락 몇 뼘씩 벌어진다. */
+  .roster :is(th, td):not(.fill) { width: 1%; white-space: nowrap; }
+  .roster :is(th, td).fill { width: auto; }
+  /* 칸마다 최소 폭을 글자 수로 준다 — 글자 크기가 바뀌면 같이 따라온다.
+     값이 짧아도 이만큼은 벌어져 표로 읽히고, 그보다 길면 내용만큼 늘어난다. */
+  .roster :is(th, td):nth-child(1) { min-width: 7ch; }
+  .roster :is(th, td):nth-child(2) { min-width: 14ch; }
+  .roster :is(th, td):nth-child(3) { min-width: 10ch; }
+  .roster :is(th, td):nth-child(4) { min-width: 6ch; }
+  .roster :is(th, td):nth-child(5) { min-width: 12ch; }
+  .roster tr:last-child td { border-bottom: none; }
+  .rosterfoot { padding: 12px 0; text-align: center; font-size: 13px; color: var(--t3); }
 }

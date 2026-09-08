@@ -118,7 +118,12 @@ export function SignIn() {
         }),
         async (form) => {
           try {
-            await logIn(fieldText(form, "mail").trim(), fieldText(form, "pw"));
+            await logIn(
+              fieldText(form, "mail").trim(),
+              fieldText(form, "pw"),
+              // 체크박스는 켜졌을 때만 값을 낸다. 안 켜졌으면 빈 문자열이다.
+              fieldText(form, "keep") !== "",
+            );
             say("로그인했어요");
             void navigate("/scheduler");
           } catch (error) {
@@ -170,6 +175,8 @@ export function SignUp() {
           const password = fieldText(form, "pw2");
           return {
             nm: fieldText(form, "nm").trim() ? "" : "이름을 입력해 주세요.",
+            dept: fieldText(form, "dept").trim() ? "" : "학과를 입력해 주세요.",
+            sno: fieldText(form, "sno").trim() ? "" : "학번을 입력해 주세요.",
             mail2: emailMessage(fieldText(form, "mail2").trim()),
             pw2: passwordMessage(password),
             pw3: fieldText(form, "pw3") === password ? "" : "비밀번호가 일치하지 않아요.",
@@ -180,6 +187,8 @@ export function SignUp() {
           try {
             const account = await signUp({
               name: fieldText(form, "nm").trim(),
+              department: fieldText(form, "dept").trim(),
+              student_no: fieldText(form, "sno").trim(),
               email: fieldText(form, "mail2").trim(),
               password: fieldText(form, "pw2"),
               cohort: Number(fieldText(form, "cohort")),
@@ -194,6 +203,10 @@ export function SignUp() {
     >
       <Field name="nm" label="이름" type="text"
         autoComplete="name" placeholder="이름을 입력해주세요." error={errors.nm} />
+      <Field name="dept" label="학과" type="text"
+        autoComplete="organization" placeholder="학과를 입력해주세요" error={errors.dept} />
+      <Field name="sno" label="학번" type="text" inputMode="numeric"
+        autoComplete="off" placeholder="학번을 입력해주세요" error={errors.sno} />
       <Field name="mail2" label="이메일" type="email" inputMode="email"
         autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.mail2} />
       <Field name="pw2" label="비밀번호" type="password" autoComplete="new-password"

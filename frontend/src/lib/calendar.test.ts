@@ -35,10 +35,10 @@ describe("monthCells — 한 달을 7칸씩 나눠 담는다", () => {
 });
 
 describe("slotLabel — 칸 번호를 시각으로", () => {
-  it("여는 시각이 0번이고 30분마다 하나씩 간다", () => {
+  it("여는 시각이 0번이고 한 시간마다 하나씩 간다", () => {
     expect(slotLabel(0, 18)).toBe("18:00");
-    expect(slotLabel(1, 18)).toBe("18:30");
-    expect(slotLabel(8, 18)).toBe("22:00");
+    expect(slotLabel(1, 18)).toBe("19:00");
+    expect(slotLabel(4, 18)).toBe("22:00");
   });
 
   it("한 자리 시각에도 0을 붙인다", () => {
@@ -47,14 +47,9 @@ describe("slotLabel — 칸 번호를 시각으로", () => {
 });
 
 describe("hoursLabel — 칸 개수를 사람이 읽는 시간으로", () => {
-  it("두 칸이 한 시간이다", () => {
-    expect(hoursLabel(14)).toBe("7시간");
-    expect(hoursLabel(2)).toBe("1시간");
-  });
-
-  it("홀수면 30분이 남는다", () => {
-    expect(hoursLabel(7)).toBe("3시간 30분");
-    expect(hoursLabel(1)).toBe("0시간 30분");
+  it("한 칸이 한 시간이다", () => {
+    expect(hoursLabel(7)).toBe("7시간");
+    expect(hoursLabel(1)).toBe("1시간");
   });
 
   it("하나도 없으면 0시간이다", () => {

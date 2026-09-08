@@ -47,10 +47,8 @@ export function hhmm(iso: string): string {
 }
 
 export function slotIndex(iso: string, openHour: number): number {
-  // 여는 시각을 0번으로 두고 30분마다 하나씩 늘어나는 칸 번호를 돌려준다.
-  const hour = Number(iso.slice(11, 13));
-  const minute = Number(iso.slice(14, 16));
-  return (hour - openHour) * 2 + (minute >= 30 ? 1 : 0);
+  // 여는 시각을 0번으로 두고 한 시간마다 하나씩 늘어나는 칸 번호를 돌려준다.
+  return Number(iso.slice(11, 13)) - openHour;
 }
 
 export function isoAt(dayKey: string, index: number, openHour: number): string {

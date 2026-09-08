@@ -68,6 +68,10 @@ export function EyeOffIcon(props: IconProps) {
   );
 }
 
+export function PlusIcon(props: IconProps) {
+  return <Stroke width={2.2} {...props}><path d="M12 5v14M5 12h14" /></Stroke>;
+}
+
 export function PencilIcon(props: IconProps) {
   return (
     <Stroke width={2} {...props}>

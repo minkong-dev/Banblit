@@ -3,14 +3,14 @@ import { describe, expect, it } from "vitest";
 import { capacity, dateRangeMessage, openHoursMessage, roomNameMessage, slotsBetween } from "./settings";
 
 describe("openHoursMessage", () => {
-  it("정시와 30분에서만 열고 닫는다", () => {
+  it("정시에서만 열고 닫는다", () => {
     expect(openHoursMessage("18:00", "23:00")).toBe("");
-    expect(openHoursMessage("18:30", "23:30")).toBe("");
+    expect(openHoursMessage("10:00", "22:00")).toBe("");
   });
 
-  it("30분 격자를 벗어나면 사유를 돌려준다", () => {
-    expect(openHoursMessage("18:20", "23:00")).toBe("여는 시각은 정시 또는 30분이어야 합니다.");
-    expect(openHoursMessage("18:00", "22:45")).toBe("닫는 시각은 정시 또는 30분이어야 합니다.");
+  it("정시가 아니면 사유를 돌려준다", () => {
+    expect(openHoursMessage("18:20", "23:00")).toBe("여는 시각은 정시여야 합니다.");
+    expect(openHoursMessage("18:00", "22:45")).toBe("닫는 시각은 정시여야 합니다.");
   });
 
   it("닫는 시각이 여는 시각보다 늦어야 한다", () => {
@@ -61,9 +61,9 @@ describe("dateRangeMessage", () => {
 });
 
 describe("slotsBetween", () => {
-  it("여는 시각부터 닫는 시각까지를 30분으로 센다", () => {
-    expect(slotsBetween("18:00", "23:00")).toBe(10);
-    expect(slotsBetween("18:30", "19:00")).toBe(1);
+  it("여는 시각부터 닫는 시각까지를 한 시간으로 센다", () => {
+    expect(slotsBetween("18:00", "23:00")).toBe(5);
+    expect(slotsBetween("18:00", "19:00")).toBe(1);
   });
 
   it("성하지 않은 값은 0 이다", () => {
@@ -74,26 +74,26 @@ describe("slotsBetween", () => {
 
 describe("capacity", () => {
   const rooms = [
-    { opens_at: "18:00", closes_at: "23:00" },  // 10
-    { opens_at: "10:00", closes_at: "22:00" },  // 24
+    { opens_at: "18:00", closes_at: "23:00" },  // 5칸
+    { opens_at: "10:00", closes_at: "22:00" },  // 12칸
   ];
 
   it("방을 모두 더해 하루치를 내고, 날수를 곱해 전체를 낸다", () => {
     const got = capacity({ rooms, days: 14, teams: 6 });
-    expect(got.perDay).toBe(34);
-    expect(got.total).toBe(476);
+    expect(got.perDay).toBe(17);
+    expect(got.total).toBe(238);
   });
 
   it("팀 수로 나눈 몫이 팀당 몫이고 나머지는 남는다", () => {
     const got = capacity({ rooms, days: 14, teams: 6 });
-    expect(got.perTeam).toBe(79);
-    expect(got.leftover).toBe(2);
+    expect(got.perTeam).toBe(39);
+    expect(got.leftover).toBe(4);
   });
 
   it("팀이 없으면 나누지 않고 전체가 남는다", () => {
     const got = capacity({ rooms, days: 14, teams: 0 });
     expect(got.perTeam).toBe(0);
-    expect(got.leftover).toBe(476);
+    expect(got.leftover).toBe(238);
   });
 
   it("방이 없으면 전부 0 이다", () => {

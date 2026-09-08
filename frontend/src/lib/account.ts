@@ -38,7 +38,7 @@ export const PERMISSION_ITEMS: readonly {
   {
     key: "team_create",
     label: "팀 만들기",
-    note: "팀을 새로 만들고 악기 자리를 정합니다.",
+    note: "팀을 새로 만들고 포지션 구성을 정합니다.",
   },
   {
     key: "team_edit",
@@ -48,17 +48,17 @@ export const PERMISSION_ITEMS: readonly {
   {
     key: "team_delete",
     label: "팀 삭제",
-    note: "팀을 지웁니다. 그 팀의 자리도 함께 사라집니다.",
+    note: "팀을 지웁니다. 그 팀의 포지션도 함께 사라집니다.",
   },
   {
     key: "member_add",
-    label: "자리에 사람 추가",
-    note: "팀의 빈 자리에 사람을 넣습니다.",
+    label: "포지션에 사람 추가",
+    note: "팀의 빈 포지션에 사람을 넣습니다.",
   },
   {
     key: "member_remove",
-    label: "남을 자리에서 빼기",
-    note: "다른 사람이 앉은 자리를 비웁니다. 자기 자리는 이 권한 없이도 뺄 수 있습니다.",
+    label: "남을 포지션에서 빼기",
+    note: "다른 사람이 있는 포지션을 비웁니다. 자기 포지션은 이 권한 없이도 뺄 수 있습니다.",
   },
   {
     key: "notice_write",

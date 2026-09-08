@@ -132,6 +132,20 @@ export function Assignment() {
     enabled: activePeriodId !== null && canRollbackNow,
   });
 
+  // 고른 회차. 탭 값이 "r:" 로 시작하면 그 뒤가 저장 시각이다 — 조율안(p0·p1)과 같은
+  // 자리를 쓰므로 달력·아래 설명·탭이 한 값만 보고 갈린다.
+  const roundAt = view.startsWith("r:") ? view.slice(2) : null;
+  const round = useQuery({
+    queryKey: ["backup-round", activePeriodId, roundAt],
+    queryFn: () => {
+      if (activePeriodId === null || roundAt === null) throw new Error("고를 회차가 없습니다");
+      return getJSON<{ rows: ScheduleRow[] }>(
+        `/periods/${activePeriodId}/backups/${encodeURIComponent(roundAt)}`,
+      );
+    },
+    enabled: activePeriodId !== null && roundAt !== null,
+  });
+
   const saveRunTimes = useMutation({
     mutationFn: (body: { first_run_at: string; second_run_at: string }) => {
       if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
@@ -160,11 +174,19 @@ export function Assignment() {
   // 쓰는 곳도 없어 아래 useMemo 가 다시 돌아도 비용이 없다.
   const proposals = recompute.data?.proposals ?? [];
   const proposalIndex = view.startsWith("p") ? Number(view.slice(1)) : null;
+  const roundRows = round.data?.rows ?? [];
+  const roundSessions = useMemo(
+    () => mergeSessions(roundRows.map((row) => ({
+      team: row.team, room: row.room, start: row.start, end: row.end,
+    }))),
+    [roundRows],
+  );
   const shown = useMemo(() => {
+    if (roundAt !== null) return roundSessions;
     if (proposalIndex === null) return confirmed;
     const proposal = proposals[proposalIndex];
     return proposal ? sessionsOf(proposal.assignment.slots_by_team) : confirmed;
-  }, [proposalIndex, proposals, confirmed]);
+  }, [roundAt, roundSessions, proposalIndex, proposals, confirmed]);
 
   const colors = useMemo(() => colorsOf([...confirmed, ...shown]), [confirmed, shown]);
 
@@ -184,6 +206,7 @@ export function Assignment() {
       key: `p${index}`,
       text: `${String.fromCharCode(65 + index)}안`,
     })),
+    ...(roundAt === null ? [] : [{ key: `r:${roundAt}`, text: backupLabel(roundAt) }]),
   ];
 
   const days = shown.length
@@ -243,6 +266,24 @@ export function Assignment() {
         <h2>서버가 요청을 받지 못했습니다</h2>
         <p className="sub">{error instanceof Error ? error.message : "알 수 없는 오류"}</p>
         {again}
+      </>
+    );
+  } else if (roundAt !== null) {
+    const hours = shown.reduce((sum, session) => sum + minutesOf(session), 0) / MINUTES_PER_HOUR;
+    under = (
+      <>
+        <h2>{backupLabel(roundAt)}에 밀려난 시간표입니다</h2>
+        <p className="sub">
+          {round.isPending
+            ? "불러오는 중…"
+            : round.isError
+              ? round.error instanceof Error ? round.error.message : "이 회차를 불러오지 못했습니다"
+              : `합주 ${shown.length}번 · 모두 합쳐 ${hours.toFixed(1)}시간. 지나간 회차라 보기만 합니다.`}
+        </p>
+        {counts}
+        <div className="act">
+          <button className="btn" onClick={() => setView("now")}>지금 것으로 돌아가기</button>
+        </div>
       </>
     );
   } else if (proposalIndex !== null && proposals[proposalIndex]) {
@@ -322,14 +363,20 @@ export function Assignment() {
     roundList = [...rounds]
       .sort((a, b) => b.saved_at.localeCompare(a.saved_at))
       .map((backup, index) => (
-        <li className="round" key={backup.saved_at}>
-          <b>{backupLabel(backup.saved_at)}</b>
-          <small>{slotCountLabel(backup.slot_count)}{index === 0 ? " · 되돌리면 여기로" : ""}</small>
+        <li key={backup.saved_at}>
+          <button
+            className={view === `r:${backup.saved_at}` ? "round on" : "round"}
+            aria-pressed={view === `r:${backup.saved_at}`}
+            onClick={() => setView(`r:${backup.saved_at}`)}
+          >
+            <b>{backupLabel(backup.saved_at)}</b>
+            <small>{slotCountLabel(backup.slot_count)}{index === 0 ? " · 되돌리면 여기로" : ""}</small>
+          </button>
         </li>
       ));
   }
   const pastRuns = (
-    <Panel title="지난 계산" hint="다시 계산할 때마다 한 회차씩 밀려납니다">
+    <Panel title="지난 계산" hint="회차를 누르면 그때 시간표가 달력에 나옵니다">
       <ul>{roundList}</ul>
     </Panel>
   );

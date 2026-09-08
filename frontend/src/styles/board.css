@@ -12,7 +12,7 @@
     --c4: #8A6516; --c4-tint: #F6EED9;
     --shadow: 0 1px 2px rgba(0,23,51,.04), 0 8px 24px rgba(0,23,51,.07);
     --shadow-up: 0 12px 48px rgba(0,23,51,.18);
-    --side: 296px;
+    --side: clamp(232px, 15%, 300px);
   }
   @media (prefers-color-scheme: dark) {
     html:not([data-theme="light"]) body[data-page="board"] {
@@ -111,7 +111,7 @@ body[data-page="board"] {
 
   .shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); height: calc(100vh - 62px); }
   .side { overflow: hidden auto; background: var(--card); border-right: 1px solid var(--line); }
-  .side .inner { width: 296px; height: 100%; padding: 20px 14px; display: flex; flex-direction: column; gap: 18px; }
+  .side .inner { width: 100%; height: 100%; padding: 20px 14px; display: flex; flex-direction: column; gap: 18px; }
   .side nav { display: flex; flex-direction: column; gap: 2px; }
   .side nav :is(a, button) { display: flex; align-items: center; text-align: left; padding: 12px; min-height: 46px; color: var(--t1); text-decoration: none; font-size: 15px; font-weight: 500; border-radius: 10px; white-space: nowrap; }
   .side nav a:hover { background: var(--card-2); }
@@ -120,7 +120,7 @@ body[data-page="board"] {
   .side .cap { font-size: 12px; color: var(--t3); padding: 0 12px; }
   .side .sep { border-top: 1px solid var(--line); }
 
-  .page { height: 100%; padding: 18px; display: grid; grid-template-columns: minmax(0, 1fr) 380px; grid-template-rows: auto minmax(0, 1fr); column-gap: 18px; min-height: 0; }
+  .page { height: 100%; padding: 18px; width: 100%; max-width: var(--content); margin-inline: auto; display: grid; grid-template-columns: minmax(0, 1fr) clamp(280px, 24%, 400px); grid-template-rows: auto minmax(0, 1fr); column-gap: 18px; min-height: 0; }
   .tabs { grid-column: 1; grid-row: 1; display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .tab { padding: 10px 18px; min-height: 44px; border-radius: 999px; background: var(--card); color: var(--t2); font-size: 14.5px; font-weight: 500; box-shadow: var(--shadow); transition: background-color .15s ease, color .15s ease; }
   .tab:hover { color: var(--t1); }
@@ -130,9 +130,12 @@ body[data-page="board"] {
   /* 목록은 스크롤하지 않는다 — 들어가는 만큼만 보여주고 나머지는 쪽으로 넘긴다.
      그래서 쪽 넘기기 줄이 창 크기와 상관없이 늘 카드 바닥에 있다. */
   .main { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; min-height: 0; gap: 14px; overflow: hidden; }
-  .main > .card { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-  .main > .card > .rows { flex: 1; min-height: 0; overflow: hidden; }
-  .main > .card > .listfoot { margin-top: auto; }
+  /* 카드가 하나뿐일 때만 세로를 채운다. 목록 화면이 그렇다 — 쪽 넘기기 줄을 카드
+     바닥에 붙이려면 카드가 남는 높이를 가져야 한다. 카드가 여럿인 화면(설정의 계정)에
+     걸면 넷이 높이를 나눠 갖고 넘치는 부분이 잘린다. */
+  .main > .card:only-child { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .main > .card:only-child > .rows { flex: 1; min-height: 0; overflow: hidden; }
+  .main > .card:only-child > .listfoot { margin-top: auto; }
   .rail { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
   .card { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; }
   .panel { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
@@ -171,11 +174,6 @@ body[data-page="board"] {
   .why { margin: 8px 0 0; font-size: 13px; color: var(--red); }
 
   /* 쪽 단추 — 목록 아래 가운데. 지금 쪽만 바탕이 찬다. */
-  .pager { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 14px 0 4px; }
-  .pager button { min-width: 34px; height: 34px; padding: 0 8px; border-radius: 9px; font-size: 13.5px; color: var(--t2); transition: background-color .15s ease, color .15s ease; }
-  .pager button:hover:not(:disabled) { background: var(--card-2); color: var(--t1); }
-  .pager button[aria-current="page"] { background: var(--brand); color: var(--brand-on); font-weight: 700; }
-  .pager button:disabled { opacity: .35; cursor: default; }
 
   /* 글쓰기는 목록 맨 아래 오른쪽에 단추 하나로 둔다. */
 
@@ -221,7 +219,6 @@ body[data-page="board"] {
 
   /* ===== 창이 좁아지면 요소가 움직인다 ===== */
   @media (max-width: 1240px) {
-    .shell { --side: 264px; }
     .page { padding: 14px; }
   }
   /* 1040px·860px 이하 규칙은 걷어냈다. 본문이 min-width 아래로 내려가지 않으므로

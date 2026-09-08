@@ -7,10 +7,11 @@ import { Modal } from "../components/Modal";
 import { getJSON } from "../lib/api";
 import { checkPeriod, checkRoom, daysBetween, openingHours } from "../lib/pipeline";
 import { useMe, useToast } from "../components/hooks";
-import { PERMISSION_ITEMS, can, roleLabel } from "../lib/account";
+import { can, roleLabel } from "../lib/account";
 import { applyTheme, readSavedTheme } from "../lib/theme";
 import type { Theme } from "../lib/theme";
-import { PermissionCard } from "./SettingsPermissions";
+import { MemberCards } from "./SettingsMembers";
+import { AccountCards } from "./SettingsAccount";
 import {
   Cell,
   CardState,
@@ -25,16 +26,17 @@ import "../styles/settings.css";
 import type { Period, Room, Team } from "../lib/contract";
 
 
-type Tab = "rooms" | "periods" | "permissions" | "display";
+type Tab = "rooms" | "periods" | "members" | "account";
 
 // 탭마다 필요한 항목이 다르다. 가진 것만 보이므로, 아무 관리 항목도 없는 사람에게는
-// 화면 탭 하나만 남는다 — 그 탭이 없으면 볼 것이 없는 빈 화면이 된다.
+// 계정 탭 하나가 남는다 — 내 정보·비밀번호·화면 밝기·탈퇴가 전부 자기 것에 대한
+// 설정이라 한 탭에 둔다.
 // needs 가 없는 탭은 로그인한 사람 누구에게나 보인다.
 const TABS = [
   { key: "rooms" as const, text: "합주실", needs: ["room_create", "room_edit"] as const },
   { key: "periods" as const, text: "기간", needs: ["period_create", "period_edit"] as const },
-  { key: "permissions" as const, text: "권한", needs: ["permission_manage", "permission_grant"] as const },
-  { key: "display" as const, text: "화면", needs: null },
+  { key: "members" as const, text: "멤버", needs: ["permission_manage", "permission_grant"] as const },
+  { key: "account" as const, text: "계정", needs: null },
 ];
 
 const BLANK_ROOM = { name: "", opens_at: "18:00", closes_at: "23:00" };
@@ -90,41 +92,6 @@ function ThemeCard() {
         </div>
       </div>
     </Card>
-  );
-}
-
-/** 화면 탭에서 오른쪽에 두는 안내. */
-function DisplayNote() {
-  return (
-    <Panel title="화면">
-      <div className="read">
-        <p className="note">
-          고른 밝기는 이 브라우저에만 남습니다.
-          다른 기기에서 열면 그 기기의 설정을 따릅니다.
-        </p>
-        <p className="note">
-          고른 적이 없으면 기기가 밝은 화면인지 어두운 화면인지를 그대로 씁니다.
-        </p>
-      </div>
-    </Panel>
-  );
-}
-
-/** 권한 탭에서 오른쪽에 두는 안내. 합주실·기간 탭의 셈(Readout)이 들어설 자리다. */
-function PermissionNote() {
-  return (
-    <Panel title="권한" hint={`항목 ${PERMISSION_ITEMS.length}가지`}>
-      <div className="read">
-        <p className="note">
-          권한을 만들어 할 수 있는 일을 켜고, 그 권한을 사람에게 줍니다.
-          한 사람이 권한을 여럿 가지면 켜진 항목이 모두 합쳐집니다.
-        </p>
-        <p className="note">
-          이 화면이 단추를 감추는 것은 안내일 뿐입니다.
-          실제로 허용할지는 서버가 요청마다 다시 판정합니다.
-        </p>
-      </div>
-    </Panel>
   );
 }
 
@@ -206,19 +173,15 @@ export function Settings() {
             canCreate={can(me, "period_create")}
             onSaved={saved("periods", "기간을 저장했습니다")}
           />
-        ) : shown === "permissions" ? (
-          <PermissionCard onSay={say} />
+        ) : shown === "members" ? (
+          <MemberCards onSay={say} />
         ) : (
-          <ThemeCard />
+          <AccountCards onSay={say} theme={<ThemeCard />} />
         )}
       </div>
 
-      <div className="rail">
-        {shown === "display" ? (
-          <DisplayNote />
-        ) : shown === "permissions" ? (
-          <PermissionNote />
-        ) : (
+      {shown === "members" || shown === "account" ? null : (
+        <div className="rail">
           <Readout
             rooms={roomList}
             periods={periodList}
@@ -226,8 +189,8 @@ export function Settings() {
             teamsState={stateOf(teams)}
             tab={shown}
           />
-        )}
-      </div>
+        </div>
+      )}
     </AppShell>
   );
 }
@@ -258,7 +221,7 @@ function RoomFields(props: {
       <Cell label="여는 시각" htmlFor={at("opens")}>
         <input
           type="time"
-          step={1800}
+          step={3600}
           value={form.opens_at}
           id={at("opens")}
           aria-invalid={bad !== ""}
@@ -269,7 +232,7 @@ function RoomFields(props: {
       <Cell label="닫는 시각" htmlFor={at("closes")}>
         <input
           type="time"
-          step={1800}
+          step={3600}
           value={form.closes_at}
           id={at("closes")}
           aria-invalid={bad !== ""}
@@ -371,7 +334,7 @@ function RoomCard(props: {
     <Card>
       <div className="sethead">
         <b>합주실</b>
-        <span>합주실 하나를 씁니다. 여닫는 시각은 정시 또는 30분에만 둘 수 있습니다</span>
+        <span>합주실 하나를 씁니다. 여닫는 시각은 정시에만 둘 수 있습니다</span>
       </div>
 
       {state !== "" || rooms.length === 0 ? (
@@ -616,7 +579,7 @@ function teamLine(teams: Team[], state: string): string {
   if (state !== "") return state;
   const filled = teams.reduce((sum, team) => sum + team.filled_count, 0);
   const slots = teams.reduce((sum, team) => sum + team.slot_count, 0);
-  return `팀 ${teams.length}개 · 자리 ${slots}개 중 ${filled}개 참`;
+  return `팀 ${teams.length}개 · 포지션 ${slots}개 중 ${filled}개 참`;
 }
 
 /** 지금 설정이면 실제로 얼마가 열리는지. 집중기간은 모든 팀이 같은 몫을 가져야 한다. */
