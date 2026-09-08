@@ -51,8 +51,8 @@ def test_two_sets_give_their_union(
 ) -> None:
     _, head = account("헤드", "head@example.com")
     member_id, member = account("멤버", "member@example.com")
-    rooms_set = _make_set(api_client, head, "방담당", ["room_manage"])
-    periods_set = _make_set(api_client, head, "기간담당", ["period_manage"])
+    rooms_set = _make_set(api_client, head, "방담당", ["room_create"])
+    periods_set = _make_set(api_client, head, "기간담당", ["period_create"])
 
     for set_id in (rooms_set, periods_set):
         granted = api_client.post(
@@ -60,7 +60,7 @@ def test_two_sets_give_their_union(
         )
         assert granted.status_code == 201, granted.text
 
-    assert set(_my_permissions(api_client, member)) == {"room_manage", "period_manage"}
+    assert set(_my_permissions(api_client, member)) == {"room_create", "period_create"}
     # 합집합이 글자로만 맞는 것이 아니라 실제 통로를 연다.
     made_room = api_client.post(
         "/rooms",
@@ -88,7 +88,7 @@ def test_a_missing_permission_closes_the_gate(
 ) -> None:
     _, head = account("헤드", "head@example.com")
     member_id, member = account("멤버", "member@example.com")
-    rooms_set = _make_set(api_client, head, "방담당", ["room_manage"])
+    rooms_set = _make_set(api_client, head, "방담당", ["room_edit"])
     api_client.post(f"/members/{member_id}/permission-sets/{rooms_set}", cookies=head)
 
     blocked = api_client.post(
@@ -112,7 +112,7 @@ def test_revoking_a_set_takes_its_permissions_back(
 ) -> None:
     _, head = account("헤드", "head@example.com")
     member_id, member = account("멤버", "member@example.com")
-    rooms_set = _make_set(api_client, head, "방담당", ["room_manage"])
+    rooms_set = _make_set(api_client, head, "방담당", ["room_edit"])
     api_client.post(f"/members/{member_id}/permission-sets/{rooms_set}", cookies=head)
 
     removed = api_client.delete(
@@ -188,7 +188,7 @@ def test_deleting_a_set_takes_its_permissions_back(
 ) -> None:
     _, head = account("헤드", "head@example.com")
     member_id, member = account("멤버", "member@example.com")
-    rooms_set = _make_set(api_client, head, "방담당", ["room_manage"])
+    rooms_set = _make_set(api_client, head, "방담당", ["room_edit"])
     api_client.post(f"/members/{member_id}/permission-sets/{rooms_set}", cookies=head)
 
     deleted = api_client.delete(f"/permission-sets/{rooms_set}", cookies=head)
@@ -201,11 +201,11 @@ def test_a_duplicate_set_name_is_refused(
     api_client: TestClient, account: AccountFactory
 ) -> None:
     _, head = account("헤드", "head@example.com")
-    _make_set(api_client, head, "방담당", ["room_manage"])
+    _make_set(api_client, head, "방담당", ["room_edit"])
 
     again = api_client.post(
         "/permission-sets",
-        json={"name": "방담당", "permissions": ["period_manage"]},
+        json={"name": "방담당", "permissions": ["period_edit"]},
         cookies=head,
     )
 
@@ -231,7 +231,7 @@ def test_the_listing_shows_who_holds_each_set(
 ) -> None:
     _, head = account("헤드", "head@example.com")
     member_id, _ = account("멤버", "member@example.com")
-    rooms_set = _make_set(api_client, head, "방담당", ["room_manage"])
+    rooms_set = _make_set(api_client, head, "방담당", ["room_edit"])
     api_client.post(f"/members/{member_id}/permission-sets/{rooms_set}", cookies=head)
 
     listed = api_client.get("/permission-sets", cookies=head).json()["permission_sets"]

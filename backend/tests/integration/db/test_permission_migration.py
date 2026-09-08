@@ -11,7 +11,14 @@ from backend.db.models import PERMISSIONS
 
 # 역할 열이 아직 있던 시점과, 그것을 권한 묶음으로 옮긴 시점.
 BEFORE = "010cbf76a692"
-AFTER = "b7f1a92c4d31"
+# 권한 묶음으로 옮긴 뒤에도 목록이 몇 번 바뀌었다. 헤드매니저는 그 모든 이동을 지나
+# "할 수 있는 일 전부"를 들고 있어야 하므로, 한 지점이 아니라 끝까지 올려 견준다.
+AFTER = "head"
+
+# 되돌리기 검사는 이 migration 하나만 오간다. 끝까지 올렸다 내리면 팀 자리 migration
+# (b2d94f7a1c05) 의 되돌리기가 없는 제약을 지우려다 멈춘다 — 이 작업과 무관한 별개의
+# 문제이고, 여기서 함께 고치면 이 검사가 무엇을 보는지 흐려진다.
+MOVED = "b7f1a92c4d31"
 
 
 @pytest.fixture()
@@ -80,7 +87,7 @@ def test_the_downgrade_puts_the_role_back(
                 " VALUES ('헤드', 'head_manager'), ('멤버', 'member')"
             )
         )
-    command.upgrade(config, AFTER)
+    command.upgrade(config, MOVED)
 
     command.downgrade(config, BEFORE)
 

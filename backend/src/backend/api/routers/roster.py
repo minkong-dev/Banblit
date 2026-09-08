@@ -6,6 +6,7 @@ from backend.api.permission_service import account_permissions
 from backend.api.roster_service import assign_slot as assign_slot_row
 from backend.api.roster_service import clear_slot as clear_slot_row
 from backend.api.roster_service import create_team as create_team_row
+from backend.api.roster_service import delete_team as delete_team_row
 from backend.api.roster_service import list_slots, list_teams, search_members
 from backend.api.roster_service import update_team as update_team_row
 from backend.api.schemas import (
@@ -116,7 +117,7 @@ def search_member_list(
     "/teams",
     response_model=TeamEnvelopeOut,
     status_code=201,
-    dependencies=[Depends(require_permission("team_manage"))],
+    dependencies=[Depends(require_permission("team_create"))],
 )
 def create_team(
     req: TeamCreateIn, session: Session = Depends(get_session)
@@ -133,7 +134,7 @@ def create_team(
 @router.patch(
     "/teams/{team_id}",
     response_model=TeamEnvelopeOut,
-    dependencies=[Depends(require_permission("team_manage"))],
+    dependencies=[Depends(require_permission("team_edit"))],
 )
 def patch_team(
     team_id: int, req: TeamUpdateIn, session: Session = Depends(get_session)
@@ -147,10 +148,22 @@ def patch_team(
     return TeamEnvelopeOut(team=_team_out(team, len(rows), filled))
 
 
+@router.delete(
+    "/teams/{team_id}",
+    status_code=204,
+    dependencies=[Depends(require_permission("team_delete"))],
+)
+def delete_team_endpoint(team_id: int, session: Session = Depends(get_session)) -> None:
+    try:
+        delete_team_row(session, team_id)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+
+
 @router.put(
     "/teams/{team_id}/slots/{slot_id}",
     response_model=SlotEnvelopeOut,
-    dependencies=[Depends(require_permission("team_manage"))],
+    dependencies=[Depends(require_permission("member_add"))],
 )
 def put_slot_member(
     team_id: int,

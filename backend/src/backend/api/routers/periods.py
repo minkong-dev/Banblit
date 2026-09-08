@@ -44,7 +44,7 @@ def read_periods(session: Session = Depends(get_session)) -> PeriodsOut:
     "/periods",
     response_model=PeriodEnvelopeOut,
     status_code=201,
-    dependencies=[Depends(require_permission("period_manage"))],
+    dependencies=[Depends(require_permission("period_create"))],
 )
 def create_period(
     req: PeriodCreateIn,
@@ -68,7 +68,7 @@ def create_period(
 @router.patch(
     "/periods/{period_id}",
     response_model=PeriodEnvelopeOut,
-    dependencies=[Depends(require_permission("period_manage"))],
+    dependencies=[Depends(require_permission("period_edit"))],
 )
 def patch_period(
     period_id: int,

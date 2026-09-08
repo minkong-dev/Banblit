@@ -4,6 +4,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from backend.api.board_input import require_non_empty
+from backend.api.permission_service import account_permissions
 from backend.db.models import Comment, Member, Post, Team, TeamSlot
 
 PostRow = tuple[Post, str, int]
@@ -43,9 +44,13 @@ def require_post_readable(session: Session, post_id: int, requester: Member) -> 
 
 
 def require_post_author(session: Session, post_id: int, requester: Member) -> Post:
-    """읽을 수 있는지 먼저 보고, 그 게시글을 쓴 사람 본인이면 게시글을 돌려준다."""
+    """읽을 수 있는지 먼저 보고, 그 게시글을 쓴 사람 본인이면 게시글을 돌려준다.
+
+    board_moderate 를 가진 사람은 남의 글에도 손댈 수 있다 — 부적절한 글을 아무도
+    치우지 못하는 상태를 두지 않기 위해서다.
+    """
     post = require_post_readable(session, post_id, requester)
-    if post.author_id != requester.id:
+    if post.author_id != requester.id and not "board_moderate" in account_permissions(session, requester.id):
         raise PermissionError("글쓴이만 할 수 있습니다")
     return post
 
@@ -166,6 +171,50 @@ def get_post_with_comments(
     ).all()
     comments = [(comment, author) for comment, author in comment_rows]
     return post, post_author, len(comments), comments
+
+
+def update_post(
+    session: Session, post_id: int, title: str, body: str, requester: Member
+) -> tuple[Post, str]:
+    """글을 고친다. 글쓴이 본인만 할 수 있다 — 판정은 require_post_author 가 한다."""
+    post = require_post_author(session, post_id, requester)
+    post.title = require_non_empty(title, "제목")
+    post.body = require_non_empty(body, "내용")
+    session.commit()
+    return post, requester.name
+
+
+def require_comment_author(session: Session, comment_id: int, requester: Member) -> Comment:
+    """댓글을 쓴 사람 본인이면 그 댓글을 돌려준다.
+
+    댓글이 달린 글을 읽을 수 있는지도 함께 본다 — 팀 게시판의 댓글은 그 팀 소속만
+    닿을 수 있어야 하고, 소속에서 빠진 뒤에는 자기 댓글이라도 손댈 수 없다.
+    """
+    comment = session.get(Comment, comment_id)
+    if comment is None:
+        raise ValueError("그런 댓글이 없습니다")
+    require_post_readable(session, comment.post_id, requester)
+    if (
+        comment.author_id != requester.id
+        and "board_moderate" not in account_permissions(session, requester.id)
+    ):
+        raise PermissionError("댓글을 쓴 사람만 할 수 있습니다")
+    return comment
+
+
+def update_comment(
+    session: Session, comment_id: int, body: str, requester: Member
+) -> tuple[Comment, str]:
+    comment = require_comment_author(session, comment_id, requester)
+    comment.body = require_non_empty(body, "댓글")
+    session.commit()
+    return comment, requester.name
+
+
+def delete_comment(session: Session, comment_id: int, requester: Member) -> None:
+    comment = require_comment_author(session, comment_id, requester)
+    session.delete(comment)
+    session.commit()
 
 
 def create_comment(

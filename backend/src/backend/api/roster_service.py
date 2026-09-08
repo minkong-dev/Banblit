@@ -1,4 +1,4 @@
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -194,6 +194,17 @@ def update_team(session: Session, team_id: int, name: str) -> Team:
     team.name = clean_name
     commit_roster(session)
     return team
+
+
+def delete_team(session: Session, team_id: int) -> None:
+    """팀을 지운다. 자리는 팀의 구성이라 함께 사라진다.
+
+    자리에 앉아 있던 사람은 그대로 남는다 — 사람은 팀보다 오래 산다.
+    """
+    team = _get_team_or_raise(session, team_id)
+    session.execute(delete(TeamSlot).where(TeamSlot.team_id == team_id))
+    session.delete(team)
+    commit_roster(session)
 
 
 def assign_slot(session: Session, team_id: int, slot_id: int, member_id: int) -> TeamSlot:

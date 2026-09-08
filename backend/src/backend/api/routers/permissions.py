@@ -22,8 +22,9 @@ from backend.db.pipeline import get_session
 
 router = APIRouter()
 
-# 여섯 endpoint 모두 permission_grant 하나로 막는다. 그 항목이 없으면 남의 권한도
+# 권한 묶음을 만들고 고치고 지우는 것과, 사람에게 주고 뺏는 것을 가른다. 그 항목이 없으면 남의 권한도
 # 자기 권한도 건드리지 못한다 — 본인이냐 남이냐로 가르는 예외는 두지 않는다.
+_manage_only = Depends(require_permission("permission_manage"))
 _grant_only = Depends(require_permission("permission_grant"))
 
 
@@ -49,7 +50,7 @@ def read_permission_sets(session: Session = Depends(get_session)) -> PermissionS
     "/permission-sets",
     response_model=PermissionSetEnvelopeOut,
     status_code=201,
-    dependencies=[_grant_only],
+    dependencies=[_manage_only],
 )
 def create_set(
     req: PermissionSetIn, session: Session = Depends(get_session)
@@ -64,7 +65,7 @@ def create_set(
 @router.patch(
     "/permission-sets/{set_id}",
     response_model=PermissionSetEnvelopeOut,
-    dependencies=[_grant_only],
+    dependencies=[_manage_only],
 )
 def patch_set(
     set_id: int, req: PermissionSetIn, session: Session = Depends(get_session)
@@ -82,7 +83,7 @@ def patch_set(
     )
 
 
-@router.delete("/permission-sets/{set_id}", status_code=204, dependencies=[_grant_only])
+@router.delete("/permission-sets/{set_id}", status_code=204, dependencies=[_manage_only])
 def delete_set(set_id: int, session: Session = Depends(get_session)) -> None:
     try:
         delete_permission_set(session, set_id)

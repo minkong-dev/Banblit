@@ -9,6 +9,7 @@ from backend.api.reservation_input import (
     require_valid_slot_bounds,
     require_within_room_hours,
 )
+from backend.api.permission_service import account_permissions
 from backend.db.models import Member, Period, Reservation, Room, Team, TeamSlot
 from backend.scheduling.pipeline import TimeInterval, generate_slots
 
@@ -180,7 +181,11 @@ def _get_own_reservation(
     reservation = session.get(Reservation, reservation_id)
     if reservation is None:
         raise ValueError("그런 예약이 없습니다")
-    if reservation.member_id != requester.id:
+    # reservation_manage 를 가진 사람은 남의 예약도 다룬다 — 합주실을 정리해야 하는
+    # 사람이 남이 잡아 둔 자리를 손대지 못하면 방을 비울 방법이 없다.
+    if reservation.member_id != requester.id and (
+        "reservation_manage" not in account_permissions(session, requester.id)
+    ):
         raise PermissionError(f"본인이 예약한 자리만 {verb} 수 있습니다")
     return reservation
 
