@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PERMISSION_ITEMS, can, permissionLabels, permissionSetNameMessage, roleLabel } from "./account";
+import { PERMISSION_ITEMS, can, roleLabel } from "./account";
 import type { Account } from "./contract";
 
 function accountWith(permissions: Account["permissions"]): Account {
@@ -43,39 +43,5 @@ describe("PERMISSION_ITEMS", () => {
 
   it("항목마다 한국어 이름이 있다", () => {
     expect(PERMISSION_ITEMS.every((item) => item.label !== "")).toBe(true);
-  });
-});
-
-describe("permissionLabels", () => {
-  it("고른 순서와 무관하게 항목 선언 순서로 한국어 이름을 돌려준다", () => {
-    expect(permissionLabels(["notice_write", "room_edit"])).toEqual(["합주실 수정", "공지 쓰기"]);
-  });
-
-  it("모르는 이름은 버린다", () => {
-    expect(permissionLabels(["room_edit", "무언가"])).toEqual(["합주실 수정"]);
-  });
-
-  it("빈 목록은 빈 목록이다", () => {
-    expect(permissionLabels([])).toEqual([]);
-  });
-});
-
-describe("permissionSetNameMessage", () => {
-  it("이미 있는 이름은 받지 않는다", () => {
-    expect(permissionSetNameMessage("헤드매니저", ["헤드매니저", "합주실 담당"]))
-      .toBe("같은 이름의 권한이 이미 있습니다.");
-  });
-
-  it("앞뒤 공백만 다른 것도 같은 이름으로 본다", () => {
-    expect(permissionSetNameMessage("  헤드매니저 ", ["헤드매니저"]))
-      .toBe("같은 이름의 권한이 이미 있습니다.");
-  });
-
-  it("겹치지 않으면 통과한다", () => {
-    expect(permissionSetNameMessage("공지 담당", ["헤드매니저"])).toBe("");
-  });
-
-  it("비어 있으면 채워 달라고 한다", () => {
-    expect(permissionSetNameMessage("   ", [])).toBe("권한 이름을 입력해 주세요.");
   });
 });

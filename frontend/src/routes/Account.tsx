@@ -1,19 +1,20 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { reason } from "../lib/api";
 import {
   Link,
   Outlet,
   useLocation,
   useNavigate,
-  useOutletContext,
   useSearchParams,
 } from "react-router-dom";
 
 import { Field, failures, fieldText } from "../components/Field";
 import type { Errors } from "../components/Field";
 import { GoogleIcon, KakaoIcon } from "../components/icons";
-import { useToast } from "../components/hooks";
+
 import { usePage } from "../components/hooks";
+import { say, useToast } from "../lib/toast";
 import "../styles/account.css";
 import {
   cohortMessage,
@@ -27,9 +28,6 @@ import {
   strongPasswordMessage,
 } from "../lib/pipeline";
 
-function reason(error: unknown): string {
-  return error instanceof Error ? error.message : "서버에 닿지 못했습니다";
-}
 
 // 사진은 화면에 붙박이로 두고 오른쪽 서식만 갈아 끼운다. 다섯 화면이 한 자리를 나눠 쓴다.
 // 주소가 다섯 개로 나뉘어 있어 뒤로 가기와 링크 보내기가 제대로 동작하고,
@@ -42,11 +40,9 @@ const HEADS: Record<string, { title: string; sub: string }> = {
   "/reset-password": { title: "비밀번호 재설정", sub: "대소문자, 숫자, 특수기호 포함 8~20자" },
 };
 
-type AccountContext = { say: (message: string) => void };
-
 export function AccountLayout() {
   usePage("account");
-  const { message, say } = useToast();
+  const message = useToast();
   const head = HEADS[useLocation().pathname] ?? HEADS["/login"];
 
   return (
@@ -66,7 +62,7 @@ export function AccountLayout() {
               <h2>{head.title}</h2>
               <p>{head.sub}</p>
             </div>
-            <Outlet context={{ say } satisfies AccountContext} />
+            <Outlet />
           </div>
 
           <div className="legal">
@@ -103,7 +99,6 @@ function useSubmit() {
 }
 
 export function SignIn() {
-  const { say } = useOutletContext<AccountContext>();
   const { errors, submit } = useSubmit();
   const navigate = useNavigate();
 
@@ -163,7 +158,6 @@ export function SignIn() {
 }
 
 export function SignUp() {
-  const { say } = useOutletContext<AccountContext>();
   const { errors, submit } = useSubmit();
   const navigate = useNavigate();
   return (
@@ -228,7 +222,6 @@ export function SignUp() {
 const MAIL_SENT = "메일을 보냈어요 · 전송된 메일을 확인해주세요";
 
 export function FindId() {
-  const { say } = useOutletContext<AccountContext>();
   const { errors, submit } = useSubmit();
 
   return (
@@ -263,7 +256,6 @@ export function FindId() {
 }
 
 export function FindPassword() {
-  const { say } = useOutletContext<AccountContext>();
   const { errors, submit } = useSubmit();
 
   return (
@@ -297,7 +289,6 @@ export function FindPassword() {
 }
 
 export function ResetPassword() {
-  const { say } = useOutletContext<AccountContext>();
   const { errors, submit } = useSubmit();
   const navigate = useNavigate();
   // 메일의 링크가 /reset-password?token=... 으로 들어온다. 입력칸으로 받지 않는다 —

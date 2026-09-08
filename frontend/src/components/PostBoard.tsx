@@ -2,8 +2,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
-import { apiUrl } from "../lib/api";
-import { clampPage, pageCount, pageSlice, pageWindow } from "../lib/paging";
+import { apiUrl, reason } from "../lib/api";
+import { say } from "../lib/toast";
+import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import {
   ATTACHMENT_ACCEPT,
   attachmentHint,
@@ -16,6 +17,7 @@ import {
   sendFile,
 } from "../lib/pipeline";
 import { Card } from "./AppShell";
+import { Pager } from "./Pager";
 import { useFitCount } from "./hooks";
 import { Modal } from "./Modal";
 import { PencilIcon, TrashIcon } from "./icons";
@@ -24,9 +26,6 @@ import type { Attachment, Post, PostComment } from "../lib/contract";
 
 
 
-function reason(error: unknown): string {
-  return error instanceof Error ? error.message : "불러오지 못했습니다";
-}
 
 /** 목록 → 상세로 넘어갈 때 초점을 그 글의 제목으로, 되돌아올 때는 눌렀던 줄로 되돌린다. */
 function useDetailFocus(): {
@@ -102,11 +101,10 @@ function WriteForm(props: {
   authorId: number | null;
   writeNote: string;
   queryKey: unknown[];
-  onSay: (message: string) => void;
   /** 다 쓰고 나면 서식을 접는다 — 목록으로 돌아가는 것이 다음에 할 일이다. */
   onDone: () => void;
 }) {
-  const { writePath, authorId, writeNote, queryKey, onSay, onDone } = props;
+  const { writePath, authorId, writeNote, queryKey, onDone } = props;
   const client = useQueryClient();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -167,7 +165,7 @@ function WriteForm(props: {
       setPostedId(null);
       if (picker.current !== null) picker.current.value = "";
       setTouched(false);
-      onSay(said);
+      say(said);
       onDone();
     },
     onSettled: () => {
@@ -250,8 +248,8 @@ function WriteForm(props: {
   );
 }
 
-function CommentForm(props: { postId: number; authorId: number | null; onSay: (message: string) => void }) {
-  const { postId, authorId, onSay } = props;
+function CommentForm(props: { postId: number; authorId: number | null }) {
+  const { postId, authorId } = props;
   const client = useQueryClient();
   const [body, setBody] = useState("");
   const [touched, setTouched] = useState(false);
@@ -267,7 +265,7 @@ function CommentForm(props: { postId: number; authorId: number | null; onSay: (m
       setBody("");
       setTouched(false);
       void client.invalidateQueries({ queryKey: ["board", "post", postId] });
-      onSay("댓글을 올렸습니다.");
+      say("댓글을 올렸습니다.");
     },
   });
 
@@ -306,9 +304,8 @@ function AttachmentList(props: {
   postId: number;
   attachments: Attachment[];
   canRemove: boolean;
-  onSay: (message: string) => void;
 }) {
-  const { postId, attachments, canRemove, onSay } = props;
+  const { postId, attachments, canRemove } = props;
   const client = useQueryClient();
 
   const remove = useMutation({
@@ -316,7 +313,7 @@ function AttachmentList(props: {
       getJSON(`/attachments/${attachmentId}`, { method: "DELETE" }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["board", "post", postId] });
-      onSay("첨부파일을 지웠습니다.");
+      say("첨부파일을 지웠습니다.");
     },
   });
 
@@ -362,16 +359,15 @@ function RemovePost(props: {
   postId: number;
   listKey: readonly unknown[];
   onDone: () => void;
-  onSay: (message: string) => void;
 }) {
-  const { postId, listKey, onDone, onSay } = props;
+  const { postId, listKey, onDone } = props;
   const client = useQueryClient();
 
   const remove = useMutation({
     mutationFn: () => getJSON(`/posts/${postId}`, { method: "DELETE" }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: listKey });
-      onSay("글을 삭제했습니다.");
+      say("글을 삭제했습니다.");
       // 지운 글의 상세를 계속 열어 둘 수 없으므로 목록으로 돌아간다.
       onDone();
     },
@@ -402,9 +398,8 @@ function EditPost(props: {
   post: Post;
   listKey: readonly unknown[];
   onClose: () => void;
-  onSay: (message: string) => void;
 }) {
-  const { post, listKey, onClose, onSay } = props;
+  const { post, listKey, onClose } = props;
   const client = useQueryClient();
   const [title, setTitle] = useState(post.title);
   const [body, setBody] = useState(post.body);
@@ -420,7 +415,7 @@ function EditPost(props: {
       void client.invalidateQueries({ queryKey: listKey });
       void client.invalidateQueries({ queryKey: ["board", "post", post.id] });
       onClose();
-      onSay("글을 고쳤습니다.");
+      say("글을 고쳤습니다.");
     },
     onError: (error) => setBad(reason(error)),
   });
@@ -464,9 +459,8 @@ function CommentRow(props: {
   comment: PostComment;
   mine: boolean;
   postId: number;
-  onSay: (message: string) => void;
 }) {
-  const { comment, mine, postId, onSay } = props;
+  const { comment, mine, postId } = props;
   const client = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState(comment.body);
@@ -482,14 +476,14 @@ function CommentRow(props: {
         method: "PATCH",
         body: JSON.stringify({ body: body.trim() }),
       }),
-    onSuccess: () => { setEditing(false); refresh(); onSay("댓글을 고쳤습니다."); },
+    onSuccess: () => { setEditing(false); refresh(); say("댓글을 고쳤습니다."); },
     onError: (error) => setBad(reason(error)),
   });
 
   const remove = useMutation({
     mutationFn: () => getJSON<null>(`/comments/${comment.id}`, { method: "DELETE" }),
-    onSuccess: () => { refresh(); onSay("댓글을 삭제했습니다."); },
-    onError: (error) => onSay(reason(error)),
+    onSuccess: () => { refresh(); say("댓글을 삭제했습니다."); },
+    onError: (error) => say(reason(error)),
   });
 
   return (
@@ -548,9 +542,8 @@ function PostDetail(props: {
   listKey: readonly unknown[];
   heading: RefObject<HTMLHeadingElement | null>;
   onBack: () => void;
-  onSay: (message: string) => void;
 }) {
-  const { postId, authorId, listKey, heading, onBack, onSay } = props;
+  const { postId, authorId, listKey, heading, onBack } = props;
   const [editing, setEditing] = useState(false);
   const detail = useQuery({
     queryKey: ["board", "post", postId],
@@ -577,7 +570,7 @@ function PostDetail(props: {
             <button className="ic" aria-label="글 수정" onClick={() => setEditing(true)}>
               <PencilIcon />
             </button>
-            <RemovePost postId={post.id} listKey={listKey} onDone={onBack} onSay={onSay} />
+            <RemovePost postId={post.id} listKey={listKey} onDone={onBack} />
           </span>
         )}
       </div>
@@ -589,7 +582,6 @@ function PostDetail(props: {
         postId={post.id}
         attachments={attachments}
         canRemove={mine}
-        onSay={onSay}
       />
 
       <div className="comments">
@@ -604,17 +596,16 @@ function PostDetail(props: {
                 comment={comment}
                 mine={authorId !== null && comment.author_id === authorId}
                 postId={post.id}
-                onSay={onSay}
               />
             ))}
           </ul>
         )}
       </div>
 
-      <CommentForm postId={post.id} authorId={authorId} onSay={onSay} />
+      <CommentForm postId={post.id} authorId={authorId} />
 
       {!editing ? null : (
-        <EditPost post={post} listKey={listKey} onClose={() => setEditing(false)} onSay={onSay} />
+        <EditPost post={post} listKey={listKey} onClose={() => setEditing(false)} />
       )}
     </div>
   );
@@ -633,9 +624,8 @@ export function PostBoard(props: {
   canWrite: boolean;
   writeNote: string;
   emptyText: string;
-  onSay: (message: string) => void;
 }) {
-  const { title, hint, listPath, writePath, authorId, canWrite, writeNote, emptyText, onSay } = props;
+  const { title, hint, listPath, writePath, authorId, canWrite, writeNote, emptyText } = props;
   const queryKey = ["board", listPath];
   const focus = useDetailFocus();
   const client = useQueryClient();
@@ -684,32 +674,7 @@ export function PostBoard(props: {
           {writing ? null : (
           <div className="listfoot">
           {state !== "" ? null : (
-            <nav className="pager" aria-label="쪽 넘기기">
-              <button
-                aria-label="이전 쪽"
-                disabled={shownPage === 1}
-                onClick={() => setPage(shownPage - 1)}
-              >
-                ‹
-              </button>
-              {pageWindow(shownPage, pages).map((number) => (
-                <button
-                  key={number}
-                  aria-label={`${number}쪽`}
-                  aria-current={number === shownPage ? "page" : undefined}
-                  onClick={() => setPage(number)}
-                >
-                  {number}
-                </button>
-              ))}
-              <button
-                aria-label="다음 쪽"
-                disabled={shownPage === pages}
-                onClick={() => setPage(shownPage + 1)}
-              >
-                ›
-              </button>
-            </nav>
+            <Pager page={shownPage} pages={pages} onPage={setPage} />
           )}
 
           {!canWrite ? null : (
@@ -726,7 +691,6 @@ export function PostBoard(props: {
               authorId={authorId}
               writeNote={writeNote}
               queryKey={queryKey}
-              onSay={onSay}
               onDone={() => setWriting(false)}
             />
           )}
@@ -738,7 +702,6 @@ export function PostBoard(props: {
           listKey={queryKey}
           heading={focus.heading}
           onBack={backToList}
-          onSay={onSay}
         />
       )}
     </Card>

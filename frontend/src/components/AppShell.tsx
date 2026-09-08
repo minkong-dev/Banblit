@@ -3,10 +3,10 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
-import { MenuIcon } from "./icons";
 import { NotificationMenu } from "./NotificationMenu";
-import { useMe, usePage } from "./hooks";
-import { can } from "../lib/account";
+import { useMe, useMyTeams, usePage } from "./hooks";
+import { useToast } from "../lib/toast";
+import { can, roleLabel } from "../lib/account";
 import { getJSON, logOut } from "../lib/pipeline";
 import type { Member, Permission } from "../lib/contract";
 import "../styles/shell.css";
@@ -17,9 +17,8 @@ const NAV = [
   { key: "notice", label: "공지사항", to: "/notices" },
   { key: "find-team", label: "팀 찾기", to: "/teams" },
   { key: "board", label: "팀 게시판", to: "/board" },
-  // 설정은 누구에게나 보인다 — 화면 밝기는 권한과 무관한 개인 설정이다. 관리 구역에
-  // 두었을 때는 권한 없는 사람이 밝기를 바꿀 길이 아예 없었다. 안에서 무엇을 볼지는
-  // 설정 화면이 탭 단위로 다시 가린다.
+  // 설정은 누구에게나 보인다 — 화면 밝기는 권한과 무관한 개인 설정이다. 안에서 무엇을
+  // 볼지는 설정 화면이 탭 단위로 다시 가린다.
   { key: "settings", label: "설정", to: "/settings" },
 ] as const;
 
@@ -30,22 +29,17 @@ const MANAGER_NAV = [
 
 export type NavKey = (typeof NAV)[number]["key"] | (typeof MANAGER_NAV)[number]["key"];
 
-type NavItem = { key: string; label: string; to: string | null };
+type NavItem = { key: string; label: string; to: string };
 
 function NavList({ items, current }: { items: readonly NavItem[]; current: NavKey | undefined }) {
   return (
     <nav>
-      {items.map((item) =>
-        // 아직 만들지 않은 화면은 링크가 아니라 눌리지 않는 단추다.
-        item.to === null ? (
-          <button key={item.key} type="button" disabled>{item.label}</button>
-        ) : (
+      {items.map((item) => (
           <NavLink key={item.key} to={item.to}
             aria-current={item.key === current ? "page" : undefined}>
             {item.label}
           </NavLink>
-        ),
-      )}
+      ))}
     </nav>
   );
 }
@@ -55,41 +49,30 @@ export function AppShell(props: {
   page: string;
   /** 사이드바에 없는 화면(프로필 설정)은 아무 항목도 켜지 않도록 비워 둔다. */
   current?: NavKey;
-  /** 상단 오른쪽 — 프로필 버튼과, 있다면 프로필 말풍선까지. */
-  profile: ReactNode;
   /** 사이드바 맨 아래에 덧붙일 것. */
   sideExtra?: ReactNode;
-  toast?: string;
   children: ReactNode;
 }) {
-  const { page, current, profile, sideExtra, toast, children } = props;
+  const { page, current, sideExtra, children } = props;
+  const toast = useToast();
   usePage(page);
+  // shell.css 가 이 표시로 껍데기(상단바·사이드바·탭·카드)를 입힌다. 계정·랜딩 화면에는 없다.
+  useEffect(() => {
+    document.body.dataset.shell = "";
+    return () => { delete document.body.dataset.shell; };
+  }, []);
   const { me } = useMe();
 
   // 가진 항목으로 가린다. 계정을 아직 못 받았으면 아무것도 보이지 않는다.
   const managerNav = MANAGER_NAV.filter((item) => item.needs.some((need) => can(me, need)));
 
-  const [navOpen, setNavOpen] = useState(false);
-
-  // 사이드바를 여는 표시는 원본 CSS 가 body.navopen 으로 읽는다.
-  useEffect(() => {
-    document.body.classList.toggle("navopen", navOpen);
-    return () => document.body.classList.remove("navopen");
-  }, [navOpen]);
-
   return (
     <>
       <header className="top">
         <div className="in">
-          <button className="ic" id="menuBtn" aria-label="메뉴 열기" aria-expanded={navOpen}
-            onClick={() => setNavOpen((open) => !open)}>
-            <MenuIcon />
-          </button>
           <div className="logo"><b>Banblit</b><span>IN SIX STRINGS · A실</span></div>
-          {/* 화면 밝기 단추가 있던 자리다. 밝기는 설정 화면으로 옮기고 그 자리에
-              알림을 두었다 — 밝기는 한 번 정하면 끝이지만 알림은 계속 봐야 한다. */}
           <NotificationMenu />
-          {profile}
+          <ProfileMenu />
         </div>
       </header>
 
@@ -112,7 +95,7 @@ export function AppShell(props: {
       </div>
 
       <div className={toast ? "toast on" : "toast"} role="status" aria-live="polite">
-        {toast ?? ""}
+        {toast}
       </div>
     </>
   );
@@ -144,16 +127,14 @@ export function Tabs<T extends string>(props: {
 
 /** 상단 오른쪽 프로필 단추 + 말풍선. 스케줄러·게시판류 화면이 함께 쓴다.
  *  "프로필 설정"이 이 말풍선에서 `/profile`로 들어가는 유일한 입구다. */
-export function ProfileMenu(props: {
-  name: string;
-  sub: string;
-  teams: { id: number; name: string; colorKey: string }[];
-}) {
-  const { name, sub, teams } = props;
+export function ProfileMenu() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const initial = name.slice(0, 2);
   const { me } = useMe();
+  const teams = useMyTeams();
+  const name = me?.name ?? "";
+  const sub = me ? roleLabel(me.role) : "";
+  const initial = name.slice(0, 2);
 
   // 팀마다 그 팀의 명단을 받는다. 명단에서 내 번호와 같은 사람을 찾으면 그 사람이
   // 그 팀에서 맡은 포지션이다 — 이름이 아니라 번호로 가른다(동명이인 규칙).
@@ -172,7 +153,7 @@ export function ProfileMenu(props: {
     try {
       await logOut();
     } catch {
-      // 로그아웃 요청 실패는 무시한다.
+      // 무시 — 아래에서 로그인 화면으로 보낸다.
     }
     void navigate("/login");
   }

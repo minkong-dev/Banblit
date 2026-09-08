@@ -26,10 +26,6 @@ export function WideMenuIcon(props: IconProps) {
   return <Stroke width={1.6} {...props}><path d="M3 7h18M3 12h18M3 17h18" /></Stroke>;
 }
 
-export function ThemeIcon(props: IconProps) {
-  return <Stroke width={1.9} {...props}><path d="M21 13a8.5 8.5 0 1 1-10-10 7 7 0 0 0 10 10Z" /></Stroke>;
-}
-
 /** 알림 종. 흔들리는 몸통과 아래 추 두 획으로 그린다. */
 export function BellIcon(props: IconProps) {
   return (
@@ -96,10 +92,6 @@ export function ChevronLeftIcon(props: IconProps) {
 
 export function ChevronRightIcon(props: IconProps) {
   return <Stroke width={2.4} {...props}><path d="M9 5l7 7-7 7" /></Stroke>;
-}
-
-export function CheckIcon(props: IconProps) {
-  return <Stroke width={2.6} {...props}><path d="M4 12l6 6L20 6" /></Stroke>;
 }
 
 export function ClockIcon(props: IconProps) {

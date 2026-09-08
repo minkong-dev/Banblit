@@ -1,17 +1,13 @@
 import { useQueries } from "@tanstack/react-query";
 
-import { AppShell, Card, ProfileMenu } from "../components/AppShell";
-import { getJSON } from "../lib/api";
+import { AppShell, Card } from "../components/AppShell";
+import { getJSON, reason } from "../lib/api";
 import { useMe } from "../components/hooks";
-import { useMyTeams } from "../components/hooks";
 import "../styles/profile.css";
 import type { Account, Member } from "../lib/contract";
 import { roleLabel } from "../lib/account";
 
 
-function reason(error: unknown): string {
-  return error instanceof Error ? error.message : "불러오지 못했습니다";
-}
 
 /** 소속 팀마다 내가 맡은 포지션을 한 줄로 낸다. 실패한 팀은 사유를 그 줄에 남긴다. */
 function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: number; name: string }[]) {
@@ -38,13 +34,11 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
 export function Profile() {
   const { me, teamIds, teams } = useMe();
   const affiliations = useMyAffiliations(me, teamIds, teams);
-  const myTeams = useMyTeams();
   const name = me?.name ?? "";
 
   return (
     <AppShell
       page="profile"
-      profile={<ProfileMenu name={name} sub={me ? `${roleLabel(me.role)} · 2026년 입부` : ""} teams={myTeams} />}
     >
       <div className="main">
         <Card>

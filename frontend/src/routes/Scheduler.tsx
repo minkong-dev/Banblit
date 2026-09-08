@@ -2,18 +2,18 @@ import { Fragment, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
-import { AppShell, Card, Panel, ProfileMenu, Tabs } from "../components/AppShell";
+import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from "../components/icons";
 import { getJSON } from "../lib/api";
+import { currentMonth } from "../lib/calendar";
 import { focusedRange, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
 import type { Entry } from "./DayDialog";
 import { teamsOf } from "../lib/roster";
-import { roleLabel } from "../lib/account";
 import type { DayTeam } from "../lib/roster";
-import { useMe, useToast } from "../components/hooks";
+import { useMe, usePeriods, useRooms } from "../components/hooks";
 import "../styles/scheduler.css";
-import type { Period, Post, Room, ScheduleRow, Team } from "../lib/contract";
+import type { Post, ScheduleRow, Team } from "../lib/contract";
 import { dayOf, hoursLabel, isRangeFree, mergeSessions, monthCells, postWhen, slotIndex, slotLabel, takenGrid, weekKeys } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
 
@@ -80,27 +80,20 @@ function visible(entries: Entry[], tab: TabKey, teams: DayTeam[]): Entry[] {
 }
 
 export function Scheduler() {
-  const { message, say } = useToast();
   const { me, teamIds, teams: allTeams } = useMe();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabKey>("me");
   const [week, setWeek] = useState(false);
-  const [cursor, setCursor] = useState({ year: 2026, month: 8 });
+  const [cursor, setCursor] = useState(currentMonth);
   const [weekShift, setWeekShift] = useState(0);
   const [from, setFrom] = useState<number | null>(null);
   const [to, setTo] = useState<number | null>(null);
   const [openDay, setOpenDay] = useState<string | null>(null);
 
   // 합주실·기간 목록은 배정 여부와 상관없이 달력의 시간·날짜 범위를 정한다.
-  const rooms = useQuery({
-    queryKey: ["rooms"],
-    queryFn: () => getJSON<{ rooms: Room[] }>("/rooms"),
-  });
-  const periods = useQuery({
-    queryKey: ["periods"],
-    queryFn: () => getJSON<{ periods: Period[] }>("/periods"),
-  });
+  const rooms = useRooms();
+  const periods = usePeriods();
   const periodIds = periods.data?.periods.map((period) => period.id) ?? [];
   const roomIds = rooms.data?.rooms.map((room) => room.id) ?? [];
   // 달력 한 달치 범위 — 예약 조회는 기간이 아니라 날짜 범위로 서버에 묻는다.
@@ -356,20 +349,10 @@ export function Scheduler() {
     setWeekShift(0);
   };
 
-  const profile = (
-    <ProfileMenu
-      name={me?.name ?? ""}
-      sub={me ? roleLabel(me.role) : ""}
-      teams={myTeams.map((team) => ({ id: team.id, name: team.name, colorKey: team.key }))}
-    />
-  );
-
   return (
     <AppShell
       page="scheduler"
       current="schedule"
-      profile={profile}
-      toast={message}
     >
       <Tabs label="보기 모드" items={TABS} selected={tab} onSelect={setTab} />
 
@@ -495,7 +478,6 @@ export function Scheduler() {
           myName={me?.name ?? ""}
           rooms={rooms.data?.rooms ?? []}
           onSaved={onSaved}
-          onSay={say}
           onClose={() => setOpenDay(null)}
         />
       )}

@@ -1,4 +1,4 @@
-// 설정 화면의 서식 부품. 합주실·기간·권한 세 구역이 같은 것을 쓴다.
+// 설정 화면의 서식 부품. 합주실·기간 두 구역이 같은 것을 쓴다.
 // 값을 들지 않고, 서버도 부르지 않는다 — 무엇을 저장할지는 부르는 구역이 정한다.
 
 import { useEffect, useRef, useState } from "react";
@@ -6,10 +6,6 @@ import type { ReactNode, RefObject } from "react";
 
 import { PencilIcon } from "../components/icons";
 
-export function reason(error: unknown): string {
-  // error 를 받아 화면에 띄울 한 줄을 돌려준다.
-  return error instanceof Error ? error.message : "저장하지 못했습니다";
-}
 
 /** 수정/취소로 줄이 통째로 갈릴 때 초점이 사라지지 않게, 눌렀던 단추를 기억해 둔다. */
 export function useRowFocus(): {

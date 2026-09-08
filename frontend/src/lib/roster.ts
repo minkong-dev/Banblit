@@ -2,18 +2,13 @@
 // 검사 함수는 값이 성하면 빈 문자열을, 아니면 사람이 읽을 사유를 돌려준다.
 
 import type { Instrument, MyTeam } from "./contract";
+import { uniqueNameMessage } from "./validate";
 
 /** 배정 계산이 팀당 10명까지만 받는다 — 그보다 많은 자리는 만들어도 못 쓴다. */
 export const MAX_SLOTS_PER_TEAM = 10;
 
 export function teamNameMessage(name: string, taken: string[]): string {
-  // name 을 taken 과 견줘, 비었거나 겹치면 그 사유를 돌려준다.
-  // 앞뒤 공백을 뗀 뒤 견주므로 공백만 다른 이름도 겹친 것으로 본다 — settings.ts의
-  // roomNameMessage와 같은 규칙이다.
-  const trimmed = name.trim();
-  if (!trimmed) return "팀 이름을 입력해 주세요.";
-  const clash = taken.some((other) => other.trim() === trimmed);
-  return clash ? "같은 이름의 팀이 이미 있습니다." : "";
+  return uniqueNameMessage(name, taken, "팀");
 }
 
 /** 악기마다 몇 자리인지 정한 것을 보내기 전에 거른다. 서버도 같은 것을 다시 거른다. */
@@ -57,31 +52,6 @@ export function teamsOf(rows: TeamRow[], myTeamIds: number[]): DayTeam[] {
       key: `c${(index % 4) + 1}`,
       mine: mine.has(id),
     }));
-}
-
-/** 사람 하나 — 화면에는 번호가 아니라 이름과 소속으로 나온다. 동명이인이 있어 소속을 함께 붙인다. */
-export type Person = { id: number; name: string; where: string };
-
-export type RosterTeam = { id: number; name: string };
-export type RosterMember = { id: number; name: string; cohort: number | null };
-
-export function peopleOf(
-  teams: RosterTeam[], rosters: (RosterMember[] | undefined)[],
-): Person[] {
-  // 팀마다 받아 둔 명단을 사람 번호로 합쳐, 이름 순으로 늘어놓는다. 두 팀에 걸친
-  // 사람은 소속을 이어 붙여 한 줄로 만든다. 아직 못 받은 명단(undefined)은 건너뛴다.
-  const found = new Map<number, Person>();
-  teams.forEach((team, index) => {
-    for (const member of rosters[index] ?? []) {
-      const already = found.get(member.id);
-      found.set(member.id, {
-        id: member.id,
-        name: memberLabel(member.name, member.cohort),
-        where: already === undefined ? team.name : `${already.where}, ${team.name}`,
-      });
-    }
-  });
-  return [...found.values()].sort((a, b) => a.name.localeCompare(b.name, "ko"));
 }
 
 /** /me 가 준 자리 목록에서 팀 번호만 뽑는다. 한 팀에 자리는 하나뿐이라 겹치지 않는다. */

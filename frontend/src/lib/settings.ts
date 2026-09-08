@@ -2,6 +2,8 @@
 // 검사 함수는 값이 성하면 빈 문자열을, 아니면 사람이 읽을 사유를 돌려준다.
 // 부르는 순서는 pipeline.ts 가 정한다.
 
+import { uniqueNameMessage } from "./validate";
+
 // 칸 하나가 한 시간이다(사용자 결정). 서버 쪽 정본은
 // backend/src/backend/scheduling/slots.py 의 SLOT_MINUTES 다.
 const SLOT_MINUTES = 60;
@@ -31,12 +33,7 @@ export function openHoursMessage(opens: string, closes: string): string {
 }
 
 export function roomNameMessage(name: string, taken: string[]): string {
-  // name 을 taken 과 견줘, 비었거나 겹치면 그 사유를 돌려준다.
-  // 앞뒤 공백을 뗀 뒤 견주므로 공백만 다른 이름도 겹친 것으로 본다.
-  const trimmed = name.trim();
-  if (!trimmed) return "합주실 이름을 입력해 주세요.";
-  const clash = taken.some((other) => other.trim() === trimmed);
-  return clash ? "같은 이름의 합주실이 이미 있습니다." : "";
+  return uniqueNameMessage(name, taken, "합주실");
 }
 
 export function dateRangeMessage(from: string, to: string): string {

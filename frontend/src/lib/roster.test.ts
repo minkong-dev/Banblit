@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   memberLabel,
   myTeamIds,
-  peopleOf,
   slotCountsMessage,
   slotName,
   teamNameMessage,
@@ -101,32 +100,5 @@ describe("teamsOf", () => {
 
   it("자리를 아직 못 받아왔으면 내 팀이 없다", () => {
     expect(teamsOf(rows, []).every((team) => !team.mine)).toBe(true);
-  });
-});
-
-describe("peopleOf", () => {
-  const teams = [{ id: 1, name: "청산" }, { id: 2, name: "곰팡이" }];
-
-  it("팀 명단을 사람 단위로 합치고 이름 순으로 늘어놓는다", () => {
-    const got = peopleOf(teams, [
-      [{ id: 7, name: "황찬우", cohort: 44 }],
-      [{ id: 3, name: "김민서", cohort: null }],
-    ]);
-    expect(got).toEqual([
-      { id: 3, name: "김민서", where: "곰팡이" },
-      { id: 7, name: "황찬우 (44기)", where: "청산" },
-    ]);
-  });
-
-  it("두 팀에 걸친 사람은 소속을 이어 붙여 한 줄로 만든다", () => {
-    const got = peopleOf(teams, [
-      [{ id: 7, name: "황찬우", cohort: 44 }],
-      [{ id: 7, name: "황찬우", cohort: 44 }],
-    ]);
-    expect(got).toEqual([{ id: 7, name: "황찬우 (44기)", where: "청산, 곰팡이" }]);
-  });
-
-  it("아직 못 받아온 명단은 건너뛴다", () => {
-    expect(peopleOf(teams, [undefined, undefined])).toEqual([]);
   });
 });

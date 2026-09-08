@@ -11,6 +11,7 @@ import {
   takenGrid,
 } from "../lib/pipeline";
 import type { Room } from "../lib/contract";
+import { say } from "../lib/toast";
 
 
 /** 하루에 놓인 것 하나. 배정은 서버가 준 것이고, 예약과 못 나오는 시간은 화면이 넣은 것이다. */
@@ -59,17 +60,19 @@ export function DayDialog(props: {
   rooms: Room[];
   /** 서버 저장이 성공한 뒤 화면이 최신 값을 다시 받아오게 알린다. */
   onSaved: () => void;
-  onSay: (message: string) => void;
   onClose: () => void;
 }) {
   const { dayKey, tab, teams, entries, openHour, closeHour, slotCount, fixed, inFocus } = props;
-  const { memberId, myName, rooms, onSaved, onSay, onClose } = props;
+  const { memberId, myName, rooms, onSaved, onClose } = props;
 
   const dialog = useRef<HTMLDialogElement>(null);
   const [error, setError] = useState("");
   const [who, setWho] = useState("me");
   const [roomId, setRoomId] = useState<number | null>(null);
   const [repeatsWeekly, setRepeatsWeekly] = useState(false);
+  // 시각 두 칸. 기본은 그날 여는 칸부터 닫는 칸까지 전부다.
+  const [off, setOff] = useState({ a: 0, b: slotCount });
+  const [book, setBook] = useState({ a: 0, b: slotCount });
 
   // 아직 아무것도 안 골랐으면 목록의 첫 합주실이다 — 대화상자를 열자마자 어딘가는 정해져 있어야 한다.
   const room = rooms.find((item) => item.id === roomId) ?? rooms[0] ?? null;
@@ -131,11 +134,20 @@ export function DayDialog(props: {
   const rosterError = rosters.find((query) => query.isError)?.error;
 
   /** 시각 두 개를 고르는 자리. 이미 찬 칸은 고를 수 없게 잠근다. */
-  const picker = (fromName: string, toName: string, lock: boolean) => (
+  const picker = (
+    prefix: string,
+    range: { a: number; b: number },
+    setRange: (next: { a: number; b: number }) => void,
+    lock: boolean,
+  ) => (
     <div className="pick">
       <div className="fld">
-        <label htmlFor={fromName}>시작</label>
-        <select id={fromName} name={fromName} defaultValue="16">
+        <label htmlFor={`${prefix}-from`}>시작</label>
+        <select
+          id={`${prefix}-from`}
+          value={range.a}
+          onChange={(event) => setRange({ ...range, a: Number(event.target.value) })}
+        >
           {Array.from({ length: slotCount }, (_, i) => i).map((slot) => (
             <option value={slot} key={slot} disabled={lock && grid[slot]}>
               {label(slot)}{lock && grid[slot] ? " (찼어요)" : ""}
@@ -144,8 +156,12 @@ export function DayDialog(props: {
         </select>
       </div>
       <div className="fld">
-        <label htmlFor={toName}>끝</label>
-        <select id={toName} name={toName} defaultValue="24">
+        <label htmlFor={`${prefix}-to`}>끝</label>
+        <select
+          id={`${prefix}-to`}
+          value={range.b}
+          onChange={(event) => setRange({ ...range, b: Number(event.target.value) })}
+        >
           {Array.from({ length: slotCount }, (_, i) => i + 1).map((slot) => (
             <option value={slot} key={slot}>{endLabel(slot)}</option>
           ))}
@@ -154,12 +170,8 @@ export function DayDialog(props: {
     </div>
   );
 
-  const readValue = (name: string): number =>
-    Number((document.getElementById(name) as HTMLSelectElement | null)?.value ?? 0);
-
   const addOff = async () => {
-    const a = readValue("mf");
-    const b = readValue("mt");
+    const { a, b } = off;
     if (b <= a) { setError("끝나는 시각이 시작보다 뒤여야 해요."); return; }
     if (memberId === null) { setError("내 번호를 아직 못 받아왔어요. 잠시 후 다시 시도해 주세요."); return; }
     try {
@@ -172,12 +184,11 @@ export function DayDialog(props: {
     }
     setError("");
     onSaved();
-    onSay(repeatsWeekly ? "매주 그 시간은 안 되는 것으로 등록했어요" : "안 되는 시간으로 등록했어요");
+    say(repeatsWeekly ? "매주 그 시간은 안 되는 것으로 등록했어요" : "안 되는 시간으로 등록했어요");
   };
 
   const addBooking = async () => {
-    const a = fixed ? fixed.from : readValue("bf");
-    const b = fixed ? fixed.to : readValue("bt");
+    const { a, b } = fixed ? { a: fixed.from, b: fixed.to } : book;
     if (b <= a) { setError("끝나는 시각이 시작보다 뒤여야 해요."); return; }
     // 선착순이므로 이미 찬 칸이 하나라도 있으면 먼저 걸러 서버까지 가지 않는다.
     // 두 사람이 동시에 노려 이 검사를 둘 다 통과해도, 최종 판정은 서버(선착순 유니크
@@ -202,7 +213,7 @@ export function DayDialog(props: {
       return;
     }
     onSaved();
-    onSay(`${dayTitle(dayKey)} ${label(a)}–${endLabel(b)} 예약했어요`);
+    say(`${dayTitle(dayKey)} ${label(a)}–${endLabel(b)} 예약했어요`);
     onClose();
   };
 
@@ -242,7 +253,7 @@ export function DayDialog(props: {
           ? timeline(mine)
           : <div className="blank"><b>이날은 등록한 일정이 없어요</b><p>아래에서 안 되는 시간을 알려주세요.</p></div>}
         <p className="cap2">안 되는 시간</p>
-        {picker("mf", "mt", false)}
+        {picker("off", off, setOff, false)}
         <label className="rep">
           <input
             type="checkbox"
@@ -273,7 +284,7 @@ export function DayDialog(props: {
             </select>
           </div>
         </div>
-        {fixed ? null : <><p className="cap2">언제 쓰실 건가요</p>{picker("bf", "bt", true)}</>}
+        {fixed ? null : <><p className="cap2">언제 쓰실 건가요</p>{picker("book", book, setBook, true)}</>}
         <p className="cap2">누구 이름으로 할까요</p>
         <div className="who2">
           <button aria-pressed={who === "me"} onClick={() => setWho("me")}>{myName} (나)</button>

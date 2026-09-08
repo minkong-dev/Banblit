@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { applyTheme, nextTheme, readSavedTheme, type Theme } from "./theme";
+import { applyTheme, readSavedTheme, type Theme } from "./theme";
 
 const KEY = "banblit_theme";
 
@@ -31,16 +31,6 @@ function stubBrowser(options: { systemDark: boolean; saved?: string; canSave?: b
 
 afterEach(() => {
   vi.unstubAllGlobals();
-});
-
-describe("nextTheme", () => {
-  test("어두운 화면에서는 밝은 화면으로 넘어간다", () => {
-    expect(nextTheme("dark")).toBe("light");
-  });
-
-  test("밝은 화면에서는 어두운 화면으로 넘어간다", () => {
-    expect(nextTheme("light")).toBe("dark");
-  });
 });
 
 describe("readSavedTheme", () => {

@@ -1,17 +1,17 @@
 // lib 모듈의 시퀀스 파일. 어느 검사를 어느 순서로 부를지 여기서 정한다.
-// 화면은 기능 파일(settings.ts, calendar.ts, slots.ts)을 직접 부르지 않고 이것만 부른다.
 
 import { getJSON, sendFile } from "./api";
 import type { Account, Me, Member, Notification, Reservation, Unavailable } from "./contract";
 import {
   datesBetween,
   focusedRange,
-  hoursLabel as hoursLabelOf,
+  hoursLabel,
   isRangeFree,
   monthCells,
   roomBounds,
   slotLabel,
   takenGrid,
+  weekKeys,
 } from "./calendar";
 import {
   capacity,
@@ -35,7 +35,6 @@ import {
 import {
   memberLabel,
   myTeamIds,
-  peopleOf,
   slotCountsMessage,
   slotName,
   teamNameMessage,
@@ -73,10 +72,10 @@ export function openingHours(input: Opening): {
   // 순서가 반대일 수 없다 — 화면은 자리 개수를 그대로 보여주지 않는다.
   const raw = capacity(input);
   return {
-    perDay: hoursLabelOf(raw.perDay),
-    total: hoursLabelOf(raw.total),
-    perTeam: hoursLabelOf(raw.perTeam),
-    leftover: hoursLabelOf(raw.leftover),
+    perDay: hoursLabel(raw.perDay),
+    total: hoursLabel(raw.total),
+    perTeam: hoursLabel(raw.perTeam),
+    leftover: hoursLabel(raw.leftover),
     raw,
   };
 }
@@ -92,15 +91,14 @@ export { focusedRange, roomBounds };
 
 export type PostForm = { title: string; body: string };
 
+export { commentMessage as checkComment };
+
 export function checkPost(form: PostForm): string {
   // 제목을 먼저 본다 — 사유를 한 번에 하나만 보여주므로 먼저 고칠 것을 앞에 둔다.
   const title = titleMessage(form.title);
   return title !== "" ? title : bodyMessage(form.body);
 }
 
-export function checkComment(body: string): string {
-  return commentMessage(body);
-}
 
 /** 고른 파일을 앞에서부터 검사해, 처음 걸린 것의 이름과 사유를 돌려준다. */
 export function checkAttachments(files: { name: string; size: number }[]): string {
@@ -115,34 +113,31 @@ export function checkAttachments(files: { name: string; size: number }[]): strin
   return "";
 }
 
-export function checkTeamName(name: string, taken: string[]): string {
-  return teamNameMessage(name, taken);
-}
-
-export function checkSlotCounts(counts: Record<string, number>): string {
-  return slotCountsMessage(counts);
-}
-
-// 팀·자리를 두고 화면이 하는 계산. 서로 기다릴 것이 없어 그대로 다시 내보낸다.
-export { memberLabel, myTeamIds, slotCountsMessage, slotName };
+// 팀·포지션을 두고 화면이 하는 계산. 서로 기다릴 것이 없어 그대로 다시 내보낸다.
+export { memberLabel, myTeamIds, slotName };
+export { teamNameMessage as checkTeamName, slotCountsMessage as checkSlotCounts };
 
 // 게시판·공지 화면이 쓰는 계산. postWhen 과 fileSizeLabel 은 order 의존이 없어
 // 그대로 다시 내보낸다.
 export { ATTACHMENT_ACCEPT, attachmentHint, fileSizeLabel, postWhen };
 
-// 권한 구역이 쓰는 계산. 팀 명단을 받아 둔 뒤에만 부를 수 있어 순서를 정할 것이 없다.
-export { peopleOf };
-export type { Person } from "./roster";
 
 export type AssignBody = { team_ids: number[]; room_ids: number[] };
 
-export async function runAssignment<T>(periodId: number, body: AssignBody): Promise<T> {
+export async function runAssignment<T>(
+  periodId: number,
+  body: AssignBody,
+  /** 조율안을 고른 것이면 그 안에서 빠지는 사람의 번호. 그 사람을 뺀 채로 다시 계산해 저장한다. */
+  excludeMemberId?: number,
+): Promise<T> {
   // 접수(POST)가 먼저다 — 서버는 계산을 기다리지 않고 작업 번호만 돌려준다. 그 번호로
   // awaitJob 이 끝날 때까지 되묻는다. 순서가 반대일 수 없고, 접수 응답을 결과로 쓰면
   // 계산이 시작도 안 한 값을 화면에 그리게 된다.
-  const accepted = await getJSON<{ job: Job<T> }>(`/periods/${periodId}/assign`, {
+  const path = excludeMemberId === undefined
+    ? `/periods/${periodId}/assign`
+    : `/periods/${periodId}/proposals/${excludeMemberId}/confirm`;
+  const accepted = await getJSON<{ job: Job<T> }>(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   return awaitJob<T>(
@@ -167,7 +162,6 @@ export async function addUnavailable(
   // 하나를 더 받아 repeat_until 로 함께 보낸다.
   const body = await getJSON<{ time: Unavailable }>(`/members/${memberId}/unavailable`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ starts_at: startsAt, ends_at: endsAt, repeats_weekly: repeatsWeekly }),
   });
   return body.time;
@@ -202,7 +196,6 @@ export type ReservationForm = {
 export async function addReservation(form: ReservationForm): Promise<Reservation[]> {
   const body = await getJSON<{ reservations: Reservation[] }>("/reservations", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(form),
   });
   return body.reservations;
@@ -218,13 +211,12 @@ export {
   slotIndex,
 } from "./slots";
 export type { Session } from "./slots";
-export { datesBetween, isRangeFree, monthCells, slotLabel, takenGrid };
-export { hoursLabelOf as hoursLabel };
+export { datesBetween, isRangeFree, monthCells, slotLabel, takenGrid, weekKeys };
+export { hoursLabel };
 export {
   cohortMessage,
   emailMessage,
   passwordMessage,
-  phoneMessage,
   strongPasswordMessage,
 } from "./validate";
 
@@ -243,7 +235,6 @@ export async function signUp(form: SignUpForm): Promise<Account> {
   // 내려보내고, 화면은 그 값을 보지도 만지지도 않는다.
   const { account } = await getJSON<{ account: Account }>("/signup", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(form),
   });
   return account;
@@ -267,7 +258,6 @@ export async function findId(name: string, email: string): Promise<void> {
   // 그 주소로 가는 메일이다. 그래서 돌려줄 값이 없다.
   await getJSON("/find-id", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, email }),
   });
 }
@@ -276,7 +266,6 @@ export async function requestPasswordReset(email: string): Promise<void> {
   // 재설정 링크도 메일로만 간다. 위와 같은 이유로 응답에는 아무것도 담기지 않는다.
   await getJSON("/password-reset", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email }),
   });
 }
@@ -286,7 +275,6 @@ export async function resetPassword(token: string, password: string): Promise<vo
   // 그 계정으로 열려 있던 로그인도 전부 끊는다.
   await getJSON("/password-reset/confirm", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ token, password }),
   });
 }
@@ -312,27 +300,7 @@ export async function logOut(): Promise<void> {
   await getJSON("/logout", { method: "POST" });
 }
 
-// 예전에는 여기에 "연결 끊긴 상태로 보기" 스위치가 있어, 켜면 부르기 전에 실패시켜
-// 오류 화면을 볼 수 있었다. 끊긴 상태를 보려면 실제로 서버를 내리면 되는 일이라
-// 걷어냈다 — 요청마다 지나는 자리에 아무도 켤 수 없는 분기를 둘 이유가 없다.
 export { getJSON, sendFile };
-
-// 주 보기가 쓰는 계산. 달력의 달 옮기기(cursor)와 짝을 이뤄, 몇 주 옮겼는지(shift)만
-// 따로 들고 여기서 날짜로 편다 — 주가 달을 넘어가도 상태를 하나만 보면 된다.
-function dayKeyOf(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-export function weekKeys(year: number, month: number, shift: number): string[] {
-  // year 년 month 월(0부터 센다) 15일이 든 주를 shift 주만큼 옮겨, 일요일부터
-  // 토요일까지 이레 치 날짜를 돌려준다.
-  // 정오를 기준으로 센다 — datesBetween 과 같은 이유로, 자정으로 세면 여름시간제가
-  // 있는 지역에서 날짜가 하루씩 밀 수 있다.
-  const sunday = new Date(year, month, 15 + shift * 7, 12);
-  sunday.setDate(sunday.getDate() - sunday.getDay());
-  return Array.from({ length: 7 }, (_, i) =>
-    dayKeyOf(new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + i, 12)));
-}
 
 export async function loadTeamMembers(teamId: number): Promise<Member[]> {
   const body = await getJSON<{ members: Member[] }>(`/teams/${teamId}/members`);
