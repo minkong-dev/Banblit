@@ -13,7 +13,7 @@ SIGNUP_BODY = {
     "student_no": "20260001",
     "name": "박서연",
     "email": "seoyeon@example.com",
-    "password": "password123",
+    "password": "Password123!",
     "cohort": 46,
 }
 
@@ -184,7 +184,7 @@ def test_login_rejects_an_unknown_email_without_revealing_that(
 
     _signup(api_client)
     wrong_password = api_client.post(
-        "/login", json={"email": SIGNUP_BODY["email"], "password": "wrong-password"}
+        "/login", json={"email": SIGNUP_BODY["email"], "password": "Wrong-Password1"}
     )
 
     assert wrong_password.status_code == 401
@@ -445,7 +445,7 @@ def test_changing_my_password_needs_the_current_one(api_client: TestClient) -> N
     _signup(api_client)
 
     response = api_client.post(
-        "/me/password", json={"current": "틀린비밀번호1", "next": "newpass12345"}
+        "/me/password", json={"current": "틀린비밀번호1", "next": "Newpass12345!"}
     )
 
     assert response.status_code == 401
@@ -458,13 +458,13 @@ def test_changing_my_password_lets_me_log_in_with_the_new_one(
 
     changed = api_client.post(
         "/me/password",
-        json={"current": SIGNUP_BODY["password"], "next": "newpass12345"},
+        json={"current": SIGNUP_BODY["password"], "next": "Newpass12345!"},
     )
 
     assert changed.status_code == 204, changed.text
     api_client.post("/logout")
     again = api_client.post(
-        "/login", json={"email": SIGNUP_BODY["email"], "password": "newpass12345"}
+        "/login", json={"email": SIGNUP_BODY["email"], "password": "Newpass12345!"}
     )
     assert again.status_code == 200
 

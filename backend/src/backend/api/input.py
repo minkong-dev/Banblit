@@ -13,6 +13,7 @@ CLOCK_FORMAT = "%H:%M"
 DATE_FORMAT = "%Y-%m-%d"
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$")
 PASSWORD_MIN_LENGTH = 8
+PASSWORD_MAX_LENGTH = 20
 # 기수의 위 끝. 실제로 있을 수 있는 값보다 넉넉히 두되, 오타로 들어온 큰 수는 막는다.
 MAX_COHORT = 200
 
@@ -39,9 +40,27 @@ def require_email(value: str) -> str:
     return trimmed
 
 
+# 비밀번호가 지켜야 할 것. 왼쪽이 검사, 오른쪽이 어겼을 때 사람에게 보일 문장이다.
+# 가입·재설정·변경이 모두 이 한 곳을 지난다 — 화면마다 따로 두면 한쪽만 느슨해진다.
+# 화면 쪽 같은 규칙은 frontend/src/lib/validate.ts 에 있다.
+PASSWORD_RULES: tuple[tuple[str, str], ...] = (
+    (r"[a-z]", "비밀번호에는 소문자가 하나 이상 있어야 합니다"),
+    (r"[A-Z]", "비밀번호에는 대문자가 하나 이상 있어야 합니다"),
+    (r"[0-9]", "비밀번호에는 숫자가 하나 이상 있어야 합니다"),
+    (r"[^A-Za-z0-9]", "비밀번호에는 특수기호가 하나 이상 있어야 합니다"),
+)
+
+
 def require_password(value: str) -> None:
-    if len(value) < PASSWORD_MIN_LENGTH:
-        raise ValueError("비밀번호는 8자 이상이어야 합니다")
+    """새로 정하는 비밀번호를 검사한다. 로그인은 이것을 부르지 않는다 —
+    규칙을 바꾸기 전에 만든 계정이 로그인 자체를 못 하게 되면 안 된다."""
+    if not PASSWORD_MIN_LENGTH <= len(value) <= PASSWORD_MAX_LENGTH:
+        raise ValueError(
+            f"비밀번호는 {PASSWORD_MIN_LENGTH}자에서 {PASSWORD_MAX_LENGTH}자 사이여야 합니다"
+        )
+    for pattern, message in PASSWORD_RULES:
+        if not re.search(pattern, value):
+            raise ValueError(message)
 
 
 def require_cohort(value: int) -> int:

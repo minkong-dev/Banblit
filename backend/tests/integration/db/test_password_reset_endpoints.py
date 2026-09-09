@@ -13,7 +13,7 @@ from conftest import AccountFactory
 
 HEAD = ("박서연", "seoyeon@example.com")
 OTHER = ("김민수", "minsu@example.com")
-NEW_PASSWORD = "brand-new-pass-9"
+NEW_PASSWORD = "Brand-New-Pass9"
 UNKNOWN_EMAIL = "nobody@example.com"
 
 
@@ -47,7 +47,7 @@ def test_the_same_token_is_refused_the_second_time(
     assert token is not None
     assert _confirm(api_client, token, NEW_PASSWORD).status_code == 200
 
-    again = _confirm(api_client, token, "another-pass-77")
+    again = _confirm(api_client, token, "Another-Pass77")
 
     assert again.status_code == 400
     # 두 번째 요청이 거절되었으므로 첫 번째로 바꾼 비밀번호가 그대로 남는다.
