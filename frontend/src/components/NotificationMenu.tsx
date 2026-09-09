@@ -37,11 +37,11 @@ export function NotificationMenu() {
 
   let body;
   if (notifications.isPending) {
-    body = <p className="quiet">알림을 불러오는 중입니다</p>;
+    body = <p className="quiet">알림을 불러오는 중이에요</p>;
   } else if (notifications.isError) {
-    body = <p className="quiet">알림을 못 불러왔습니다</p>;
+    body = <p className="quiet">알림을 불러오는데 실패했어요</p>;
   } else if (rows.length === 0) {
-    body = <p className="quiet">새 알림이 없습니다</p>;
+    body = <p className="quiet">새 알림이 없어요</p>;
   } else {
     body = (
       <ul>

@@ -35,7 +35,7 @@ import {
 // layout route 라 화면을 오갈 때 왼쪽 사진은 다시 그려지지 않는다.
 const HEADS: Record<string, { title: string; sub: string }> = {
   "/login": { title: "로그인", sub: "유일무이 버스킹 동아리 여섯줄 안에서." },
-  "/signup": { title: "회원가입", sub: "비밀번호는 대소문자, 숫자, 특수기호 포함 8~20자" },
+  "/signup": { title: "회원가입", sub: "가입에 필요한 정보를 작성해주세요." },
   "/find-id": { title: "아이디 찾기", sub: "가입한 이메일로 찾기" },
   "/find-password": { title: "비밀번호 찾기", sub: "가입한 이메일로 비밀번호 찾기" },
   "/reset-password": { title: "비밀번호 재설정", sub: "대소문자, 숫자, 특수기호 포함 8~20자" },
@@ -142,7 +142,7 @@ export function SignIn() {
         </span>
       </div>
       <button className="go" type="submit" disabled={isPending}>
-        {isPending ? "로그인하는 중…" : "로그인"}
+        {isPending ? "로그인 중…" : "로그인"}
       </button>
 
       <div className="or">또는</div>
@@ -187,7 +187,7 @@ export function SignUp() {
           password: fieldText(data, "pw2"),
           cohort: Number(fieldText(data, "cohort")),
         });
-        say(`${account.name}님, 가입됐어요 · ${account.cohort}기`);
+        say(`${account.name}님, 가입이 완료되었습니다`);
         void navigate("/scheduler");
       } catch (error) {
         say(reason(error));
@@ -214,7 +214,7 @@ export function SignUp() {
         autoComplete="off" placeholder="예: 46" error={errors.cohort} />
 
       <button className="go" type="submit" style={{ marginTop: 22 }} disabled={isPending}>
-        {isPending ? "가입하는 중…" : "가입하기"}
+        {isPending ? "가입 중…" : "가입하기"}
       </button>
       <p className="foot">이미 계정이 있으신가요? <Link to="/login">로그인</Link></p>
     </form>
@@ -309,7 +309,7 @@ export function ResetPassword() {
     },
     async (data) => {
       if (!token) {
-        say("재설정 링크가 올바르지 않아요 · 비밀번호 찾기부터 다시 해주세요");
+        say("재설정 메일 링크에 문제가 있는 것 같아요 · 비밀번호 찾기를 다시 시도해주세요");
         return;
       }
       try {

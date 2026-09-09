@@ -23,7 +23,7 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
 
   /** 명단에서 찾은 나 — 기수를 적는다. 못 찾았거나 기수가 없으면 그 사유를 적는다. */
   function cohortText(mine: Member | undefined): string {
-    if (mine === undefined) return "명단에서 찾지 못했습니다";
+    if (mine === undefined) return "멤버 리스트에서 찾지 못했어요";
     return mine.cohort === null ? "기수 없음" : `${mine.cohort}기`;
   }
 
@@ -67,7 +67,7 @@ export function Profile() {
               ))}
             </dl>
             <p className="note">
-              정보를 고치는 자리가 아직 없어 보여주기만 합니다.
+              정보 수정은 설정 탭에서 진행해주세요.
             </p>
           </div>
         </Card>

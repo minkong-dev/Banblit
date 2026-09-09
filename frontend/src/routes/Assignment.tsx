@@ -51,9 +51,9 @@ function minutesOf(session: Session): number {
 /** 계산이 끝난 뒤 알릴 한 줄. 자리를 다 채웠는지, 채웠으면 저장까지 됐는지로 갈린다. */
 function runResultText(result: AssignOut): string {
   if (!result.assignment.feasible) {
-    return `자리를 다 채우지 못했습니다 · 조율안 ${result.proposals.length}개`;
+    return `모든 시간을 다 사용하지는 못했어요 · 배정 제안 ${result.proposals.length}건`;
   }
-  return result.saved ? "배정을 새로 확정했습니다" : "배정은 됐지만 저장되지 않았습니다";
+  return result.saved ? "선택한 배정으로 확정했어요" : "해당 배정을 선택하지 않았어요";
 }
 
 /** 팀 이름에 색을 하나씩 매긴다. 이름 순으로 매겨야 다시 그려도 색이 안 바뀐다. */
@@ -85,7 +85,7 @@ export function Assignment() {
   const schedule = useQuery({
     queryKey: ["schedule", activePeriodId],
     queryFn: () => {
-      if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
+      if (activePeriodId === null) throw new Error("선택할 집중 합주기간이 없어요");
       return getJSON<{ rows: ScheduleRow[] }>(`/periods/${activePeriodId}/schedule`);
     },
     enabled: activePeriodId !== null,
@@ -96,7 +96,7 @@ export function Assignment() {
 
   const recompute = useMutation({
     mutationFn: (body: AssignBody) => {
-      if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
+      if (activePeriodId === null) throw new Error("선택할 집중 합주기간이 없어요");
       // 서버는 접수만 하고 곧바로 답한다. 끝날 때까지 되묻는 것은 runAssignment 다.
       return runAssignment<AssignOut>(activePeriodId, body);
     },
@@ -108,14 +108,14 @@ export function Assignment() {
       setView(NOW);
       say(runResultText(result));
     },
-    onError: () => say("계산하지 못했습니다"),
+    onError: () => say("엔진이 연산에 실패했어요"),
   });
 
   // 조율안 확정 — 그 사람을 뺀 채로 같은 계산을 다시 돌려 저장한다. 서버 경로가
   // 다를 뿐 결과를 받는 방식은 재계산과 같다.
   const confirm = useMutation({
     mutationFn: (memberId: number) => {
-      if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
+      if (activePeriodId === null) throw new Error("선택할 집중 합주기간이 없어요");
       return runAssignment<AssignOut>(
         activePeriodId, { team_ids: teamIds, room_ids: roomIds }, memberId,
       );
@@ -124,14 +124,14 @@ export function Assignment() {
       await queryClient.invalidateQueries({ queryKey: ["schedule", activePeriodId] });
       await queryClient.invalidateQueries({ queryKey: ["backups", activePeriodId] });
       setView(NOW);
-      say(result.saved ? "이 안으로 확정했습니다" : "확정하지 못했습니다");
+      say(result.saved ? "선택한 배정으로 확정했어요" : "해당 배정을 선택하지 않았어요");
     },
-    onError: () => say("확정하지 못했습니다"),
+    onError: () => say("해당 배정을 선택하는데 실패했어요"),
   });
 
   const rollback = useMutation({
     mutationFn: () => {
-      if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
+      if (activePeriodId === null) throw new Error("선택할 집중 합주기간이 없어요");
       // 회차를 받지 않는 endpoint 다. 언제나 바로 직전 회차로만 되돌아간다.
       return getJSON<{ rolled_back: boolean }>(`/periods/${activePeriodId}/rollback`, {
         method: "POST",
@@ -142,10 +142,10 @@ export function Assignment() {
       // 되돌린 회차는 목록에서 빠진다.
       await queryClient.invalidateQueries({ queryKey: ["backups", activePeriodId] });
       setView(NOW);
-      say(result.rolled_back ? "직전 배정으로 되돌렸습니다" : "되돌릴 배정이 없습니다");
+      say(result.rolled_back ? "이전 배정안으로 되돌렸어요" : "이전 배정기록이 없어요");
     },
     // 서버가 거절한 사유를 그대로 보여준다 — 방·시각이 겹쳐 되돌리지 못하는 경우가 있다.
-    onError: (error) => say(error instanceof Error ? error.message : "되돌리지 못했습니다"),
+    onError: (error) => say(error instanceof Error ? error.message : "이전 배정기록으로 되돌리는데 실패했어요"),
   });
 
   // 되돌리기 항목이 없으면 이 목록도 부르지 않는다 — 서버가 같은 항목으로 막고 있어
@@ -154,7 +154,7 @@ export function Assignment() {
   const backups = useQuery({
     queryKey: ["backups", activePeriodId],
     queryFn: () => {
-      if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
+      if (activePeriodId === null) throw new Error("선택할 집중 합주기간이 없어요");
       return getJSON<{ backups: Backup[] }>(`/periods/${activePeriodId}/backups`);
     },
     enabled: activePeriodId !== null && canRollbackNow,
@@ -165,7 +165,7 @@ export function Assignment() {
   const round = useQuery({
     queryKey: ["backup-round", activePeriodId, roundAt],
     queryFn: () => {
-      if (activePeriodId === null || roundAt === null) throw new Error("고를 회차가 없습니다");
+      if (activePeriodId === null || roundAt === null) throw new Error("선택할 이전 배정기록이 없어요");
       return getJSON<{ rows: ScheduleRow[] }>(
         `/periods/${activePeriodId}/backups/${encodeURIComponent(roundAt)}`,
       );
@@ -175,7 +175,7 @@ export function Assignment() {
 
   const saveRunTimes = useMutation({
     mutationFn: (body: { first_run_at: string; second_run_at: string }) => {
-      if (activePeriodId === null) throw new Error("고를 기간이 없습니다");
+      if (activePeriodId === null) throw new Error("선택할 집중 합주기간이 없어요");
       return getJSON<{ period: Period }>(`/periods/${activePeriodId}`, {
         method: "PATCH",
         body: JSON.stringify(body),
@@ -185,9 +185,9 @@ export function Assignment() {
       // 고친 값을 서버에서 다시 받아 화면과 맞춘다. 받아온 뒤에는 고친 자국을 버린다.
       await queryClient.invalidateQueries({ queryKey: ["periods"] });
       setRunForm(null);
-      say("계산 시각을 저장했습니다");
+      say("엔진 연산 시간을 저장했어요");
     },
-    onError: (error) => say(error instanceof Error ? error.message : "저장하지 못했습니다"),
+    onError: (error) => say(error instanceof Error ? error.message : "엔진 연산 시간을 저장하는데 실패했어요."),
   });
 
   const confirmed = useMemo(
@@ -228,7 +228,7 @@ export function Assignment() {
     : (rooms.data?.rooms ?? []).map((room) => room.id);
 
   const tabs = [
-    { key: "now", text: "지금 확정된 것" },
+    { key: "now", text: "현재 확정된 배정안" },
     ...proposals.map((_, index) => ({
       key: `p${index}`,
       text: `${String.fromCharCode(65 + index)}안`,
@@ -275,11 +275,11 @@ export function Assignment() {
       {!canRollback ? null : (
         <button className="btn" disabled={rollback.isPending || activePeriodId === null}
           onClick={() => {
-            if (window.confirm("지금 확정된 시간표를 버리고 직전 배정으로 되돌립니다. 되돌릴까요?")) {
+            if (window.confirm("현재 확정된 시간표를 해당 배정안으로 되돌려요. 해당 작업은 진행 후 다시 복구하기 어려워요. 그래도 되돌릴까요?")) {
               rollback.mutate();
             }
           }}>
-          {rollback.isPending ? "되돌리는 중…" : "직전 배정으로 되돌리기"}
+          {rollback.isPending ? "되돌리는 중…" : "이전 배정안으로 되돌리기"}
         </button>
       )}
     </div>
@@ -290,7 +290,7 @@ export function Assignment() {
     const error = periods.error ?? rooms.error ?? teams.error ?? schedule.error ?? recompute.error;
     under = (
       <>
-        <h2>서버가 요청을 받지 못했습니다</h2>
+        <h2>서버가 요청을 받지 못했어요</h2>
         <p className="sub">{error instanceof Error ? error.message : "알 수 없는 오류"}</p>
         {again}
       </>
@@ -304,12 +304,12 @@ export function Assignment() {
           {round.isPending
             ? "불러오는 중…"
             : round.isError
-              ? reason(round.error, "이 회차를 불러오지 못했습니다")
-              : `합주 ${shown.length}번 · 모두 합쳐 ${hours.toFixed(1)}시간. 지나간 회차라 보기만 합니다.`}
+              ? reason(round.error, "해당 배정안을 불러오지 못했어요")
+              : `합주 ${shown.length}번 · 총 ${hours.toFixed(1)}시간이에요`}
         </p>
         {counts}
         <div className="act">
-          <button className="btn" onClick={() => setView(NOW)}>지금 것으로 돌아가기</button>
+          <button className="btn" onClick={() => setView(NOW)}>현재 배정안으로 돌아가기</button>
         </div>
       </>
     );
@@ -317,45 +317,44 @@ export function Assignment() {
     const who = proposals[proposalIndex].excluded_member;
     under = (
       <>
-        <h2>{who.name} 을 빼면 이렇게 됩니다</h2>
+        <h2>{who.name} 멤버를 제외하면 될 것 같아요.</h2>
         <p className="sub">
-          이 사람의 못 나오는 시간 때문에 팀 전원이 모일 자리를 찾지 못했습니다.
-          빠지는 것은 이 기간의 합주뿐입니다.
+          해당 인원의 불가능 시간으로 인해 이상적인 배정안을 찾지 못했어요.
         </p>
         {counts}
         <div className="note">
-          달력이 이 안대로 바뀐 시간표를 보여주고 있습니다.
-          확정하면 이 사람을 뺀 채로 다시 계산해 저장합니다.
+          현재 캘린더는 해당 멤버를 제외한 예상 결과를 보여주고 있어요.
+          확정할 경우에만 해당 배정안으로 확정되니, 신중하게 결정해주세요.
         </div>
         <div className="act">
           {!can(me, "proposal_confirm") ? null : (
             <button className="btn main" disabled={confirm.isPending}
               onClick={() => confirm.mutate(who.id)}>
-              {confirm.isPending ? "확정하는 중…" : "이 안으로 확정"}
+              {confirm.isPending ? "배정안 확정 중…" : "해당 배정안으로 확정"}
             </button>
           )}
-          <button className="btn" onClick={() => setView(NOW)}>지금 것으로 돌아가기</button>
+          <button className="btn" onClick={() => setView(NOW)}>현재 배정안으로 돌아가기</button>
         </div>
       </>
     );
   } else if (confirmed.length === 0) {
     under = (
       <>
-        <h2>아직 확정된 시간표가 없습니다</h2>
+        <h2>현재 확정된 배정안이 없어요</h2>
         <p className="sub">
-          이 기간은 자동 배정이 아직 자리를 다 채우지 못했습니다.
-          빈 시간표를 내보내지 않고 여기서 멈춰 있습니다.
+          현재 팀이나 멤버가 없거나, 집중 합주기간이 아니에요. 
+          생성된 팀과 가입한 멤버가 있는지 확인해주세요.
         </p>
         {counts}
         {/* 계산 단추를 감춘 사람에게 그 단추를 누르라고 안내하지 않는다. */}
         <div className="note">
           {canRun ? (
             <>
-              아래 <b>지금 다시 계산</b>을 누르면 서버가 배정을 돌립니다.
-              풀리지 않으면 누구를 빼면 되는지 <b>A안·B안</b> 탭으로 나옵니다.
+              아래의 <b>스케줄링</b> 버튼을 누르면 스케줄링 엔진이 즉시 다시 연산을 시작해요.
+              즉시 연산이 필요할 경우에만 사용해주세요.
             </>
           ) : (
-            "배정 계산을 맡은 사람이 다시 돌리면 여기에 시간표가 나옵니다."
+            "관리자가 배정을 진행할 경우 배정안이 여기에 표시돼요."
           )}
         </div>
         {again}
@@ -365,13 +364,13 @@ export function Assignment() {
     const hours = shown.reduce((sum, session) => sum + minutesOf(session), 0) / MINUTES_PER_HOUR;
     under = (
       <>
-        <h2>확정된 시간표입니다</h2>
+        <h2>확정된 배정안이에요</h2>
         <p className="sub">
-          합주 {shown.length}번 · 모두 합쳐 {hours.toFixed(1)}시간. 서버에 저장된 배정을 그대로 보여줍니다.
+          합주 {shown.length}번이고, 총 {hours.toFixed(1)}시간이에요.
         </p>
         {counts}
         {!canRun ? null : (
-          <div className="note">다시 계산하면 지금 시간표는 백업으로 밀려나고 새 결과가 확정됩니다.</div>
+          <div className="note">다시 스케줄링하면 현재 배정안은 기록 후 새 배정안으로 변경되어요.</div>
         )}
         {again}
       </>
@@ -379,18 +378,18 @@ export function Assignment() {
   }
 
   // ── 오른쪽 칸 ───────────────────────────────────────────────────────────────
-  // 되돌리기 항목이 있는 사람에게만 회차 목록을 보인다. 서버가 같은 항목으로 막고
-  // 있어, 감추는 것은 정리일 뿐 근거가 아니다.
+  // 되돌리기 권한이 있는 멤버에게만 이전 배정기록을 표시합니다. 
+  // 서버가 같은 항목으로 막고 있어, 감추는 것은 정리일 뿐 근거가 아니다. < 이게 뭔말인데;
   const rounds = backups.data?.backups ?? [];
   let roundList;
   if (!canRollback) {
-    roundList = <li className="empty">되돌리기 항목이 있어야 볼 수 있습니다.</li>;
+    roundList = <li className="empty">이전 배정 되돌리기 권한이 있어야 확인이 가능해요.</li>;
   } else if (backups.isPending) {
-    roundList = <li className="empty">불러오는 중…</li>;
+    roundList = <li className="empty">이전 배정기록 불러오는 중…</li>;
   } else if (backups.isError) {
-    roundList = <li className="empty">지난 계산을 불러오지 못했습니다.</li>;
+    roundList = <li className="empty">이전 배정기록을 불러오지 못했어요.</li>;
   } else if (rounds.length === 0) {
-    roundList = <li className="empty">아직 밀려난 회차가 없습니다.</li>;
+    roundList = <li className="empty">이전 배정기록이 없어요.</li>;
   } else {
     // 최근 것이 위로 오게 뒤집는다. 되돌리기는 언제나 맨 위 회차로만 간다.
     roundList = [...rounds]
@@ -403,13 +402,13 @@ export function Assignment() {
             onClick={() => setView({ kind: "round", at: backup.saved_at })}
           >
             <b>{stampLabel(backup.saved_at)}</b>
-            <small>{slotCountLabel(backup.slot_count)}{index === 0 ? " · 되돌리면 여기로" : ""}</small>
+            <small>{slotCountLabel(backup.slot_count)}{index === 0 ? " · 되돌린 배정안은 여기로" : ""}</small>
           </button>
         </li>
       ));
   }
   const pastRuns = (
-    <Panel title="지난 계산" hint="회차를 누르면 그때 시간표가 달력에 나옵니다">
+    <Panel title="이전 배정기록" hint="캘린더에서 미리보기가 가능해요">
       <ul>{roundList}</ul>
     </Panel>
   );
@@ -427,20 +426,20 @@ export function Assignment() {
   const runTimes = (
     <section className="panel">
       <div className="times">
-        <div className="k">계산이 도는 시각</div>
+        <div className="k">스케줄링 시간</div>
         <div className="t">
           {activePeriod === null
-            ? "고를 기간이 없습니다"
+            ? "집중 합주기간을 생성해주세요"
             : `${activePeriod.first_run_at} · ${activePeriod.second_run_at}`}
         </div>
         {activePeriod === null ? null : (
           <>
             <div className="rows">
-              {/* step 은 초 단위다 — 1800 이면 30분마다 고를 수 있다. */}
+              {/* step 은 초 단위다 — 3600 이면 60분마다 고를 수 있다. */}
               <input
                 type="time"
                 step={HALF_HOUR_SECONDS}
-                aria-label="첫 계산 시각"
+                aria-label="1차 스케줄링 시간"
                 disabled={!canManagePeriod || saveRunTimes.isPending}
                 value={shownRun.first}
                 onChange={(event) => setRunForm({
@@ -450,7 +449,7 @@ export function Assignment() {
               <input
                 type="time"
                 step={HALF_HOUR_SECONDS}
-                aria-label="두 번째 계산 시각"
+                aria-label="2차 스케줄링 시간"
                 disabled={!canManagePeriod || saveRunTimes.isPending}
                 value={shownRun.second}
                 onChange={(event) => setRunForm({
@@ -466,13 +465,13 @@ export function Assignment() {
                   first_run_at: shownRun.first, second_run_at: shownRun.second,
                 })}
               >
-                {saveRunTimes.isPending ? "저장하는 중…" : "이 시각으로 저장"}
+                {saveRunTimes.isPending ? "변경사항 저장 중…" : "변경사항 저장"}
               </button>
             )}
             <p>
               {runWhy !== "" ? runWhy : canManagePeriod
-                ? "정한 시각이 지나면 사람이 누르지 않아도 계산이 돕니다."
-                : "기간 항목이 있어야 고칠 수 있습니다."}
+                ? "지정한 시간에 스케줄링을 진행해요."
+                : "집중 합주기간이 있어야 시간을 지정할 수 있어요."}
             </p>
           </>
         )}
@@ -492,9 +491,9 @@ export function Assignment() {
           <div className="calhead">
             <b>집중 합주기간</b>
             <span>
-              {days.length ? `${days[0]} – ${days[days.length - 1]}` : "표시할 일정 없음"}
+              {days.length ? `${days[0]} – ${days[days.length - 1]}` : "일정이 없어요"}
               {" · 기간 "}
-              <select value={activePeriodId ?? ""} aria-label="기간 고르기"
+              <select value={activePeriodId ?? ""} aria-label="기간 선택"
                 onChange={(event) => { setPeriodId(Number(event.target.value)); setView(NOW); }}>
                 {/* 번호가 아니라 날짜 범위로 보여준다 — 사람·기간을 번호로 부르지 않는다. */}
                 {focusedPeriods.map((period) => (
@@ -516,7 +515,7 @@ export function Assignment() {
           <div className="grid">
             {days.length === 0 ? (
               <div className="day" style={{ gridColumn: "1/-1" }}>
-                <span className="free">표시할 일정이 없습니다</span>
+                <span className="free">캘린더에 표시할 일정이 없어요</span>
               </div>
             ) : (
               <>

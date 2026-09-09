@@ -125,17 +125,17 @@ function WriteForm(props: {
     // 사람에게 보여줄 수 없다.
     for (const [index, file] of files.entries()) {
       const nth = files.length === 1 ? "" : ` (${index + 1}/${files.length})`;
-      setStage(`${file.name} 올리는 중${nth} 0%`);
+      setStage(`${file.name} 업로드 중${nth} 0%`);
       try {
         await sendFile(`/posts/${postId}/attachments`, file, (percent) => {
-          setStage(`${file.name} 올리는 중${nth} ${percent}%`);
+          setStage(`${file.name} 업로드 중${nth} ${percent}%`);
         });
       } catch (error) {
         // 여기까지 올라간 것은 이미 글에 붙었다. 못 올린 것만 남겨, 다시 누를 때
         // 같은 파일을 두 번 올리지 않게 한다.
         setFiles(files.slice(index));
         throw new Error(
-          `글은 올렸습니다. "${file.name}" 을 올리지 못했습니다 — ${reason(error)}`,
+          `글은 업로드 되었지만 "${file.name}" 을 업로드하지 못했어요 — ${reason(error)}`,
         );
       }
     }
@@ -160,7 +160,7 @@ function WriteForm(props: {
       await uploadAll(postId);
     },
     onSuccess: () => {
-      const said = files.length === 0 ? "글을 올렸습니다." : "글과 첨부파일을 올렸습니다.";
+      const said = files.length === 0 ? "글을 업로드 했어요." : "글과 첨부파일을 업로드 했어요.";
       setTitle("");
       setBody("");
       setFiles([]);
@@ -241,7 +241,7 @@ function WriteForm(props: {
       )}
       <div className="acts">
         <button className="btn go" type="submit" disabled={send.isPending || authorId === null}>
-          {send.isPending ? "올리는 중…" : postedId === null ? "글쓰기" : "남은 첨부 다시 올리기"}
+          {send.isPending ? "업로드 중…" : postedId === null ? "글쓰기" : "첨부파일 재업로드"}
         </button>
       </div>
       {stage === "" ? null : <p className="note" role="status">{stage}</p>}
@@ -315,7 +315,7 @@ function AttachmentList(props: {
       getJSON(`/attachments/${attachmentId}`, { method: "DELETE" }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["board", "post", postId] });
-      say("첨부파일을 지웠습니다.");
+      say("첨부파일을 삭제했어요.");
     },
   });
 
@@ -369,7 +369,7 @@ function RemovePost(props: {
     mutationFn: () => getJSON(`/posts/${postId}`, { method: "DELETE" }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: listKey });
-      say("글을 삭제했습니다.");
+      say("글을 삭제했어요.");
       // 지운 글의 상세를 계속 열어 둘 수 없으므로 목록으로 돌아간다.
       onDone();
     },
@@ -383,7 +383,7 @@ function RemovePost(props: {
         aria-label="글 삭제"
         disabled={remove.isPending}
         onClick={() => {
-          if (window.confirm("이 글과 붙어 있는 첨부파일을 함께 지웁니다. 삭제할까요?")) {
+          if (window.confirm("해당 글과 첨부된 파일을 모두 삭제할까요?")) {
             remove.mutate();
           }
         }}
@@ -478,13 +478,13 @@ function CommentRow(props: {
         method: "PATCH",
         body: JSON.stringify({ body: body.trim() }),
       }),
-    onSuccess: () => { setEditing(false); refresh(); say("댓글을 고쳤습니다."); },
+    onSuccess: () => { setEditing(false); refresh(); say("댓글을 수정했어요."); },
     onError: (error) => setBad(reason(error)),
   });
 
   const remove = useMutation({
     mutationFn: () => getJSON<null>(`/comments/${comment.id}`, { method: "DELETE" }),
-    onSuccess: () => { refresh(); say("댓글을 삭제했습니다."); },
+    onSuccess: () => { refresh(); say("댓글을 삭제했어요."); },
     onError: (error) => say(reason(error)),
   });
 

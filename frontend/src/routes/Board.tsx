@@ -25,7 +25,7 @@ export function Board() {
       ) : teams.isError ? (
         <div className="main"><div className="empty">{reason(teams.error)}</div></div>
       ) : mine.length === 0 ? (
-        <div className="main"><div className="empty">소속된 팀이 없습니다</div></div>
+        <div className="main"><div className="empty">소속된 팀이 없어요</div></div>
       ) : (
         <>
           {mine.length > 1 ? (
@@ -40,13 +40,13 @@ export function Board() {
             <PostBoard
               key={current.id}
               title={current.name}
-              hint="이 팀 소속만 볼 수 있습니다"
+              hint="해당 팀에 소속된 멤버만 볼 수 있어요"
               listPath={`/teams/${current.id}/posts`}
               writePath={`/teams/${current.id}/posts`}
               authorId={me?.id ?? null}
               canWrite
-              writeNote={`${current.name} 소속만 쓸 수 있습니다.`}
-              emptyText="아직 등록된 글이 없습니다"
+              writeNote={`${current.name} 팀에 소속된 멤버만 쓸 수 있어요.`}
+              emptyText="아직 등록된 글이 없어요"
             />
           </div>
         </>

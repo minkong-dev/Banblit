@@ -128,13 +128,13 @@ function EditTeam(props: {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["teams"] });
       void client.invalidateQueries({ queryKey: ["slots", team.id] });
-      onDone(`${name.trim()} 을(를) 고쳤어요.`);
+      onDone(`${name.trim()} 수정을 완료했어요.`);
     },
     onError: (error) => setBad(reason(error)),
   });
 
   return (
-    <Modal title="팀 수정" hint="이름과 포지션 구성을 고칩니다" onClose={onClose}
+    <Modal title="팀 수정" hint="팀 정보를 수정할 수 있어요" onClose={onClose}
       foot={
         <>
           <button className="ghost" onClick={onClose}>취소</button>
@@ -238,7 +238,7 @@ function Lineup(props: {
         <li className={slot.member_id === null ? "seat open" : "seat"} key={slot.id}>
           <span className="part">{label}</span>
           {slot.member_id === null ? (
-            <span className="who none">비어 있음</span>
+            <span className="who none">멤버가 지정되지 않았어요</span>
           ) : (
             <span className="who">{memberLabel(slot.member_name ?? "", slot.member_cohort)}</span>
           )}
@@ -247,7 +247,7 @@ function Lineup(props: {
               {!canAdd ? null : (
                 <button
                   className="ic"
-                  aria-label={`${label} 포지션에 넣을 사람 찾기`}
+                  aria-label={`${label} 지정할 멤버 찾기`}
                   onClick={() => setSeeking(slot.id)}
                 >
                   <SearchIcon />
@@ -265,7 +265,7 @@ function Lineup(props: {
             </span>
           )}
           {seeking !== slot.id ? null : (
-            <Modal title="사람 찾기" hint={label} onClose={() => setSeeking(null)}>
+            <Modal title="멤버 검색" hint={label} onClose={() => setSeeking(null)}>
               <MemberSearch
                 onPick={(member) => sit.mutate({ slotId: slot.id, memberId: member.id })}
               />
@@ -333,7 +333,7 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
     },
     onSuccess: (team) => {
       void client.invalidateQueries({ queryKey: ["teams"] });
-      onDone(`${team.name} 팀을 만들었어요.`);
+      onDone(`${team.name} 팀 생성을 완료했어요.`);
     },
     onError: (error) => setBad(reason(error)),
   });
@@ -341,7 +341,7 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
   // 1단계 — 악기마다 몇 명인지 정한다.
   if (drafts === null) {
     return (
-      <Modal title="새 팀" hint="악기마다 몇 명이 들어가는지 정합니다" onClose={onClose}
+      <Modal title="새 팀" hint="포지션별 인원 수를 지정해주세요" onClose={onClose}
         foot={
           <>
             <button className="ghost" onClick={onClose}>취소</button>
@@ -389,7 +389,7 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
 
   // 2단계 — 포지션마다 사람을 넣는다. 비워 둔 곳은 그대로 빈 포지션으로 만들어진다.
   return (
-    <Modal title={name.trim()} hint="돋보기를 눌러 포지션에 넣을 사람을 찾습니다" onClose={onClose}
+    <Modal title={name.trim()} hint="버튼을 눌러 지정할 멤버를 검색해요" onClose={onClose}
       foot={
         <>
           <button className="ghost" onClick={() => setDrafts(null)}>이전</button>
@@ -408,14 +408,14 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
           <li className={draft.member === null ? "seat open" : "seat"} key={draft.label}>
             <span className="part">{draft.label}</span>
             {draft.member === null ? (
-              <span className="who none">비어 있음</span>
+              <span className="who none">멤버가 지정되지 않았어요</span>
             ) : (
               <span className="who">{memberLabel(draft.member.name, draft.member.cohort)}</span>
             )}
             <span className="acts">
               <button
                 className="ic"
-                aria-label={`${draft.label} 포지션에 넣을 사람 찾기`}
+                aria-label={`${draft.label} 지정할 멤버 찾기`}
                 onClick={() => setSeeking(index)}
               >
                 <SearchIcon />
@@ -439,7 +439,7 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
       {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
 
       {seeking === null ? null : (
-        <Modal title="사람 찾기" hint={drafts[seeking]?.label} onClose={() => setSeeking(null)}>
+        <Modal title="멤버 검색" hint={drafts[seeking]?.label} onClose={() => setSeeking(null)}>
           <MemberSearch
             onPick={(member) => {
               setDrafts((now) =>
@@ -497,14 +497,14 @@ export function Teams() {
         <Card>
           <div className="sethead">
             <b>팀</b>
-            <span>팀을 누르면 포지션 구성이 보입니다</span>
+            <span>팀을 눌러 포지션을 확인해주세요</span>
           </div>
 
           {/* 비었거나 불러오는 중이어도 상자는 그대로 둔다 — 상자 높이를 재서 한 쪽에
               몇 줄을 둘지 정하므로, 상자가 사라지면 잴 것이 없어진다. */}
           <ul className="rows" ref={box}>
             {noList ? (
-              <li className="empty">{stateText(state, "아직 팀이 없습니다.")}</li>
+              <li className="empty">{stateText(state, "아직 생성된 팀이 없어요.")}</li>
             ) : (
               pageSlice(list, shownPage, perPage).map((team) => (
                 <li key={team.id}>
@@ -552,7 +552,7 @@ export function Teams() {
       {opened === null ? null : (
         <Modal
           title={opened.name}
-          hint={`포지션 ${opened.slot_count}개 중 ${opened.filled_count}개 참`}
+          hint={`포지션 ${opened.slot_count}개 중 ${opened.filled_count}명을 지정했어요`}
           onClose={() => setOpenId(null)}
         >
           <Lineup

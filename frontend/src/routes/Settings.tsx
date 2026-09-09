@@ -66,15 +66,15 @@ function ThemeCard() {
   const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
 
   const choices: { key: Theme; label: string }[] = [
-    { key: "light", label: "밝게" },
-    { key: "dark", label: "어둡게" },
+    { key: "light", label: "다크" },
+    { key: "dark", label: "라이트" },
   ];
 
   return (
     <Card>
       <div className="sethead">
-        <b>화면</b>
-        <span>이 브라우저에만 남습니다</span>
+        <b>테마</b>
+        <span>현재 브라우저에서의 테마를 지정해요</span>
       </div>
       <div className="display">
         <div className="pick" role="group" aria-label="화면 밝기">
@@ -138,7 +138,7 @@ export function Settings() {
             state={loadState(rooms)}
             canEdit={can(me, "room_edit")}
             canCreate={can(me, "room_create")}
-            onSaved={saved("rooms", "합주실을 저장했습니다")}
+            onSaved={saved("rooms", "합주실 정보를 등록했어요.")}
           />
         ) : shown === "periods" ? (
           <PeriodCard
@@ -146,7 +146,7 @@ export function Settings() {
             state={loadState(periods)}
             canEdit={can(me, "period_edit")}
             canCreate={can(me, "period_create")}
-            onSaved={saved("periods", "기간을 저장했습니다")}
+            onSaved={saved("periods", "집중 합주기간을 등록했어요.")}
           />
         ) : shown === "members" ? (
           <MemberCards />
@@ -189,11 +189,11 @@ function RoomFields(props: {
           id={at("name")}
           aria-invalid={bad !== ""}
           aria-describedby={bad === "" ? undefined : whyId}
-          placeholder="합주실 A"
+          placeholder="합주실"
           onChange={(event) => setForm({ ...form, name: event.target.value })}
         />
       </Cell>
-      <Cell label="여는 시각" htmlFor={at("opens")}>
+      <Cell label="개방 시간" htmlFor={at("opens")}>
         <input
           type="time"
           step={3600}
@@ -204,7 +204,7 @@ function RoomFields(props: {
           onChange={(event) => setForm({ ...form, opens_at: event.target.value })}
         />
       </Cell>
-      <Cell label="닫는 시각" htmlFor={at("closes")}>
+      <Cell label="마감 시간" htmlFor={at("closes")}>
         <input
           type="time"
           step={3600}
@@ -231,7 +231,7 @@ function PeriodFields(props: {
   const { form, setForm, at, bad, whyId, first } = props;
   return (
     <>
-      <Cell label="종류" htmlFor={at("kind")}>
+      <Cell label="분류" htmlFor={at("kind")}>
         <select
           ref={first}
           id={at("kind")}
@@ -246,7 +246,7 @@ function PeriodFields(props: {
           <option value="open">상시 개방</option>
         </select>
       </Cell>
-      <Cell label="시작하는 날" htmlFor={at("starts")}>
+      <Cell label="시작일" htmlFor={at("starts")}>
         <input
           type="date"
           value={form.starts_on}
@@ -256,7 +256,7 @@ function PeriodFields(props: {
           onChange={(event) => setForm({ ...form, starts_on: event.target.value })}
         />
       </Cell>
-      <Cell label="끝나는 날" htmlFor={at("ends")}>
+      <Cell label="종료일" htmlFor={at("ends")}>
         <input
           type="date"
           value={form.ends_on}
@@ -268,7 +268,7 @@ function PeriodFields(props: {
       </Cell>
       {form.kind === "focused" ? (
         <>
-          <Cell label="매일 (미연동)" htmlFor={at("everyday")}>
+          <Cell label="매일" htmlFor={at("everyday")}>
             <input
               id={at("everyday")}
               type="checkbox"
@@ -276,7 +276,7 @@ function PeriodFields(props: {
               onChange={(event) => setForm({ ...form, everyday: event.target.checked })}
             />
           </Cell>
-          <Cell label="첫 계산" htmlFor={at("first")}>
+          <Cell label="1차 스케줄링 시간" htmlFor={at("first")}>
             <input
               id={at("first")}
               type="time"
@@ -284,7 +284,7 @@ function PeriodFields(props: {
               onChange={(event) => setForm({ ...form, first_run_at: event.target.value })}
             />
           </Cell>
-          <Cell label="두 번째 계산" htmlFor={at("second")}>
+          <Cell label="2차 스케줄링 시간" htmlFor={at("second")}>
             <input
               id={at("second")}
               type="time"
@@ -309,11 +309,11 @@ function RoomCard(props: {
     <Card>
       <div className="sethead">
         <b>합주실</b>
-        <span>합주실 하나를 씁니다. 여닫는 시각은 정시에만 둘 수 있습니다</span>
+        <span>개방 및 마감시간은 정각으로만 설정이 가능해요</span>
       </div>
 
       {state.kind !== "ready" || rooms.length === 0 ? (
-        <CardState state={state} empty="아직 등록된 합주실이 없습니다" />
+        <CardState state={state} empty="아직 등록된 합주실이 없어요" />
       ) : (
         <ul className="rows">
           {rooms.map((room) =>
@@ -360,7 +360,7 @@ function RoomCard(props: {
       )}
 
       {!making ? null : (
-        <Modal title="새 합주실" hint="이름과 여닫는 시각을 정합니다"
+        <Modal title="새 합주실" hint="합주실 이름과 개방 및 마감시간을 지정해주세요"
           onClose={() => setMaking(false)}>
           <RoomForm
             start={BLANK_ROOM}
@@ -437,14 +437,14 @@ function PeriodCard(props: {
   return (
     <Card>
       <div className="sethead">
-        <b>기간</b>
+        <b>집중합주 기간</b>
         <span>
-          집중 합주기간에만 자동 배정이 돕니다 · 매일은 저장까지만 되고 배정 계산은 아직 이 값을 보지 않습니다
+          자동 스케줄링을 진행할 기간을 설정해요
         </span>
       </div>
 
       {state.kind !== "ready" || periods.length === 0 ? (
-        <CardState state={state} empty="아직 등록된 기간이 없습니다" />
+        <CardState state={state} empty="아직 등록된 집중합주 기간이 없어요." />
       ) : (
         <ul className="rows">
           {periods.map((period) =>
@@ -470,7 +470,7 @@ function PeriodCard(props: {
                 title={KIND_TEXT[period.kind] + (period.everyday ? " · 매일" : "")}
                 when={<><b>{period.starts_on}</b> 부터 <b>{period.ends_on}</b> 까지</>}
                 span={periodSpan(period)}
-                editLabel={canEdit ? `${period.starts_on} 부터의 기간 수정` : undefined}
+                editLabel={canEdit ? `${period.starts_on} 부터의 기간을 수정` : undefined}
                 buttonRef={canEdit ? register(period.id) : undefined}
                 onEdit={canEdit ? () => open(period.id) : undefined}
               />
@@ -481,12 +481,12 @@ function PeriodCard(props: {
 
       {!canCreate ? null : (
         <div className="listfoot">
-          <button className="new" onClick={() => setMaking(true)}>+ 새 기간</button>
+          <button className="new" onClick={() => setMaking(true)}>+ 새 집중합주 기간</button>
         </div>
       )}
 
       {!making ? null : (
-        <Modal title="새 기간" hint="언제부터 언제까지인지, 어떤 기간인지 정합니다"
+        <Modal title="새 집중합주 기간" hint="집중합주 기간을 설정해요"
           onClose={() => setMaking(false)}>
           <PeriodForm
             start={BLANK_PERIOD}
@@ -550,11 +550,11 @@ function PeriodForm(props: {
 
 /** 팀 목록이 성하면 팀 수와 소속 인원 수를, 아니면 왜 셀 수 없는지 돌려준다. */
 function teamLine(teams: Team[], state: LoadState): string {
-  if (state.kind === "loading") return "팀 목록을 불러오는 중…";
+  if (state.kind === "loading") return "팀 리스트를 불러오는 중…";
   if (state.kind === "failed") return state.why;
   const filled = teams.reduce((sum, team) => sum + team.filled_count, 0);
   const slots = teams.reduce((sum, team) => sum + team.slot_count, 0);
-  return `팀 ${teams.length}개 · 포지션 ${slots}개 중 ${filled}개 참`;
+  return `팀 ${teams.length}개 · 포지션 ${slots}개 중 ${filled}명 배정됨`;
 }
 
 /** 지금 설정이면 실제로 얼마가 열리는지. 집중기간은 모든 팀이 같은 몫을 가져야 한다. */
@@ -577,14 +577,14 @@ function Readout(props: {
   const sum = openingHours({ rooms, days, teams: count });
 
   return (
-    <Panel title="이 설정이면" hint={period ? `${days}일 기준` : "하루 기준"}>
+    <Panel title="해당 설정으로" hint={period ? `${days}일 기준` : "하루 기준"}>
       <div className="read">
         <div className="big">
           {sum.total}
           <small>
             {period
-              ? `${period.starts_on} – ${period.ends_on} 동안 열리는 시간`
-              : `합주실 ${rooms.length}곳이 하루에 여는 시간`}
+              ? `${period.starts_on} – ${period.ends_on} 동안 개방을 진행해요.`
+              : `합주실 ${rooms.length} 전체 총 개방 시간`}
           </small>
         </div>
 
@@ -593,9 +593,9 @@ function Readout(props: {
           <dd>{sum.perDay}</dd>
           {count > 0 ? (
             <>
-              <dt>팀 하나당</dt>
+              <dt>팀당</dt>
               <dd>{sum.perTeam}</dd>
-              <dt>고르게 나누고 남는 것</dt>
+              <dt>균등 배정 후 잔여 시간</dt>
               <dd className="left">{sum.leftover}</dd>
             </>
           ) : null}
@@ -605,8 +605,8 @@ function Readout(props: {
 
         <p className="note">
           {count > 0
-            ? "집중 합주기간에는 모든 팀이 정확히 같은 몫을 갖습니다. 한 팀이라도 채우지 못하면 배정 전체가 실패로 넘어갑니다."
-            : "셀 팀이 없어 팀마다 얼마씩 돌아가는지는 계산하지 않습니다."}
+            ? "집중합주 기간에는 모든 팀이 같은 합주 횟수를 갖도록 스케줄링을 진행해요."
+            : "현재 생성된 팀이 없어요."}
         </p>
       </div>
     </Panel>
