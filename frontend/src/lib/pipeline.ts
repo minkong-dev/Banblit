@@ -237,6 +237,7 @@ export {
   cohortMessage,
   emailMessage,
   passwordMessage,
+  signupPasswordMessage,
   strongPasswordMessage,
 } from "./validate";
 

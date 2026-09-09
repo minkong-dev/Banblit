@@ -22,6 +22,7 @@ import {
   findId,
   logIn,
   passwordMessage,
+  signupPasswordMessage,
   requestPasswordReset,
   resetPassword,
   signUp,
@@ -34,7 +35,7 @@ import {
 // layout route 라 화면을 오갈 때 왼쪽 사진은 다시 그려지지 않는다.
 const HEADS: Record<string, { title: string; sub: string }> = {
   "/login": { title: "로그인", sub: "유일무이 버스킹 동아리 여섯줄 안에서." },
-  "/signup": { title: "회원가입", sub: "가입에 필요한 양식을 작성해주세요." },
+  "/signup": { title: "회원가입", sub: "비밀번호는 대소문자, 숫자, 특수기호 포함 8~20자" },
   "/find-id": { title: "아이디 찾기", sub: "가입한 이메일로 찾기" },
   "/find-password": { title: "비밀번호 찾기", sub: "가입한 이메일로 비밀번호 찾기" },
   "/reset-password": { title: "비밀번호 재설정", sub: "대소문자, 숫자, 특수기호 포함 8~20자" },
@@ -171,7 +172,7 @@ export function SignUp() {
         dept: fieldText(data, "dept").trim() ? "" : "학과를 입력해 주세요.",
         sno: fieldText(data, "sno").trim() ? "" : "학번을 입력해 주세요.",
         mail2: emailMessage(fieldText(data, "mail2").trim()),
-        pw2: passwordMessage(password),
+        pw2: signupPasswordMessage(password),
         pw3: fieldText(data, "pw3") === password ? "" : "비밀번호가 일치하지 않아요.",
         cohort: cohortMessage(fieldText(data, "cohort")),
       };
@@ -205,7 +206,7 @@ export function SignUp() {
       <Field name="mail2" label="이메일" type="email" inputMode="email"
         autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.mail2} />
       <Field name="pw2" label="비밀번호" type="password" autoComplete="new-password"
-        placeholder="비밀번호를 입력해주세요." error={errors.pw2} />
+        placeholder="대소문자·숫자·특수기호 포함 8~20자" error={errors.pw2} />
       <Field name="pw3" label="비밀번호 확인" type="password" autoComplete="new-password"
         placeholder="비밀번호를 한 번 더 입력해주세요." error={errors.pw3} />
 

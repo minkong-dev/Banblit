@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { emailMessage, passwordMessage, strongPasswordMessage } from "./validate";
+import { emailMessage, passwordMessage, signupPasswordMessage, strongPasswordMessage } from "./validate";
 
 describe("emailMessage", () => {
   it("성한 값이면 아무 말도 하지 않는다", () => {
@@ -33,7 +33,24 @@ describe("passwordMessage", () => {
   });
 });
 
-describe("strongPasswordMessage — 재설정은 가입보다 규칙이 빡빡하다", () => {
+describe("signupPasswordMessage — 가입도 재설정과 같은 규칙을 쓴다", () => {
+  it("네 가지를 모두 갖추면 통과한다", () => {
+    expect(signupPasswordMessage("Abcdef1!")).toBe("");
+  });
+
+  it.each([
+    ["", "비밀번호를 입력해 주세요."],
+    ["Ab1!", "8자에서 20자 사이로 입력해주세요."],
+    ["ABCDEF1!", "소문자를 하나 이상 넣어주세요."],
+    ["abcdef1!", "대문자를 하나 이상 넣어주세요."],
+    ["Abcdefg!", "숫자를 하나 이상 넣어주세요."],
+    ["Abcdefg1", "특수기호를 하나 이상 넣어주세요."],
+  ])("%s 는 막는다", (given, expected) => {
+    expect(signupPasswordMessage(given)).toBe(expected);
+  });
+});
+
+describe("strongPasswordMessage — 재설정", () => {
   it("네 가지를 모두 갖추면 통과한다", () => {
     expect(strongPasswordMessage("Abcdef1!")).toBe("");
   });
