@@ -279,7 +279,7 @@ export function Scheduler() {
                 <div className="avail">
                   {free
                     ? <span className="yes">예약 가능</span>
-                    : <span className="no">이 시간 참</span>}
+                    : <span className="no">해당시간 마감</span>}
                 </div>
               );
             } else {
@@ -289,7 +289,7 @@ export function Scheduler() {
               inner = (
                 <div className={left === 0 ? "avail none" : "avail"}>
                   <span className="big">
-                    {left === 0 ? "예약 마감" : <>{hoursLabel(left)}<small>비어 있음</small></>}
+                    {left === 0 ? "예약 마감" : <>{hoursLabel(left)}<small>예약 가능</small></>}
                   </span>
                   <span className="meter" aria-hidden="true">
                     {grid.map((taken, i) => <i className={taken ? "on" : ""} key={i} />)}
@@ -305,7 +305,7 @@ export function Scheduler() {
                 {list.slice(0, 3).map((entry, i) => (
                   <span className={`ev ${entry.team ? `${entry.team}` : "off"}`} key={i}>
                     {entry.kind === "off"
-                      ? "못 나옴"
+                      ? "불가능 일정"
                       : teams.find((team) => team.key === entry.team)?.name ?? "개인"}
                     <time>{label(entry.a)}</time>
                   </span>
@@ -370,7 +370,7 @@ export function Scheduler() {
                     <span className={`blk ${entry.team ? `${entry.team}` : "off"}`}
                       style={{ "--span": entry.b - entry.a } as CSSProperties}>
                       {entry.kind === "off"
-                        ? "못 나옴"
+                        ? "불가능 일정"
                         : teams.find((team) => team.key === entry.team)?.name ?? "개인"}
                       {/* 합주실을 함께 적는다. 붙어 있는 두 칸이 따로 그려지는 유일한 까닭이
                           방이 다른 것인데, 방을 안 적으면 왜 갈라졌는지 읽을 수가 없다. */}
@@ -407,13 +407,13 @@ export function Scheduler() {
       page="scheduler"
       current="schedule"
     >
-      <Tabs label="보기 모드" items={TABS} selected={tab} onSelect={setTab} />
+      <Tabs label="레이아웃" items={TABS} selected={tab} onSelect={setTab} />
 
       {/* 합주실·기간·시간표 중 하나라도 실패하면 성공한 것만 그리고 첫 실패 사유를
           알린다. 다시 불러오기는 셋을 한 번에 다시 부른다. */}
       {rooms.isError || periods.isError || query.isError ? (
         <div className="cut">
-          <p><b>시간표를 못 불러왔어요</b>{String(rooms.error ?? periods.error ?? query.error)}</p>
+          <p><b>스케줄을 불러오지 못했어요</b>{String(rooms.error ?? periods.error ?? query.error)}</p>
           <button onClick={() => { void rooms.refetch(); void periods.refetch(); void query.refetch(); }}>
             다시 불러오기
           </button>
@@ -422,14 +422,14 @@ export function Scheduler() {
 
       <Card>
         <div className="calbar">
-          <button className="navb" aria-label={week ? "이전 주" : "이전 달"} onClick={() => shift(-1)}>
+          <button className="navb" aria-label={week ? "저번 주" : "저번 달"} onClick={() => shift(-1)}>
             <ChevronLeftIcon />
           </button>
           <span className="ml">{week ? weekLabel : `${cursor.year}년 ${cursor.month + 1}월`}</span>
           <button className="navb" aria-label={week ? "다음 주" : "다음 달"} onClick={() => shift(1)}>
             <ChevronRightIcon />
           </button>
-          <div className="seg" role="group" aria-label="보기 전환">
+          <div className="seg" role="group" aria-label="레이아웃 변경">
             <button aria-pressed={!week} onClick={() => setWeek(false)}>월</button>
             <button aria-pressed={week} onClick={() => setWeek(true)}>주</button>
           </div>
@@ -438,7 +438,7 @@ export function Scheduler() {
         {tab === "book" && !week ? (
           <div className="timebar">
             <div className="fld">
-              <label htmlFor="tFrom">시작</label>
+              <label htmlFor="tFrom">시작시간</label>
               <select id="tFrom" value={from ?? ""}
                 onChange={(event) => setFrom(event.target.value === "" ? null : Number(event.target.value))}>
                 <option value="">선택 안 함</option>
@@ -448,7 +448,7 @@ export function Scheduler() {
               </select>
             </div>
             <div className="fld">
-              <label htmlFor="tTo">끝</label>
+              <label htmlFor="tTo">끝 시간</label>
               <select id="tTo" value={to ?? ""}
                 onChange={(event) => setTo(event.target.value === "" ? null : Number(event.target.value))}>
                 <option value="">선택 안 함</option>
@@ -460,8 +460,8 @@ export function Scheduler() {
             <button className="clear" onClick={() => { setFrom(null); setTo(null); }}>시간 선택 취소</button>
             <span className="state">
               {from === null || to === null
-                ? "시간을 고르면 그 시간이 비어 있는 날짜만 켜집니다"
-                : `${label(from)}–${endLabel(to)} 고른 시간으로 예약할 날짜를 눌러주세요`}
+                ? "지정한 시간에 예약이 가능한 날짜만 표시해요"
+                : `${label(from)}–${endLabel(to)} 해당 시간으로 예약할 날짜를 눌러주세요`}
             </span>
           </div>
         ) : null}
@@ -473,11 +473,11 @@ export function Scheduler() {
             {teams.filter((team) => tab !== "me" || team.mine).map((team) => (
               <span key={team.id}><i style={{ background: `var(--${team.key})` }} />{team.name}</span>
             ))}
-            {tab === "me" ? <span><i style={{ background: "var(--off)" }} />내가 안 되는 시간</span> : null}
+            {tab === "me" ? <span><i style={{ background: "var(--off)" }} />나의 불가능 일정</span> : null}
           </div>
           <div id="bandSlot">
             {focus === null ? null : (
-              <span className="band"><ClockIcon />배정된 기간 <b>{focus.from} ~ {focus.to}</b> · 자동 배정</span>
+              <span className="band"><ClockIcon />현재 집중합주 기간 <b>{focus.from} ~ {focus.to}</b> · 자동 스케줄링</span>
             )}
           </div>
         </div>

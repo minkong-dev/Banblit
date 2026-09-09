@@ -32,13 +32,13 @@ export function MemberSearch(props: {
 
   let body;
   if (query === "") {
-    body = <p className="empty">이름을 입력하면 찾아 드려요.</p>;
+    body = <p className="empty">검색을 위해 이름을 입력해주세요.</p>;
   } else if (found.isPending) {
-    body = <p className="empty">찾는 중…</p>;
+    body = <p className="empty">검색 중…</p>;
   } else if (found.isError) {
     body = <p className="empty">{reason(found.error)}</p>;
   } else if (members.length === 0) {
-    body = <p className="empty">그런 이름을 찾지 못했어요.</p>;
+    body = <p className="empty">해당하는 사용자를 찾지 못했어요.</p>;
   } else {
     body = (
       <ul className="found">
@@ -59,8 +59,8 @@ export function MemberSearch(props: {
         autoFocus
         type="search"
         value={text}
-        aria-label="찾을 이름"
-        placeholder="이름"
+        aria-label="검색어"
+        placeholder="이름을 입력해주세요"
         onChange={(event) => setText(event.target.value)}
       />
       {body}

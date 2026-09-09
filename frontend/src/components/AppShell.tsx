@@ -11,18 +11,17 @@ import { getJSON, logOut } from "../lib/pipeline";
 import type { Member, Permission } from "../lib/contract";
 import "../styles/shell.css";
 
-// 사이드바 차림. 두 화면이 같은 것을 보여주고, 지금 보는 곳만 다르게 켠다.
+// 사이드바 메뉴입니다. 권한에 따라 보이는 항목이 다릅니다.
 const NAV = [
-  { key: "schedule", label: "합주실 시간표", to: "/scheduler" },
+  { key: "schedule", label: "대시보드", to: "/scheduler" },
   { key: "notice", label: "공지사항", to: "/notices" },
   { key: "find-team", label: "팀 찾기", to: "/teams" },
   { key: "board", label: "팀 게시판", to: "/board" },
-  // 설정은 누구에게나 보인다 — 화면 밝기는 권한과 무관한 개인 설정이다. 안에서 무엇을
-  // 볼지는 설정 화면이 탭 단위로 다시 가린다.
+  // 다크/라이트 모드 설정은 제로 등급 권한에도 표시됩니다. 
   { key: "settings", label: "설정", to: "/settings" },
 ] as const;
 
-// needs 중 하나라도 가진 사람에게만 보인다.
+// 필요 권한을 가진 사람만 배정결과 확인이 가능합니다.
 const MANAGER_NAV = [
   { key: "assign", label: "배정 결과 확인", to: "/admin", needs: ["assign_read"] },
 ] as const satisfies readonly { key: string; label: string; to: string; needs: readonly Permission[] }[];
@@ -70,7 +69,7 @@ export function AppShell(props: {
     <>
       <header className="top">
         <div className="in">
-          <div className="logo"><b>Banblit</b><span>IN SIX STRINGS · A실</span></div>
+          <div className="logo"><b>Banblit</b><span>IN SIX STRINGS</span></div>
           <NotificationMenu />
           <ProfileMenu />
         </div>
@@ -83,7 +82,7 @@ export function AppShell(props: {
             {managerNav.length === 0 ? null : (
               <>
                 <div className="sep" />
-                <div className="cap">관리</div>
+                <div className="cap">관리자 메뉴</div>
                 <NavList items={managerNav} current={current} />
               </>
             )}

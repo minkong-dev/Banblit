@@ -22,8 +22,8 @@ export function Notices() {
           writePath="/notices"
           authorId={me?.id ?? null}
           canWrite={can(me, "notice_write")}
-          writeNote="공지 쓰기 권한이 있는 사람만 씁니다."
-          emptyText="아직 등록된 공지가 없습니다"
+          writeNote="공지 작성 권한이 있는 사람만 작성이 가능해요."
+          emptyText="아직 등록된 공지가 없어요."
         />
       </div>
     </AppShell>

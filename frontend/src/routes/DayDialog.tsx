@@ -40,7 +40,7 @@ function hourText(hour: number): string {
 
 function kindLabel(entry: Entry): string {
   if (entry.kind === "assign") return "자동 배정";
-  return entry.kind === "book" ? "예약" : "못 나오는 시간";
+  return entry.kind === "book" ? "예약" : "불가능 일정";
 }
 
 export function DayDialog(props: {
@@ -81,7 +81,7 @@ export function DayDialog(props: {
   const endLabel = (index: number) => (index >= slotCount ? `${closeHour}:00` : label(index));
   const nameOf = (entry: Entry) =>
     entry.kind === "off"
-      ? entry.who ?? "못 나옴"
+      ? entry.who ?? "불가능 일정"
       : teams.find((team) => team.key === entry.team)?.name ?? entry.who ?? "개인";
 
   const booked = entries.filter((entry) => entry.kind !== "off");
@@ -177,13 +177,13 @@ export function DayDialog(props: {
     if (ids === undefined || memberId === null) return;
     const when = `${label(entry.a)}–${endLabel(entry.b)}`;
     const booking = entry.kind === "book";
-    if (!(booking ? askCancel(`${nameOf(entry)} ${when} 예약`) : askDelete(`${when} 안 되는 시간`))) {
+    if (!(booking ? askCancel(`${nameOf(entry)} ${when} 예약`) : askDelete(`${when} 불가능 일정`))) {
       return;
     }
     try {
       await (booking ? cancelBooking(ids) : removeUnavailable(memberId, ids[0]));
     } catch (error) {
-      setError(error instanceof Error ? error.message : "지우지 못했어요.");
+      setError(error instanceof Error ? error.message : "삭제하지 못했어요.");
       // 걸려도 서버 값을 다시 받는다. 예약은 칸마다 지우므로 앞쪽 몇 칸은 이미 지워졌을
       // 수 있는데, 화면이 옛 번호를 그대로 들고 있으면 다시 눌러도 이미 없는 칸부터
       // 지우려다 같은 자리에서 멈춘다.
@@ -192,7 +192,7 @@ export function DayDialog(props: {
     }
     setError("");
     onSaved();
-    say(booking ? "예약을 취소했어요" : "안 되는 시간을 지웠어요");
+    say(booking ? "예약을 취소했어요" : "해당 불가능 일정을 삭제했어요");
   };
 
   /** 타임라인 아래에 서는 목록. 내가 이 날 걸어 둔 것만 줄로 세워 지울 수 있게 한다.
@@ -223,8 +223,8 @@ export function DayDialog(props: {
 
   const addOff = async () => {
     const { a, b } = off;
-    if (b <= a) { setError("끝나는 시각이 시작보다 뒤여야 해요."); return; }
-    if (memberId === null) { setError("내 번호를 아직 못 받아왔어요. 잠시 후 다시 시도해 주세요."); return; }
+    if (b <= a) { setError("끝 시간을 시작 시간 이후로 설정해주세요."); return; }
+    if (memberId === null) { setError("요청이 많아 지연되고 있어요. 잠시 후 다시 시도해 주세요."); return; }
     try {
       await addUnavailable(
         memberId, isoAt(dayKey, a, openHour), isoAt(dayKey, b, openHour), repeatsWeekly,
@@ -235,20 +235,20 @@ export function DayDialog(props: {
     }
     setError("");
     onSaved();
-    say(repeatsWeekly ? "매주 그 시간은 안 되는 것으로 등록했어요" : "안 되는 시간으로 등록했어요");
+    say(repeatsWeekly ? "반복 일정을 등록했어요" : "불가능 시간을 등록했어요");
   };
 
   const addBooking = async () => {
     const { a, b } = fixed ? { a: fixed.from, b: fixed.to } : book;
-    if (b <= a) { setError("끝나는 시각이 시작보다 뒤여야 해요."); return; }
+    if (b <= a) { setError("끝 시간을 시작 시간 이후로 설정해주세요."); return; }
     // 선착순이므로 이미 찬 칸이 하나라도 있으면 먼저 걸러 서버까지 가지 않는다.
     // 두 사람이 동시에 노려 이 검사를 둘 다 통과해도, 최종 판정은 서버(선착순 유니크
     // 제약)가 하므로 아래 catch 에서 서버가 돌려준 사유를 그대로 보여준다.
     for (let i = a; i < b; i += 1) {
-      if (grid[i]) { setError(`${label(i)}은 이미 찼어요. 다른 시간을 골라주세요.`); return; }
+      if (grid[i]) { setError(`${label(i)}은 이미 예약되어있어요. 다른 시간을 선택해주세요.`); return; }
     }
     if (memberId === null || room === null) {
-      setError("예약할 자리를 아직 못 받아왔어요. 잠시 후 다시 시도해 주세요.");
+      setError("요청이 많아 지연되고 있어요. 잠시 후 다시 시도해 주세요.");
       return;
     }
     const teamId = who === "me" ? null : teams.find((team) => team.key === who)?.id ?? null;
@@ -273,7 +273,7 @@ export function DayDialog(props: {
       booked.length
         ? <>{timeline(booked)}
             {dayTeams.length === 0 ? null : (
-              <div className="people"><h3>이날 나오는 사람</h3>
+              <div className="people"><h3>참여 멤버</h3>
                 {rosterError === undefined ? (
                   <div className="plist">
                     {dayPeople.map(({ team, member }) => (
@@ -291,20 +291,20 @@ export function DayDialog(props: {
                   </div>
                 ) : (
                   <p className="msg">
-                    {rosterError instanceof Error ? rosterError.message : "명단을 못 불러왔어요."}
+                    {rosterError instanceof Error ? rosterError.message : "멤버 리스트를 불러오지 못했어요."}
                   </p>
                 )}
               </div>
             )}
           </>
-        : <div className="blank"><b>이날은 아무도 안 써요</b><p>합주실이 하루 종일 비어 있어요.</p></div>
+        : <div className="blank"><b>현재 예약이 없어요</b></div>
     ) : tab === "me" ? (
       <>
         {mine.length
           ? timeline(mine)
-          : <div className="blank"><b>이날은 등록한 일정이 없어요</b><p>아래에서 안 되는 시간을 알려주세요.</p></div>}
+          : <div className="blank"><b>등록된 일정이 없어요</b><p>불가능 일정을 등록해주세요.</p></div>}
         {myList}
-        <p className="cap2">안 되는 시간</p>
+        <p className="cap2">불가능 일정</p>
         {picker("off", off, setOff, false)}
         <label className="rep">
           <input
@@ -312,18 +312,18 @@ export function DayDialog(props: {
             checked={repeatsWeekly}
             onChange={(event) => setRepeatsWeekly(event.target.checked)}
           />
-          매주 같은 요일·같은 시간에도 안 돼요
+          매일 혹은 매주 해당 불가능 일정을 반복 설정해요.
         </label>
         <p className="msg">{error}</p>
-        <p className="tip">여기 넣은 시간에는 자동 배정이 절대 잡지 않아요.</p>
+        <p className="tip">등록한 불가능 일정을 제외하고 스케줄링을 진행해요.</p>
       </>
     ) : (
       <>
         {fixed
-          ? <div className="bigtime"><b>{label(fixed.from)} – {endLabel(fixed.to)}</b><small>이 시간으로 예약해요</small></div>
+          ? <div className="bigtime"><b>{label(fixed.from)} – {endLabel(fixed.to)}</b><small>해당 시간으로 예약할게요</small></div>
           : timeline(booked)}
         {/* 합주실을 먼저 고른다 — 아래 시각 고르기가 그 합주실에 찬 자리만 잠근다. */}
-        <p className="cap2">어디서 쓰실 건가요</p>
+        <p className="cap2">합주실을 선택해주세요</p>
         <div className="pick">
           <div className="fld">
             <label htmlFor="broom">합주실</label>
@@ -336,8 +336,8 @@ export function DayDialog(props: {
             </select>
           </div>
         </div>
-        {fixed ? null : <><p className="cap2">언제 쓰실 건가요</p>{picker("book", book, setBook, true)}</>}
-        <p className="cap2">누구 이름으로 할까요</p>
+        {fixed ? null : <><p className="cap2">예약할 시간을 선택해주세요</p>{picker("book", book, setBook, true)}</>}
+        <p className="cap2">예약자를 지정해주세요</p>
         <div className="who2">
           <button aria-pressed={who === "me"} onClick={() => setWho("me")}>{myName} (나)</button>
           {teams.filter((team) => team.mine).map((team) => (
@@ -347,7 +347,7 @@ export function DayDialog(props: {
           ))}
         </div>
         <p className="msg">{error}</p>
-        {fixed ? <p className="tip">먼저 누른 사람이 가져가요. 예약한 뒤에는 내 일정에서 취소할 수 있어요.</p> : null}
+        {fixed ? <p className="tip">예약 후에는 마이캘린더에서 취소 및 변경이 가능해요.</p> : null}
       </>
     );
 
