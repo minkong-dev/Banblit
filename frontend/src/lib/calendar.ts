@@ -34,7 +34,7 @@ export function slotLabel(index: number, openHour: number): string {
 }
 
 /** 여는 시각부터 닫는 시각까지 들어가는 칸 수. 칸 하나가 한 시간이라 시각 차이가
- *  곧 칸 수다 — 30분 칸이던 때의 두 배가 아니다. */
+ *  곧 칸 수다. */
 export function slotCountOf(openHour: number, closeHour: number): number {
   return closeHour - openHour;
 }
@@ -72,10 +72,7 @@ export function roomBounds(rooms: { opens_at: string; closes_at: string }[]): {
   let close = 0;
   for (const room of rooms) {
     open = Math.min(open, Number(room.opens_at.slice(0, 2)));
-    // 닫는 시각이 정시가 아니면 다음 정시까지 칸을 그려야 그 자리가 보인다.
-    const closeHour =
-      Number(room.closes_at.slice(0, 2)) + (room.closes_at.slice(3, 5) === "00" ? 0 : 1);
-    close = Math.max(close, closeHour);
+    close = Math.max(close, Number(room.closes_at.slice(0, 2)));
   }
   return open < close ? { open, close } : { open: FALLBACK_OPEN_HOUR, close: FALLBACK_CLOSE_HOUR };
 }

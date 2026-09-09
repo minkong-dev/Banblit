@@ -116,10 +116,6 @@ describe("roomBounds — 합주실 여닫는 시각으로 달력의 앞뒤를 �
     ])).toEqual({ open: 18, close: 22 });
   });
 
-  it("30분에 닫으면 다음 정시까지 칸을 넓힌다", () => {
-    expect(roomBounds([{ opens_at: "18:00", closes_at: "22:30" }])).toEqual({ open: 18, close: 23 });
-  });
-
   it("합주실이 없으면 기본값을 쓴다", () => {
     expect(roomBounds([])).toEqual({ open: 10, close: 22 });
   });
@@ -205,7 +201,7 @@ describe("WEEKDAY_NAMES — 달력 머리글의 요일 이름", () => {
 
 describe("slotCountOf — 여닫는 시각 사이의 칸 수", () => {
   it("칸 하나가 한 시간이라 시각 차이가 곧 칸 수다", () => {
-    // 10시에 열고 22시에 닫으면 열두 칸이다. 30분 칸이던 때의 스물넷이 아니다.
+    // 10시에 열고 22시에 닫으면 열두 칸이다.
     expect(slotCountOf(10, 22)).toBe(12);
   });
 
