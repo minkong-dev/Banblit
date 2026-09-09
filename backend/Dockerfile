@@ -44,6 +44,13 @@ FROM base AS prod
 # pyproject.toml이 readme = "README.md"를 선언하므로 패키지 설치에 이 파일이 필요하다.
 COPY README.md ./
 COPY src ./src
+
+# 마이그레이션도 함께 굽는다. 이것이 없으면 배포한 서버에서 표를 만들 방법이 없다 —
+# 마이그레이션을 돌리던 dev service 는 개발용 override 에만 있어 배포에는 존재하지 않는다.
+# 적용은 `docker compose -f docker-compose.yml run --rm api alembic upgrade head` 로 한다.
+COPY alembic.ini ./
+COPY migrations ./migrations
+
 RUN uv sync --locked --no-dev
 
 EXPOSE 8000
