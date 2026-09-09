@@ -66,8 +66,8 @@ function ThemeCard() {
   const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
 
   const choices: { key: Theme; label: string }[] = [
-    { key: "light", label: "다크" },
-    { key: "dark", label: "라이트" },
+    { key: "light", label: "라이트" },
+    { key: "dark", label: "다크" },
   ];
 
   return (

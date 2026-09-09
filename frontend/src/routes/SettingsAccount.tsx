@@ -97,7 +97,7 @@ function MyPassword() {
       setNext("");
       setAgain("");
       setBad("");
-      say("비밀번호를 바꿨어요.");
+      say("비밀번호를 변경했어요.");
     },
     onError: (error) => setBad(reason(error)),
   });
@@ -106,11 +106,11 @@ function MyPassword() {
     <Card>
       <div className="sethead">
         <b>비밀번호</b>
-        <span>지금 비밀번호를 확인한 뒤 새 것으로 바꿉니다</span>
+        <span>비밀번호를 변경 할 수 있어요</span>
       </div>
       <div className="fields">
         <label className="wide" htmlFor="pwNow">
-          지금 비밀번호
+          현재 비밀번호
           <input
             id="pwNow"
             type="password"
@@ -147,12 +147,12 @@ function MyPassword() {
           onClick={() => {
             // 길이 같은 규칙은 서버가 판정한다. 두 번 적은 것이 서로 다른 것만
             // 여기서 먼저 잡는다 — 서버는 하나만 받으므로 알 수 없는 일이다.
-            const why = next === again ? "" : "새 비밀번호가 서로 다릅니다.";
+            const why = next === again ? "" : "비밀번호가 일치하지 않아요.";
             setBad(why);
             if (why === "") save.mutate();
           }}
         >
-          {save.isPending ? "바꾸는 중…" : "비밀번호 바꾸기"}
+          {save.isPending ? "변경사항 저장 중…" : "비밀번호 변경"}
         </button>
       </div>
       {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
