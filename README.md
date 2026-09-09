@@ -54,9 +54,57 @@ flowchart TD
 | 데이터베이스 | PostgreSQL |
 | 자연어 처리 | Claude API (연동 예정) |
 
+## 실행
+
+모든 실행은 컨테이너 안에서 이뤄집니다. 호스트에는 Docker 만 있으면 됩니다.
+개별 `docker compose` 명령의 뜻과 주의점은 `COMMAND.md` 가 정본입니다.
+
+### 개발 (Windows)
+
+```
+.\setup.ps1     # 한 번만. .env 를 만들고 git hook 과 banblit 명령을 켠다
+banblit up
+```
+
+화면은 `http://localhost:5173`, API 문서는 `http://localhost:8000/docs` 입니다.
+`banblit help` 로 나머지 명령을 봅니다.
+
+### 배포 (Linux 서버)
+
+```
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER      # 그리고 다시 로그인
+git clone https://github.com/minkong-dev/Banblit.git
+cd Banblit
+cp .env.example .env
+nano .env                          # 아래 표의 값을 채운다
+./banblit.sh up
+```
+
+`./banblit.sh up` 이 image 를 만들고, 마이그레이션을 맞추고, 전체를 띄운 뒤
+응답을 기다립니다. 성공하면 `~/.bashrc` 에 `banblit` 이름을 넣으므로 그 뒤로는
+`./` 없이 어느 경로에서나 부릅니다.
+
+`.env` 에서 반드시 채워야 하는 값입니다. 비어 있으면 뜨기 전에 멈춥니다.
+
+| 값 | 무엇 |
+| --- | --- |
+| `BANBLIT_DOMAIN` | 서비스 주소. 이 이름으로 인증서를 받으므로 실제로 이 서버를 가리켜야 한다 |
+| `POSTGRES_PASSWORD` | 데이터베이스 비밀번호. 견본 값 그대로면 거절한다 |
+| `SMTP_*` | 비밀번호 재설정·아이디 찾기 메일이 나가는 계정. 비우면 메일이 안 나간다 |
+| `APP_ORIGIN` | 메일에 담을 링크의 앞부분. 배포에서는 `https://<도메인>` |
+
+Cloudflare 를 쓴다면 그 레코드만 프록시를 끄거나(DNS only) 프록시 모드를
+Full (strict) 로 둡니다. 그렇지 않으면 인증서 발급이 막힙니다.
+
 ## 현재 상태
 
-초기 단계입니다. v1 기획을 확정했고 구현을 준비하고 있으며, 로컬 실행 방법과 설정 안내는 코드가 추가되는 시점에 이 문서에 채웁니다.
+v1 기획을 확정하고 구현했습니다. 합주실·기간·팀·명단·예약·못 나오는 시간·게시판·
+알림·권한과 자동 배정까지 동작하며, 화면 열두 벌이 서버에 물려 있습니다.
+Claude API 연동과 소셜 로그인은 아직입니다.
+
+배포 구성(TLS 앞단·정기 백업·요청 제한)은 코드가 갖춰져 있으나 실제 서버에서
+검증하기 전입니다.
 
 ## 라이선스
 
