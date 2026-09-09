@@ -78,7 +78,7 @@ def _planned_rows(
     ends_at: datetime,
     created_at: datetime,
 ) -> tuple[list[Reservation], Room, Team | None]:
-    """요청한 구간을 검증하고 30분 slot 행들을 만들어, 방·팀과 함께 돌려준다.
+    """요청한 구간을 검증하고 한 시간 slot 행들을 만들어, 방·팀과 함께 돌려준다.
 
     행은 아직 session에 넣지 않는다 — 넣는 시점과 커밋 범위는 부르는 쪽이 정한다.
     """
@@ -116,7 +116,7 @@ def create_reservation(
     ends_at: datetime,
     created_at: datetime,
 ) -> tuple[list[Reservation], str, str, str | None]:
-    """예약 하나를 30분 slot 행으로 나눠 만든다. 한 slot 이라도 이미 찼으면 전부 되돌린다.
+    """예약 하나를 한 시간 slot 행으로 나눠 만든다. 한 slot 이라도 이미 찼으면 전부 되돌린다.
 
     선착순은 reservations table 의 (room_id, starts_at) 유니크 제약이 커밋 시점에 정한다 —
     schedule_store.save_schedule과 같은 방식이다. 검증 과정에서 이미 읽은 방·사람·팀의

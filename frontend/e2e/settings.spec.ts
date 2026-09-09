@@ -8,9 +8,9 @@ test.beforeEach(async ({ page, request }) => {
   await loginForTests(page.request, request);
 });
 
-const SLOT_MINUTES = 30;
+const SLOT_MINUTES = 60;
 
-/** 30분 격자를 지키며 opens_at 을 한 slot 옮긴다. +30분이 closes_at 을 넘으면 -30분으로 옮긴다. */
+/** 정시 격자를 지키며 opens_at 을 한 slot 옮긴다. +1시간이 closes_at 을 넘으면 -1시간으로 옮긴다. */
 function shiftedOpensAt(opensAt: string, closesAt: string): string {
   const [hour, minute] = opensAt.split(":").map(Number);
   const [closeHour, closeMinute] = closesAt.split(":").map(Number);
@@ -59,15 +59,15 @@ test("합주실을 고치면 저장되고 다시 열어도 남아 있다", async
   expect(restoredRoom?.opens_at).toBe(room.opens_at);
 });
 
-test("30분에 안 맞는 시각은 저장 단추를 막는다", async ({ page }) => {
+test("정시가 아닌 시각은 저장 단추를 막는다", async ({ page }) => {
   await page.goto("/settings");
   const addForm = page.locator("form").filter({ has: page.getByRole("button", { name: "합주실 추가" }) });
 
   await addForm.getByLabel("이름").fill(`E2E 검사용 합주실 ${Date.now()}`);
   await addForm.getByLabel("닫는 시각").fill("23:00");
-  // 30분 격자를 벗어난 값 — 저장 단추가 막히고 사유가 떠야 한다.
+  // 정시가 아닌 값 — 저장 단추가 막히고 사유가 떠야 한다.
   await addForm.getByLabel("여는 시각").fill("18:20");
 
   await expect(addForm.getByRole("button", { name: "합주실 추가" })).toBeDisabled();
-  await expect(addForm.getByRole("alert")).toContainText("정시 또는 30분");
+  await expect(addForm.getByRole("alert")).toContainText("정시");
 });

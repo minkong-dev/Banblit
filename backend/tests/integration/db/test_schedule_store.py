@@ -30,7 +30,7 @@ def _scaffold(session: Session) -> tuple[int, int, int]:
 
 
 def _row(team_id: int, room_id: int, hour: int) -> AssignmentRow:
-    """8월 1일 hour시 시작하는 30분짜리 배정 한 칸(현행/백업 공용 입력)."""
+    """8월 1일 hour시 시작하는 한 시간짜리 배정 한 칸(현행/백업 공용 입력)."""
     return {
         "team_id": team_id,
         "room_id": room_id,

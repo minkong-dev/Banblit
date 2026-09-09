@@ -40,7 +40,7 @@ class ScheduleRowOut(BaseModel):
 
 
 class ScheduleOut(BaseModel):
-    # open_slots 는 아무 팀도 쓰지 않는 30분 slot 이다. 화면은 open_slots 의 시간만 예약으로 연다.
+    # open_slots 는 아무 팀도 쓰지 않는 한 시간 slot 이다. 화면은 open_slots 의 시간만 예약으로 연다.
     rows: list[ScheduleRowOut]
     open_slots: list[RoomSlotOut]
 
