@@ -83,17 +83,23 @@ body[data-page="scheduler"] {
   .band b { font-weight: 700; }
 
   .weekscroll { flex: 1; overflow: auto; min-height: 0; }
-  .weekgrid { display: grid; grid-template-columns: 56px repeat(7, minmax(92px, 1fr)); min-width: 700px; }
-  .wh { padding: 12px 0 10px; text-align: center; font-size: 12.5px; color: var(--t3); border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); }
+  /* 한 칸의 세로 길이를 여기 한 곳이 정한다. 최소는 막대가 이름과 시각 두 줄을 담는 높이고,
+     남는 자리는 1fr 이 나눠 갖는다 — 3시간만 여는 날은 칸이 늘고, 10시간 여는 날은 최소를
+     지킨 채 .weekscroll 이 스크롤을 낸다. 픽셀을 JS 에도 적어 두면 두 값이 어긋난다. */
+  .weekgrid { display: grid; grid-template-columns: 56px repeat(7, minmax(92px, 1fr)); min-width: 700px;
+    /* 첫 줄(요일 머리글)은 제 내용만큼만 쓴다. 이것을 빼 두지 않으면 머리글까지 1fr 이 되어,
+       높이가 정해지지 않은 상자에서는 모든 1fr 줄이 가장 큰 줄(머리글)과 같은 높이로 커진다. */
+    grid-template-rows: auto;
+    --slot-min: 3rem; grid-auto-rows: minmax(var(--slot-min), 1fr); min-height: 100%; }
+  .wh { position: sticky; top: 0; z-index: 1; background: var(--card); padding: 12px 0 10px; text-align: center; font-size: 12.5px; color: var(--t3); border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); }
   .wh:last-child { border-right: none; }
   .wh b { display: block; font-size: 17px; font-weight: 700; color: var(--t1); margin-top: 2px; }
   .wh.sun, .wh.sun b { color: var(--red); }
-  .wt { height: 26px; font-size: 11.5px; color: var(--t3); text-align: right; padding-right: 9px; transform: translateY(-8px); }
-  .wt.half { visibility: hidden; }
-  .wcell { height: 26px; border-top: 1px solid var(--line); border-right: 1px solid var(--line); position: relative; }
+  .wt { font-size: 11.5px; color: var(--t3); text-align: right; padding-right: 9px; transform: translateY(-8px); }
+  .wcell { border-top: 1px solid var(--line); border-right: 1px solid var(--line); position: relative; }
   .wcell:nth-child(8n) { border-right: none; }
-  .wcell.half { border-top-color: transparent; }
-  .wcell .blk { position: absolute; left: 3px; right: 3px; top: 2px; border-radius: 9px; padding: 5px 8px; font-size: 12px; font-weight: 700; line-height: 1.3; overflow: hidden; }
+  .wcell .blk { position: absolute; left: 3px; right: 3px; top: 2px; height: calc(var(--span, 1) * 100% - 4px);
+    border-radius: 9px; padding: 5px 8px; font-size: 12px; font-weight: 700; line-height: 1.3; overflow: hidden; }
   .wcell .blk small { display: block; font-weight: 400; font-size: 11px; opacity: .85; }
   .blk.c1 { background: var(--c1-tint); color: var(--c1); }
   .blk.c2 { background: var(--c2-tint); color: var(--c2); }
@@ -136,10 +142,16 @@ body[data-page="scheduler"] {
   .bigtime b { display: block; font-size: 26px; font-weight: 700; color: var(--brand); letter-spacing: -.03em; }
   .bigtime small { font-size: 13.5px; color: var(--t2); }
 
-  .tl { position: relative; padding-left: 50px; border-bottom: 1px solid var(--line); }
-  .tl .hr { position: relative; height: 34px; border-top: 1px solid var(--line); }
+  /* 스크롤은 감싼 쪽에 건다. .tl 자체에 걸면 시각 글씨(.hr::before)가 왼쪽 여백에
+     -50px 로 놓여 있어 잘려 사라진다 — 시작 방향으로 넘친 것은 스크롤이 생기지 않는다. */
+  .tlscroll { max-height: 42vh; overflow-y: auto; }
+  /* 한 칸의 세로 길이. 주 보기와 같은 이유로 여기 한 곳만 정한다. */
+  .tl { --slot-h: 3.4rem; position: relative; padding-left: 50px; border-bottom: 1px solid var(--line); }
+  .tl .hr { position: relative; height: var(--slot-h); border-top: 1px solid var(--line); }
   .tl .hr::before { content: attr(data-h); position: absolute; left: -50px; top: -9px; width: 42px; text-align: right; font-size: 12px; color: var(--t3); }
-  .tl .evb { position: absolute; left: 0; right: 0; border-radius: 11px; padding: 7px 12px; font-size: 13px; font-weight: 700; line-height: 1.35; overflow: hidden; }
+  .tl .evb { position: absolute; left: 0; right: 0; top: calc(var(--from, 0) * var(--slot-h));
+    height: calc(var(--span, 1) * var(--slot-h) - 3px);
+    border-radius: 11px; padding: 7px 12px; font-size: 13px; font-weight: 700; line-height: 1.35; overflow: hidden; }
   .tl .evb small { display: block; font-weight: 400; font-size: 11.5px; opacity: .85; }
   .evb.c1 { background: var(--c1-tint); color: var(--c1); }
   .evb.c2 { background: var(--c2-tint); color: var(--c2); }
