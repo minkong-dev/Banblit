@@ -143,7 +143,7 @@ def account(api_client: TestClient) -> AccountFactory:
                 "department": "실용음악과",
                 "student_no": email.split("@")[0],
                 "email": email,
-                "password": "password123",
+                "password": "Password123!",
                 "cohort": 46,
             },
         ).json()

@@ -66,13 +66,18 @@ def test_require_email_rejects_malformed_addresses(value: str) -> None:
         require_email(value)
 
 
-def test_require_password_accepts_eight_characters_or_more() -> None:
-    require_password("12345678")
+def test_require_password_accepts_all_four_kinds_of_character() -> None:
+    require_password("Abcdef1!")
 
 
-def test_require_password_rejects_fewer_than_eight_characters() -> None:
+# 각 줄이 규칙 하나씩을 어긴다 — 짧음, 김, 소문자 없음, 대문자 없음, 숫자 없음, 특수기호 없음.
+@pytest.mark.parametrize(
+    "value",
+    ["Abcde1!", "Abcdefghij1234567890!", "ABCDEF1!", "abcdef1!", "Abcdefg!", "Abcdefg1"],
+)
+def test_require_password_rejects_a_password_missing_any_rule(value: str) -> None:
     with pytest.raises(ValueError, match="비밀번호"):
-        require_password("1234567")
+        require_password(value)
 
 
 def test_parse_clock_reads_a_room_time() -> None:
