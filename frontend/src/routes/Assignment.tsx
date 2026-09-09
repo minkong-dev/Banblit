@@ -267,7 +267,7 @@ export function Assignment() {
       {!canRun ? null : (
         <button className="btn main" disabled={recompute.isPending || activePeriodId === null}
           onClick={() => recompute.mutate({ team_ids: teamIds, room_ids: roomIds })}>
-          {recompute.isPending ? "계산하는 중…" : "지금 다시 계산"}
+          {recompute.isPending ? "스케줄링 진행 중…" : "스케줄링"}
         </button>
       )}
       {/* ponytail: 되돌리기는 무를 수 없어 한 번 되묻는다. 이 화면에는 확인 대화상자가
