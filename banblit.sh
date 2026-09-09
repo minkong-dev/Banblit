@@ -147,7 +147,7 @@ assert_deploy_env() {
 
   if [ -z "$domain" ]; then
     fail "BANBLIT_DOMAIN 이 비어 있습니다. 이 이름으로 인증서를 받습니다."
-    note "  .env 에 적으십시오:  BANBLIT_DOMAIN=in-six-strings.banblit.com"
+    note "  .env 에 적으십시오:  BANBLIT_DOMAIN=insixstrings.banblit.com"
     note "  그 이름이 실제로 이 서버를 가리키고 있어야 발급이 됩니다."
     missing=1
   fi
