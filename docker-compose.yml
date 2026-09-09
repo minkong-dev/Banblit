@@ -13,6 +13,10 @@ services:
     image: banblit-backend:prod
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # 시간대. 이것이 없으면 컨테이너가 UTC 로 돌아, 사람이 넣은 "09:00" 을 UTC 09:00
+      # 으로 읽는다 — 한국시로는 18:00 이라 아홉 시간 어긋난다. 이 저장소는 시각에
+      # 시간대를 붙이지 않으므로(CLAUDE.md 6장) 컨테이너 시간대가 곧 그 기준이다.
+      TZ: ${TZ:-Asia/Seoul}
       # 로그인 세션 쿠키에 Secure를 붙인다. 배포는 https이므로 켠다 — 개발용
       # override(docker-compose.override.yml)가 이 값을 false로 덮는다.
       COOKIE_SECURE: "true"
@@ -49,6 +53,8 @@ services:
     command: python -m backend.jobs.auto_assign
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # api 와 같은 시간대여야 한다. 여기가 어긋나면 정해 둔 시각과 다른 때에 배정이 돈다.
+      TZ: ${TZ:-Asia/Seoul}
       AUTO_ASSIGN_ENABLED: "${AUTO_ASSIGN_ENABLED:-true}"
       AUTO_ASSIGN_INTERVAL_SECONDS: "${AUTO_ASSIGN_INTERVAL_SECONDS:-60}"
     depends_on:
@@ -107,6 +113,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB: ${POSTGRES_DB}
       PGPASSWORD: ${POSTGRES_PASSWORD}
+      TZ: ${TZ:-Asia/Seoul}
       BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-6}
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
     volumes:
@@ -128,6 +135,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      TZ: ${TZ:-Asia/Seoul}
     volumes:
       - banblit-db-data:/var/lib/postgresql/data
     healthcheck:
