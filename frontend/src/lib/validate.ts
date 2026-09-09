@@ -12,14 +12,17 @@ export function emailMessage(value: string): string {
   return EMAIL.test(value) ? "" : "이메일 형식이 맞는지 확인해주세요.";
 }
 
+/** 로그인 칸. 규칙을 보지 않는다 — 여기서 조이면 규칙을 바꾸기 전에 만든 계정이
+ *  로그인 자체를 못 하게 된다. 맞는지는 서버가 판단한다. */
 export function passwordMessage(value: string): string {
   if (!value) return "비밀번호를 입력해 주세요.";
   return value.length < PASSWORD_MIN ? "비밀번호는 8자 이상으로 작성해주세요." : "";
 }
 
-export function strongPasswordMessage(value: string): string {
-  // 재설정은 가입보다 규칙이 빡빡하다 — 길이, 소문자, 대문자, 숫자, 특수기호를 다 본다.
-  if (!value) return "새 비밀번호를 입력해주세요.";
+/** 새로 정하는 비밀번호가 지켜야 할 것. 가입과 재설정이 이 하나를 함께 쓴다 —
+ *  화면마다 따로 두면 한쪽만 느슨해진다. 서버의 같은 규칙은 input.py 의 require_password 다.
+ *  빈 값은 부르는 쪽이 먼저 거른다. 화면마다 부르는 말이 달라서다. */
+function passwordRuleMessage(value: string): string {
   if (value.length < STRONG_MIN || value.length > STRONG_MAX) {
     return "8자에서 20자 사이로 입력해주세요.";
   }
@@ -28,6 +31,18 @@ export function strongPasswordMessage(value: string): string {
   if (!/[0-9]/.test(value)) return "숫자를 하나 이상 넣어주세요.";
   if (!/[^A-Za-z0-9]/.test(value)) return "특수기호를 하나 이상 넣어주세요.";
   return "";
+}
+
+/** 가입에서 처음 정하는 비밀번호. */
+export function signupPasswordMessage(value: string): string {
+  if (!value) return "비밀번호를 입력해 주세요.";
+  return passwordRuleMessage(value);
+}
+
+/** 재설정에서 다시 정하는 비밀번호. */
+export function strongPasswordMessage(value: string): string {
+  if (!value) return "새 비밀번호를 입력해주세요.";
+  return passwordRuleMessage(value);
 }
 
 /** 기수. 1981년이 1기이고 해마다 하나씩 오르지만, 연도로 환산하지 않고 숫자만 받는다 —

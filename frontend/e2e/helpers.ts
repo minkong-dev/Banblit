@@ -9,7 +9,7 @@ const WEEKDAYS_KR = ["일", "월", "화", "수", "목", "금", "토"];
 // backend/scripts/seed_dev.py 가 넣는 E2E 전용 로그인 계정 — 헤드매니저이고
 // "새벽 네시" 소속이다.
 export const E2E_ACCOUNT_EMAIL = "e2e@banblit.test";
-export const E2E_ACCOUNT_PASSWORD = "e2e-password1";
+export const E2E_ACCOUNT_PASSWORD = "E2e-Password1!";
 export const E2E_ACCOUNT_TEAM = "새벽 네시";
 
 /** 넘긴 APIRequestContext 마다 /api/login 을 불러 세션 쿠키를 받아 둔다.
