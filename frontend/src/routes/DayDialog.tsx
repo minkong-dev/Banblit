@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { CSSProperties } from "react";
 import { useQueries } from "@tanstack/react-query";
 
 import { Modal } from "../components/Modal";
@@ -32,7 +33,6 @@ export type Entry = {
   removeIds?: number[];
 };
 
-const PIXELS_PER_SLOT = 17;
 
 function hourText(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
@@ -102,21 +102,21 @@ export function DayDialog(props: {
 
   /** 하루를 세로 띠로 그린다. 시각은 왼쪽에 시간 단위로만 적는다. */
   const timeline = (list: Entry[]) => (
-    <div className="tl">
+    <div className="tlscroll"><div className="tl">
       {Array.from({ length: closeHour - openHour }, (_, i) => openHour + i).map((hour) => (
         <div className="hr" data-h={`${hour}:00`} key={hour} />
       ))}
       {list.map((entry, index) => (
         <span
           className={`evb ${entry.team ? `${entry.team}` : "off"}`}
-          style={{ top: entry.a * PIXELS_PER_SLOT, height: (entry.b - entry.a) * PIXELS_PER_SLOT - 3 }}
+          style={{ "--from": entry.a, "--span": entry.b - entry.a } as CSSProperties}
           key={index}
         >
           {nameOf(entry)}
           <small>{label(entry.a)}–{endLabel(entry.b)} · {kindLabel(entry)}</small>
         </span>
       ))}
-    </div>
+    </div></div>
   );
 
   const roomsLabel = [...new Set(booked.map((entry) => entry.room).filter(Boolean))].join(" · ");

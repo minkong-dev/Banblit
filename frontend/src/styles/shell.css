@@ -190,7 +190,7 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
 }
 
 /* ===== 모달 ===== */
-dialog { width: min(560px, calc(100vw - 40px)); max-height: 84vh; padding: 0; border: none; border-radius: 22px; background: var(--card); color: var(--t1); box-shadow: var(--shadow-up); overflow: hidden; }
+dialog { width: min(560px, calc(100vw - 40px)); max-height: 92vh; padding: 0; border: none; border-radius: 22px; background: var(--card); color: var(--t1); box-shadow: var(--shadow-up); overflow: hidden; }
 /* 열렸을 때만 flex 로 세운다. dialog 자체에 display 를 주면 닫혀 있어도 보인다 —
    브라우저가 dialog:not([open]) 에 display:none 을 거는 방식이라 덮어써 버린다.
    머리와 발이 제 높이를 갖고 몸이 남는 높이를 다 쓴다. */

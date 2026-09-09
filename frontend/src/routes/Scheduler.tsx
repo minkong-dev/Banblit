@@ -1,4 +1,5 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
@@ -116,6 +117,20 @@ function offByDay(times: Unavailable[], openHour: number): DayEntries {
  *  칸을 먼저 한 건으로 이어야 사람이 보는 예약 한 번이 된다. team_id 로 실제 팀을
  *  찾는다 — 이름 대조보다 정확하다. 동명이인 규칙과 같은 이유로 사람도 팀도 번호로 가른다.
  *  내가 잡은 건에만 지울 번호를 실어, 남의 예약에는 취소가 뜨지 않게 한다. */
+// 주 보기는 방이 여는 시간만이 아니라 하루를 통째로 세운다. 방마다 여는 시각이 달라도
+// 같은 줄에 같은 시각이 오고, 방을 바꿔도 줄이 밀리지 않는다. 대신 줄이 많아 늘 스크롤이
+// 생기므로, 주 보기로 들어올 때 합주가 있는 구간으로 스스로 내려간다(weekBox 의 useEffect).
+const WEEK_FIRST_HOUR = 1;
+const WEEK_LAST_HOUR = 23;
+const WEEK_HOURS = Array.from(
+  { length: WEEK_LAST_HOUR - WEEK_FIRST_HOUR + 1 },
+  (_, i) => WEEK_FIRST_HOUR + i,
+);
+
+function hourLabel(hour: number): string {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
 function bookedByDay(
   rows: Reservation[], teams: DayTeam[], openHour: number, myMemberId: number | null,
 ): DayEntries {
@@ -322,8 +337,20 @@ export function Scheduler() {
     ? `${dayLabel(weekDayKeys[0])} – ${Number(weekDayKeys[6].slice(8, 10))}일`
     : `${dayLabel(weekDayKeys[0])} – ${dayLabel(weekDayKeys[6])}`;
 
+  // 하루 스물세 줄 중 합주는 방이 여는 몇 줄에만 있다. 주 보기로 들어올 때마다 그 줄이
+  // 맨 위에 오게 내려 준다 — 안 그러면 늘 01:00 부터 보게 되어 매번 사람이 굴려야 한다.
+  // 줄 높이는 CSS 가 정하므로 계산하지 않고 실제로 그려진 자리를 잰다.
+  const weekBox = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!week) return;
+    const box = weekBox.current;
+    const row = box?.querySelector<HTMLElement>(`[data-hour="${open}"]`);
+    if (!box || !row) return;
+    box.scrollTop += row.getBoundingClientRect().top - box.getBoundingClientRect().top;
+  }, [week, weekShift, open, tab, cursor.year, cursor.month]);
+
   const weekView = (
-    <div className="weekscroll">
+    <div className="weekscroll" ref={weekBox}>
       <div className="weekgrid">
         <div className="wh" />
         {weekDayKeys.map((key, index) => (
@@ -331,20 +358,26 @@ export function Scheduler() {
             {WEEKDAY_NAMES[index]}<b>{Number(key.slice(8, 10))}</b>
           </div>
         ))}
-        {Array.from({ length: slotCount }, (_, i) => i).map((slot) => (
-          <Fragment key={slot}>
-            <div className={slot % 2 ? "wt half" : "wt"}>{label(slot)}</div>
+        {WEEK_HOURS.map((hour) => (
+          <Fragment key={hour}>
+            <div className="wt" data-hour={hour}>{hourLabel(hour)}</div>
             {weekDayKeys.map((key) => {
-              const entry = visible(entriesOf(key), tab, teams).find((item) => item.a === slot);
+              const entry = visible(entriesOf(key), tab, teams)
+                .find((item) => item.a + open === hour);
               return (
-                <div className={slot % 2 ? "wcell half" : "wcell"} key={`${key}-${slot}`}>
+                <div className="wcell" key={`${key}-${hour}`}>
                   {entry === undefined ? null : (
                     <span className={`blk ${entry.team ? `${entry.team}` : "off"}`}
-                      style={{ height: (entry.b - entry.a) * 26 - 4 }}>
+                      style={{ "--span": entry.b - entry.a } as CSSProperties}>
                       {entry.kind === "off"
                         ? "못 나옴"
                         : teams.find((team) => team.key === entry.team)?.name ?? "개인"}
-                      <small>{label(entry.a)}–{endLabel(entry.b)}</small>
+                      {/* 합주실을 함께 적는다. 붙어 있는 두 칸이 따로 그려지는 유일한 까닭이
+                          방이 다른 것인데, 방을 안 적으면 왜 갈라졌는지 읽을 수가 없다. */}
+                      <small>
+                        {label(entry.a)}–{endLabel(entry.b)}
+                        {entry.room === undefined ? "" : ` · ${entry.room}`}
+                      </small>
                     </span>
                   )}
                 </div>
