@@ -6,13 +6,13 @@ import type { Notification } from "./contract";
 
 // 종류가 늘면 이 표에 한 줄을 더한다.
 const TEXT: Record<string, string> = {
-  assignment_updated: "합주 시간표가 새로 짜였습니다",
+  assignment_updated: "합주일정이 업데이트 되었어요.",
 };
 
 export function notificationText(kind: string): string {
   // 서버가 더 나중 판이라 모르는 종류를 보낼 수 있다. 그때 kind 를 그대로 보이면
   // 화면에 개발 용어가 나오므로, 무난한 문장으로 대신한다.
-  return TEXT[kind] ?? "새 소식이 있습니다";
+  return TEXT[kind] ?? "새 알림이 있어요.";
 }
 
 export function unreadCount(list: Notification[]): number {

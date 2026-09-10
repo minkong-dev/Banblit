@@ -26,7 +26,7 @@ describe("unreadCount", () => {
 
 describe("notificationText", () => {
   it("배정이 다시 돈 알림을 사람이 읽을 문장으로 바꾼다", () => {
-    expect(notificationText("assignment_updated")).toBe("합주 시간표가 새로 짜였습니다");
+    expect(notificationText("assignment_updated")).toBe("합주일정이 업데이트 되었어요.");
   });
 
   it("모르는 종류가 와도 종류 이름을 그대로 내보이지 않는다", () => {
