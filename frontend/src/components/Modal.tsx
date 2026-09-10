@@ -58,7 +58,7 @@ export function Stepper(props: {
       <div className="stepbox">
         <button
           type="button"
-          aria-label={`${label} 하나 줄이기`}
+          aria-label={`${label} 인원 감소`}
           disabled={value <= min}
           onClick={() => onChange(value - 1)}
         >
@@ -67,7 +67,7 @@ export function Stepper(props: {
         <b aria-live="polite">{value}</b>
         <button
           type="button"
-          aria-label={`${label} 하나 늘리기`}
+          aria-label={`${label} 인원 추가`}
           disabled={value >= max}
           onClick={() => onChange(value + 1)}
         >

@@ -12,14 +12,14 @@ describe("loadState — 물어본 결과를 상태 값으로", () => {
   });
 
   it("걸렸으면 사유를 함께 든다", () => {
-    const state = loadState({ isPending: false, error: new Error("서버에 닿지 못했습니다") });
-    expect(state).toEqual({ kind: "failed", why: "서버에 닿지 못했습니다" });
+    const state = loadState({ isPending: false, error: new Error("서버로부터 응답을 받지 못했어요") });
+    expect(state).toEqual({ kind: "failed", why: "서버로부터 응답을 받지 못했어요" });
   });
 
   it("사유가 Error 가 아니어도 한 줄로 만든다", () => {
     expect(loadState({ isPending: false, error: "쿵" })).toEqual({
       kind: "failed",
-      why: "알 수 없는 오류가 났습니다",
+      why: "알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.",
     });
   });
 

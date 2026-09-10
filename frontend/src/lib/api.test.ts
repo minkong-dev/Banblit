@@ -45,7 +45,7 @@ describe("getJSON", () => {
     });
 
     await expect(getJSON("/health")).rejects.toThrow(
-      `서버가 ${REQUEST_TIMEOUT_MS / 1000}초 안에 답하지 않아 끊었습니다`,
+      `서버가 ${REQUEST_TIMEOUT_MS / 1000}초 내 응답하지 않아 요청을 실행하지 못했어요`,
     );
   });
 
@@ -54,7 +54,7 @@ describe("getJSON", () => {
       throw new TypeError("Failed to fetch");
     });
 
-    await expect(getJSON("/health")).rejects.toThrow("서버에 닿지 못했습니다");
+    await expect(getJSON("/health")).rejects.toThrow("서버로부터 응답을 받지 못했어요");
   });
 
   it("서버가 거절하면 서버가 적어 보낸 사유를 그대로 올린다", async () => {

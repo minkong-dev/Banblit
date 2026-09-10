@@ -42,8 +42,8 @@ export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
   } catch (error) {
     throw new Error(
       error instanceof Error && error.name === "TimeoutError"
-        ? `서버가 ${REQUEST_TIMEOUT_MS / 1000}초 안에 답하지 않아 끊었습니다`
-        : "서버에 닿지 못했습니다",
+        ? `서버가 ${REQUEST_TIMEOUT_MS / 1000}초 내 응답하지 않아 요청을 실행하지 못했어요`
+        : "서버로부터 응답을 받지 못했어요",
     );
   }
 
@@ -100,9 +100,9 @@ export function sendFile<T>(
       }
       reject(new Error(detailOf(body) ?? `${request.status} ${request.statusText}`));
     };
-    request.onerror = () => reject(new Error("서버에 닿지 못했습니다"));
+    request.onerror = () => reject(new Error("서버로부터 응답을 받지 못했어요"));
     request.ontimeout = () =>
-      reject(new Error(`파일을 ${UPLOAD_TIMEOUT_MS / 60000}분 안에 다 올리지 못해 끊었습니다`));
+      reject(new Error(`파일 업로드가 ${UPLOAD_TIMEOUT_MS / 60000}분 내 응답하지 않아 요청을 실행하지 못했어요`));
 
     request.send(form);
   });
@@ -118,6 +118,6 @@ function parseJSON(text: string): unknown {
 }
 
 /** 오류를 화면에 띄울 한 줄로. Error 면 그 문장, 아니면 fallback. */
-export function reason(error: unknown, fallback = "알 수 없는 오류가 났습니다"): string {
+export function reason(error: unknown, fallback = "알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요."): string {
   return error instanceof Error ? error.message : fallback;
 }

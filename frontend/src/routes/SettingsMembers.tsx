@@ -187,7 +187,7 @@ function GrantModal(props: {
                 <button
                   className="ic danger"
                   disabled={busy}
-                  aria-label={`${person.name} 에게서 권한 빼기`}
+                  aria-label={`${person.name} 에게서 권한 제거하기`}
                   onClick={() => revoke.mutate(person.id)}
                 >
                   <TrashIcon />
@@ -221,7 +221,7 @@ function SetTile(props: {
         <b>{set.name}</b>
         <span>{set.members.length}명</span>
       </div>
-      <p className="tilenote">{set.description || "설명이 없습니다"}</p>
+      <p className="tilenote">{set.description || "권한 설명을 작성해주세요"}</p>
       <div className="tileacts">
         <button className="ic" aria-label={`${set.name} 멤버 추가`} onClick={onGrant}>
           <PlusIcon />
@@ -369,10 +369,10 @@ function MemberRoster(props: {
     <Card>
       <div className="sethead">
         <b>멤버</b>
-        <span>가입한 사람 전부입니다</span>
+        <span>가입한 멤버의 목록이에요</span>
         <select
           className="railfilter"
-          aria-label="권한으로 거르기"
+          aria-label="권한별 필터링"
           value={filter}
           onChange={(event) => setFilter(event.target.value)}
         >
@@ -410,9 +410,9 @@ function MemberRoster(props: {
             ))}
           </tbody>
         </table>
-        {shown.length === 0 ? <p className="empty">보여줄 사람이 없습니다</p> : null}
+        {shown.length === 0 ? <p className="empty">표시할 멤버가 없어요</p> : null}
         {/* 이 표시가 화면에 들어오면 다음 쪽을 부른다. */}
-        <div ref={foot} className="rosterfoot">{done ? "" : "더 불러오는 중…"}</div>
+        <div ref={foot} className="rosterfoot">{done ? "" : "멤버를 불러오고 있어요…"}</div>
       </div>
     </Card>
   );
