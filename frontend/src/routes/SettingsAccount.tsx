@@ -33,7 +33,7 @@ function MyProfile({ me }: { me: Account }) {
       }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["me"] });
-      say("내 정보를 고쳤어요.");
+      say("내 정보를 수정했어요.");
     },
     onError: (error) => setBad(reason(error)),
   });
@@ -42,7 +42,7 @@ function MyProfile({ me }: { me: Account }) {
     <Card>
       <div className="sethead">
         <b>내 정보</b>
-        <span>이름과 기수를 고칩니다. 이메일은 바꿀 수 없습니다</span>
+        <span>가입한 이메일을 제외한 정보를 수정할 수 있어요</span>
       </div>
       <div className="fields">
         <label className="wide" htmlFor="myName">
@@ -176,11 +176,11 @@ function Leave({ me }: { me: Account }) {
     <Card>
       <div className="sethead">
         <b>회원 탈퇴</b>
-        <span>계정과 함께 내가 쓴 글·댓글·예약이 모두 사라집니다. 되돌릴 수 없습니다</span>
+        <span>계정과 함께 작성한 글·댓글·예약이 모두 삭제되고, 이 작업은 되돌릴 수 없어요</span>
       </div>
       <div className="fields">
         <label className="wide" htmlFor="leaveName">
-          확인을 위해 내 이름을 적어 주세요
+          확인을 위해 이름을 정확히 적어주세요
           <input
             id="leaveName"
             value={typed}
@@ -195,7 +195,7 @@ function Leave({ me }: { me: Account }) {
           disabled={!matched || leave.isPending}
           onClick={() => leave.mutate()}
         >
-          {leave.isPending ? "탈퇴하는 중…" : "탈퇴하기"}
+          {leave.isPending ? "회원 탈퇴 중…" : "탈퇴하기"}
         </button>
       </div>
     </Card>
