@@ -157,16 +157,29 @@ export async function loadUnavailable(memberId: number): Promise<Unavailable[]> 
   return body.times;
 }
 
+/** 되풀이 방식. "none" 이면 그 날 한 번뿐이다. */
+export type RepeatCycle = "none" | "daily" | "weekly";
+
 export async function addUnavailable(
-  memberId: number, startsAt: string, endsAt: string, repeatsWeekly: boolean,
+  memberId: number,
+  startsAt: string,
+  endsAt: string,
+  repeat: RepeatCycle,
+  reason: string,
 ): Promise<Unavailable> {
-  // repeat_until 은 보내지 않는다 — 서버는 repeats_weekly 가 꺼져 있는데 repeat_until 이
-  // 오면 거절하고, 켜져 있으면 기간의 끝까지로 알아서 자른다.
+  // repeat_until 은 보내지 않는다 — 서버는 반복이 꺼져 있는데 repeat_until 이 오면
+  // 거절하고, 켜져 있으면 기간의 끝까지로 알아서 자른다.
   // ponytail: 끝나는 날을 사람이 직접 정하는 자리는 없다. 필요해지면 화면에 날짜
   // 하나를 더 받아 repeat_until 로 함께 보낸다.
   const body = await getJSON<{ time: Unavailable }>(`/members/${memberId}/unavailable`, {
     method: "POST",
-    body: JSON.stringify({ starts_at: startsAt, ends_at: endsAt, repeats_weekly: repeatsWeekly }),
+    body: JSON.stringify({
+      starts_at: startsAt,
+      ends_at: endsAt,
+      repeats_daily: repeat === "daily",
+      repeats_weekly: repeat === "weekly",
+      reason: reason.trim() === "" ? null : reason.trim(),
+    }),
   });
   return body.time;
 }

@@ -101,28 +101,57 @@ describe("addUnavailable", () => {
     );
     vi.stubGlobal("fetch", spy);
 
-    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", true);
+    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", "weekly", "시험");
 
     const [url, init] = spy.mock.calls[0];
     expect(url).toBe("/api/members/7/unavailable");
     expect(sentBody(init)).toEqual({
       starts_at: "2026-09-14T18:00:00",
       ends_at: "2026-09-14T20:00:00",
+      repeats_daily: false,
       repeats_weekly: true,
+      reason: "시험",
     });
   });
 
-  it("켜지 않으면 repeats_weekly 가 거짓으로 나간다", async () => {
+  it("매일 반복을 켜면 repeats_daily 만 실어 보낸다", async () => {
     const spy = vi.fn(
       async (_input: RequestInfo | URL, _init?: RequestInit) =>
         new Response(JSON.stringify({ time: { id: 1 } }), { status: 201 }),
     );
     vi.stubGlobal("fetch", spy);
 
-    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", false);
+    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", "daily", "");
 
-    const [, init] = spy.mock.calls[0];
-    expect(sentBody(init).repeats_weekly).toBe(false);
+    const body = sentBody(spy.mock.calls[0][1]);
+    expect(body.repeats_daily).toBe(true);
+    expect(body.repeats_weekly).toBe(false);
+  });
+
+  it("켜지 않으면 두 반복이 다 거짓으로 나간다", async () => {
+    const spy = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(JSON.stringify({ time: { id: 1 } }), { status: 201 }),
+    );
+    vi.stubGlobal("fetch", spy);
+
+    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", "none", "");
+
+    const body = sentBody(spy.mock.calls[0][1]);
+    expect(body.repeats_daily).toBe(false);
+    expect(body.repeats_weekly).toBe(false);
+  });
+
+  it("사유가 공백뿐이면 null 로 나간다 — 빈 줄을 남기지 않는다", async () => {
+    const spy = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(JSON.stringify({ time: { id: 1 } }), { status: 201 }),
+    );
+    vi.stubGlobal("fetch", spy);
+
+    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", "none", "   ");
+
+    expect(sentBody(spy.mock.calls[0][1]).reason).toBeNull();
   });
 });
 
