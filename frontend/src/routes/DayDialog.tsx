@@ -208,18 +208,18 @@ export function DayDialog(props: {
    *  막대 안에 지우기를 넣지 않는 것은 한 칸짜리 막대가 14px 이라 누를 자리가 없어서다. */
   const myList = removable.length === 0 ? null : (
     <div className="people">
-      <h3>내가 걸어 둔 것</h3>
+      <h3>등록된 불가능 일정</h3>
       <ul className="mlist">
         {removable.map((entry) => (
           <li className="prow" key={`${entry.kind}-${entry.removeIds?.[0] ?? entry.a}`}>
             <i className={`dot ${entry.team ?? "off"}`} aria-hidden="true" />
-            <span className="nm">{entry.kind === "book" ? nameOf(entry) : "안 되는 시간"}</span>
+            <span className="nm">{entry.kind === "book" ? nameOf(entry) : "불가능 일정"}</span>
             <span className="ps">{label(entry.a)}–{endLabel(entry.b)}</span>
             <button
               className="ic danger"
               aria-label={entry.kind === "book"
                 ? `${nameOf(entry)} ${label(entry.a)}–${endLabel(entry.b)} 예약 취소`
-                : `${label(entry.a)}–${endLabel(entry.b)} 안 되는 시간 삭제`}
+                : `${label(entry.a)}–${endLabel(entry.b)} 불가능 일정 삭제`}
               onClick={() => { void removeEntry(entry); }}
             >
               <TrashIcon />
@@ -326,7 +326,7 @@ export function DayDialog(props: {
             id="offReason"
             value={offReason}
             maxLength={200}
-            placeholder="왜 안 되는지 적어주세요 (선택)"
+            placeholder="불가능 사유를 적어주세요"
             onChange={(event) => setOffReason(event.target.value)}
           />
         </label>

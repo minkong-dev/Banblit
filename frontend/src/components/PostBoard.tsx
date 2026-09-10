@@ -417,7 +417,7 @@ function EditPost(props: {
       void client.invalidateQueries({ queryKey: listKey });
       void client.invalidateQueries({ queryKey: ["board", "post", post.id] });
       onClose();
-      say("글을 고쳤습니다.");
+      say("글을 수정했어요.");
     },
     onError: (error) => setBad(reason(error)),
   });
