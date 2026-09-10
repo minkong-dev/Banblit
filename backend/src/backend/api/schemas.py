@@ -327,12 +327,21 @@ class PermissionSetIn(BaseModel):
     permissions: list[Permission] = Field(max_length=20)
 
 
+class PermissionSetMemberOut(BaseModel):
+    """permission set 을 가진 사람 하나. 번호로 사람을 가르고, 이름은 보여주기 위한 것이다."""
+
+    id: int
+    name: str
+
+
 class PermissionSetOut(BaseModel):
     id: int
     name: str
     description: str
     permissions: list[Permission]
-    member_ids: list[int]
+    # 번호만 주면 화면이 이름을 다른 목록에서 찾아야 하는데, 그 목록은 쪽 단위라 다 있지
+    # 않다. 이름까지 여기서 실어 보낸다.
+    members: list[PermissionSetMemberOut]
 
 
 class PermissionSetsOut(BaseModel):

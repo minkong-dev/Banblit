@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_permission
 from backend.api.permission_service import (
+    SetMember,
     create_permission_set,
     delete_permission_set,
     grant_permission_set,
@@ -14,6 +15,7 @@ from backend.api.permission_service import (
 from backend.api.schemas import (
     PermissionSetEnvelopeOut,
     PermissionSetIn,
+    PermissionSetMemberOut,
     PermissionSetOut,
     PermissionSetsOut,
 )
@@ -28,13 +30,13 @@ _manage_only = Depends(require_permission("permission_manage"))
 _grant_only = Depends(require_permission("permission_grant"))
 
 
-def _set_out(permission_set: PermissionSet, member_ids: list[int]) -> PermissionSetOut:
+def _set_out(permission_set: PermissionSet, members: list[SetMember]) -> PermissionSetOut:
     return PermissionSetOut(
         id=permission_set.id,
         name=permission_set.name,
         description=permission_set.description,
         permissions=permission_set.permissions,  # type: ignore[arg-type]
-        member_ids=member_ids,
+        members=[PermissionSetMemberOut(id=one.id, name=one.name) for one in members],
     )
 
 
@@ -42,7 +44,7 @@ def _set_out(permission_set: PermissionSet, member_ids: list[int]) -> Permission
 def read_permission_sets(session: Session = Depends(get_session)) -> PermissionSetsOut:
     return PermissionSetsOut(
         permission_sets=[
-            _set_out(row, member_ids) for row, member_ids in list_permission_sets(session)
+            _set_out(row, members) for row, members in list_permission_sets(session)
         ]
     )
 
