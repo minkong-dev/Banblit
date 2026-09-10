@@ -110,14 +110,15 @@ export type Account = {
   cohort: number | null;
 };
 
-/** 이름 붙인 권한 하나. member_ids 는 이 권한을 가진 사람들이다. */
+/** 이름 붙인 권한 하나. members 는 이 권한을 가진 사람들이고, 이름까지 서버가 실어 준다 —
+ *  멤버 목록은 쪽 단위로 받으므로 여기서 번호를 이름으로 바꾸려 하면 안 된다. */
 export type PermissionSet = {
   id: number;
   name: string;
   /** 무엇을 하는 사람에게 주는 권한인지. 만들 때 반드시 적는다. */
   description: string;
   permissions: Permission[];
-  member_ids: number[];
+  members: { id: number; name: string }[];
 };
 
 /** 멤버 목록의 한 줄. 사람을 가르는 네 값과 가진 권한 묶음 이름이 함께 온다.

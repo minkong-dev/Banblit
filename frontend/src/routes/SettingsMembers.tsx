@@ -58,7 +58,7 @@ function SetForm(props: {
       void client.invalidateQueries({ queryKey: SETS_KEY });
       void client.invalidateQueries({ queryKey: MEMBERS_KEY });
       void client.invalidateQueries({ queryKey: ["me"] });
-      onDone(method === "POST" ? "권한을 만들었습니다" : "권한을 저장했습니다");
+      onDone(method === "POST" ? "권한을 생성했어요." : "권한을 저장했어요.");
     },
     onError: (error) => setBad(reason(error)),
   });
@@ -72,7 +72,7 @@ function SetForm(props: {
     });
 
   return (
-    <Modal title={title} hint="켜고 싶은 것만 켜서 권한을 만듭니다" onClose={onClose}
+    <Modal title={title} hint="부여할 권한을 설정해 커스텀 권한을 만들 수 있어요." onClose={onClose}
       foot={
         <>
           <button className="ghost" onClick={onClose}>취소</button>
@@ -85,9 +85,9 @@ function SetForm(props: {
                 form.name.trim() === ""
                   ? "권한 이름을 입력해 주세요."
                   : clash
-                    ? "같은 이름의 권한이 이미 있습니다."
+                    ? "이미 같은 이름을 가진 권한이 있어요."
                     : form.description.trim() === ""
-                      ? "이 권한이 무엇인지 한 줄로 적어 주세요."
+                      ? "이 권한에 대한 설명을 작성해주세요."
                       : "";
               setBad(why);
               if (why === "") send.mutate();
@@ -105,7 +105,7 @@ function SetForm(props: {
             id="setName"
             autoFocus
             value={form.name}
-            placeholder="합주실 담당"
+            placeholder="권한 이름"
             onChange={(event) => setForm({ ...form, name: event.target.value })}
           />
         </label>
@@ -114,7 +114,7 @@ function SetForm(props: {
           <input
             id="setNote"
             value={form.description}
-            placeholder="무엇을 하는 사람인지 한 줄로"
+            placeholder="권한 설명"
             onChange={(event) => setForm({ ...form, description: event.target.value })}
           />
         </label>
@@ -146,11 +146,10 @@ function SetForm(props: {
 /** 권한을 사람에게 주고 뺀다. */
 function GrantModal(props: {
   set: PermissionSet;
-  people: MemberRow[];
   onClose: () => void;
   onDone: (text: string) => void;
 }) {
-  const { set, people, onClose, onDone } = props;
+  const { set, onClose, onDone } = props;
   const client = useQueryClient();
 
   const refresh = (): void => {
@@ -162,48 +161,48 @@ function GrantModal(props: {
   const grant = useMutation({
     mutationFn: (memberId: number) =>
       getJSON<null>(`/members/${memberId}/permission-sets/${set.id}`, { method: "POST" }),
-    onSuccess: () => { refresh(); onDone("권한을 주었습니다"); },
+    onSuccess: () => { refresh(); onDone("권한을 부여했어요"); },
     onError: (error) => onDone(reason(error)),
   });
 
   const revoke = useMutation({
     mutationFn: (memberId: number) =>
       getJSON<null>(`/members/${memberId}/permission-sets/${set.id}`, { method: "DELETE" }),
-    onSuccess: () => { refresh(); onDone("권한을 뺐습니다"); },
+    onSuccess: () => { refresh(); onDone("권한을 제거했어요"); },
     onError: (error) => onDone(reason(error)),
   });
 
   const busy = grant.isPending || revoke.isPending;
 
   return (
-    <Modal title={set.name} hint="이 권한을 가진 사람" onClose={onClose}>
+    <Modal title={set.name} hint="해당 권한을 가진 멤버" onClose={onClose}>
       <ul className="lineup">
-        {set.member_ids.length === 0 ? (
-          <li className="empty">아직 이 권한을 가진 사람이 없습니다</li>
+        {set.members.length === 0 ? (
+          <li className="empty">아직 해당 권한을 가진 멤버가 없어요</li>
         ) : (
-          set.member_ids.map((memberId) => {
-            const person = people.find((one) => one.id === memberId);
-            return (
-              <li className="seat" key={memberId}>
-                <span className="who">{person?.name ?? "아직 못 받아온 사람"}</span>
-                <span className="acts">
-                  <button
-                    className="ic danger"
-                    disabled={busy}
-                    aria-label={`${person?.name ?? "이 사람"} 에게서 권한 빼기`}
-                    onClick={() => revoke.mutate(memberId)}
-                  >
-                    <TrashIcon />
-                  </button>
-                </span>
-              </li>
-            );
-          })
+          set.members.map((person) => (
+            <li className="seat" key={person.id}>
+              <span className="who">{person.name}</span>
+              <span className="acts">
+                <button
+                  className="ic danger"
+                  disabled={busy}
+                  aria-label={`${person.name} 에게서 권한 빼기`}
+                  onClick={() => revoke.mutate(person.id)}
+                >
+                  <TrashIcon />
+                </button>
+              </span>
+            </li>
+          ))
         )}
       </ul>
 
       <p className="cap2">멤버 추가</p>
-      <MemberSearch exclude={set.member_ids} onPick={(one) => grant.mutate(one.id)} />
+      <MemberSearch
+        exclude={set.members.map((person) => person.id)}
+        onPick={(one) => grant.mutate(one.id)}
+      />
     </Modal>
   );
 }
@@ -220,7 +219,7 @@ function SetTile(props: {
     <li className="tile">
       <div className="tilehead">
         <b>{set.name}</b>
-        <span>{set.member_ids.length}명</span>
+        <span>{set.members.length}명</span>
       </div>
       <p className="tilenote">{set.description || "설명이 없습니다"}</p>
       <div className="tileacts">
@@ -239,8 +238,7 @@ function SetTile(props: {
 }
 
 /** 권한 카드 줄. 가로로 늘어서고, 한 화면에 다 안 들어가면 ‹ › 로 넘긴다. */
-function SetRail(props: { people: MemberRow[] }) {
-  const { people } = props;
+function SetRail() {
   const client = useQueryClient();
   const track = useRef<HTMLUListElement | null>(null);
   const [making, setMaking] = useState(false);
@@ -278,7 +276,7 @@ function SetRail(props: { people: MemberRow[] }) {
     <Card>
       <div className="sethead">
         <b>권한</b>
-        <span>켜고 싶은 것만 켜서 권한을 만들고, 그 권한을 사람에게 줍니다</span>
+        <span>부여할 권한을 설정해 커스텀 권한을 만들 수 있어요</span>
         <span className="railnav">
           <button className="ic" aria-label="이전 권한" onClick={() => slide(-1)}>
             <ChevronLeftIcon />
@@ -333,7 +331,6 @@ function SetRail(props: { people: MemberRow[] }) {
       {granting === null ? null : (
         <GrantModal
           set={list.find((one) => one.id === granting.id) ?? granting}
-          people={people}
           onClose={() => setGranting(null)}
           onDone={saved}
         />
@@ -440,7 +437,7 @@ export function MemberCards() {
 
   return (
     <>
-      <SetRail people={rows} />
+      <SetRail />
       <MemberRoster
         rows={rows}
         done={!list.hasNextPage}
