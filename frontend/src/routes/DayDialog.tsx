@@ -3,7 +3,7 @@ import type { CSSProperties } from "react";
 import { useQueries } from "@tanstack/react-query";
 
 import { Modal } from "../components/Modal";
-import { TrashIcon } from "../components/icons";
+import { CheckIcon, TrashIcon } from "../components/icons";
 import { askCancel, askDelete } from "../lib/confirm";
 import {
   addReservation,
@@ -16,6 +16,7 @@ import {
   slotLabel,
   takenGrid,
 } from "../lib/pipeline";
+import type { RepeatCycle } from "../lib/pipeline";
 import type { Room } from "../lib/contract";
 import { say } from "../lib/toast";
 import type { DayTeam } from "../lib/roster";
@@ -37,6 +38,12 @@ export type Entry = {
 function hourText(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
 }
+
+/** 반복 고르개에 세우는 두 자리. 하나만 켜진다. */
+const REPEAT_CHOICES: readonly { key: Exclude<RepeatCycle, "none">; label: string }[] = [
+  { key: "daily", label: "매일 불가능해요" },
+  { key: "weekly", label: "매주 이 시간은 불가능해요" },
+];
 
 function kindLabel(entry: Entry): string {
   if (entry.kind === "assign") return "자동 배정";
@@ -69,7 +76,9 @@ export function DayDialog(props: {
   const [error, setError] = useState("");
   const [who, setWho] = useState("me");
   const [roomId, setRoomId] = useState<number | null>(null);
-  const [repeatsWeekly, setRepeatsWeekly] = useState(false);
+  // 매일과 매주는 하나만 고른다. 같은 것을 다시 누르면 반복이 꺼진다.
+  const [repeat, setRepeat] = useState<RepeatCycle>("none");
+  const [offReason, setOffReason] = useState("");
   // 시각 두 칸. 기본은 그날 여는 칸부터 닫는 칸까지 전부다.
   const [off, setOff] = useState({ a: 0, b: slotCount });
   const [book, setBook] = useState({ a: 0, b: slotCount });
@@ -227,15 +236,20 @@ export function DayDialog(props: {
     if (memberId === null) { setError("요청이 많아 지연되고 있어요. 잠시 후 다시 시도해 주세요."); return; }
     try {
       await addUnavailable(
-        memberId, isoAt(dayKey, a, openHour), isoAt(dayKey, b, openHour), repeatsWeekly,
+        memberId,
+        isoAt(dayKey, a, openHour),
+        isoAt(dayKey, b, openHour),
+        repeat,
+        offReason,
       );
     } catch (error) {
       setError(error instanceof Error ? error.message : "등록하지 못했어요.");
       return;
     }
     setError("");
+    setOffReason("");
     onSaved();
-    say(repeatsWeekly ? "반복 일정을 등록했어요" : "불가능 시간을 등록했어요");
+    say(repeat === "none" ? "불가능 시간을 등록했어요" : "반복 일정을 등록했어요");
   };
 
   const addBooking = async () => {
@@ -306,14 +320,34 @@ export function DayDialog(props: {
         {myList}
         <p className="cap2">불가능 일정</p>
         {picker("off", off, setOff, false)}
-        <label className="rep">
+        <label className="offwhy" htmlFor="offReason">
+          사유
           <input
-            type="checkbox"
-            checked={repeatsWeekly}
-            onChange={(event) => setRepeatsWeekly(event.target.checked)}
+            id="offReason"
+            value={offReason}
+            maxLength={200}
+            placeholder="왜 안 되는지 적어주세요 (선택)"
+            onChange={(event) => setOffReason(event.target.value)}
           />
-          매일 혹은 매주 해당 불가능 일정을 반복 설정해요.
         </label>
+        <div className="reps" role="group" aria-label="반복 설정">
+          {REPEAT_CHOICES.map((choice) => {
+            const on = repeat === choice.key;
+            return (
+              <button
+                key={choice.key}
+                type="button"
+                className={`rep${on ? " on" : ""}`}
+                // 같은 것을 다시 누르면 꺼진다 — 반복을 끄려고 다른 자리를 찾지 않아도 된다.
+                aria-pressed={on}
+                onClick={() => setRepeat(on ? "none" : choice.key)}
+              >
+                <CheckIcon className="repmark" />
+                {choice.label}
+              </button>
+            );
+          })}
+        </div>
         <p className="msg">{error}</p>
         <p className="tip">등록한 불가능 일정을 제외하고 스케줄링을 진행해요.</p>
       </>

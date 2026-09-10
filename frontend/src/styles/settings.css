@@ -26,7 +26,8 @@ body[data-page="settings"] {
   /* 카드 안쪽 여백. sethead·listfoot 과 같은 20px 을 써서 세로로 줄이 맞는다. */
   .card > .fields { padding: 4px 20px 14px; }
   /* 입력칸의 높이·테두리는 글씨를 넣는 칸의 것이다. 체크박스에 걸면 네모가 늘어난다. */
-  .fields input[type="checkbox"] { min-height: 0; width: 18px; height: 18px; margin: 12px 0; padding: 0; border: none; accent-color: var(--brand); }
+  /* 체크 표시는 base.css 의 .chk 가 그린다. 여기서는 위아래 자리만 준다. */
+  .fields .chk { margin: 12px 0; }
 
   /* 오른쪽 — 지금 설정이면 실제로 얼마가 열리는지 */
   .read { padding: 4px 18px 18px; display: flex; flex-direction: column; gap: 14px; }

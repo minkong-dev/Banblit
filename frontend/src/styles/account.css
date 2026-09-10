@@ -92,7 +92,8 @@ body[data-page="account"] {
 
   .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 22px; }
   .keep { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink-2); cursor: pointer; min-height: 44px; }
-  .keep input { width: 17px; height: 17px; accent-color: var(--brand); cursor: pointer; }
+  /* 체크 표시는 base.css 의 .chk 가 그린다. 여기서는 색만 이 화면 것으로 맞춘다. */
+  .keep .chkmark { color: var(--ink-2); }
   .row .links { display: flex; gap: 14px; }
   .row a { font-size: 13.5px; color: var(--ink-3); text-decoration: none; }
   .row a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }

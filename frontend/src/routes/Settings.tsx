@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { RefObject } from "react";
 
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
+import { CheckMark } from "../components/CheckMark";
 import { Modal } from "../components/Modal";
 import { getJSON } from "../lib/api";
 import { formError, loadState } from "../lib/loading";
@@ -269,11 +270,10 @@ function PeriodFields(props: {
       {form.kind === "focused" ? (
         <>
           <Cell label="매일" htmlFor={at("everyday")}>
-            <input
+            <CheckMark
               id={at("everyday")}
-              type="checkbox"
               checked={form.everyday}
-              onChange={(event) => setForm({ ...form, everyday: event.target.checked })}
+              onChange={(on) => setForm({ ...form, everyday: on })}
             />
           </Cell>
           <Cell label="1차 스케줄링 시간" htmlFor={at("first")}>

@@ -76,3 +76,22 @@ body { margin: 0; }
   --side: clamp(232px, 15%, 300px);
   --minw: 1060px;
 }
+
+/* 체크칸 — 브라우저 기본 네모 대신 테두리 없는 체크 표시를 세운다(components/CheckMark.tsx).
+   진짜 input 은 지우지 않고 눈에서만 감춘다. display:none 이나 visibility:hidden 으로
+   지우면 키보드가 닿지 못하고 낭독기가 읽지 못한다. */
+.chk { display: inline-flex; align-items: center; position: relative; flex: none; }
+.chk input {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  margin: 0; opacity: 0; cursor: pointer;
+}
+.chk input:disabled { cursor: default; }
+/* 끈 상태도 자리를 지킨다 — 켤 때 옆의 글자가 밀리지 않는다. */
+.chkmark {
+  width: 20px; height: 20px; flex: none;
+  color: var(--t3, currentColor); opacity: .3;
+  transition: color .15s ease, opacity .15s ease;
+}
+.chk input:checked ~ .chkmark { color: var(--brand); opacity: 1; }
+.chk input:disabled ~ .chkmark { opacity: .15; }
+.chk input:focus-visible ~ .chkmark { outline: 2px solid var(--brand); outline-offset: 3px; border-radius: 5px; }

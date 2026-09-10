@@ -98,20 +98,61 @@ function assignedByDay(rows: ScheduleRow[], teams: DayTeam[], openHour: number):
 
 /** 내가 못 나오는 시간을 날짜별로 담는다. 서버에 저장된 값을 그대로 옮긴다.
  *  받아오는 것이 내 것뿐이라 전부 내가 지울 수 있다. */
-function offByDay(times: Unavailable[], openHour: number): DayEntries {
+function offByDay(times: Unavailable[], openHour: number, days: string[]): DayEntries {
   const byDay: DayEntries = {};
   for (const item of times) {
-    (byDay[dayOf(item.starts_at)] ??= []).push({
-      kind: "off",
-      team: null,
-      who: "직접 등록",
-      a: slotIndex(item.starts_at, openHour),
-      b: slotIndex(item.ends_at, openHour),
-      removeIds: [item.id],
-    });
+    // 반복은 서버가 배정을 돌 때 풀어내지만(api/period_input.py expand_unavailable),
+    // 달력은 저장된 줄 하나만 받는다. 보이는 날짜 위에 같은 규칙으로 다시 편다 —
+    // 이것이 없으면 매주 걸어 둔 것이 첫 날에만 떠서 안 걸린 것처럼 보인다.
+    for (const day of repeatDays(item, days)) {
+      (byDay[day] ??= []).push({
+        kind: "off",
+        team: null,
+        who: item.reason ?? "직접 등록",
+        a: slotIndex(item.starts_at, openHour),
+        b: slotIndex(item.ends_at, openHour),
+        // 되풀이된 자리는 저장된 줄이 아니므로 지우지 못한다. 원본 날짜에만 번호를 싣는다.
+        removeIds: day === dayOf(item.starts_at) ? [item.id] : undefined,
+      });
+    }
   }
   return byDay;
 }
+
+/** 이 불가능 시간이 걸리는 날짜들. 반복이 아니면 시작한 날 하나뿐이다. */
+function repeatDays(item: Unavailable, days: string[]): string[] {
+  const first = dayOf(item.starts_at);
+  if (!item.repeats_daily && !item.repeats_weekly) return [first];
+
+  const step = item.repeats_daily ? 1 : 7;
+  const last = item.repeat_until;
+  return days.filter((day) => {
+    if (day < first) return false;
+    if (last !== null && day > last) return false;
+    return daysBetween(first, day) % step === 0;
+  });
+}
+
+function daysBetween(from: string, to: string): number {
+  const ms = Date.parse(`${to}T00:00:00`) - Date.parse(`${from}T00:00:00`);
+  return Math.round(ms / 86_400_000);
+}
+
+/** 지금 보고 있는 달에 그릴 수 있는 날짜 전부. 앞뒤로 한 주씩 더 잡는 것은 주 보기가
+ *  달을 걸칠 수 있어서다 — 반복을 펼 때만 쓰므로 조금 넉넉해도 괜찮다. */
+function visibleDays(year: number, month: number): string[] {
+  const first = new Date(year, month, 1 - DAYS_PER_WEEK);
+  const last = new Date(year, month + 1, DAYS_PER_WEEK);
+  const days: string[] = [];
+  for (const at = first; at <= last; at.setDate(at.getDate() + 1)) {
+    days.push(
+      `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`,
+    );
+  }
+  return days;
+}
+
+const DAYS_PER_WEEK = 7;
 
 /** 상시 개방기간 예약을 날짜별로 담는다. 서버는 한 시간짜리 칸을 하나씩 주므로 맞닿은
  *  칸을 먼저 한 건으로 이어야 사람이 보는 예약 한 번이 된다. team_id 로 실제 팀을
@@ -228,7 +269,9 @@ export function Scheduler() {
   const slotCount = slotCountOf(open, close);
 
   const assigned = assignedByDay(rows, teams, open);
-  const offEntries = offByDay(unavailableQuery.data ?? [], open);
+  const offEntries = offByDay(
+    unavailableQuery.data ?? [], open, visibleDays(cursor.year, cursor.month),
+  );
   const bookEntries = bookedByDay(reservationQuery.data?.rows ?? [], teams, open, me?.id ?? null);
 
   const entriesOf = (key: string): Entry[] =>

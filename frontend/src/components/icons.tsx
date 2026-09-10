@@ -103,6 +103,12 @@ export function ClockIcon(props: IconProps) {
   );
 }
 
+/** 테두리 없는 체크 표시. 켜고 끄는 자리에 쓴다 — 끈 상태는 자리를 지키되 흐리다.
+ *  자리가 밀리지 않게 켠 쪽과 끈 쪽이 같은 그림을 쓴다. */
+export function CheckIcon(props: IconProps) {
+  return <Stroke width={2.6} {...props}><path d="M4.5 12.5l5 5 10-11" /></Stroke>;
+}
+
 export function ArrowIcon(props: IconProps) {
   return <Stroke width={2.2} {...props}><path d="M5 12h14M13 6l6 6-6 6" /></Stroke>;
 }

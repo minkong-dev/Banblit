@@ -190,8 +190,12 @@ export type Unavailable = {
   /** "2026-09-14T18:00:00" */
   starts_at: string;
   ends_at: string;
+  /** 매일과 매주는 함께 켜지지 않는다. 둘 다 거짓이면 그 날 한 번뿐이다. */
+  repeats_daily: boolean;
   repeats_weekly: boolean;
   repeat_until: string | null;
+  /** 사람이 적은 사유. 안 적으면 null. */
+  reason: string | null;
 };
 
 export type Reservation = {
