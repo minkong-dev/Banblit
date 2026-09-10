@@ -6,6 +6,7 @@ from backend.scheduling.pipeline import Room as EngineRoom
 from backend.scheduling.pipeline import Team as EngineTeam
 from backend.scheduling.pipeline import TimeInterval, generate_slots
 
+DAY = timedelta(days=1)
 WEEK = timedelta(days=7)
 
 
@@ -22,7 +23,8 @@ def expand_unavailable(
 ) -> list[TimeInterval]:
     """불가능시간을 기간 안에 실제로 걸리는 구간들로 풀어낸다.
 
-    매주 반복이면 7일 간격으로 되풀이하되, 반복 종료일이 있으면 그 날짜까지만 만든다.
+    매일 반복이면 1일, 매주 반복이면 7일 간격으로 되풀이하되, 반복 종료일이 있으면
+    그 날짜까지만 만든다.
     기간과 조금도 겹치지 않는 구간은 버린다 — 엔진에 넘겨도 아무 영향이 없다.
     """
     expanded: list[TimeInterval] = []
@@ -37,7 +39,8 @@ def expand_unavailable(
 
 
 def _occurrences(row: UnavailableTime, window_end: datetime) -> list[datetime]:
-    if not bool(row.repeats_weekly):
+    step = _repeat_step(row)
+    if step is None:
         return [row.starts_at]
 
     limit = window_end
@@ -49,8 +52,21 @@ def _occurrences(row: UnavailableTime, window_end: datetime) -> list[datetime]:
     current = row.starts_at
     while current < limit:
         starts.append(current)
-        current += WEEK
+        current += step
     return starts
+
+
+def _repeat_step(row: UnavailableTime) -> timedelta | None:
+    """되풀이 간격. 반복이 아니면 None.
+
+    세션에 넣지 않은 객체는 기본값이 아직 적용되지 않아 None 일 수 있으므로
+    bool() 로 받는다. 둘 다 켜진 줄은 경계에서 막으므로 여기서는 매일을 먼저 본다.
+    """
+    if bool(row.repeats_daily):
+        return DAY
+    if bool(row.repeats_weekly):
+        return WEEK
+    return None
 
 
 def build_engine_rooms(rooms: list[Room], days: list[date]) -> list[EngineRoom]:

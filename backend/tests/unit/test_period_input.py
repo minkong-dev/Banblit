@@ -21,11 +21,13 @@ def _row(
     ends_at: datetime,
     repeats_weekly: bool = False,
     repeat_until: date | None = None,
+    repeats_daily: bool = False,
 ) -> UnavailableTime:
     return UnavailableTime(
         member_id=1,
         starts_at=starts_at,
         ends_at=ends_at,
+        repeats_daily=repeats_daily,
         repeats_weekly=repeats_weekly,
         repeat_until=repeat_until,
     )
@@ -71,6 +73,43 @@ def test_weekly_repeat_fills_every_seventh_day_inside_the_window() -> None:
         datetime(2026, 8, 10, 19, 0),
     ]
     assert all(i.end - i.start == rows[0].ends_at - rows[0].starts_at for i in result)
+
+
+def test_daily_repeat_fills_every_day_inside_the_window() -> None:
+    rows = [
+        _row(
+            datetime(2026, 8, 12, 19, 0),
+            datetime(2026, 8, 12, 21, 0),
+            repeats_daily=True,
+        )
+    ]
+
+    result = expand_unavailable(rows, WINDOW_START, WINDOW_END)
+
+    assert [i.start for i in result] == [
+        datetime(2026, 8, 12, 19, 0),
+        datetime(2026, 8, 13, 19, 0),
+        datetime(2026, 8, 14, 19, 0),
+    ]
+
+
+def test_daily_repeat_stops_at_its_repeat_until_date() -> None:
+    rows = [
+        _row(
+            datetime(2026, 8, 3, 19, 0),
+            datetime(2026, 8, 3, 21, 0),
+            repeats_daily=True,
+            repeat_until=date(2026, 8, 5),
+        )
+    ]
+
+    result = expand_unavailable(rows, WINDOW_START, WINDOW_END)
+
+    assert [i.start for i in result] == [
+        datetime(2026, 8, 3, 19, 0),
+        datetime(2026, 8, 4, 19, 0),
+        datetime(2026, 8, 5, 19, 0),
+    ]
 
 
 def test_weekly_repeat_stops_at_its_repeat_until_date() -> None:
