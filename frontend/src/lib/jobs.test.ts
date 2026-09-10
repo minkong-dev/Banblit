@@ -32,7 +32,7 @@ describe("awaitJob", () => {
 
   it("사유 없이 실패하면 사람이 읽을 문장을 대신 올린다", async () => {
     const read = vi.fn().mockResolvedValue(job("failed"));
-    await expect(awaitJob("j1", read, nowait, () => 0)).rejects.toThrow("계산하지 못했습니다");
+    await expect(awaitJob("j1", read, nowait, () => 0)).rejects.toThrow("연산을 진행하지 못했어요.");
   });
 
   it("정해둔 시각을 넘기면 기다리기를 그만둔다", async () => {
@@ -40,12 +40,12 @@ describe("awaitJob", () => {
     let clock = 0;
     const tick = () => { clock += JOB_DEADLINE_MS / 2; return Promise.resolve(); };
     await expect(awaitJob("j1", read, tick, () => clock)).rejects.toThrow(
-      `계산이 ${JOB_DEADLINE_MS / 1000}초 안에 끝나지 않았습니다`,
+      `스케줄링 엔진이 ${JOB_DEADLINE_MS / 1000}초 안에 연산되지 않았어요.`,
     );
   });
 
   it("결과가 비어 있는 done 은 결과 없음으로 올린다", async () => {
     const read = vi.fn().mockResolvedValue(job("done"));
-    await expect(awaitJob("j1", read, nowait, () => 0)).rejects.toThrow("계산 결과가 비어 있습니다");
+    await expect(awaitJob("j1", read, nowait, () => 0)).rejects.toThrow("연산된 결과를 받지 못했어요.");
   });
 });

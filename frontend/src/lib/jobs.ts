@@ -29,14 +29,14 @@ export async function awaitJob<T>(
   for (;;) {
     const { job } = await read(jobId);
     if (job.status === "done") {
-      if (job.result === null) throw new Error("계산 결과가 비어 있습니다");
+      if (job.result === null) throw new Error("연산된 결과를 받지 못했어요.");
       return job.result;
     }
     if (job.status === "failed") {
-      throw new Error(job.error ?? "계산하지 못했습니다");
+      throw new Error(job.error ?? "연산을 진행하지 못했어요.");
     }
     if (now() >= until) {
-      throw new Error(`계산이 ${JOB_DEADLINE_MS / 1000}초 안에 끝나지 않았습니다`);
+      throw new Error(`스케줄링 엔진이 ${JOB_DEADLINE_MS / 1000}초 안에 연산되지 않았어요.`);
     }
     await wait(JOB_POLL_MS);
   }
