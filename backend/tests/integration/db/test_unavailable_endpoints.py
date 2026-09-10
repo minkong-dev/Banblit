@@ -98,8 +98,72 @@ def test_unavailable_time_is_created_with_on_the_hour_bounds(
     assert body["member_id"] == owner_id
     assert body["starts_at"] == "2026-09-14T18:00:00"
     assert body["ends_at"] == "2026-09-14T20:00:00"
+    assert body["repeats_daily"] is False
     assert body["repeats_weekly"] is False
     assert body["repeat_until"] is None
+    assert body["reason"] is None
+
+
+def test_unavailable_time_keeps_the_reason_it_was_given(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    owner_id, owner = account("이도현", "dohyun@example.com")
+
+    response = api_client.post(
+        f"/members/{owner_id}/unavailable",
+        json={
+            "starts_at": "2026-09-14T18:00:00",
+            "ends_at": "2026-09-14T20:00:00",
+            "repeats_daily": True,
+            "reason": "  기말고사  ",
+        },
+        cookies=owner,
+    )
+
+    assert response.status_code == 201
+    body = response.json()["time"]
+    assert body["repeats_daily"] is True
+    # 앞뒤 공백은 걷어낸다.
+    assert body["reason"] == "기말고사"
+
+
+def test_unavailable_time_with_a_blank_reason_stores_nothing(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    owner_id, owner = account("이도현", "dohyun@example.com")
+
+    response = api_client.post(
+        f"/members/{owner_id}/unavailable",
+        json={
+            "starts_at": "2026-09-14T18:00:00",
+            "ends_at": "2026-09-14T20:00:00",
+            "reason": "   ",
+        },
+        cookies=owner,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["time"]["reason"] is None
+
+
+def test_unavailable_time_creation_rejects_daily_and_weekly_together(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    owner_id, owner = account("이도현", "dohyun@example.com")
+
+    response = api_client.post(
+        f"/members/{owner_id}/unavailable",
+        json={
+            "starts_at": "2026-09-14T18:00:00",
+            "ends_at": "2026-09-14T20:00:00",
+            "repeats_daily": True,
+            "repeats_weekly": True,
+        },
+        cookies=owner,
+    )
+
+    assert response.status_code == 422
+    assert "함께 켤 수 없습니다" in response.json()["detail"]
 
 
 def test_unavailable_time_creation_rejects_off_grid_minutes(

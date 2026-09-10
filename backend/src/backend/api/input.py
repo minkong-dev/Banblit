@@ -141,8 +141,14 @@ def require_within_room_hours(
         raise ValueError("합주실 운영 시간 안에서만 예약할 수 있습니다")
 
 
-def require_repeat_until_only_when_weekly(
-    repeats_weekly: bool, repeat_until: date | None
+def require_one_repeat_cycle(repeats_daily: bool, repeats_weekly: bool) -> None:
+    """매일과 매주를 한꺼번에 켜는 것을 막는다. 둘 다 끄면 한 번짜리 일정이다."""
+    if repeats_daily and repeats_weekly:
+        raise ValueError("매일 반복과 매주 반복을 함께 켤 수 없습니다")
+
+
+def require_repeat_until_only_when_repeating(
+    repeats_daily: bool, repeats_weekly: bool, repeat_until: date | None
 ) -> None:
-    if not repeats_weekly and repeat_until is not None:
-        raise ValueError("매주 반복이 아니면 반복 종료일을 넣을 수 없습니다")
+    if not repeats_daily and not repeats_weekly and repeat_until is not None:
+        raise ValueError("반복이 아니면 반복 종료일을 넣을 수 없습니다")

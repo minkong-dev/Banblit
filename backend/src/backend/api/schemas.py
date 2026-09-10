@@ -401,8 +401,10 @@ class UnavailableOut(BaseModel):
     member_id: int
     starts_at: datetime
     ends_at: datetime
+    repeats_daily: bool
     repeats_weekly: bool
     repeat_until: date | None
+    reason: str | None
 
 
 class UnavailableTimesOut(BaseModel):
@@ -416,8 +418,11 @@ class UnavailableEnvelopeOut(BaseModel):
 class UnavailableCreateIn(BaseModel):
     starts_at: datetime
     ends_at: datetime
+    repeats_daily: bool = False
     repeats_weekly: bool = False
     repeat_until: date | None = None
+    # 사유는 사람이 적는 한 줄이다. 안 적어도 등록된다.
+    reason: str | None = Field(default=None, max_length=200)
 
 
 class ReservationOut(BaseModel):

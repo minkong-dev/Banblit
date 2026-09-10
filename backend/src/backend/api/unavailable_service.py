@@ -4,7 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.api.input import (
-    require_repeat_until_only_when_weekly,
+    require_one_repeat_cycle,
+    require_repeat_until_only_when_repeating,
     require_valid_slot_bounds,
 )
 from backend.db.models import Member, UnavailableTime
@@ -39,20 +40,26 @@ def create_unavailable(
     requester: Member,
     starts_at: datetime,
     ends_at: datetime,
+    repeats_daily: bool,
     repeats_weekly: bool,
     repeat_until: date | None,
+    reason: str | None,
 ) -> UnavailableTime:
     """못 나오는 시간 하나를 만든다. 경계에서 주인·시간대·격자·반복 조합을 거절한다."""
     _require_self(member_id, requester)
     require_valid_slot_bounds(starts_at, ends_at)
-    require_repeat_until_only_when_weekly(repeats_weekly, repeat_until)
+    require_one_repeat_cycle(repeats_daily, repeats_weekly)
+    require_repeat_until_only_when_repeating(repeats_daily, repeats_weekly, repeat_until)
 
     row = UnavailableTime(
         member_id=member_id,
         starts_at=starts_at,
         ends_at=ends_at,
+        repeats_daily=repeats_daily,
         repeats_weekly=repeats_weekly,
         repeat_until=repeat_until,
+        # 공백만 적은 것은 안 적은 것과 같게 둔다 — 화면에 빈 줄이 뜨지 않는다.
+        reason=(reason or "").strip() or None,
     )
     session.add(row)
     session.commit()

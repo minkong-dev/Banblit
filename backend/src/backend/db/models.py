@@ -11,6 +11,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    String,
     Text,
     Time,
     UniqueConstraint,
@@ -185,9 +186,15 @@ class TeamSlot(Base):
 
 
 class UnavailableTime(Base):
-    """멤버의 불가능 시간. repeats_weekly가 켜지면 repeat_until까지 매주 반복.
+    """멤버의 불가능 시간. 반복이 켜지면 repeat_until까지 매일 또는 매주 되풀이한다.
 
     시각은 시간대 없는 값으로 저장한다 — 엔진의 TimeInterval 계약과 동일.
+
+    반복은 두 값이 갈라 가진다. 둘 다 켜는 것은 뜻이 없으므로 경계에서 막는다
+    (api/input.py require_one_repeat_cycle). 하나의 열로 합치지 않는 것은 이미
+    repeats_weekly 로 저장된 줄이 있어서다.
+
+    reason 은 사람이 적는 사유다. 엔진은 보지 않고 화면에만 쓴다 — 비워 둘 수 있다.
     """
 
     __tablename__ = "unavailable_times"
@@ -198,8 +205,10 @@ class UnavailableTime(Base):
     )
     starts_at: Mapped[datetime] = mapped_column(DateTime)
     ends_at: Mapped[datetime] = mapped_column(DateTime)
+    repeats_daily: Mapped[bool] = mapped_column(Boolean, default=False)
     repeats_weekly: Mapped[bool] = mapped_column(Boolean, default=False)
     repeat_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
     __table_args__ = (CheckConstraint("ends_at > starts_at"),)
 

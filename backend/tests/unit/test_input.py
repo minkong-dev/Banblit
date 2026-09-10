@@ -18,7 +18,8 @@ from backend.api.input import (
     require_non_empty,
     require_on_the_hour,
     require_password,
-    require_repeat_until_only_when_weekly,
+    require_one_repeat_cycle,
+    require_repeat_until_only_when_repeating,
     require_same_day,
     require_valid_kind,
     require_valid_slot_bounds,
@@ -235,16 +236,32 @@ def test_rejects_timezone_aware_moments() -> None:
 
 
 def test_allows_repeat_until_when_repeating_weekly() -> None:
-    require_repeat_until_only_when_weekly(True, date(2026, 12, 31))
+    require_repeat_until_only_when_repeating(False, True, date(2026, 12, 31))
+
+
+def test_allows_repeat_until_when_repeating_daily() -> None:
+    require_repeat_until_only_when_repeating(True, False, date(2026, 12, 31))
 
 
 def test_allows_no_repeat_until_when_not_repeating() -> None:
-    require_repeat_until_only_when_weekly(False, None)
+    require_repeat_until_only_when_repeating(False, False, None)
 
 
-def test_rejects_repeat_until_when_not_repeating_weekly() -> None:
+def test_rejects_repeat_until_when_not_repeating() -> None:
     with pytest.raises(ValueError, match="반복"):
-        require_repeat_until_only_when_weekly(False, date(2026, 12, 31))
+        require_repeat_until_only_when_repeating(False, False, date(2026, 12, 31))
+
+
+def test_allows_one_repeat_cycle() -> None:
+    require_one_repeat_cycle(True, False)
+    require_one_repeat_cycle(False, True)
+    require_one_repeat_cycle(False, False)
+
+
+def test_rejects_daily_and_weekly_together() -> None:
+    with pytest.raises(ValueError, match="함께 켤 수 없습니다"):
+        require_one_repeat_cycle(True, True)
+
 
 def test_require_team_name_rejects_an_empty_string() -> None:
     with pytest.raises(ValueError, match="팀 이름"):
