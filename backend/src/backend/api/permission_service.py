@@ -1,3 +1,5 @@
+from typing import NamedTuple
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -54,29 +56,41 @@ def account_permissions(session: Session, member_id: int) -> list[str]:
     return [name for name in PERMISSIONS if name in granted]
 
 
-def list_permission_sets(session: Session) -> list[tuple[PermissionSet, list[int]]]:
-    """permission set 을 id 오름차순으로, 그 permission set 을 가진 사람 번호와 함께 돌려준다."""
-    holders: dict[int, list[int]] = {}
+class SetMember(NamedTuple):
+    """permission set 을 가진 사람. 번호와 이름을 함께 들고 다닌다.
+
+    이름까지 싣는 것은 화면이 번호를 이름으로 바꾸지 않게 하려는 것이다 — 화면이 가진
+    사람 목록은 쪽 단위로 받으므로, 아직 받지 않은 쪽에 있는 사람은 이름이 비어 버린다.
+    """
+
+    id: int
+    name: str
+
+
+def list_permission_sets(session: Session) -> list[tuple[PermissionSet, list[SetMember]]]:
+    """permission set 을 id 오름차순으로, 그 permission set 을 가진 사람과 함께 돌려준다."""
+    holders: dict[int, list[SetMember]] = {}
     rows = session.execute(
-        select(MemberPermissionSet.permission_set_id, MemberPermissionSet.member_id)
-        .order_by(MemberPermissionSet.member_id)
+        select(MemberPermissionSet.permission_set_id, Member.id, Member.name)
+        .join(Member, Member.id == MemberPermissionSet.member_id)
+        .order_by(Member.id)
     ).all()
-    for set_id, member_id in rows:
-        holders.setdefault(set_id, []).append(member_id)
+    for set_id, member_id, name in rows:
+        holders.setdefault(set_id, []).append(SetMember(member_id, name))
 
     sets = session.scalars(select(PermissionSet).order_by(PermissionSet.id)).all()
     return [(row, holders.get(row.id, [])) for row in sets]
 
 
-def set_holders(session: Session, set_id: int) -> list[int]:
-    """set_id permission set 을 가진 사람 번호를 오름차순으로 돌려준다."""
-    return list(
-        session.scalars(
-            select(MemberPermissionSet.member_id)
-            .where(MemberPermissionSet.permission_set_id == set_id)
-            .order_by(MemberPermissionSet.member_id)
-        ).all()
-    )
+def set_holders(session: Session, set_id: int) -> list[SetMember]:
+    """set_id permission set 을 가진 사람을 번호 오름차순으로 돌려준다."""
+    rows = session.execute(
+        select(Member.id, Member.name)
+        .join(MemberPermissionSet, MemberPermissionSet.member_id == Member.id)
+        .where(MemberPermissionSet.permission_set_id == set_id)
+        .order_by(Member.id)
+    ).all()
+    return [SetMember(member_id, name) for member_id, name in rows]
 
 
 def create_permission_set(

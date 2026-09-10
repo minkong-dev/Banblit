@@ -138,7 +138,8 @@ def test_permission_grant_holder_changes_their_own_set(
 
     assert changed.status_code == 200, changed.text
     assert _my_permissions(api_client, head) == ["permission_grant"]
-    assert head_id in changed.json()["permission_set"]["member_ids"]
+    holders = changed.json()["permission_set"]["members"]
+    assert head_id in [one["id"] for one in holders]
 
 
 def test_permission_grant_holder_drops_their_own_set(
@@ -236,5 +237,5 @@ def test_the_listing_shows_who_holds_each_set(
 
     listed = api_client.get("/permission-sets", cookies=head).json()["permission_sets"]
 
-    holders = {row["id"]: row["member_ids"] for row in listed}
-    assert holders[rooms_set] == [member_id]
+    holders = {row["id"]: row["members"] for row in listed}
+    assert holders[rooms_set] == [{"id": member_id, "name": "멤버"}]
