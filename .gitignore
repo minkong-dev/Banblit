@@ -10,11 +10,6 @@ trash/
 # 예외: 비밀값 없는 견본 파일은 커밋한다
 !.env.example
 
-# superpowers 산출물. 2026-08-27 하네스 정리로 폐지했다 — 플러그인을 쓰지 않는다.
-# 파일은 디스크에 그대로 남아 있고, 정본은 .cluedoc/ 이다.
-docs/
-.superpowers/
-
 # 파이썬 산출물 (가상환경·캐시)
 .venv/
 __pycache__/

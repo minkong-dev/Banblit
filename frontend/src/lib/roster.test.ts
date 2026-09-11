@@ -31,12 +31,12 @@ describe("teamNameMessage", () => {
 
 describe("slotCountsMessage", () => {
   it("한 자리도 고르지 않았으면 고르라고 한다", () => {
-    expect(slotCountsMessage({ 보컬: 0, 드럼: 0 })).toBe("악기를 하나 이상 골라 주세요.");
+    expect(slotCountsMessage({ 보컬: 0, 드럼: 0 })).toBe("포지션을 한 자리 이상 추가해주세요.");
   });
 
   it("열 자리를 넘으면 막는다", () => {
     // 배정 계산이 팀당 10명까지만 받는다 — 더 만들어도 못 쓴다.
-    expect(slotCountsMessage({ 보컬: 6, 일렉: 5 })).toBe("한 팀의 자리는 10개까지입니다.");
+    expect(slotCountsMessage({ 보컬: 6, 일렉: 5 })).toBe("팀 당 10 자리의 포지션까지만 추가가 가능해요.");
   });
 
   it("딱 열 자리는 통과한다", () => {

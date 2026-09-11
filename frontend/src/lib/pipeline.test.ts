@@ -172,7 +172,7 @@ describe("checkAttachments", () => {
       { name: "악보.pdf", size: 1024 },
       { name: "설치.exe", size: 1024 },
     ])).toBe(
-      "설치.exe: 올릴 수 없는 형식입니다. 사진·소리·영상과 문서(md, txt, pdf, docx, ppt, pptx, hwp, xlsx, zip)만 올릴 수 있습니다.",
+      "설치.exe: 지원하지 않는 파일 형식이에요. 파일명을 확인해주세요.",
     );
   });
 

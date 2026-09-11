@@ -26,9 +26,9 @@ export function openHoursMessage(opens: string, closes: string): string {
 
   const from = minutesOf(opens);
   const to = minutesOf(closes);
-  if (from === null || !onGrid(from)) return "여는 시각은 정시여야 합니다.";
-  if (to === null || !onGrid(to)) return "닫는 시각은 정시여야 합니다.";
-  if (to <= from) return "닫는 시각은 여는 시각보다 늦어야 합니다.";
+  if (from === null || !onGrid(from)) return "개방 시간은 정각 기준으로 지정해주세요.";
+  if (to === null || !onGrid(to)) return "마감 시간은 정각 기준으로 지정해주세요.";
+  if (to <= from) return "마감 시간은 개방 시간보다 빠를 수 없어요.";
   return "";
 }
 
@@ -37,11 +37,11 @@ export function roomNameMessage(name: string, taken: string[]): string {
 }
 
 export function dateRangeMessage(from: string, to: string): string {
-  if (!from) return "시작하는 날을 골라 주세요.";
-  if (!to) return "끝나는 날을 골라 주세요.";
+  if (!from) return "시작일을 지정해주세요.";
+  if (!to) return "종료일을 지정해주세요.";
   // from·to 를 글자 그대로 견준다. "YYYY-MM-DD" 는 사전 순서가 곧 날짜 순서다.
   // Date 로 바꾸지 않는다 — 브라우저가 제 시간대를 끼워 넣어 하루씩 밀 수 있다.
-  return to < from ? "끝나는 날은 시작하는 날보다 빠를 수 없습니다." : "";
+  return to < from ? "종료일은 시작일보다 빠를 수 없어요." : "";
 }
 
 export function slotsBetween(opens: string, closes: string): number {

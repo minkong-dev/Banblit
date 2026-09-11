@@ -22,7 +22,7 @@ const BOXES = [
     unit: "예약 확정까지 소모되는 단계",
   },
   {
-    rail: "Calender Fix Engine",
+    rail: "Calendar Fix Engine",
     title: ["모두가 맞는 시간이 없어도", "새로 계산하지 않도록"],
     body: "한 명만 빼고 진행하면 가능한 날도 있으니까요. 그런 상황도 모두 엔진이 연산해서 제공해드리니, 확인해보시고 결정만 해주시면 돼요.",
     num: "2회",
@@ -106,7 +106,7 @@ export function Landing() {
         <button className="x" aria-label="메뉴 닫기" popoverTarget={MENU_ID} popoverTargetAction="hide">
           <CloseIcon />
         </button>
-        <a href="#how">TITLE</a>
+        <a href="#how">BANBLIT</a>
         <a href="#auto">HOW IT WORKS</a>
         <a href="#admin">FOR MANAGERS</a>
         <Link to="/login">JOIN IN</Link>
@@ -115,7 +115,7 @@ export function Landing() {
       <section className="hero">
         <div>
           <h1>
-            합주실 예약, 어렵지 않을 때도 됐으니까.<br />
+            합주시간 배정, 어렵지 않을 때도 됐으니까.<br />
             지금, <span className="mark">BANBLIT.</span>
           </h1>
           <p className="sub">세상 쉬운 합주 일정 관리, Banblit</p>

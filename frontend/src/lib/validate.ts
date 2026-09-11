@@ -51,8 +51,8 @@ export function cohortMessage(value: string): string {
   const trimmed = value.trim();
   if (!trimmed) return "기수를 입력해 주세요.";
   const cohort = Number(trimmed);
-  if (!Number.isInteger(cohort) || cohort < 1 || cohort > 200) {
-    return "기수는 1에서 200 사이의 숫자여야 해요.";
+  if (!Number.isInteger(cohort) || cohort < 1 || cohort > 100) {
+    return "기수는 1에서 100 사이의 숫자여야 해요.";
   }
   return "";
 }
