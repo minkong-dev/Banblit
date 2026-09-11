@@ -9,13 +9,13 @@ describe("openHoursMessage", () => {
   });
 
   it("정시가 아니면 사유를 돌려준다", () => {
-    expect(openHoursMessage("18:20", "23:00")).toBe("여는 시각은 정시여야 합니다.");
-    expect(openHoursMessage("18:00", "22:45")).toBe("닫는 시각은 정시여야 합니다.");
+    expect(openHoursMessage("18:20", "23:00")).toBe("개방 시간은 정각 기준으로 지정해주세요.");
+    expect(openHoursMessage("18:00", "22:45")).toBe("마감 시간은 정각 기준으로 지정해주세요.");
   });
 
   it("닫는 시각이 여는 시각보다 늦어야 한다", () => {
-    expect(openHoursMessage("23:00", "18:00")).toBe("닫는 시각은 여는 시각보다 늦어야 합니다.");
-    expect(openHoursMessage("18:00", "18:00")).toBe("닫는 시각은 여는 시각보다 늦어야 합니다.");
+    expect(openHoursMessage("23:00", "18:00")).toBe("마감 시간은 개방 시간보다 빠를 수 없어요.");
+    expect(openHoursMessage("18:00", "18:00")).toBe("마감 시간은 개방 시간보다 빠를 수 없어요.");
   });
 
   it("비어 있으면 채워 달라고 한다", () => {
@@ -47,7 +47,7 @@ describe("roomNameMessage", () => {
 describe("dateRangeMessage", () => {
   it("끝이 시작보다 빠르면 받지 않는다", () => {
     expect(dateRangeMessage("2026-09-27", "2026-09-14"))
-      .toBe("끝나는 날은 시작하는 날보다 빠를 수 없습니다.");
+      .toBe("종료일은 시작일보다 빠를 수 없어요.");
   });
 
   it("하루짜리 기간은 통과한다", () => {
@@ -55,8 +55,8 @@ describe("dateRangeMessage", () => {
   });
 
   it("비어 있으면 채워 달라고 한다", () => {
-    expect(dateRangeMessage("", "2026-09-14")).toBe("시작하는 날을 골라 주세요.");
-    expect(dateRangeMessage("2026-09-14", "")).toBe("끝나는 날을 골라 주세요.");
+    expect(dateRangeMessage("", "2026-09-14")).toBe("시작일을 지정해주세요.");
+    expect(dateRangeMessage("2026-09-14", "")).toBe("종료일을 지정해주세요.");
   });
 });
 

@@ -10,7 +10,7 @@ import {
 
 describe("titleMessage", () => {
   it("비어 있으면 채워 달라고 한다", () => {
-    expect(titleMessage("   ")).toBe("제목을 입력해 주세요.");
+    expect(titleMessage("   ")).toBe("제목을 입력해주세요.");
   });
 
   it("200자까지는 통과한다", () => {
@@ -18,17 +18,17 @@ describe("titleMessage", () => {
   });
 
   it("200자를 넘으면 사유를 돌려준다", () => {
-    expect(titleMessage("가".repeat(201))).toBe("제목은 200자를 넘을 수 없습니다.");
+    expect(titleMessage("가".repeat(201))).toBe("제목은 200자 이내로 작성해주세요.");
   });
 });
 
 describe("bodyMessage", () => {
   it("비어 있으면 채워 달라고 한다", () => {
-    expect(bodyMessage("")).toBe("내용을 입력해 주세요.");
+    expect(bodyMessage("")).toBe("내용을 입력해주세요.");
   });
 
   it("20000자를 넘으면 사유를 돌려준다", () => {
-    expect(bodyMessage("가".repeat(20001))).toBe("내용은 20000자를 넘을 수 없습니다.");
+    expect(bodyMessage("가".repeat(20001))).toBe("내용은 20000자 이내로 작성해주세요.");
   });
 
   it("20000자까지는 통과한다", () => {
@@ -38,11 +38,11 @@ describe("bodyMessage", () => {
 
 describe("commentMessage", () => {
   it("비어 있으면 채워 달라고 한다", () => {
-    expect(commentMessage("  ")).toBe("댓글을 입력해 주세요.");
+    expect(commentMessage("  ")).toBe("댓글을 입력해주세요.");
   });
 
   it("2000자를 넘으면 사유를 돌려준다", () => {
-    expect(commentMessage("가".repeat(2001))).toBe("댓글은 2000자를 넘을 수 없습니다.");
+    expect(commentMessage("가".repeat(2001))).toBe("댓글은 2000자 이내로 작성해주세요.");
   });
 
   it("2000자까지는 통과한다", () => {
@@ -82,13 +82,13 @@ describe("attachmentMessage", () => {
 
   it("상한을 넘으면 상한과 이 파일의 크기를 함께 알린다", () => {
     expect(attachmentMessage("공연.mp4", 400 * 1024 * 1024)).toBe(
-      "파일 하나는 300MB까지 올릴 수 있습니다. 이 파일은 400MB입니다.",
+      "파일 당 업로드 가능한 크기는 300MB 이하만 가능해요. 해당 파일은 400MB 에요.",
     );
   });
 
   it("허용하지 않는 확장자면 무엇이 되는지 알린다", () => {
     expect(attachmentMessage("설치.exe", 1024)).toBe(
-      "올릴 수 없는 형식입니다. 사진·소리·영상과 문서(md, txt, pdf, docx, ppt, pptx, hwp, xlsx, zip)만 올릴 수 있습니다.",
+      "지원하지 않는 파일 형식이에요. 파일명을 확인해주세요.",
     );
   });
 

@@ -6,18 +6,18 @@ const BODY_MAX = 20000;
 const COMMENT_MAX = 2000;
 
 export function titleMessage(title: string): string {
-  if (!title.trim()) return "제목을 입력해 주세요.";
-  return title.length > TITLE_MAX ? `제목은 ${TITLE_MAX}자를 넘을 수 없습니다.` : "";
+  if (!title.trim()) return "제목을 입력해주세요.";
+  return title.length > TITLE_MAX ? `제목은 ${TITLE_MAX}자 이내로 작성해주세요.` : "";
 }
 
 export function bodyMessage(body: string): string {
-  if (!body.trim()) return "내용을 입력해 주세요.";
-  return body.length > BODY_MAX ? `내용은 ${BODY_MAX}자를 넘을 수 없습니다.` : "";
+  if (!body.trim()) return "내용을 입력해주세요.";
+  return body.length > BODY_MAX ? `내용은 ${BODY_MAX}자 이내로 작성해주세요.` : "";
 }
 
 export function commentMessage(body: string): string {
-  if (!body.trim()) return "댓글을 입력해 주세요.";
-  return body.length > COMMENT_MAX ? `댓글은 ${COMMENT_MAX}자를 넘을 수 없습니다.` : "";
+  if (!body.trim()) return "댓글을 입력해주세요.";
+  return body.length > COMMENT_MAX ? `댓글은 ${COMMENT_MAX}자 이내로 작성해주세요.` : "";
 }
 
 // ===== 첨부파일 =====
@@ -35,7 +35,7 @@ const ALLOWED_EXTENSIONS = new Set([
 
 // 사람에게 보여주는 형식 목록. 위 ALLOWED_EXTENSIONS 를 다 적으면 읽기 어려워
 // 흔한 것만 적는다. 두 자리에서 서로 다르게 적히던 것을 여기 하나로 모았다.
-const ALLOWED_TEXT = "사진·소리·영상과 문서(md, txt, pdf, docx, ppt, pptx, hwp, xlsx, zip)";
+const ALLOWED_TEXT = "이미지, 소리파일, 영상, 문서(md, txt, pdf, docx, ppt, pptx, hwp, xlsx, zip)";
 
 /** <input type="file"> 의 accept 에 그대로 넣는 값. 허용 확장자를 적는 자리를 하나로 유지한다.
  *  고르는 창을 걸러 줄 뿐이라 검사를 대신하지 못한다 — 사람은 "모든 파일"을 골라 넘길 수 있다. */
@@ -45,7 +45,7 @@ const SIZE_UNITS = ["B", "KB", "MB", "GB"];
 
 /** 파일을 고르기 전에 보여주는 안내. 상한을 글로 다시 적지 않고 위 값에서 만든다. */
 export const ATTACHMENT_HINT =
-  `파일 하나에 ${fileSizeLabel(MAX_ATTACHMENT_BYTES)}까지, ${ALLOWED_TEXT}를 올릴 수 있습니다.`;
+  `파일당 업로드 가능한 크기는 ${fileSizeLabel(MAX_ATTACHMENT_BYTES)} 이하만 가능해요. 또한, ${ALLOWED_TEXT} 형식의 파일만 업로드 가능해요.`;
 
 export function fileSizeLabel(bytes: number): string {
   // 1024로 나눌 수 있을 때까지 나누고 단위를 한 칸씩 올려, 사람이 읽는 크기로 만든다.
@@ -64,11 +64,11 @@ export function attachmentMessage(name: string, size: number): string {
   const dot = name.lastIndexOf(".");
   const extension = dot > 0 ? name.slice(dot + 1).toLowerCase() : "";
   if (!ALLOWED_EXTENSIONS.has(extension)) {
-    return `올릴 수 없는 형식입니다. ${ALLOWED_TEXT}만 올릴 수 있습니다.`;
+    return `지원하지 않는 파일 형식이에요. 파일명을 확인해주세요.`;
   }
   if (size > MAX_ATTACHMENT_BYTES) {
-    return `파일 하나는 ${fileSizeLabel(MAX_ATTACHMENT_BYTES)}까지 올릴 수 있습니다.`
-      + ` 이 파일은 ${fileSizeLabel(size)}입니다.`;
+    return `파일 당 업로드 가능한 크기는 ${fileSizeLabel(MAX_ATTACHMENT_BYTES)} 이하만 가능해요.`
+      + ` 해당 파일은 ${fileSizeLabel(size)} 에요.`;
   }
   return "";
 }

@@ -14,9 +14,9 @@ export function teamNameMessage(name: string, taken: string[]): string {
 /** 악기마다 몇 자리인지 정한 것을 보내기 전에 거른다. 서버도 같은 것을 다시 거른다. */
 export function slotCountsMessage(counts: Record<string, number>): string {
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
-  if (total === 0) return "악기를 하나 이상 골라 주세요.";
+  if (total === 0) return "포지션을 한 자리 이상 추가해주세요.";
   if (total > MAX_SLOTS_PER_TEAM) {
-    return `한 팀의 자리는 ${MAX_SLOTS_PER_TEAM}개까지입니다.`;
+    return `팀 당 ${MAX_SLOTS_PER_TEAM} 자리의 포지션까지만 추가가 가능해요.`;
   }
   return "";
 }

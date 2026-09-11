@@ -6,7 +6,7 @@ import type { Notification } from "./contract";
 
 // 종류가 늘면 이 표에 한 줄을 더한다.
 const TEXT: Record<string, string> = {
-  assignment_updated: "합주일정이 업데이트 되었어요.",
+  assignment_updated: "합주 일정이 업데이트 되었어요.",
 };
 
 export function notificationText(kind: string): string {
