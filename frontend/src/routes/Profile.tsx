@@ -21,7 +21,7 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
     })),
   });
 
-  /** 명단에서 찾은 나입니다. 기수를 기입합니다. 못 찾았거나 기수가 없을 경우 그 사유를 기입합니다. */
+  /** 명단에서 찾은 나입니다. 기수를 표시합니다. 찾지 못했거나 기수가 없을 경우 그 사유를 표시합니다. */
   function cohortText(mine: Member | undefined): string {
     if (mine === undefined) return "멤버 리스트에서 찾지 못했어요";
     return mine.cohort === null ? "기수 없음" : `${mine.cohort}기`;
@@ -36,7 +36,7 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
   });
 }
 
-/** 프로필을 표시합니다. 내 이름과 소속 팀별 포지션을 보여줍니다. 수정하는 endpoint(통신 지점)가 미구현입니다. */
+/** 프로필을 표시합니다. 내 이름과 소속 팀별 포지션을 표시합니다. 수정하는 endpoint(API의 요청 주소 단위)는 미구현입니다. */
 export function Profile() {
   const { me, teamIds, teams } = useMe();
   const affiliations = useMyAffiliations(me, teamIds, teams);

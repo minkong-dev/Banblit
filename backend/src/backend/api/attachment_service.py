@@ -18,7 +18,7 @@ MAX_NAME_CHARS = 200
 MAX_CONTENT_TYPE_CHARS = 100
 DEFAULT_CONTENT_TYPE = "application/octet-stream"
 
-# 업로드할 수 있는 파일 확장자입니다. 이 목록에 없는 것은 전부 거절합니다.
+# 업로드할 수 있는 파일 확장자입니다. 이 목록에 없는 확장자는 전부 거절합니다.
 ALLOWED_EXTENSIONS = frozenset(
     {
         "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic",

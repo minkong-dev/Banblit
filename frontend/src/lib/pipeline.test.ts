@@ -13,8 +13,8 @@ import {
   weekKeys,
 } from "./pipeline";
 
-/** vitest는 브라우저가 아니라 Node에서 돕니다 — document 를 기본으로 주지 않아
- *  api.test.ts 가 localStorage 를 세우던 것과 같은 방식으로 흉내냅니다. */
+/** vitest 는 브라우저가 아니라 Node 에서 실행됩니다. document 를 기본으로 제공하지 않으므로
+ *  api.test.ts 가 localStorage 를 mock 으로 만든 것과 같은 방식으로 만듭니다. */
 function stubCookie(value: string): void {
   vi.stubGlobal("document", { cookie: value });
 }
@@ -82,13 +82,13 @@ describe("weekKeys", () => {
   });
 
   it("해를 넘어가도 이어진다", () => {
-    // 2026년 12월 15일이 든 주는 12월 13일에 시작합니다. 세 주 뒤는 2027년입니다.
+    // 2026년 12월 15일이 포함된 주는 12월 13일에 시작합니다. 3주 뒤는 2027년입니다.
     expect(weekKeys(2026, 11, 3)[0]).toBe("2027-01-03");
   });
 });
 
-/** fetch 에 실린 본문은 BodyInit 이라 그대로는 못 읽습니다 — 글자로 보낸 것만 다루므로
- *  string 으로 좁혀 JSON 으로 되돌립니다. */
+/** fetch 에 전달된 본문은 BodyInit 타입이라 그대로 읽을 수 없습니다. 문자열로 보낸 본문만 다루므로
+ *  string 으로 좁혀 JSON 으로 변환합니다. */
 function sentBody(init: RequestInit | undefined): Record<string, unknown> {
   return JSON.parse(init?.body as string) as Record<string, unknown>;
 }
@@ -228,7 +228,7 @@ describe("아이디 찾기와 비밀번호 재설정", () => {
 
 describe("cancelBooking", () => {
   it("이어 잡은 칸을 번호마다 하나씩 지운다", async () => {
-    // Arrange — 서버는 칸 하나씩만 지웁니다. 한 건이 세 칸이면 세 번 불러야 합니다.
+    // Arrange: 서버는 slot 하나씩만 삭제합니다. 예약 한 건이 3칸이면 3번 호출해야 합니다.
     const spy = vi.fn(
       async (_input: RequestInfo | URL, _init?: RequestInit) =>
         new Response(null, { status: 204 }),
@@ -248,7 +248,7 @@ describe("cancelBooking", () => {
   });
 
   it("한 칸이 걸리면 거기서 멈추고 사유를 올린다", async () => {
-    // 이미 지운 칸은 되살리지 않습니다 — 다시 눌러 남은 것을 마저 지우면 됩니다.
+    // 이미 삭제한 slot 은 복구하지 않습니다. 다시 호출하면 남은 slot 을 이어서 삭제합니다.
     const spy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) =>
       String(input).endsWith("/12")
         ? new Response(JSON.stringify({ detail: "취소할 예약이 없습니다" }), { status: 404 })

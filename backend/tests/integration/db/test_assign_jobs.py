@@ -158,7 +158,7 @@ def test_health_responds_while_an_assignment_job_is_running(
     head_login: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """이번 변경의 핵심 — 계산이 실행되는 동안에도 /health가 막히지 않고 응답해야 합니다."""
+    """계산이 실행되는 동안에도 /health 가 차단되지 않고 응답해야 합니다."""
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
     room = Room(name="1번방", opens_at=clock(18, 0), closes_at=clock(19, 0))
@@ -209,6 +209,6 @@ def test_job_lookup_needs_assign_read(
     assert forbidden.status_code == 403
     assert "권한" in forbidden.json()["detail"]
 
-    # 없는 작업 번호로 불러, 권한이 있는 사람은 검증을 통과해 422까지 도달하는 것을 확인합니다.
+    # 없는 작업 번호로 호출해, 권한이 있는 사람은 권한 검증을 통과해 422 까지 도달하는지 확인합니다.
     passed = api_client.get("/jobs/no-such-job", cookies=head)
     assert passed.status_code == 422

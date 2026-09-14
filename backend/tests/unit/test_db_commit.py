@@ -1,4 +1,4 @@
-"""제약 위반을 메시지로 변환하는 자리는 하나입니다. 각 테이블마다 같은 try/except를 반복하지 않습니다."""
+"""제약 위반을 메시지로 변환하는 module 은 하나입니다. table 마다 같은 try/except 를 반복하지 않습니다."""
 
 from types import SimpleNamespace
 from typing import cast
@@ -63,7 +63,7 @@ def test_a_clean_commit_just_commits() -> None:
 
 
 def test_the_error_type_can_be_narrowed() -> None:
-    """저장소 층은 ValueError의 자식 클래스(ScheduleConflict)로 예외를 발생시켜, 호출하는 쪽에서 선택적으로 처리하도록 합니다."""
+    """db 층은 ValueError 의 하위 class(ScheduleConflict)로 예외를 발생시켜, 호출자가 선택적으로 처리할 수 있게 합니다."""
     session = _Session(_violation("k"))
 
     with pytest.raises(_Conflict):

@@ -15,8 +15,8 @@ from backend.db.pipeline import commit_translating
 # 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 바꾸는 단계별 기록)이 정한 이름입니다.
 SET_MESSAGES = {"permission_sets_name_key": "이미 있는 권한 묶음 이름입니다"}
 
-# 아무도 없는 DB에 처음 가입한 사람이 받는 permission set의 이름입니다. 마이그레이션이
-# 심는 permission set도 같은 이름을 사용합니다(migrations/versions/b7f1a92c4d31_permission_sets.py).
+# 계정이 0개인 DB 에 처음 가입한 사람이 받는 permission set 의 이름입니다. migration 이
+# 추가하는 permission set 도 같은 이름을 사용합니다(migrations/versions/b7f1a92c4d31_permission_sets.py).
 FULL_SET_NAME = "헤드매니저"
 FULL_SET_NOTE = "모든 권한을 가진 멤버입니다"
 
@@ -40,7 +40,7 @@ def _get_set_or_raise(session: Session, set_id: int) -> PermissionSet:
 def account_permissions(session: Session, member_id: int) -> list[str]:
     """member_id가 가진 모든 permission set의 항목을 합집합으로 모아 선언 순서로 반환합니다.
 
-    permission set이 하나도 없으면 빈 목록입니다 — 아무것도 할 수 없다는 뜻입니다.
+    permission set 이 하나도 없으면 빈 목록을 반환합니다. 그 멤버는 권한이 필요한 동작을 할 수 없습니다.
     """
     rows = session.scalars(
         select(PermissionSet.permissions)
@@ -59,8 +59,8 @@ def account_permissions(session: Session, member_id: int) -> list[str]:
 class SetMember(NamedTuple):
     """permission set을 가진 멤버입니다. 번호와 이름을 함께 포함합니다.
 
-    이름까지 싣는 것은 화면이 번호를 이름으로 변환하지 않게 하려는 것입니다 — 화면이 가진
-    멤버 목록은 페이지 단위로 받으므로, 아직 받지 않은 페이지에 있는 멤버는 이름이 비어 버립니다.
+    이름을 포함하는 이유는 화면이 번호를 이름으로 변환하지 않게 하기 위해서입니다. 화면은
+    멤버 목록을 페이지 단위로 받으므로, 아직 받지 않은 페이지에 있는 멤버는 이름을 찾지 못합니다.
     """
 
     id: int
@@ -120,8 +120,8 @@ def update_permission_set(
 
 
 def delete_permission_set(session: Session, set_id: int) -> None:
-    """set_id permission set을 삭제합니다. 그 permission set을 가졌던 멤버의 연결도 함께 사라집니다
-    (member_permission_sets.permission_set_id가 ON DELETE CASCADE 제약)."""
+    """set_id permission set 을 삭제합니다. 그 permission set 을 가졌던 멤버의 연결도 함께 삭제됩니다
+    (member_permission_sets.permission_set_id 가 ON DELETE CASCADE 제약)."""
     session.delete(_get_set_or_raise(session, set_id))
     session.commit()
 
@@ -163,7 +163,7 @@ def revoke_permission_set(session: Session, member_id: int, set_id: int) -> None
 def grant_full_permissions(session: Session, member_id: int) -> None:
     """member_id에게 18가지 항목이 모두 활성화된 permission set을 부여합니다. 그런 permission set이 없으면 생성합니다.
 
-    커밋은 호출 쪽이 수행합니다 — 가입은 계정·포지션·권한을 한 번에 커밋합니다.
+    commit 은 호출자가 수행합니다. 가입은 계정과 권한을 한 번에 commit 합니다.
     """
     full = session.scalars(
         select(PermissionSet)

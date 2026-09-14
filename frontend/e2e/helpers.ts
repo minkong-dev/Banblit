@@ -11,13 +11,13 @@ export const E2E_ACCOUNT_EMAIL = "e2e@banblit.test";
 export const E2E_ACCOUNT_PASSWORD = "E2e-Password1!";
 export const E2E_ACCOUNT_TEAM = "새벽 네시";
 
-/** 넘긴 APIRequestContext 마다 /api/login을 호출해 세션 쿠키를 받아둡니다.
- *  page.request는 page의 브라우저 컨텍스트와 쿠키 저장소를 공유하므로, 여기서 받은
- *  쿠키(banblit_session·banblit_signed_in)는 이어지는 page.goto 호출에도 포함됩니다.
- *  반면 테스트가 받는 request는 별개의 쿠키 저장소입니다. 화면과 API를 함께 확인하는
- *  테스트는 `loginForTests(page.request, request)` 처럼 둘 다 넘겨야 합니다.
- *  로그인 서식 자체가 작동하는지는 account.spec.ts가 따로 확인합니다. 나머지 테스트는
- *  로그인된 이후 화면만 보면 되므로, 매번 서식을 채우지 않습니다. */
+/** 전달한 APIRequestContext 마다 /api/login 을 호출해 session cookie 를 받아 둡니다.
+ *  page.request 는 page 의 브라우저 컨텍스트와 cookie 저장소를 공유하므로, 이 함수에서 받은
+ *  cookie(banblit_session·banblit_signed_in)는 이어지는 page.goto 호출에도 포함됩니다.
+ *  반면 테스트가 받는 request 는 별개의 cookie 저장소입니다. 화면과 API 를 함께 확인하는
+ *  테스트는 `loginForTests(page.request, request)` 처럼 둘 다 전달해야 합니다.
+ *  로그인 form 자체가 동작하는지는 account.spec.ts 가 따로 확인합니다. 나머지 테스트는
+ *  로그인된 이후 화면만 확인하면 되므로, 매번 form 을 입력하지 않습니다. */
 export async function loginForTests(...contexts: APIRequestContext[]): Promise<void> {
   for (const context of contexts) {
     await context.post("/api/login", {
@@ -62,9 +62,9 @@ export type Period = {
 
 export type PeriodWithSchedule = Period & { rows: ScheduleRow[] };
 
-/** 집중 합주기간 중, 저장된 배정이 있는 것 하나와 없는 것 하나를 조회합니다.
- *  seed는 앞 기간은 성사되어 저장되고 뒤 기간은 slot(1시간 단위 시간 칸)을 못 채워 저장되지 않게
- *  만들지만, 여기서 순서를 가정하지 않고 실제 응답을 하나씩 확인합니다. */
+/** 집중 합주기간 중, 저장된 배정이 있는 기간 하나와 없는 기간 하나를 조회합니다.
+ *  seed 는 앞 기간은 배정이 성공해 저장되고 뒤 기간은 slot(1시간 단위 시간 칸)을 채우지 못해 저장되지 않게
+ *  만들지만, 이 함수에서는 순서를 가정하지 않고 실제 응답을 하나씩 확인합니다. */
 export async function findFocusedPeriods(request: APIRequestContext): Promise<{
   withSchedule: PeriodWithSchedule | null;
   withoutSchedule: Period | null;

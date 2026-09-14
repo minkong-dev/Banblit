@@ -22,7 +22,7 @@ def _room_out(room: Room) -> RoomOut:
 
 
 # 요청자의 신원을 사용하지 않고 권한만 검증하는 endpoint(API의 요청 주소 단위)는, 사용하지 않는
-# 매개변수를 남기지 않도록 dependencies에 겁니다.
+# 매개변수를 남기지 않도록 dependencies 에 추가합니다.
 @router.get("/rooms", response_model=RoomsOut, dependencies=[Depends(require_account)])
 def read_rooms(session: Session = Depends(get_session)) -> RoomsOut:
     return RoomsOut(rooms=[_room_out(room) for room in list_rooms(session)])

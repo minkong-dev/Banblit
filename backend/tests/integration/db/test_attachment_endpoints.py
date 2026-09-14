@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-# account 픽스처를 부른 순서가 곧 역할입니다 — 이 파일의 첫 호출이 헤드매니저입니다.
+# account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 이 파일의 첫 호출이 헤드매니저입니다.
 from conftest import AccountFactory
 
 Cookies = dict[str, str]
@@ -11,7 +11,7 @@ Cookies = dict[str, str]
 
 @pytest.fixture()
 def storage_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """첨부를 검사 전용 폴더에 저장하게 하고, 그 폴더를 반환합니다."""
+    """첨부 파일을 테스트 전용 폴더에 저장하도록 설정하고, 그 폴더를 반환합니다."""
     root = tmp_path / "attachments"
     monkeypatch.setenv("ATTACHMENT_DIR", str(root))
     return root
@@ -31,8 +31,8 @@ def _make_team(api_client: TestClient, head: Cookies, name: str) -> int:
 
 
 def _seat(api_client: TestClient, head: Cookies, team_id: int, member_id: int) -> None:
-    """빈 자리 하나를 찾아 그 사람을 배정합니다. 배정하는 것은 팀 항목을 가진 사람만 할 수
-    있으므로 언제나 헤드매니저의 cookie로 부릅니다."""
+    """빈 자리 하나를 찾아 그 멤버를 배정합니다. 배정은 member_add 권한을 가진 사람만 할 수
+    있으므로 언제나 헤드매니저의 cookie 로 호출합니다."""
     slots = api_client.get(f"/teams/{team_id}/slots", cookies=head).json()["slots"]
     free = next(slot for slot in slots if slot["member_id"] is None)
     api_client.put(
@@ -73,8 +73,8 @@ def test_attachment_is_uploaded_listed_and_downloaded(
     downloaded = api_client.get(f"/attachments/{attachment['id']}", cookies=head)
     assert downloaded.status_code == 200
     assert downloaded.content == b"score-bytes"
-    # 브라우저가 내용을 표시하지 않게 하는 헤더입니다. HTML·SVG가 표시되면 그 안의
-    # 스크립트가 우리 화면 권한으로 작동합니다.
+    # 브라우저가 파일 내용을 표시하지 않게 하는 헤더입니다. HTML·SVG 가 표시되면 그 안의
+    # 스크립트가 이 서비스 화면의 권한으로 실행됩니다.
     assert downloaded.headers["content-disposition"].startswith("attachment")
     assert downloaded.headers["x-content-type-options"] == "nosniff"
 
@@ -183,7 +183,7 @@ def test_teammate_who_is_not_the_author_can_read_and_download(
     downloaded = api_client.get(f"/attachments/{attachment_id}", cookies=teammate)
     assert downloaded.status_code == 200
     assert downloaded.content == b"practice"
-    # 읽는 것은 팀 소속 전체, 삭제하는 것은 글쓴이만입니다.
+    # 조회는 팀 소속 전체가, 삭제는 작성자만 할 수 있습니다.
     assert (
         api_client.delete(f"/attachments/{attachment_id}", cookies=teammate).status_code
         == 403

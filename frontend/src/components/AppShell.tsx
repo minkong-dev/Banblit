@@ -17,7 +17,7 @@ const NAV = [
   { key: "notice", label: "공지사항", to: "/notices" },
   { key: "find-team", label: "팀 찾기", to: "/teams" },
   { key: "board", label: "팀 게시판", to: "/board" },
-  // 다크/라이트 모드 설정은 제로 등급 권한에도 표시됩니다. 
+  // 다크/라이트 모드 설정은 권한이 없는 사용자에게도 표시됩니다.
   { key: "settings", label: "설정", to: "/settings" },
 ] as const;
 
@@ -44,18 +44,18 @@ function NavList({ items, current }: { items: readonly NavItem[]; current: NavKe
 }
 
 export function AppShell(props: {
-  /** 화면별 CSS가 격리되는 이름입니다 — scheduler, admin 등. */
+  /** 화면별 CSS 가 격리되는 이름입니다. 예: scheduler, admin. */
   page: string;
   /** 사이드바에 없는 화면(프로필 설정)은 아무 항목도 켜지 않도록 비워 둡니다. */
   current?: NavKey;
-  /** 사이드바 맨 아래에 덧붙일 것. */
+  /** 사이드바 맨 아래에 추가할 요소입니다. */
   sideExtra?: ReactNode;
   children: ReactNode;
 }) {
   const { page, current, sideExtra, children } = props;
   const toast = useToast();
   usePage(page);
-  // shell.css가 이 표시로 껍데기(상단바·사이드바·탭·카드)를 입힙니다. 계정·랜딩 화면에는 없습니다.
+  // shell.css 가 이 속성으로 공통 layout(상단바·사이드바·탭·카드)의 스타일을 적용합니다. 계정·랜딩 화면에는 없습니다.
   useEffect(() => {
     document.body.dataset.shell = "";
     return () => { delete document.body.dataset.shell; };
@@ -136,7 +136,7 @@ export function ProfileMenu() {
   const initial = name.slice(0, 2);
 
   // 팀마다 그 팀의 명단을 받습니다. 명단에서 내 번호와 같은 사람을 찾으면 그 사람이
-  // 그 팀에서 맡은 포지션입니다 — 이름이 아니라 번호로 구분합니다(동명이인 규칙).
+  // 그 팀에서 맡은 포지션입니다. 이름이 아니라 번호로 구분합니다(동명이인 규칙).
   // queryKey(TanStack Query가 관리하는 조회 식별자)는 hooks 의 queryKey 와 같아서 이미 받아 둔 명단이 있으면 다시 요청하지 않습니다.
   const rosters = useQueries({
     queries: teams.map((team) => ({
@@ -145,21 +145,21 @@ export function ProfileMenu() {
     })),
   });
 
-  // 서버 호출이 실패해도 로그인 화면으로 이동합니다 — 표시용 쿠키가 남아 있어도
-  // 다음 요청은 401로 거절되니 화면을 붙잡아 둘 이유가 없습니다.
+  // 서버 호출이 실패해도 로그인 화면으로 이동합니다. 표시용 cookie 가 남아 있어도
+  // 다음 요청은 401 로 거절되므로 현재 화면을 유지할 이유가 없습니다.
   async function handleLogOut(): Promise<void> {
     setOpen(false);
     try {
       await logOut();
     } catch {
-      // 무시 — 아래에서 로그인 화면으로 이동합니다.
+      // 오류를 무시합니다. 아래에서 로그인 화면으로 이동합니다.
     }
     void navigate("/login");
   }
 
   return (
-    // display:contents이므로 자리를 차지하지 않습니다 — 상단바의 배치는 그대로 두고,
-    // 바깥을 눌렀는지 감지하는 자리만 만듭니다.
+    // display:contents 이므로 자리를 차지하지 않습니다. 상단바의 배치는 그대로 두고,
+    // 바깥 클릭을 감지하는 요소만 만듭니다.
     <div className="profwrap" ref={box}>
       <button className="profbtn" aria-expanded={open} onClick={toggle}>
         <span className="face" aria-hidden="true">{initial}</span>
@@ -193,7 +193,7 @@ export function ProfileMenu() {
   );
 }
 
-/** 오른쪽 목록 한 칸입니다. onOpen이 있으면 제목이 눌리는 버튼이 됩니다. */
+/** 오른쪽 목록 한 칸입니다. onOpen 이 있으면 제목이 클릭할 수 있는 버튼이 됩니다. */
 export function Panel(props: {
   title: string;
   hint?: string;

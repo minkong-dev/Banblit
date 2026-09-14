@@ -1,10 +1,10 @@
-"""지난 공연의 팀 구성을 그대로 넣습니다.
+"""지난 공연의 팀 구성을 DB 에 추가합니다.
 
-명단에 있는 사람은 전부 가입한 것으로 친다 — 이메일은 이름과 기수로 지어내고
-비밀번호는 모두 같게 둔다. 실제 서비스 데이터가 아니라 화면을 열어 볼 밑감이다.
+명단에 있는 사람은 전부 가입한 것으로 처리합니다. 이메일은 순번으로 생성하고
+비밀번호는 모두 같게 둡니다. 실제 서비스 데이터가 아니라 화면을 확인하기 위한 예시 데이터입니다.
 
-이름이 같은 두 사람(박민경)은 기수로 갈린다. 괄호는 이름에 남기지 않고 cohort 로
-옮긴다 — 사람을 가르는 것은 id 이고, 기수는 화면에서 눈으로 가르기 위한 값이다.
+이름이 같은 두 사람(박민경)은 기수로 구분합니다. 괄호는 이름에 남기지 않고 cohort 로
+옮깁니다. 사람을 식별하는 값은 id 이고, 기수는 화면에서 사용자가 구분하기 위한 값입니다.
 
 실행:
     docker compose run --rm dev python scripts/seed_setlist.py
@@ -22,7 +22,7 @@ from backend.db.models import Member, Team, TeamSlot
 
 PASSWORD = "banblit123"
 
-# 기수를 아는 사람만 적습니다. 나머지는 비워 둡니다 — 모르는 값을 지어내지 않습니다.
+# 기수를 아는 사람만 적습니다. 나머지는 None 으로 둡니다. 모르는 값을 임의로 적지 않습니다.
 COHORTS = {"박민경(47기)": 47, "박민경(49기)": 49}
 
 # (곡, 세션, 이름). 세션의 꼬리 숫자는 같은 포지션의 몇 번째 자리인지를 뜻합니다.
@@ -104,7 +104,7 @@ def main() -> None:
             print("이미 팀이 있습니다. 비우고 다시 넣으려면 banblit down -Volumes 후 실행하세요.")
             return
 
-        # 사람을 먼저 만듭니다. 자리는 사람을 가리키므로 순서가 반대일 수 없습니다.
+        # 멤버를 먼저 생성합니다. 포지션 자리가 member_id 로 멤버를 참조하므로 순서가 반대일 수 없습니다.
         labels = sorted({label for _, _, label in SETLIST})
         members: dict[str, Member] = {}
         for index, label in enumerate(labels, start=1):
@@ -118,7 +118,7 @@ def main() -> None:
             members[label] = member
         session.flush()
 
-        # 가장 먼저 가입한 사람이 권한 열한 개를 전부 갖는다는 규칙을 여기서도 지킵니다.
+        # 가장 먼저 가입한 사람이 모든 권한을 갖는다는 규칙을 이 script 에서도 지킵니다.
         grant_full_permissions(session, members[labels[0]].id)
 
         by_team: dict[str, list[tuple[str, str]]] = defaultdict(list)

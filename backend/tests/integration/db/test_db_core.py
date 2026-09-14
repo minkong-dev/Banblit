@@ -55,7 +55,7 @@ def test_one_person_may_sit_in_two_teams(db_session: Session) -> None:
 
 
 def test_many_empty_slots_may_share_a_team(db_session: Session) -> None:
-    """빈 자리끼리는 겹침 조건에 걸리지 않습니다. 저장소가 빈 값을 서로 다르게 봅니다."""
+    """빈 자리끼리는 (team_id, member_id) unique 제약에 위반되지 않습니다. PostgreSQL 이 NULL 을 서로 다른 값으로 보기 때문입니다."""
     team = Team(name="A")
     db_session.add(team)
     db_session.flush()

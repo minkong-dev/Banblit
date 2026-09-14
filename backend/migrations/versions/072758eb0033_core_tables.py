@@ -1,4 +1,4 @@
-"""핵심 테이블들입니다.
+"""핵심 table 을 생성합니다.
 
 Revision ID: 072758eb0033
 Revises:

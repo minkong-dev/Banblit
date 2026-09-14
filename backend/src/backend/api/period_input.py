@@ -21,7 +21,7 @@ def expand_unavailable(
     window_start: datetime,
     window_end: datetime,
 ) -> list[TimeInterval]:
-    """불가능 시간을 기간 안에 실제로 걸리는 구간들로 확장합니다.
+    """불가능 시간을 기간과 겹치는 구간 목록으로 확장합니다.
 
     매일 반복하면 1일, 매주 반복하면 7일 간격으로 되풀이하되, 반복 종료일이 있으면
     그 날짜까지만 생성합니다.
@@ -57,10 +57,10 @@ def _occurrences(row: UnavailableTime, window_end: datetime) -> list[datetime]:
 
 
 def _repeat_step(row: UnavailableTime) -> timedelta | None:
-    """재반복 간격을 반환합니다. 반복이 아니면 None입니다.
+    """반복 간격을 반환합니다. 반복이 아니면 None 을 반환합니다.
 
-    세션에 넣지 않은 객체는 기본값이 아직 적용되지 않아 None일 수 있으므로
-    bool()로 받습니다. 둘 다 켜진 경우는 경계에서 거부되므로 여기서는 매일 반복을 먼저 확인합니다.
+    session 에 추가하지 않은 객체는 열의 기본값이 아직 적용되지 않아 None 일 수 있으므로
+    bool() 로 변환합니다. 매일·매주가 둘 다 켜진 경우는 경계에서 거부되므로 이 함수에서는 매일 반복을 먼저 확인합니다.
     """
     if bool(row.repeats_daily):
         return DAY
@@ -113,8 +113,8 @@ def build_engine_teams(
 ) -> list[EngineTeam]:
     """팀과 그 명단을 엔진 입력으로 변환합니다.
 
-    팀도 멤버도 DB의 번호를 그대로 사용합니다. 멤버는 동명이인이 있어 이름으로는
-    구분할 수 없고, 두 팀에 걸친 한 멤버는 번호가 같아 엔진이 한 몸으로 다룹니다.
+    팀도 멤버도 DB 의 번호를 그대로 사용합니다. 멤버는 동명이인이 있어 이름으로는
+    구분할 수 없고, 두 팀에 속한 한 멤버는 두 팀에서 같은 번호이므로 엔진이 같은 사람으로 처리합니다.
     """
     engine_teams: list[EngineTeam] = []
     for team_id in team_ids:

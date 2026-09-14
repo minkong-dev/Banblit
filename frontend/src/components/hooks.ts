@@ -8,7 +8,7 @@ import { colorKey, fetchMe, getJSON, myTeamIds } from "../lib/pipeline";
 import type { Account, Period, Room, Team } from "../lib/contract";
 
 /** 클릭으로 여는 팝업 하나입니다. 열려 있는 동안 바깥을 누르거나 Escape를 누르면 닫힙니다.
- *  반환되는 box ref는 열기 버튼과 팝업을 감싼 요소에 연결합니다 — 버튼 클릭까지 외부 클릭으로 감지하면,
+ *  반환되는 box ref 는 열기 버튼과 팝업을 감싼 요소에 연결합니다. 버튼 클릭까지 외부 클릭으로 감지하면,
  *  닫은 후 곧바로 다시 열려 팝업이 닫히지 않기 때문입니다. */
 export function useDismissible(): {
   open: boolean;
@@ -51,7 +51,7 @@ export function usePage(page: string): void {
   }, [page]);
 }
 
-/** 팀·합주실·기간 목록입니다. 여러 화면에서 같은 조회를 다시 작성하지 않습니다 — queryKey가 같아 캐시도 하나입니다. */
+/** 팀·합주실·기간 목록입니다. 여러 화면에서 같은 조회를 다시 작성하지 않습니다. queryKey 가 같아 cache 도 하나입니다. */
 export function useTeams() {
   return useQuery({ queryKey: ["teams"], queryFn: () => getJSON<{ teams: Team[] }>("/teams") });
 }
@@ -63,7 +63,7 @@ export function usePeriods() {
 }
 
 /** 현재 로그인한 계정과, 그 계정이 소속된 팀 번호들입니다.
- *  /me가 teams와 함께 반환됩니다 — 팀 명단을 하나씩 반복하지 않아도 됩니다.
+ *  /me 가 teams 와 함께 반환됩니다. 팀 명단을 하나씩 조회하지 않아도 됩니다.
  *  아직 로드되지 않았으면 me는 null입니다. */
 export function useMe(): {
   me: Account | null;
@@ -73,8 +73,8 @@ export function useMe(): {
   const mine = useQuery({ queryKey: ["me"], queryFn: fetchMe, retry: false });
   const teamList = useTeams();
 
-  // 이전 서버가 teams 없이 응답하면 소속 팀이 없는 것으로 처리합니다 — 잠시 표시되었다가
-  // 사라지는 "내 팀" 배지보다 처음부터 없는 것이 낫습니다.
+  // 이전 버전의 서버가 teams 없이 응답하면 소속 팀이 없는 것으로 처리합니다. 잠시 표시되었다가
+  // 사라지는 "내 팀" 배지보다 처음부터 없는 편이 낫습니다.
   return {
     me: mine.data?.account ?? null,
     teamIds: myTeamIds(mine.data?.teams ?? []),
@@ -85,8 +85,8 @@ export function useMe(): {
 export type MyTeam = { id: number; name: string; colorKey: string };
 
 /** 내가 속한 팀을 전체 팀 목록에서 필터링하고, 목록 내 순서로 색상을 할당합니다(스케줄러와
- *  같은 규칙 — 전체 팀 목록에서의 순서가 곧 달력 색입니다). 여러 화면에서 프로필 카드가
- *  사용합니다. 아직 로드되지 않았거나 실패하면 빈 배열을 반환합니다 — 프로필 카드는 팀 없이도 렌더링됩니다. */
+ *  같은 규칙입니다. 전체 팀 목록에서의 순서가 곧 달력 색입니다). 여러 화면에서 프로필 카드가
+ *  사용합니다. 아직 로드되지 않았거나 실패하면 빈 배열을 반환합니다. 프로필 카드는 팀 없이도 렌더링됩니다. */
 export function useMyTeams(): MyTeam[] {
   const { teamIds, teams } = useMe();
   return teams
@@ -96,7 +96,7 @@ export function useMyTeams(): MyTeam[] {
 
 /** 목록 상자에 몇 줄이 들어가는지 측정해서 반환합니다.
  *
- *  목록을 스크롤하지 않습니다 — 들어가는 만큼만 표시하고 나머지는 페이지네이션으로 나눕니다.
+ *  목록을 스크롤하지 않습니다. 들어가는 만큼만 표시하고 나머지는 pagination 으로 나눕니다.
  *  그래야 페이지네이션과 추가 버튼이 화면에서 항상 같은 위치에 있습니다.
  *
  *  줄 높이는 첫 줄을 실제로 측정해서 사용합니다. 글자 크기나 여백을 수정하면 값이 자동으로 반영됩니다.

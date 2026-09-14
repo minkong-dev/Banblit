@@ -25,8 +25,8 @@ def test_room_closing_before_opening_is_rejected(db_session: Session) -> None:
 def test_deleting_a_member_empties_their_slot_but_keeps_it(
     db_session: Session,
 ) -> None:
-    """자리는 팀의 구성입니다. 사람이 제외되었다고 팀에 공백이 생기면 안 됩니다.
-    반면 그 사람이 등록한 불가능 시간은 함께 사라집니다."""
+    """자리는 팀의 구성입니다. 멤버가 삭제되어도 팀의 자리 수가 줄면 안 됩니다.
+    반면 그 멤버가 등록한 불가능 시간은 함께 삭제됩니다."""
     member = Member(name="김민수")
     team = Team(name="A")
     db_session.add_all([member, team])

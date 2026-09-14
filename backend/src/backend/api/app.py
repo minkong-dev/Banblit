@@ -40,7 +40,7 @@ async def handle_database_down(
     # 데이터베이스에 연결하지 못한 요청을 503으로 반환합니다. 사용자 입력 오류(422)나
     # 서버 고장(500)과 구분하기 위해 사용합니다. 자세한 사유는 로그에만 남기고
     # 화면에는 표시하지 않습니다.
-    logger.error("데이터베이스에 닿지 못했습니다 (%s): %s", request.url.path, exc)
+    logger.error("데이터베이스에 연결하지 못했습니다 (%s): %s", request.url.path, exc)
     return JSONResponse(
         status_code=503,
         content={"detail": "데이터베이스에 연결하지 못했습니다. 잠시 후 다시 시도하십시오"},
@@ -49,20 +49,21 @@ async def handle_database_down(
 
 @app.exception_handler(IntegrityError)
 async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONResponse:
-    # db.commit.commit_translating 처럼 특정 제약을 미리 포착해 ValueError로 변환한 부분을
-    # 통과한 IntegrityError만 여기로 옵니다. 어떤 제약을 위반했는지는 로그에만 남기고,
-    # 화면에는 SQL 상세가 아니라 사용자가 읽을 수 있는 문장 하나만 보냅니다.
-    logger.error("데이터 제약을 어겼습니다 (%s): %s", request.url.path, exc)
+    # db.commit.commit_translating 이 ValueError 로 변환하지 않은 IntegrityError 만 이 함수가
+    # 처리합니다. 어떤 제약을 위반했는지는 로그에만 남기고, 화면에는 SQL 상세가 아니라
+    # 사용자가 읽을 수 있는 문장 하나만 보냅니다.
+    logger.error("데이터베이스 제약을 위반했습니다 (%s): %s", request.url.path, exc)
     return JSONResponse(
         status_code=409,
         content={"detail": "다른 데이터가 참조하고 있어 처리할 수 없습니다"},
     )
 
 
-# 서비스 함수가 발생시키는 두 가지 exception(예외). 어느 endpoint(API의 요청 주소 단위)에서
-# 발생하든 응답은 같습니다. 규칙 위반은 422, 권한 부족은 403이며, 둘 다 detail에 사용자가
-# 읽을 수 있는 문장 하나씩 포함합니다. 라우터는 이 둘을 처리하지 않으며, 다른 상태 코드가
-# 필요한 부분(로그인 401 등)만 직접 처리합니다.
+# 서비스 함수가 발생시키는 exception(예외) 두 가지를 처리합니다. 어느 endpoint(API의 요청
+# 주소 단위)에서 발생하든 응답은 같습니다. ValueError(규칙 위반)는 422, PermissionError(권한
+# 부족)는 403이며, 둘 다 detail 에 사용자가 읽을 수 있는 문장 하나를 포함합니다. 라우터는 이 두
+# exception 을 처리하지 않으며, 다른 상태 코드가 필요한 endpoint(로그인 실패 401 등)만 직접
+# 처리합니다.
 @app.exception_handler(ValueError)
 async def handle_value_error(request: Request, exc: ValueError) -> JSONResponse:
     return JSONResponse(status_code=422, content={"detail": str(exc)})
@@ -99,8 +100,8 @@ def health() -> JSONResponse:
 
 
 # 도메인 라우터를 추가합니다. 각 라우터는 table(데이터베이스의 행과 열로 이루어진 데이터 구조)
-# 하나(또는 하나에 딸린 CRUD)만 처리하므로 room_service·period_crud_service·roster_service·
-# board_service 같은 경계로 나누었습니다. 추가 순서는 응답에 영향을 주지 않습니다.
+# 하나와 그 table 의 CRUD 만 처리하므로 room_service·period_crud_service·roster_service·
+# board_service 와 같은 경계로 나누었습니다. 추가 순서는 응답에 영향을 주지 않습니다.
 # 요청 주소가 서로 겹치지 않기 때문입니다.
 app.include_router(rooms.router)
 app.include_router(periods.router)

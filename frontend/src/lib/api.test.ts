@@ -2,12 +2,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getJSON, REQUEST_TIMEOUT_MS, sendFile, UPLOAD_TIMEOUT_MS } from "./api";
 
-/** fetch 를 가짜로 세웁니다. 단위 테스트는 실제 서버에 닿지 않습니다. */
+/** fetch 를 mock 으로 교체합니다. 단위 테스트는 실제 서버를 호출하지 않습니다. */
 function stubFetch(handler: () => Promise<Response> | Promise<never>): void {
   vi.stubGlobal("fetch", vi.fn(handler));
 }
 
-/** AbortSignal.timeout 이 시간을 넘겼을 때 fetch 가 던지는 것과 같은 모양. */
+/** AbortSignal.timeout 이 시간을 넘겼을 때 fetch 가 발생시키는 예외와 같은 형태입니다. */
 function timeoutError(): DOMException {
   return new DOMException("signal timed out", "TimeoutError");
 }
@@ -81,7 +81,7 @@ describe("getJSON", () => {
   });
 });
 
-/** XMLHttpRequest 를 가짜로 세웁니다. 단위 테스트는 실제 서버에 닿지 않습니다. */
+/** XMLHttpRequest 를 mock 으로 교체합니다. 단위 테스트는 실제 서버를 호출하지 않습니다. */
 class FakeUpload {
   static last: FakeUpload;
   headers: Record<string, string> = {};

@@ -1,4 +1,4 @@
-"""rate limit(같은 곳에서 오는 요청 횟수 제한) — 같은 곳에서 짧은 시간에 몰리는 요청을 거부합니다.
+"""rate limit(같은 요청자가 정해진 시간 안에 보낼 수 있는 요청 횟수 제한) 테스트입니다. 같은 요청자가 짧은 시간에 보내는 요청을 거부합니다.
 
 로그인처럼 값을 맞혀 보는 자리가 대상입니다. 비밀번호를 한 번에 하나씩 넣어 보는
 것을 막지 못하면, 짧은 비밀번호는 시간 문제로 뚫립니다.
@@ -59,7 +59,7 @@ def test_a_rejected_try_does_not_extend_the_block() -> None:
 
 
 def test_does_not_grow_without_bound() -> None:
-    # 주소를 바꿔 가며 요청하면 메모리가 무한히 증가합니다. 그 자체가 공격이 됩니다.
+    # IP 주소를 바꿔 가며 요청하면 메모리가 무한히 증가합니다. 메모리를 고갈시키는 공격이 됩니다.
     limiter = RateLimiter(limit=1, window_seconds=60, max_callers=100)
 
     for index in range(500):
@@ -88,7 +88,7 @@ def test_caller_is_the_peer_when_nothing_is_in_front() -> None:
 
 
 def test_caller_is_what_the_proxy_saw_not_what_the_client_claimed() -> None:
-    # 앞단(caddy)은 자신이 본 클라이언트를 X-Forwarded-For 끝에 붙입니다. 앞쪽 값은
+    # reverse proxy(Caddy)는 자신이 본 클라이언트 주소를 X-Forwarded-For 끝에 추가합니다. 앞쪽 값은
     # 요청을 보낸 쪽이 조작할 수 있으므로 맨 뒤의 주소만 신뢰합니다.
     request = _request("172.18.0.5", "1.1.1.1, 2.2.2.2, 203.0.113.9")
 

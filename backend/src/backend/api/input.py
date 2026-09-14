@@ -1,6 +1,7 @@
-"""경계에서 입력을 검증합니다. 위반한 것은 사람이 읽을 문장의 ValueError로 거부합니다.
+"""경계에서 입력을 검증합니다. 위반한 값은 사람이 읽을 수 있는 문장을 담은 ValueError 로 거부합니다.
 
-표마다 따로 두지 않습니다 — 빈 문자열, "HH:MM", "YYYY-MM-DD", slot(1시간 단위 시간 칸) 격자는 어느 표든 같습니다.
+table(데이터베이스의 행과 열로 이루어진 데이터 구조)마다 따로 두지 않습니다. 빈 문자열, "HH:MM",
+"YYYY-MM-DD", slot(1시간 단위 시간 칸) 격자 검증은 어느 table 이든 같습니다.
 """
 
 import re
@@ -14,8 +15,8 @@ DATE_FORMAT = "%Y-%m-%d"
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$")
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_LENGTH = 20
-# 기수의 최댓값. 1981년이 1기라 2026년은 46기입니다. 반세기 남짓 여유를 두되, 오타로 들어온
-# 큰 수는 거부합니다. 화면(validate.ts의 cohortMessage)도 같은 값을 참조합니다.
+# 기수의 최댓값입니다. 1981년이 1기라 2026년은 46기입니다. 54기의 여유를 두되, 오타로 입력된
+# 큰 수는 거부합니다. 화면(validate.ts 의 cohortMessage)도 같은 값을 참조합니다.
 MAX_COHORT = 100
 # 학번은 숫자 8자리입니다. 화면(validate.ts의 studentNoMessage)도 같은 규칙을 참조합니다.
 # 숫자 클래스(역슬래시 d) 대신 [0-9]를 사용합니다 — 파이썬의 숫자 클래스는 전각 숫자(１２３４)까지 받기 때문입니다.
@@ -53,8 +54,8 @@ def require_student_no(value: str) -> str:
 
 
 # 비밀번호가 충족해야 할 규칙입니다. 왼쪽이 검증 조건, 오른쪽이 위반했을 때 사용자에게 보일 메시지입니다.
-# 가입·재설정·변경이 모두 이 한 곳을 지나갑니다 — 화면마다 따로 두면 한쪽만 느슨해집니다.
-# 화면의 같은 규칙은 frontend/src/lib/validate.ts에 있습니다.
+# 가입·비밀번호 재설정·비밀번호 변경이 모두 이 규칙을 사용합니다. 경로마다 따로 두면 규칙이 어긋납니다.
+# 화면의 같은 규칙은 frontend/src/lib/validate.ts 에 있습니다.
 PASSWORD_RULES: tuple[tuple[str, str], ...] = (
     (r"[a-z]", "비밀번호에는 소문자가 하나 이상 있어야 합니다"),
     (r"[A-Z]", "비밀번호에는 대문자가 하나 이상 있어야 합니다"),
@@ -64,7 +65,7 @@ PASSWORD_RULES: tuple[tuple[str, str], ...] = (
 
 
 def require_password(value: str) -> None:
-    """새로 정하는 비밀번호를 검증합니다. 로그인은 이것을 호출하지 않습니다 —
+    """새로 정하는 비밀번호를 검증합니다. 로그인은 이 함수를 호출하지 않습니다.
     규칙을 변경하기 전에 생성된 계정이 로그인할 수 없어서는 안 되기 때문입니다."""
     if not PASSWORD_MIN_LENGTH <= len(value) <= PASSWORD_MAX_LENGTH:
         raise ValueError(

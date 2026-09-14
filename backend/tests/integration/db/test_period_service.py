@@ -190,7 +190,7 @@ def test_reassignment_archives_the_previous_schedule(db_session: Session) -> Non
     )
 
     backups = db_session.scalars(select(AssignmentBackup)).all()
-    assert len(backups) == 2  # 첫 회차의 2칸이 백업으로 옮겨졌다
+    assert len(backups) == 2  # 첫 배정기록의 2칸이 백업으로 옮겨졌다
     assert {b.saved_at for b in backups} == {datetime(2026, 8, 1, 21, 0)}
 
 
@@ -270,8 +270,8 @@ def test_team_without_members_is_rejected(db_session: Session) -> None:
 def test_overlapping_period_room_conflict_is_rejected_not_500(
     db_session: Session,
 ) -> None:
-    """날짜가 겹치는 두 기간이 같은 방·같은 시각을 쓰면 (room_id, starts_at) 유니크
-    제약에 걸린다 — 사용자가 만들 수 있는 상황이므로 500이 아니라 422(ValueError)로
+    """날짜가 겹치는 두 기간이 같은 합주실·같은 시각을 사용하면 (room_id, starts_at) unique
+    제약을 위반합니다. 사용자가 만들 수 있는 상황이므로 500 이 아니라 422(ValueError)로
     거부되어야 하고, 첫 번째 기간의 현행 시간표는 그대로 남아 있어야 합니다."""
     period_a = _period(db_session)
     period_b = _period(db_session)
@@ -319,10 +319,10 @@ def test_duplicate_room_id_is_rejected(db_session: Session) -> None:
 
 
 def test_two_week_schedule_for_four_teams_finishes(db_session: Session) -> None:
-    """2주 × 합주실 2개 × 팀 4개 — 실제로 쓰일 만한 크기가 계산되는지 확인합니다.
+    """2주 × 합주실 2개 × 팀 4개, 실제 운영 규모의 입력이 계산되는지 확인합니다.
 
-    계산 시간 자체는 단언하지 않는다(기계마다 다르다). 이 테스트가 도는 시간이
-    곧 실측값이므로, `pytest --durations`로 확인해 문서에 적는다.
+    계산 시간 자체는 assert 하지 않습니다(PC 마다 다릅니다). 이 테스트의 실행 시간이
+    곧 실측값이므로, `pytest --durations` 로 확인해 문서에 적습니다.
     """
     period = Period(
         kind="focused",
@@ -357,11 +357,11 @@ def test_two_week_schedule_for_four_teams_finishes(db_session: Session) -> None:
 def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
     db_session: Session,
 ) -> None:
-    """기간 마지막 날(둘째 날)에 걸린 불가능시간도 첫날과 똑같이 배정을 막아야 합니다.
+    """기간 마지막 날(둘째 날)에 있는 불가능 시간도 첫날과 같게 배정을 막아야 합니다.
 
-    기간의 끝을 시작일 기준으로 계산하면(예: window_end를 starts_on으로 잡으면)
-    둘째 날의 불가능시간이 창 밖으로 밀려 통째로 버려진다 — 그러면 이영희가
-    아무 때나 가능한 것처럼 취급되어, 제외 없이 곧바로 배정에 성공해 버린다.
+    기간의 끝을 시작일 기준으로 계산하면(예: window_end 를 starts_on 으로 잡으면)
+    둘째 날의 불가능 시간이 기간 밖으로 판정되어 전부 제외됩니다. 그러면 이영희가
+    항상 가능한 것으로 처리되어, 조율안 없이 배정에 성공합니다.
     """
     period_id = _period(db_session, days=2)  # 8/1 ~ 8/2
     team_id = _team_with_member(db_session, "A", "김민수")
@@ -369,7 +369,7 @@ def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
     db_session.add(other)
     db_session.flush()
     seat(db_session, team_id, other.id)
-    # 마지막 날(8/2)에만 걸리는 불가능시간 — 첫날(8/1)에는 아무 제약이 없습니다.
+    # 마지막 날(8/2)에만 있는 불가능 시간입니다. 첫날(8/1)에는 제약이 없습니다.
     db_session.add(
         UnavailableTime(
             member_id=other.id,
@@ -397,12 +397,12 @@ def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
 def test_multiple_unavailable_times_for_the_same_person_all_block_assignment(
     db_session: Session,
 ) -> None:
-    """한 사람에게 불가능시간이 둘 이상이면 둘 다 걸러져야 합니다.
+    """한 사람에게 불가능 시간이 2개 이상이면 전부 반영되어야 합니다.
 
-    첫 번째 것만 반영하면(예: expand_unavailable이 rows의 첫 원소만 쓰면) 두 번째
-    구간이 열려 있는 것처럼 보여, 실제로는 불가능한 배정이 가능하다고 잘못 판단한다.
+    첫 번째 불가능 시간만 반영하면(예: expand_unavailable 이 rows 의 첫 원소만 사용하면) 두 번째
+    구간이 가능한 시간으로 처리되어, 실제로는 불가능한 배정을 가능하다고 잘못 판정합니다.
 
-    설계: 방은 하루 2칸(18:00~20:00, 한 시간 격자). 팀 A(김민수, 항상 가능)와
+    설계: 합주실은 하루 2칸(18:00~20:00, 1시간 격자). 팀 A(김민수, 항상 가능)와
     팀 B(이영희 혼자)가 각각 2칸씩 나눠 갖는다(총 4칸 / 팀 2개). 이영희에게
     18:00~19:00, 19:00~19:30 두 구간을 따로따로 걸어 두면 그녀가 갈 수 있는
     칸은 19:30~20:00 하나뿐이라 2칸을 채울 수 없어 반드시 infeasible이어야
@@ -448,7 +448,7 @@ def test_multiple_unavailable_times_for_the_same_person_all_block_assignment(
 def test_excluding_the_proposed_member_makes_the_assignment_savable(
     db_session: Session,
 ) -> None:
-    """조율안 확정 경로 — 조율안이 지목한 사람을 빼면 그대로 현행 시간표가 됩니다."""
+    """조율안 확정 경로입니다. 조율안이 지목한 멤버를 제외하면 그 결과가 현행 시간표가 됩니다."""
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
     blocked = Member(name="이영희")
@@ -510,7 +510,7 @@ def test_excluding_someone_outside_the_roster_is_rejected(
 def test_open_slots_come_from_the_saved_schedule_without_recomputing(
     db_session: Session,
 ) -> None:
-    """남는 칸은 저장된 배정에서 되읽습니다 — 배정 계산을 다시 돌리지 않습니다."""
+    """남는 slot 은 저장된 배정에서 조회합니다. 배정 계산을 다시 실행하지 않습니다."""
     period_id = _period(db_session)  # 8/1 하루
     team_a = _team_with_member(db_session, "A", "김민수")
     team_b = _team_with_member(db_session, "B", "박지훈")

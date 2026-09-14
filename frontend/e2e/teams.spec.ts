@@ -28,8 +28,8 @@ test("팀 찾기에서 팀을 누르면 명단이 나온다", async ({ page, req
 });
 
 // 승인하는 쪽은 page와 page.request(seed가 생성한 e2e 계정, join_approve 권한을 가짐)이고,
-// 신청하는 쪽은 request를 로그아웃한 뒤 새 계정으로 갈아 씁니다. 쿠키 저장소가 둘로 나뉘어야
-// 한 테스트 안에서 두 사람을 흉내낼 수 있기 때문입니다.
+// 신청하는 쪽은 request 를 로그아웃한 뒤 새 계정으로 다시 로그인합니다. cookie 저장소가 둘로 나뉘어야
+// 한 테스트 안에서 두 사람을 재현할 수 있기 때문입니다.
 test("직접 승인 팀은 승인해야 명단에 오르고 그전에는 인원 수에 안 세진다", async ({
   page,
   request,
@@ -73,8 +73,8 @@ test("직접 승인 팀은 승인해야 명단에 오르고 그전에는 인원 
   await page.getByRole("button", { name: new RegExp(escapeRegExp(team.name)) }).click();
   await page.getByRole("button", { name: `${applicantName} 참가 승인` }).click();
 
-  // 승인 대기 중인 신청과 확정된 명단이 같은 상자를 씁니다. 승인 버튼이 사라지는 것을 먼저
-  // 기다리지 않으면 신청 줄에 그대로 있는 이름을 명단으로 잘못 보고, 아직 완료되지 않은 승인을 검사합니다.
+  // 승인 대기 중인 신청과 확정된 명단이 같은 영역에 표시됩니다. 승인 버튼이 사라지는 것을 먼저
+  // 기다리지 않으면 신청 줄에 그대로 있는 이름을 명단으로 잘못 판정해, 아직 완료되지 않은 승인을 검사합니다.
   await expect(page.getByRole("button", { name: `${applicantName} 참가 승인` })).toHaveCount(0);
   await expect(page.getByText(applicantName)).toBeVisible();
   const approved = (await (await page.request.get("/api/teams")).json()) as { teams: Team[] };

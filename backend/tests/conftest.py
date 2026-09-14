@@ -39,15 +39,15 @@ def seat(
     return slot
 
 
-# 테스트 전용 DB 이름입니다. 여러 테스트를 동시에 실행할 때만 환경변수로 구분합니다—
-# 같은 이름을 사용하면 서로의 테이블을 삭제하며 실행됩니다.
+# 테스트 전용 DB 이름입니다. 여러 테스트를 동시에 실행할 때는 환경변수로 이름을 구분합니다.
+# 같은 이름을 사용하면 서로의 table 을 삭제합니다.
 TEST_DB_NAME = os.environ.get("TEST_DB_NAME", "banblit_test")
 
 
 @pytest.fixture(scope="session")
 def test_engine() -> Iterator[Engine]:
-    """전용 테스트 DB를 생성하고, 실제 migration(DB 구조를 바꾸는 단계별 기록)을
-    적용해 스키마를 구성합니다."""
+    """전용 테스트 DB 를 생성하고, 실제 migration(DB 구조를 바꾸는 단계별 기록)을
+    적용해 schema 를 구성합니다."""
     base_url = os.environ["DATABASE_URL"]
     admin = create_engine(base_url, isolation_level="AUTOCOMMIT")
     with admin.connect() as connection:
@@ -65,19 +65,19 @@ def test_engine() -> Iterator[Engine]:
     )
     engine = create_engine(test_url)
     with engine.begin() as connection:
-        # 스키마를 완전히 비웁니다. 테이블 단위로 삭제하면 모델에서 제거된
-        # 이전 테이블(memberships 같은)을 metadata가 인식하지 못해 남아있고,
-        # 그 테이블의 외래키가 teams를 참조해 다시 생성할 수도 없습니다.
-        # alembic_version도 함께 삭제되어 alembic이 "이미 최신"으로 인식하고
-        # upgrade를 건너뛰는 문제도 방지합니다.
+        # schema 를 완전히 비웁니다. table 단위로 삭제하면 model 에서 제거된
+        # 이전 table(memberships 등)을 metadata 가 인식하지 못해 남고,
+        # 그 table 의 foreign key 가 teams 를 참조해 teams 를 다시 생성할 수도 없습니다.
+        # alembic_version 도 함께 삭제되어 alembic 이 "이미 최신"으로 인식하고
+        # upgrade 를 건너뛰는 문제도 방지합니다.
         connection.execute(text("DROP SCHEMA public CASCADE"))
         connection.execute(text("CREATE SCHEMA public"))
 
     alembic_config = Config("alembic.ini")
     alembic_config.set_main_option("sqlalchemy.url", test_url)
-    # migrations/env.py는 DATABASE_URL 환경변수를 set_main_option보다 먼저 확인합니다.
-    # attributes에 넣은 주소를 env.py가 그 둘보다 우선해 사용합니다—이것이 없으면
-    # migration이 테스트 DB가 아니라 메인 DB에 적용됩니다.
+    # migrations/env.py 는 DATABASE_URL 환경변수를 set_main_option 보다 먼저 확인합니다.
+    # attributes 에 넣은 주소를 env.py 가 그 둘보다 우선해 사용합니다. 이 설정이 없으면
+    # migration 이 테스트 DB 가 아니라 메인 DB 에 적용됩니다.
     alembic_config.attributes["sqlalchemy.url"] = test_url
     command.upgrade(alembic_config, "head")
 
@@ -90,8 +90,8 @@ def db_session(test_engine: Engine) -> Iterator[Session]:
     with Session(test_engine) as session:
         yield session
         session.rollback()
-    # 테스트마다 깨끗한 상태로: 모든 행을 삭제합니다. 이전에는 migration이 생성한
-    # position만 남겼는데, 그 테이블이 없어져 남길 것이 없습니다.
+    # 테스트 사이의 격리를 위해 모든 행을 삭제합니다. 이전에는 migration 이 생성한
+    # positions 행만 남겼는데, 그 table 이 삭제되어 남길 행이 없습니다.
     with test_engine.begin() as connection:
         for table in reversed(Base.metadata.sorted_tables):
             connection.execute(table.delete())
@@ -99,19 +99,19 @@ def db_session(test_engine: Engine) -> Iterator[Session]:
 
 @pytest.fixture()
 def api_client(db_session: Session) -> Iterator[TestClient]:
-    """endpoint(API의 요청 주소 단위)가 테스트 전용 세션을 사용하도록
+    """endpoint(API의 요청 주소 단위)가 테스트 전용 session 을 사용하도록
     설정한 클라이언트입니다.
 
-    실제 앱은 요청마다 새 세션을 열지만, 테스트에서는 db_session fixture(테스트마다
-    준비해 주는 값)가 생성한 세션을 그대로 사용합니다—테스트가 추가한 데이터를
-    endpoint가 같은 세션에서 확인합니다.
+    실제 앱은 요청마다 새 session 을 열지만, 테스트에서는 db_session fixture(테스트마다
+    준비해 주는 값)가 생성한 session 을 그대로 사용합니다. 테스트가 추가한 데이터를
+    endpoint 가 같은 session 에서 확인합니다.
     """
     from backend.api.app import app
     from backend.db.pipeline import get_session, get_session_factory
 
-    # 배정 작업은 배경 스레드에서 db_session과 다른 세션을 엽니다(Session은 스레드끼리
-    # 공유하면 안 됩니다). 테스트에서도 같은 엔진에 새 세션을 열어야 그 스레드가 쓴
-    # 값이 커밋된 뒤 db_session에서도 표시됩니다.
+    # 배정 작업은 백그라운드 스레드에서 db_session 과 다른 session 을 엽니다(Session 은 스레드끼리
+    # 공유하면 안 됩니다). 테스트에서도 같은 engine 에 새 session 을 열어야 그 스레드가 저장한
+    # 값이 commit 된 뒤 db_session 에서도 조회됩니다.
     test_engine = db_session.get_bind()
     app.dependency_overrides[get_session] = lambda: db_session
     app.dependency_overrides[get_session_factory] = lambda: (
@@ -122,17 +122,17 @@ def api_client(db_session: Session) -> Iterator[TestClient]:
     app.dependency_overrides.clear()
 
 
-# 계정 하나를 생성해 (계정 번호, 인증 쿠키)를 반환하는 도우미의 타입입니다.
-# 테스트 파일마다 같은 정의를 다시 적지 않도록 여기서 한 번만 정의합니다.
+# 계정 하나를 생성해 (계정 번호, 인증 cookie)를 반환하는 함수의 타입입니다.
+# 테스트 파일마다 같은 정의를 다시 적지 않도록 이 파일에서 한 번만 정의합니다.
 AccountFactory = Callable[[str, str], tuple[int, dict[str, str]]]
 
 
 @pytest.fixture()
 def account(api_client: TestClient) -> AccountFactory:
-    """가입을 통해 실제 계정을 생성하고, (계정 번호, 인증 쿠키)를 반환합니다.
+    """가입을 통해 실제 계정을 생성하고, (계정 번호, 인증 cookie)를 반환합니다.
 
-    한 테스트 안에서 헤드매니저와 일반 멤버를 오가며 요청해야 하므로, 받은 쿠키를
-    클라이언트 저장소에 남기지 않고 반환합니다—호출마다 cookies= 매개변수로
+    한 테스트 안에서 헤드매니저와 일반 멤버를 번갈아 요청해야 하므로, 받은 cookie 를
+    클라이언트에 저장하지 않고 반환합니다. 호출마다 cookies= 매개변수로
     선택해 전달해야 나중에 생성한 계정이 앞의 계정을 덮어쓰지 않습니다.
 
     맨 처음 가입한 사람이 헤드매니저입니다(.cluedoc/accounts-and-roles).
@@ -145,7 +145,7 @@ def account(api_client: TestClient) -> AccountFactory:
             json={
                 "name": name,
                 # 학과·학번은 사람을 구분하는 값의 일부입니다. 이메일이 계정마다 다르므로
-                # 학번도 그것에서 생성합니다(8자리 숫자 규칙에 맞춰). 같은 이름이 2명 이상
+                # 학번도 이메일에서 생성합니다(8자리 숫자 규칙에 맞춰). 같은 이름이 2명 이상
                 # 있어도 충돌하지 않습니다.
                 "department": "실용음악과",
                 "student_no": f"{zlib.crc32(email.encode()) % 10**8:08d}",
@@ -185,14 +185,14 @@ def poll_job(api_client: TestClient) -> Callable[[str], dict[str, Any]]:
 
 
 # 외부와 실제로 통신해야 하는 테스트는 tests/integration/<의존 대상>/ 아래에 둡니다.
-# 폴더 이름이 곧 표시 이름입니다—llm, broker가 생기면 폴더를 하나 더 만들면 됩니다.
+# 폴더 이름이 곧 marker 이름입니다. llm, broker 가 생기면 폴더를 하나 더 만듭니다.
 EXTERNAL_DEPENDENCIES = ("db", "llm", "broker")
 
 _DB_FIXTURES = {"test_engine", "db_session", "api_client"}
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    # 테스트가 있는 폴더를 확인하고 표시를 붙입니다. 파일마다 수동으로 붙이면
+    # 테스트가 있는 폴더를 확인하고 marker 를 붙입니다. 파일마다 수동으로 붙이면
     # 새 테스트에서 빠뜨리고, 그러면 실패가 코드 탓인지 환경 탓인지 구분할 수 없습니다.
     for item in items:
         parts = item.path.parts
@@ -212,9 +212,9 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
 
 @pytest.fixture(autouse=True)
 def _forget_rate_limits() -> None:
-    """테스트와 테스트 사이에 요청 제한 카운트를 삭제합니다.
+    """테스트와 테스트 사이에 rate limit(요청 횟수 제한) 기록을 초기화합니다.
 
-    rate limiter는 process 내에서 계산하므로, 삭제하지 않으면 이전 테스트가
-    사용한 횟수가 다음 테스트에 남아 로그인 테스트부터 429 오류로 막힙니다.
+    rate limiter 는 process 메모리에서 세므로, 초기화하지 않으면 이전 테스트가
+    사용한 횟수가 다음 테스트에 남아 로그인 테스트부터 429 로 거부됩니다.
     """
     reset_all()

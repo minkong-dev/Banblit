@@ -140,7 +140,7 @@ def test_does_not_run_a_slot_missed_yesterday(db_session: Session) -> None:
     _team_with_member(db_session, "A", "김민수")
     _room(db_session, "1번방")
 
-    # 어제 두 시각이 다 지났지만 오늘 9시는 아직 안 됐습니다. 역산은 오늘까지만입니다.
+    # 어제 두 시각은 지났지만 오늘 9시는 아직 지나지 않았습니다. 지난 시각 확인은 오늘 안에서만 합니다.
     assert auto_assign.run_due_assignments(db_session, _at(8)) == []
     assert _runs(db_session) == []
 
@@ -165,8 +165,8 @@ def test_a_failing_period_does_not_stop_the_next_one(
     healthy_id = _period(db_session)
     _team_with_member(db_session, "A", "김민수")
     _room(db_session, "1번방")
-    # 실패한 기간은 되돌리기(rollback)로 자기 작업만 버립니다. 실제 저장소의 기간은
-    # 이미 커밋된 줄이므로, 검사도 심어둔 것을 커밋해 같은 조건으로 맞춥니다.
+    # 실패한 기간은 rollback 으로 자신의 변경만 취소합니다. 실제 DB 의 기간은
+    # 이미 commit 된 행이므로, 테스트도 준비한 행을 commit 해 같은 조건으로 맞춥니다.
     db_session.commit()
     real = auto_assign.assign_period
 
@@ -182,7 +182,7 @@ def test_a_failing_period_does_not_stop_the_next_one(
     assert [result.period_id for result in results] == [broken_id, healthy_id]
     assert results[0].error is not None
     assert results[1].error is None
-    # 터진 기간은 표시를 남기지 않아 다음 확인 때 다시 시도됩니다.
+    # 실패한 기간은 실행 기록을 남기지 않아 다음 확인 때 다시 시도됩니다.
     assert [(run.period_id, run.slot) for run in _runs(db_session)] == [
         (healthy_id, "first")
     ]

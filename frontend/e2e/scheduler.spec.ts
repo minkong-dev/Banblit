@@ -28,10 +28,10 @@ test("달력이 실제 데이터로 그려진다", async ({ page, request }) => 
 
 type Notification = { id: number; kind: string; created_at: string; read: boolean };
 
-// ponytail: 알림을 생성하는 곳은 자동 배정 서비스 하나뿐입니다(backend/api/auto_assign.py).
-// 브라우저에서 새 알림을 생성할 방법이 없습니다. 그래서 알림을 새로 만들지 않고,
-// 서버가 가진 것과 화면이 표시하는 것이 같은지만 확인합니다. 화면에서 알림이 생기는 경로가
-// 열리면 알림을 생성해 두고 확인하는 방식으로 바꿉니다.
+// ponytail: 알림은 배정이 저장되거나 되돌리기가 완료될 때 서버가 생성합니다
+// (backend/api/routers/schedule.py, backend/jobs/auto_assign.py). 이 테스트는 알림을 새로
+// 만들지 않고, 서버가 반환한 알림과 화면이 표시하는 알림이 같은지만 확인합니다. 알림을 생성해
+// 두고 확인하려면 assignment.spec.ts 처럼 배정 계산을 실행해야 합니다.
 test("알림 칸이 목록 맨 위에 있고 서버가 준 내 알림과 같은 것을 보여준다", async ({
   page,
   request,
@@ -52,7 +52,7 @@ test("알림 칸이 목록 맨 위에 있고 서버가 준 내 알림과 같은 
   await expect(panel.locator("li")).toHaveCount(notifications.length);
   if (unread === 0) return;
 
-  // 머리글을 누르면 전부 읽은 상태가 되고 '안 읽음 n'이 사라집니다.
+  // 알림 패널의 제목(.ph)을 클릭하면 전부 읽은 상태가 되고 '안 읽음 n' 표시가 사라집니다.
   await expect(panel.locator(".ph")).toContainText(`안 읽음 ${unread}`);
   await panel.locator(".ph").click();
   await expect(panel.locator(".ph")).not.toContainText("안 읽음");

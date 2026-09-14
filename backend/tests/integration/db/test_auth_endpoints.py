@@ -88,7 +88,7 @@ def test_a_later_account_becomes_a_member(api_client: TestClient) -> None:
 
 
 def test_signup_allows_a_duplicate_name(api_client: TestClient) -> None:
-    """이름이 같아도 학번이 다르면 다른 사람입니다 — 동명이인은 흔하입니다."""
+    """이름이 같아도 학번이 다르면 다른 사람입니다. 동명이인이 있기 때문입니다."""
     _signup(api_client)
 
     response = api_client.post(
@@ -100,10 +100,10 @@ def test_signup_allows_a_duplicate_name(api_client: TestClient) -> None:
 
 
 def test_signup_refuses_the_same_person_twice(api_client: TestClient) -> None:
-    """이름·학과·학번·기수가 모두 같으면 같은 사람이다(사용자 결정)."""
+    """이름·학과·학번·기수가 모두 같으면 같은 사람입니다(사용자 결정)."""
     _signup(api_client)
 
-    # 이메일만 다르고 나머지 네 값이 같습니다.
+    # 이메일만 다르고 나머지 4개 값이 같습니다.
     response = api_client.post(
         "/signup", json={**SIGNUP_BODY, "email": "second@example.com"}
     )
@@ -134,7 +134,7 @@ def test_signup_rejects_a_short_password(api_client: TestClient) -> None:
 
 
 def test_signup_rejects_a_cohort_out_of_range(api_client: TestClient) -> None:
-    """기수는 숫자만 받되 오타로 들어온 큰 수는 막습니다."""
+    """기수는 숫자만 받되 오타로 입력된 큰 수는 거부합니다."""
     response = api_client.post("/signup", json={**SIGNUP_BODY, "cohort": 101})
 
     assert response.status_code == 422
@@ -192,8 +192,8 @@ def test_login_rejects_an_unknown_email_without_revealing_that(
 
 
 def test_me_returns_the_signed_in_account(api_client: TestClient) -> None:
-    # TestClient(테스트용 API 클라이언트)가 cookie 저장소를 들고 있어, signup 응답의 Set-Cookie가 다음 요청에
-    # 자동으로 담깁니다. 화면이 브라우저 cookie로 하는 것과 같습니다.
+    # TestClient(테스트용 API 클라이언트)가 cookie 를 저장하므로, signup 응답의 Set-Cookie 가 다음 요청에
+    # 자동으로 포함됩니다. 브라우저가 cookie 를 처리하는 방식과 같습니다.
     _signup(api_client)
 
     response = api_client.get("/me")
@@ -298,8 +298,8 @@ def test_login_removes_that_accounts_expired_session_row(
 def test_login_removes_only_the_dead_rows_of_that_account(
     api_client: TestClient, db_session: Session
 ) -> None:
-    """만료된 행은 삭제하되 남의 계정 행은 건드리지 않아야 합니다. 삭제 조건에
-    계정 번호가 빠지면 다른 사람이 로그인 상태를 잃습니다."""
+    """만료된 행은 삭제하되 다른 계정의 행은 삭제하지 않아야 합니다. 삭제 조건에
+    계정 번호가 빠지면 다른 사용자의 로그인이 해제됩니다."""
     first = _signup(api_client)
     first_id = first["account"]["id"]
     api_client.post("/logout")
@@ -321,7 +321,7 @@ def test_login_removes_only_the_dead_rows_of_that_account(
 
 
 def _session_max_age(response: Response) -> int:
-    """Set-Cookie에 담긴 Max-Age를 추출합니다. 없으면 브라우저 닫을 때까지입니다."""
+    """Set-Cookie 에 담긴 Max-Age 를 추출합니다. 없으면 None 을 반환하며, cookie 는 브라우저를 닫을 때까지 유지됩니다."""
     for raw in response.headers.get_list("set-cookie"):
         if raw.startswith(f"{SESSION_COOKIE}="):
             for part in raw.split(";"):
@@ -335,7 +335,7 @@ def _session_max_age(response: Response) -> int:
 def test_login_without_keep_lasts_only_for_the_browser_session(
     api_client: TestClient, db_session: Session
 ) -> None:
-    """체크를 끄면 브라우저를 닫을 때 로그인이 풀립니다. cookie에 수명을 담지 않습니다."""
+    """로그인 상태 유지를 끄면 브라우저를 닫을 때 로그인이 해제됩니다. cookie 에 Max-Age 를 설정하지 않습니다."""
     _signup(api_client)
 
     response = api_client.post(
@@ -368,7 +368,7 @@ def test_login_with_keep_lasts_far_longer(
 def test_keeping_the_login_also_stretches_the_row_on_the_server(
     api_client: TestClient, db_session: Session
 ) -> None:
-    """cookie의 유효 기간을 늘리기만 하면 서버 쪽 행이 먼저 만료되어 로그인이 풀립니다. 둘이 함께 늘어야 합니다."""
+    """cookie 의 유효 기간만 늘리면 서버 쪽 session 행이 먼저 만료되어 로그인이 해제됩니다. 둘을 함께 늘려야 합니다."""
     _signup(api_client)
     api_client.post(
         "/login",
@@ -394,10 +394,10 @@ def test_leaving_requires_login(api_client: TestClient) -> None:
 def test_leaving_removes_the_account_and_everything_it_left(
     api_client: TestClient, db_session: Session
 ) -> None:
-    """탈퇴하면 그 사람이 남긴 것도 함께 사라집니다(사용자 결정).
+    """탈퇴하면 그 사람이 작성한 글·댓글·예약도 함께 삭제됩니다(사용자 결정).
 
-    글·댓글·예약을 남겨 두면 쓴 사람이 없는 글이 되고, 이름 자리에 무엇을 적을지를
-    또 정해야 합니다. 통째로 삭제하는 쪽을 선택했습니다.
+    글·댓글·예약을 남겨 두면 작성자가 없는 글이 되고, 작성자 이름 자리에 무엇을 표시할지를
+    또 정해야 합니다. 전부 삭제하는 쪽을 선택했습니다.
     """
     _signup(api_client)
     me = api_client.get("/me").json()["account"]
@@ -408,11 +408,11 @@ def test_leaving_removes_the_account_and_everything_it_left(
     assert response.status_code == 204
     assert db_session.get(Member, me["id"]) is None
     assert db_session.scalars(select(Post)).all() == []
-    # cookie도 함께 삭제되어 그 자리에서 로그아웃됩니다.
+    # cookie 도 함께 삭제되어 즉시 로그아웃됩니다.
     assert api_client.get("/me").status_code == 401
 
 
-# ── 내 정보 고치기 ─────────────────────────────────────────────────────────
+# ── 내 정보 수정 ───────────────────────────────────────────────────────────
 
 
 def test_editing_my_profile_requires_login(api_client: TestClient) -> None:
@@ -438,7 +438,7 @@ def test_editing_my_profile_rejects_an_empty_name(api_client: TestClient) -> Non
     assert api_client.patch("/me", json={"name": "  ", "cohort": 47}).status_code == 422
 
 
-# ── 비밀번호 바꾸기 ────────────────────────────────────────────────────────
+# ── 비밀번호 변경 ──────────────────────────────────────────────────────────
 
 
 def test_changing_my_password_needs_the_current_one(api_client: TestClient) -> None:
@@ -480,7 +480,7 @@ def test_changing_my_password_rejects_a_weak_one(api_client: TestClient) -> None
 
 
 def test_signup_rejects_a_student_no_that_is_not_eight_digits(api_client: TestClient) -> None:
-    """학번은 숫자 8자리입니다 — 화면(validate.ts)과 서버가 같은 규칙을 봅니다."""
+    """학번은 숫자 8자리입니다. 화면(validate.ts)과 서버가 같은 규칙을 사용합니다."""
     for bad in ("2026001", "202600011", "2026000a", " ", "２０２６０００１"):
         response = api_client.post("/signup", json={**SIGNUP_BODY, "student_no": bad})
 

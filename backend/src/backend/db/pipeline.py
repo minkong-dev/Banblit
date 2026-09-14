@@ -51,16 +51,16 @@ def get_engine() -> Engine:
 
 
 def get_session() -> Iterator[Session]:
-    # get_engine 으로 Engine 을 획득하여 Session 을 열고, 사용자가 완료하면 닫습니다.
-    # 세션을 닫지 않으면 connection 이 pool 에 반납되지 않아 다음 요청이 pool 대기에서
-    # 차단됩니다. 테스트는 FastAPI 의 의존성 재정의로 이 함수 대신 전용 세션을 대체합니다.
+    # get_engine 으로 Engine 을 획득하여 Session 을 열고, 요청 처리가 끝나면 닫습니다.
+    # session 을 닫지 않으면 connection 이 pool 에 반납되지 않아 다음 요청이 pool 대기에서
+    # 차단됩니다. 테스트는 FastAPI 의 dependency override 로 이 함수 대신 테스트 전용 session 을 사용합니다.
     with Session(get_engine()) as session:
         yield session
 
 
 def get_session_factory() -> Callable[[], Session]:
-    # 배경 스레드가 요청을 받은 스레드와 다른 세션을 열어야 할 때 사용합니다. Session 은 스레드끼리
-    # 공유하면 안 되므로 세션 객체가 아니라 "호출할 때마다 새 세션을 여는 함수"를 반환합니다.
+    # 백그라운드 스레드가 요청을 받은 스레드와 다른 session 을 열어야 할 때 사용합니다. Session 은 스레드끼리
+    # 공유하면 안 되므로 session 객체가 아니라 "호출할 때마다 새 session 을 여는 함수"를 반환합니다.
     return lambda: Session(get_engine())
 
 

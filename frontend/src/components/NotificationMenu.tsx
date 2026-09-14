@@ -10,16 +10,16 @@ import {
   unreadCount,
 } from "../lib/pipeline";
 
-/** 상단바의 알림 종(bell icon)과 그 아래 popover(팝업 메뉴). 프로필 메뉴와 같은 구조를 쓰되,
- *  종에는 안 읽은 알림 개수를 표시합니다 — 어느 화면에 있든 배정이 바뀌었음을 알 수 있어야 합니다. */
+/** 상단바의 알림 아이콘과 그 아래 popover(팝업 메뉴)입니다. 프로필 메뉴와 같은 구조를 사용하되,
+ *  아이콘에는 읽지 않은 알림 개수를 표시합니다. 어느 화면에 있든 배정이 바뀌었음을 알 수 있어야 합니다. */
 export function NotificationMenu() {
   // popover 바깥을 누르면 닫습니다. 목록이 길어 화면의 많은 부분을 차지하므로,
-  // 종만으로는 닫기 어려워 UX 가 갇힌 느낌이 될 수 있습니다.
+  // 아이콘으로만 닫아야 하면 사용자가 닫는 방법을 찾기 어렵습니다.
   const { open, toggle, box } = useDismissible();
   const queryClient = useQueryClient();
 
   // 이 query(서버 조회)는 항상 현재 로그인한 사람의 알림만 반환합니다.
-  // 경로(주소)로는 사람을 구분하지 않고, 인증 cookie(웹 저장소)로 확인합니다.
+  // 경로(주소)로는 사람을 구분하지 않고, 인증 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 확인합니다.
   const notifications = useQuery({
     queryKey: ["notifications"],
     queryFn: loadNotifications,

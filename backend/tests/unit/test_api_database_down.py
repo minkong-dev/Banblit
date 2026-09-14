@@ -15,7 +15,7 @@ def _refuse_session() -> None:
 def test_database_down_answers_503_not_500() -> None:
     """DB가 끊겼을 때 예외 처리를 하지 않으면 상태 코드 500으로 응답합니다.
 
-    사용자의 잘못이 아니라 이 쪽이 현재 요청을 처리할 수 없는 상태이므로 503으로 응답합니다.
+    사용자의 잘못이 아니라 서버가 현재 요청을 처리할 수 없는 상태이므로 503 으로 응답합니다.
     """
     app.dependency_overrides[get_session] = _refuse_session
     try:

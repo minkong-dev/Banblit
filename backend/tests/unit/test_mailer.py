@@ -32,6 +32,6 @@ def test_a_deployment_missing_the_settings_records_the_failure_without_the_body(
 ) -> None:
     recorded = _send_without_smtp(monkeypatch, caplog, "false")
 
-    # 본문에는 재설정 토큰이 포함되어 있습니다. 설정을 빠뜨린 배포에서 토큰이 로그로 노출되면 안 됩니다.
+    # 본문에는 재설정 token 이 포함되어 있습니다. 설정을 빠뜨린 배포 환경에서 token 이 로그로 노출되면 안 됩니다.
     assert "secret-token-value" not in recorded
     assert TO in recorded

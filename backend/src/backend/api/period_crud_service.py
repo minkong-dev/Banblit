@@ -88,8 +88,9 @@ def update_period(
     if period is None:
         raise ValueError("그런 기간이 없습니다")
 
-    # _validated_changes를 먼저 통과시킨 뒤에만 대입합니다. 대입이 앞서면 검증이
-    # 실패해도 세션에 dirty로 남아, 조회 한 줄만 끼어도 커밋하지 않은 값이 저장됩니다.
+    # _validated_changes 를 먼저 통과시킨 뒤에만 대입합니다. 대입이 앞서면 검증이 실패해도
+    # session 에 dirty 상태로 남아, 같은 session 에서 조회가 한 번이라도 실행되면 autoflush 로
+    # 검증에 실패한 값이 데이터베이스에 기록됩니다.
     changes = _validated_changes(
         period, kind, starts_on, ends_on, first_run_at, second_run_at
     )

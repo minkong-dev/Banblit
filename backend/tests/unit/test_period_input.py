@@ -128,7 +128,7 @@ def test_weekly_repeat_stops_at_its_repeat_until_date() -> None:
 
 
 def test_repeats_weekly_none_is_treated_as_not_repeating() -> None:
-    # 세션에 저장하지 않은 객체는 repeats_weekly가 아직 기본값(False)이 설정되지 않아
+    # session 에 추가하지 않은 객체는 repeats_weekly 에 아직 기본값(False)이 설정되지 않아
     # None일 수 있습니다. 이때도 반복 없는 1회짜리로 처리해야 합니다.
     rows = [
         UnavailableTime(

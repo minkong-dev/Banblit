@@ -12,7 +12,7 @@ from backend.api.input import (
 from backend.db.models import Room
 from backend.db.pipeline import commit_translating
 
-# 걸릴 수 있는 제약과 그때 사람에게 보일 문장입니다. 이름은 마이그레이션이 만든 것입니다.
+# 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 바꾸는 단계별 기록)이 정한 이름입니다.
 ROOM_MESSAGES = {"rooms_name_key": "이미 있는 합주실 이름입니다"}
 
 
@@ -21,7 +21,7 @@ def list_rooms(session: Session) -> list[Room]:
 
 
 def create_room(session: Session, name: str, opens_at: str, closes_at: str) -> Room:
-    """새 합주실을 생성합니다. 경계에서 이름·시간대·순서·이름 중복을 사람이 읽을 문장으로 검증합니다."""
+    """새 합주실을 생성합니다. 이름이 비어 있는지, 시각이 HH:MM 형식이고 정시인지, 닫는 시각이 여는 시각보다 늦은지, 이름이 중복인지를 사람이 읽을 수 있는 문장으로 검증합니다."""
     clean_name = require_non_empty(name, "합주실 이름")
     opens = _parse_room_clock(opens_at, "여는 시각")
     closes = _parse_room_clock(closes_at, "닫는 시각")

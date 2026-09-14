@@ -1,4 +1,4 @@
-"""로그인 세션 저장소입니다.
+"""로그인 session(로그인 상태를 담는 서버 쪽 기록) table 을 생성합니다.
 
 Revision ID: 010cbf76a692
 Revises: 9688ede756d5
@@ -20,7 +20,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # 로그인 세션입니다. 서버가 토큰을 취소할 수 있도록 DB에 활성 세션만 유효한 것으로 간주합니다.
+    # 로그인 session 입니다. 서버가 token 을 취소할 수 있도록 DB 에 저장된 활성 session 만 유효로 판정합니다.
     op.create_table(
         'sessions',
         sa.Column('id', sa.Integer(), nullable=False),

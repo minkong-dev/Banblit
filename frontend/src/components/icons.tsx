@@ -1,5 +1,5 @@
 // 여러 화면이 같은 아이콘을 사용합니다. 화면마다 SVG를 다시 작성하면 한쪽만 수정되어 불일치가 발생합니다.
-// 크기는 CSS가 정하므로 여기서는 모양만 정의합니다.
+// 크기는 CSS 가 정하므로 이 파일에서는 모양만 정의합니다.
 
 type IconProps = { className?: string };
 
@@ -104,7 +104,7 @@ export function ClockIcon(props: IconProps) {
 }
 
 /** 체크 아이콘입니다. 켜고 끄는 자리에 사용합니다.
- *  자리가 밀리지 않게 켠 쪽과 끈 쪽이 같은 그림을 씁니다. */
+ *  배치가 밀리지 않게 켠 상태와 끈 상태가 같은 크기의 그림을 사용합니다. */
 export function CheckIcon(props: IconProps) {
   return <Stroke width={2.6} {...props}><path d="M4.5 12.5l5 5 10-11" /></Stroke>;
 }

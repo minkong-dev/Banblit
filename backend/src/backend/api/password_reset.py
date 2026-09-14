@@ -11,14 +11,14 @@ from backend.api.auth_session import hash_token, revoke_member_sessions
 from backend.api.mailer import send_mail
 from backend.db.models import Member, PasswordResetToken
 
-# 세션(7일) 유지 기간보다 훨씬 짧게 설정합니다. 이 token 하나만으로 계정을 탈취할 수 있는데, 그동안
-# 메일함에 남아 있을 수 있습니다. 메일을 수신하고 사용자가 열어본 후 새 비밀번호를 설정하는 데 필요한 시간만
-# 포함하면 되므로 30분으로 설정합니다.
+# session 유효 기간(SESSION_TTL, 7일)보다 짧게 설정합니다. 이 token 하나만으로 계정을 탈취할 수 있고,
+# 만료 전까지 메일함에 남아 있기 때문입니다. 메일을 수신하고 열어 새 비밀번호를 설정하는 데 필요한
+# 시간만 있으면 되므로 30분으로 설정합니다.
 RESET_TTL = timedelta(minutes=30)
 
 # 같은 계정으로 이 시간 내에 다시 호출하면 token을 생성하지도, 메일을 전송하지도 않습니다.
-# 이 endpoint가 인증 없이 열려 있어서 누구든 반복 호출할 수 있습니다 — 제한하지 않으면 다른 사용자의 메일함에
-# 재설정 link를 계속 삽입할 수 있고, 유효한 token도 그만큼 증가합니다.
+# 이 endpoint 는 인증 없이 열려 있어서 누구든 반복 호출할 수 있습니다. 제한하지 않으면 다른 사용자의
+# 메일함에 재설정 link 를 계속 보낼 수 있고, 유효한 token 도 그만큼 증가합니다.
 RESEND_INTERVAL = timedelta(minutes=1)
 
 # 메일에 포함할 재설정 link의 기본 도메인입니다. 배포 환경의 도메인은 환경변수로 지정합니다.
@@ -52,9 +52,9 @@ def issue_reset_token(session: Session, member_id: int, now: datetime) -> str | 
     이전 token은 삭제합니다 — 한 계정에 유효한 token은 항상 하나뿐입니다.
     """
     # ponytail: 조회와 저장 사이에 lock이 없습니다. 같은 계정으로 거의 동시에 들어오는 두
-    # 요청이 둘 다 이 검증을 통과할 수 있고, 그러면 메일이 두 통 전송됩니다. auth_service의
-    # _commit_signup도 유사한 구조입니다. 메일이 두 통 전송되는 것이 문제가 되면 이 행을
-    # lock하고(FOR UPDATE) 검증하면 됩니다.
+    # 요청이 둘 다 이 검증을 통과할 수 있고, 그러면 메일이 2통 전송됩니다. auth_service.signup 도
+    # 같은 구조입니다. 메일이 2통 전송되는 것이 문제가 되면 이 행을 lock 하고(FOR UPDATE)
+    # 검증합니다.
     latest = session.scalar(
         select(PasswordResetToken.created_at)
         .where(PasswordResetToken.member_id == member_id)
@@ -105,8 +105,8 @@ def request_password_reset(session: Session, email: str, now: datetime) -> None:
     드러내는 결과가 됩니다.
 
     ponytail: 제한은 계정 단위로만 설정합니다. 서로 다른 계정을 번갈아 호출하면 그만큼 메일이
-    전송됩니다. 이메일 주소마다 제한하려면 요청 발신자(주소) 단위로 추적하는 코드가 필요하지만, 그 기능은
-    gateway에 구현해야 합니다.
+    전송됩니다. 요청자 단위로 제한하려면 요청자의 IP 주소별로 호출 횟수를 추적해야 하는데, 그 기능은
+    reverse proxy(gateway)에 구현합니다.
     """
     member = _find_account(session, email)
     if member is None or member.email is None:

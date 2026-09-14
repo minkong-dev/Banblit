@@ -9,27 +9,27 @@ from sqlalchemy.engine import make_url
 
 from backend.db.models import PERMISSIONS
 
-# 역할 열이 있던 시점과 권한 묶음으로 옮긴 시점입니다.
+# 역할 열이 있던 시점과 permission set(권한 집합)으로 옮긴 시점입니다.
 BEFORE = "010cbf76a692"
-# 권한 묶음으로 옮긴 뒤에도 목록이 몇 번 바뀌었습니다. 헤드매니저는 그 모든 이동을 거쳐
+# permission set 으로 옮긴 뒤에도 권한 항목 목록이 여러 번 바뀌었습니다. 헤드매니저는 그 모든 이행을 거쳐
 # "할 수 있는 일 전부"를 보유해야 하므로, 한 지점이 아니라 끝까지 올려 검증합니다.
 AFTER = "head"
 
-# 역할 되돌리기 검사는 이 migration(DB 구조를 바꾸는 단계별 기록) 하나만 오갑니다 — 무엇을 보는지 좁게 둡니다.
-# 사슬 전체가 끝까지 내려가는지는 맨 아래 검사가 따로 봅니다.
+# 역할 복원 테스트는 이 migration(DB 구조를 바꾸는 단계별 기록) 하나만 upgrade·downgrade 합니다. 검증 범위를 좁게 둡니다.
+# migration 전체가 끝까지 downgrade 되는지는 맨 아래 테스트가 따로 검증합니다.
 MOVED = "b7f1a92c4d31"
 
 
 @pytest.fixture()
 def migration_db() -> Iterator[tuple[Engine, Config]]:
-    """이 검사 전용 DB를 새로 만듭니다. 다른 검사가 쓰는 DB는 이미 head까지 올라가 있어서 역할 열이 있던 시점으로 되돌릴 수 없습니다."""
+    """이 테스트 전용 DB 를 새로 만듭니다. 다른 테스트가 사용하는 DB 는 이미 head 까지 upgrade 되어 있어서 역할 열이 있던 시점으로 되돌릴 수 없습니다."""
     base_url = os.environ["DATABASE_URL"]
     name = os.environ.get("TEST_DB_NAME", "banblit_test") + "_migration"
 
     admin = create_engine(base_url, isolation_level="AUTOCOMMIT")
     with admin.connect() as connection:
-        # WITH (FORCE)는 남아 있는 연결을 끊고 삭제합니다 — 앞선 검사가 비정상 종료해
-        # 연결이 남아 있어도 다음 실행이 진행됩니다.
+        # WITH (FORCE)는 남아 있는 connection 을 끊고 삭제합니다. 앞선 테스트가 비정상 종료해
+        # connection 이 남아 있어도 다음 실행이 진행됩니다.
         connection.execute(text(f"DROP DATABASE IF EXISTS {name} WITH (FORCE)"))
         connection.execute(text(f"CREATE DATABASE {name}"))
     admin.dispose()
@@ -95,7 +95,7 @@ def test_the_downgrade_puts_the_role_back(
     assert roles == {"헤드": "head_manager", "멤버": "member"}
 
 
-# 항목을 동작 단위로 쪼갠 migration(DB 구조를 바꾸는 단계별 기록). 되돌릴 때 이전 이름으로 다시 합칩니다.
+# 권한 항목을 동작 단위로 나눈 migration 입니다. downgrade 할 때 이전 이름으로 다시 합칩니다.
 SPLIT_PER_ACTION = "c1d5e83f4a29"
 BEFORE_SPLIT = "b2d94f7a1c05"
 

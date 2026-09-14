@@ -1,12 +1,12 @@
 """배정 계산을 백그라운드 스레드에서, 정해진 개수만큼만 동시에 실행합니다.
 
 작업 기록은 프로세스 메모리에만 있습니다. 서버를 재시작하면 진행 중이던 계산과 그 기록이
-함께 사라집니다 — 계산 자체가 스레드에 바인드되어 있어 재시작 후 계속 실행할 방법이 없으므로,
-기록만 DB에 남겨도 결과를 복구할 수 없습니다.
+함께 사라집니다. 계산 자체가 실행 중인 스레드 안에만 있어 재시작 후 이어서 실행할 방법이 없으므로,
+기록만 DB 에 남겨도 결과를 복구할 수 없습니다.
 
-ponytail: 완료된 작업 기록을 삭제하지 않습니다. 하루 두 번 자동 실행 + 사용자가 누른 몇 번이
-프로세스가 실행되는 동안 쌓이는 정도라 몇 달은 문제없습니다. 장시간 운영 시 submit 때
-완료된 지 오래된 것을 정리하면 됩니다.
+ponytail: 완료된 작업 기록을 삭제하지 않습니다. 하루 2번의 자동 실행과 사용자가 직접 실행한
+횟수만큼만 쌓이므로, 프로세스 재시작 전까지 메모리 부족이 발생하지 않습니다. 장시간 운영할
+경우 submit 에서 완료된 지 오래된 기록을 삭제합니다.
 """
 
 import logging
@@ -64,8 +64,8 @@ class JobRunner(Generic[ResultT]):
         self._entries[job_id] = entry
 
         def run() -> None:
-            # max_workers를 초과하는 작업은 풀의 대기열에서 기다립니다. 실제로 실행을 시작할 때
-            # 이를 기록해야 "queued"와 "running"이 구분됩니다.
+            # max_workers 를 초과하는 작업은 스레드 풀의 대기열에서 기다립니다. 실제로 실행을 시작할 때
+            # started 를 True 로 기록해야 "queued" 와 "running" 이 구분됩니다.
             entry.started = True
             try:
                 entry.future.set_result(work())
@@ -90,8 +90,9 @@ class JobRunner(Generic[ResultT]):
         error = entry.future.exception()
         if error is None:
             return replace(base, status="done", result=entry.future.result(), finished_at=entry.finished_at)
-        # ValueError는 assign_period가 의도적으로 발생시킨 사용자 메시지입니다. 그대로 반환합니다.
-        # 기타 예외는 접근 정보 같은 내부 정보가 포함될 수 있어 기록에만 남깁니다.
+        # ValueError 는 assign_period 가 의도적으로 발생시킨 사용자 메시지이므로 그대로 반환합니다.
+        # 다른 예외는 데이터베이스 접속 정보 같은 내부 정보를 포함할 수 있으므로 로그에만 남기고
+        # 화면에는 고정 문장을 반환합니다.
         message = str(error) if isinstance(error, ValueError) else "배정 계산 중 오류가 발생했습니다"
         return replace(base, status="failed", error=message, finished_at=entry.finished_at)
 

@@ -227,12 +227,12 @@ def test_period_patch_can_turn_everyday_back_off(
 def test_period_patch_does_not_leak_a_rejected_kind_change(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """검증이 끝나기 전에 값부터 대입하면, 실패한 요청의 일부가 새어 나올 수 있습니다.
+    """검증이 끝나기 전에 값부터 대입하면, 거절된 요청의 일부가 저장될 수 있습니다.
 
-    kind 변경과 잘못된 날짜 순서를 함께 보낼 경우 요청 전체가 거절되어야 합니다. kind를
-    날짜 검증보다 먼저 대입하면, 커밋은 안 해도 세션에 dirty 상태로 남습니다. 뒤이은
-    조회(GET)가 같은 세션에서 오토플러시를 일으킬 경우, 커밋한 적 없는 kind 변경이
-    그대로 저장됩니다 — update_room처럼 검증을 모두 통과한 뒤에만 대입해야 방지할 수 있습니다.
+    kind 변경과 잘못된 날짜 순서를 함께 보낼 경우 요청 전체가 거절되어야 합니다. kind 를
+    날짜 검증보다 먼저 대입하면, commit 하지 않아도 session 에 dirty 상태로 남습니다. 뒤이은
+    조회(GET)가 같은 session 에서 autoflush 를 일으킬 경우, commit 한 적 없는 kind 변경이
+    그대로 저장됩니다. update_room 처럼 검증을 모두 통과한 뒤에만 대입해야 방지할 수 있습니다.
     """
     _, head = account(*HEAD)
     period = _period(db_session, date(2026, 9, 10), date(2026, 9, 20), kind="open")

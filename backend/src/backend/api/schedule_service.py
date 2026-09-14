@@ -1,4 +1,4 @@
-"""확정 스케줄과 밀려난 회차(backup round)를 조회하는 module입니다. 라우터는 여기서 반환된 행에 이름만 추가하여 응답합니다."""
+"""확정 스케줄과 밀려난 배정기록(backup round)을 조회하는 module 입니다. 라우터는 이 module 이 반환한 행에 이름만 추가하여 응답합니다."""
 
 from datetime import datetime
 
@@ -34,9 +34,9 @@ def list_schedule(session: Session, period_id: int) -> list[ScheduleRow]:
 
 
 def list_backup_round(session: Session, period_id: int, saved_at: datetime) -> list[ScheduleRow]:
-    """밀려난 회차(backup round) 하나의 스케줄을 반환합니다. 회차를 식별하는 값은 저장 시각입니다.
+    """밀려난 배정기록(backup round) 하나의 스케줄을 반환합니다. 배정기록을 식별하는 값은 저장 시각입니다.
 
-    배정이 하나도 없는 회차는 애초에 저장되지 않습니다. 빈 결과는 "그런 회차가 없다"는
+    배정이 하나도 없는 배정기록은 애초에 저장되지 않습니다. 빈 결과는 "그런 배정기록이 없다"는
     의미이므로, 빈 스케줄을 반환하는 대신 ValueError를 발생시킵니다.
     """
     rows = session.execute(
@@ -48,7 +48,7 @@ def list_backup_round(session: Session, period_id: int, saved_at: datetime) -> l
         .order_by(AssignmentBackup.starts_at, Room.name)
     ).all()
     if not rows:
-        raise ValueError("그런 회차가 없습니다")
+        raise ValueError("그런 배정기록이 없습니다")
     return [
         (b.team_id, team_name, b.room_id, room_name, b.starts_at, b.ends_at)
         for b, team_name, room_name in rows

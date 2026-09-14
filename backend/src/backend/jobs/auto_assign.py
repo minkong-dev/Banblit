@@ -1,4 +1,4 @@
-"""정해진 시각이 지난 회차의 배정을 자동으로 실행합니다.
+"""계산 시각이 지난 집중 합주기간의 배정을 자동으로 실행합니다.
 
 서버(api)와 같은 image 를 사용하는 별도 container 로 동작합니다. 서버를 여러 대로 확장해도
 이 서비스는 한 대로 유지하므로 같은 계산이 여러 번 실행되지 않습니다. HTTP endpoint 를 거치지 않고
@@ -31,7 +31,7 @@ _INTERVAL_VARIABLE = "AUTO_ASSIGN_INTERVAL_SECONDS"
 
 @dataclass(frozen=True)
 class AutoRun:
-    """자동 배정 회차 하나분의 결과입니다. slots 는 이번 실행에서 표시된 연산 시각들입니다."""
+    """기간 하나의 자동 배정 결과입니다. slots 는 이번 실행에서 실행한 것으로 기록한 계산 시각 목록입니다."""
 
     period_id: int
     run_on: date
@@ -43,9 +43,9 @@ class AutoRun:
 def due_slots(
     period: Period, now: datetime, already_ran: set[str]
 ) -> tuple[RunSlot, ...]:
-    # period 의 두 연산 시각 중 now 까지 지난 것 중 아직 실행하지 않은 것을 반환합니다.
-    # 어제 놓친 것은 검사하지 않습니다. 배정은 회차 전체를 다시 계산하는 작업이므로 어제 것을
-    # 지금 실행하는 것과 오늘 것을 지금 실행하는 것이 같은 결과를 나타냅니다.
+    # period 의 두 계산 시각 중 now 까지 지났고 아직 실행하지 않은 시각을 반환합니다.
+    # 어제 놓친 시각은 검사하지 않습니다. 배정은 기간 전체를 다시 계산하는 작업이므로 어제 시각을
+    # 지금 실행하는 것과 오늘 시각을 지금 실행하는 것은 결과가 같습니다.
     today = now.date()
     schedule: list[tuple[RunSlot, time]] = [
         ("first", period.first_run_at),
@@ -61,14 +61,14 @@ def due_slots(
 
 
 def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
-    """now 기준으로 실행할 차례가 된 회차를 전부 계산하고, 실행한 시각을 table 에 기록합니다.
+    """now 기준으로 계산 시각이 지난 기간을 전부 계산하고, 실행한 시각을 assignment_runs table 에 기록합니다.
 
-    한 회차 계산이 실패해도 다음 회차를 계속 처리합니다. 실패는 기록에 남기고 실행 표시는
-    남기지 않아 다음 확인 때 다시 시도됩니다. 시각을 인자로 받으므로 테스트가 임의의
+    한 기간의 계산이 실패해도 다음 기간을 계속 처리합니다. 실패는 로그에 남기고 assignment_runs 에는
+    기록하지 않으므로 다음 확인 때 다시 시도합니다. 시각을 인자로 받으므로 테스트가 임의의
     시각을 대입할 수 있습니다.
     """
     today = now.date()
-    # 오늘이 회차 기간 내에 있는 집중 합주기간만 처리합니다. 상시 개방 회차는 선착순
+    # 오늘이 기간 안에 포함되는 집중 합주기간만 처리합니다. 상시 기간(kind="open")은 선착순
     # 예약으로 동작하므로 assign_period 가 거절합니다.
     periods = session.scalars(
         select(Period)
@@ -99,7 +99,7 @@ def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
 def _ran_slots_today(
     session: Session, period_ids: list[int], today: date
 ) -> dict[int, set[str]]:
-    # 오늘 이미 실행한 (회차, 연산 시각)을 회차별 집합으로 수집합니다.
+    # 오늘 이미 실행한 (기간, 계산 시각)을 기간별 집합으로 수집합니다.
     rows = session.execute(
         select(AssignmentRun.period_id, AssignmentRun.slot)
         .where(AssignmentRun.period_id.in_(period_ids))
@@ -119,26 +119,26 @@ def _run_one(
     team_ids: list[int],
     room_ids: list[int],
 ) -> AutoRun:
-    # 두 연산 시각이 모두 미뤄진 경우에도 계산은 한 번만 합니다. 같은 회차를 같은 입력으로 두 번
-    # 계산한 결과가 같기 때문입니다. 늦은 시각을 실행하고 이른 시각도 실행한 것으로 함께 표시합니다.
+    # 두 계산 시각이 모두 지난 경우에도 계산은 1번만 합니다. 같은 기간을 같은 입력으로 2번
+    # 계산한 결과가 같기 때문입니다. 1번 계산하고 두 시각 모두 실행한 것으로 기록합니다.
     try:
         result = assign_period(
             session, period_id, team_ids, room_ids, saved_at=datetime.now()
         )
-    except Exception as error:  # noqa: BLE001 - 한 회차 계산이 실패해도 다음 회차를 계속 처리
+    except Exception as error:  # noqa: BLE001 - 한 기간의 계산이 실패해도 다음 기간을 계속 처리합니다
         session.rollback()
         logger.exception("자동 배정이 실패했습니다 (period=%s)", period_id)
         return AutoRun(period_id, today, (), saved=False, error=str(error))
 
-    # 실행 표시는 계산이 완료된 후에 기록합니다. 시작할 때 기록하면 중간에 실패했을 때
-    # 그 시각이 다시 실행되지 않기 때문입니다. 그날 배정이 비는 것이 계산을 한 번 더
-    # 실행하는 것보다 나쁩니다. 다시 실행해도 assign_period 는 같은 회차를 다시 계산해
+    # 실행 기록은 계산이 완료된 후에 남깁니다. 시작할 때 기록하면 중간에 실패했을 때
+    # 그 시각이 다시 실행되지 않기 때문입니다. 그날 배정이 비는 것이 계산을 1번 더
+    # 실행하는 것보다 나쁩니다. 다시 실행해도 assign_period 는 같은 기간을 다시 계산해
     # 덮어쓰기 때문입니다.
     _mark_ran(session, period_id, today, slots)
 
-    # 알림은 저장이 실제로 완료된 후에, 그리고 실행 표시를 기록한 후에 발송합니다.
-    # 배정할 slot 을 찾지 못해 저장이 안 되면 사용자가 보던 시간표가 그대로이므로
-    # 알릴 내용이 없습니다. 알림 발송이 실패해도 실행 표시는 이미 commit 되어 있어
+    # 알림은 저장이 완료되고 실행 기록을 commit 한 후에 생성합니다.
+    # 배정할 slot 을 찾지 못해 저장하지 않으면 확정 시간표가 변경되지 않으므로
+    # 알릴 내용이 없습니다. 알림 생성이 실패해도 실행 기록은 이미 commit 되어 있어
     # 계산을 다시 실행하지 않습니다.
     if result.saved:
         notify_assignment_updated(session, period_id, datetime.now())
@@ -148,7 +148,7 @@ def _run_one(
 def _mark_ran(
     session: Session, period_id: int, today: date, slots: tuple[RunSlot, ...]
 ) -> None:
-    # (회차, 날짜, 연산 시각)을 assignment_runs 에 기록합니다. 그 셋에 중복 금지 제약이
+    # (기간, 날짜, 계산 시각)을 assignment_runs 에 기록합니다. 세 열에 unique 제약이
     # 있어 같은 시각이 중복으로 기록되지 않습니다.
     for slot in slots:
         session.add(
@@ -179,10 +179,10 @@ def interval_seconds_from_env() -> int:
 
 
 def main() -> None:
-    """확인 간격마다 깨어나 실행 대기 중인 회차가 있는지 확인하는 반복입니다. container 의 시작 명령입니다."""
+    """확인 간격마다 계산 시각이 지난 기간이 있는지 확인하는 무한 반복입니다. container 의 시작 명령입니다."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     if not enabled_from_env():
-        logger.info("%s 가 꺼져 있어 자동 배정을 돌리지 않습니다", _ENABLED_VARIABLE)
+        logger.info("%s 가 비활성화되어 있어 자동 배정을 실행하지 않습니다", _ENABLED_VARIABLE)
         return
 
     interval = interval_seconds_from_env()

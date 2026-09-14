@@ -4,10 +4,10 @@ import { E2E_ACCOUNT_TEAM, escapeRegExp, loginForTests } from "./helpers";
 
 type Team = { id: number; name: string; member_count: number };
 
-// 화면이 아니라 서버 endpoint(/api/...)를 직접 조회해 권한 자체를 확인합니다 — 다른 팀
-// 글쓰기 form으로는 화면 조작으로 갈 수 있는 경로가 없기 때문입니다.
-// request는 이 테스트 안에서 받은 응답의 쿠키를 스스로 저장해 다음 요청에 다시
-// 실어 보냅니다(브라우저 컨텍스트와 같은 방식) — 로그인 뒤 header를 따로 만들 필요가 없습니다.
+// 화면이 아니라 서버 endpoint(/api/...)를 직접 조회해 권한 자체를 확인합니다. 다른 팀의
+// 글쓰기 form 은 화면 조작으로 도달할 수 있는 경로가 없기 때문입니다.
+// request 는 이 테스트 안에서 받은 응답의 cookie 를 저장해 다음 요청에 다시
+// 포함해 보냅니다(브라우저 컨텍스트와 같은 방식). 로그인 뒤 header 를 따로 만들 필요가 없습니다.
 test("남의 팀 게시판에는 글을 못 쓴다", async ({ request }) => {
   await loginForTests(request);
 
@@ -28,7 +28,7 @@ test("남의 팀 게시판에는 글을 못 쓴다", async ({ request }) => {
 });
 
 // 팀 id는 로그인해야 알 수 있으므로(팀 목록도 로그인이 필요) 먼저 로그인해
-// id만 받아 두고, 로그아웃해 쿠키를 버린 다음 같은 endpoint를 다시 조회합니다.
+// id 만 받아 두고, 로그아웃해 cookie 를 삭제한 다음 같은 endpoint 를 다시 조회합니다.
 test("로그인하지 않으면 팀 게시판 글 목록을 읽을 수 없다", async ({ request }) => {
   await loginForTests(request);
   const { teams } = (await (await request.get("/api/teams")).json()) as { teams: Team[] };
@@ -70,7 +70,7 @@ test("팀 게시판 글에 파일을 붙여 올리면 글을 열었을 때 그 �
   await expect(page.getByText("첨부파일 1개")).toBeVisible();
   await expect(page.getByRole("link", { name: fileName })).toBeVisible();
 
-  // 되돌립니다 — 게시글을 지우면 붙은 파일도 디스크에서 함께 사라집니다.
+  // 되돌립니다. 게시글을 삭제하면 첨부 파일도 디스크에서 함께 삭제됩니다.
   const { teams } = (await (await request.get("/api/teams")).json()) as { teams: Team[] };
   const mine = teams.find((team) => team.name === E2E_ACCOUNT_TEAM);
   if (mine === undefined) return;
