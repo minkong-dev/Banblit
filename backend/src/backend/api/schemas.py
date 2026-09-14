@@ -322,6 +322,8 @@ class AccountOut(BaseModel):
     # 선택하고 있어 함께 제공합니다.
     role: Literal["head_manager", "member"]
     permissions: list[Permission]
+    # 가진 permission set 의 이름입니다. 화면은 "헤드매니저" 고정 문구 대신 이 이름을 역할로 표시합니다(사용자 결정 2026-09-11).
+    permission_sets: list[str]
     # 기수입니다. 화면이 동명이인을 구분할 때 이름 옆에 표시합니다.
     cohort: int | None = None
 

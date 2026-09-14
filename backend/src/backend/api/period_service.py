@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, time
+from datetime import date, datetime, time
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -82,9 +82,9 @@ def assign_period(
     if excluded_member_id is not None:
         member_ids_by_team = _without_member(member_ids_by_team, excluded_member_id)
 
-    days = dates_in_period(period.starts_on, period.ends_on)
-    window_start = datetime.combine(period.starts_on, time())
-    window_end = datetime.combine(period.ends_on, time.max)
+    days = period_days(period, saved_at.date())
+    window_start = datetime.combine(days[0], time())
+    window_end = datetime.combine(days[-1], time.max)
     unavailable_by_member = _load_unavailable(
         session, list(member_names), window_start, window_end
     )
@@ -114,6 +114,17 @@ def assign_period(
         room_names={room.id: room.name for room in rooms},
         member_names=member_names,
     )
+
+
+def period_days(period: Period, on: date) -> list[date]:
+    """배정을 계산할 날짜 목록을 반환합니다.
+
+    everyday 가 켜진 기간은 종료일이 없으므로(사용자 결정 2026-09-11) 계산을 실행한 날 on 하루만 반환합니다.
+    그 외에는 시작일부터 종료일까지 전부 반환합니다.
+    """
+    if period.everyday:
+        return [on]
+    return dates_in_period(period.starts_on, period.ends_on)
 
 
 def _load_rooms(session: Session, room_ids: list[int]) -> list[Room]:
@@ -199,7 +210,7 @@ def open_slots_in_period(session: Session, period: Period) -> list[OpenSlot]:
     ).all()
     room_names = {room.id: room.name for room in rooms}
 
-    days = dates_in_period(period.starts_on, period.ends_on)
+    days = period_days(period, date.today())
     open_slots: list[OpenSlot] = []
     for engine_room in build_engine_rooms(list(rooms), days):
         for interval in generate_slots(engine_room.open_period):

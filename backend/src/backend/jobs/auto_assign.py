@@ -12,7 +12,7 @@ from datetime import date, datetime, time
 from time import sleep
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from backend.api.notification_service import notify_assignment_updated
@@ -69,12 +69,13 @@ def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
     """
     today = now.date()
     # 오늘이 기간 안에 포함되는 집중 합주기간만 처리합니다. 상시 기간(kind="open")은 선착순
-    # 예약으로 동작하므로 assign_period 가 거절합니다.
+    # 예약으로 동작하므로 assign_period 가 거절합니다. everyday 가 켜진 기간은 종료일이 없으므로
+    # 시작일만 지났으면 매일 처리합니다(사용자 결정 2026-09-11).
     periods = session.scalars(
         select(Period)
         .where(Period.kind == "focused")
         .where(Period.starts_on <= today)
-        .where(Period.ends_on >= today)
+        .where(or_(Period.everyday.is_(True), Period.ends_on >= today))
         .order_by(Period.id)
     ).all()
     if not periods:
@@ -92,7 +93,7 @@ def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
         slots = due_slots(period, now, ran_by_period.get(period.id, set()))
         if not slots:
             continue
-        results.append(_run_one(session, period.id, today, slots, team_ids, room_ids))
+        results.append(_run_one(session, period.id, now, slots, team_ids, room_ids))
     return results
 
 
@@ -114,7 +115,7 @@ def _ran_slots_today(
 def _run_one(
     session: Session,
     period_id: int,
-    today: date,
+    now: datetime,
     slots: tuple[RunSlot, ...],
     team_ids: list[int],
     room_ids: list[int],
@@ -123,37 +124,37 @@ def _run_one(
     # 계산한 결과가 같기 때문입니다. 1번 계산하고 두 시각 모두 실행한 것으로 기록합니다.
     try:
         result = assign_period(
-            session, period_id, team_ids, room_ids, saved_at=datetime.now()
+            session, period_id, team_ids, room_ids, saved_at=now
         )
     except Exception as error:  # noqa: BLE001 - 한 기간의 계산이 실패해도 다음 기간을 계속 처리합니다
         session.rollback()
         logger.exception("자동 배정이 실패했습니다 (period=%s)", period_id)
-        return AutoRun(period_id, today, (), saved=False, error=str(error))
+        return AutoRun(period_id, now.date(), (), saved=False, error=str(error))
 
     # 실행 기록은 계산이 완료된 후에 남깁니다. 시작할 때 기록하면 중간에 실패했을 때
     # 그 시각이 다시 실행되지 않기 때문입니다. 그날 배정이 비는 것이 계산을 1번 더
     # 실행하는 것보다 나쁩니다. 다시 실행해도 assign_period 는 같은 기간을 다시 계산해
     # 덮어쓰기 때문입니다.
-    _mark_ran(session, period_id, today, slots)
+    _mark_ran(session, period_id, now, slots)
 
     # 알림은 저장이 완료되고 실행 기록을 commit 한 후에 생성합니다.
     # 배정할 slot 을 찾지 못해 저장하지 않으면 확정 시간표가 변경되지 않으므로
     # 알릴 내용이 없습니다. 알림 생성이 실패해도 실행 기록은 이미 commit 되어 있어
     # 계산을 다시 실행하지 않습니다.
     if result.saved:
-        notify_assignment_updated(session, period_id, datetime.now())
-    return AutoRun(period_id, today, slots, saved=result.saved, error=None)
+        notify_assignment_updated(session, period_id, now)
+    return AutoRun(period_id, now.date(), slots, saved=result.saved, error=None)
 
 
 def _mark_ran(
-    session: Session, period_id: int, today: date, slots: tuple[RunSlot, ...]
+    session: Session, period_id: int, now: datetime, slots: tuple[RunSlot, ...]
 ) -> None:
     # (기간, 날짜, 계산 시각)을 assignment_runs 에 기록합니다. 세 열에 unique 제약이
     # 있어 같은 시각이 중복으로 기록되지 않습니다.
     for slot in slots:
         session.add(
             AssignmentRun(
-                period_id=period_id, run_on=today, slot=slot, ran_at=datetime.now()
+                period_id=period_id, run_on=now.date(), slot=slot, ran_at=now
             )
         )
     session.commit()

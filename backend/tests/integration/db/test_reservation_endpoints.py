@@ -652,3 +652,27 @@ def test_a_reservation_slot_can_be_stretched_over_its_own_time(
         f"{OPEN_DAY}T18:00:00",
         f"{OPEN_DAY}T19:00:00",
     ]
+
+
+def test_an_everyday_focused_period_blocks_reservations_after_its_end_date(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """everyday 집중 합주기간은 종료일 없이 계속되므로, 저장된 종료일 뒤의 날짜도 예약을 거부합니다."""
+    _, owner = account("이도현", "dohyun@example.com")
+    room = _room(db_session)
+    period = _focused_period(db_session)  # 9/21 ~ 9/27
+    period.everyday = True
+    db_session.commit()
+
+    response = api_client.post(
+        "/reservations",
+        json={
+            "room_id": room.id,
+            "starts_at": "2026-10-05T18:00:00",
+            "ends_at": "2026-10-05T19:00:00",
+        },
+        cookies=owner,
+    )
+
+    assert response.status_code == 422
+    assert "집중 합주기간" in response.json()["detail"]

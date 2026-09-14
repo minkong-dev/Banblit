@@ -126,9 +126,12 @@ def test_revoking_a_set_takes_its_permissions_back(
 def test_permission_grant_holder_changes_their_own_set(
     api_client: TestClient, account: AccountFactory
 ) -> None:
-    """permission_grant 권한을 가진 사용자는 자신의 permission set(권한 집합)도 회수할 수 있습니다. 다른 사용자에게 권한을 부여하고 자신은 그 역할에서 물러나는 방법입니다."""
+    """permission_grant 권한을 가진 사용자는 자신의 permission set(권한 집합)도 축소할 수 있습니다. 다른 사용자에게 권한을 부여하고 자신은 그 역할에서 물러나는 방법입니다.
+
+    모든 항목을 가진 permission set 이 다른 하나 더 있어야 축소가 허용됩니다(마지막 1개 보호 규칙)."""
     head_id, head = account("헤드", "head@example.com")
     own = api_client.get("/permission-sets", cookies=head).json()["permission_sets"][0]
+    _make_set(api_client, head, "운영진", list(PERMISSIONS))
 
     changed = api_client.patch(
         f"/permission-sets/{own['id']}",
@@ -239,3 +242,73 @@ def test_the_listing_shows_who_holds_each_set(
 
     holders = {row["id"]: row["members"] for row in listed}
     assert holders[rooms_set] == [{"id": member_id, "name": "멤버"}]
+
+
+def _set_ids(api_client: TestClient, cookies: dict[str, str]) -> dict[str, int]:
+    body = api_client.get("/permission-sets", cookies=cookies).json()
+    return {row["name"]: row["id"] for row in body["permission_sets"]}
+
+
+def test_the_last_full_set_cannot_be_deleted(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """모든 항목이 활성화된 permission set 이 1개뿐이면 삭제를 거부합니다(사용자 결정 2026-09-11)."""
+    _, head = account("헤드", "head@example.com")
+    full_id = _set_ids(api_client, head)["헤드매니저"]
+
+    response = api_client.delete(f"/permission-sets/{full_id}", cookies=head)
+
+    assert response.status_code == 422
+    assert _my_permissions(api_client, head) == list(PERMISSIONS)
+
+
+def test_the_last_full_set_cannot_lose_an_item(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """모든 항목이 활성화된 permission set 이 1개뿐이면 항목 비활성화를 거부합니다. 이름·설명 수정은 허용합니다."""
+    _, head = account("헤드", "head@example.com")
+    full_id = _set_ids(api_client, head)["헤드매니저"]
+
+    fewer = api_client.patch(
+        f"/permission-sets/{full_id}",
+        json={"name": "헤드매니저", "description": "모든 권한", "permissions": list(PERMISSIONS)[:-1]},
+        cookies=head,
+    )
+    renamed = api_client.patch(
+        f"/permission-sets/{full_id}",
+        json={"name": "운영진", "description": "모든 권한", "permissions": list(PERMISSIONS)},
+        cookies=head,
+    )
+
+    assert fewer.status_code == 422
+    assert renamed.status_code == 200
+    assert renamed.json()["permission_set"]["name"] == "운영진"
+
+
+def test_a_second_full_set_frees_the_first(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """기준은 개인이 아니라 permission set 입니다. 모든 항목을 가진 permission set 이 2개면 하나는 삭제할 수 있습니다."""
+    _, head = account("헤드", "head@example.com")
+    full_id = _set_ids(api_client, head)["헤드매니저"]
+    _make_set(api_client, head, "운영진", list(PERMISSIONS))
+
+    response = api_client.delete(f"/permission-sets/{full_id}", cookies=head)
+
+    assert response.status_code == 204
+
+
+def test_me_lists_the_names_of_my_permission_sets(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """화면은 "헤드매니저" 고정 문구 대신 가진 permission set 의 이름을 표시합니다(사용자 결정 2026-09-11)."""
+    _, head = account("헤드", "head@example.com")
+    member_id, member = account("멤버", "member@example.com")
+    rooms_set = _make_set(api_client, head, "방담당", ["room_edit"])
+    api_client.post(f"/members/{member_id}/permission-sets/{rooms_set}", cookies=head)
+
+    head_names = api_client.get("/me", cookies=head).json()["account"]["permission_sets"]
+    member_names = api_client.get("/me", cookies=member).json()["account"]["permission_sets"]
+
+    assert head_names == ["헤드매니저"]
+    assert member_names == ["방담당"]
