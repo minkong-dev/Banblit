@@ -207,6 +207,8 @@ function Lineup(props: {
     void client.invalidateQueries({ queryKey: ["slots", teamId] });
     void client.invalidateQueries({ queryKey: ["teams"] });
     void client.invalidateQueries({ queryKey: ["members", teamId] });
+    // 내가 앉거나 빠진 자리면 "내 팀"(프로필 말풍선·달력의 내 일정)도 바뀐다.
+    void client.invalidateQueries({ queryKey: ["me"] });
   };
 
   const sit = useMutation({
