@@ -179,10 +179,10 @@ def _get_own_reservation(
 def cancel_reservation(session: Session, reservation_id: int, requester: Member) -> None:
     """예약 slot 하나를 취소한다. 그 slot 을 예약한 사람 본인만 지울 수 있다.
 
-    ponytail: 여러 slot 을 이어 쓴 예약은 slot 마다 id가 달라, 전부 취소하려면 slot 마다
-    이 endpoint 를 호출해야 한다. "예약 하나를 통째로 취소" UI가 생기면 그때 예약을
-    묶는 번호를 붙인다 — 지금 화면(DayDialog)에는 취소 버튼 자체가 없어 이 endpoint 는
-    API로만 쓰인다.
+    ponytail: 여러 slot 을 이어 쓴 예약은 slot 마다 id가 달라, 화면(DayDialog 의 취소 단추 →
+    pipeline.ts cancelBooking)이 slot 마다 이 endpoint 를 차례로 부른다. 도중에 하나가
+    걸리면 앞쪽 몇 칸만 지워진 채 남는다 — "예약 하나를 통째로 취소" 가 한 번의 요청이어야
+    하면 그때 예약을 묶는 번호를 붙인다.
     """
     reservation = _get_own_reservation(session, reservation_id, requester, "취소할")
     session.delete(reservation)

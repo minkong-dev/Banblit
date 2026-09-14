@@ -1,5 +1,6 @@
 import os
 import time
+import zlib
 from collections.abc import Callable, Iterator
 from typing import Any
 
@@ -139,9 +140,10 @@ def account(api_client: TestClient) -> AccountFactory:
             json={
                 "name": name,
                 # 학과·학번은 사람을 가르는 값의 일부다. 이메일이 계정마다 다르므로
-                # 학번도 그것으로 지어, 같은 이름이 여럿 나와도 부딪히지 않게 한다.
+                # 학번도 그것에서 지어(숫자 8자리 규칙에 맞춰), 같은 이름이 여럿
+                # 나와도 부딪히지 않게 한다.
                 "department": "실용음악과",
-                "student_no": email.split("@")[0],
+                "student_no": f"{zlib.crc32(email.encode()) % 10**8:08d}",
                 "email": email,
                 "password": "Password123!",
                 "cohort": 46,
