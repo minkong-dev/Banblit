@@ -1,4 +1,4 @@
-// lib 모듈의 시퀀스 파일. 어느 검사를 어느 순서로 부를지 여기서 정한다.
+// lib 모듈의 시퀀스 파일입니다. 어느 검사를 어느 순서로 호출할지 여기서 정합니다.
 
 import { getJSON, sendFile } from "./api";
 import type { Account, Me, Member, Notification, Reservation, Unavailable } from "./contract";
@@ -51,18 +51,18 @@ export type RoomForm = { name: string; opens_at: string; closes_at: string };
 export type PeriodForm = { starts_on: string; ends_on: string };
 
 export function checkRoom(form: RoomForm, taken: string[]): string {
-  // 이름을 먼저 본다. 이름이 비었거나 겹치면 시각이 성해도 저장할 수 없고,
-  // 사유를 한 번에 하나만 보여주므로 사람이 먼저 고쳐야 할 것을 앞에 둔다.
+  // 이름을 먼저 검증합니다. 이름이 비었거나 겹치면 시각이 유효해도 저장할 수 없고,
+  // 오류 메시지를 한 번에 하나만 표시하므로 먼저 수정할 것을 앞에 둡니다.
   const name = roomNameMessage(form.name, taken);
   if (name !== "") return name;
 
-  // 여는 시각과 닫는 시각은 한 쌍으로만 판정된다 — 격자를 벗어났는지와
-  // 순서가 뒤집혔는지를 따로 물으면 둘 다 어긋났을 때 두 번 되묻게 된다.
+  // 여는 시각과 닫는 시각은 한 쌍으로만 검증합니다. 격자를 벗어났는지와
+  // 순서가 뒤집혔는지를 따로 물으면 둘 다 어긋났을 때 두 번 다시 조회하게 됩니다.
   return openHoursMessage(form.opens_at, form.closes_at);
 }
 
 export function checkPeriod(form: PeriodForm): string {
-  // 기간은 날짜 두 개가 전부다. 종류와 계산 시각은 고를 수만 있어 검사할 것이 없다.
+  // 기간은 시작일과 종료일 두 개입니다. 종류와 계산 시각은 선택 옵션이라 검증할 것이 없습니다.
   return dateRangeMessage(form.starts_on, form.ends_on);
 }
 
@@ -75,8 +75,8 @@ export function openingHours(input: Opening): {
   leftover: string;
   raw: Capacity;
 } {
-  // capacity 로 칸 개수를 먼저 내고, 그것을 hoursLabel 로 시각으로 바꾼다.
-  // 순서가 반대일 수 없다 — 화면은 자리 개수를 그대로 보여주지 않는다.
+  // capacity()로 slot(1시간 단위 시간 칸)의 개수를 먼저 계산하고, 그것을 hoursLabel()로 시각으로 변환합니다.
+  // 순서가 반대일 수 없습니다. 화면은 slot 개수를 그대로 표시하지 않습니다.
   const raw = capacity(input);
   return {
     perDay: hoursLabel(raw.perDay),
@@ -88,12 +88,12 @@ export function openingHours(input: Opening): {
 }
 
 export function daysBetween(from: string, to: string): number {
-  // datesBetween 이 양 끝을 포함해 날짜를 잇는다. 그 개수가 곧 기간의 날수다.
+  // datesBetween()이 시작일과 종료일을 포함해 날짜를 연결합니다. 그 개수가 곧 기간의 날수입니다.
   return datesBetween(from, to).length;
 }
 
-// 스케줄러 화면이 쓰는 계산. 방·기간 사이에 서로 order 의존이 없어 그대로 다시 내보낸다 —
-// roomBounds 는 달력의 여닫는 시각을, focusedRange 는 자동 배정 띠의 날짜 범위를 낸다.
+// 스케줄러 화면이 사용하는 계산입니다. 방과 기간 사이에 순서 의존이 없어 그대로 재내보냅니다.
+// roomBounds()는 달력의 여닫는 시각을, focusedRange()는 자동 배정 띠의 날짜 범위를 반환합니다.
 export { focusedRange, roomBounds };
 
 export type PostForm = { title: string; body: string };
@@ -101,18 +101,18 @@ export type PostForm = { title: string; body: string };
 export { commentMessage as checkComment };
 
 export function checkPost(form: PostForm): string {
-  // 제목을 먼저 본다 — 사유를 한 번에 하나만 보여주므로 먼저 고칠 것을 앞에 둔다.
+  // 제목을 먼저 검증합니다. 오류 메시지를 한 번에 하나만 표시하므로 먼저 수정할 것을 앞에 둡니다.
   const title = titleMessage(form.title);
   return title !== "" ? title : bodyMessage(form.body);
 }
 
 
-/** 고른 파일을 앞에서부터 검사해, 처음 걸린 것의 이름과 사유를 돌려준다. */
+/** 선택한 파일을 앞에서부터 검증해, 처음 걸린 것의 이름과 오류 메시지를 반환합니다. */
 export function checkAttachments(files: { name: string; size: number }[]): string {
-  // 보내기 전에 여기서 한 번 거른다. 서버도 같은 것을 다시 거르므로 이 검사는
-  // 사람이 바로 알아채라고 있는 것이지 안전장치가 아니다 — 브라우저에서 하는
-  // 검사는 얼마든지 건너뛸 수 있다.
-  // 사유를 한 번에 하나만 보여주므로, 여럿이 걸려도 앞의 것만 알린다.
+  // 전송 전에 여기서 한 번 검증합니다. 서버도 같은 검증을 다시 수행하므로 이 검사는
+  // 사용자가 즉시 알아채도록 하는 것이지 보안 검증이 아닙니다. 브라우저에서 실행하는
+  // 검사는 얼마든지 건너뛸 수 있습니다.
+  // 오류 메시지를 한 번에 하나만 표시하므로, 2개 이상 걸려도 첫 번째 파일만 알립니다.
   for (const file of files) {
     const why = attachmentMessage(file.name, file.size);
     if (why !== "") return `${file.name}: ${why}`;
@@ -133,12 +133,12 @@ export type AssignBody = { team_ids: number[]; room_ids: number[] };
 export async function runAssignment<T>(
   periodId: number,
   body: AssignBody,
-  /** 조율안을 고른 것이면 그 안에서 빠지는 사람의 번호. 그 사람을 뺀 채로 다시 계산해 저장한다. */
+  /** 조율안을 선택했으면 그 안에서 제외할 멤버의 번호입니다. 그 멤버를 제외하고 다시 계산해 저장합니다. */
   excludeMemberId?: number,
 ): Promise<T> {
-  // 접수(POST)가 먼저다 — 서버는 계산을 기다리지 않고 작업 번호만 돌려준다. 그 번호로
-  // awaitJob 이 끝날 때까지 되묻는다. 순서가 반대일 수 없고, 접수 응답을 결과로 쓰면
-  // 계산이 시작도 안 한 값을 화면에 그리게 된다.
+  // 접수(POST 요청)가 먼저입니다. 서버는 계산을 기다리지 않고 job(서버가 접수해 뒤에서 돌리는 계산 하나) 번호만 반환합니다. 그 번호로
+  // awaitJob()이 완료될 때까지 다시 조회합니다. 순서가 반대일 수 없고, 접수 응답을 결과로 사용하면
+  // 계산이 시작되지도 않은 값을 화면에 표시하게 됩니다.
   const path = excludeMemberId === undefined
     ? `/periods/${periodId}/assign`
     : `/periods/${periodId}/proposals/${excludeMemberId}/confirm`;
@@ -159,7 +159,7 @@ export async function loadUnavailable(memberId: number): Promise<Unavailable[]> 
   return body.times;
 }
 
-/** 되풀이 방식. "none" 이면 그 날 한 번뿐이다. */
+/** 반복 주기입니다. "none"이면 해당 날 한 번뿐입니다. */
 export type RepeatCycle = "none" | "daily" | "weekly";
 
 export async function addUnavailable(
@@ -169,10 +169,9 @@ export async function addUnavailable(
   repeat: RepeatCycle,
   reason: string,
 ): Promise<Unavailable> {
-  // repeat_until 은 보내지 않는다 — 서버는 반복이 꺼져 있는데 repeat_until 이 오면
-  // 거절하고, 켜져 있으면 기간의 끝까지로 알아서 자른다.
-  // ponytail: 끝나는 날을 사람이 직접 정하는 자리는 없다. 필요해지면 화면에 날짜
-  // 하나를 더 받아 repeat_until 로 함께 보낸다.
+  // repeat_until은 전송하지 않습니다. 서버는 반복이 비활성화되어 있으면 repeat_until을 수신할 때 거절하고, 활성화되어 있으면 기간의 끝까지로 자동 설정합니다.
+  // ponytail: 반복 종료일을 사용자가 직접 입력하는 UI 는 없습니다. 필요해지면 화면에 날짜
+  // 하나를 더 입력받아 repeat_until으로 함께 전송합니다.
   const body = await getJSON<{ time: Unavailable }>(`/members/${memberId}/unavailable`, {
     method: "POST",
     body: JSON.stringify({
@@ -186,7 +185,7 @@ export async function addUnavailable(
   return body.time;
 }
 
-/** 방 여러 개의 예약을 한 번에 받아, 실패한 방은 사유만 모아 둔다 — loadRows(Scheduler)와 같은 얼개. */
+/** 여러 개의 합주실에서 예약을 한 번에 조회하고, 실패한 합주실은 오류 메시지만 수집합니다. loadRows(Scheduler)와 같은 구조입니다. */
 export async function loadReservationRows(
   roomIds: number[], from: string, to: string,
 ): Promise<{ rows: Reservation[]; failures: string[] }> {
@@ -212,16 +211,16 @@ export type ReservationForm = {
   ends_at: string;
 };
 
-/** 예약 한 건을 취소한다. 서버는 칸 하나씩만 지우므로 그 건이 든 번호를 차례로 지운다.
- *  한 칸이 걸리면 거기서 멈춘다 — 이미 지운 칸을 되살리는 자리가 서버에 없고, 되살릴
- *  이유도 없다. 다시 누르면 남은 칸을 마저 지운다. */
+/** 예약 한 건을 취소합니다. 서버는 slot(1시간 단위 시간 칸) 하나씩만 삭제하므로 그 예약에 포함된 ID를 차례로 삭제합니다.
+ *  한 slot이 실패하면 거기서 멈춥니다. 이미 삭제한 slot을 복구하는 기능이 서버에 없고, 복구할
+ *  이유도 없습니다. 다시 호출하면 남은 slot을 계속 삭제합니다. */
 export async function cancelBooking(reservationIds: readonly number[]): Promise<void> {
   for (const id of reservationIds) {
     await getJSON(`/reservations/${id}`, { method: "DELETE" });
   }
 }
 
-/** 내가 등록한 못 나오는 시간 하나를 지운다. 남의 것은 서버가 없는 것과 같게 거절한다. */
+/** 자신이 등록한 불가능 일정 하나를 삭제합니다. 다른 사용자의 일정은 서버가 없는 일정과 같게 거절합니다. */
 export async function removeUnavailable(memberId: number, timeId: number): Promise<void> {
   await getJSON(`/members/${memberId}/unavailable/${timeId}`, { method: "DELETE" });
 }
@@ -234,8 +233,8 @@ export async function addReservation(form: ReservationForm): Promise<Reservation
   return body.reservations;
 }
 
-// 아래는 화면이 그대로 쓰는 것들이다. 순서를 정할 것이 없어 그냥 내보내되, 화면이
-// 기능 파일을 직접 부르지 않게 부르는 자리를 여기 하나로 모은다.
+// 아래는 화면이 직접 사용하는 것들입니다. 순서 의존이 없어 그대로 재내보내지만, 화면이
+// 기능 파일을 직접 참조하지 않도록 호출 지점을 여기 한 곳으로 집중합니다.
 export {
   dayOf,
   hhmm,
@@ -260,7 +259,7 @@ export {
 
 export type SignUpForm = {
   name: string;
-  // 사람을 가르는 값의 일부다 — 이름·학과·학번·기수 넷이 같으면 같은 사람이다.
+  // 멤버를 구분하는 값의 일부입니다. 이름·학과·학번·기수 네 항목이 모두 같아야 같은 멤버입니다.
   department: string;
   student_no: string;
   email: string;
@@ -269,8 +268,8 @@ export type SignUpForm = {
 };
 
 export async function signUp(form: SignUpForm): Promise<Account> {
-  // 가입 성공 응답은 계정만 담아 온다 — 세션은 서버가 httpOnly 쿠키(banblit_session)로
-  // 내려보내고, 화면은 그 값을 보지도 만지지도 않는다.
+  // 가입 성공 응답은 계정만 포함합니다. 세션은 서버가 httpOnly 쿠키(banblit_session)로
+  // 전송하고, 화면은 그 값을 읽거나 수정하지 않습니다.
   const { account } = await getJSON<{ account: Account }>("/signup", {
     method: "POST",
     body: JSON.stringify(form),
@@ -281,7 +280,7 @@ export async function signUp(form: SignUpForm): Promise<Account> {
 export async function logIn(
   email: string,
   password: string,
-  /** 로그인 상태 유지. 끄면 브라우저를 닫을 때 풀린다 — 수명은 서버가 정한다. */
+  /** 로그인 상태 유지 여부입니다. false로 설정하면 브라우저를 닫을 때 로그아웃됩니다. 세션의 유효기간은 서버가 정합니다. */
   keep: boolean,
 ): Promise<Account> {
   const { account } = await getJSON<{ account: Account }>("/login", {
@@ -292,8 +291,8 @@ export async function logIn(
 }
 
 export async function findId(name: string, email: string): Promise<void> {
-  // 맞는 계정이 있든 없든 서버는 같은 답을 준다 — 아이디를 알려주는 것은 응답이 아니라
-  // 그 주소로 가는 메일이다. 그래서 돌려줄 값이 없다.
+  // 일치하는 계정이 있든 없든 서버는 같은 응답을 반환합니다. 학번을 알려주는 것은 응답 본문이 아니라
+  // 해당 이메일 주소로 전송되는 메일입니다. 따라서 반환할 값이 없습니다.
   await getJSON("/find-id", {
     method: "POST",
     body: JSON.stringify({ name, email }),
@@ -301,7 +300,7 @@ export async function findId(name: string, email: string): Promise<void> {
 }
 
 export async function requestPasswordReset(email: string): Promise<void> {
-  // 재설정 링크도 메일로만 간다. 위와 같은 이유로 응답에는 아무것도 담기지 않는다.
+  // 재설정 링크도 이메일로만 전송됩니다. 위와 같은 이유로 응답에는 어떤 내용도 포함되지 않습니다.
   await getJSON("/password-reset", {
     method: "POST",
     body: JSON.stringify({ email }),
@@ -309,8 +308,8 @@ export async function requestPasswordReset(email: string): Promise<void> {
 }
 
 export async function resetPassword(token: string, password: string): Promise<void> {
-  // 메일로 받은 토큰과 새 비밀번호를 함께 보낸다. 서버가 토큰을 한 번 쓰고 죽이며,
-  // 그 계정으로 열려 있던 로그인도 전부 끊는다.
+  // 이메일로 수신한 토큰과 새 비밀번호를 함께 전송합니다. 서버는 토큰을 한 번 사용한 후 폐기하며,
+  // 해당 계정의 모든 활성 로그인 세션도 종료합니다.
   await getJSON("/password-reset/confirm", {
     method: "POST",
     body: JSON.stringify({ token, password }),
@@ -318,23 +317,22 @@ export async function resetPassword(token: string, password: string): Promise<vo
 }
 
 export async function fetchMe(): Promise<Me> {
-  // 계정과 함께 내가 앉아 있는 자리(teams)가 온다. 팀 명단을 훑어 소속을 가려낼
-  // 필요가 없다.
+  // 계정과 함께 내가 속한 팀 목록(teams)이 포함됩니다. 팀 명단을 조회할 필요가 없습니다.
   return getJSON<Me>("/me");
 }
 
-// 표시용 쿠키 이름 — 실제 세션(banblit_session)은 httpOnly라 여기서 읽지 못한다.
+// 표시용 쿠키 이름입니다. 실제 세션(banblit_session)은 httpOnly 속성이라 여기서 읽을 수 없습니다.
 // 이름을 적는 자리는 여기 하나다.
 const SIGNED_IN_COOKIE = "banblit_signed_in";
 
-/** 로그인 여부만 나타내는 쿠키가 있는지 본다. document.cookie 를 읽는 것은 상태를
- *  보는 일이라 시퀀스 파일인 여기에 둔다. */
+/** 로그인 여부만 나타내는 쿠키의 존재 여부를 확인합니다. document.cookie를 읽는 것은 상태를
+ *  조회하는 작업이므로 시퀀스 파일인 여기에 있습니다. */
 export function isSignedIn(): boolean {
   return document.cookie.split("; ").includes(`${SIGNED_IN_COOKIE}=1`);
 }
 
 export async function logOut(): Promise<void> {
-  // 서버가 세션을 무효로 만들고 쿠키 둘을 지운다.
+  // 서버가 세션을 무효로 설정하고 쿠키 두 개를 삭제합니다.
   await getJSON("/logout", { method: "POST" });
 }
 
@@ -345,19 +343,18 @@ export async function loadTeamMembers(teamId: number): Promise<Member[]> {
   return body.members;
 }
 
-// 알림. 목록을 받은 뒤에야 안 읽은 수를 셀 수 있고, 읽음 처리는 목록을 다시 받아야
-// 화면에 반영된다 — 부르는 순서가 있어 여기 둔다.
+// 알림입니다. 목록을 조회한 후에야 읽지 않은 개수를 계산할 수 있고, 읽음 표시는 목록을 다시 조회해야
+// 화면에 반영됩니다. 호출 순서가 중요하므로 여기 집중합니다.
 export async function loadNotifications(): Promise<Notification[]> {
-  // ponytail: 오래된 알림을 지우거나 몇 개까지만 받는 자리는 두지 않았다. 사람마다
-  // 하루 두 줄까지 쌓인다. 목록이 무거워지면 여기에 개수 상한을 주고 서버도 함께 자른다.
+  // ponytail: 오래된 알림을 삭제하거나 일부만 조회하는 기능은 구현하지 않았습니다. 사용자당 하루에 최대 두 줄까지 누적됩니다. 목록 크기가 커지면 여기에 개수 제한을 추가하고 서버도 함께 적용합니다.
   const body = await getJSON<{ notifications: Notification[] }>("/notifications");
   return body.notifications;
 }
 
 export async function markNotificationsRead(): Promise<void> {
-  // 안 읽은 것 전부를 한 번에 읽음으로 바꾼다. 답장에는 본문이 없다.
+  // 읽지 않은 알림을 모두 한 번에 읽음 상태로 변경합니다. 응답에는 본문이 없습니다.
   await getJSON("/notifications/read", { method: "POST" });
 }
 
-// 문장 만들기와 세기는 서로 기다릴 것이 없어 그대로 다시 내보낸다.
+// 알림 문구 생성과 읽지 않은 개수 계산 사이에 순서 의존이 없어 그대로 재내보냅니다.
 export { notificationText, unreadCount } from "./notifications";

@@ -24,8 +24,8 @@ from backend.db.pipeline import get_session
 
 router = APIRouter()
 
-# 권한 묶음을 만들고 고치고 지우는 것과, 사람에게 주고 뺏는 것을 가른다. 그 항목이 없으면 남의 권한도
-# 자기 권한도 건드리지 못한다 — 본인이냐 남이냐로 가르는 예외는 두지 않는다.
+# 권한 묶음을 생성·수정·삭제하는 것과 사람에게 부여·회수하는 것을 구분합니다. 해당 권한이 없으면
+# 다른 사람의 권한도 자신의 권한도 건드리지 못합니다 — 본인인지 다른 사람인지로 구분하는 예외는 두지 않습니다.
 _manage_only = Depends(require_permission("permission_manage"))
 _grant_only = Depends(require_permission("permission_grant"))
 
@@ -73,8 +73,8 @@ def patch_set(
     permission_set = update_permission_set(
         session, set_id, req.name, req.description, list(req.permissions)
     )
-    # 고친 permission set 이 지금 누구에게 붙어 있는지까지 돌려준다 — 화면이 바로
-    # 다음에 보여줄 목록이다.
+    # 수정된 권한 묶음(permission set)이 현재 누구에게 할당되어 있는지도 함께 반환합니다 — 화면이
+    # 바로 다음에 표시할 목록입니다.
     return PermissionSetEnvelopeOut(
         permission_set=_set_out(permission_set, set_holders(session, set_id))
     )

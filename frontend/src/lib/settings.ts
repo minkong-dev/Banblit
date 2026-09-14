@@ -1,15 +1,15 @@
-// 합주실·기간 설정의 검사와 셈. 화면도 서버도 건드리지 않는다.
-// 검사 함수는 값이 성하면 빈 문자열을, 아니면 사람이 읽을 사유를 돌려준다.
-// 부르는 순서는 pipeline.ts 가 정한다.
+// 합주실·기간 설정의 검사와 계산입니다. 화면이나 서버와 상호작용하지 않습니다.
+// 검사 함수는 값이 유효하면 빈 문자열을, 아니면 사용자가 읽을 메시지를 반환합니다.
+// 호출 순서는 pipeline.ts가 정합니다.
 
 import { uniqueNameMessage } from "./validate";
 
-// 칸 하나가 한 시간이다(사용자 결정). 서버 쪽 정본은
-// backend/src/backend/scheduling/slots.py 의 SLOT_MINUTES 다.
+// 칸 하나가 한 시간입니다(사용자 결정). 서버 쪽 정본입니다:
+// backend/src/backend/scheduling/slots.py의 SLOT_MINUTES
 const SLOT_MINUTES = 60;
 const MINUTES_PER_HOUR = 60;
 
-/** "18:30" 을 자정부터의 분으로 바꾼다. 모양이 아니면 null. */
+/** "18:30"을 자정부터의 분으로 변환합니다. 형식이 맞지 않으면 null입니다. */
 function minutesOf(hhmm: string): number | null {
   const parts = /^([01][0-9]|2[0-3]):([0-5][0-9])$/.exec(hhmm);
   return parts === null ? null : Number(parts[1]) * MINUTES_PER_HOUR + Number(parts[2]);
@@ -20,7 +20,7 @@ function onGrid(minutes: number): boolean {
 }
 
 export function openHoursMessage(opens: string, closes: string): string {
-  // opens·closes 를 받아, 정시가 아니거나 순서가 뒤집혔으면 그 사유를 돌려준다.
+  // opens·closes를 받아, 정각이 아니거나 순서가 뒤집혔으면 그 메시지를 반환합니다.
   if (!opens) return "여는 시각을 입력해 주세요.";
   if (!closes) return "닫는 시각을 입력해 주세요.";
 
@@ -39,13 +39,13 @@ export function roomNameMessage(name: string, taken: string[]): string {
 export function dateRangeMessage(from: string, to: string): string {
   if (!from) return "시작일을 지정해주세요.";
   if (!to) return "종료일을 지정해주세요.";
-  // from·to 를 글자 그대로 견준다. "YYYY-MM-DD" 는 사전 순서가 곧 날짜 순서다.
-  // Date 로 바꾸지 않는다 — 브라우저가 제 시간대를 끼워 넣어 하루씩 밀 수 있다.
+  // from·to를 문자 그대로 비교합니다. "YYYY-MM-DD"는 사전식 순서가 날짜 순서와 같습니다.
+  // Date로 변환하지 않습니다 — 브라우저가 시간대를 끼워 넣어 날짜가 밀릴 수 있습니다.
   return to < from ? "종료일은 시작일보다 빠를 수 없어요." : "";
 }
 
 export function slotsBetween(opens: string, closes: string): number {
-  // 여는 시각부터 닫는 시각까지 들어가는 한 시간짜리 자리의 개수. 성하지 않으면 0.
+  // 여는 시각부터 닫는 시각까지 들어가는 한 시간짜리 자리의 개수입니다. 유효하지 않으면 0입니다.
   if (openHoursMessage(opens, closes) !== "") return 0;
   const from = minutesOf(opens);
   const to = minutesOf(closes);

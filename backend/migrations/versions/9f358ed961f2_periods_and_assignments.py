@@ -1,4 +1,4 @@
-"""periods and assignments
+"""회차 및 배정입니다.
 
 Revision ID: 9f358ed961f2
 Revises: 08a3734da800

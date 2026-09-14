@@ -21,7 +21,7 @@ def test_open_period_splits_into_one_hour_slots() -> None:
 
 
 def test_rejects_period_that_does_not_start_on_the_grid() -> None:
-    # 운영시간은 정시에서만 시작할 수 있다. 18:10 시작은 잘못된 설정이다.
+    # 운영시간은 정시에 시작해야 합니다. 18:10 시작은 잘못된 설정입니다.
     open_period = TimeInterval(
         start=datetime(2026, 7, 20, 18, 10),
         end=datetime(2026, 7, 20, 19, 10),
@@ -32,7 +32,7 @@ def test_rejects_period_that_does_not_start_on_the_grid() -> None:
 
 
 def test_rejects_period_that_does_not_end_on_the_grid() -> None:
-    # 자투리를 조용히 버리지 않는다. 한 시간으로 나누어떨어지지 않으면 잘못된 설정이다.
+    # 나머지 시간을 조용히 버리지 않습니다. 1시간으로 나누어떨어지지 않으면 오류를 발생시킵니다.
     open_period = TimeInterval(
         start=datetime(2026, 7, 20, 18, 0),
         end=datetime(2026, 7, 20, 19, 10),
@@ -52,12 +52,12 @@ def test_rejects_period_with_seconds() -> None:
         generate_slots(open_period)
 
 
-# 뒤집힌 구간과 길이 0 구간은 TimeInterval 자체가 거부한다.
-# 해당 검사는 test_validation.py 가 담당한다.
+# TimeInterval이 뒤집힌 구간과 길이 0인 구간을 거부합니다.
+# 해당 검사는 test_validation.py가 담당합니다.
 
 
 def test_long_period_produces_the_exact_number_of_slots() -> None:
-    # 18시부터 23시까지 다섯 시간 → 한 시간 칸 다섯 개
+    # 18시부터 23시까지 5시간이므로 1시간 칸 5개를 생성합니다.
     open_period = TimeInterval(
         start=datetime(2026, 7, 20, 18, 0),
         end=datetime(2026, 7, 20, 23, 0),

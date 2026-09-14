@@ -1,6 +1,6 @@
-"""잘못된 입력을 조용히 삼키지 않고 거부하는지 검사한다.
+"""잘못된 입력을 오류 없이 통과시키지 않고 거부하는지 검증합니다.
 
-여기서 막지 못하면 엔진이 '틀린 답'을 자신 있게 내놓는다.
+여기서 막지 못하면 엔진이 error 를 발생시키지 않고 잘못된 배정안을 출력합니다.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -45,7 +45,7 @@ def test_interval_rejects_mixed_timezone_awareness() -> None:
 
 
 def test_interval_rejects_timezone_aware_values() -> None:
-    # 시간대 지원은 아직 설계되지 않았다. 조용히 잘못 계산하느니 거부한다.
+    # 시간대 지원은 미구현입니다. 조용히 오류 계산하는 것보다 거부합니다.
     with pytest.raises(ValueError):
         TimeInterval(_at(18).replace(tzinfo=KST), _at(19).replace(tzinfo=KST))
 
@@ -54,20 +54,20 @@ def test_interval_rejects_timezone_aware_values() -> None:
 
 
 def test_rejects_the_same_room_opening_twice_over_the_same_time() -> None:
-    # 같은 방의 같은 시각이 두 칸으로 세어지면 두 팀이 같은 자리에 들어간다.
+    # 같은 합주실의 같은 시간이 두 slot으로 세어지면 두 팀이 같은 자리에 배정됩니다.
     with pytest.raises(ValueError):
         assign(teams=[_team()], rooms=[_room(1), _room(1)], slots_per_team=1)
 
 
 def test_rejects_overlapping_open_periods_for_the_same_room() -> None:
-    # 19~21시는 앞의 18~20시와 19~20시 구간이 겹친다.
+    # 19~21시는 앞의 18~20시 및 19~20시 slot과 겹칩니다.
     late = Room(id=1, open_period=TimeInterval(_at(19), _at(21)))
     with pytest.raises(ValueError):
         assign(teams=[_team()], rooms=[_room(1), late], slots_per_team=1)
 
 
 def test_accepts_the_same_room_opening_on_different_days() -> None:
-    # 기간 배정은 합주실 하나를 날짜마다 한 번씩 넘긴다. 이건 겹치지 않으므로 정상이다.
+    # 기간 배정은 합주실 하나를 날짜마다 한 번씩 제공합니다. 이는 겹치지 않으므로 유효합니다.
     day_one = Room(id=1, open_period=TimeInterval(_at(18), _at(20)))
     day_two = Room(id=1, open_period=TimeInterval(_at(18, day=21), _at(20, day=21)))
 
@@ -89,8 +89,8 @@ def test_rejects_duplicate_team_ids() -> None:
 
 
 def test_rejects_a_member_listed_twice_in_the_same_team() -> None:
-    # 같은 사람을 두 번 적는 것은 명단 오류다.
-    # 조용히 넘어가면 엔진이 '이 사람을 빼라'는 엉뚱한 조율안을 낸다.
+    # 같은 멤버를 두 번 포함하는 것은 명단 오류입니다.
+    # 조용히 넘어가면 배정 엔진이 잘못된 조율안을 출력합니다.
     kim = Member(id=7, unavailable=[])
     with pytest.raises(ValueError):
         assign(teams=[Team(id=10, members=[kim, kim])], rooms=[_room()], slots_per_team=1)

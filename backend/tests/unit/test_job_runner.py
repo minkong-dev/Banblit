@@ -8,8 +8,8 @@ from backend.api.job_runner import DEFAULT_MAX_CONCURRENT_JOBS, JobRunner, max_c
 
 
 def _wait_until(predicate: Callable[[], bool], timeout: float = 5.0) -> None:
-    # predicate() 가 참이 될 때까지 짧게 반복해서 확인한다. 배경 스레드가 store 를
-    # 갱신하는 시점은 테스트 스레드와 다르므로, 값을 한 번만 보고 판단할 수 없다.
+    # predicate()가 참이 될 때까지 계속 확인합니다. 배경 스레드가 store를
+    # 갱신하는 시점은 테스트 스레드와 다르므로, 값을 한 번만 확인하고 판단할 수 없습니다.
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if predicate():
@@ -91,7 +91,7 @@ def test_unknown_job_id_returns_none() -> None:
 
 
 def test_extra_jobs_stay_queued_until_a_worker_frees_up() -> None:
-    """max_concurrent=1 이면 두 번째 작업은 첫 번째가 끝날 때까지 running 이 되지 않는다."""
+    """max_concurrent=1이면 두 번째 작업은 첫 번째가 끝날 때까지 running 상태가 되지 않습니다."""
     runner: JobRunner[str] = JobRunner(max_concurrent=1)
     first_started = threading.Event()
     release_first = threading.Event()

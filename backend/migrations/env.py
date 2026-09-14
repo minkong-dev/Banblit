@@ -14,8 +14,8 @@ config = context.config
 attributes_url = config.attributes.get("sqlalchemy.url")
 if attributes_url:
     # 호출자(conftest 등)가 Config.attributes로 명시적으로 지정한 접속 주소를
-    # 최우선한다 — 그렇지 않으면 아래 DATABASE_URL 환경변수가 항상 이를 덮어써
-    # 프로그램적으로 지정한 대상(예: 테스트 전용 DB)에 마이그레이션이 적용되지 않는다.
+    # 최우선합니다. 그렇지 않으면 아래 DATABASE_URL 환경변수가 항상 이를 덮어써
+    # 프로그램적으로 지정한 대상(예: 테스트 전용 DB)에 마이그레이션이 적용되지 않습니다.
     config.set_main_option("sqlalchemy.url", attributes_url)
 else:
     database_url = os.environ.get("DATABASE_URL")
@@ -25,9 +25,9 @@ else:
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if config.config_file_name is not None:
-    # disable_existing_loggers 를 끄지 않으면, 이 설정을 읽는 순간 이미 만들어져
-    # 있던 기록기가 전부 꺼진다. 마이그레이션을 부른 쪽(서버·검사)이 그 뒤로
-    # 아무것도 기록하지 못하게 되므로, 기존 기록기는 그대로 둔다.
+    # disable_existing_loggers를 끄지 않으면 이 설정을 읽는 순간 이미 만들어져
+    # 있던 logger(기록기)가 모두 비활성화됩니다. 마이그레이션을 호출한 쪽(서버·검사)이
+    # 그 이후로 아무것도 기록하지 못하게 되므로 기존 logger는 그대로 둡니다.
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # add your model's MetaData object here

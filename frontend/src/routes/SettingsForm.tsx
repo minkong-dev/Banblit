@@ -1,5 +1,5 @@
-// 설정 화면의 서식 부품. 합주실·기간 두 구역이 같은 것을 쓴다.
-// 값을 들지 않고, 서버도 부르지 않는다 — 무엇을 저장할지는 부르는 구역이 정한다.
+// 설정 화면의 서식 부품입니다. 합주실·기간 두 구역이 같은 것을 사용합니다.
+// 값을 보유하지 않으며, 서버도 호출하지 않습니다. 무엇을 저장할지는 부르는 컴포넌트가 정합니다.
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
@@ -9,7 +9,7 @@ import type { LoadState } from "../lib/loading";
 import { PencilIcon } from "../components/icons";
 
 
-/** 수정/취소로 줄이 통째로 갈릴 때 초점이 사라지지 않게, 눌렀던 단추를 기억해 둔다. */
+/** 수정/취소로 행이 재생성될 때 초점이 유지되도록, 편집 시작 전 눌린 버튼을 기억합니다. */
 export function useRowFocus(): {
   editing: number | null;
   open: (id: number) => void;
@@ -18,11 +18,10 @@ export function useRowFocus(): {
 } {
   const [editing, setEditing] = useState<number | null>(null);
   const buttons = useRef(new Map<number, HTMLButtonElement>());
-  // 되돌아갈 곳은 화면에 그려지는 값이 아니므로 state 로 들지 않는다. state 로 들면
-  // 초점을 옮긴 뒤 그것을 비우려고 다시 그리게 된다.
+  // 돌아갈 버튼 ID를 state가 아닌 ref로 보유합니다. state로 보유하면 초점 이동 후 값을 비우는 과정에서 불필요한 재생성이 발생합니다.
   const back = useRef<number | null>(null);
 
-  // 단추는 편집을 떠나며 다시 그려진다. 그려진 뒤에 초점을 옮겨야 잡힌다.
+  // 편집 모드를 벗어나면 버튼이 재생성됩니다. 재생성 후 초점을 옮겨야 작동합니다.
   useEffect(() => {
     if (editing !== null || back.current === null) return;
     buttons.current.get(back.current)?.focus();
@@ -43,9 +42,8 @@ export function useRowFocus(): {
   };
 }
 
-/** 수정으로 들어온 서식의 첫 칸에 초점을 옮긴다. autoFocus 는 이 화면에서 걸리지
- *  않아 직접 옮긴다. 추가 서식(editing 이 아닌 것)에는 걸지 않는다 — 화면을 열자마자
- *  아래쪽 서식으로 끌려가면 안 된다. */
+/** 편집 모드에 진입한 서식의 첫 입력칸으로 초점을 이동합니다. autoFocus 속성이 이 화면에서 작동하지 않아 직접 이동합니다.
+ *  새로 추가된 서식(editing이 false인 경우)에는 적용하지 않습니다. 화면이 열린 직후 아래쪽 서식으로 초점이 이동하면 안 됩니다. */
 export function useFirstField<T extends HTMLElement>(editing: boolean): RefObject<T | null> {
   const first = useRef<T>(null);
   useEffect(() => {
@@ -54,7 +52,7 @@ export function useFirstField<T extends HTMLElement>(editing: boolean): RefObjec
   return first;
 }
 
-/** 서식 한 벌의 상태. 사람이 손대기 전에는 빨간 사유를 띄우지 않으려고 touched 를 함께 든다. */
+/** 서식 한 벌의 상태입니다. 사용자가 입력하기 전에는 오류 메시지를 표시하지 않으려고 touched를 함께 보유합니다. */
 export function useForm<T>(start: T): [T, (next: T) => void, boolean, () => void] {
   const [value, write] = useState(start);
   const [touched, setTouched] = useState(false);
@@ -69,7 +67,7 @@ export function useForm<T>(start: T): [T, (next: T) => void, boolean, () => void
   return [value, set, touched, reset];
 }
 
-/** 서식 한 칸. 계정 화면의 Field 는 그쪽 CSS 에 묶여 있어 여기서는 쓰지 않는다. */
+/** 서식 입력칸입니다. 계정 화면의 Field는 그 화면의 CSS에 묶여 있어 여기서는 사용하지 않습니다. */
 export function Cell(props: { label: string; htmlFor: string; wide?: boolean; children: ReactNode }) {
   return (
     <label className={props.wide ? "wide" : undefined} htmlFor={props.htmlFor}>
@@ -83,10 +81,9 @@ export function CardState({ state, empty }: { state: LoadState; empty: string })
   return <div className="empty">{stateText(state, empty)}</div>;
 }
 
-/** 목록 한 줄 — 보고 있는 상태. 고치는 중이면 카드가 서식을 대신 그린다.
- *  오른쪽 끝에 연필(수정)이 서고, onEdit 이 없으면 값만 보여준다 — 고칠 항목이
- *  없는 사람에게 그리는 줄이다. 줄마다 같은 그림이라 무엇을 가리키는지는
- *  aria-label 이 말한다. */
+/** 목록의 한 행입니다. 보기 모드에서는 데이터를 표시하고, 편집 모드이면 서식이 대신 표시됩니다.
+ *  오른쪽 끝에 연필 아이콘(수정)이 표시되며, onEdit이 없으면 데이터만 표시합니다. 이런 경우는 수정할 권한이 없는 사용자에게 렌더링됩니다.
+ *  모든 행의 외형이 같으므로 aria-label이 무엇을 나타내는지 말해줍니다. */
 export function Row(props: {
   title: string;
   when: ReactNode;
@@ -116,7 +113,7 @@ export function Row(props: {
   );
 }
 
-/** 서식 꼬리 — 취소·저장 단추와 사유. 세 서식이 같은 것을 쓴다. */
+/** 서식 꼬리 — 취소·저장 버튼와 사유. 세 서식이 같은 것을 쓴다. */
 export function FormTail(props: {
   submit: string;
   pending: boolean;
@@ -136,7 +133,7 @@ export function FormTail(props: {
           {pending ? "저장하는 중…" : submit}
         </button>
       </div>
-      {/* role="alert" 이라야 화면을 보지 않는 사람에게도 사유가 전해진다. */}
+      {/* role="alert"를 지정해야 스크린 리더 사용자에게도 오류가 전달됩니다. */}
       {bad === "" ? null : <p className="why" id={whyId} role="alert">{bad}</p>}
     </>
   );

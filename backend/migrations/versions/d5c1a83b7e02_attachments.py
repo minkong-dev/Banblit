@@ -1,4 +1,4 @@
-"""attachments
+"""첨부 파일 관리 기능을 추가합니다.
 
 Revision ID: d5c1a83b7e02
 Revises: c4a7d2e91b83
@@ -19,7 +19,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
+    """스키마를 업그레이드합니다."""
     op.create_table(
         'attachments',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -39,6 +39,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
+    """스키마를 다운그레이드합니다."""
     op.drop_index(op.f('ix_attachments_post_id'), table_name='attachments')
     op.drop_table('attachments')

@@ -1,5 +1,6 @@
-// 오래 걸리는 계산을 접수하고 끝날 때까지 되묻는 부분. 화면도 서버도 건드리지 않는다 —
-// 실제로 묻는 일은 넘겨받은 read 가 한다. 부르는 순서는 pipeline.ts 가 정한다.
+// 오래 걸리는 계산을 접수하고 완료될 때까지 다시 조회(refetch: 같은 조회를 다시 보내 값을 갱신하는 것)하는 부분입니다.
+// 화면이나 서버와 상호작용하지 않습니다 — 실제로 조회하는 일은 넘겨받은 read가 합니다.
+// 호출 순서는 pipeline.ts가 정합니다.
 
 export type JobStatus = "queued" | "running" | "done" | "failed";
 
@@ -10,11 +11,11 @@ export type Job<T> = {
   error: string | null;
 };
 
-/** 되묻는 간격(밀리초). */
+/** 다시 조회하는 간격(밀리초)입니다. */
 export const JOB_POLL_MS = 700;
 
-/** 여기까지도 안 끝나면 기다리기를 그만둔다(밀리초).
- *  조율안까지 20초대가 나온 적이 있어 그 세 배쯤을 둔다. */
+/** 이 시간까지 끝나지 않으면 대기를 중단합니다(밀리초).
+ *  배정안까지 계산하는 데 20초대가 나온 경우가 있어서 그 3배쯤을 설정합니다. */
 export const JOB_DEADLINE_MS = 60000;
 
 export async function awaitJob<T>(
@@ -23,8 +24,8 @@ export async function awaitJob<T>(
   wait: (ms: number) => Promise<void>,
   now: () => number,
 ): Promise<T> {
-  // jobId 를 read 에 넣어 상태를 받고, done 이면 결과를, failed 면 사유를 올린다.
-  // 그 밖이면 wait 만큼 쉬었다 다시 묻는다. now 가 정해둔 시각을 넘기면 그만둔다.
+  // jobId를 read에 넣어 상태를 받고, done이면 결과를, failed이면 사유를 발생시킵니다.
+  // 그 외에는 wait만큼 기다린 후 다시 조회합니다. now가 정해둔 시각을 넘기면 중단합니다.
   const until = now() + JOB_DEADLINE_MS;
   for (;;) {
     const { job } = await read(jobId);

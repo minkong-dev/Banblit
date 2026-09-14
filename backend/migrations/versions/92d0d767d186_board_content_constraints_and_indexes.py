@@ -1,4 +1,4 @@
-"""board content constraints and indexes
+"""게시판 콘텐츠 제약 조건과 색인입니다.
 
 Revision ID: 92d0d767d186
 Revises: e32b20253fc7
@@ -21,8 +21,8 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
 
-    # 손수 추가 — autogenerate는 CHECK 제약을 잡아내지 못한다(fd4b8458697a와 같은 이유).
-    # 공백만 있는 제목·본문·댓글이 경계 검증을 거치지 않고 들어오는 것을 DB에서도 막는다.
+    # 수동 추가입니다. autogenerate는 check constraint(제약 조건)을 감지하지 못합니다(fd4b8458697a와 같은 이유).
+    # 공백만 있는 제목·본문·댓글이 경계 검증을 거치지 않고 입력되는 것을 DB에서도 방지합니다.
     op.create_check_constraint(
         "posts_title_not_blank", "posts", "length(trim(title)) > 0"
     )

@@ -50,7 +50,7 @@ def test_the_same_token_is_refused_the_second_time(
     again = _confirm(api_client, token, "Another-Pass77")
 
     assert again.status_code == 400
-    # 두 번째 요청이 거절되었으므로 첫 번째로 바꾼 비밀번호가 그대로 남는다.
+    # 두 번째 요청이 거절되었으므로 첫 번째로 변경한 비밀번호가 그대로 유지됩니다.
     assert (
         api_client.post(
             "/login", json={"email": HEAD[1], "password": NEW_PASSWORD}
@@ -158,6 +158,6 @@ def test_find_id_mails_the_registered_address_only_when_the_pair_matches(
         api_client.post("/find-id", json={"name": HEAD[0], "email": HEAD[1]})
         api_client.post("/find-id", json={"name": OTHER[0], "email": HEAD[1]})
 
-    # 이름과 이메일이 함께 맞는 첫 요청만 메일이 나간다.
+    # 이름과 이메일이 함께 일치하는 첫 요청만 메일이 발송됩니다.
     mails = [record for record in caplog.records if HEAD[1] in record.getMessage()]
     assert len(mails) == 1

@@ -1,15 +1,15 @@
-// 지금 로그인한 계정을 두고 화면이 하는 판단과 표시. 서버를 부르지 않는다.
+// 현재 로그인한 계정과 관련하여 화면이 하는 판단과 표시입니다. 서버를 호출하지 않습니다.
 
 import type { Account, Permission } from "./contract";
 
-/** 프로필 말풍선에 쓰는 역할 표시. 화면 네 곳(Board·Notices·Profile·Teams)이 같이 쓴다. */
+/** 프로필 카드에 표시하는 역할 표시입니다. 화면 네 곳(Board·Notices·Profile·Teams)에서 사용합니다. */
 export function roleLabel(role: Account["role"]): string {
   return role === "head_manager" ? "헤드매니저" : "일반멤버";
 }
 
-/** 항목 열여덟 가지와 그 한국어 이름·설명. 순서는 서버가 고정한 선언 순서 그대로다.
- *  설명은 켜면 무엇을 할 수 있게 되는지를 한 줄로 적는다 — 이름만으로는 "되돌리기"가
- *  무엇을 되돌리는지 알 수 없다. */
+/** 항목 18개와 그 한국어 이름·설명입니다. 순서는 서버가 고정한 선언 순서 그대로입니다.
+ *  설명은 권한을 켜면 무엇을 할 수 있게 되는지를 한 줄로 적습니다.
+ *  예를 들어 이름만으로는 "되돌리기"가 무엇을 되돌리는지 명확하지 않기 때문입니다. */
 export const PERMISSION_ITEMS: readonly {
   key: Permission;
   label: string;
@@ -107,9 +107,9 @@ export const PERMISSION_ITEMS: readonly {
   },
 ];
 
-/** me 가 item 을 가졌는지. 아직 못 받아왔거나 응답에 permissions 가 없으면 없는 것으로 본다 —
- *  잠깐 보였다 사라지는 단추보다 처음부터 없는 편이 낫다.
- *  화면이 감추는 것일 뿐 진짜 판정은 서버가 한다. */
+/** me가 item을 가졌는지 판정합니다. 아직 받아오지 못했거나 응답에 permissions가 없으면 없는 것으로 봅니다.
+ *  잠깐 보였다 사라지는 버튼보다 처음부터 없는 편이 낫습니다.
+ *  화면이 감추는 것일 뿐 진짜 판정은 서버가 합니다. */
 export function can(me: Account | null, item: Permission): boolean {
   return me?.permissions?.includes(item) ?? false;
 }

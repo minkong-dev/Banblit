@@ -48,7 +48,7 @@ const STEPS = [
   },
 ];
 
-/** 화면에 들어온 .rise 요소를 한 번씩만 켠다. 스크롤을 따라 글이 떠오르는 효과. */
+/** 화면에 들어온 .rise 요소를 한 번씩만 켭니다. 스크롤을 따라 글이 떠오르는 효과입니다. */
 function useRiseOnScroll(scope: RefObject<HTMLDivElement | null>): void {
   useEffect(() => {
     const root = scope.current;
@@ -73,7 +73,7 @@ function useRiseOnScroll(scope: RefObject<HTMLDivElement | null>): void {
   }, [scope]);
 }
 
-// 메뉴를 여는 단추와 메뉴가 서로를 popoverTarget 으로 가리킨다. 이름을 적는 자리는 하나다.
+// 메뉴를 여는 버튼과 메뉴가 서로를 popoverTarget으로 가리킵니다. 이름을 표시하는 자리는 하나입니다.
 const MENU_ID = "landingMenu";
 
 export function Landing() {
@@ -94,8 +94,8 @@ export function Landing() {
         <Link className="login" to="/login">LOGIN</Link>
       </header>
 
-      {/* popover 는 여닫기·Escape·맨 앞에 띄우기를 브라우저가 맡는다.
-          링크는 popoverTarget 을 걸 수 없어(단추만 된다) 눌리면 여기서 닫는다. */}
+      {/* popover는 여닫기·Escape·맨 앞에 띄우기를 브라우저가 맡습니다.
+          링크는 popoverTarget을 걸 수 없어서(버튼만 가능) 눌리면 여기서 닫습니다. */}
       <nav
         id={MENU_ID}
         popover="auto"
@@ -126,8 +126,8 @@ export function Landing() {
 
       <section className="sec" id="how">
         <div className="wrap stack">
-          {/* 세로 한 장에 정사각 한 장을 걸쳐 둔다. 배경으로만 넣은 장식이라 읽어 줄
-              글이 없다 — 화면을 읽어 주는 도구는 그냥 지나간다. */}
+          {/* 세로 한 장에 정사각형 한 장을 걸쳐 둡니다. 배경으로만 넣은 장식이라 읽을
+              텍스트가 없습니다 — 화면을 읽어 주는 도구(스크린 리더)는 그냥 지나갑니다. */}
           <div className="shots rise">
             <div className="shot back" />
             <div className="shot front" />

@@ -1,8 +1,9 @@
-"""사람을 지우면 그 사람이 남긴 것도 함께 지운다
+"""멤버를 삭제하면 그 멤버가 남긴 것도 함께 삭제합니다.
 
-글·댓글·예약이 사람을 붙들고 있어(RESTRICT) 탈퇴 자체가 막혀 있었다. 남겨 두면
-쓴 사람이 없는 글이 되고 이름 자리에 무엇을 적을지를 또 정해야 하므로, 통째로
-지우는 쪽으로 정했다(사용자 결정).
+게시글·댓글·예약이 멤버를 foreign key(다른 table의 행을 참조하는 제약 조건)로 참조하고 있어
+RESTRICT 규칙이 적용되면 멤버 삭제 자체가 차단됩니다. 멤버 데이터를 보존하면 글을 작성한
+멤버가 없는 상태가 되고 표시명을 어떻게 할지를 또 정해야 하므로, 멤버 삭제 시 연결된
+데이터를 모두 삭제하는 쪽으로 정했습니다(사용자 결정).
 
 Revision ID: e8b2f5c17d40
 Revises: d4a71c96e2b8
@@ -17,7 +18,7 @@ down_revision: Union[str, Sequence[str], None] = "d4a71c96e2b8"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
-# (제약 이름, 표, 열)
+# (제약 조건 이름, table, 열)
 LINKS = (
     ("posts_author_id_fkey", "posts", "author_id"),
     ("comments_author_id_fkey", "comments", "author_id"),

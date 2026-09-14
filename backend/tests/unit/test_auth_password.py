@@ -23,6 +23,6 @@ def test_verify_password_rejects_the_wrong_password() -> None:
 
 
 def test_hash_password_salts_each_call_differently() -> None:
-    # 같은 비밀번호라도 매번 다른 소금을 써서, 저장된 값만 보고 같은 비밀번호를
-    # 쓰는 두 계정을 알아낼 수 없게 한다.
+    # 같은 비밀번호라도 매번 다른 salt를 사용하므로, 저장된 해시값만으로는 같은 비밀번호를
+    # 사용하는 두 계정을 식별할 수 없습니다.
     assert hash_password("same-password") != hash_password("same-password")

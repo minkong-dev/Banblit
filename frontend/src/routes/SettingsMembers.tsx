@@ -1,7 +1,7 @@
-// 설정 화면의 멤버 구역. 카드 두 장이 세로로 선다.
+// 설정 화면의 멤버 구역입니다. 카드 두 장이 수직으로 배치됩니다.
 //
-// 위 — 권한 묶음. 정사각형 카드가 가로로 늘어서고, 한 화면에 다 안 들어가면 ‹ › 로 넘긴다.
-// 아래 — 가입한 모든 사람. 권한으로 걸러 보고, 아래로 내리면 이어 받는다.
+// 위쪽 — 권한 묶음입니다. 정사각형 카드가 수평으로 늘어서며, 한 화면에 모두 보이지 않으면 < > 버튼으로 넘깁니다.
+// 아래쪽 — 가입한 모든 사람입니다. 권한으로 필터링하여 보이며, 아래로 스크롤하면 다음 페이지를 불러옵니다.
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -24,7 +24,7 @@ import type { MemberRow, Permission, PermissionSet } from "../lib/contract";
 
 const SETS_KEY = ["permission-sets"];
 const MEMBERS_KEY = ["member-roster"];
-/** 한 번에 받아 오는 사람 수. 아래로 내리면 이만큼씩 이어 받는다. */
+/** 한 번에 불러오는 멤버 수입니다. 아래로 스크롤하면 이 크기만큼씩 다음 페이지를 불러옵니다. */
 const PAGE = 50;
 
 
@@ -32,8 +32,7 @@ type Draft = { name: string; description: string; permissions: Permission[] };
 
 const BLANK: Draft = { name: "", description: "", permissions: [] };
 
-/** 권한 하나를 만들거나 고치는 모달. 설명은 반드시 적는다 — 항목 목록만으로는
- *  "왜 이 묶음이 있는가" 가 남지 않는다. */
+/** 권한을 생성하거나 수정하는 모달입니다. 설명은 필수입니다. 항목 목록만으로는 "이 권한 묶음이 필요한 이유"가 명확하지 않습니다. */
 function SetForm(props: {
   start: Draft;
   taken: string[];
@@ -143,7 +142,7 @@ function SetForm(props: {
   );
 }
 
-/** 권한을 사람에게 주고 뺀다. */
+/** 멤버에게 권한을 부여하거나 제거합니다. */
 function GrantModal(props: {
   set: PermissionSet;
   onClose: () => void;
@@ -207,7 +206,7 @@ function GrantModal(props: {
   );
 }
 
-/** 권한 카드 한 장. 정사각형이고 이름·인원·설명이 들어간다. */
+/** 권한 카드 한 장입니다. 정사각형 카드이며 이름, 멤버 수, 설명이 포함됩니다. */
 function SetTile(props: {
   set: PermissionSet;
   onGrant: () => void;
@@ -237,7 +236,7 @@ function SetTile(props: {
   );
 }
 
-/** 권한 카드 줄. 가로로 늘어서고, 한 화면에 다 안 들어가면 ‹ › 로 넘긴다. */
+/** 권한 카드 행입니다. 카드가 수평으로 배치되며, 한 화면에 모두 보이지 않으면 < > 버튼으로 넘깁니다. */
 function SetRail() {
   const client = useQueryClient();
   const track = useRef<HTMLUListElement | null>(null);
@@ -264,7 +263,7 @@ function SetRail() {
     onError: (error) => say(reason(error)),
   });
 
-  // 한 번에 카드 하나 폭만큼 민다. 창 폭이 바뀌어도 카드를 재서 쓴다.
+  // 한 번에 카드 한 개 너비만큼 스크롤합니다. 창 너비가 바뀌어도 카드를 다시 계산하여 사용합니다.
   const slide = (way: 1 | -1): void => {
     const box = track.current;
     if (box === null) return;
@@ -339,7 +338,7 @@ function SetRail() {
   );
 }
 
-/** 가입한 모든 사람. 아래로 내리면 이어 받는다. */
+/** 가입한 모든 멤버입니다. 아래로 스크롤하면 다음 페이지를 불러옵니다. */
 function MemberRoster(props: {
   rows: MemberRow[];
   done: boolean;
@@ -350,8 +349,7 @@ function MemberRoster(props: {
   const [filter, setFilter] = useState("");
   const foot = useRef<HTMLDivElement | null>(null);
 
-  // 목록 바닥이 화면에 들어오면 다음 쪽을 부른다. 스크롤 위치를 직접 재지 않는 것은,
-  // 줄 높이나 카드 높이가 바뀌어도 이 방식은 그대로 맞기 때문이다.
+  // 목록의 바닥이 화면에 들어오면 다음 페이지를 불러옵니다. 스크롤 위치를 직접 계산하지 않는 이유는, 행 높이나 카드 높이가 변해도 이 방식은 계속 작동하기 때문입니다.
   useEffect(() => {
     const mark = foot.current;
     if (mark === null || done) return;
@@ -392,8 +390,7 @@ function MemberRoster(props: {
               <th>학번</th>
               <th>기수</th>
               <th>권한</th>
-              {/* 남는 가로를 먹는 빈 칸. 이것이 없으면 넓은 화면에서 앞의 칸들이
-                  가로를 나눠 갖느라 값 사이가 크게 벌어진다. */}
+              {/* 남는 가로 공간을 차지하는 빈 칸입니다. 이것이 없으면 넓은 화면에서 앞의 칼럼들이 가로 공간을 나눠 가지느라 값 사이가 크게 벌어집니다. */}
               <th className="fill" aria-hidden="true" />
             </tr>
           </thead>
@@ -411,7 +408,7 @@ function MemberRoster(props: {
           </tbody>
         </table>
         {shown.length === 0 ? <p className="empty">표시할 멤버가 없어요</p> : null}
-        {/* 이 표시가 화면에 들어오면 다음 쪽을 부른다. */}
+        {/* 이 요소가 화면에 들어오면 다음 페이지를 불러옵니다. */}
         <div ref={foot} className="rosterfoot">{done ? "" : "멤버를 불러오고 있어요…"}</div>
       </div>
     </Card>
@@ -419,8 +416,8 @@ function MemberRoster(props: {
 }
 
 export function MemberCards() {
-  // 쪽을 이어 붙이는 것은 TanStack 이 한다. 마지막 줄의 번호 다음부터 받는다 —
-  // 보는 중에 사람이 늘거나 줄어도 이미 본 줄이 다시 나오거나 건너뛰지 않는다.
+  // 페이지 연결은 TanStack Query(서버 데이터 동기화를 관리하는 라이브러리)가 처리합니다. 마지막 행의 ID 다음부터 불러옵니다.
+  // 조회 중에 멤버가 추가되거나 삭제되어도 이미 본 행이 다시 나오거나 건너뛰지 않습니다.
   const list = useInfiniteQuery({
     queryKey: MEMBERS_KEY,
     initialPageParam: null as number | null,

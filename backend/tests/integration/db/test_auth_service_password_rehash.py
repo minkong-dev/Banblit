@@ -1,7 +1,7 @@
-"""login() 이 성공하는 순간 옛 강도로 저장된 비밀번호를 지금 강도로 갈아 끼우는지 검증한다.
+"""login()이 성공하는 순간 이전 강도로 저장된 비밀번호를 지금 강도로 업그레이드하는지 검증합니다.
 
-auth_service.hash_password/verify_password 는 DB 를 몰라도 되지만, 이 갈아 끼우기는
-Member 행을 실제로 commit 해야 확인할 수 있어 tests/unit 이 아니라 여기(DB 딸림)에 둔다.
+auth_service.hash_password/verify_password는 DB를 몰라도 되지만, 이 업그레이드는
+Member 행을 실제로 commit해야 확인할 수 있어 tests/unit이 아니라 여기(DB 포함)에 둡니다.
 """
 
 import hashlib
@@ -15,7 +15,7 @@ from backend.db.models import Member
 
 
 def _weak_hash(password: str) -> str:
-    """지금보다 낮은 강도(n=2**13)로 저장된 값을 흉내낸다 — 강도를 올리기 전 계정이다."""
+    """이전 강도(n=2**13)로 저장된 값을 흉내냅니다. 업그레이드하기 전 계정입니다."""
     salt = secrets.token_bytes(16)
     derived = hashlib.scrypt(password.encode(), salt=salt, n=2**13, r=8, p=1, dklen=32)
     return f"scrypt$8192$8$1${salt.hex()}${derived.hex()}"

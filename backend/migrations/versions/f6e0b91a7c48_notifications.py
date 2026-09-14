@@ -1,4 +1,4 @@
-"""notifications
+"""알림(notification) table을 생성합니다.
 
 Revision ID: f6e0b91a7c48
 Revises: d5c1a83b7e02
@@ -19,7 +19,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
+    """알림 table을 생성합니다."""
     op.create_table(
         'notifications',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -35,6 +35,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
+    """알림 table을 삭제합니다."""
     op.drop_index(op.f('ix_notifications_member_id'), table_name='notifications')
     op.drop_table('notifications')

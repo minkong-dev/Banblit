@@ -1,4 +1,4 @@
-// 화면이 함께 쓰는 훅.
+// 여러 화면에서 공유하는 훅입니다.
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -7,9 +7,9 @@ import type { RefObject } from "react";
 import { colorKey, fetchMe, getJSON, myTeamIds } from "../lib/pipeline";
 import type { Account, Period, Room, Team } from "../lib/contract";
 
-/** 눌러서 여는 말풍선 하나. 열려 있는 동안 바깥을 누르거나 Escape 를 누르면 닫힌다.
- *  돌려주는 box 는 여는 단추와 말풍선을 함께 감싼 자리에 건다 — 단추를 누른 것까지
- *  바깥으로 세면, 닫고 곧바로 다시 여는 것이 되어 말풍선이 닫히지 않는다. */
+/** 클릭으로 여는 팝업 하나입니다. 열려 있는 동안 바깥을 누르거나 Escape를 누르면 닫힙니다.
+ *  반환되는 box ref는 열기 버튼와 팝업을 감싼 요소에 연결합니다 — 버튼 클릭까지 외부 클릭으로 감지하면,
+ *  닫은 후 곧바로 다시 열려 팝업이 닫히지 않기 때문입니다. */
 export function useDismissible(): {
   open: boolean;
   setOpen: (next: boolean) => void;
@@ -27,21 +27,21 @@ export function useDismissible(): {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === "Escape") setOpen(false);
     };
-    // mousedown 으로 듣는다. click 으로 들으면 누른 자리의 단추가 먼저 반응해,
-    // 닫으려고 누른 것이 그 단추를 누른 것으로도 세어진다.
+    // mousedown 이벤트로 감지합니다. click으로 감지하면 누른 버튼가 먼저 처리되어,
+    // 닫으려고 누른 동작이 그 버튼 클릭으로도 세어집니다.
     document.addEventListener("mousedown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
     return () => {
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-    // setOpen 은 늘 같은 함수라 열고 닫힐 때만 다시 건다.
+    // setOpen은 항상 같은 함수이므로 열고 닫힐 때만 의존성을 다시 설정합니다.
   }, [open]);
 
   return { open, setOpen, toggle: () => setOpen((on) => !on), box };
 }
 
-/** 화면 CSS 는 body[data-page="..."] 안에 갇혀 있다. data-page 를 걸고 떼는 곳. */
+/** 화면별 CSS는 body[data-page="..."] 속에 격리됩니다. data-page 속성을 설정/해제하는 곳입니다. */
 export function usePage(page: string): void {
   useEffect(() => {
     document.body.dataset.page = page;
@@ -51,7 +51,7 @@ export function usePage(page: string): void {
   }, [page]);
 }
 
-/** 팀·합주실·기간 목록. 화면마다 같은 질의를 다시 적지 않는다 — 열쇠가 같아 캐시도 하나다. */
+/** 팀·합주실·기간 목록입니다. 여러 화면에서 같은 조회를 다시 작성하지 않습니다 — queryKey가 같아 캐시도 하나입니다. */
 export function useTeams() {
   return useQuery({ queryKey: ["teams"], queryFn: () => getJSON<{ teams: Team[] }>("/teams") });
 }
@@ -62,9 +62,9 @@ export function usePeriods() {
   return useQuery({ queryKey: ["periods"], queryFn: () => getJSON<{ periods: Period[] }>("/periods") });
 }
 
-/** 지금 로그인한 계정과, 그 계정이 자리를 갖고 있는 팀 번호들.
- *  /me 가 teams 로 함께 준다 — 팀 명단을 하나씩 훑지 않아도 된다.
- *  아직 못 불러왔으면 me 는 null 이다. */
+/** 현재 로그인한 계정과, 그 계정이 소속된 팀 번호들입니다.
+ *  /me가 teams와 함께 반환됩니다 — 팀 명단을 하나씩 반복하지 않아도 됩니다.
+ *  아직 로드되지 않았으면 me는 null입니다. */
 export function useMe(): {
   me: Account | null;
   teamIds: number[];
@@ -73,8 +73,8 @@ export function useMe(): {
   const mine = useQuery({ queryKey: ["me"], queryFn: fetchMe, retry: false });
   const teamList = useTeams();
 
-  // 낡은 서버가 teams 없이 답하면 아무 자리도 없는 것으로 본다 — 잠깐 보였다
-  // 사라지는 "내 팀" 배지보다 처음부터 없는 편이 낫다.
+  // 이전 서버가 teams 없이 응답하면 소속 팀이 없는 것으로 처리합니다 — 잠시 표시되었다가
+  // 사라지는 "내 팀" 배지보다 처음부터 없는 것이 낫습니다.
   return {
     me: mine.data?.account ?? null,
     teamIds: myTeamIds(mine.data?.teams ?? []),
@@ -84,9 +84,9 @@ export function useMe(): {
 
 export type MyTeam = { id: number; name: string; colorKey: string };
 
-/** 내가 속한 팀을 전체 팀 목록에서 골라내고, 목록 안 순서로 색을 매긴다(스케줄러와
- *  같은 규칙 — 전체 팀 목록에서의 순서가 곧 달력 색이다). 프로필 말풍선이 화면마다
- *  쓴다. 아직 못 불러왔거나 실패하면 빈 배열을 돌려준다 — 말풍선은 팀 없이도 그려진다. */
+/** 내가 속한 팀을 전체 팀 목록에서 필터링하고, 목록 내 순서로 색상을 할당합니다(스케줄러와
+ *  같은 규칙 — 전체 팀 목록에서의 순서가 곧 달력 색입니다). 여러 화면에서 프로필 카드가
+ *  사용합니다. 아직 로드되지 않았거나 실패하면 빈 배열을 반환합니다 — 프로필 카드는 팀 없이도 렌더링됩니다. */
 export function useMyTeams(): MyTeam[] {
   const { teamIds, teams } = useMe();
   return teams
@@ -94,13 +94,13 @@ export function useMyTeams(): MyTeam[] {
     .filter((team) => teamIds.includes(team.id));
 }
 
-/** 목록 상자에 몇 줄이 들어가는지 재서 돌려준다.
+/** 목록 상자에 몇 줄이 들어가는지 측정해서 반환합니다.
  *
- *  목록을 스크롤하지 않는다 — 들어가는 만큼만 보여주고 나머지는 쪽으로 넘긴다.
- *  그래야 쪽 넘기기와 만드는 단추가 화면에서 늘 같은 자리에 있다.
+ *  목록을 스크롤하지 않습니다 — 들어가는 만큼만 표시하고 나머지는 페이지네이션으로 나눕니다.
+ *  그래야 페이지네이션과 추가 버튼가 화면에서 항상 같은 위치에 있습니다.
  *
- *  줄 높이는 첫 줄을 실제로 재서 쓴다. 글자 크기나 여백을 고치면 값이 저절로 따라온다.
- *  아직 줄이 하나도 없으면 fallback 을 쓴다. 창 크기가 바뀌면 다시 잰다. */
+ *  줄 높이는 첫 줄을 실제로 측정해서 사용합니다. 글자 크기나 여백을 수정하면 값이 자동으로 반영됩니다.
+ *  아직 줄이 없으면 fallback 높이를 사용합니다. 창 크기가 변경되면 다시 측정합니다. */
 export function useFitCount(fallbackRowHeight: number): [RefObject<HTMLUListElement | null>, number] {
   const box = useRef<HTMLUListElement | null>(null);
   const [count, setCount] = useState(1);

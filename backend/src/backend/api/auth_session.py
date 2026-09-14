@@ -7,12 +7,10 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import LoginSession
 
-# 로그인 상태 유지를 끈 사람의 수명. 브라우저를 닫으면 쿠키가 사라지므로 이 값은
-# "브라우저를 계속 켜 둔 사람"에게만 걸린다.
+# 로그인 상태 유지를 비활성화한 사람의 session(로그인 상태를 담는 서버 쪽 기록) 유효 기간입니다. 브라우저를 닫으면 쿠키가 삭제되므로, 이 값은 "브라우저를 계속 켜 둔 사람"에게만 적용됩니다.
 SESSION_TTL = timedelta(days=7)
 
-# 로그인 상태 유지를 켠 사람의 수명. 쿠키에도 같은 값을 실어야 한다 — 한쪽만 길면
-# 짧은 쪽이 먼저 끝나 로그인이 풀린다.
+# 로그인 상태 유지를 활성화한 사람의 session 유효 기간입니다. 쿠키에도 같은 값을 설정해야 합니다. 한쪽만 길면 짧은 쪽이 먼저 만료되어 로그인이 해제됩니다.
 KEEP_TTL = timedelta(days=90)
 
 SESSION_COOKIE = "banblit_session"
@@ -20,14 +18,14 @@ SIGNED_IN_COOKIE = "banblit_signed_in"
 
 
 def hash_token(token: str) -> str:
-    """토큰 원문을 되돌릴 수 없게 줄인 지문으로 바꾼다. 저장·조회 모두 이 값으로 한다."""
+    """token(임시로 발급하는 인증 문자열)의 원문을 일방향 해시로 변환합니다. 저장 및 조회 모두 이 값을 사용합니다."""
     return hashlib.sha256(token.encode()).hexdigest()
 
 
 def _delete_dead_sessions(session: Session, member_id: int, now: datetime) -> None:
-    """그 계정의 만료된(expires_at < now) 행과 취소된(revoked_at이 채워진) 행을 지운다.
+    """해당 계정의 만료된(expires_at < now) 행과 취소된(revoked_at이 채워진) 행을 삭제합니다.
 
-    둘 다 resolve_session이 이미 거절하는 행이라, 남겨 둬도 로그인에 쓰이지 않는다.
+    두 경우 모두 resolve_session 에서 이미 거절되는 행이므로, 남겨 둬도 로그인에 사용되지 않습니다.
     """
     session.execute(
         delete(LoginSession).where(
@@ -40,13 +38,13 @@ def _delete_dead_sessions(session: Session, member_id: int, now: datetime) -> No
 def create_session(
     session: Session, member_id: int, now: datetime, keep: bool = False
 ) -> str:
-    """새 세션 토큰을 만들어 저장하고, 토큰 원문을 돌려준다.
+    """새 session token(임시로 발급하는 인증 문자열)을 생성하여 저장하고, token 원문을 반환합니다.
 
-    쌓인 죽은 행은 새 행과 같은 커밋에서 함께 지운다 — 로그인·가입이 login_sessions
-    table 에 행을 더하는 유일한 코드라서, 여기 말고 정리할 곳이 없다.
+    쌓인 만료된 행은 새 행과 같은 커밋에서 함께 삭제합니다. 로그인·가입이 login_sessions
+    table 에 행을 추가하는 유일한 코드이므로, 여기 외에 정리할 곳이 없습니다.
 
-    ponytail: 로그인하지 않는 계정의 행은 계속 남는다. 그 계정 수가 문제되면
-    주기적 삭제를 붙인다 — 지금 이 저장소에는 예약 실행 장치가 없다.
+    ponytail: 로그인하지 않는 계정의 행은 계속 남습니다. 해당 계정 수가 문제되면
+    주기적 삭제를 추가합니다. 현재 이 저장소에는 scheduled(시간을 정해 자동으로 실행하는) 작업 기능이 없습니다.
     """
     _delete_dead_sessions(session, member_id, now)
     token = secrets.token_urlsafe(32)
@@ -63,7 +61,7 @@ def create_session(
 
 
 def resolve_session(session: Session, token: str, now: datetime) -> LoginSession | None:
-    """취소되지 않고 만료되지 않은 세션 행을 찾는다. 없으면 None."""
+    """취소되지 않고 만료되지 않은 session 행을 찾습니다. 없으면 None 을 반환합니다."""
     row = session.scalar(
         select(LoginSession).where(LoginSession.token_hash == hash_token(token))
     )
@@ -73,8 +71,7 @@ def resolve_session(session: Session, token: str, now: datetime) -> LoginSession
 
 
 def revoke_session(session: Session, token: str, now: datetime) -> None:
-    """그 토큰의 세션을 취소한다. 없는 토큰이어도 조용히 끝난다 — 이미 로그아웃된
-    것과 구분할 이유가 없다."""
+    """해당 token 의 session 을 취소합니다. 존재하지 않는 token 이어도 오류를 발생시키지 않습니다. 이미 로그아웃된 것과 구분할 필요가 없기 때문입니다."""
     session.execute(
         update(LoginSession)
         .where(LoginSession.token_hash == hash_token(token))
@@ -85,8 +82,8 @@ def revoke_session(session: Session, token: str, now: datetime) -> None:
 
 
 def revoke_member_sessions(session: Session, member_id: int, now: datetime) -> None:
-    """그 계정의 살아 있는 세션 전부에 끊긴 표시를 남긴다. 커밋은 부르는 쪽이 한다 —
-    비밀번호 변경과 같은 커밋에 묶여야 둘 중 하나만 남는 상태가 생기지 않는다."""
+    """해당 계정의 활성 session 전부에 revoked_at 을 설정합니다. commit 은 호출자가 수행합니다.
+    비밀번호 변경과 같은 commit 에 함께 포함되어야 둘 중 하나만 성공하는 상태를 피할 수 있습니다."""
     session.execute(
         update(LoginSession)
         .where(LoginSession.member_id == member_id, LoginSession.revoked_at.is_(None))

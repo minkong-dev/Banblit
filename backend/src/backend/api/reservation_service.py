@@ -13,7 +13,7 @@ from backend.db.models import Member, Period, Reservation, Room, Team, TeamSlot
 from backend.db.pipeline import commit_translating
 from backend.scheduling.pipeline import TimeInterval, generate_slots
 
-# 선착순은 (room_id, starts_at) 유니크 제약이 커밋 시점에 정한다 — 먼저 커밋한 쪽이 그 slot 을 가져간다.
+# 선착순은 (room_id, starts_at) 유니크 제약이 커밋 시점에 정합니다 — 먼저 커밋한 쪽이 그 slot을 가져갑니다.
 RESERVATION_MESSAGES = {
     "reservations_room_id_starts_at_key": "이미 다른 사람이 예약한 시간입니다. 다른 시간을 골라 주세요",
 }
@@ -47,15 +47,15 @@ def _get_team_or_raise(session: Session, team_id: int) -> Team:
 
 
 def _require_not_in_focused_period(session: Session, day: date) -> None:
-    """집중 합주기간이 아니면 예약을 받는다.
+    """집중 합주기간이 아닐 경우 예약을 허용합니다.
 
-    막는 것은 집중 합주기간뿐이다 — 그 기간만 자동 배정이 자리를 통째로 나눠 갖는다.
-    기간을 아무것도 정해 두지 않은 날도 예약제다. "상시 개방" 기간을 따로 등록해야만
-    예약이 열리던 규칙을 뒤집은 것이다(사용자 결정) — 그 등록을 잊으면 아무도 예약을
-    못 하는데, 그것이 기본값일 이유가 없다.
+    차단하는 것은 집중 합주기간뿐입니다 — 그 기간만 자동 배정이 모든 slot을 나누어 갖습니다.
+    기간을 아무것도 정하지 않은 날도 예약 가능합니다. 과거 규칙은 "상시 개방" 기간을 따로 등록해야
+    예약이 열렸지만, 이제는 그 규칙을 뒤집었습니다(사용자 결정) — 등록을 잊으면 예약이 불가능하므로,
+    기본값으로 예약을 허용하는 것이 타당합니다.
 
-    집중 합주기간이라도 "매일" 옵션이 켜져 있으면 막지 않는다. 그 옵션은 상시처럼
-    쓰겠다는 뜻이라, 자동 배정이 자리를 다 가져가지 않는다.
+    집중 합주기간이라도 "매일"(everyday) 옵션이 켜져 있으면 차단하지 않습니다. 그 옵션은 상시처럼
+    운영하겠다는 뜻이므로, 자동 배정이 모든 slot을 가져가지 않습니다.
     """
     covered = session.execute(
         select(Period.id).where(
@@ -78,9 +78,9 @@ def _planned_rows(
     ends_at: datetime,
     created_at: datetime,
 ) -> tuple[list[Reservation], Room, Team | None]:
-    """요청한 구간을 검증하고 한 시간 slot 행들을 만들어, 방·팀과 함께 돌려준다.
+    """요청한 구간을 검증하고 한 시간 단위 slot 행들을 생성하여, 합주실·팀과 함께 반환합니다.
 
-    행은 아직 session에 넣지 않는다 — 넣는 시점과 커밋 범위는 부르는 쪽이 정한다.
+    행은 아직 세션에 추가하지 않습니다 — 추가할 시점과 커밋 범위는 호출 쪽이 정합니다.
     """
     require_valid_slot_bounds(starts_at, ends_at)
     require_same_day(starts_at, ends_at)
@@ -116,11 +116,11 @@ def create_reservation(
     ends_at: datetime,
     created_at: datetime,
 ) -> tuple[list[Reservation], str, str, str | None]:
-    """예약 하나를 한 시간 slot 행으로 나눠 만든다. 한 slot 이라도 이미 찼으면 전부 되돌린다.
+    """예약을 한 시간 단위 slot 행으로 분할하여 생성합니다. 하나라도 차있으면 전체를 롤백합니다.
 
-    선착순은 reservations table 의 (room_id, starts_at) 유니크 제약이 커밋 시점에 정한다 —
-    schedule_store.save_schedule과 같은 방식이다. 검증 과정에서 이미 읽은 방·사람·팀의
-    이름을 함께 돌려줘, 부르는 쪽이 이름을 붙이려고 다시 조회하지 않게 한다.
+    선착순은 reservations table의 (room_id, starts_at) 유니크 제약이 커밋 시점에 정합니다 —
+    schedule_service.save_schedule과 같은 방식입니다. 검증 과정에서 이미 조회한 합주실·멤버·팀의
+    이름을 함께 반환하므로, 호출 쪽이 이름을 붙이려고 다시 조회할 필요가 없습니다.
     """
     rows, room, team = _planned_rows(
         session, room_id, requester, team_id, starts_at, ends_at, created_at
@@ -133,9 +133,9 @@ def create_reservation(
 def list_reservations(
     session: Session, room_id: int, from_date: date, to_date: date
 ) -> list[ReservationRow]:
-    """room_id 하나의 [from_date, to_date] 범위 예약을 시작 시각 순으로 돌려준다.
+    """room_id의 [from_date, to_date] 범위 예약을 시작 시각 순으로 반환합니다.
 
-    행마다 방 이름·팀 이름(팀 예약이 아니면 None)·예약한 사람 이름을 함께 붙인다.
+    각 행마다 합주실 이름·팀 이름(팀 예약이 아니면 None)·예약한 멤버 이름을 함께 포함합니다.
     """
     room = _get_room_or_raise(session, room_id)
     range_start = datetime.combine(from_date, time.min)
@@ -158,17 +158,17 @@ def list_reservations(
 def _get_own_reservation(
     session: Session, reservation_id: int, requester: Member, verb: str
 ) -> Reservation:
-    """reservation_id 의 slot 을 찾아, 그 slot 을 예약한 사람이 requester 일 때만 돌려준다.
+    """reservation_id의 slot을 찾아, 그 slot을 예약한 멤버가 requester일 때만 반환합니다.
 
-    없는 slot 은 ValueError, 남의 slot 은 PermissionError 로 갈라 던진다 — 부르는 쪽이
-    "잘못된 요청"과 "권한 없음"을 다른 응답 코드로 내보낸다. verb 는 거절 문구에
-    들어가는 동작 이름이다("취소할", "옮길").
+    없는 slot은 ValueError, 타인 소유 slot은 PermissionError로 구분하여 발생시킵니다 — 호출 쪽이
+    "잘못된 요청"과 "권한 없음"을 다른 HTTP 상태 코드로 내보냅니다. verb는 오류 메시지에
+    들어가는 동작 이름입니다("취소할", "이동할").
     """
     reservation = session.get(Reservation, reservation_id)
     if reservation is None:
         raise ValueError("그런 예약이 없습니다")
-    # reservation_manage 를 가진 사람은 남의 예약도 다룬다 — 합주실을 정리해야 하는
-    # 사람이 남이 잡아 둔 자리를 손대지 못하면 방을 비울 방법이 없다.
+    # reservation_manage 권한을 가진 멤버는 타인의 예약도 관리합니다 — 합주실을 정리해야 하는
+    # 멤버가 타인이 예약한 slot을 건드릴 수 없으면 합주실을 비울 방법이 없습니다.
     if reservation.member_id != requester.id and (
         "reservation_manage" not in account_permissions(session, requester.id)
     ):
@@ -177,12 +177,12 @@ def _get_own_reservation(
 
 
 def cancel_reservation(session: Session, reservation_id: int, requester: Member) -> None:
-    """예약 slot 하나를 취소한다. 그 slot 을 예약한 사람 본인만 지울 수 있다.
+    """예약 slot 하나를 취소합니다. 그 slot을 예약한 멤버 본인만 삭제할 수 있습니다.
 
-    ponytail: 여러 slot 을 이어 쓴 예약은 slot 마다 id가 달라, 화면(DayDialog 의 취소 단추 →
-    pipeline.ts cancelBooking)이 slot 마다 이 endpoint 를 차례로 부른다. 도중에 하나가
-    걸리면 앞쪽 몇 칸만 지워진 채 남는다 — "예약 하나를 통째로 취소" 가 한 번의 요청이어야
-    하면 그때 예약을 묶는 번호를 붙인다.
+    ponytail: 여러 slot을 이어서 예약하면 각 slot마다 id가 다르므로, 화면(DayDialog의 삭제 버튼 →
+    pipeline.ts cancelBooking)이 각 slot마다 이 endpoint를 순차적으로 호출합니다. 중간에 하나가
+    실패하면 앞의 몇 칸만 삭제되고 남습니다 — "하나의 예약을 통째로 취소"가 한 번의 요청이어야
+    하면 그때 예약을 묶는 ID를 추가합니다.
     """
     reservation = _get_own_reservation(session, reservation_id, requester, "취소할")
     session.delete(reservation)
@@ -197,17 +197,16 @@ def update_reservation(
     ends_at: datetime,
     created_at: datetime,
 ) -> tuple[list[Reservation], str, str, str | None]:
-    """예약 slot 하나를 다른 시각으로 옮긴다. 방과 팀은 그대로 두고 시각만 바꾼다.
+    """예약 slot 하나를 다른 시각으로 이동합니다. 합주실과 팀은 그대로 두고 시각만 변경합니다.
 
-    옛 slot 을 지우고 새 slot 을 넣는 것을 한 트랜잭션에서 한다. 옮길 slot 이 이미 차
-    있으면 커밋이 유니크 제약에 걸리고, 되돌리기가 옛 slot 까지 함께 살려 원래 slot 을
-    잃지 않는다. 지우기를 먼저 flush 하는 것은 SQLAlchemy 가 기본적으로 INSERT 를
-    DELETE 보다 먼저 보내기 때문이다 — 그대로 두면 겹치는 slot(같은 slot, 이어진 slot)
-    으로 옮길 때 자기 자신과 부딪힌다.
+    기존 slot을 삭제하고 새 slot을 추가하는 작업을 한 트랜잭션에서 수행합니다. 이동할 slot이 이미 차있으면
+    커밋이 유니크 제약에 걸리고, 롤백이 기존 slot까지 함께 복구하여 원래 예약을 잃지 않습니다. 삭제를 먼저 flush하는 것은
+    SQLAlchemy가 기본적으로 INSERT를 DELETE보다 먼저 전송하기 때문입니다 — 그렇지 않으면 겹치는 slot(같은 slot, 인접한 slot)으로
+    이동할 때 자기 자신과 충돌합니다.
 
-    ponytail: cancel_reservation 과 같은 한계로, 옮기는 단위는 slot 하나다. 여러 slot 을
-    이어 쓴 예약을 통째로 옮기려면 slot 마다 이 endpoint 를 호출해야 한다. 다만 새
-    구간이 여러 slot 이면 slot 수는 늘어난다 — create_reservation 과 같은 규칙으로 쪼갠다.
+    ponytail: cancel_reservation과 같은 한계로, 이동 단위는 slot 하나입니다. 여러 slot을
+    이어서 예약한 경우를 통째로 이동하려면 각 slot마다 이 endpoint를 호출해야 합니다. 다만 새
+    구간이 여러 slot이면 slot 개수가 증가합니다 — create_reservation과 같은 규칙으로 분할됩니다.
     """
     reservation = _get_own_reservation(session, reservation_id, requester, "옮길")
     rows, room, team = _planned_rows(

@@ -11,7 +11,7 @@ WEEK = timedelta(days=7)
 
 
 def dates_in_period(starts_on: date, ends_on: date) -> list[date]:
-    """기간의 시작일부터 종료일까지, 양 끝을 포함한 날짜 목록."""
+    """기간의 시작일부터 종료일까지, 양 끝을 포함한 날짜 목록을 반환합니다."""
     span = (ends_on - starts_on).days
     return [starts_on + timedelta(days=offset) for offset in range(span + 1)]
 
@@ -21,11 +21,11 @@ def expand_unavailable(
     window_start: datetime,
     window_end: datetime,
 ) -> list[TimeInterval]:
-    """불가능시간을 기간 안에 실제로 걸리는 구간들로 풀어낸다.
+    """불가능 시간을 기간 안에 실제로 걸리는 구간들로 확장합니다.
 
-    매일 반복이면 1일, 매주 반복이면 7일 간격으로 되풀이하되, 반복 종료일이 있으면
-    그 날짜까지만 만든다.
-    기간과 조금도 겹치지 않는 구간은 버린다 — 엔진에 넘겨도 아무 영향이 없다.
+    매일 반복하면 1일, 매주 반복하면 7일 간격으로 되풀이하되, 반복 종료일이 있으면
+    그 날짜까지만 생성합니다.
+    기간과 전혀 겹치지 않는 구간은 제외합니다 — 엔진에 넘겨도 아무 영향이 없습니다.
     """
     expanded: list[TimeInterval] = []
     for row in rows:
@@ -57,10 +57,10 @@ def _occurrences(row: UnavailableTime, window_end: datetime) -> list[datetime]:
 
 
 def _repeat_step(row: UnavailableTime) -> timedelta | None:
-    """되풀이 간격. 반복이 아니면 None.
+    """재반복 간격을 반환합니다. 반복이 아니면 None입니다.
 
-    세션에 넣지 않은 객체는 기본값이 아직 적용되지 않아 None 일 수 있으므로
-    bool() 로 받는다. 둘 다 켜진 줄은 경계에서 막으므로 여기서는 매일을 먼저 본다.
+    세션에 넣지 않은 객체는 기본값이 아직 적용되지 않아 None일 수 있으므로
+    bool()로 받습니다. 둘 다 켜진 경우는 경계에서 거부되므로 여기서는 매일 반복을 먼저 확인합니다.
     """
     if bool(row.repeats_daily):
         return DAY
@@ -70,11 +70,11 @@ def _repeat_step(row: UnavailableTime) -> timedelta | None:
 
 
 def build_engine_rooms(rooms: list[Room], days: list[date]) -> list[EngineRoom]:
-    """합주실 × 날짜를 엔진 합주실 목록으로 펼친다.
+    """합주실 × 날짜를 엔진 입력 합주실 목록으로 확장합니다.
 
-    엔진은 한 합주실에 이어진 운영시간 하나만 받으므로 날짜마다 한 번씩 넘긴다.
-    번호는 DB 의 합주실 번호를 그대로 쓴다 — 날짜가 다르면 시간 구간이 달라
-    같은 번호가 여러 번 나와도 slot 끼리는 겹치지 않는다.
+    엔진은 한 합주실에 이어진 운영시간 하나만 받으므로 날짜마다 한 번씩 전달합니다.
+    번호는 DB의 합주실 번호를 그대로 사용합니다 — 날짜가 다르면 시간 구간이 달라
+    같은 번호가 여러 번 나와도 slot(1시간 단위 시간 칸)끼리는 겹치지 않습니다.
     """
     engine_rooms: list[EngineRoom] = []
     for day in days:
@@ -92,7 +92,7 @@ def build_engine_rooms(rooms: list[Room], days: list[date]) -> list[EngineRoom]:
 
 
 def auto_slots_per_team(engine_rooms: list[EngineRoom], team_count: int) -> int:
-    """전체 slot 을 팀 수로 나눠 팀마다 가질 slot 개수를 정한다(나머지는 남는 slot)."""
+    """전체 slot(1시간 단위 시간 칸)을 팀 수로 나누어 팀마다 가질 slot 개수를 반환합니다(나머지는 남는 slot)."""
     if team_count <= 0:
         raise ValueError("배정할 팀이 없습니다")
 
@@ -111,10 +111,10 @@ def build_engine_teams(
     member_ids_by_team: dict[int, list[int]],
     unavailable_by_member: dict[int, list[TimeInterval]],
 ) -> list[EngineTeam]:
-    """팀과 그 명단을 엔진 입력으로 옮긴다.
+    """팀과 그 명단을 엔진 입력으로 변환합니다.
 
-    팀도 사람도 DB 의 번호를 그대로 쓴다. 사람은 동명이인이 있어 이름으로는
-    가를 수 없고, 두 팀에 걸친 한 사람은 번호가 같아 엔진이 한 몸으로 다룬다.
+    팀도 멤버도 DB의 번호를 그대로 사용합니다. 멤버는 동명이인이 있어 이름으로는
+    구분할 수 없고, 두 팀에 걸친 한 멤버는 번호가 같아 엔진이 한 몸으로 다룹니다.
     """
     engine_teams: list[EngineTeam] = []
     for team_id in team_ids:

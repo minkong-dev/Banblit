@@ -1,7 +1,7 @@
-"""요청 제한 — 같은 곳에서 짧은 시간에 몰아치는 요청을 거른다.
+"""rate limit(같은 곳에서 오는 요청 횟수 제한) — 같은 곳에서 짧은 시간에 몰리는 요청을 거부합니다.
 
-로그인처럼 값을 맞혀 보는 자리가 대상이다. 비밀번호를 한 번에 하나씩 넣어 보는
-것을 막을 수 없다면, 짧은 비밀번호는 시간 문제로 뚫린다.
+로그인처럼 값을 맞혀 보는 자리가 대상입니다. 비밀번호를 한 번에 하나씩 넣어 보는
+것을 막지 못하면, 짧은 비밀번호는 시간 문제로 뚫립니다.
 """
 
 import pytest
@@ -26,12 +26,12 @@ def test_rejects_past_the_limit_and_says_how_long_to_wait() -> None:
 
     retry_after = limiter.check("1.2.3.4", now=20.0)
 
-    # 가장 오래된 것이 창을 벗어날 때까지 남은 초. 0 초를 돌려주면 곧바로 다시 온다.
+    # 가장 오래된 요청이 시간 window를 벗어날 때까지 남은 초입니다. 0초를 반환하면 즉시 다시 요청할 수 있습니다.
     assert retry_after == 40
 
 
 def test_counts_each_caller_separately() -> None:
-    # 한 사람이 막혔다고 옆 사람까지 막히면 안 된다.
+    # 한 사용자가 제한되었다고 다른 사용자까지 제한되면 안 됩니다.
     limiter = RateLimiter(limit=1, window_seconds=60)
     limiter.check("1.2.3.4", now=0.0)
 
@@ -43,12 +43,12 @@ def test_forgets_what_fell_out_of_the_window() -> None:
     limiter.check("1.2.3.4", now=0.0)
     limiter.check("1.2.3.4", now=1.0)
 
-    # 창(60초)을 지나면 앞의 둘은 세지 않는다.
+    # 시간 window(60초)를 벗어나면 이전의 요청들은 집계하지 않습니다.
     assert limiter.check("1.2.3.4", now=61.5) is None
 
 
 def test_a_rejected_try_does_not_extend_the_block() -> None:
-    # 막힌 요청까지 세면, 계속 두드리는 동안 영영 풀리지 않는다.
+    # 차단된 요청까지 집계하면, 계속 요청하는 동안 영구히 해제되지 않습니다.
     limiter = RateLimiter(limit=1, window_seconds=60)
     limiter.check("1.2.3.4", now=0.0)
 
@@ -59,7 +59,7 @@ def test_a_rejected_try_does_not_extend_the_block() -> None:
 
 
 def test_does_not_grow_without_bound() -> None:
-    # 주소를 바꿔 가며 두드리면 기억이 무한히 쌓인다. 그 자체가 공격이 된다.
+    # 주소를 바꿔 가며 요청하면 메모리가 무한히 증가합니다. 그 자체가 공격이 됩니다.
     limiter = RateLimiter(limit=1, window_seconds=60, max_callers=100)
 
     for index in range(500):
@@ -88,15 +88,15 @@ def test_caller_is_the_peer_when_nothing_is_in_front() -> None:
 
 
 def test_caller_is_what_the_proxy_saw_not_what_the_client_claimed() -> None:
-    # 앞단(caddy)은 자기가 본 상대를 X-Forwarded-For 맨 뒤에 붙인다. 앞쪽 값은
-    # 요청을 보낸 쪽이 지어낼 수 있으므로 맨 뒤만 믿는다.
+    # 앞단(caddy)은 자신이 본 클라이언트를 X-Forwarded-For 끝에 붙입니다. 앞쪽 값은
+    # 요청을 보낸 쪽이 조작할 수 있으므로 맨 뒤의 주소만 신뢰합니다.
     request = _request("172.18.0.5", "1.1.1.1, 2.2.2.2, 203.0.113.9")
 
     assert caller_of(request) == "203.0.113.9"
 
 
 def test_caller_falls_back_when_there_is_no_peer() -> None:
-    # TestClient 처럼 client 가 비어 오는 경우가 있다. 그때도 값 하나로 세어야 한다.
+    # TestClient처럼 client가 비어 오는 경우가 있습니다. 그때도 값 하나로 집계해야 합니다.
     assert caller_of(_request(None, None)) == "unknown"
 
 

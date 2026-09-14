@@ -24,7 +24,7 @@ type Counts = Record<string, number>;
 
 const NO_SLOTS: Counts = Object.fromEntries(INSTRUMENTS.map((name) => [name, 0]));
 
-/** 서버가 준 포지션 목록을 악기별 수로 센다. 아직 못 받았으면 null 이다. */
+/** 서버에서 받은 포지션 목록을 포지션별 자리 수로 집계합니다. 아직 받지 못했으면 null입니다. */
 function countsFromSlots(data: { slots: TeamSlot[] } | undefined): Counts | null {
   if (data === undefined) return null;
   return data.slots.reduce(
@@ -33,7 +33,7 @@ function countsFromSlots(data: { slots: TeamSlot[] } | undefined): Counts | null
   );
 }
 
-/** 포지션을 악기별로 묶어 이름을 붙인다. 같은 악기가 하나뿐이면 번호를 떼고 "드럼" 으로 둔다. */
+/** 포지션을 포지션별로 묶어 이름을 붙입니다. 같은 포지션이 1자리뿐이면 번호를 제거하고 "드럼" 으로만 표시합니다. */
 function labelled(slots: TeamSlot[]): { slot: TeamSlot; label: string }[] {
   const perInstrument = new Map<Instrument, number>();
   for (const slot of slots) {
@@ -45,8 +45,8 @@ function labelled(slots: TeamSlot[]): { slot: TeamSlot; label: string }[] {
   }));
 }
 
-/** 팀 목록의 한 줄. 줄을 누르면 포지션 구성이 열리고, 오른쪽 끝의 연필·쓰레기통은
- *  팀을 다룰 수 있는 사람에게만 보인다. */
+/** 팀 목록의 한 행입니다. 행을 클릭하면 포지션 구성이 열리며, 오른쪽 끝의 연필·삭제 버튼은
+ *  팀을 수정할 권한이 있는 사람에게만 표시됩니다. */
 function TeamRow(props: {
   team: Team;
   selected: boolean;
@@ -83,11 +83,11 @@ function TeamRow(props: {
   );
 }
 
-/** 팀 수정 — 이름과 포지션 구성을 함께 고친다.
+/** 팀 이름과 포지션 구성을 함께 수정합니다.
  *
- *  구성은 저장할 때 통째로 다시 세운다. 이미 사람이 있던 (악기, 번호) 는 그대로
- *  남으므로, 드럼을 하나에서 둘로 늘려도 원래 드럼을 치던 사람은 포지션을 잃지 않는다.
- *  줄이면 번호가 큰 포지션부터 사라지고 거기 있던 사람은 팀에서 빠진다. */
+ *  포지션 구성은 저장할 때 통째로 다시 계산됩니다. 이미 멤버가 배정된 (포지션, 번호) 포지션은 그대로 유지되므로,
+ *  드럼을 1개에서 2개로 늘려도 기존에 드럼을 담당하던 멤버는 포지션을 잃지 않습니다.
+ *  포지션 수를 줄이면 번호가 큰 포지션부터 삭제되며, 그 포지션에 있던 멤버는 팀에서 제거됩니다. */
 function EditTeam(props: {
   team: Team;
   taken: string[];
@@ -100,14 +100,14 @@ function EditTeam(props: {
   const [counts, setCounts] = useState<Counts | null>(null);
   const [bad, setBad] = useState("");
 
-  // 지금 구성을 서버에서 받아 그대로 띄운다. 화면이 값을 지어내지 않는다.
+  // 현재 포지션 구성을 서버에서 받아 그대로 표시합니다. 화면에서 값을 임의로 생성하지 않습니다.
   const slots = useQuery({
     queryKey: ["slots", team.id],
     queryFn: () => getJSON<{ slots: TeamSlot[] }>(`/teams/${team.id}/slots`),
   });
 
-  // 아직 손대지 않았으면 서버 구성을 그대로 보인다. 상태로 복사해 두지 않는다 —
-  // 복사하면 "받았는데 아직 안 옮긴" 순간이 생긴다.
+  // 사용자가 아직 수정하지 않았으면 서버 구성을 그대로 표시합니다. state로 복사하지 않습니다.
+  // 복사하면 "받았지만 아직 적용 전" 상태가 생기기 때문입니다.
   const shownCounts = counts ?? countsFromSlots(slots.data);
 
   const total = Object.values(shownCounts ?? NO_SLOTS).reduce((sum, count) => sum + count, 0);
@@ -186,12 +186,12 @@ function EditTeam(props: {
   );
 }
 
-/** 고른 팀의 포지션 구성. 빈 포지션도 함께 보인다 — 채워야 할 곳을 보여주는 것이 이 화면의 일이다. */
+/** 선택한 팀의 포지션 구성입니다. 빈 포지션도 함께 표시됩니다. 채워야 할 자리를 명확히 보여주는 것이 이 화면의 목적입니다. */
 function Lineup(props: {
   teamId: number;
-  /** 빈 포지션에 사람을 넣을 수 있는가 */
+  /** 빈 포지션에 멤버를 추가할 수 있는지 여부입니다 */
   canAdd: boolean;
-  /** 남이 있는 포지션을 비울 수 있는가 */
+  /** 멤버가 배정된 포지션을 비울 수 있는지 여부입니다 */
   canRemove: boolean;
 }) {
   const { teamId, canAdd, canRemove } = props;
@@ -207,7 +207,7 @@ function Lineup(props: {
     void client.invalidateQueries({ queryKey: ["slots", teamId] });
     void client.invalidateQueries({ queryKey: ["teams"] });
     void client.invalidateQueries({ queryKey: ["members", teamId] });
-    // 내가 앉거나 빠진 자리면 "내 팀"(프로필 말풍선·달력의 내 일정)도 바뀐다.
+    // 현재 사용자가 추가되거나 제거된 포지션이면, "내 팀"(프로필·달력의 내 일정)도 함께 갱신됩니다.
     void client.invalidateQueries({ queryKey: ["me"] });
   };
 
@@ -279,10 +279,10 @@ function Lineup(props: {
   );
 }
 
-/** 만들려는 포지션 하나. 아직 저장 전이라 id 가 없고, 악기와 번호로만 가리킨다. */
+/** 생성 중인 포지션 하나입니다. 아직 저장 전이므로 ID가 없으며, 포지션과 번호로만 식별됩니다. */
 type Draft = { instrument: Instrument; ordinal: number; label: string; member: Member | null };
 
-/** 정한 수만큼 포지션을 펼친다. 같은 악기가 하나뿐이면 번호를 떼고 "드럼" 으로 둔다. */
+/** 지정한 개수만큼 포지션을 전개합니다. 같은 포지션이 1자리뿐이면 번호를 제거하고 "드럼" 으로만 표시합니다. */
 function spread(counts: Counts): Draft[] {
   return INSTRUMENTS.flatMap((instrument) => {
     const count = counts[instrument] ?? 0;
@@ -295,12 +295,11 @@ function spread(counts: Counts): Draft[] {
   });
 }
 
-/** 팀 만들기. 두 단계다 — 먼저 악기마다 몇 명인지 정하고, 그다음 포지션마다 사람을 넣는다.
+/** 팀을 생성합니다. 두 단계의 프로세스입니다. 먼저 포지션마다 필요한 인원 수를 지정하고, 그 다음 각 포지션에 멤버를 배정합니다.
  *
- *  저장은 마지막 한 번에 일어난다. 서버는 팀과 포지션을 함께 만들고(POST /teams) 사람은
- *  포지션마다 따로 받으므로(PUT .../slots/{id}), 만든 뒤 포지션 목록을 받아 악기·번호로
- *  짝을 지어 채운다. 순서를 짐작하지 않는 것은 서버가 정렬을 바꿔도 어긋나지
- *  않게 하기 위해서다. */
+ *  저장은 마지막에 한 번에 일어납니다. 서버는 팀과 포지션을 함께 생성하고(POST /teams), 멤버는
+ *  각 포지션별로 따로 배정하므로(PUT .../slots/{id}), 팀 생성 후 포지션 목록을 받아 포지션·번호로
+ *  대응시켜 채웁니다. 포지션 순서를 가정하지 않는 이유는, 서버가 정렬 방식을 바꿔도 동작하게 하기 위함입니다. */
 function NewTeam(props: { taken: string[]; onDone: (message: string) => void; onClose: () => void }) {
   const { taken, onDone, onClose } = props;
   const client = useQueryClient();
@@ -340,7 +339,7 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
     onError: (error) => setBad(reason(error)),
   });
 
-  // 1단계 — 악기마다 몇 명인지 정한다.
+  // 1단계: 포지션마다 필요한 인원 수를 지정합니다.
   if (drafts === null) {
     return (
       <Modal title="새 팀" hint="포지션별 인원 수를 지정해주세요" onClose={onClose}
@@ -389,7 +388,7 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
     );
   }
 
-  // 2단계 — 포지션마다 사람을 넣는다. 비워 둔 곳은 그대로 빈 포지션으로 만들어진다.
+  // 2단계: 각 포지션에 멤버를 배정합니다. 빈 채로 둔 포지션은 배정되지 않은 상태로 생성됩니다.
   return (
     <Modal title={name.trim()} hint="버튼을 눌러 지정할 멤버를 검색해요" onClose={onClose}
       foot={
@@ -467,7 +466,7 @@ export function Teams() {
   const drop = useMutation({
     mutationFn: (team: Team) => getJSON<null>(`/teams/${team.id}`, { method: "DELETE" }),
     onSuccess: (_body, team) => {
-      // 지운 팀의 포지션 구성이 열려 있으면 함께 닫는다.
+      // 삭제된 팀의 포지션 구성이 열려 있으면 함께 닫습니다.
       setOpenId((now) => (now === team.id ? null : now));
       void client.invalidateQueries({ queryKey: ["teams"] });
       say(`${team.name} 팀을 삭제했어요.`);
@@ -481,10 +480,10 @@ export function Teams() {
   const canRename = can(me, "team_edit");
   const canDrop = can(me, "team_delete");
   const state = loadState(teams);
-  // 목록을 그리지 못하는 자리 — 아직 안 왔거나, 걸렸거나, 성한데 비었거나.
+  // 목록을 렌더링할 수 없는 경우입니다. 아직 데이터를 받지 못했거나, 오류가 발생했거나, 데이터가 비어 있을 때입니다.
   const noList = state.kind !== "ready" || list.length === 0;
 
-  // 한 쪽에 몇 줄을 둘지는 상자 높이가 정한다. 목록은 스크롤하지 않고 쪽으로 넘긴다.
+  // 한 페이지에 표시할 행 개수는 컨테이너 높이에 따라 결정됩니다. 목록은 스크롤하지 않고 페이지로 넘깁니다.
   const [box, perPage] = useFitCount(64);
   const pages = pageCount(list.length, perPage);
   const shownPage = clampPage(page, pages);
@@ -502,8 +501,8 @@ export function Teams() {
             <span>팀을 눌러 포지션을 확인해주세요</span>
           </div>
 
-          {/* 비었거나 불러오는 중이어도 상자는 그대로 둔다 — 상자 높이를 재서 한 쪽에
-              몇 줄을 둘지 정하므로, 상자가 사라지면 잴 것이 없어진다. */}
+          {/* 데이터가 비어 있거나 로딩 중이어도 컨테이너는 그대로 유지합니다. 컨테이너 높이를 측정하여 한 페이지의 행 수를 결정하므로,
+              컨테이너가 사라지면 측정할 대상이 없어집니다. */}
           <ul className="rows" ref={box}>
             {noList ? (
               <li className="empty">{stateText(state, "아직 생성된 팀이 없어요.")}</li>

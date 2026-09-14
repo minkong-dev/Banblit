@@ -1,4 +1,4 @@
-"""join approval
+"""팀 참가 신청을 승인 정책으로 관리합니다.
 
 Revision ID: c4a7d2e91b83
 Revises: 0e65e95acef3
@@ -19,8 +19,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
-    # 기존 팀은 지금까지의 동작인 즉시 가입을 그대로 유지한다.
+    """스키마를 업그레이드합니다."""
+    # 기존 팀의 join_policy는 'auto'(즉시 승인)로 설정하여 현재 동작을 유지합니다.
     op.add_column(
         'teams',
         sa.Column('join_policy', sa.Text(), nullable=False, server_default='auto'),
@@ -29,7 +29,7 @@ def upgrade() -> None:
         'teams_join_policy_valid', 'teams', "join_policy IN ('auto', 'approval')"
     )
 
-    # 기존 소속은 전부 승인된 상태다 — 승인 대기라는 것이 지금까지 없었다.
+    # 기존 멤버십의 status는 'approved'(승인됨)로 설정합니다. 승인 대기 상태(pending)는 미구현이었습니다.
     op.add_column(
         'memberships',
         sa.Column('status', sa.Text(), nullable=False, server_default='approved'),
@@ -40,9 +40,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """Downgrade schema."""
-    # 대기 중인 신청은 소속이 아니므로, 상태 열을 없애기 전에 지운다.
-    # 남겨 두면 열이 사라진 순간 전부 소속으로 둔갑한다.
+    """스키마를 다운그레이드합니다."""
+    # pending 상태의 멤버십은 확정되지 않은 소속이므로, status 열을 삭제하기 전에 행을 삭제합니다.
+    # 이를 생략하면 status 열이 없어지는 순간 pending 상태의 행들이 승인된 상태로 간주됩니다.
     op.execute("DELETE FROM memberships WHERE status = 'pending'")
 
     op.drop_constraint('memberships_status_valid', 'memberships', type_='check')

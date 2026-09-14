@@ -1,4 +1,4 @@
-"""제약 위반을 문장으로 바꾸는 자리는 하나다 — 표마다 같은 try/except 를 두지 않는다."""
+"""제약 위반을 메시지로 변환하는 자리는 하나입니다. 각 테이블마다 같은 try/except를 반복하지 않습니다."""
 
 from types import SimpleNamespace
 from typing import cast
@@ -44,7 +44,7 @@ def test_a_known_constraint_becomes_the_given_message() -> None:
 
 
 def test_an_unknown_constraint_is_raised_as_is() -> None:
-    """모르는 제약에 아는 척 문구를 붙이면 엉뚱한 곳을 고치게 만든다 — 원래 예외 그대로."""
+    """알려지지 않은 제약에 무관한 메시지를 붙이면 잘못된 위치를 수정하도록 유도하므로, 원래 예외를 그대로 발생시킵니다."""
     session = _Session(_violation("something_else"))
 
     with pytest.raises(IntegrityError):
@@ -63,7 +63,7 @@ def test_a_clean_commit_just_commits() -> None:
 
 
 def test_the_error_type_can_be_narrowed() -> None:
-    """저장소 층은 ValueError 의 자식(ScheduleConflict)으로 올려 부르는 쪽이 가려 잡게 한다."""
+    """저장소 층은 ValueError의 자식 클래스(ScheduleConflict)로 예외를 발생시켜, 호출하는 쪽에서 선택적으로 처리하도록 합니다."""
     session = _Session(_violation("k"))
 
     with pytest.raises(_Conflict):
@@ -71,7 +71,7 @@ def test_the_error_type_can_be_narrowed() -> None:
 
 
 def test_an_action_other_than_commit_is_translated_too() -> None:
-    """flush 에서 먼저 걸리는 제약(신원 조건)도 같은 자리에서 문장이 된다."""
+    """flush에서 먼저 검출되는 제약(고유성 조건)도 같은 자리에서 메시지로 변환됩니다."""
     session = _Session()
 
     def flush() -> None:

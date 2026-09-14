@@ -1,8 +1,8 @@
-// 사람을 이름으로 찾는 알맹이. 팀 자리와 권한 두 곳이 같은 것을 쓴다.
-// 껍데기는 Modal 이 맡는다 — 이 부품은 입력칸과 결과 목록만 그린다.
+// 이름으로 멤버를 검색합니다. 팀 만들기 화면과 권한 묶음 편집 화면이 같은 컴포넌트를 사용합니다.
+// Modal 이 제목과 아래 버튼 줄을 렌더하고, 이 컴포넌트는 입력 칸과 검색 결과 목록만 렌더합니다.
 //
-// 빈 검색어에는 아무것도 나오지 않는다. 서버가 그렇게 답하기도 하고, 명단을 통째로
-// 내주는 자리가 아니기 때문이다.
+// 검색어가 비어 있을 때는 아무것도 표시하지 않습니다. 서버도 그렇게 응답하고,
+// 전체 멤버 목록을 반환하는 기능이 아니기 때문입니다.
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -14,7 +14,7 @@ import type { Member } from "../lib/contract";
 
 export function MemberSearch(props: {
   onPick: (member: Member) => void;
-  /** 이미 골라 둔 사람은 목록에서 뺀다. 같은 사람을 두 번 넣을 이유가 없다. */
+  /** 이미 선택한 멤버는 목록에서 제외합니다. 같은 멤버를 두 번 선택할 필요가 없습니다. */
   exclude?: number[];
 }) {
   const { onPick, exclude } = props;

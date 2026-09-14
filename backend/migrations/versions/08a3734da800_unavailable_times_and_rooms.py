@@ -1,4 +1,4 @@
-"""unavailable times and rooms
+"""불가능 시간 및 합주실입니다.
 
 Revision ID: 08a3734da800
 Revises: 072758eb0033

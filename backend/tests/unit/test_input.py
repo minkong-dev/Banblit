@@ -1,4 +1,4 @@
-"""api/input.py 의 검사 하나하나. 빈 문자열·시각·날짜·구간 — 어느 표든 같은 규칙이다."""
+"""api/input.py의 입력 검증입니다. 빈 문자열·시간·날짜·구간 — 모든 입력 유형에 같은 검증 규칙이 적용됩니다."""
 
 from datetime import date, datetime
 from datetime import date, time

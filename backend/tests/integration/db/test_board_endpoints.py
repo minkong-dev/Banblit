@@ -20,7 +20,7 @@ def _team(session: Session, name: str) -> Team:
 
 
 def _member(session: Session, name: str) -> Member:
-    """로그인과 무관한, DB 제약만 확인하는 검사용 — 순수 SQLAlchemy 객체로 넣는다."""
+    """로그인과 무관하게 DB 제약만 검증하는 용도입니다. 순수 SQLAlchemy 객체로 생성합니다."""
     member = Member(name=name)
     session.add(member)
     session.flush()
@@ -98,7 +98,7 @@ def test_notice_creation_rejects_an_empty_body(
 
 
 def test_notice_reading_requires_authentication(api_client: TestClient) -> None:
-    """공지 목록은 로그인 뒤 메인 캘린더 안에서만 보인다 — 방문자에게는 열지 않는다."""
+    """공지 목록은 로그인 뒤 메인 캘린더 안에서만 보여집니다. 방문자에게는 공개하지 않습니다."""
     response = api_client.get("/notices")
 
     assert response.status_code == 401
@@ -107,7 +107,7 @@ def test_notice_reading_requires_authentication(api_client: TestClient) -> None:
 def test_notice_reading_allows_a_member_without_a_team(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """공지의 '전체 공개'는 팀과 무관하다는 뜻이다 — 어느 팀에도 없는 사람이 본다."""
+    """공지의 '전체 공개'는 팀과 무관하다는 의미입니다. 어느 팀에도 없는 사람이 봅니다."""
     _, head = account("박서연", "head@example.com")
     _, loner = account("이도현", "member@example.com")
     api_client.post("/notices", json={"title": "공지 제목", "body": "내용"}, cookies=head)
@@ -397,8 +397,8 @@ def test_comment_creation_allows_a_team_member_on_a_team_post(
 def test_post_author_is_taken_from_the_token_not_the_request_body(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    # author_id 가 이제 스키마에 없으니 보내도 조용히 무시돼야 한다 — 응답의 글쓴이는
-    # 언제나 토큰이 가리키는 계정이다.
+    # author_id는 이제 schema에 없으니 제출해도 무시되어야 합니다. 반환되는 글쓴이는
+    # 언제나 token이 가리키는 계정입니다.
     _, head = account("박서연", "head@example.com")
 
     response = api_client.post(

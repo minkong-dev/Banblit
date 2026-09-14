@@ -9,9 +9,9 @@ from backend.db.health import DependencyStatus
 def test_health_reports_each_dependency_when_everything_is_up(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """살아 있다는 말만 하는 정상 확인은 아무것도 막지 못한다.
+    """정상 상태만 보고하는 건강 확인으로는 장애를 포착할 수 없습니다.
 
-    의존 대상마다 실제로 연결됐는지를 각각 담아야 한다.
+    각 의존 대상이 실제로 연결되었는지 상태를 각각 포함해야 합니다.
     """
     monkeypatch.setattr(
         app_module,
@@ -31,9 +31,9 @@ def test_health_reports_each_dependency_when_everything_is_up(
 def test_health_reports_which_dependency_failed(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """끊긴 상태에서 정상이라 답하면 장애를 격리할 수 없다.
+    """연결이 끊긴 상태에서 정상이라 응답하면 장애의 원인을 파악할 수 없습니다.
 
-    어느 의존 대상이 실패했는지 이름과 이유가 나와야 한다.
+    어느 의존 대상이 실패했는지, 그 이유가 명확히 표시되어야 합니다.
     """
     monkeypatch.setattr(
         app_module,

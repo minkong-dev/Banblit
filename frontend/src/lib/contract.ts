@@ -1,14 +1,14 @@
-// 서버와 주고받는 값의 모양. **선언만 둔다** — 계산·판단·분기가 들어가면 그때부터
-// 기능 코드이고, 기능 코드는 여기 두지 않는다.
+// 서버와 주고받는 값의 형태입니다. **선언만 둡니다** — 계산·판단·분기가 들어가면 그때부터
+// 기능 코드이고, 기능 코드는 여기에 두지 않습니다.
 //
-// 한 세트만 두는 이유: 화면마다 같은 모양을 따로 적어 두면, 서버가 항목 하나를
-// 바꿀 때 어느 화면이 어긋나는지 아무도 모른 채 조용히 깨진다.
-// 서버 쪽 정본은 backend/src/backend/api/schemas.py 다.
+// 한 세트만 두는 이유: 화면마다 같은 형태를 따로 적어 두면, 서버가 항목 하나를
+// 바꿀 때 어느 화면이 어긋나는지 아무도 모른 채 조용히 깨집니다.
+// 서버 쪽 정본입니다: backend/src/backend/api/schemas.py
 
 export type Room = {
   id: number;
   name: string;
-  /** "18:00" — 시간대를 붙이지 않는다. */
+  /** "18:00" — 시간대를 포함하지 않습니다. */
   opens_at: string;
   closes_at: string;
 };
@@ -24,14 +24,14 @@ export type Period = {
   second_run_at: string;
 };
 
-/** 되돌릴 수 있는 이전 시간표 회차 하나. 회차를 가르는 값은 저장 시각이다. */
+/** 되돌릴 수 있는 이전 시간표 회차 하나입니다. 회차를 구분하는 값은 저장 시각입니다. */
 export type Backup = {
   /** "2026-09-07T18:03:00" */
   saved_at: string;
   slot_count: number;
 };
 
-/** 팀이 가질 수 있는 악기. 서버 쪽 정본은 backend/src/backend/db/models.py 의 Instrument 다. */
+/** 팀이 가질 수 있는 포지션 종류입니다. 서버 쪽 정본입니다: backend/src/backend/db/models.py의 Instrument */
 export type Instrument = "보컬" | "일렉" | "통기타" | "베이스" | "신디" | "드럼";
 
 export const INSTRUMENTS: Instrument[] = [
@@ -43,7 +43,7 @@ export const INSTRUMENTS: Instrument[] = [
   "드럼",
 ];
 
-/** 자리 수와 앉은 수를 함께 준다 — 하나만으로는 몇 자리 비었는지 알 수 없다. */
+/** 자리 수와 채워진 수를 함께 제공합니다 — 하나만으로는 몇 자리 비었는지 알 수 없습니다. */
 export type Team = {
   id: number;
   name: string;
@@ -51,23 +51,23 @@ export type Team = {
   filled_count: number;
 };
 
-/** 사람. 동명이인이 있어 화면에서는 이름 옆에 기수를 붙여 가른다. */
+/** 사람입니다. 동명이인이 있어서 화면에서는 이름 옆에 기수를 붙여 구분합니다. */
 export type Member = { id: number; name: string; cohort: number | null };
 
-/** 팀의 악기 자리 하나. 사람이 없으면 아직 아무도 안 앉은 자리다.
- *  배정 쪽 Slot(합주실·시각)과는 다른 것이라 이름을 나눈다. */
+/** 팀의 포지션 자리 하나입니다. 사람이 없으면 아직 아무도 배정되지 않은 자리입니다.
+ *  배정 쪽 Slot(합주실·시각)과는 다른 것이므로 이름을 구분합니다. */
 export type TeamSlot = {
   id: number;
   team_id: number;
   instrument: Instrument;
-  /** 같은 악기가 여럿일 때 몇 번째인지. 화면은 "일렉 2" 처럼 붙여 보여준다. */
+  /** 같은 포지션이 1명 이상일 때, "일렉 2" 처럼 포지션에 숫자를 부여해 표시합니다. */
   ordinal: number;
   member_id: number | null;
   member_name: string | null;
   member_cohort: number | null;
 };
 
-/** /me 가 함께 주는, 내가 앉아 있는 자리 하나. 팀 번호 오름차순으로 온다. */
+/** /me가 함께 제공하는, 내가 배정된 자리 하나입니다. 팀 번호 오름차순으로 옵니다. */
 export type MyTeam = {
   team_id: number;
   team_name: string;
@@ -75,10 +75,10 @@ export type MyTeam = {
   ordinal: number;
 };
 
-/** /me 응답 전체 — 지금 로그인한 계정과 그 계정이 앉아 있는 자리들. */
+/** /me 응답 전체입니다 — 현재 로그인한 계정과 그 계정이 배정된 자리들입니다. */
 export type Me = { account: Account; teams: MyTeam[] };
 
-/** 할 수 있는 일 열여덟 가지. 서버 쪽 정본은 backend/src/backend/db/models.py 의 Permission 이다. */
+/** 할 수 있는 일 18가지입니다. 서버 쪽 정본입니다: backend/src/backend/db/models.py의 Permission */
 export type Permission =
   | "room_create"
   | "room_edit"
@@ -103,26 +103,26 @@ export type Account = {
   id: number;
   name: string;
   email: string;
-  /** 저장된 값이 아니라 permissions 에서 뽑아낸 값이다 — 열여덟 가지가 전부 켜져 있으면 head_manager. */
+  /** 저장된 값이 아니라 permissions에서 추출한 값입니다 — 18가지가 모두 켜져 있으면 head_manager입니다. */
   role: "head_manager" | "member";
   permissions: Permission[];
-  /** 기수. 화면이 동명이인을 가를 때 이름 옆에 붙인다. */
+  /** 기수입니다. 화면이 동명이인을 구분할 때 이름 옆에 붙입니다. */
   cohort: number | null;
 };
 
-/** 이름 붙인 권한 하나. members 는 이 권한을 가진 사람들이고, 이름까지 서버가 실어 준다 —
- *  멤버 목록은 쪽 단위로 받으므로 여기서 번호를 이름으로 바꾸려 하면 안 된다. */
+/** 이름 붙인 권한 하나입니다. members는 이 권한을 가진 사람들이며, 이름까지 서버가 제공합니다 —
+ *  멤버 목록은 쪽 단위로 받으므로 여기서 번호를 이름으로 바꾸려 하면 안 됩니다. */
 export type PermissionSet = {
   id: number;
   name: string;
-  /** 무엇을 하는 사람에게 주는 권한인지. 만들 때 반드시 적는다. */
+  /** 무엇을 하는 사람에게 주는 권한인지입니다. 생성할 때 반드시 기록합니다. */
   description: string;
   permissions: Permission[];
   members: { id: number; name: string }[];
 };
 
-/** 멤버 목록의 한 줄. 사람을 가르는 네 값과 가진 권한 묶음 이름이 함께 온다.
- *  서버 쪽 정본은 backend/src/backend/api/schemas.py 의 MemberRowOut 이다. */
+/** 멤버 목록의 한 줄입니다. 사람을 구분하는 네 값과 가진 권한 묶음 이름이 함께 옵니다.
+ *  서버 쪽 정본입니다: backend/src/backend/api/schemas.py의 MemberRowOut */
 export type MemberRow = {
   id: number;
   name: string;
@@ -172,13 +172,13 @@ export type PostComment = {
   created_at: string;
 };
 
-/** 글에 붙은 파일 하나. 실제 파일은 GET /attachments/{id} 로 내려받는다. */
+/** 글에 첨부된 파일 하나입니다. 실제 파일은 GET /attachments/{id}로 다운로드합니다. */
 export type Attachment = {
   id: number;
   post_id: number;
-  /** 올린 사람이 쓰던 이름 — "악보.pdf" */
+  /** 업로드한 사람이 사용하던 이름입니다 — "악보.pdf" */
   name: string;
-  /** 바이트. 화면에는 fileSizeLabel 로 바꿔 보여준다. */
+  /** 바이트 단위입니다. 화면에는 fileSizeLabel로 변환하여 표시합니다. */
   size: number;
   content_type: string;
   uploaded_at: string;
@@ -190,11 +190,11 @@ export type Unavailable = {
   /** "2026-09-14T18:00:00" */
   starts_at: string;
   ends_at: string;
-  /** 매일과 매주는 함께 켜지지 않는다. 둘 다 거짓이면 그 날 한 번뿐이다. */
+  /** 매일과 매주는 함께 켜질 수 없습니다. 둘 다 거짓이면 그 날 한 번뿐입니다. */
   repeats_daily: boolean;
   repeats_weekly: boolean;
   repeat_until: string | null;
-  /** 사람이 적은 사유. 안 적으면 null. */
+  /** 사람이 기록한 사유입니다. 기록하지 않으면 null입니다. */
   reason: string | null;
 };
 
@@ -202,7 +202,7 @@ export type Reservation = {
   id: number;
   room_id: number;
   room: string;
-  /** team_id 가 없으면 개인이 직접 잡은 예약이다. */
+  /** team_id가 없으면 개인이 직접 예약한 것입니다. */
   team_id: number | null;
   team: string | null;
   member_id: number;
@@ -211,8 +211,8 @@ export type Reservation = {
   end: string;
 };
 
-/** 화면 안 알림 하나. 완성된 문구는 담기지 않는다 — kind 로 화면이 문장을 만든다
- *  (lib/notifications.ts). read 가 거짓이면 아직 안 읽은 것이다. */
+/** 화면 안 알림 하나입니다. 완성된 문구는 포함하지 않습니다 — kind로 화면이 문장을 작성합니다
+ *  (lib/notifications.ts). read가 거짓이면 아직 읽지 않은 것입니다. */
 export type Notification = {
   id: number;
   kind: "assignment_updated";

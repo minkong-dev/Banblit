@@ -31,8 +31,8 @@ def _period_out(period: Period) -> PeriodOut:
     )
 
 
-# 요청한 사람이 누구인지 쓰지 않고 권한만 확인하는 endpoint 는, 쓰이지 않는 인자를
-# 남기지 않도록 dependencies 로 건다.
+# 요청자의 신원을 사용하지 않고 권한만 검증하는 endpoint(API의 요청 주소 단위)는, 사용하지 않는
+# 매개변수를 남기지 않도록 dependencies에 건다.
 @router.get(
     "/periods", response_model=PeriodsOut, dependencies=[Depends(require_account)]
 )

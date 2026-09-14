@@ -12,7 +12,7 @@ from backend.api.input import (
 from backend.db.models import Room
 from backend.db.pipeline import commit_translating
 
-# 걸릴 수 있는 제약과 그때 사람에게 보일 문장. 이름은 마이그레이션이 만든 것이다.
+# 걸릴 수 있는 제약과 그때 사람에게 보일 문장입니다. 이름은 마이그레이션이 만든 것입니다.
 ROOM_MESSAGES = {"rooms_name_key": "이미 있는 합주실 이름입니다"}
 
 
@@ -21,7 +21,7 @@ def list_rooms(session: Session) -> list[Room]:
 
 
 def create_room(session: Session, name: str, opens_at: str, closes_at: str) -> Room:
-    """새 합주실을 만든다. 경계에서 이름·격자·순서·이름 중복을 사람이 읽을 문장으로 거절한다."""
+    """새 합주실을 생성합니다. 경계에서 이름·시간대·순서·이름 중복을 사람이 읽을 문장으로 검증합니다."""
     clean_name = require_non_empty(name, "합주실 이름")
     opens = _parse_room_clock(opens_at, "여는 시각")
     closes = _parse_room_clock(closes_at, "닫는 시각")
@@ -40,7 +40,7 @@ def update_room(
     opens_at: str | None,
     closes_at: str | None,
 ) -> Room:
-    """보낸 항목만 고친다. 안 보낸 항목은 기존 값을 그대로 검증에 다시 태운다."""
+    """전달된 항목만 수정합니다. 전달되지 않은 항목은 기존 값을 그대로 검증에 다시 적용합니다."""
     room = session.get(Room, room_id)
     if room is None:
         raise ValueError("그런 합주실이 없습니다")

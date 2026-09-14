@@ -183,8 +183,8 @@ def test_a_team_reservation_records_the_team(
 def test_a_team_reservation_rejects_someone_outside_the_team(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """소속이 아닌 팀 번호를 실어 보내면 거절한다 — 통과하면 그 팀이 그 시간을 쓴
-    것처럼 전체 일정에 남는다."""
+    """소속이 아닌 팀 번호를 보낼 경우 거절합니다 — 통과할 경우 그 팀이 그 시간을 사용한
+    것으로 전체 일정에 남습니다."""
     _, outsider = account("이도현", "dohyun@example.com")
     team = _team(db_session, "새벽 네시")
     room = _room(db_session)
@@ -237,7 +237,7 @@ def test_reservation_creation_rejects_a_slot_already_taken(
 
     assert second.status_code == 422
     assert "이미" in second.json()["detail"]
-    # 겹친 앞칸(18:00)에서 막혔으니 뒤칸(18:30)은 만들어지지 않아야 한다 — 전부 되돌린다.
+    # slot(1시간 단위 시간 칸)이 겹쳐서 거절되었으므로 뒷 slot은 생성되지 않아야 합니다 — 모두 취소됩니다.
     remaining = api_client.get(
         f"/rooms/{room.id}/reservations",
         params={"from": OPEN_DAY, "to": OPEN_DAY},
@@ -249,9 +249,9 @@ def test_reservation_creation_rejects_a_slot_already_taken(
 def test_a_day_with_no_period_at_all_is_open_for_reservation(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """기간을 아무것도 정해 두지 않은 날은 예약제다.
+    """기간을 정하지 않은 날은 예약제입니다.
 
-    막는 것은 집중 합주기간뿐이다 — 그 기간만 자동 배정이 자리를 나눠 갖는다.
+    제약은 집중 합주기간뿐입니다 — 그 기간만 자동 배정이 slot(1시간 단위 시간 칸)을 차지합니다.
     """
     _, owner = account("이도현", "dohyun@example.com")
     room = _room(db_session)
@@ -459,12 +459,12 @@ def test_a_reservation_slot_cancellation_rejects_someone_else(
 def test_reservation_slot_race_at_commit_time_is_translated_not_500(
     test_engine: Engine, db_session: Session
 ) -> None:
-    """두 사람이 같은 방·같은 시각을 동시에 노리면 한쪽만 성공해야 한다.
+    """같은 room(합주실)·같은 시각을 동시에 예약하면 하나만 성공해야 합니다.
 
-    room_service.test_room_name_race_at_commit_time_is_translated_not_500 과 같은 얼개다.
-    완전히 동시인 두 요청은 스레드 없이 재현할 수 없어, 두 독립 세션이 순서대로
-    커밋할 때 두 번째 커밋에서 진짜 IntegrityError가 나고 그것이 지금 쓰는 것과 같은
-    문구의 ValueError로 바뀌는지를 직접 확인한다. db_session은 정리용으로만 받는다.
+    room_service.test_room_name_race_at_commit_time_is_translated_not_500과 같은 구조입니다.
+    완전히 동시인 두 요청은 스레드 없이 재현할 수 없어서, 두 독립 세션이 순서대로
+    커밋할 때 두 번째 커밋에서 IntegrityError가 발생하고 그것이 현재 사용하는 것과 같은
+    메시지의 ValueError로 변환되는지를 직접 검증합니다. db_session은 정리 목적으로만 받습니다.
     """
     member = _member(db_session, "이도현")
     room = _room(db_session)
@@ -525,8 +525,8 @@ def test_a_reservation_slot_is_moved_to_a_free_time_by_its_owner(
 def test_moving_a_reservation_slot_onto_a_taken_time_keeps_the_original(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """옮길 자리가 차 있으면 거절하되, 원래 자리를 잃지 않아야 한다 — 지우고 다시
-    넣는 사이에 실패하면 예약이 통째로 사라진다."""
+    """옮길 시간이 차 있을 경우 거절하되, 원래 예약을 유지해야 합니다 — 삭제했다가 다시
+    생성하는 사이에 실패하면 예약이 전부 사라집니다."""
     owner_id, owner = account("이도현", "dohyun@example.com")
     _, someone_else = account("박서연", "seoyeon@example.com")
     room = _room(db_session)
@@ -625,8 +625,8 @@ def test_moving_a_reservation_slot_outside_room_hours_is_rejected(
 def test_a_reservation_slot_can_be_stretched_over_its_own_time(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """옮길 구간이 원래 자리와 겹쳐도 통과해야 한다 — 옛 칸을 지우기 전에 새 칸을
-    넣으면 자기 자신과 부딪혀 거절된다."""
+    """옮길 구간이 원래 slot(1시간 단위 시간 칸)과 겹쳐도 통과해야 합니다 — 이전 slot을 삭제하기 전에 새 slot을
+    생성하면 자신의 예약과 충돌해서 거절됩니다."""
     _, owner = account("이도현", "dohyun@example.com")
     room = _room(db_session)
     _open_period(db_session)

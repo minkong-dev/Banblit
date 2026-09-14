@@ -10,15 +10,16 @@ import {
   unreadCount,
 } from "../lib/pipeline";
 
-/** 상단바의 알림 종과 그 아래 말풍선. 프로필 말풍선과 같은 언어를 쓰되, 종에는
- *  안 읽은 개수를 얹는다 — 어느 화면에 있든 시간표가 바뀐 것을 알 수 있어야 한다. */
+/** 상단바의 알림 종(bell icon)과 그 아래 popover(팝업 메뉴). 프로필 메뉴와 같은 구조를 쓰되,
+ *  종에는 안 읽은 알림 개수를 표시합니다 — 어느 화면에 있든 배정이 바뀌었음을 알 수 있어야 합니다. */
 export function NotificationMenu() {
-  // 말풍선 바깥을 누르면 닫는다 — 목록이 길어 화면을 많이 덮으므로, 닫을 길이
-  // 종 하나뿐이면 갇힌 느낌이 든다.
+  // popover 바깥을 누르면 닫습니다. 목록이 길어 화면의 많은 부분을 차지하므로,
+  // 종만으로는 닫기 어려워 UX 가 갇힌 느낌이 될 수 있습니다.
   const { open, toggle, box } = useDismissible();
   const queryClient = useQueryClient();
 
-  // 알림은 언제나 내 것만 온다 — 어느 사람의 것인지는 주소가 아니라 인증 쿠키가 정한다.
+  // 이 query(서버 조회)는 항상 현재 로그인한 사람의 알림만 반환합니다.
+  // 경로(주소)로는 사람을 구분하지 않고, 인증 cookie(웹 저장소)로 확인합니다.
   const notifications = useQuery({
     queryKey: ["notifications"],
     queryFn: loadNotifications,
@@ -30,7 +31,8 @@ export function NotificationMenu() {
     try {
       await markNotificationsRead();
     } catch {
-      // 읽음 표시가 실패해도 목록은 그대로 둔다. 다시 받아 오면 안 읽은 채로 나온다.
+      // 마크 요청이 실패해도 cache(클라이언트 임시 저장소)는 갱신하지 않습니다.
+      // refetch(다시 조회)하면 서버의 정확한 상태를 반영합니다.
     }
     void queryClient.invalidateQueries({ queryKey: ["notifications"] });
   }
@@ -47,8 +49,8 @@ export function NotificationMenu() {
       <ul>
         {rows.map((item) => (
           <li key={item.id} className={item.read ? "note" : "note unread"}>
-            {/* 빈 span 의 aria-label 은 읽히지 않는다. role="img" 를 붙여야
-                빛깔로만 알리는 점을 소리로도 읽어 준다. */}
+            {/* 비어 있는 span 의 aria-label 은 스크린 리더가 읽지 않습니다.
+                role="img" 를 붙여야 색깔로만 표시하는 상태를 음성으로도 전달합니다. */}
             {item.read ? null : <span className="new" role="img" aria-label="안 읽음" />}
             <b>{notificationText(item.kind)}</b>
             <small>{stampLabel(item.created_at)}</small>

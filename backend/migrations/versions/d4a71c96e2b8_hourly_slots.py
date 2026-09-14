@@ -1,10 +1,8 @@
-"""점유 단위를 30분에서 한 시간으로 바꾼다
+"""slot(1시간 단위 시간 칸) 단위를 30분에서 1시간으로 변경합니다.
 
-사용자 결정이다. 합주실 여닫는 시각도 정시에만 둘 수 있게 좁힌다.
+사용자의 결정입니다. 합주실의 시작시간과 종료시간을 정시(분·초가 0)에만 설정할 수 있도록 제약을 좁혔습니다.
 
-이미 30분에 걸쳐 있던 값은 그대로 두면 새 제약에 걸려 저장 자체가 막히므로 함께
-옮긴다 — 여는 시각은 뒤(늦게 열기), 닫는 시각은 앞(일찍 닫기)으로 당긴다. 어느
-쪽이든 없던 시간을 만들어 내지 않는 방향이다.
+30분 단위로 설정된 기존 값은 새 제약에 충돌하므로 함께 수정합니다. 시작시간은 다음 정시로 올리고, 종료시간은 이전 정시로 내립니다. 어느 쪽이든 시간 공백이 생기지 않는 방향입니다.
 
 Revision ID: d4a71c96e2b8
 Revises: c1d5e83f4a29
@@ -36,8 +34,8 @@ def upgrade() -> None:
         "UPDATE rooms SET closes_at = date_trunc('hour', closes_at::interval)"
         " WHERE date_part('minute', closes_at) <> 0"
     )
-    # 30분짜리 방이었다면 위 두 줄이 여는 시각을 닫는 시각 뒤로 보낼 수 있다.
-    # 그런 방은 한 시간으로 벌려 둔다 — 방을 지우는 것보다 낫다.
+    # 30분 구간의 합주실이면 위의 수정으로 시작시간이 종료시간보다 뒤가 될 수 있습니다.
+    # 이 경우 종료시간을 시작시간으로부터 1시간 뒤로 설정합니다. 합주실을 삭제하는 것보다 낫습니다.
     op.execute(
         "UPDATE rooms SET closes_at = opens_at + interval '1 hour'"
         " WHERE closes_at <= opens_at"
@@ -56,7 +54,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # 정시는 30분 격자에도 들어맞아, 값은 그대로 두고 제약만 넓힌다.
+    # 정시(분이 0)는 30분 격자에도 일치하므로, 값은 그대로 두고 제약만 다시 설정합니다.
     op.drop_constraint(OPENS, "rooms", type_="check")
     op.drop_constraint(CLOSES, "rooms", type_="check")
     op.create_check_constraint(

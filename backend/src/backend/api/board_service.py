@@ -17,8 +17,7 @@ def _require_team_exists(session: Session, team_id: int) -> None:
 
 
 def _require_team_member(session: Session, team_id: int, member_id: int) -> None:
-    # 인증된 사람이라도 그 팀 소속이 아니면 권한 문제다(PermissionError) — 팀/게시글이
-    # 아예 없는 경우(ValueError)와는 사람이 다음에 할 일이 다르므로 구분한다.
+    # 인증된 사람이라도 팀 소속이 아니면 권한 문제입니다(PermissionError). 팀/게시글이 없는 경우(ValueError)와는 다음에 할 일이 다르므로 구분합니다.
     row = session.execute(
         select(TeamSlot.id).where(
             TeamSlot.team_id == team_id,
@@ -30,9 +29,9 @@ def _require_team_member(session: Session, team_id: int, member_id: int) -> None
 
 
 def require_post_readable(session: Session, post_id: int, requester: Member) -> Post:
-    """게시글 하나를 돌려준다. 팀 게시판 게시글이면 requester 가 그 팀 소속이어야 한다.
+    """post_id 의 게시글을 반환합니다. 팀 게시판 게시글이면 requester 가 해당 팀 소속이어야 합니다.
 
-    공지(team_id 가 비어 있음)는 로그인한 사람 누구나 읽으므로 소속을 보지 않는다.
+    공지사항(team_id 가 None 인 경우)은 로그인한 사람 누구나 읽으므로 팀 소속을 확인하지 않습니다.
     """
     post = session.get(Post, post_id)
     if post is None:
@@ -43,10 +42,9 @@ def require_post_readable(session: Session, post_id: int, requester: Member) -> 
 
 
 def require_post_author(session: Session, post_id: int, requester: Member) -> Post:
-    """읽을 수 있는지 먼저 보고, 그 게시글을 쓴 사람 본인이면 게시글을 돌려준다.
+    """게시글을 읽을 수 있는지 먼저 확인한 뒤, 작성자이면 게시글을 반환합니다.
 
-    board_moderate 를 가진 사람은 남의 글에도 손댈 수 있다 — 부적절한 글을 아무도
-    치우지 못하는 상태를 두지 않기 위해서다.
+    board_moderate 권한을 가진 사람은 다른 사람의 글도 수정할 수 있습니다. 부적절한 글을 아무도 처리하지 못하는 상태를 피하기 위함입니다.
     """
     post = require_post_readable(session, post_id, requester)
     if post.author_id != requester.id and "board_moderate" not in account_permissions(
@@ -70,10 +68,9 @@ def _comment_counts(session: Session, post_ids: list[int]) -> dict[int, int]:
 
 
 def _posts_with_author_and_count(session: Session, team_id: int | None) -> list[PostRow]:
-    """team_id 가 None 이면 공지, 아니면 그 팀 게시판 게시글을 최신순으로 돌려준다.
+    """team_id 가 None 이면 공지사항, 아니면 해당 팀의 게시판 게시글을 최신순으로 반환합니다.
 
-    게시글마다 따로 사람·댓글 수를 묻지 않고, Member 는 join 으로 한 번에 붙이고
-    댓글 수는 post_id 목록으로 한 번에 집계해 붙인다.
+    게시글마다 작성자와 댓글 수를 따로 조회하지 않습니다. Member 는 join 으로 한 번에 가져오고, 댓글 수는 post_id 목록으로 한 번에 집계합니다.
     """
     condition = Post.team_id.is_(None) if team_id is None else Post.team_id == team_id
     rows = session.execute(
@@ -93,9 +90,9 @@ def list_notices(session: Session) -> list[PostRow]:
 def create_notice(
     session: Session, title: str, body: str, requester: Member, created_at: datetime
 ) -> tuple[Post, str]:
-    """공지사항 하나를 만든다. 글쓴이는 요청 본문이 아니라 토큰으로 확인한 requester다.
+    """공지사항 하나를 만듭니다. 작성자는 요청 본문이 아니라 token(임시로 발급하는 인증 문자열)으로 확인한 requester 입니다.
 
-    누가 쓸 수 있는지는 endpoint(routers/boards.py)의 notice_write 확인이 가른다.
+    쓰기 권한 확인은 endpoint(API 의 요청 주소 단위, routers/boards.py)의 notice_write 에서 합니다.
     """
     clean_title = require_non_empty(title, "제목")
     clean_body = require_non_empty(body, "내용")
@@ -126,8 +123,7 @@ def create_team_post(
     requester: Member,
     created_at: datetime,
 ) -> tuple[Post, str]:
-    """팀 게시판 게시글 하나를 만든다. 글쓴이는 토큰으로 확인한 requester이고, 그 팀
-    소속이어야 한다."""
+    """팀 게시판 게시글 하나를 만듭니다. 작성자는 token 으로 확인한 requester 이며, 해당 팀 소속이어야 합니다."""
     clean_title = require_non_empty(title, "제목")
     clean_body = require_non_empty(body, "내용")
     _require_team_exists(session, team_id)
@@ -148,7 +144,7 @@ def create_team_post(
 def get_post_with_comments(
     session: Session, post_id: int, requester: Member
 ) -> tuple[Post, str, list[CommentRow]]:
-    """게시글 하나(작성자 이름 포함)와 댓글 목록(오래된 순, 작성자 이름 포함)을 돌려준다."""
+    """게시글 하나(작성자 이름 포함)와 댓글 목록(생성된 순서대로, 작성자 이름 포함)을 반환합니다."""
     post = require_post_readable(session, post_id, requester)
     post_author = session.scalar(select(Member.name).where(Member.id == post.author_id)) or ""
 
@@ -164,7 +160,7 @@ def get_post_with_comments(
 def update_post(
     session: Session, post_id: int, title: str, body: str, requester: Member
 ) -> tuple[Post, str]:
-    """글을 고친다. 글쓴이 본인만 할 수 있다 — 판정은 require_post_author 가 한다."""
+    """게시글을 수정합니다. 작성자 본인만 수정할 수 있습니다. require_post_author 에서 판정합니다."""
     post = require_post_author(session, post_id, requester)
     post.title = require_non_empty(title, "제목")
     post.body = require_non_empty(body, "내용")
@@ -173,10 +169,9 @@ def update_post(
 
 
 def require_comment_author(session: Session, comment_id: int, requester: Member) -> Comment:
-    """댓글을 쓴 사람 본인이면 그 댓글을 돌려준다.
+    """댓글을 작성한 사람 본인이면 그 댓글을 반환합니다.
 
-    댓글이 달린 글을 읽을 수 있는지도 함께 본다 — 팀 게시판의 댓글은 그 팀 소속만
-    닿을 수 있어야 하고, 소속에서 빠진 뒤에는 자기 댓글이라도 손댈 수 없다.
+    댓글이 달린 게시글을 읽을 수 있는지도 함께 확인합니다. 팀 게시판의 댓글은 해당 팀 소속만 접근할 수 있으며, 팀에서 제외된 후에는 자신의 댓글도 수정할 수 없습니다.
     """
     comment = session.get(Comment, comment_id)
     if comment is None:
@@ -208,7 +203,7 @@ def delete_comment(session: Session, comment_id: int, requester: Member) -> None
 def create_comment(
     session: Session, post_id: int, body: str, requester: Member, created_at: datetime
 ) -> tuple[Comment, str]:
-    """댓글 하나를 만든다. 게시글이 팀 게시판 게시글이면 글쓰기와 같은 규칙으로 소속을 확인한다."""
+    """댓글 하나를 만듭니다. 게시글이 팀 게시판 게시글이면 글쓰기와 같은 규칙으로 팀 소속을 확인합니다."""
     clean_body = require_non_empty(body, "댓글")
     require_post_readable(session, post_id, requester)
 

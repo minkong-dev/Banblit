@@ -9,7 +9,7 @@ import { roleLabel } from "../lib/account";
 
 
 
-/** 소속 팀마다 내가 맡은 포지션을 한 줄로 낸다. 실패한 팀은 사유를 그 줄에 남긴다. */
+/** 소속 팀마다 내가 맡은 포지션을 한 줄로 반환합니다. 실패한 팀은 사유를 그 줄에 남깁니다. */
 function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: number; name: string }[]) {
   const teamName = (id: number): string =>
     teams.find((team) => team.id === id)?.name ?? "이름 없는 팀";
@@ -21,7 +21,7 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
     })),
   });
 
-  /** 명단에서 찾은 나 — 기수를 적는다. 못 찾았거나 기수가 없으면 그 사유를 적는다. */
+  /** 명단에서 찾은 나입니다. 기수를 기입합니다. 못 찾았거나 기수가 없을 경우 그 사유를 기입합니다. */
   function cohortText(mine: Member | undefined): string {
     if (mine === undefined) return "멤버 리스트에서 찾지 못했어요";
     return mine.cohort === null ? "기수 없음" : `${mine.cohort}기`;
@@ -36,7 +36,7 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
   });
 }
 
-/** 프로필 설정 — 내 이름과 소속 팀별 포지션을 보여준다. 고치는 endpoint 가 아직 없다. */
+/** 프로필을 표시합니다. 내 이름과 소속 팀별 포지션을 보여줍니다. 수정하는 endpoint(통신 지점)가 미구현입니다. */
 export function Profile() {
   const { me, teamIds, teams } = useMe();
   const affiliations = useMyAffiliations(me, teamIds, teams);

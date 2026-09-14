@@ -13,7 +13,7 @@ from backend.db.schedule_store import (
 
 
 def _scaffold(session: Session) -> tuple[int, int, int]:
-    """FK를 만족시킬 기간·팀·합주실을 하나씩 만들고 그 id를 돌려준다."""
+    """FK를 만족시킬 기간·팀·합주실을 하나씩 생성하고 그 id를 반환합니다."""
     period = Period(
         kind="focused",
         starts_on=date(2026, 8, 1),
@@ -30,7 +30,7 @@ def _scaffold(session: Session) -> tuple[int, int, int]:
 
 
 def _row(team_id: int, room_id: int, hour: int) -> AssignmentRow:
-    """8월 1일 hour시 시작하는 한 시간짜리 배정 한 칸(현행/백업 공용 입력)."""
+    """8월 1일 hour시 시작하는 한 시간짜리 배정 행을 반환합니다(현행/백업 공용 입력)."""
     return {
         "team_id": team_id,
         "room_id": room_id,

@@ -4,10 +4,10 @@ import { E2E_ACCOUNT_TEAM, escapeRegExp, loginForTests } from "./helpers";
 
 type Team = { id: number; name: string; member_count: number };
 
-// 화면이 아니라 서버 endpoint(/api/...)를 직접 불러 권한 자체를 확인한다 — 남의 팀
-// 글쓰기 서식으로는 화면 조작으로 갈 수 있는 경로가 없기 때문이다.
-// request 는 이 테스트 안에서 부른 응답의 쿠키를 스스로 저장해 다음 요청에 다시
-// 싣는다(브라우저 컨텍스트와 같은 방식) — 로그인 뒤 헤더를 따로 만들 필요가 없다.
+// 화면이 아니라 서버 endpoint(/api/...)를 직접 조회해 권한 자체를 확인합니다 — 다른 팀
+// 글쓰기 form으로는 화면 조작으로 갈 수 있는 경로가 없기 때문입니다.
+// request는 이 테스트 안에서 받은 응답의 쿠키를 스스로 저장해 다음 요청에 다시
+// 실어 보냅니다(브라우저 컨텍스트와 같은 방식) — 로그인 뒤 header를 따로 만들 필요가 없습니다.
 test("남의 팀 게시판에는 글을 못 쓴다", async ({ request }) => {
   await loginForTests(request);
 
@@ -27,8 +27,8 @@ test("남의 팀 게시판에는 글을 못 쓴다", async ({ request }) => {
   expect(body.detail).toBe("그 팀 소속이 아닙니다");
 });
 
-// 팀 번호는 로그인해야 알 수 있으므로(팀 목록도 로그인이 필요하다) 먼저 로그인해
-// 번호만 받아 두고, 로그아웃해 쿠키를 버린 다음 같은 endpoint 를 다시 부른다.
+// 팀 id는 로그인해야 알 수 있으므로(팀 목록도 로그인이 필요) 먼저 로그인해
+// id만 받아 두고, 로그아웃해 쿠키를 버린 다음 같은 endpoint를 다시 조회합니다.
 test("로그인하지 않으면 팀 게시판 글 목록을 읽을 수 없다", async ({ request }) => {
   await loginForTests(request);
   const { teams } = (await (await request.get("/api/teams")).json()) as { teams: Team[] };
@@ -44,8 +44,8 @@ test("로그인하지 않으면 팀 게시판 글 목록을 읽을 수 없다", 
   expect(response.status()).toBe(401);
 });
 
-// 첨부는 게시글이 만들어진 뒤에 붙는다(components/PostBoard.tsx). 그 두 단계가 한 번의
-// "글쓰기" 로 이어지는지를 화면에서 확인한다.
+// 첨부는 게시글이 만들어진 뒤에 붙습니다(components/PostBoard.tsx). 그 두 단계가 한 번의
+// "글쓰기"로 이어지는지를 화면에서 확인합니다.
 test("팀 게시판 글에 파일을 붙여 올리면 글을 열었을 때 그 파일이 보인다", async ({
   page,
   request,

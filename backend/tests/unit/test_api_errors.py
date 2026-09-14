@@ -20,8 +20,8 @@ def _with_route(path: str, raiser: Exception) -> Response:
 
 
 def test_value_error_becomes_422_with_the_message() -> None:
-    """서비스 함수가 던진 규칙 위반은 어느 endpoint 에서 났든 422 와 그 문장이다 —
-    라우터마다 같은 두 줄을 적지 않는다."""
+    """서비스 함수가 발생시킨 검증 오류는 어느 endpoint에서 발생했든 상태 코드 422와 메시지로 응답합니다.
+    모든 endpoint에서 동일한 처리를 하므로 각 라우터에서 반복적으로 작성할 필요가 없습니다."""
     response = _with_route("/_boom_value", ValueError("이름이 비어 있습니다"))
 
     assert response.status_code == 422

@@ -1,7 +1,7 @@
-"""core tables
+"""핵심 테이블들입니다.
 
 Revision ID: 072758eb0033
-Revises: 
+Revises:
 Create Date: 2026-07-21 07:51:51.883149
 
 """

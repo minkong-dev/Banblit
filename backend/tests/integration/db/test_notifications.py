@@ -19,7 +19,7 @@ RUN_AT = time(9, 0)
 
 
 def _due_time() -> datetime:
-    # first_run_at 이 지난 시각. 이 값을 run_due_assignments 에 넣으면 오늘 몫이 돈다.
+    # first_run_at이 통과한 시각. 이 값을 run_due_assignments에 넣으면 오늘 몫이 실행됩니다.
     return datetime.combine(TODAY, time(10, 0))
 
 
@@ -49,7 +49,7 @@ def _team_with(session: Session, name: str, member_id: int) -> int:
 
 
 def _room(session: Session, name: str) -> None:
-    # 여닫는 시각이 한 시간이면 칸 하나다.
+    # 여닫는 시각이 한 시간이면 slot(1시간 단위 시간 칸) 하나입니다.
     session.add(Room(name=name, opens_at=time(18, 0), closes_at=time(20, 0)))
     session.flush()
 
@@ -87,7 +87,7 @@ def test_auto_assign_leaves_a_notification(
     assert [(row["kind"], row["read"]) for row in rows] == [
         ("assignment_updated", False)
     ]
-    # 통로가 아니라 표에도 그 사람 번호로 남았는지 함께 본다.
+    # endpoint(API의 요청 주소 단위) 응답이 아니라 database(저장소)에도 그 사람 번호로 남았는지 함께 확인합니다.
     assert list(
         db_session.scalars(select(Notification.member_id))
     ) == [member_id]
@@ -154,7 +154,7 @@ def test_a_person_pressing_recalculate_also_leaves_a_notification(
     assigned_member: tuple[int, dict[str, str]],
     poll_job: Callable[[str], dict[str, Any]],
 ) -> None:
-    """자동으로 돈 것이든 사람이 누른 것이든, 시간표가 새로 저장되면 알린다."""
+    """자동으로 실행된 것이든 사람이 누른 것이든, 시간표가 새로 저장되면 알립니다."""
     # 이 파일의 첫 계정이 헤드매니저다 — assigned_member 가 그것을 만든다.
     _, cookies = assigned_member
     api_client.cookies.update(cookies)

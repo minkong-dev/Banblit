@@ -16,10 +16,11 @@ def head_login(
     api_client: TestClient,
     account: AccountFactory,
 ) -> dict[str, str]:
-    """헤드매니저로 가입시키고, 그 쿠키를 클라이언트 기본값으로 실어 둔다.
+    """헤드매니저 계정으로 가입시키고, 그 쿠키를 클라이언트 기본값으로 설정합니다.
 
-    poll_job 은 쿠키를 따로 싣지 않고 /jobs 를 조회하므로, 기본 쿠키가 있어야
-    작업 조회가 인증을 통과한다. 다른 계정으로 부를 때는 cookies= 로 덮어쓴다.
+    poll_job은 쿠키를 따로 전달하지 않고 /jobs를 조회하므로, 기본 쿠키가 있어야
+    작업 조회가 인증을 통과합니다. 다른 계정으로 호출할 때는 cookies= 매개변수로
+    덮어씁니다.
     """
     _, cookies = account("박서연", "head@example.com")
     api_client.cookies.update(cookies)
@@ -186,7 +187,7 @@ def test_assign_saves_the_schedule_and_reports_it(
     assert body["saved"] is True
     assert body["assignment"]["feasible"] is True
     slots = body["assignment"]["slots_by_team"]["A"]
-    assert len(slots) == 4  # 이틀 × 2칸
+    assert len(slots) == 4  # 2일 × slot(1시간 단위 시간 칸) 2개
     assert {slot["room"] for slot in slots} == {"1번방"}
     assert all(slot["room_id"] == room.id for slot in slots)
 
@@ -200,7 +201,8 @@ def test_assign_reports_open_slots_with_real_room_names(
     poll_job: Callable[[str], dict[str, Any]],
     head_login: dict[str, str],
 ) -> None:
-    """칸이 팀보다 많이 남는 시나리오 — open_slots가 엔진 키가 아니라 실제 방 정보로 되돌아오는지."""
+    """slot(1시간 단위 시간 칸)이 팀보다 많이 남는 시나리오—open_slots가 엔진
+    내부 식별자가 아니라 실제 방 정보로 반환되는지 확인합니다."""
     period = Period(
         kind="focused",
         starts_on=date(2026, 8, 1),
@@ -213,8 +215,8 @@ def test_assign_reports_open_slots_with_real_room_names(
     db_session.flush()
     team_a = _team_with_member(db_session, "A", "김민수")
     team_b = _team_with_member(db_session, "B", "박지훈")
-    room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(21, 0))  # 3칸
-    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(22, 0))  # 2칸
+    room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(21, 0))  # 3개 slot
+    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(22, 0))  # 2개 slot
     db_session.add_all([room_1, room_2])
     db_session.flush()
     db_session.commit()
@@ -231,10 +233,10 @@ def test_assign_reports_open_slots_with_real_room_names(
     body = job["result"]
     assert body["assignment"]["feasible"] is True
     open_slots = body["assignment"]["open_slots"]
-    assert len(open_slots) == 1  # 전체 5칸 - 팀당 2칸 × 2팀 = 1칸 남는다
+    assert len(open_slots) == 1  # 전체 5개 slot - 팀당 2개 slot × 2팀 = 1개 slot 남음
     room_id_by_name = {"1번방": room_1.id, "2번방": room_2.id}
     slot = open_slots[0]
-    # 엔진 키는 "1번방 (2026-08-01)" 형태다 — 순수한 방 이름만 나와야 한다.
+    # 엔진 내부 식별자는 "1번방 (2026-08-01)" 형태입니다—순수한 방 이름만 반환되어야 합니다.
     assert slot["room"] in room_id_by_name
     assert slot["room_id"] == room_id_by_name[slot["room"]]
 
@@ -245,7 +247,8 @@ def test_assign_reports_a_coordination_proposal_with_real_names(
     poll_job: Callable[[str], dict[str, Any]],
     head_login: dict[str, str],
 ) -> None:
-    """배정이 실패해 조율안이 나오는 경로 — 제외 인원과 조율안 안 배정 모두 실제 값으로 되돌아오는지."""
+    """배정이 실패해 조율안이 나오는 경로—제외 멤버와 조율안 미배정 모두 실제 값으로
+    반환되는지 확인합니다."""
     period = Period(
         kind="focused",
         starts_on=date(2026, 8, 1),
@@ -264,7 +267,7 @@ def test_assign_reports_a_coordination_proposal_with_real_names(
     db_session.flush()
     seat(db_session, team.id, member_1.id)
     seat(db_session, team.id, member_2.id)
-    # 이영희만 운영시간 내내 불가능하게 만든다.
+    # 이영희만 운영시간 내내 불가능하게 설정합니다.
     db_session.add(
         UnavailableTime(
             member_id=member_2.id,
@@ -293,7 +296,7 @@ def test_assign_reports_a_coordination_proposal_with_real_names(
     assert body["assignment"]["feasible"] is False
     assert len(body["proposals"]) == 1
     proposal = body["proposals"][0]
-    # 엔진 키는 "이영희 #<id>" 형태다 — 실제 id·이름으로 되돌아와야 한다.
+    # 엔진 내부 식별자는 "이영희 #<id>" 형태입니다—실제 id·이름으로 반환되어야 합니다.
     assert proposal["excluded_member"] == {"id": member_2.id, "name": "이영희"}
     slots = proposal["assignment"]["slots_by_team"]["A"]
     assert len(slots) == 2

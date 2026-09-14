@@ -7,7 +7,7 @@ from backend.db.models import Instrument, Permission
 from backend.db.models import NotificationKind
 
 class RoomSlotOut(BaseModel):
-    # 배정 한 칸. 방은 DB 의 번호와 이름을 함께 돌려준다.
+    # 배정의 1시간 slot(1시간 단위 시간 칸). 방은 DB의 번호와 이름을 함께 반환합니다.
     room_id: int
     room: str
     start: datetime
@@ -40,7 +40,8 @@ class ScheduleRowOut(BaseModel):
 
 
 class ScheduleOut(BaseModel):
-    # open_slots 는 아무 팀도 쓰지 않는 한 시간 slot 이다. 화면은 open_slots 의 시간만 예약으로 연다.
+    # open_slots는 어느 팀도 사용하지 않는 1시간 slot(1시간 단위 시간 칸)입니다. 화면은
+    # open_slots의 시간만 예약용으로 개방합니다.
     rows: list[ScheduleRowOut]
     open_slots: list[RoomSlotOut]
 
@@ -51,7 +52,7 @@ class PeriodAssignIn(BaseModel):
 
 
 class BackupOut(BaseModel):
-    # 회차를 가르는 값은 저장 시각이다 — assignment_backups 에 별도 회차 번호가 없다.
+    # 회차를 구분하는 값은 저장 시각입니다. assignment_backups에 별도 회차 번호가 없습니다.
     saved_at: datetime
     slot_count: int
 
@@ -61,8 +62,8 @@ class BackupsOut(BaseModel):
 
 
 class BackupRoundOut(BaseModel):
-    # 지난 회차의 시간표. 확정 시간표(ScheduleOut)와 줄 서식은 같지만 open_slots 가
-    # 없다 — 지나간 회차에 예약을 열 자리는 없다.
+    # 지난 회차의 시간표입니다. 확정 시간표(ScheduleOut)와 row(데이터베이스 행) 구조는 같지만
+    # open_slots는 없습니다. 지나간 회차에 예약을 개방할 필요가 없습니다.
     rows: list[ScheduleRowOut]
 
 
@@ -112,7 +113,8 @@ class RoomCreateIn(BaseModel):
 
 
 class RoomUpdateIn(BaseModel):
-    # PATCH는 보낸 항목만 고친다 — 안 보낸 항목은 None으로 남아 서비스가 건드리지 않는다.
+    # PATCH는 요청에 포함된 항목만 수정합니다. 포함되지 않은 항목은 None으로 남아
+    # 서비스가 처리하지 않습니다.
     name: str | None = None
     opens_at: str | None = None
     closes_at: str | None = None
@@ -171,15 +173,18 @@ class TeamEnvelopeOut(BaseModel):
 
 
 class TeamSlotsIn(BaseModel):
-    """포지션 구성만 받는다. 팀 이름은 팀을 고치는 endpoint 가 따로 맡는다."""
+    """포지션 구성만 수신합니다. 팀 이름은 팀을 수정하는 endpoint(API의 요청 주소 단위)가
+    따로 처리합니다.
+    """
 
     slots: dict[str, int]
 
 
 class TeamCreateIn(BaseModel):
-    # 만든 사람은 요청 본문이 아니라 인증 쿠키의 주인이다.
+    # 생성자는 요청 본문이 아니라 인증 cookie(HTTP 요청 헤더에 포함되는 사용자 정보)의 소유자입니다.
     name: str
-    # 악기마다 몇 포지션인지. 0인 악기는 보내도 되고 빼도 된다 — 포지션을 만들지 않는다.
+    # 포지션마다 몇 자리인지입니다. 0인 포지션은 요청에 포함해도 되고 제외해도 됩니다.
+    # 포지션을 만들지 않습니다.
     slots: dict[str, int]
 
 
@@ -191,9 +196,9 @@ class SlotOut(BaseModel):
     id: int
     team_id: int
     instrument: Instrument
-    # 같은 악기가 여럿일 때 몇 번째인지. 화면은 "일렉 2" 처럼 붙여 보여준다.
+    # 같은 포지션이 1명 이상일 때 몇 번째인지입니다. 화면은 "일렉 2" 처럼 포지션에 숫자를 부여해 표시합니다.
     ordinal: int
-    # 아직 아무도 안 들어간 포지션은 셋 다 비어 있다.
+    # 아직 아무도 배정되지 않은 포지션은 세 필드가 모두 null입니다.
     member_id: int | None = None
     member_name: str | None = None
     member_cohort: int | None = None
@@ -214,15 +219,15 @@ class SlotAssignIn(BaseModel):
 class MemberOut(BaseModel):
     id: int
     name: str
-    # 사람이 사람을 가르는 값 — 이름·학과·학번·기수 네 가지다. 이 조건이 생기기
-    # 전에 들어온 사람은 학과·학번이 비어 있다.
+    # 사용자를 구분하는 값입니다. 이름, 학과, 학번, 기수 네 가지입니다. 이 조건이
+    # 생기기 전에 등록된 사용자는 학과와 학번이 null입니다.
     department: str | None = None
     student_no: str | None = None
     cohort: int | None = None
 
 
 class MemberRowOut(MemberOut):
-    """멤버 화면의 한 줄. 가진 권한 묶음 이름이 함께 온다."""
+    """멤버 화면의 한 줄입니다. 가진 permission set(권한 집합) 이름이 함께 포함됩니다."""
 
     permission_sets: list[str]
 
@@ -236,7 +241,7 @@ class MembersOut(BaseModel):
 
 
 class MemberSearchOut(BaseModel):
-    """포지션에 넣을 사람을 고르는 돋보기의 결과."""
+    """포지션에 배정할 사용자를 찾는 검색 기능의 결과입니다."""
 
     members: list[MemberOut]
 
@@ -272,7 +277,8 @@ class CommentOut(BaseModel):
 class AttachmentOut(BaseModel):
     id: int
     post_id: int
-    # 올린 사람이 보낸 이름이다. 저장 이름은 서버가 따로 만들고 밖으로 내보내지 않는다.
+    # 업로드한 사용자가 지정한 이름입니다. 저장 이름은 서버가 따로 생성하고
+    # 외부에 노출하지 않습니다.
     name: str
     size: int
     content_type: str
@@ -298,8 +304,8 @@ class CommentEnvelopeOut(BaseModel):
 
 
 class PostCreateIn(BaseModel):
-    # author_id 는 여기 없다 — 글쓴이는 토큰으로 확인한 요청자다. 클라이언트가
-    # 보내도 스키마에 없는 항목이라 조용히 무시된다.
+    # author_id는 여기 없습니다. 글쓴이는 인증 token(세션 정보)으로 확인한 요청자입니다.
+    # 클라이언트가 보내도 스키마에 없는 항목이므로 무시됩니다.
     title: str = Field(max_length=200)
     body: str = Field(max_length=20000)
 
@@ -312,23 +318,26 @@ class AccountOut(BaseModel):
     id: int
     name: str
     email: str
-    # role 은 permissions 에서 뽑아낸 값이다 — 열여덟 가지가 전부 켜져 있으면
-    # head_manager. 화면이 아직 이 값으로 글자를 고르고 있어 함께 내려준다.
+    # role은 permissions에서 추출한 값입니다. 18가지 권한이 모두 설정되어 있으면
+    # head_manager입니다. 화면이 아직 이 값으로 레이블(화면에 표시되는 텍스트)을
+    # 선택하고 있어 함께 제공합니다.
     role: Literal["head_manager", "member"]
     permissions: list[Permission]
-    # 기수. 화면이 동명이인을 가를 때 이름 옆에 붙인다.
+    # 기수입니다. 화면이 동명이인을 구분할 때 이름 옆에 표시합니다.
     cohort: int | None = None
 
 
 class PermissionSetIn(BaseModel):
     name: str = Field(max_length=50)
-    # 무엇을 하는 사람에게 주는 권한인지. 반드시 적는다(사용자 결정).
+    # 무엇을 하는 사람에게 주는 권한인지입니다. 반드시 기록합니다(사용자 결정).
     description: str = Field(max_length=200)
     permissions: list[Permission] = Field(max_length=20)
 
 
 class PermissionSetMemberOut(BaseModel):
-    """permission set 을 가진 사람 하나. 번호로 사람을 가르고, 이름은 보여주기 위한 것이다."""
+    """permission set(권한 집합)을 가진 사용자 하나입니다. ID로 사용자를 식별하고,
+    이름은 표시하기 위한 것입니다.
+    """
 
     id: int
     name: str
@@ -339,8 +348,8 @@ class PermissionSetOut(BaseModel):
     name: str
     description: str
     permissions: list[Permission]
-    # 번호만 주면 화면이 이름을 다른 목록에서 찾아야 하는데, 그 목록은 쪽 단위라 다 있지
-    # 않다. 이름까지 여기서 실어 보낸다.
+    # ID만 제공하면 화면이 이름을 다른 목록에서 찾아야 합니다. 그 목록은 page(화면 분할
+    # 단위) 단위라 모두 있지 않을 수 있습니다. 이름까지 여기에 포함해 보냅니다.
     members: list[PermissionSetMemberOut]
 
 
