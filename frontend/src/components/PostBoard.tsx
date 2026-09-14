@@ -10,6 +10,7 @@ import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_HINT,
+  boardActions,
   checkAttachments,
   checkComment,
   checkPost,
@@ -301,7 +302,8 @@ function CommentForm(props: { postId: number; authorId: number | null }) {
   );
 }
 
-/** 글에 붙은 파일 목록. 이름을 누르면 받고, 글쓴이 자신에게만 지우는 자리가 보인다. */
+/** 글에 붙은 파일 목록. 이름을 누르면 받고, 글을 지울 수 있는 사람에게만 지우는 자리가 보인다
+ *  — 첨부에는 올린 사람 정보가 따로 없어, 글쓴이 기준으로 판정한다(서버도 같다). */
 function AttachmentList(props: {
   postId: number;
   attachments: Attachment[];
@@ -456,13 +458,14 @@ function EditPost(props: {
   );
 }
 
-/** 댓글 한 줄. 자기 댓글이면 오른쪽 끝에 연필과 쓰레기통이 선다. */
+/** 댓글 한 줄. 고칠 수 있으면 연필이, 지울 수 있으면 쓰레기통이 오른쪽 끝에 선다(lib/boards boardActions). */
 function CommentRow(props: {
   comment: PostComment;
-  mine: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
   postId: number;
 }) {
-  const { comment, mine, postId } = props;
+  const { comment, canEdit, canDelete, postId } = props;
   const client = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState(comment.body);
@@ -492,16 +495,20 @@ function CommentRow(props: {
     <li className="comment">
       <span className="meta">{comment.author} · {stampLabel(comment.created_at)}</span>
       <p>{comment.body}</p>
-      {!mine ? null : (
+      {!canEdit && !canDelete ? null : (
         <span className="acts">
-          <button className="ic" aria-label="댓글 수정"
-            onClick={() => { setBody(comment.body); setBad(""); setEditing(true); }}>
-            <PencilIcon />
-          </button>
-          <button className="ic danger" aria-label="댓글 삭제" disabled={remove.isPending}
-            onClick={() => { if (askDelete("댓글")) remove.mutate(); }}>
-            <TrashIcon />
-          </button>
+          {!canEdit ? null : (
+            <button className="ic" aria-label="댓글 수정"
+              onClick={() => { setBody(comment.body); setBad(""); setEditing(true); }}>
+              <PencilIcon />
+            </button>
+          )}
+          {!canDelete ? null : (
+            <button className="ic danger" aria-label="댓글 삭제" disabled={remove.isPending}
+              onClick={() => { if (askDelete("댓글")) remove.mutate(); }}>
+              <TrashIcon />
+            </button>
+          )}
         </span>
       )}
 
@@ -540,12 +547,14 @@ function PostDetail(props: {
   postId: number;
   /** 아직 누구인지 모르면 null — 그때는 글도 댓글도 쓸 수 없다. */
   authorId: number | null;
+  /** 타 멤버 글 수정 및 삭제(board_moderate) 권한이 있는지 — 남의 글·댓글·첨부에도 삭제가 보인다. */
+  canModerate: boolean;
   /** 글을 지운 뒤 다시 받아야 하는 목록 */
   listKey: readonly unknown[];
   heading: RefObject<HTMLHeadingElement | null>;
   onBack: () => void;
 }) {
-  const { postId, authorId, listKey, heading, onBack } = props;
+  const { postId, authorId, canModerate, listKey, heading, onBack } = props;
   const [editing, setEditing] = useState(false);
   const detail = useQuery({
     queryKey: ["board", "post", postId],
@@ -561,18 +570,20 @@ function PostDetail(props: {
   if (detail.isError) return <div className="empty">{reason(detail.error)}</div>;
 
   const { post, comments, attachments } = detail.data;
-  const mine = authorId !== null && post.author_id === authorId;
+  const { canEdit, canDelete } = boardActions(post.author_id, authorId, canModerate);
 
   return (
     <div className="thread">
       <div className="threadtop">
         <button className="back" onClick={onBack}>‹ 목록으로</button>
-        {!mine ? null : (
+        {!canEdit && !canDelete ? null : (
           <span className="acts">
-            <button className="ic" aria-label="글 수정" onClick={() => setEditing(true)}>
-              <PencilIcon />
-            </button>
-            <RemovePost postId={post.id} listKey={listKey} onDone={onBack} />
+            {!canEdit ? null : (
+              <button className="ic" aria-label="글 수정" onClick={() => setEditing(true)}>
+                <PencilIcon />
+              </button>
+            )}
+            {!canDelete ? null : <RemovePost postId={post.id} listKey={listKey} onDone={onBack} />}
           </span>
         )}
       </div>
@@ -583,7 +594,7 @@ function PostDetail(props: {
       <AttachmentList
         postId={post.id}
         attachments={attachments}
-        canRemove={mine}
+        canRemove={canDelete}
       />
 
       <div className="comments">
@@ -596,7 +607,7 @@ function PostDetail(props: {
               <CommentRow
                 key={comment.id}
                 comment={comment}
-                mine={authorId !== null && comment.author_id === authorId}
+                {...boardActions(comment.author_id, authorId, canModerate)}
                 postId={post.id}
               />
             ))}
@@ -624,10 +635,12 @@ export function PostBoard(props: {
   authorId: number | null;
   /** 글쓰기 서식을 그릴지. 공지는 notice_write 를 가진 사람만이고, 팀 게시판은 소속이면 쓴다. */
   canWrite: boolean;
+  /** 타 멤버 글 수정 및 삭제(board_moderate) 권한. 남의 글·댓글·첨부에도 삭제 단추가 선다. */
+  canModerate: boolean;
   writeNote: string;
   emptyText: string;
 }) {
-  const { title, hint, listPath, writePath, authorId, canWrite, writeNote, emptyText } = props;
+  const { title, hint, listPath, writePath, authorId, canWrite, canModerate, writeNote, emptyText } = props;
   const queryKey = ["board", listPath];
   const focus = useDetailFocus();
   const client = useQueryClient();
@@ -701,6 +714,7 @@ export function PostBoard(props: {
         <PostDetail
           postId={focus.openId}
           authorId={authorId}
+          canModerate={canModerate}
           listKey={queryKey}
           heading={focus.heading}
           onBack={backToList}

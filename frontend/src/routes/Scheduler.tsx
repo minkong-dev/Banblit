@@ -263,7 +263,7 @@ export function Scheduler() {
   // 다시 도는데, 빈 배열을 다루는 계산이라 가벼워 따로 감쌀 만큼은 아니다.
   const rows = query.data?.rows ?? [];
 
-  const teams = teamsOf(rows, teamIds);
+  const teams = teamsOf(rows, teamIds, allTeams);
   const { open, close } = roomBounds(rooms.data?.rooms ?? []);
   const focus = focusedRange(periods.data?.periods ?? []);
   const slotCount = slotCountOf(open, close);

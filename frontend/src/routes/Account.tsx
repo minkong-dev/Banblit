@@ -28,6 +28,7 @@ import {
   resetPassword,
   signUp,
   strongPasswordMessage,
+  studentNoMessage,
 } from "../lib/pipeline";
 
 
@@ -171,7 +172,7 @@ export function SignUp() {
       return {
         nm: fieldText(data, "nm").trim() ? "" : "이름을 입력해 주세요.",
         dept: fieldText(data, "dept").trim() ? "" : "학과를 입력해 주세요.",
-        sno: fieldText(data, "sno").trim() ? "" : "학번을 입력해 주세요.",
+        sno: studentNoMessage(fieldText(data, "sno")),
         mail2: emailMessage(fieldText(data, "mail2").trim()),
         pw2: signupPasswordMessage(password),
         pw3: fieldText(data, "pw3") === password ? "" : "비밀번호가 일치하지 않아요.",

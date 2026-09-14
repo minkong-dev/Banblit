@@ -72,3 +72,17 @@ export function attachmentMessage(name: string, size: number): string {
   }
   return "";
 }
+
+// ===== 글·댓글에 무엇을 할 수 있는가 =====
+
+/** 수정은 쓴 사람만, 삭제는 쓴 사람이거나 "타 멤버 글 수정 및 삭제"(board_moderate) 권한자다.
+ *  서버(board_service.py require_post_author)는 권한자에게 수정도 열어 두지만, 화면은 삭제
+ *  단추만 보여준다(사용자 결정 2026-09-11). 아직 누구인지 모르면(meId null) 아무것도 못 한다. */
+export function boardActions(
+  authorId: number,
+  meId: number | null,
+  canModerate: boolean,
+): { canEdit: boolean; canDelete: boolean } {
+  const mine = meId !== null && authorId === meId;
+  return { canEdit: mine, canDelete: mine || (meId !== null && canModerate) };
+}

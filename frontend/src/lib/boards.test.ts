@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   attachmentMessage,
+  boardActions,
   bodyMessage,
   commentMessage,
   fileSizeLabel,
@@ -98,5 +99,23 @@ describe("attachmentMessage", () => {
 
   it("점으로 시작하는 이름을 확장자로 읽지 않는다", () => {
     expect(attachmentMessage(".zip", 1024)).not.toBe("");
+  });
+});
+
+describe("boardActions — 글·댓글 하나에 무엇을 할 수 있는가", () => {
+  it("쓴 사람 본인은 수정도 삭제도 한다", () => {
+    expect(boardActions(7, 7, false)).toEqual({ canEdit: true, canDelete: true });
+  });
+
+  it("남의 것은 권한이 없으면 아무것도 못 한다", () => {
+    expect(boardActions(7, 8, false)).toEqual({ canEdit: false, canDelete: false });
+  });
+
+  it("타 멤버 글 수정 및 삭제 권한자는 남의 것을 지울 수 있지만 고치지는 않는다", () => {
+    expect(boardActions(7, 8, true)).toEqual({ canEdit: false, canDelete: true });
+  });
+
+  it("아직 누구인지 모르면 권한이 있어도 아무것도 못 한다", () => {
+    expect(boardActions(7, null, true)).toEqual({ canEdit: false, canDelete: false });
   });
 });

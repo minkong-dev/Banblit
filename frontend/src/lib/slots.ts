@@ -121,3 +121,9 @@ export function isoAt(dayKey: string, index: number, openHour: number): string {
   // slotIndex 의 반대 방향 — 날짜와 칸 번호를 서버가 받는 시간대 없는 시각 문자열로 합친다.
   return `${dayKey}T${slotLabel(index, openHour)}:00`;
 }
+
+/** 설정의 예약 탭이 보는 목록 — 한 건으로 이은 뒤 합주실과 무관하게 시작 시각 순으로 세운다.
+ *  mergeReservations 는 합주실·사람 순이라, 사람이 "다음에 뭐가 있지" 를 보기에는 맞지 않다. */
+export function upcomingBookings(rows: readonly ReservationSlot[]): Booking[] {
+  return mergeReservations(rows).sort((a, b) => a.start.localeCompare(b.start));
+}

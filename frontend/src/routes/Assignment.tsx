@@ -15,7 +15,6 @@ import { colorKey, datesBetween, dayOf, hhmm, mergeSessions, stampLabel, WEEKDAY
 import type { Session } from "../lib/pipeline";
 
 const MINUTES_PER_HOUR = 60;
-const HALF_HOUR_SECONDS = 1800;
 
 /** 달력이 보이는 것 — 지금 확정된 시간표, 조율안 n번, 지난 회차 하나. */
 type View = { kind: "now" } | { kind: "proposal"; index: number } | { kind: "round"; at: string };
@@ -108,7 +107,7 @@ export function Assignment() {
       setView(NOW);
       say(runResultText(result));
     },
-    onError: () => say("엔진이 연산에 실패했어요"),
+    onError: (error) => say(reason(error, "엔진이 연산에 실패했어요")),
   });
 
   // 조율안 확정 — 그 사람을 뺀 채로 같은 계산을 다시 돌려 저장한다. 서버 경로가
@@ -126,7 +125,7 @@ export function Assignment() {
       setView(NOW);
       say(result.saved ? "선택한 배정으로 확정했어요" : "해당 배정을 선택하지 않았어요");
     },
-    onError: () => say("해당 배정을 선택하는데 실패했어요"),
+    onError: (error) => say(reason(error, "해당 배정을 선택하는데 실패했어요")),
   });
 
   const rollback = useMutation({
@@ -435,10 +434,8 @@ export function Assignment() {
         {activePeriod === null ? null : (
           <>
             <div className="rows">
-              {/* step 은 초 단위다 — 3600 이면 60분마다 고를 수 있다. */}
               <input
                 type="time"
-                step={HALF_HOUR_SECONDS}
                 aria-label="1차 스케줄링 시간"
                 disabled={!canManagePeriod || saveRunTimes.isPending}
                 value={shownRun.first}
@@ -448,7 +445,6 @@ export function Assignment() {
               />
               <input
                 type="time"
-                step={HALF_HOUR_SECONDS}
                 aria-label="2차 스케줄링 시간"
                 disabled={!canManagePeriod || saveRunTimes.isPending}
                 value={shownRun.second}
@@ -471,7 +467,7 @@ export function Assignment() {
             <p>
               {runWhy !== "" ? runWhy : canManagePeriod
                 ? "지정한 시간에 스케줄링을 진행해요."
-                : "집중 합주기간이 있어야 시간을 지정할 수 있어요."}
+                : "스케줄링 시간 설정 권한이 있어야 시간을 지정할 수 있어요."}
             </p>
           </>
         )}

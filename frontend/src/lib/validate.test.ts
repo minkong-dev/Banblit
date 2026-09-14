@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { emailMessage, passwordMessage, signupPasswordMessage, strongPasswordMessage } from "./validate";
+import {
+  emailMessage,
+  passwordMessage,
+  signupPasswordMessage,
+  strongPasswordMessage,
+  studentNoMessage,
+} from "./validate";
 
 describe("emailMessage", () => {
   it("성한 값이면 아무 말도 하지 않는다", () => {
@@ -66,4 +72,21 @@ describe("strongPasswordMessage — 재설정", () => {
   ])("%s 는 막는다", (given, expected) => {
     expect(strongPasswordMessage(given)).toBe(expected);
   });
+});
+
+describe("studentNoMessage", () => {
+  it("숫자 여덟 자리면 통과한다", () => {
+    expect(studentNoMessage("20260001")).toBe("");
+  });
+
+  it("비었으면 넣어 달라고 한다", () => {
+    expect(studentNoMessage("  ")).toBe("학번을 입력해 주세요.");
+  });
+
+  it.each(["2026001", "202600011", "2026000a", "2026-0001"])(
+    "숫자 여덟 자리가 아니면 막는다 — %s",
+    (bad) => {
+      expect(studentNoMessage(bad)).toBe("학번은 숫자 8자리여야 해요.");
+    },
+  );
 });

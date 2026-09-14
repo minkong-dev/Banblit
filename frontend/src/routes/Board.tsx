@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { AppShell, Tabs } from "../components/AppShell";
 import { PostBoard } from "../components/PostBoard";
+import { can } from "../lib/account";
 import { reason } from "../lib/api";
 import { useMe, useMyTeams, useTeams } from "../components/hooks";
 
@@ -45,6 +46,7 @@ export function Board() {
               writePath={`/teams/${current.id}/posts`}
               authorId={me?.id ?? null}
               canWrite
+              canModerate={can(me, "board_moderate")}
               writeNote={`${current.name} 팀에 소속된 멤버만 쓸 수 있어요.`}
               emptyText="아직 등록된 글이 없어요"
             />
