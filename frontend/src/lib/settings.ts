@@ -4,9 +4,10 @@
 
 import { uniqueNameMessage } from "./validate";
 
-// 칸 하나가 한 시간입니다(사용자 결정). 서버 쪽 정본입니다:
-// backend/src/backend/scheduling/slots.py의 SLOT_MINUTES
-const SLOT_MINUTES = 60;
+// 칸 하나의 크기는 저장소 설정이 정합니다(GET /settings 의 slot_minutes). 이 파일은 서버와
+// 상호작용하지 않으므로 값을 인자로 받습니다. 부르는 쪽이 설정에서 읽어 넘깁니다.
+// 서버 쪽 정본은 backend/src/backend/api/settings_service.py 입니다.
+const DEFAULT_SLOT_MINUTES = 60;
 const MINUTES_PER_HOUR = 60;
 
 /** "18:30"을 자정부터의 분으로 변환합니다. 형식이 맞지 않으면 null입니다. */
@@ -15,19 +16,27 @@ function minutesOf(hhmm: string): number | null {
   return parts === null ? null : Number(parts[1]) * MINUTES_PER_HOUR + Number(parts[2]);
 }
 
-function onGrid(minutes: number): boolean {
-  return minutes % SLOT_MINUTES === 0;
+function onGrid(minutes: number, slotMinutes: number): boolean {
+  return minutes % slotMinutes === 0;
 }
 
-export function openHoursMessage(opens: string, closes: string): string {
-  // opens·closes를 받아, 정각이 아니거나 순서가 뒤집혔으면 그 메시지를 반환합니다.
+/** 격자에 맞지 않을 때 보여줄 단위 이름입니다. 한 시간이면 "정각"이 자연스럽습니다. */
+function unitText(slotMinutes: number): string {
+  return slotMinutes === MINUTES_PER_HOUR ? "정각" : `${slotMinutes}분`;
+}
+
+export function openHoursMessage(
+  opens: string, closes: string, slotMinutes: number = DEFAULT_SLOT_MINUTES,
+): string {
+  // opens·closes를 받아, 격자에 맞지 않거나 순서가 뒤집혔으면 그 메시지를 반환합니다.
   if (!opens) return "여는 시각을 입력해 주세요.";
   if (!closes) return "닫는 시각을 입력해 주세요.";
 
+  const unit = unitText(slotMinutes);
   const from = minutesOf(opens);
   const to = minutesOf(closes);
-  if (from === null || !onGrid(from)) return "개방 시간은 정각 기준으로 지정해주세요.";
-  if (to === null || !onGrid(to)) return "마감 시간은 정각 기준으로 지정해주세요.";
+  if (from === null || !onGrid(from, slotMinutes)) return `개방 시간은 ${unit} 기준으로 지정해주세요.`;
+  if (to === null || !onGrid(to, slotMinutes)) return `마감 시간은 ${unit} 기준으로 지정해주세요.`;
   if (to <= from) return "마감 시간은 개방 시간보다 빠를 수 없어요.";
   return "";
 }
@@ -44,13 +53,15 @@ export function dateRangeMessage(from: string, to: string): string {
   return to < from ? "종료일은 시작일보다 빠를 수 없어요." : "";
 }
 
-export function slotsBetween(opens: string, closes: string): number {
-  // 여는 시각부터 닫는 시각까지 들어가는 한 시간짜리 자리의 개수입니다. 유효하지 않으면 0입니다.
-  if (openHoursMessage(opens, closes) !== "") return 0;
+export function slotsBetween(
+  opens: string, closes: string, slotMinutes: number = DEFAULT_SLOT_MINUTES,
+): number {
+  // 여는 시각부터 닫는 시각까지 들어가는 자리의 개수입니다. 유효하지 않으면 0입니다.
+  if (openHoursMessage(opens, closes, slotMinutes) !== "") return 0;
   const from = minutesOf(opens);
   const to = minutesOf(closes);
   if (from === null || to === null) return 0;
-  return (to - from) / SLOT_MINUTES;
+  return (to - from) / slotMinutes;
 }
 
 export type Capacity = {

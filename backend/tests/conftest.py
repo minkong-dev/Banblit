@@ -8,12 +8,13 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine, select, text
+from sqlalchemy import Engine, create_engine, select, text, update
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
 from backend.api.rate_limit import reset_all
-from backend.db.models import Base, TeamSlot
+from backend.db.models import Base, Settings, TeamSlot
+from backend.scheduling.slots import DEFAULT_SLOT_MINUTES
 
 def seat(
     session: Session, team_id: int, member_id: int, instrument: str = "보컬"
@@ -90,11 +91,18 @@ def db_session(test_engine: Engine) -> Iterator[Session]:
     with Session(test_engine) as session:
         yield session
         session.rollback()
-    # 테스트 사이의 격리를 위해 모든 행을 삭제합니다. 이전에는 migration 이 생성한
-    # positions 행만 남겼는데, 그 table 이 삭제되어 남길 행이 없습니다.
+    # 테스트 사이의 격리를 위해 모든 행을 삭제합니다. settings 만 지우지 않고 기본값으로
+    # 되돌립니다. 그 한 줄은 테스트가 만든 데이터가 아니라 migration 이 넣는 schema 의
+    # 일부여서, 지우면 칸 크기를 읽는 코드가 전부 실패합니다(api/settings_service.py 의 _row).
+    # 그렇다고 그대로 두면 값을 바꾼 테스트가 다음 테스트로 새어 나갑니다.
     with test_engine.begin() as connection:
         for table in reversed(Base.metadata.sorted_tables):
+            if table.name == "settings":
+                continue
             connection.execute(table.delete())
+        connection.execute(
+            update(Settings).values(slot_minutes=DEFAULT_SLOT_MINUTES)
+        )
 
 
 @pytest.fixture()

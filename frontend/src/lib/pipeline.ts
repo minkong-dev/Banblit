@@ -50,7 +50,7 @@ import {
 export type RoomForm = { name: string; opens_at: string; closes_at: string };
 export type PeriodForm = { starts_on: string; ends_on: string };
 
-export function checkRoom(form: RoomForm, taken: string[]): string {
+export function checkRoom(form: RoomForm, taken: string[], slotMinutes: number): string {
   // 이름을 먼저 검증합니다. 이름이 비었거나 겹치면 시각이 유효해도 저장할 수 없고,
   // 오류 메시지를 한 번에 하나만 표시하므로 먼저 수정할 것을 앞에 둡니다.
   const name = roomNameMessage(form.name, taken);
@@ -58,7 +58,7 @@ export function checkRoom(form: RoomForm, taken: string[]): string {
 
   // 여는 시각과 닫는 시각은 한 쌍으로만 검증합니다. 정시 격자를 벗어났는지와
   // 순서가 뒤집혔는지를 따로 검증하면 둘 다 위반했을 때 오류 메시지가 2번에 나뉘어 표시됩니다.
-  return openHoursMessage(form.opens_at, form.closes_at);
+  return openHoursMessage(form.opens_at, form.closes_at, slotMinutes);
 }
 
 /** 서버에 보낼 기간 값입니다. 매일이 켜진 집중 합주기간은 종료일이 없으므로(사용자 결정 2026-09-11)

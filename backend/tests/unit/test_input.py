@@ -27,6 +27,13 @@ from backend.api.input import (
 )
 
 
+# 이 파일은 격자 검증만 보므로 칸 크기를 60분으로 고정해 넘깁니다. 설정에서 읽는 것은
+# 이 함수를 부르는 service 들의 일이고, 그쪽은 통합 테스트가 봅니다.
+def require_valid_slot_bounds_60(starts_at: datetime, ends_at: datetime) -> None:
+    require_valid_slot_bounds(starts_at, ends_at, 60)
+
+
+
 def test_require_non_empty_trims_surrounding_whitespace() -> None:
     assert require_non_empty("  안녕하세요  ", "제목") == "안녕하세요"
 
@@ -212,24 +219,24 @@ def test_rejects_ending_after_the_room_closes() -> None:
 
 
 def test_accepts_a_valid_on_the_hour_aligned_interval() -> None:
-    require_valid_slot_bounds(datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 20))
+    require_valid_slot_bounds_60(datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 20))
 
 
 def test_rejects_off_grid_minutes() -> None:
     with pytest.raises(ValueError, match="정시"):
-        require_valid_slot_bounds(datetime(2026, 9, 14, 18, 10), datetime(2026, 9, 14, 19, 0))
+        require_valid_slot_bounds_60(datetime(2026, 9, 14, 18, 10), datetime(2026, 9, 14, 19, 0))
 
 
 def test_rejects_an_end_not_after_the_start() -> None:
     with pytest.raises(ValueError):
-        require_valid_slot_bounds(datetime(2026, 9, 14, 19, 0), datetime(2026, 9, 14, 18, 0))
+        require_valid_slot_bounds_60(datetime(2026, 9, 14, 19, 0), datetime(2026, 9, 14, 18, 0))
 
 
 def test_rejects_timezone_aware_moments() -> None:
     from datetime import timezone
 
     with pytest.raises(ValueError, match="시간대"):
-        require_valid_slot_bounds(
+        require_valid_slot_bounds_60(
             datetime(2026, 9, 14, 18, 0, tzinfo=timezone.utc),
             datetime(2026, 9, 14, 19, 0, tzinfo=timezone.utc),
         )

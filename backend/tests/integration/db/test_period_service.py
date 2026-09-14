@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.api.period_service import assign_period, open_slots_in_period
-from backend.scheduling.slots import SLOT_MINUTES
+from backend.scheduling.slots import DEFAULT_SLOT_MINUTES
 from backend.db.models import (
     Assignment,
     AssignmentBackup,
@@ -529,7 +529,7 @@ def test_open_slots_come_from_the_saved_schedule_without_recomputing(
     assert len(left_open) == 1
     assert left_open[0].room_id == room_id
     assert left_open[0].room == "1번방"
-    assert left_open[0].end - left_open[0].start == timedelta(minutes=SLOT_MINUTES)
+    assert left_open[0].end - left_open[0].start == timedelta(minutes=DEFAULT_SLOT_MINUTES)
 
 
 def test_open_slots_are_empty_when_nothing_is_assigned(db_session: Session) -> None:

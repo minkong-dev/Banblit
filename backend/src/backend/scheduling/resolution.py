@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from backend.scheduling.assignment import Assignment, Room, assign
 from backend.scheduling.availability import Team
+from backend.scheduling.slots import DEFAULT_SLOT_MINUTES
 
 
 @dataclass
@@ -20,8 +21,9 @@ def resolve(
     teams: list[Team],
     rooms: list[Room],
     slots_per_team: int,
+    slot_minutes: int = DEFAULT_SLOT_MINUTES,
 ) -> Resolution:
-    base = assign(teams, rooms, slots_per_team)
+    base = assign(teams, rooms, slots_per_team, slot_minutes)
     if base.feasible:
         return Resolution(assignment=base, proposals=[])
 
@@ -31,7 +33,7 @@ def resolve(
         # 한 멤버를 제외했을 때 멤버가 0명인 팀이 생기면, 그 멤버를 제외한 계산은 조율안이 될 수 없으므로 건너뜁니다.
         if any(not team.members for team in reduced):
             continue
-        trial = assign(reduced, rooms, slots_per_team)
+        trial = assign(reduced, rooms, slots_per_team, slot_minutes)
         if trial.feasible:
             proposals.append(
                 ExclusionProposal(excluded_member=member_id, assignment=trial)

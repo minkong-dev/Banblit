@@ -246,7 +246,7 @@ def test_slots_per_team_is_the_whole_grid_divided_by_team_count() -> None:
         rooms, [date(2026, 8, 1), date(2026, 8, 2)]
     )  # 8칸
 
-    assert auto_slots_per_team(engine_rooms, team_count=3) == 2
+    assert auto_slots_per_team(engine_rooms, slot_minutes=60, team_count=3) == 2
 
 
 def test_slots_per_team_is_rejected_when_no_team_can_get_a_slot() -> None:
@@ -254,7 +254,7 @@ def test_slots_per_team_is_rejected_when_no_team_can_get_a_slot() -> None:
     engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
 
     with pytest.raises(ValueError, match="한 칸도"):
-        auto_slots_per_team(engine_rooms, team_count=3)
+        auto_slots_per_team(engine_rooms, slot_minutes=60, team_count=3)
 
 
 def test_slots_per_team_is_rejected_when_there_are_no_teams() -> None:
@@ -262,7 +262,7 @@ def test_slots_per_team_is_rejected_when_there_are_no_teams() -> None:
     engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
 
     with pytest.raises(ValueError, match="배정할 팀이 없습니다"):
-        auto_slots_per_team(engine_rooms, team_count=0)
+        auto_slots_per_team(engine_rooms, slot_minutes=60, team_count=0)
 
 
 def test_two_people_with_the_same_name_stay_separate() -> None:

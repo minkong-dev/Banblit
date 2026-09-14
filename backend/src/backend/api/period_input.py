@@ -91,12 +91,16 @@ def build_engine_rooms(rooms: list[Room], days: list[date]) -> list[EngineRoom]:
     return engine_rooms
 
 
-def auto_slots_per_team(engine_rooms: list[EngineRoom], team_count: int) -> int:
-    """전체 slot(1시간 단위 시간 칸)을 팀 수로 나누어 팀마다 가질 slot 개수를 반환합니다(나머지는 남는 slot)."""
+def auto_slots_per_team(
+    engine_rooms: list[EngineRoom], team_count: int, slot_minutes: int
+) -> int:
+    """전체 slot(시간 칸)을 팀 수로 나누어 팀마다 가질 slot 개수를 반환합니다(나머지는 남는 slot)."""
     if team_count <= 0:
         raise ValueError("배정할 팀이 없습니다")
 
-    total = sum(len(generate_slots(room.open_period)) for room in engine_rooms)
+    total = sum(
+        len(generate_slots(room.open_period, slot_minutes)) for room in engine_rooms
+    )
     per_team = total // team_count
     if per_team == 0:
         raise ValueError(

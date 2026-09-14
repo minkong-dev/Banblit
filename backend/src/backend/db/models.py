@@ -21,6 +21,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from backend.scheduling.slots import DEFAULT_SLOT_MINUTES
+
 # 권한 항목입니다. 생성·수정·삭제·조회를 따로 두어, permission set(권한 집합)을 만드는 사람이
 # 필요한 항목만 선택해 묶을 수 있게 합니다. 항목이 늘면 그 항목을 처리하는 서버 코드도
 # 같이 늘어나므로 데이터가 아니라 이 코드에 고정합니다. 활성화/비활성화 여부만 permission_sets 에
@@ -72,6 +74,25 @@ def _in_sql(column: str, allowed: tuple[str, ...]) -> str:
 
 class Base(DeclarativeBase):
     pass
+
+
+class Settings(Base):
+    """저장소 전체에 하나뿐인 설정입니다. id 가 1 로 못박혀 있어 행이 둘 이상 생기지 않습니다.
+
+    값마다 허용 범위가 달라 키·값 table 로 두지 않고 열로 둡니다. 그래야 CHECK 로 지킬 수 있습니다.
+    """
+
+    __tablename__ = "settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # 예약과 배정이 쓰는 시간 칸의 크기입니다. 한 시간을 남김없이 나누어야 격자가 고르게
+    # 떨어지므로 60 의 약수만 받습니다.
+    slot_minutes: Mapped[int] = mapped_column(default=DEFAULT_SLOT_MINUTES)
+
+    __table_args__ = (
+        CheckConstraint("id = 1"),
+        CheckConstraint("slot_minutes BETWEEN 5 AND 60 AND 60 % slot_minutes = 0"),
+    )
 
 
 class Member(Base):
