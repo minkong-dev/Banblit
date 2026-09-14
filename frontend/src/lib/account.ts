@@ -2,12 +2,15 @@
 
 import type { Account, Permission } from "./contract";
 
-/** 프로필 카드에 표시하는 역할 이름입니다. 화면 4곳(Board·Notices·Profile·Teams)에서 사용합니다. */
-export function roleLabel(role: Account["role"]): string {
-  return role === "head_manager" ? "헤드매니저" : "일반멤버";
+/** 프로필 카드에 표시하는 역할 이름입니다. 가진 permission set(권한 집합)의 이름을 ", " 로 이어 표시하고,
+ *  하나도 없으면 "일반멤버", 아직 계정을 받지 못했으면 빈 문자열을 반환합니다(사용자 결정 2026-09-11). */
+export function roleLabel(me: Account | null): string {
+  if (!me) return "";
+  const names = me.permission_sets ?? [];
+  return names.length === 0 ? "일반멤버" : names.join(", ");
 }
 
-/** 항목 18개와 그 한국어 이름·설명입니다. 순서는 서버가 고정한 선언 순서 그대로입니다.
+/** 항목 19개와 그 한국어 이름·설명입니다. 순서는 서버가 고정한 선언 순서 그대로입니다.
  *  설명은 권한을 켜면 무엇을 할 수 있게 되는지를 한 줄로 적습니다.
  *  예를 들어 이름만으로는 "되돌리기"가 무엇을 되돌리는지 명확하지 않기 때문입니다. */
 export const PERMISSION_ITEMS: readonly {
@@ -59,6 +62,11 @@ export const PERMISSION_ITEMS: readonly {
     key: "member_remove",
     label: "포지션 배치 인원 제외",
     note: "본인을 포함해 포지션에 이미 배치된 멤버를 해제할 수 있어요.",
+  },
+  {
+    key: "member_expel",
+    label: "멤버 추방",
+    note: "멤버의 계정을 삭제해 서비스에서 내보낼 수 있어요. 글·댓글·예약도 함께 삭제돼요.",
   },
   {
     key: "notice_write",

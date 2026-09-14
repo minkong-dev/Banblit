@@ -132,7 +132,7 @@ export function ProfileMenu() {
   const { me } = useMe();
   const teams = useMyTeams();
   const name = me?.name ?? "";
-  const sub = me ? roleLabel(me.role) : "";
+  const sub = roleLabel(me);
   const initial = name.slice(0, 2);
 
   // 팀마다 그 팀의 명단을 받습니다. 명단에서 내 번호와 같은 사람을 찾으면 그 사람이

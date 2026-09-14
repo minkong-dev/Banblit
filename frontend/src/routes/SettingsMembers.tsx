@@ -18,8 +18,10 @@ import {
 } from "../components/icons";
 import { getJSON, reason } from "../lib/api";
 import { say } from "../lib/toast";
-import { PERMISSION_ITEMS } from "../lib/account";
-import { askDelete } from "../lib/confirm";
+import { PERMISSION_ITEMS, can } from "../lib/account";
+import { askDelete, askExpel } from "../lib/confirm";
+import { useMe } from "../components/hooks";
+import { expelMember } from "../lib/pipeline";
 import type { MemberRow, Permission, PermissionSet } from "../lib/contract";
 
 const SETS_KEY = ["permission-sets"];
@@ -344,8 +346,11 @@ function MemberRoster(props: {
   done: boolean;
   onMore: () => unknown;
   sets: string[];
+  /** member_expel 권한이 있으면 각 행에 추방 버튼을 표시합니다. 로그인한 본인 행에는 표시하지 않습니다. */
+  onExpel: ((row: MemberRow) => void) | null;
+  meId: number | null;
 }) {
-  const { rows, done, onMore, sets } = props;
+  const { rows, done, onMore, sets, onExpel, meId } = props;
   const [filter, setFilter] = useState("");
   const foot = useRef<HTMLDivElement | null>(null);
 
@@ -392,6 +397,7 @@ function MemberRoster(props: {
               <th>권한</th>
               {/* 남는 가로 공간을 차지하는 빈 칸입니다. 이 요소가 없으면 넓은 화면에서 앞의 열들이 가로 공간을 나눠 가져 값 사이가 크게 벌어집니다. */}
               <th className="fill" aria-hidden="true" />
+              {onExpel === null ? null : <th>추방</th>}
             </tr>
           </thead>
           <tbody>
@@ -403,6 +409,20 @@ function MemberRoster(props: {
                 <td>{row.cohort === null ? "—" : `${row.cohort}기`}</td>
                 <td>{row.permission_sets.join(" · ") || "—"}</td>
                 <td className="fill" />
+                {onExpel === null ? null : (
+                  <td>
+                    {/* 자기 계정은 탈퇴로만 삭제합니다. 서버도 자기 자신의 추방을 거부합니다. */}
+                    {row.id === meId ? null : (
+                      <button
+                        className="ic danger"
+                        aria-label={`${row.name} 추방`}
+                        onClick={() => onExpel(row)}
+                      >
+                        <TrashIcon />
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -432,6 +452,19 @@ export function MemberCards() {
   const rows = list.data?.pages.flatMap((page) => page.members) ?? [];
   const sets = [...new Set(rows.flatMap((row) => row.permission_sets))].sort();
 
+  const { me } = useMe();
+  const client = useQueryClient();
+  // 추방은 계정 삭제입니다(사용자 결정 2026-09-14). 삭제가 끝나면 명단을 서버에서 다시 조회합니다.
+  const expel = useMutation({
+    mutationFn: (row: MemberRow) => expelMember(row.id),
+    onSuccess: (_result, row) => {
+      say(`${row.name} 님을 추방했어요.`);
+      void client.invalidateQueries({ queryKey: MEMBERS_KEY });
+      void client.invalidateQueries({ queryKey: SETS_KEY });
+    },
+    onError: (error) => say(reason(error, "추방하지 못했어요.")),
+  });
+
   return (
     <>
       <SetRail />
@@ -440,6 +473,12 @@ export function MemberCards() {
         done={!list.hasNextPage}
         sets={sets}
         onMore={list.fetchNextPage}
+        meId={me?.id ?? null}
+        onExpel={
+          can(me, "member_expel")
+            ? (row) => { if (!expel.isPending && askExpel(row.name)) expel.mutate(row); }
+            : null
+        }
       />
     </>
   );

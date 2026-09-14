@@ -52,7 +52,7 @@ export function Profile() {
             <span className="big" aria-hidden="true">{name.slice(0, 2)}</span>
             <div>
               <h1>{name}</h1>
-              <span className="role">{me ? roleLabel(me.role) : ""}</span>
+              <span className="role">{roleLabel(me)}</span>
             </div>
           </div>
           <div className="read">

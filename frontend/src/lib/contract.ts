@@ -89,6 +89,7 @@ export type Permission =
   | "team_delete"
   | "member_add"
   | "member_remove"
+  | "member_expel"
   | "notice_write"
   | "board_moderate"
   | "reservation_manage"
@@ -106,6 +107,8 @@ export type Account = {
   /** 저장된 값이 아니라 permissions 에서 계산한 값입니다. 18가지가 모두 켜져 있으면 head_manager 입니다. */
   role: "head_manager" | "member";
   permissions: Permission[];
+  /** 가진 permission set(권한 집합)의 이름입니다. 화면은 "헤드매니저" 고정 문구 대신 이 이름을 역할로 표시합니다. */
+  permission_sets: string[];
   /** 기수입니다. 화면이 동명이인을 구분할 때 이름 옆에 붙입니다. */
   cohort: number | null;
 };

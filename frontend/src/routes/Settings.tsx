@@ -9,7 +9,7 @@ import { getJSON } from "../lib/api";
 import { formError, loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { say } from "../lib/toast";
-import { checkPeriod, checkRoom, daysBetween, openingHours } from "../lib/pipeline";
+import { checkPeriod, checkRoom, daysBetween, openingHours, periodBody } from "../lib/pipeline";
 import { useMe, usePeriods, useRooms, useTeams } from "../components/hooks";
 import { can } from "../lib/account";
 import { applyTheme, readSavedTheme } from "../lib/theme";
@@ -260,16 +260,19 @@ function PeriodFields(props: {
           onChange={(event) => setForm({ ...form, starts_on: event.target.value })}
         />
       </Cell>
-      <Cell label="종료일" htmlFor={at("ends")}>
-        <input
-          type="date"
-          value={form.ends_on}
-          id={at("ends")}
-          aria-invalid={bad !== ""}
-          aria-describedby={bad === "" ? undefined : whyId}
-          onChange={(event) => setForm({ ...form, ends_on: event.target.value })}
-        />
-      </Cell>
+      {/* 매일이 켜진 집중 합주기간은 종료일이 없습니다(사용자 결정 2026-09-11). 입력칸을 감추고 서버에는 시작일을 종료일로 보냅니다. */}
+      {form.kind === "focused" && form.everyday ? null : (
+        <Cell label="종료일" htmlFor={at("ends")}>
+          <input
+            type="date"
+            value={form.ends_on}
+            id={at("ends")}
+            aria-invalid={bad !== ""}
+            aria-describedby={bad === "" ? undefined : whyId}
+            onChange={(event) => setForm({ ...form, ends_on: event.target.value })}
+          />
+        </Cell>
+      )}
       {form.kind === "focused" ? (
         <>
           <Cell label="매일" htmlFor={at("everyday")}>
@@ -471,7 +474,11 @@ function PeriodCard(props: {
               <Row
                 key={period.id}
                 title={KIND_TEXT[period.kind] + (period.everyday ? " · 매일" : "")}
-                when={<><b>{period.starts_on}</b> 부터 <b>{period.ends_on}</b> 까지</>}
+                when={
+                  period.everyday
+                    ? <><b>{period.starts_on}</b> 부터 매일</>
+                    : <><b>{period.starts_on}</b> 부터 <b>{period.ends_on}</b> 까지</>
+                }
                 span={periodSpan(period)}
                 editLabel={canEdit ? `${period.starts_on} 부터의 기간을 수정` : undefined}
                 buttonRef={canEdit ? register(period.id) : undefined}
@@ -521,7 +528,7 @@ function PeriodForm(props: {
     mutationFn: () =>
       getJSON<{ period: Period }>(path, {
         method,
-        body: JSON.stringify(form),
+        body: JSON.stringify(periodBody(form)),
       }),
     onSuccess: () => {
       if (method === "POST") reset();

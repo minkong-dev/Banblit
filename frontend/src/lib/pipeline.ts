@@ -61,9 +61,19 @@ export function checkRoom(form: RoomForm, taken: string[]): string {
   return openHoursMessage(form.opens_at, form.closes_at);
 }
 
+/** 서버에 보낼 기간 값입니다. 매일이 켜진 집중 합주기간은 종료일이 없으므로(사용자 결정 2026-09-11)
+ *  화면이 감춘 종료일 대신 시작일을 종료일로 보냅니다. 서버는 ends_on 을 필수로 받고 everyday 면 무시합니다. */
+export function periodBody<T extends PeriodForm & { kind?: string; everyday?: boolean }>(form: T): T {
+  if (form.kind === "focused" && form.everyday) {
+    return { ...form, ends_on: form.starts_on };
+  }
+  return form;
+}
+
 export function checkPeriod(form: PeriodForm): string {
   // 기간은 시작일과 종료일 2개를 검증합니다. 종류와 계산 시각은 선택 옵션이라 검증할 항목이 없습니다.
-  return dateRangeMessage(form.starts_on, form.ends_on);
+  const body = periodBody(form);
+  return dateRangeMessage(body.starts_on, body.ends_on);
 }
 
 export type Opening = { rooms: RoomForm[]; days: number; teams: number };
@@ -223,6 +233,11 @@ export async function cancelBooking(reservationIds: readonly number[]): Promise<
 /** 자신이 등록한 불가능 일정 하나를 삭제합니다. 다른 사용자의 일정은 서버가 없는 일정과 같게 거절합니다. */
 export async function removeUnavailable(memberId: number, timeId: number): Promise<void> {
   await getJSON(`/members/${memberId}/unavailable/${timeId}`, { method: "DELETE" });
+}
+
+/** 멤버를 추방합니다. 서버는 계정을 삭제하므로 그 멤버의 글·댓글·예약도 함께 삭제됩니다(사용자 결정 2026-09-14). member_expel 권한이 필요합니다. */
+export async function expelMember(memberId: number): Promise<void> {
+  await getJSON(`/members/${memberId}`, { method: "DELETE" });
 }
 
 export async function addReservation(form: ReservationForm): Promise<Reservation[]> {
