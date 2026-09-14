@@ -705,27 +705,25 @@ docker compose -f docker-compose.yml run --rm api alembic upgrade head
 ### 11-2. 배포한 서버를 새 버전으로 갱신하기
 
 ```
-./deploy/deploy.sh
+./banblit.sh update
 ```
 
 - **실행 경로**: 서버의 저장소 루트
-- **용도**: 코드를 최신으로 갱신합니다. 다섯 단계를 정해진 순서로 실행합니다.
-  1. `git pull` — 코드를 가져옵니다.
-  2. `docker compose -f docker-compose.yml build` — image 를 생성합니다.
-  3. `docker compose -f docker-compose.yml up -d db` 후 `pg_dump` — 고치기 직전 상태를 한 벌 뜹니다.
-     `BACKUP_DIR` 에 `pre-migrate-<시각>.sql.gz` 로 남습니다.
-  4. `docker compose -f docker-compose.yml run --rm api alembic upgrade head` — 마이그레이션을 적용합니다.
-  5. `docker compose -f docker-compose.yml up -d` — 서비스를 교체합니다.
+- **용도**: 코드를 가져오고 서비스를 새 버전으로 교체합니다. `git pull` 을 실행한 뒤
+  `up` 과 같은 순서로 진행합니다 — `.env` 필수값 확인, image 생성, `db` 기동,
+  **마이그레이션 직전 백업**, `alembic upgrade head`, 나머지 서비스 기동, 응답 대기.
 - **주의점**
   - **마이그레이션이 서비스 교체보다 먼저입니다.** 새 코드가 먼저 실행되면 아직 없는 열을 읽어
     500 이 발생합니다(개발에서 실제로 발생했습니다. 오류는 `column members.department does not exist`
-    였습니다). 스크립트가 이 순서를 고정하고 있어 직접 칠 때처럼 순서를 틀릴 일이 없습니다.
+    였습니다). 스크립트가 이 순서를 고정합니다.
   - **백업이 마이그레이션 앞에 있습니다.** `backup` 서비스는 6시간마다 뜨므로 그것만 믿으면
-    되돌릴 지점이 최대 6시간 어긋납니다. 백업에 실패하면 마이그레이션을 적용하지 않고 종료합니다.
-  - 되돌려야 하면 마이그레이션도 함께 되돌려야 합니다(`4-2-1`). 3번에서 뜬 파일이 되돌리기
-    직전 상태입니다.
-  - 스크립트를 쓰지 않고 직접 칠 때는 `-f docker-compose.yml` 을 빠뜨리지 마십시오. **생략하면
-    개발 설정이 적용되어 cookie 의 Secure 가 비활성화되고 caddy·backup 이 실행되지 않습니다.**
+    되돌릴 지점이 최대 6시간 어긋납니다. `BACKUP_DIR` 에 `pre-migrate-<시각>.sql.gz` 로 남고,
+    백업에 실패하면 마이그레이션을 실행하지 않고 멈춥니다.
+  - 마이그레이션만 따로 실행할 때(`./banblit.sh migrate`)도 같은 백업이 먼저 실행됩니다.
+  - 되돌려야 하면 마이그레이션도 함께 되돌려야 합니다(`4-2-1`). `pre-migrate-*.sql.gz` 가
+    되돌리기 직전 상태입니다.
+  - 리눅스에서는 `--deploy` 를 적지 않아도 배포용으로 돕니다. 윈도우에서 배포용을 돌리려면
+    `--deploy` 를 붙여야 합니다.
   - **아직 서버에서 실행해 확인하지 않았습니다.** 처음 실행할 때 각 단계가 기대대로 도는지
     확인하고, 어긋나는 것이 있으면 이 절을 고치십시오.
 

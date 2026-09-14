@@ -167,6 +167,33 @@ assert_deploy_env() {
   good "$domain"
 }
 
+# migration 이 값을 지우면 되돌릴 곳이 필요하다. backup service 는 6시간마다 뜨므로
+# 그것만 믿으면 되돌릴 지점이 그만큼 어긋난다. 고치기 직전 상태를 한 벌 더 뜬다.
+backup_db() {
+  local user database out stamp file
+  user="$(env_value POSTGRES_USER)"
+  database="$(env_value POSTGRES_DB)"
+  out="$(env_value BACKUP_DIR)"
+  out="${out:-./backups}"
+  [ -n "$user" ] && [ -n "$database" ] || {
+    fail "POSTGRES_USER·POSTGRES_DB 를 .env 에서 읽지 못했습니다."
+    exit 1
+  }
+
+  mkdir -p "$out"
+  stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  file="$out/pre-migrate-$stamp.sql.gz"
+
+  # 맨 위 set -o pipefail 이 있어 pg_dump 가 죽으면 gzip 이 성공해도 실패로 잡힌다.
+  if ! "${COMPOSE[@]}" exec -T db pg_dump --clean --if-exists -U "$user" -d "$database"       | gzip > "$file.part"; then
+    rm -f "$file.part"
+    fail "백업을 뜨지 못했습니다. migration 을 실행하지 않습니다."
+    exit 1
+  fi
+  mv "$file.part" "$file"
+  good "$file"
+}
+
 wait_url() {
   local url="$1" timeout="$2" label="$3" deadline
   deadline=$(( SECONDS + timeout ))
@@ -313,6 +340,7 @@ up_deploy() {
 
   step "데이터베이스를 띄우고 migration 을 맞춥니다"
   "${COMPOSE[@]}" up -d db
+  backup_db
   # 배포용 image 안에 alembic.ini 와 migrations 가 함께 들어 있다(backend/Dockerfile).
   # --no-deps 는 이 한 번을 위해 web·caddy 까지 딸려 뜨는 것을 막는다.
   "${COMPOSE[@]}" run --rm --no-deps api alembic upgrade head
@@ -339,6 +367,15 @@ cmd_up() {
   if [ "$MODE" = 'deploy' ]; then up_deploy; else up_dev; fi
   # 뜬 뒤에 등록한다. 띄우다 실패한 자리에 이름만 남기지 않으려는 것이다.
   register_command
+}
+
+# 서버를 새 버전으로 갱신한다. git pull 이 이 파일 자체를 바꾸지만, bash 는 함수를
+# 정의할 때 본문을 전부 읽어 두므로 실행 중에 바뀌어도 어긋나지 않는다.
+cmd_update() {
+  assert_ready
+  step "코드를 가져옵니다"
+  git pull
+  cmd_up
 }
 
 cmd_down() {
@@ -404,6 +441,7 @@ cmd_migrate() {
   if [ "$MODE" = 'deploy' ]; then
     assert_deploy_env
     "${COMPOSE[@]}" up -d db
+    backup_db
     "${COMPOSE[@]}" run --rm --no-deps api alembic upgrade head
     "${COMPOSE[@]}" run --rm --no-deps api alembic current
   else
@@ -450,6 +488,7 @@ banblit — 띄우고 내립니다. 윈도우와 리눅스 서버가 같은 파�
 
 명령
   up        image 확인, migration, 기동, 응답 대기 (기본값)
+  update    git pull 로 코드를 가져온 뒤 up 을 실행합니다. 서버 갱신은 이것 하나면 됩니다
   down      service 를 내립니다. 데이터는 volume 에 남습니다
   restart   다시 띄웁니다. service 를 적지 않으면 api 와 web
   logs      최근 1분 로그를 봅니다
@@ -481,6 +520,7 @@ fi
 
 case "$COMMAND" in
   up)      cmd_up ;;
+  update)  cmd_update ;;
   down)    cmd_down ;;
   restart) cmd_restart ;;
   logs)    cmd_logs ;;
