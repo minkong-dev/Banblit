@@ -91,7 +91,7 @@ describe("teamsOf", () => {
   ];
 
   it("내 팀은 목록 순서가 아니라 내가 실제로 앉은 팀이다", () => {
-    const got = teamsOf(rows, [2]);
+    const got = teamsOf(rows, [2], []);
     expect(got.map((team) => [team.id, team.mine])).toEqual([
       [1, false],
       [2, true],
@@ -99,6 +99,25 @@ describe("teamsOf", () => {
   });
 
   it("자리를 아직 못 받아왔으면 내 팀이 없다", () => {
-    expect(teamsOf(rows, []).every((team) => !team.mine)).toBe(true);
+    expect(teamsOf(rows, [], []).every((team) => !team.mine)).toBe(true);
+  });
+});
+
+describe("teamsOf — 색", () => {
+  const rows = [
+    { team_id: 2, team: "곰팡이" },
+    { team_id: 1, team: "청산" },
+  ];
+
+  it("전체 팀 목록에서의 자리로 색을 매긴다 — 프로필 말풍선(useMyTeams)과 같은 색이 난다", () => {
+    const all = [{ id: 1 }, { id: 5 }, { id: 2 }];
+    expect(teamsOf(rows, [], all).map((team) => [team.id, team.key])).toEqual([
+      [1, "c1"],
+      [2, "c3"],
+    ]);
+  });
+
+  it("목록을 아직 못 받아왔으면 시간표에 나온 순서로 색을 매긴다", () => {
+    expect(teamsOf(rows, [], []).map((team) => team.key)).toEqual(["c1", "c2"]);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dayOf, hhmm, isoAt, mergeReservations, mergeSessions, slotIndex } from "./slots";
+import { dayOf, hhmm, isoAt, mergeReservations, mergeSessions, slotIndex, upcomingBookings } from "./slots";
 import type { Session } from "./slots";
 
 const slot = (team: string, room: string, start: string, end: string): Session => ({
@@ -189,5 +189,23 @@ describe("mergeReservations — 칸마다 쪼개진 예약을 한 건으로 잇�
     mergeReservations(rows);
 
     expect(rows).toEqual(before);
+  });
+});
+
+describe("upcomingBookings — 설정의 예약 탭이 보는 목록", () => {
+  const slot = (id: number, room: string, start: string, end: string) => ({
+    id, room, teamId: null, team: null, memberId: 7, member: "고윤서", start, end,
+  });
+
+  it("합주실과 무관하게 시작 시각 순으로 세우고, 맞닿은 칸은 한 건으로 잇는다", () => {
+    const rows = [
+      slot(3, "합주실 B", "2026-09-20T20:00:00", "2026-09-20T21:00:00"),
+      slot(1, "합주실 A", "2026-09-21T18:00:00", "2026-09-21T19:00:00"),
+      slot(2, "합주실 A", "2026-09-21T19:00:00", "2026-09-21T20:00:00"),
+    ];
+    expect(upcomingBookings(rows).map((booking) => [booking.room, booking.ids])).toEqual([
+      ["합주실 B", [3]],
+      ["합주실 A", [1, 2]],
+    ]);
   });
 });

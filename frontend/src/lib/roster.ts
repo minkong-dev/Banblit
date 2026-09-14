@@ -48,8 +48,14 @@ export function colorKey(index: number): string {
  *  만들어 쓰는 것이다. 색(key)과 내 팀인지(mine)를 함께 든다. */
 export type DayTeam = { id: number; name: string; key: string; mine: boolean };
 
-export function teamsOf(rows: TeamRow[], myTeamIds: number[]): DayTeam[] {
-  // 확정된 시간표에 나온 팀을 번호 순으로 모으고, 자리 순서로 달력 색을 매긴다.
+export function teamsOf(
+  rows: TeamRow[],
+  myTeamIds: number[],
+  allTeams: readonly { id: number }[],
+): DayTeam[] {
+  // 확정된 시간표에 나온 팀을 번호 순으로 모은다. 색은 전체 팀 목록(allTeams)에서의
+  // 자리로 매긴다 — 프로필 말풍선(components/hooks useMyTeams)과 같은 규칙이라 같은 팀이
+  // 두 곳에서 다른 색으로 보이지 않는다. 목록을 아직 못 받았으면 시간표 순서로 임시로 칠한다.
   // mine 은 목록에서의 자리가 아니라 myTeamIds(로그인한 계정이 실제로 앉은 자리)로 정한다.
   const seen = new Map<number, string>();
   for (const row of rows) {
@@ -58,12 +64,10 @@ export function teamsOf(rows: TeamRow[], myTeamIds: number[]): DayTeam[] {
   const mine = new Set(myTeamIds);
   return [...seen.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([id, name], index) => ({
-      id,
-      name,
-      key: colorKey(index),
-      mine: mine.has(id),
-    }));
+    .map(([id, name], index) => {
+      const at = allTeams.findIndex((team) => team.id === id);
+      return { id, name, key: colorKey(at === -1 ? index : at), mine: mine.has(id) };
+    });
 }
 
 /** /me 가 준 자리 목록에서 팀 번호만 뽑는다. 한 팀에 자리는 하나뿐이라 겹치지 않는다. */

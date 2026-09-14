@@ -3,6 +3,7 @@
 import { getJSON, sendFile } from "./api";
 import type { Account, Me, Member, Notification, Reservation, Unavailable } from "./contract";
 import {
+  dayKey,
   datesBetween,
   dayLabel,
   dayWithWeekday,
@@ -31,6 +32,7 @@ import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_HINT,
   attachmentMessage,
+  boardActions,
   bodyMessage,
   commentMessage,
   fileSizeLabel,
@@ -123,7 +125,7 @@ export { colorKey, memberLabel, myTeamIds, slotName };
 export { teamNameMessage as checkTeamName, slotCountsMessage as checkSlotCounts };
 
 // 게시판·공지 화면이 쓰는 계산. fileSizeLabel 은 order 의존이 없어 그대로 다시 내보낸다.
-export { ATTACHMENT_ACCEPT, ATTACHMENT_HINT, fileSizeLabel };
+export { ATTACHMENT_ACCEPT, ATTACHMENT_HINT, boardActions, fileSizeLabel };
 
 
 export type AssignBody = { team_ids: number[]; room_ids: number[] };
@@ -241,9 +243,10 @@ export {
   mergeReservations,
   mergeSessions,
   slotIndex,
+  upcomingBookings,
 } from "./slots";
 export type { Booking, Session } from "./slots";
-export { datesBetween, isRangeFree, monthCells, slotCountOf, slotLabel, takenGrid, weekKeys };
+export { dayKey, datesBetween, isRangeFree, monthCells, slotCountOf, slotLabel, takenGrid, weekKeys };
 export { dayLabel, dayWithWeekday, stampLabel, WEEKDAY_NAMES };
 export { hoursLabel };
 export {
@@ -252,6 +255,7 @@ export {
   passwordMessage,
   signupPasswordMessage,
   strongPasswordMessage,
+  studentNoMessage,
 } from "./validate";
 
 export type SignUpForm = {

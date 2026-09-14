@@ -65,3 +65,10 @@ export function uniqueNameMessage(name: string, taken: string[], what: string): 
   const clash = taken.some((other) => other.trim() === trimmed);
   return clash ? `같은 이름의 ${what}이 이미 있습니다.` : "";
 }
+
+/** 학번. 숫자 8자리만 받는다. 서버의 같은 규칙은 input.py 의 require_student_no 다. */
+export function studentNoMessage(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "학번을 입력해 주세요.";
+  return /^\d{8}$/.test(trimmed) ? "" : "학번은 숫자 8자리여야 해요.";
+}

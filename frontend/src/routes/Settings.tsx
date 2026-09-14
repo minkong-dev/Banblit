@@ -15,6 +15,7 @@ import { can } from "../lib/account";
 import { applyTheme, readSavedTheme } from "../lib/theme";
 import type { Theme } from "../lib/theme";
 import { MemberCards } from "./SettingsMembers";
+import { ReservationCards } from "./SettingsReservations";
 import { AccountCards } from "./SettingsAccount";
 import {
   Cell,
@@ -29,7 +30,7 @@ import "../styles/settings.css";
 import type { Period, Room, Team } from "../lib/contract";
 
 
-type Tab = "rooms" | "periods" | "members" | "account";
+type Tab = "rooms" | "periods" | "members" | "reservations" | "account";
 
 // 탭마다 필요한 항목이 다르다. 가진 것만 보이므로, 아무 관리 항목도 없는 사람에게는
 // 계정 탭 하나가 남는다 — 내 정보·비밀번호·화면 밝기·탈퇴가 전부 자기 것에 대한
@@ -39,6 +40,7 @@ const TABS = [
   { key: "rooms" as const, text: "합주실", needs: ["room_create", "room_edit"] as const },
   { key: "periods" as const, text: "기간", needs: ["period_create", "period_edit"] as const },
   { key: "members" as const, text: "멤버", needs: ["permission_manage", "permission_grant"] as const },
+  { key: "reservations" as const, text: "예약", needs: ["reservation_manage"] as const },
   { key: "account" as const, text: "계정", needs: null },
 ];
 
@@ -151,12 +153,14 @@ export function Settings() {
           />
         ) : shown === "members" ? (
           <MemberCards />
+        ) : shown === "reservations" ? (
+          <ReservationCards />
         ) : (
           <AccountCards theme={<ThemeCard />} />
         )}
       </div>
 
-      {shown === "members" || shown === "account" ? null : (
+      {shown === "members" || shown === "reservations" || shown === "account" ? null : (
         <div className="rail">
           <Readout
             rooms={roomList}
