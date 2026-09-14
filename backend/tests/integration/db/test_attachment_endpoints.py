@@ -11,7 +11,7 @@ Cookies = dict[str, str]
 
 @pytest.fixture()
 def storage_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """첨부를 검사 전용 폴더에 저장하게 하고, 그 폴더를 돌려준다."""
+    """첨부를 검사 전용 폴더에 저장하게 하고, 그 폴더를 반환합니다."""
     root = tmp_path / "attachments"
     monkeypatch.setenv("ATTACHMENT_DIR", str(root))
     return root
@@ -31,8 +31,8 @@ def _make_team(api_client: TestClient, head: Cookies, name: str) -> int:
 
 
 def _seat(api_client: TestClient, head: Cookies, team_id: int, member_id: int) -> None:
-    """빈 자리 하나를 찾아 그 사람을 앉힌다. 앉히는 것은 팀 항목을 가진 사람만 할 수
-    있으므로 언제나 헤드매니저의 쿠키로 부른다."""
+    """빈 자리 하나를 찾아 그 사람을 배정합니다. 배정하는 것은 팀 항목을 가진 사람만 할 수
+    있으므로 언제나 헤드매니저의 cookie로 부릅니다."""
     slots = api_client.get(f"/teams/{team_id}/slots", cookies=head).json()["slots"]
     free = next(slot for slot in slots if slot["member_id"] is None)
     api_client.put(
@@ -73,8 +73,8 @@ def test_attachment_is_uploaded_listed_and_downloaded(
     downloaded = api_client.get(f"/attachments/{attachment['id']}", cookies=head)
     assert downloaded.status_code == 200
     assert downloaded.content == b"score-bytes"
-    # 브라우저가 내용을 열지 않고 받게 하는 헤더다. HTML·SVG 가 열리면 그 안의
-    # 스크립트가 우리 화면 권한으로 돈다.
+    # 브라우저가 내용을 표시하지 않게 하는 헤더입니다. HTML·SVG가 표시되면 그 안의
+    # 스크립트가 우리 화면 권한으로 작동합니다.
     assert downloaded.headers["content-disposition"].startswith("attachment")
     assert downloaded.headers["x-content-type-options"] == "nosniff"
 
@@ -183,7 +183,7 @@ def test_teammate_who_is_not_the_author_can_read_and_download(
     downloaded = api_client.get(f"/attachments/{attachment_id}", cookies=teammate)
     assert downloaded.status_code == 200
     assert downloaded.content == b"practice"
-    # 읽는 것은 팀 소속 전체, 지우는 것은 글쓴이만이다.
+    # 읽는 것은 팀 소속 전체, 삭제하는 것은 글쓴이만입니다.
     assert (
         api_client.delete(f"/attachments/{attachment_id}", cookies=teammate).status_code
         == 403
@@ -252,7 +252,7 @@ def test_traversal_filename_never_escapes_the_storage_root(
     assert response.status_code == 201
     written = _stored_files(storage_dir)
     assert len(written) == 1
-    # 저장 이름은 서버가 만든다 — 보낸 이름이 경로로 쓰이면 저장소 밖에 쓰인다.
+    # 저장 파일 이름은 서버가 생성합니다. 제출된 이름이 경로로 사용되면 저장소 밖에 기록됩니다.
     assert written[0].parent == storage_dir
     assert "passwd" not in written[0].name
     assert not (storage_dir.parent / "etc").exists()

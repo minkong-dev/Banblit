@@ -13,7 +13,7 @@ from backend.scheduling.slots import generate_slots
 
 @dataclass(frozen=True)
 class Room:
-    """합주실이 한 번 여는 구간. 같은 합주실을 여러 날 열면 날마다 하나씩 넘긴다."""
+    """합주실이 한 번 개방하는 시간 구간입니다. 같은 합주실을 여러 날 개방하면 날마다 하나씩 전달됩니다."""
 
     id: int
     open_period: TimeInterval
@@ -21,7 +21,7 @@ class Room:
 
 @dataclass(frozen=True)
 class RoomSlot:
-    """어느 방의 어느 시간 slot 인지. room_id 와 interval 이 한 slot 을 유일하게 가리킨다."""
+    """어느 합주실의 어느 시간 slot(1시간 단위 시간 칸)인지를 나타냅니다. room_id 와 interval 이 slot 하나를 유일하게 식별합니다."""
 
     room_id: int
     interval: TimeInterval
@@ -35,16 +35,16 @@ class Assignment:
 
 
 def _build_room_slots(rooms: list[Room]) -> list[RoomSlot]:
-    # rooms 의 운영 구간을 generate_slots 로 한 시간 slot 으로 쪼개 한 줄로 잇는다.
-    # 같은 slot 이 두 번 나오면 곧바로 거부한다. 한 slot 이 둘로 세어지면
-    # 한 slot 에 한 팀이라는 제약이 두 팀을 같은 slot 에 넣는 것을 막지 못한다.
+    # rooms 의 개방 시간 구간을 generate_slots 로 1시간 slot(1시간 단위 시간 칸)으로 분할하여 하나의 목록으로 통합합니다.
+    # 같은 slot 이 중복으로 나타나면 즉시 거부합니다. slot 하나가 두 번 세어지면
+    # slot 하나에는 팀 하나만이라는 제약이 두 팀을 같은 slot 에 배정하는 것을 막지 못하기 때문입니다.
     room_slots: list[RoomSlot] = []
     seen: set[RoomSlot] = set()
     for room in rooms:
         try:
             intervals = generate_slots(room.open_period)
         except ValueError as error:
-            # generate_slots 가 올린 사유 앞에 방 번호를 붙여 다시 올린다.
+            # generate_slots 가 발생시킨 error 에 합주실 번호를 붙여 다시 발생시킵니다.
             raise ValueError(
                 f"{room.id}번 합주실의 운영 시간이 잘못되었습니다: {error}"
             ) from error
@@ -61,7 +61,7 @@ def _build_room_slots(rooms: list[Room]) -> list[RoomSlot]:
 
 
 def _validate(teams: list[Team], slots_per_team: int) -> None:
-    """번호는 대상을 유일하게 가리켜야 한다. 겹치면 결과에서 서로를 구분할 수 없다."""
+    """번호는 대상을 유일하게 식별해야 합니다. 중복되면 결과에서 대상을 구분할 수 없기 때문입니다."""
     if slots_per_team < 0:
         raise ValueError("팀당 배정 개수는 음수일 수 없습니다")
 
@@ -91,11 +91,12 @@ def assign(
     rooms: list[Room],
     slots_per_team: int,
 ) -> Assignment:
-    """각 팀에게, 그 팀이 가능한 시간의 빈 방을 필요한 개수만큼 배정한다.
+    """각 팀에게, 그 팀이 가능한 시간의 빈 합주실을 필요한 개수만큼 배정합니다.
 
-    한 방의 한 slot 에는 팀 하나만 들어간다. 한 팀이 같은 시간에 두 방을 쓸 수 없고,
-    여러 팀에 속한 사람도 같은 시간에 한 곳에만 있을 수 있다.
-    조건을 모두 만족하는 배정을 찾지 못하면 feasible=False로 돌려준다.
+    slot(1시간 단위 시간 칸) 하나에는 팀 하나만 배정됩니다. 팀 하나는 같은 시간에
+    여러 합주실을 동시에 사용할 수 없으며, 여러 팀에 속한 멤버도 같은 시간에
+    한 곳에만 있을 수 있습니다. 조건을 모두 충족하는 배정안이 없을 경우
+    feasible=False 를 반환합니다.
     """
     _validate(teams, slots_per_team)
     room_slots = _build_room_slots(rooms)
@@ -113,7 +114,6 @@ def assign(
             sum(chosen[(team.id, i)] for i, _ in enumerate(room_slots)) == slots_per_team
         )
 
-    # 한 방의 한 slot 에는 팀 하나만 들어간다.
     for index, _ in enumerate(room_slots):
         model.add(sum(chosen[(team.id, index)] for team in teams) <= 1)
 
@@ -121,14 +121,12 @@ def assign(
     for index, room_slot in enumerate(room_slots):
         indices_by_interval[room_slot.interval].append(index)
 
-    # 한 팀은 같은 시간에 여러 방을 동시에 쓸 수 없다.
     for indices in indices_by_interval.values():
         if len(indices) < 2:
             continue
         for team in teams:
             model.add(sum(chosen[(team.id, i)] for i in indices) <= 1)
 
-    # 여러 팀에 속한 사람은 같은 시간에 한 곳에만 있을 수 있다.
     teams_by_member: dict[int, list[int]] = defaultdict(list)
     for team in teams:
         for member in team.members:
@@ -142,8 +140,9 @@ def assign(
             )
 
     solver = cp_model.CpSolver()
-    # 상한이 없으면 풀리지 않는 입력 하나가 워커를 영영 쥔다. 실측 최댓값(약 22초)의
-    # 세 배쯤에서 끊고, 그때까지 못 찾았으면 "못 찾았다"로 답한다.
+    # 시간 제한이 없으면 풀리지 않는 입력 하나가 worker 를 무한정 점유하게 됩니다.
+    # 실측 최댓값(약 22초)의 3배 정도에서 중단하고, 그때까지 찾지 못했으면
+    # feasible 이 아닌 것으로 취급합니다.
     solver.parameters.max_time_in_seconds = SOLVER_TIME_LIMIT_SECONDS
     status = solver.solve(model)
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):

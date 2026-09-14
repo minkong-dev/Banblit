@@ -1,8 +1,8 @@
-// 설정 화면의 계정 구역. 권한과 무관하게 로그인한 사람 누구에게나 보인다 —
-// 여기 있는 것은 전부 자기 계정에 대한 일이다.
+// 설정 화면의 계정 구역입니다. 권한과 무관하게 로그인한 모든 사람이 봅니다.
+// 여기 있는 것은 전부 자신의 계정에 대한 설정입니다.
 //
-// 이메일은 다루지 않는다. 로그인 식별자라 바꾸려면 새 주소가 내 것인지 확인하는
-// 절차가 따로 있어야 하고, 그 절차가 아직 없다.
+// 이메일은 다루지 않습니다. 로그인 식별자는 새 주소가 실제로 본인의 주소인지 검증하는
+// 절차가 따로 필요하며, 그 절차가 미구현이기 때문입니다.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -15,7 +15,7 @@ import { say } from "../lib/toast";
 import type { Account } from "../lib/contract";
 
 
-/** 내 이름과 기수. */
+/** 자신의 이름과 기수입니다. */
 function MyProfile({ me }: { me: Account }) {
   const client = useQueryClient();
   const [name, setName] = useState(me.name);
@@ -65,7 +65,7 @@ function MyProfile({ me }: { me: Account }) {
           className="new"
           disabled={save.isPending}
           onClick={() => {
-            // 자세한 판정은 서버가 한다. 화면은 비어 있는 것만 먼저 막는다.
+            // 상세한 검증은 서버가 합니다. 화면은 빈 값만 먼저 차단합니다.
             const why = name.trim() === "" ? "이름을 입력해 주세요." : "";
             setBad(why);
             if (why === "") save.mutate();
@@ -79,7 +79,7 @@ function MyProfile({ me }: { me: Account }) {
   );
 }
 
-/** 비밀번호 바꾸기. 지금 비밀번호를 먼저 묻는 것은 서버도 같다. */
+/** 비밀번호를 변경합니다. 현재 비밀번호를 먼저 확인하는 방식은 서버도 같습니다. */
 function MyPassword() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -145,8 +145,8 @@ function MyPassword() {
           className="new"
           disabled={save.isPending}
           onClick={() => {
-            // 길이 같은 규칙은 서버가 판정한다. 두 번 적은 것이 서로 다른 것만
-            // 여기서 먼저 잡는다 — 서버는 하나만 받으므로 알 수 없는 일이다.
+            // 길이 등의 규칙은 서버가 검증합니다. 두 번 입력한 값이 일치하지 않는 경우만
+            // 여기서 먼저 감지합니다. 서버는 새 비밀번호 하나만 받으므로 일치 여부를 확인할 수 없기 때문입니다.
             const why = next === again ? "" : "비밀번호가 일치하지 않아요.";
             setBad(why);
             if (why === "") save.mutate();
@@ -160,7 +160,7 @@ function MyPassword() {
   );
 }
 
-/** 회원 탈퇴. 되돌릴 수 없어 이름을 직접 적게 한다 — 실수로 눌린 것과 가른다. */
+/** 회원을 탈퇴합니다. 되돌릴 수 없으므로 이름을 직접 입력하게 합니다. 실수로 누른 경우와 구분하기 위함입니다. */
 function Leave({ me }: { me: Account }) {
   const navigate = useNavigate();
   const [typed, setTyped] = useState("");
@@ -203,8 +203,8 @@ function Leave({ me }: { me: Account }) {
 }
 
 export function AccountCards(props: {
-  /** 화면 밝기 카드. 밝기는 이 브라우저에만 남는 값이라 서버를 부르지 않아,
-   *  계정 구역과 다른 자리(Settings.tsx)가 그리고 여기서는 놓기만 한다. */
+  /** 화면 밝기 카드입니다. 밝기는 이 브라우저에만 저장되는 값이라 서버를 호출하지 않습니다.
+   *  따라서 계정 구역과 다른 위치(Settings.tsx)가 생성하고, 여기서는 표시만 합니다. */
   theme: React.ReactNode;
 }) {
   const { theme } = props;

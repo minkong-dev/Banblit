@@ -10,7 +10,7 @@ test.beforeEach(async ({ page, request }) => {
 
 const SLOT_MINUTES = 60;
 
-/** 정시 격자를 지키며 opens_at 을 한 slot 옮긴다. +1시간이 closes_at 을 넘으면 -1시간으로 옮긴다. */
+/** 정시 격자를 지키며 opens_at을 한 slot(1시간 단위 시간 칸)만큼 옮깁니다. +1시간이 closes_at을 넘으면 -1시간으로 옮깁니다. */
 function shiftedOpensAt(opensAt: string, closesAt: string): string {
   const [hour, minute] = opensAt.split(":").map(Number);
   const [closeHour, closeMinute] = closesAt.split(":").map(Number);
@@ -48,7 +48,7 @@ test("합주실을 고치면 저장되고 다시 열어도 남아 있다", async
     .filter({ has: page.getByRole("button", { name: editButtonName }) });
   await expect(rowAfterReload).toContainText(changedOpensAt);
 
-  // 되돌린다 — 다음 번 테스트도, 이 값을 보는 사람도 원래 시각을 봐야 한다.
+  // 복원합니다. 다음 번 테스트도, 이 값을 보는 사람도 원래 시각을 봐야 하기 때문입니다.
   await page.getByRole("button", { name: editButtonName }).click();
   await page.locator("li.editing").getByLabel("여는 시각").fill(room.opens_at);
   await page.locator("li.editing").getByRole("button", { name: "저장" }).click();
@@ -65,7 +65,7 @@ test("정시가 아닌 시각은 저장 단추를 막는다", async ({ page }) =
 
   await addForm.getByLabel("이름").fill(`E2E 검사용 합주실 ${Date.now()}`);
   await addForm.getByLabel("닫는 시각").fill("23:00");
-  // 정시가 아닌 값 — 저장 단추가 막히고 사유가 떠야 한다.
+  // 정시가 아닌 값입니다. 저장 버튼가 차단되고 사유가 표시되어야 합니다.
   await addForm.getByLabel("여는 시각").fill("18:20");
 
   await expect(addForm.getByRole("button", { name: "합주실 추가" })).toBeDisabled();

@@ -85,8 +85,8 @@ def _posts_out(rows: list[PostRow]) -> PostsOut:
     return PostsOut(posts=[_post_out(post, author, count) for post, author, count in rows])
 
 
-# 공지의 "전체 공개"는 팀을 가리지 않는다는 뜻이지 방문자에게 연다는 뜻이 아니다.
-# 목록이 놓인 화면이 로그인 뒤의 메인 캘린더라, 누구인지는 쓰지 않고 로그인만 본다.
+# 공지의 "전체 공개"는 팀을 구분하지 않는다는 뜻이지 로그인하지 않은 방문자에게 공개한다는 뜻이 아닙니다.
+# 목록이 표시되는 화면이 로그인 후의 메인 캘린더이므로, 사용자 신원은 확인하지 않고 로그인만 검증합니다.
 @router.get(
     "/notices", response_model=PostsOut, dependencies=[Depends(require_account)]
 )
@@ -139,8 +139,8 @@ def read_post_detail(
     return PostDetailOut(
         post=_post_out(post, author, len(comment_rows)),
         comments=[_comment_out(comment, author) for comment, author in comment_rows],
-        # 볼 자격은 바로 위 get_post_with_comments 가 이미 확인했다. 여기서 다시
-        # 확인하는 함수를 쓰면 같은 소속 조회가 한 요청에 두 번 실행된다.
+        # 열람 권한은 위의 get_post_with_comments가 이미 검증했습니다. 여기서 다시
+        # 검증하면 같은 소속 조회가 한 요청에 두 번 실행됩니다.
         attachments=[_attachment_out(row) for row in attachments_of_post(session, post.id)],
     )
 
@@ -161,7 +161,7 @@ def create_post_comment(
 @router.patch("/posts/{post_id}", response_model=PostEnvelopeOut)
 def edit_post(
     post_id: int,
-    # 만들 때와 받는 항목·길이 제한이 같아 같은 스키마를 쓴다.
+    # 생성 시와 수정 시 받는 항목·길이 제한이 같아 같은 schema를 사용합니다.
     req: PostCreateIn,
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
@@ -201,10 +201,10 @@ def upload_attachment(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> AttachmentEnvelopeOut:
-    # file.file 은 프레임워크가 이미 임시 파일로 받아 둔 것을 가리킨다. 서비스에는
-    # UploadFile 이 아니라 읽을 수 있는 것만 넘긴다 — 서비스가 endpoint 형식을 모르게 둔다.
-    # 크기 상한 검사를 여기 두지 않는다. 이 함수에 닿기 전에 nginx 의
-    # client_max_body_size(frontend/nginx.conf.template)가 이미 거절한다.
+    # file.file은 framework가 이미 임시 파일로 준비한 파일 객체입니다. 서비스에는
+    # UploadFile이 아니라 읽을 수 있는 객체만 전달합니다 — 서비스가 endpoint(API의 요청 주소 단위) 형식을 모르게 둡니다.
+    # 파일 크기 상한 검사를 여기 두지 않습니다. 이 함수에 도달하기 전에 nginx의
+    # client_max_body_size(frontend/nginx.conf.template)가 이미 거부했습니다.
     attachment = save_attachment(
         session,
         post_id,
@@ -234,9 +234,9 @@ def download_attachment(
     session: Session = Depends(get_session),
 ) -> FileResponse:
     attachment, path = attachment_for_download(session, attachment_id, requester)
-    # filename 을 주면 FileResponse 가 Content-Disposition: attachment 를 붙인다 —
-    # 브라우저가 내용을 열지 않고 받는다. 종류도 octet-stream 하나로 내려 보내고
-    # nosniff 를 붙여, 브라우저가 내용을 보고 종류를 다시 정하지 못하게 한다.
+    # filename을 지정하면 FileResponse가 Content-Disposition: attachment를 설정합니다 —
+    # 브라우저가 내용을 표시하지 않고 다운로드합니다. media_type을 octet-stream으로 설정하고
+    # X-Content-Type-Options: nosniff를 붙여, 브라우저가 파일 내용을 보고 종류를 재결정하지 못하게 합니다.
     return FileResponse(
         path,
         filename=attachment.name,
@@ -261,8 +261,8 @@ def delete_post_endpoint(
     session: Session = Depends(get_session),
 ) -> None:
     post = require_post_author(session, post_id, requester)
-    # attachments table 의 행이 사라지기 전에 디스크의 파일부터 지운다. 순서를 바꾸면
-    # 어느 파일이 이 게시글의 것이었는지 알 방법이 없어져, 아무도 못 지우는 파일이 남는다.
+    # attachments 테이블의 행이 사라지기 전에 디스크의 파일부터 삭제합니다. 순서를 바꾸면
+    # 어느 파일이 이 게시글의 파일이었는지 추적할 수 없게 되어, 아무도 삭제하지 못하는 파일이 남습니다.
     remove_post_files(session, post_id)
     session.delete(post)
     session.commit()

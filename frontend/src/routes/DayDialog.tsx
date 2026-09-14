@@ -21,7 +21,7 @@ import type { Room } from "../lib/contract";
 import { say } from "../lib/toast";
 import type { DayTeam } from "../lib/roster";
 
-/** 하루에 놓인 것 하나. 배정은 서버가 준 것이고, 예약과 못 나오는 시간은 화면이 넣은 것이다. */
+/** 하루에 놓인 것 하나입니다. 배정은 서버가 준 것이고, 예약과 불가능 일정은 화면이 넣은 것입니다. */
 export type Entry = {
   kind: "assign" | "book" | "off";
   team: string | null;
@@ -29,8 +29,8 @@ export type Entry = {
   who?: string;
   a: number;
   b: number;
-  /** 내가 지울 수 있는 것이면 지울 때 서버에 넘길 번호. 예약은 칸마다 번호가 달라
-   *  여럿이다. 없으면 남의 것이거나 서버가 배정한 것이라 화면에서 지우지 못한다. */
+  /** 로그인한 사용자가 삭제할 수 있는 예약·불가능 일정이면, 삭제할 때 서버에 넘길 id 입니다. 예약은 slot 마다 id 가 다르므로
+   *  2개 이상입니다. 없으면 다른 사용자의 예약이거나 서버가 배정한 일정이라 화면에서 삭제하지 못합니다. */
   removeIds?: number[];
 };
 
@@ -39,7 +39,7 @@ function hourText(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
-/** 반복 고르개에 세우는 두 자리. 하나만 켜진다. */
+/** 반복 선택지에 세우는 두 항목입니다. 하나만 켜집니다. */
 const REPEAT_CHOICES: readonly { key: Exclude<RepeatCycle, "none">; label: string }[] = [
   { key: "daily", label: "매일 불가능해요" },
   { key: "weekly", label: "매주 이 시간은 불가능해요" },
@@ -58,15 +58,15 @@ export function DayDialog(props: {
   openHour: number;
   closeHour: number;
   slotCount: number;
-  /** 위쪽 시간 고르기에서 이미 시간을 정했으면 그 시간으로 바로 예약한다. */
+  /** 위쪽 시간 선택에서 이미 시간을 정했으면 그 시간으로 바로 예약합니다. */
   fixed: { from: number; to: number } | null;
   inFocus: boolean;
-  /** 로그인한 사람 번호. 아직 못 받았으면 null이고, 그동안은 등록·예약을 막는다. */
+  /** 로그인한 사용자 id입니다. 아직 받지 못했으면 null이고, 그동안은 등록·예약을 차단합니다. */
   memberId: number | null;
   myName: string;
-  /** 예약을 넣을 수 있는 합주실 전부. 어디에 넣을지는 이 안에서 고른다. */
+  /** 예약 가능한 합주실을 표시합니다. */
   rooms: Room[];
-  /** 서버 저장이 성공한 뒤 화면이 최신 값을 다시 받아오게 알린다. */
+  /** 서버 저장이 성공한 뒤 화면이 최신 값을 다시 받아오게 알립니다. */
   onSaved: () => void;
   onClose: () => void;
 }) {
@@ -76,14 +76,14 @@ export function DayDialog(props: {
   const [error, setError] = useState("");
   const [who, setWho] = useState("me");
   const [roomId, setRoomId] = useState<number | null>(null);
-  // 매일과 매주는 하나만 고른다. 같은 것을 다시 누르면 반복이 꺼진다.
+  // 매일과 매주는 하나만 선택합니다. 같은 것을 다시 누르면 반복이 꺼집니다.
   const [repeat, setRepeat] = useState<RepeatCycle>("none");
   const [offReason, setOffReason] = useState("");
-  // 시각 두 칸. 기본은 그날 여는 칸부터 닫는 칸까지 전부다.
+  // 시각 두 시간 칸입니다. 기본은 그날 여는 칸부터 닫는 칸까지 전부입니다.
   const [off, setOff] = useState({ a: 0, b: slotCount });
   const [book, setBook] = useState({ a: 0, b: slotCount });
 
-  // 아직 아무것도 안 골랐으면 목록의 첫 합주실이다 — 대화상자를 열자마자 어딘가는 정해져 있어야 한다.
+  // 아직 아무것도 선택하지 않았으면 목록의 첫 합주실입니다 — dialog를 열자마자 어딘가는 정해져 있어야 합니다.
   const room = rooms.find((item) => item.id === roomId) ?? rooms[0] ?? null;
 
   const label = (index: number) => slotLabel(index, openHour);
@@ -94,22 +94,22 @@ export function DayDialog(props: {
       : teams.find((team) => team.key === entry.team)?.name ?? entry.who ?? "개인";
 
   const booked = entries.filter((entry) => entry.kind !== "off");
-  // 선착순은 합주실마다 따로 센다 — 고른 합주실에 놓인 것만 그 시각을 막는다.
+  // 선착순은 합주실마다 따로 계산합니다 — 선택한 합주실에 놓인 것만 그 시각을 차단합니다.
   const grid = takenGrid(
     booked.filter((entry) => room !== null && entry.room === room.name),
     slotCount,
   );
-  // 내 팀에 잡힌 배정과, 내가 직접 걸어 둔 것(removeIds 가 실린 것). 개인 이름으로 잡은
-  // 예약은 팀이 없어 팀만 보고는 가려낼 수 없다.
+  // 내 팀에 배정된 것과, 내가 직접 등록한 것(removeIds가 실린 것). 개인 이름으로 한 예약은
+  // 팀이 없어 팀만 보고는 구분할 수 없습니다.
   const mine = entries.filter(
     (entry) => entry.removeIds !== undefined
       || (entry.team !== null && teams.some((t) => t.key === entry.team && t.mine)),
   );
 
-  // 내가 지울 수 있는 것만 모은다. 남의 예약과 서버가 배정한 것에는 removeIds 가 없다.
+  // 로그인한 사용자가 삭제할 수 있는 것만 모읍니다. 다른 사용자의 예약과 서버가 배정한 것에는 removeIds가 없습니다.
   const removable = entries.filter((entry) => entry.removeIds !== undefined);
 
-  /** 하루를 세로 띠로 그린다. 시각은 왼쪽에 시간 단위로만 적는다. */
+  /** 하루를 세로 띠로 표시합니다. 시각은 왼쪽에 시간 단위로만 적습니다. */
   const timeline = (list: Entry[]) => (
     <div className="tlscroll"><div className="tl">
       {Array.from({ length: closeHour - openHour }, (_, i) => openHour + i).map((hour) => (
@@ -130,8 +130,8 @@ export function DayDialog(props: {
 
   const roomsLabel = [...new Set(booked.map((entry) => entry.room).filter(Boolean))].join(" · ");
 
-  // 그날 뭔가 놓인 팀만 명단을 묻는다. 프로필·권한 구역과 같은 열쇠(["members", 팀번호])를
-  // 써서, 이미 받아 둔 명단이 있으면 서버를 다시 부르지 않는다.
+  // 그날 뭔가 놓인 팀만 명단을 조회합니다. 프로필·권한 구역과 같은 query key(["members", team id])를
+  // 써서, 이미 받아 둔 명단이 있으면 서버를 다시 조회하지 않습니다.
   const dayTeams = teams.filter((team) => booked.some((entry) => entry.team === team.key));
   const rosters = useQueries({
     queries: dayTeams.map((team) => ({
@@ -143,7 +143,7 @@ export function DayDialog(props: {
     (rosters[index]?.data ?? []).map((member) => ({ team, member })));
   const rosterError = rosters.find((query) => query.isError)?.error;
 
-  /** 시각 두 개를 고르는 자리. 이미 찬 칸은 고를 수 없게 잠근다. */
+  /** 시각 두 개를 선택하는 자리입니다. 이미 차 있는 칸은 선택할 수 없게 차단합니다. */
   const picker = (
     prefix: string,
     range: { a: number; b: number },
@@ -180,7 +180,7 @@ export function DayDialog(props: {
     </div>
   );
 
-  /** 걸어 둔 것 하나를 지운다. 예약은 칸마다 번호가 달라 여러 번을 한 번에 넘긴다. */
+  /** 등록한 것 하나를 삭제합니다. 예약은 시간 칸마다 id가 다르므로 여러 개를 한 번에 넘깁니다. */
   const removeEntry = async (entry: Entry) => {
     const ids = entry.removeIds;
     if (ids === undefined || memberId === null) return;
@@ -193,9 +193,9 @@ export function DayDialog(props: {
       await (booking ? cancelBooking(ids) : removeUnavailable(memberId, ids[0]));
     } catch (error) {
       setError(error instanceof Error ? error.message : "삭제하지 못했어요.");
-      // 걸려도 서버 값을 다시 받는다. 예약은 칸마다 지우므로 앞쪽 몇 칸은 이미 지워졌을
-      // 수 있는데, 화면이 옛 번호를 그대로 들고 있으면 다시 눌러도 이미 없는 칸부터
-      // 지우려다 같은 자리에서 멈춘다.
+      // 실패해도 서버 값을 다시 받습니다. 예약은 시간 칸마다 삭제하므로 앞쪽 몇 칸은 이미 삭제되었을
+      // 수 있는데, 화면이 옛 id를 그대로 들고 있으면 다시 눌러도 이미 없는 칸부터
+      // 삭제하려다 같은 자리에서 멈춘다.
       onSaved();
       return;
     }
@@ -204,8 +204,8 @@ export function DayDialog(props: {
     say(booking ? "예약을 취소했어요" : "해당 불가능 일정을 삭제했어요");
   };
 
-  /** 타임라인 아래에 서는 목록. 내가 이 날 걸어 둔 것만 줄로 세워 지울 수 있게 한다.
-   *  막대 안에 지우기를 넣지 않는 것은 한 칸짜리 막대가 14px 이라 누를 자리가 없어서다. */
+  /** 타임라인 아래에 서는 목록입니다. 로그인한 사용자가 이 날 등록한 것만 줄로 세워 삭제할 수 있게 합니다.
+   *  막대 안에 삭제 버튼을 넣지 않는 것은 1시간 칸짜리 막대가 14px이라 누를 자리가 없어서입니다. */
   const myList = removable.length === 0 ? null : (
     <div className="people">
       <h3>등록된 불가능 일정</h3>
@@ -388,7 +388,7 @@ export function DayDialog(props: {
   const hint = `${roomsLabel || "합주실"} · ${hourText(openHour)}–${hourText(closeHour)}`
     + ` · 1시간 단위 · ${inFocus ? "배정된 기간" : "배정 없음"}`;
 
-  // 보기만 하는 탭(all)에는 아래 단추 줄을 주지 않는다 — Modal 이 줄 자체를 그리지 않는다.
+  // 보기만 하는 탭(all)에는 아래 버튼 줄을 주지 않는다 — Modal 이 줄 자체를 그리지 않는다.
   const foot = tab === "all" ? undefined : (
     <>
       <button className="ghost" onClick={onClose}>닫기</button>

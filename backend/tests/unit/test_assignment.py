@@ -11,7 +11,7 @@ def _at(hour: int, minute: int = 0) -> datetime:
 
 def test_team_is_assigned_only_to_a_slot_it_is_available_for() -> None:
     room = Room(id=1, open_period=TimeInterval(_at(18), _at(20)))
-    # 18:00~19:00 칸에 불가능 → 남은 19:00~20:00 칸으로만 갈 수 있다.
+    # slot(1시간 단위 시간 칸)의 18:00~19:00에서 불가능 시간이 있으므로 남은 19:00~20:00 slot에만 배정할 수 있습니다.
     member = Member(id=1, unavailable=[TimeInterval(_at(18), _at(19))])
     team = Team(id=10, members=[member])
 

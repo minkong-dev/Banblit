@@ -1,17 +1,17 @@
-"""팀 악기 자리와 기수
+"""팀 포지션 자리와 기수
 
-포지션 표 둘(positions·member_positions)과 소속 표(memberships)를 걷어내고, 팀이
-악기 자리를 들고 그 자리에 사람이 앉는 team_slots 하나로 바꾼다. 사람에게는 기수를
-더한다.
+포지션 table 둘(positions·member_positions)과 소속 table(memberships)을 삭제하고,
+팀이 포지션 자리를 관리하며 그 자리에 멤버가 배정되는 team_slots 하나로 변경합니다.
+멤버에는 기수를 추가합니다.
 
-바꾸는 까닭은 포지션이 두 곳에 따로 있었기 때문이다 — 가입할 때 고르는 목록과 팀마다
-맡는 것이 서로 다른 표였고, 둘 다 "이 팀에 일렉이 두 자리 있다"를 말하지 못했다.
-자리를 팀이 들고 있으면 그 말이 그대로 표가 된다.
+변경하는 이유는 포지션이 두 곳에 따로 있었기 때문입니다. 가입할 때 선택하는 목록과
+팀별로 관리하는 것이 서로 다른 table 이었고, 둘 다 "이 팀에 일렉 자리가 두 개
+있다"를 표현하지 못했습니다. 자리를 팀이 관리하면 그 말이 그대로 table 이 됩니다.
 
-옮기는 규칙은 이렇다.
-- 승인된 소속만 옮긴다. 대기 중이던 신청은 참가 신청 자체가 없어지므로 버린다.
-- 포지션 이름을 악기로 바꾼다: 기타→일렉, 키보드→신디, 나머지는 그대로.
-- 같은 팀 안에서 같은 악기가 여럿이면 소속이 만들어진 순서대로 1, 2, … 를 매긴다.
+이행 규칙은 다음과 같습니다.
+- 승인된 소속만 이행합니다. 대기 중이던 신청은 참가 신청 자체가 없어지므로 삭제합니다.
+- 옛 포지션 이름을 새 포지션 이름으로 변경합니다: 기타→일렉, 키보드→신디, 나머지는 유지합니다.
+- 같은 팀에서 같은 포지션이 2명 이상이면 소속이 생성된 순서대로 1, 2, … 를 부여합니다.
 """
 
 from typing import Sequence, Union
@@ -27,10 +27,10 @@ depends_on: Union[str, Sequence[str], None] = None
 INSTRUMENTS = ("보컬", "일렉", "통기타", "베이스", "신디", "드럼")
 _INSTRUMENT_LIST = ", ".join(f"'{name}'" for name in INSTRUMENTS)
 
-# 포지션 이름을 악기 이름으로. 옛 목록에 없던 통기타는 이 길로 생기지 않는다.
+# 옛 포지션 이름을 새 포지션 이름으로 변환합니다. 옛 목록에 없던 통기타는 이 경로로 생기지 않습니다.
 _TO_INSTRUMENT = "CASE p.name WHEN '기타' THEN '일렉' WHEN '키보드' THEN '신디' ELSE p.name END"
 
-# 되돌릴 때 쓰는 반대 방향. 통기타는 옛 목록에 없어 기타로 합쳐진다.
+# downgrade() 에서 사용하는 역방향 변환입니다. 통기타는 옛 목록에 없어 기타로 통합됩니다.
 _TO_POSITION = (
     "CASE s.instrument WHEN '일렉' THEN '기타' WHEN '통기타' THEN '기타' "
     "WHEN '신디' THEN '키보드' ELSE s.instrument END"
@@ -40,7 +40,8 @@ _TO_POSITION = (
 def upgrade() -> None:
     op.add_column("members", sa.Column("cohort", sa.Integer(), nullable=True))
 
-    # 열을 지우면 그 열만 보는 CHECK 도 함께 사라지므로 제약을 따로 지우지 않는다.
+    # column 을 삭제하면 그 column 을 참조하는 CHECK constraint 도 함께 삭제되므로
+    # 제약을 따로 삭제하지 않습니다.
     op.drop_column("teams", "join_policy")
 
     op.create_table(
@@ -59,7 +60,7 @@ def upgrade() -> None:
         sa.CheckConstraint("ordinal >= 1"),
     )
 
-    # 자리 번호는 소속이 만들어진 순서대로 매긴다 — 같은 팀·같은 악기 안에서만 센다.
+    # 자리 번호는 소속이 생성된 순서대로 부여합니다. 같은 팀·같은 포지션 범위 내에서만 계산합니다.
     op.execute(
         f"""
         INSERT INTO team_slots (team_id, instrument, ordinal, member_id)
@@ -124,7 +125,8 @@ def downgrade() -> None:
         ),
     )
 
-    # 아무도 앉지 않은 자리는 소속으로 되돌릴 수 없다 — 사람이 없는 소속은 없다.
+    # 아무도 배정되지 않은 자리는 소속으로 복원할 수 없습니다. 멤버가 없는 소속은
+    # 존재하지 않기 때문입니다.
     op.execute(
         f"""
         INSERT INTO memberships (member_id, team_id, position_id, status)
@@ -141,7 +143,8 @@ def downgrade() -> None:
         "teams",
         sa.Column("join_policy", sa.Text(), nullable=False, server_default="auto"),
     )
-    # 이름은 c4a7d2e91b83 의 되돌리기가 지우는 이름과 같아야 한다.
+    # 이름은 c4a7d2e91b83 revision의 downgrade() 에서 삭제하는 constraint 이름과
+    # 같아야 합니다.
     op.create_check_constraint(
         "teams_join_policy_valid", "teams", "join_policy IN ('auto', 'approval')"
     )

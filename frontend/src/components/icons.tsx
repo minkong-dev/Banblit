@@ -1,9 +1,9 @@
-// 여러 화면이 같은 그림을 쓴다. 화면마다 SVG 를 다시 적으면 한쪽만 고쳐져 어긋난다.
-// 크기는 CSS 가 정하므로 여기서는 모양만 갖는다.
+// 여러 화면이 같은 아이콘을 사용합니다. 화면마다 SVG를 다시 작성하면 한쪽만 수정되어 불일치가 발생합니다.
+// 크기는 CSS가 정하므로 여기서는 모양만 정의합니다.
 
 type IconProps = { className?: string };
 
-/** 선으로만 그린 그림의 공통 뼈대. 굵기만 자리마다 다르다. */
+/** 선 아이콘의 공통 컴포넌트입니다. 선 굵기만 아이콘마다 다릅니다. */
 function Stroke({ width, children, className }: {
   width: number;
   children: React.ReactNode;
@@ -21,12 +21,12 @@ export function MenuIcon(props: IconProps) {
   return <Stroke width={2} {...props}><path d="M4 7h16M4 12h16M4 17h16" /></Stroke>;
 }
 
-/** 랜딩은 선이 조금 더 넓고 얇다. 같은 그림이 아니라 다른 그림이다. */
+/** 랜딩 페이지 전용 아이콘입니다. 다른 화면의 아이콘과 다른 컴포넌트입니다. */
 export function WideMenuIcon(props: IconProps) {
   return <Stroke width={1.6} {...props}><path d="M3 7h18M3 12h18M3 17h18" /></Stroke>;
 }
 
-/** 알림 종. 흔들리는 몸통과 아래 추 두 획으로 그린다. */
+/** 알림 아이콘입니다. */
 export function BellIcon(props: IconProps) {
   return (
     <Stroke width={1.9} {...props}>
@@ -53,7 +53,7 @@ export function EyeIcon(props: IconProps) {
   );
 }
 
-/** 가려진 상태. 뜬 눈에 사선을 그어 지금 안 보인다는 것을 말한다. */
+/** 숨김 상태 아이콘입니다. */
 export function EyeOffIcon(props: IconProps) {
   return (
     <Stroke width={2} {...props}>
@@ -103,7 +103,7 @@ export function ClockIcon(props: IconProps) {
   );
 }
 
-/** 테두리 없는 체크 표시. 켜고 끄는 자리에 쓴다 — 끈 상태는 자리를 지키되 흐리다.
+/** 체크 아이콘입니다. 켜고 끄는 자리에 사용합니다.
  *  자리가 밀리지 않게 켠 쪽과 끈 쪽이 같은 그림을 쓴다. */
 export function CheckIcon(props: IconProps) {
   return <Stroke width={2.6} {...props}><path d="M4.5 12.5l5 5 10-11" /></Stroke>;

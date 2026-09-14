@@ -24,8 +24,8 @@ app = FastAPI(title="Banblit Scheduling API")
 
 
 def _format_validation_error(exc: RequestValidationError) -> str:
-    # 형식 오류를 "어느 항목: 무엇이 문제" 문장으로 합친다. 내용 오류(엔진 거부)와
-    # 응답 모양을 맞춰, 화면이 detail 하나만 보여주면 되게 한다.
+    # 형식 오류를 "어느 항목: 무엇이 문제" 형식으로 결합합니다. 내용 오류(엔진에서 거부)와
+    # 응답 모양을 맞춰, 화면이 detail 하나만 표시하면 되게 합니다.
     lines: list[str] = []
     for error in exc.errors():
         location = " → ".join(str(part) for part in error["loc"] if part != "body")
@@ -37,9 +37,9 @@ def _format_validation_error(exc: RequestValidationError) -> str:
 async def handle_database_down(
     request: Request, exc: OperationalError
 ) -> JSONResponse:
-    # DB 에 닿지 못한 요청을 503 으로 돌려준다. 사용자 잘못이 아니라 이쪽이 지금
-    # 못 받는 상태이므로, 잘못된 입력(422)과도 서버 고장(500)과도 구분한다.
-    # 자세한 사유는 기록에만 남기고 화면에는 넣지 않는다.
+    # 데이터베이스에 연결하지 못한 요청을 503으로 반환합니다. 사용자 입력 오류(422)나
+    # 서버 고장(500)과 구분하기 위해 사용합니다. 자세한 사유는 로그에만 남기고
+    # 화면에는 표시하지 않습니다.
     logger.error("데이터베이스에 닿지 못했습니다 (%s): %s", request.url.path, exc)
     return JSONResponse(
         status_code=503,
@@ -49,9 +49,9 @@ async def handle_database_down(
 
 @app.exception_handler(IntegrityError)
 async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONResponse:
-    # db.commit.commit_translating 처럼 특정 제약을 미리 잡아 ValueError로 바꾸는 자리를
-    # 지난 IntegrityError만 여기로 온다. 어떤 제약을 어겼는지는 기록에만 남기고,
-    # 화면에는 SQL 상세가 아니라 사람이 읽을 문장 하나만 보낸다.
+    # db.commit.commit_translating 처럼 특정 제약을 미리 포착해 ValueError로 변환한 부분을
+    # 통과한 IntegrityError만 여기로 옵니다. 어떤 제약을 위반했는지는 로그에만 남기고,
+    # 화면에는 SQL 상세가 아니라 사용자가 읽을 수 있는 문장 하나만 보냅니다.
     logger.error("데이터 제약을 어겼습니다 (%s): %s", request.url.path, exc)
     return JSONResponse(
         status_code=409,
@@ -59,9 +59,10 @@ async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONR
     )
 
 
-# 서비스 함수가 던지는 두 가지 거절. 어느 endpoint 에서 났든 응답은 같다 —
-# 규칙 위반은 422, 자격 없음은 403, 둘 다 detail 에 사람이 읽을 문장 하나.
-# 라우터는 이 둘을 잡지 않는다. 다른 상태 코드가 필요한 자리(로그인 401 등)만 직접 잡는다.
+# 서비스 함수가 발생시키는 두 가지 exception(예외). 어느 endpoint(API의 요청 주소 단위)에서
+# 발생하든 응답은 같습니다. 규칙 위반은 422, 권한 부족은 403이며, 둘 다 detail에 사용자가
+# 읽을 수 있는 문장 하나씩 포함합니다. 라우터는 이 둘을 처리하지 않으며, 다른 상태 코드가
+# 필요한 부분(로그인 401 등)만 직접 처리합니다.
 @app.exception_handler(ValueError)
 async def handle_value_error(request: Request, exc: ValueError) -> JSONResponse:
     return JSONResponse(status_code=422, content={"detail": str(exc)})
@@ -83,8 +84,9 @@ async def handle_validation_error(
 
 @app.get("/health")
 def health() -> JSONResponse:
-    # check_database 로 실제 접속과 마이그레이션 적용 여부를 확인해 그대로 싣는다.
-    # 하나라도 끊겼으면 503 으로 답해, reverse proxy 가 이 서버를 빼고 동작할 수 있게 한다.
+    # check_database로 실제 접속과 migration(데이터베이스 스키마 변경) 적용 여부를 확인하고
+    # 그대로 반환합니다. 하나라도 실패하면 503으로 응답하여 reverse proxy가 이 서버를
+    # 요청 분배에서 제외할 수 있게 합니다.
     database = check_database()
     checks = {"database": {"ok": database.ok, "detail": database.detail}}
     healthy = database.ok
@@ -96,9 +98,10 @@ def health() -> JSONResponse:
     )
 
 
-# 도메인 라우터를 붙인다. 각 라우터는 table 하나(또는 하나에 딸린 CRUD)만 다루므로
-# room_service·period_crud_service·roster_service·board_service 와 같은 경계로 나눴다.
-# 순서는 응답에 영향이 없다 — 주소가 서로 겹치지 않기 때문이다.
+# 도메인 라우터를 추가합니다. 각 라우터는 table(데이터베이스의 행과 열로 이루어진 데이터 구조)
+# 하나(또는 하나에 딸린 CRUD)만 처리하므로 room_service·period_crud_service·roster_service·
+# board_service 같은 경계로 나누었습니다. 추가 순서는 응답에 영향을 주지 않습니다.
+# 요청 주소가 서로 겹치지 않기 때문입니다.
 app.include_router(rooms.router)
 app.include_router(periods.router)
 app.include_router(roster.router)

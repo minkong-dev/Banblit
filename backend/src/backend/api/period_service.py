@@ -32,7 +32,7 @@ from backend.scheduling.pipeline import (
 
 @dataclass(frozen=True)
 class PeriodAssignResult:
-    """배정 결과와, 엔진이 쓴 번호를 화면에 보일 이름으로 옮길 대응표."""
+    """배정 결과와, 엔진이 사용한 번호를 화면에 표시할 이름으로 변환할 대응표입니다."""
 
     resolution: Resolution
     saved: bool
@@ -43,7 +43,7 @@ class PeriodAssignResult:
 
 @dataclass(frozen=True)
 class OpenSlot:
-    """아무 팀도 배정받지 않은 한 시간 slot 하나. 방 번호와 이름을 함께 들고 있다."""
+    """어떤 팀도 배정받지 않은 한 시간 slot(1시간 단위 시간 칸) 하나입니다. 합주실 번호와 이름을 함께 포함합니다."""
 
     room_id: int
     room: str
@@ -59,12 +59,12 @@ def assign_period(
     saved_at: datetime,
     excluded_member_id: int | None = None,
 ) -> PeriodAssignResult:
-    """기간 전체의 시간표를 짜고, 성공하면 현행 시간표로 저장한다.
+    """기간 전체의 스케줄을 계산하고, 성공하면 현행 스케줄로 저장합니다.
 
-    배정이 불가능하면 저장하지 않고 조율안만 담아 돌려준다 — 실패는 오류가 아니다.
-    excluded_member_id 를 주면 그 사람을 명단에서 빼고 계산한다. 조율안 확정이
-    이 인자를 쓴다 — 조율안이 지목한 사람을 빼면 조율안과 같은 계산이 된다.
-    잘못된 입력(없는 기간·팀·합주실, 상시기간, 명단 밖 사람)은 ValueError로 거부한다.
+    배정이 불가능할 경우 저장하지 않고 해결안만 반환합니다 — 실패는 오류가 아닙니다.
+    excluded_member_id를 지정하면 그 멤버를 명단에서 제외하고 계산합니다. 해결안 확정이
+    이 매개변수를 사용합니다 — 해결안이 지목한 멤버를 제외하면 해결안과 같은 계산이 됩니다.
+    잘못된 입력(없는 기간·팀·합주실, 상시기간, 명단 밖 멤버)은 ValueError로 거부합니다.
     """
     period = session.get(Period, period_id)
     if period is None:

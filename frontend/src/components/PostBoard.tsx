@@ -30,7 +30,8 @@ import type { Attachment, Post, PostComment } from "../lib/contract";
 
 
 
-/** 목록 → 상세로 넘어갈 때 초점을 그 글의 제목으로, 되돌아올 때는 눌렀던 줄로 되돌린다. */
+/** focus(키보드 입력을 받는 요소 상태)를 관리합니다: 목록에서 상세 글로 이동할 때 제목으로,
+ *  목록으로 돌아올 때 눌렀던 글 버튼로 옮깁니다. */
 function useDetailFocus(): {
   openId: number | null;
   open: (id: number) => void;
@@ -68,8 +69,9 @@ function useDetailFocus(): {
   };
 }
 
-/** 글 목록. 비었거나 불러오는 중이어도 상자는 그대로 둔다 — 상자 높이를 재서
- *  한 쪽에 몇 줄을 둘지 정하므로, 상자가 사라지면 잴 것이 없어진다. */
+/** 글 목록을 렌더합니다. 비어 있거나 로딩 중이어도 컨테이너는 유지합니다.
+ *  컨테이너 높이를 측정해 한 page(페이지)에 표시할 글 개수를 계산하므로,
+ *  컨테이너가 사라지면 측정할 수 없습니다. */
 function PostList(props: {
   posts: Post[];
   state: LoadState;
@@ -100,11 +102,11 @@ function PostList(props: {
 
 function WriteForm(props: {
   writePath: string;
-  /** 아직 누구인지 모르면 null — 그때는 글을 쓸 수 없다. */
+  /** 현재 사용자의 id. 미인증(로그인 전)이면 null이므로 글을 작성할 수 없습니다. */
   authorId: number | null;
   writeNote: string;
   queryKey: unknown[];
-  /** 다 쓰고 나면 서식을 접는다 — 목록으로 돌아가는 것이 다음에 할 일이다. */
+  /** 글 작성을 완료하면 WriteForm 을 닫습니다. 다음 단계는 목록으로 돌아가는 것입니다. */
   onDone: () => void;
 }) {
   const { writePath, authorId, writeNote, queryKey, onDone } = props;
@@ -112,18 +114,19 @@ function WriteForm(props: {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  // 올리는 동안 얼마나 갔는지 보여주는 한 줄. 비어 있으면 올리는 중이 아니다.
+  // 파일 업로드 진행 상황을 표시합니다. 비어 있으면 업로드 중이 아닙니다.
   const [stage, setStage] = useState("");
-  // 글은 만들어졌는데 첨부에서 걸렸을 때 그 글 번호. null 이면 아직 만든 글이 없다.
+  // 글은 생성되었지만 attachment(첨부 파일) 업로드에서 실패했을 때의 글 id.
+  // null 이면 글을 아직 생성하지 않았습니다.
   const [postedId, setPostedId] = useState<number | null>(null);
   const [touched, setTouched] = useState(false);
-  // 고른 파일은 브라우저가 들고 있어 값을 대신 넣어 줄 수 없다. 다 올린 뒤 비우려면
-  // 그 칸을 직접 잡아야 한다.
+  // 선택한 파일은 브라우저가 관리하므로 code(코드)에서 값을 설정할 수 없습니다.
+  // 업로드 완료 후 입력 칸을 초기화하려면 DOM 요소에 직접 접근해야 합니다.
   const picker = useRef<HTMLInputElement>(null);
 
   const uploadAll = async (postId: number): Promise<void> => {
-    // 고른 순서대로 하나씩 올린다. 한 번에 몰아 보내면 어느 것이 얼마나 갔는지
-    // 사람에게 보여줄 수 없다.
+    // 선택한 순서대로 하나씩 업로드합니다. 한 번에 모두 보내면 개별 진행 상황을
+    // 사용자에게 표시할 수 없습니다.
     for (const [index, file] of files.entries()) {
       const nth = files.length === 1 ? "" : ` (${index + 1}/${files.length})`;
       setStage(`${file.name} 업로드 중${nth} 0%`);
@@ -132,8 +135,8 @@ function WriteForm(props: {
           setStage(`${file.name} 업로드 중${nth} ${percent}%`);
         });
       } catch (error) {
-        // 여기까지 올라간 것은 이미 글에 붙었다. 못 올린 것만 남겨, 다시 누를 때
-        // 같은 파일을 두 번 올리지 않게 한다.
+        // 이미 업로드된 파일은 글에 붙어 있습니다. 실패한 파일만 남겨두어,
+        // 재시도 시 같은 파일을 두 번 업로드하지 않게 합니다.
         setFiles(files.slice(index));
         throw new Error(
           `글은 업로드 되었지만 "${file.name}" 을 업로드하지 못했어요 — ${reason(error)}`,
@@ -172,7 +175,8 @@ function WriteForm(props: {
       onDone();
     },
     onSettled: () => {
-      // 첨부를 올리다 걸려도 글은 이미 만들어졌다 — 성패와 무관하게 목록을 다시 받는다.
+      // attachment 업로드에 실패해도 글은 이미 생성되었습니다.
+      // 성공·실패 여부와 무관하게 목록을 refetch(다시 조회)합니다.
       setStage("");
       void client.invalidateQueries({ queryKey });
     },
@@ -198,8 +202,8 @@ function WriteForm(props: {
           <input
             id="postTitle"
             value={title}
-            // 올리는 중에는 잠근다 — 이미 보낸 값이라 여기서 고쳐도 반영되지 않는다.
-            // 글만 만들어진 채 첨부에서 걸렸을 때도 마찬가지다.
+            // 업로드 중 또는 글은 생성되었으나 attachment 업로드에서 실패했을 때 비활성화합니다.
+            // 이미 제출된 값이므로 여기서 수정해도 반영되지 않습니다.
             disabled={send.isPending || postedId !== null}
             aria-invalid={bad !== ""}
             aria-describedby={bad === "" ? undefined : "postWhy"}
@@ -302,8 +306,9 @@ function CommentForm(props: { postId: number; authorId: number | null }) {
   );
 }
 
-/** 글에 붙은 파일 목록. 이름을 누르면 받고, 글을 지울 수 있는 사람에게만 지우는 자리가 보인다
- *  — 첨부에는 올린 사람 정보가 따로 없어, 글쓴이 기준으로 판정한다(서버도 같다). */
+/** 글에 붙은 파일들을 나열합니다. 이름을 누르면 다운로드하고, 글을 삭제할 권한이 있는 사용자에게만
+ *  "삭제" 버튼가 표시됩니다. attachment 는 작성자 정보를 따로 저장하지 않으므로,
+ *  글의 작성자를 기준으로 판정합니다(서버도 같습니다). */
 function AttachmentList(props: {
   postId: number;
   attachments: Attachment[];
@@ -329,7 +334,7 @@ function AttachmentList(props: {
       <ul>
         {attachments.map((file) => (
           <li key={file.id} className="comment">
-            {/* download 를 붙이면 브라우저가 화면에 펼치지 않고 받는다. */}
+            {/* download attribute(속성)를 붙이면 브라우저가 파일을 inline(화면에 표시)하지 않고 다운로드합니다. */}
             <a href={apiUrl(`/attachments/${file.id}`)} download={file.name}>{file.name}</a>
             {" "}
             <span className="meta">{fileSizeLabel(file.size)}</span>
@@ -339,8 +344,8 @@ function AttachmentList(props: {
                 <button
                   className="btn"
                   type="button"
-                  // 줄마다 "삭제" 가 같은 글자라, 화면을 읽어 주는 도구에는 어느
-                  // 파일의 것인지 이름을 붙여 알린다.
+                  // 각 줄의 버튼 텍스트가 모두 "삭제"로 같으므로, 스크린 리더 사용자를 위해
+                  // aria-label 에 파일명을 붙여 어느 파일의 삭제 버튼인지 명확하게 합니다.
                   aria-label={`${file.name} 삭제`}
                   disabled={remove.isPending}
                   onClick={() => remove.mutate(file.id)}
@@ -357,8 +362,9 @@ function AttachmentList(props: {
   );
 }
 
-/** 글을 지우는 단추. 글쓴이 자신에게만 보이고, 서버도 글쓴이만 통과시킨다.
- *  지우면 붙어 있던 첨부파일도 디스크에서 함께 사라진다 — 무를 수 없어 한 번 되묻는다. */
+/** 글 작성자에게만 표시되는 삭제 버튼입니다. 서버도 작성자만 삭제를 허용합니다.
+ *  삭제하면 붙어 있던 attachment 들도 서버 디스크에서 함께 제거됩니다.
+ *  취소할 수 없으므로 확인 dialog 를 한 번 표시합니다. */
 function RemovePost(props: {
   postId: number;
   listKey: readonly unknown[];
@@ -372,7 +378,7 @@ function RemovePost(props: {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: listKey });
       say("글을 삭제했어요.");
-      // 지운 글의 상세를 계속 열어 둘 수 없으므로 목록으로 돌아간다.
+      // 삭제한 글의 상세 화면을 계속 표시할 수 없으므로 목록으로 돌아갑니다.
       onDone();
     },
   });
@@ -397,7 +403,7 @@ function RemovePost(props: {
   );
 }
 
-/** 글 수정 — 쓸 때와 같은 두 칸을 값이 담긴 채로 다시 연다. */
+/** 글 제목과 본문 칸을 현재 값으로 채운 상태로 열어 수정하게 합니다. */
 function EditPost(props: {
   post: Post;
   listKey: readonly unknown[];
@@ -458,7 +464,8 @@ function EditPost(props: {
   );
 }
 
-/** 댓글 한 줄. 고칠 수 있으면 연필이, 지울 수 있으면 쓰레기통이 오른쪽 끝에 선다(lib/boards boardActions). */
+/** 댓글 하나를 렌더합니다. 수정 권한이 있으면 수정 버튼가, 삭제 권한이 있으면 삭제 버튼가
+ *  오른쪽 끝에 표시됩니다(`lib/pipeline` 의 `boardActions` 참조). */
 function CommentRow(props: {
   comment: PostComment;
   canEdit: boolean;
@@ -545,11 +552,11 @@ function CommentRow(props: {
 
 function PostDetail(props: {
   postId: number;
-  /** 아직 누구인지 모르면 null — 그때는 글도 댓글도 쓸 수 없다. */
+  /** 현재 사용자의 id. 미인증(로그인 전)이면 null이므로 글과 댓글을 작성할 수 없습니다. */
   authorId: number | null;
-  /** 타 멤버 글 수정 및 삭제(board_moderate) 권한이 있는지 — 남의 글·댓글·첨부에도 삭제가 보인다. */
+  /** board_moderate 권한 여부. 다른 사용자의 글·댓글·attachment 에도 삭제 버튼가 표시됩니다. */
   canModerate: boolean;
-  /** 글을 지운 뒤 다시 받아야 하는 목록 */
+  /** 글 삭제 후 갱신해야 하는 목록의 queryKey 입니다. */
   listKey: readonly unknown[];
   heading: RefObject<HTMLHeadingElement | null>;
   onBack: () => void;
@@ -558,8 +565,8 @@ function PostDetail(props: {
   const [editing, setEditing] = useState(false);
   const detail = useQuery({
     queryKey: ["board", "post", postId],
-    // 첨부는 글을 열 때 함께 온다 — 목록을 따로 부르지 않는다.
-    // 서버 쪽 정본은 backend/src/backend/api/schemas.py 의 PostDetailOut 이다.
+    // attachment 들은 글 상세 조회 response(응답)에 포함되므로 따로 요청하지 않습니다.
+    // 서버 정의는 `backend/src/backend/api/schemas.py` 의 `PostDetailOut` 를 참조합니다.
     queryFn: () =>
       getJSON<{ post: Post; comments: PostComment[]; attachments: Attachment[] }>(
         `/posts/${postId}`,
@@ -624,18 +631,19 @@ function PostDetail(props: {
   );
 }
 
-/** 글 목록 + 상세 + 글쓰기 + 댓글쓰기 한 벌. 공지사항과 팀 게시판이 이걸 그대로 쓰고
- *  주소(listPath·writePath)만 갈아 끼운다. */
+/** 글 목록, 상세 보기, 작성 폼, 댓글 작성을 통합한 게시판 컴포넌트입니다.
+ *  공지사항 화면과 팀별 게시판이 이 컴포넌트를 재사용하며, listPath 와 writePath 만 달라집니다. */
 export function PostBoard(props: {
   title: string;
   hint: string;
   listPath: string;
   writePath: string;
-  /** 아직 누구인지 모르면 null — 그때는 글도 댓글도 쓸 수 없다. */
+  /** 현재 사용자의 id. 미인증(로그인 전)이면 null이므로 글과 댓글을 작성할 수 없습니다. */
   authorId: number | null;
-  /** 글쓰기 서식을 그릴지. 공지는 notice_write 를 가진 사람만이고, 팀 게시판은 소속이면 쓴다. */
+  /** WriteForm 을 렌더할지 여부입니다. 공지사항은 notice_write 권한이 있는 사람만,
+   *  팀 게시판은 팀에 소속한 사람만 글을 작성할 수 있습니다. */
   canWrite: boolean;
-  /** 타 멤버 글 수정 및 삭제(board_moderate) 권한. 남의 글·댓글·첨부에도 삭제 단추가 선다. */
+  /** board_moderate 권한 여부. 다른 사용자의 글·댓글·attachment 에도 삭제 버튼가 표시됩니다. */
   canModerate: boolean;
   writeNote: string;
   emptyText: string;
@@ -653,14 +661,17 @@ export function PostBoard(props: {
   });
   const list = posts.data?.posts ?? [];
   const state = loadState(posts);
-  // 한 쪽에 몇 줄을 둘지는 상자 높이가 정한다. 스크롤하지 않고 쪽으로 넘긴다.
+  // 컨테이너 높이에 따라 한 page(페이지)에 표시할 글 개수를 계산합니다.
+  // 수직 스크롤 없이 pagination(페이지네이션) 버튼로 이동합니다.
   const [box, perPage] = useFitCount(76);
-  // 글이 지워져 보던 쪽이 사라질 수 있어, 그릴 때마다 범위 안으로 당긴다.
+  // 글이 삭제되어 현재 page 가 범위를 벗어날 수 있으므로,
+  // render 마다 유효한 page 로 clamp(제한)합니다.
   const pages = pageCount(list.length, perPage);
   const shownPage = clampPage(page, pages);
   const shown = pageSlice(list, shownPage, perPage);
 
-  // 목록으로 돌아올 때 다시 불러온다 — 댓글을 달고 오면 댓글 수가 목록에도 반영돼야 한다.
+  // 목록으로 돌아올 때 query 를 invalidate(갱신 대기 상태로 표시)합니다.
+  // 댓글을 추가하고 돌아오면 목록의 댓글 개수도 최신 상태로 반영되어야 합니다.
   const backToList = (): void => {
     void client.invalidateQueries({ queryKey });
     focus.back();
@@ -683,9 +694,9 @@ export function PostBoard(props: {
             boxRef={box}
           />
 
-          {/* 쪽 넘기기와 글쓰기가 목록 아래 한 줄에 함께 선다. 쪽이 하나뿐이어도
-              쪽 넘기기를 그린다 — 글이 늘고 줄 때마다 줄이 생겼다 없어지면 글쓰기
-              단추가 위아래로 움직인다. */}
+          {/* Pagination 과 글쓰기 버튼가 한 줄에 함께 표시됩니다. 페이지가 하나뿐이어도
+              pagination 을 렌더합니다. 그렇지 않으면 글이 추가·삭제될 때마다
+              글쓰기 버튼이 위아래로 움직여 UX 가 불안정합니다. */}
           {writing ? null : (
           <div className="listfoot">
           {state.kind !== "ready" || list.length === 0 ? null : (
@@ -698,8 +709,8 @@ export function PostBoard(props: {
           </div>
           )}
 
-          {/* 글쓰기 서식은 단추를 눌렀을 때만 나온다. 늘 펼쳐 두면 목록보다 서식이
-              더 길어져, 읽으러 온 사람이 매번 지나쳐야 한다. */}
+          {/* WriteForm 은 버튼를 눌렀을 때만 표시됩니다.
+              항상 펼쳐 두면 form 이 목록보다 길어져 사용자가 읽으러 올 때마다 스크롤해야 합니다. */}
           {!writing ? null : (
             <WriteForm
               writePath={writePath}

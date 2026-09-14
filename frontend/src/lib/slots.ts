@@ -1,5 +1,5 @@
-// 서버가 준 배정을 화면이 읽을 모양으로 바꾼다. 여기 있는 것은 전부 계산이라
-// 화면도 서버도 건드리지 않는다.
+// 서버가 제공한 배정안을 화면이 읽을 형식으로 변환합니다. 여기 있는 것은 모두 계산이므로
+// 화면도 서버도 수정하지 않습니다.
 
 import { slotLabel } from "./calendar";
 
@@ -11,9 +11,7 @@ export type Session = {
 };
 
 export function mergeSessions(items: Session[]): Session[] {
-  // items 를 팀·방·시작시각 순으로 세운 뒤, 앞 칸의 끝과 맞닿은 칸을 이어 붙여
-  // 한 시간짜리 칸의 나열을 "합주 한 번"으로 만든다. 받은 목록은 고치지 않는다.
-  // localeCompare 는 같으면 0 을 준다. || 로 이으면 앞이 같을 때만 다음을 본다.
+  // items를 팀·합주실·시작시각 순으로 정렬한 후, 앞 slot(1시간 단위 시간 칸)의 종료시각과 맞닿은 slot을 연결해 연속된 slot의 나열을 "합주 한 번"으로 변환합니다. 입력받은 목록은 고치지 않습니다. localeCompare()는 같으면 0을 반환합니다. || 연산자는 앞이 같을 때만 다음을 검토합니다.
   const sorted = [...items].sort((a, b) =>
     a.team.localeCompare(b.team)
     || a.room.localeCompare(b.room)
@@ -32,13 +30,12 @@ export function mergeSessions(items: Session[]): Session[] {
   return merged;
 }
 
-/** mergeReservations 이 받는 칸 하나. 서버 응답(lib/contract 의 Reservation)에서
- *  이 계산이 쓰는 값만 추린 모양이다. */
+/** mergeReservations()이 수신하는 slot(1시간 단위 시간 칸) 하나입니다. 서버 응답(lib/contract의 Reservation)에서
+ *  이 계산이 사용하는 값만 추출한 형태입니다. */
 export type ReservationSlot = {
   id: number;
   room: string;
-  /** 이름을 건 팀의 번호. 없으면 개인이 직접 잡은 것이다. 이름이 아니라 번호로 가른다 —
-   *  동명이인과 같은 이유로 이름은 겹칠 수 있다. */
+  /** 예약한 팀의 번호입니다. 없으면 멤버가 개인으로 예약한 것입니다. 팀을 이름이 아니라 번호로 구분합니다. 동명이인처럼 같은 이름의 팀이 있을 수 있기 때문입니다. */
   teamId: number | null;
   team: string | null;
   memberId: number;
@@ -47,9 +44,9 @@ export type ReservationSlot = {
   end: string;
 };
 
-/** 예약 한 건 — 맞닿은 칸 여럿을 이어 붙인 것. */
+/** 예약 한 건입니다. 연속된 여러 slot을 연결한 것입니다. */
 export type Booking = {
-  /** 이어 붙인 칸들의 번호. 취소는 칸마다 따로 지우므로 전부 들고 있어야 한다. */
+  /** 연결된 slot들의 ID입니다. 예약 취소는 slot마다 따로 삭제하므로 모든 ID를 보관해야 합니다. */
   ids: number[];
   room: string;
   teamId: number | null;
@@ -60,11 +57,9 @@ export type Booking = {
   end: string;
 };
 
-/** 서버가 칸 하나씩 주는 예약을 사람이 보는 한 건으로 잇는다. 받은 목록은 고치지 않는다. */
+/** 서버가 제공한 slot(1시간 단위 시간 칸) 단위 예약을 사용자가 보는 한 건으로 연결합니다. 입력받은 목록은 고치지 않습니다. */
 export function mergeReservations(rows: readonly ReservationSlot[]): Booking[] {
-  // 같은 자리(합주실·팀·잡은 사람)끼리 모아 시각 순으로 세운 뒤, 앞 칸의 끝과 맞닿은
-  // 칸만 이어 붙인다. 자리가 다르면 시각이 맞닿아도 남남이다 — 취소는 잡은 사람만
-  // 할 수 있어, 남의 칸을 한 건으로 묶으면 지울 수 없는 번호가 섞인다.
+  // 같은 위치(합주실·팀·예약자)별로 모아 시각 순으로 정렬한 후, 앞 slot의 종료시각과 맞닿은 slot만 연결합니다. 위치가 다르면 시각이 맞닿아도 별도입니다. 취소 권한은 예약자에게만 있어, 다른 사용자의 slot을 한 건으로 묶으면 삭제할 수 없는 ID가 섞입니다.
   const sorted = [...rows].sort((a, b) =>
     a.room.localeCompare(b.room)
     || a.memberId - b.memberId
@@ -99,31 +94,30 @@ export function mergeReservations(rows: readonly ReservationSlot[]): Booking[] {
   return merged;
 }
 
-// 서버는 시간대가 붙지 않은 시각을 준다. Date 로 바꾸면 브라우저가 제 시간대를
-// 끼워 넣어 날짜가 하루씩 밀 수 있으므로, 받은 글자를 그대로 자른다.
+// 서버는 시간대가 붙지 않은 ISO 문자열("2026-09-14T19:00:00" 형식의 시각 문자열)을 제공합니다. Date로 변환하면 브라우저가 기본 시간대를 적용해 날짜가 하루씩 밀릴 수 있으므로, 수신한 문자열을 그대로 자릅니다.
 
 export function dayOf(iso: string): string {
-  // "2026-09-14T18:30:00" 에서 "2026-09-14" 를 잘라 돌려준다.
+  // "2026-09-14T18:30:00"에서 "2026-09-14"를 잘라 반환합니다.
   return iso.slice(0, 10);
 }
 
 export function hhmm(iso: string): string {
-  // 같은 값에서 "18:30" 을 잘라 돌려준다.
+  // 같은 ISO 문자열에서 "18:30"을 잘라 반환합니다.
   return iso.slice(11, 16);
 }
 
 export function slotIndex(iso: string, openHour: number): number {
-  // 여는 시각을 0번으로 두고 한 시간마다 하나씩 늘어나는 칸 번호를 돌려준다.
+  // 여는 시각을 index 0으로 설정하고 한 시간마다 하나씩 증가하는 slot 번호를 반환합니다.
   return Number(iso.slice(11, 13)) - openHour;
 }
 
 export function isoAt(dayKey: string, index: number, openHour: number): string {
-  // slotIndex 의 반대 방향 — 날짜와 칸 번호를 서버가 받는 시간대 없는 시각 문자열로 합친다.
+  // slotIndex()의 역함수입니다. 날짜와 slot 번호를 서버가 수신하는 ISO 문자열로 병합합니다.
   return `${dayKey}T${slotLabel(index, openHour)}:00`;
 }
 
-/** 설정의 예약 탭이 보는 목록 — 한 건으로 이은 뒤 합주실과 무관하게 시작 시각 순으로 세운다.
- *  mergeReservations 는 합주실·사람 순이라, 사람이 "다음에 뭐가 있지" 를 보기에는 맞지 않다. */
+/** 설정의 예약 탭이 표시하는 목록입니다. 한 건으로 연결한 후 합주실과 무관하게 시작시각 순으로 정렬합니다.
+ *  mergeReservations()는 합주실·사용자 순으로 정렬하므로, 사용자가 "다음 예약이 무엇인지" 확인하기에는 맞지 않습니다. */
 export function upcomingBookings(rows: readonly ReservationSlot[]): Booking[] {
   return mergeReservations(rows).sort((a, b) => a.start.localeCompare(b.start));
 }

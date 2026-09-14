@@ -7,13 +7,13 @@ from backend.api.roster_service import ROSTER_MESSAGES
 from backend.db.pipeline import commit_translating
 from backend.db.models import Member, Team, TeamSlot
 
-# account 픽스처(tests/conftest.py)를 부른 순서가 곧 역할이다 — 첫 호출이 헤드매니저,
-# 그 뒤는 일반멤버다. 일반멤버 계정이 필요한 검사는 헤드매니저를 먼저 만들어야 한다.
+# account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다 — 첫 호출이 헤드매니저,
+# 그 뒤는 멤버입니다. 멤버 계정이 필요한 검사는 헤드매니저를 먼저 만들어야 합니다.
 from conftest import AccountFactory, seat
 
 
 def _team(session: Session, name: str, slots: int = 0) -> Team:
-    """팀 하나와 빈 보컬 자리 slots 개를 만든다."""
+    """팀 하나와 빈 보컬 자리를 slots개 생성합니다."""
     team = Team(name=name)
     session.add(team)
     session.flush()
@@ -26,7 +26,7 @@ def _team(session: Session, name: str, slots: int = 0) -> Team:
 
 
 def _member(session: Session, name: str, cohort: int | None = None) -> Member:
-    """로그인과 무관한, 명단에만 있는 사람 — 순수 SQLAlchemy 객체로 넣는다."""
+    """로그인과 무관하게 명단에만 있는 사람입니다 — 순수 SQLAlchemy 객체로 추가합니다."""
     member = Member(name=name, cohort=cohort)
     session.add(member)
     session.flush()
@@ -58,7 +58,7 @@ def test_teams_list_is_empty_when_no_teams(
 def test_teams_carry_both_slot_count_and_filled_count(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """자리 수와 앉은 수를 함께 준다 — 하나만 주면 몇 자리 비었는지 화면이 모른다."""
+    """자리 수와 점유 수를 함께 반환합니다 — 하나만 반환하면 빈 자리가 몇 개인지 화면이 알 수 없습니다."""
     _, cookies = account("박서연", "head@example.com")
     team = _team(db_session, "청산", slots=3)
     seat(db_session, team.id, _member(db_session, "황찬우").id, instrument="일렉")
@@ -85,7 +85,7 @@ def test_team_slots_read_requires_authentication(
 def test_empty_slots_are_listed_too(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """빈 자리를 빼면 화면이 채워야 할 곳을 보여줄 수 없다."""
+    """빈 자리를 제외하면 화면이 채워야 할 곳을 표시할 수 없습니다."""
     _, cookies = account("박서연", "head@example.com")
     team = _team(db_session, "청산", slots=1)
     seat(db_session, team.id, _member(db_session, "황찬우", cohort=44).id)
@@ -121,7 +121,7 @@ def test_team_members_lists_only_seated_people(
     assert [member["name"] for member in members["members"]] == ["황찬우"]
 
 
-# ── 사람 검색(돋보기) ──────────────────────────────────────────────────────
+# ── 사람 검색 ──────────────────────────────────────────────────────────────
 
 
 def test_member_search_requires_authentication(api_client: TestClient) -> None:
@@ -131,7 +131,7 @@ def test_member_search_requires_authentication(api_client: TestClient) -> None:
 def test_member_search_returns_nothing_for_an_empty_query(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """빈 검색어에 전체를 주면 명단을 통째로 내주는 통로가 된다."""
+    """빈 검색어를 허용하면 명단 전체를 반환하는 endpoint(API의 요청 주소 단위)가 됩니다."""
     _, cookies = account("박서연", "head@example.com")
     _member(db_session, "황찬우")
     db_session.commit()
@@ -144,7 +144,7 @@ def test_member_search_returns_nothing_for_an_empty_query(
 def test_member_search_finds_by_partial_name_with_cohort(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """동명이인은 기수로 가른다 — 검색 결과에 기수가 함께 실려야 고를 수 있다."""
+    """동명이인은 기수로 구분합니다 — 검색 결과에 기수가 함께 표시되어야 선택할 수 있습니다."""
     _, cookies = account("박서연", "head@example.com")
     _member(db_session, "박민경", cohort=47)
     _member(db_session, "박민경", cohort=49)
@@ -181,7 +181,7 @@ def test_team_creation_rejects_a_plain_member(
 def test_team_is_created_with_its_instrument_slots(
     api_client: TestClient, account: AccountFactory
 ) -> None:
-    """팀과 자리가 한 번에 들어간다 — 자리 없는 팀이 잠깐이라도 저장되면 안 된다."""
+    """팀과 자리를 한 번에 생성합니다 — 자리 없는 팀이 일시적으로 저장되면 안 됩니다."""
     _, head = account("박서연", "head@example.com")
 
     created = api_client.post(
@@ -228,7 +228,7 @@ def test_team_creation_rejects_zero_slots(
 def test_team_creation_rejects_more_slots_than_the_engine_takes(
     api_client: TestClient, account: AccountFactory
 ) -> None:
-    """배정 계산이 팀당 10명까지만 받는다 — 그보다 많은 자리는 만들어도 못 쓴다."""
+    """배정 엔진이 팀당 최대 10명까지만 처리합니다 — 그보다 많은 자리는 생성해도 사용할 수 없습니다."""
     _, head = account("박서연", "head@example.com")
 
     response = api_client.post(
@@ -279,7 +279,7 @@ def test_team_creation_rejects_a_whitespace_only_name(
 def test_team_name_race_at_commit_time_is_translated_not_500(
     test_engine: Engine, db_session: Session
 ) -> None:
-    """사전 검사와 commit 사이에는 잠금이 없다 — 나중 커밋이 제약에 걸린다."""
+    """사전 검사(SELECT)와 commit 사이에는 잠금이 없습니다 — 나중 커밋이 제약을 위반합니다."""
     db_session.add(Team(name="청산"))
     db_session.commit()
 
@@ -449,7 +449,7 @@ def test_seating_replaces_whoever_sat_there(
 def test_seating_rejects_someone_already_in_another_slot_of_the_team(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """한 사람이 같은 팀의 두 자리를 겸하면 배정이 그 사람을 같은 시간에 두 번 센다."""
+    """한 사람이 같은 팀의 두 자리를 겸하면 배정 엔진이 그 사람을 같은 시간에 중복 계산합니다."""
     _, head = account("박서연", "head@example.com")
     team = _team(db_session, "청산", slots=2)
     member = _member(db_session, "황찬우")
@@ -488,7 +488,7 @@ def test_seating_rejects_an_unknown_member(
 def test_seating_rejects_a_slot_from_another_team(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """자리 번호만 맞고 팀이 다르면 없는 것으로 본다."""
+    """자리 번호만 같고 팀이 다르면 없는 것으로 취급합니다."""
     _, head = account("박서연", "head@example.com")
     mine = _team(db_session, "청산", slots=1)
     other = _team(db_session, "곰팡이", slots=1)
@@ -521,7 +521,7 @@ def test_clearing_a_slot_requires_authentication(
 def test_a_member_can_leave_their_own_slot_without_any_permission(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """스스로 빠지는 것은 항목이 없어도 된다."""
+    """스스로 빠지는 것은 권한 항목이 없어도 됩니다."""
     account("박서연", "head@example.com")
     plain_id, plain = account("이도현", "member@example.com")
     team = _team(db_session, "청산")
@@ -552,7 +552,7 @@ def test_a_plain_member_cannot_clear_someone_elses_slot(
 def test_clearing_keeps_the_slot_itself(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """팀 구성이 바뀐 것이 아니라 사람만 빠진 것이다."""
+    """팀 구성이 바뀐 것이 아니라 사람만 제거된 것입니다."""
     _, head = account("박서연", "head@example.com")
     team = _team(db_session, "청산")
     seat(db_session, team.id, _member(db_session, "황찬우").id)
@@ -592,14 +592,14 @@ def test_deleting_a_team_requires_team_manage(
 def test_deleting_a_team_removes_its_slots_too(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """자리는 팀의 구성이라 팀이 사라지면 함께 사라진다."""
+    """자리는 팀 구성의 일부이므로 팀이 삭제되면 함께 삭제됩니다."""
     _, head = account("박서연", "head@example.com")
     team = _team(db_session, "청산", slots=2)
     db_session.commit()
     team_id = team.id
 
     assert api_client.delete(f"/teams/{team_id}", cookies=head).status_code == 204
-    # 없는 팀을 물으면 422 다 — 이 저장소가 "그런 것이 없다"를 답하는 방식이다.
+    # 없는 팀을 조회하면 422를 반환합니다 — 이 저장소가 "그런 것이 없다"를 응답하는 방식입니다.
     assert api_client.get(f"/teams/{team_id}/slots", cookies=head).status_code == 422
     assert db_session.scalars(
         select(TeamSlot).where(TeamSlot.team_id == team_id)
@@ -636,7 +636,7 @@ def test_changing_the_lineup_requires_team_edit(
 def test_adding_a_position_keeps_the_people_already_there(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """드럼이 하나에서 둘로 늘어도, 이미 있던 사람은 그 자리에 남는다."""
+    """드럼이 하나에서 둘로 늘어도, 이미 점유한 자리에는 사람이 남습니다."""
     head_id, head = account("박서연", "head@example.com")
     team = _team(db_session, "청산")
     db_session.add(TeamSlot(team_id=team.id, instrument="드럼", ordinal=1))
@@ -660,7 +660,7 @@ def test_adding_a_position_keeps_the_people_already_there(
 def test_removing_a_position_drops_the_last_one(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """드럼이 둘에서 하나로 줄면 번호가 큰 자리가 사라진다."""
+    """드럼이 둘에서 하나로 줄면 번호가 큰 자리가 삭제됩니다."""
     _, head = account("박서연", "head@example.com")
     team = _team(db_session, "청산")
     db_session.add_all(
@@ -722,7 +722,7 @@ def test_the_member_list_requires_login(api_client: TestClient) -> None:
 def test_the_member_list_gives_everyone_with_their_permission_sets(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """멤버 화면이 한 줄에 이름·학과·학번·기수·권한을 함께 그린다."""
+    """멤버 화면이 한 줄에 이름·학과·학번·기수·권한을 함께 표시합니다."""
     _, head = account("박서연", "head@example.com")
     account("이도현", "member@example.com")
     db_session.commit()
@@ -740,7 +740,7 @@ def test_the_member_list_gives_everyone_with_their_permission_sets(
 def test_the_member_list_pages_from_the_end_of_the_last_one(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """무한 스크롤은 마지막으로 받은 번호 다음부터 이어 받는다."""
+    """무한 스크롤은 마지막으로 받은 ID 다음부터 계속 로드됩니다."""
     _, head = account("박서연", "head@example.com")
     account("이도현", "member@example.com")
     account("최유진", "third@example.com")

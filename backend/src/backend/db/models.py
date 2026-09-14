@@ -1,5 +1,6 @@
-# 이 파일은 공유 선언이다 — table·필드 정의만 담고, api 와 db 양쪽이 그대로 참조한다.
-# 계산·판단이 필요하면 이 파일이 아니라 부르는 쪽에 둔다.
+# 이 파일은 공유 선언입니다. table(데이터베이스의 행과 열로 이루어진 데이터 구조)·
+# 필드 정의만 담고, api와 db 양쪽이 그대로 참조합니다.
+# 계산·판단이 필요하면 이 파일이 아니라 호출하는 쪽에 둡니다.
 
 from datetime import date, datetime, time
 from typing import Literal, get_args
@@ -19,9 +20,10 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-# 할 수 있는 일. 만들기·수정·삭제·주기를 따로 두어, 권한을 만드는 사람이 필요한 것만
-# 골라 묶을 수 있게 한다. 항목이 늘면 그것을 막는 서버 코드도 같이 늘어나므로 데이터가
-# 아니라 여기에 고정한다. 켜고 끄는 것만 permission_sets 에 저장한다.
+# 수행 가능한 작업입니다. 생성·수정·삭제·조회를 따로 두어, 권한을 만드는 사람이
+# 필요한 것만 선택해 묶을 수 있게 합니다. 항목이 늘면 그것을 처리하는 서버 코드도
+# 같이 늘어나므로 데이터가 아니라 여기에 고정합니다. 활성화/비활성화만 permission_sets에
+# 저장합니다.
 Permission = Literal[
     "room_create",  # 합주실 만들기
     "room_edit",  # 합주실 여닫는 시각 고치기
@@ -45,14 +47,15 @@ Permission = Literal[
 
 PERMISSIONS: tuple[Permission, ...] = get_args(Permission)
 
-# CHECK 문구는 위 목록에서 그대로 만든다 — 목록과 제약이 따로 놀지 않게 한다.
+# CHECK 제약 문구는 위 목록에서 그대로 생성합니다. 목록과 제약이 분리되지 않도록 합니다.
 _PERMISSION_ARRAY_SQL = "ARRAY[{}]::text[]".format(
     ", ".join(f"'{name}'" for name in PERMISSIONS)
 )
 
-# 팀을 만들 때 고르는 악기. 자리 하나가 이 중 하나를 맡는다. 같은 악기를 여럿 두면
-# ordinal 로 갈린다 — 일렉 두 자리는 (일렉, 1) 과 (일렉, 2) 다.
-# 기간의 종류. 집중 합주기간(focused)만 자동 배정이 돈다.
+# 팀을 생성할 때 선택하는 포지션 종류입니다. 자리 하나가 이 중 하나를 할당받습니다.
+# 같은 포지션을 2자리 이상 두면 ordinal(순서 번호)로 구분됩니다. 예: 일렉 두 포지션은
+# (일렉, 1)과 (일렉, 2)입니다. 기간의 종류는 다음과 같습니다.
+# 집중 합주기간(focused)만 자동 배정이 실행됩니다.
 PeriodKind = Literal["open", "focused"]
 PERIOD_KINDS: tuple[PeriodKind, ...] = get_args(PeriodKind)
 
@@ -61,7 +64,7 @@ INSTRUMENTS: tuple[Instrument, ...] = get_args(Instrument)
 
 
 def _in_sql(column: str, allowed: tuple[str, ...]) -> str:
-    # column 과 허용 목록을 받아 "column IN ('a', 'b')" 문구를 돌려준다.
+    # column(데이터베이스의 열)과 허용 목록을 받아 "column IN ('a', 'b')" 형식으로 반환합니다.
     return "{} IN ({})".format(column, ", ".join(f"'{value}'" for value in allowed))
 
 
@@ -70,20 +73,23 @@ class Base(DeclarativeBase):
 
 
 class Member(Base):
-    """사람. 동명이인이 있을 수 있으므로 이름에 고유 조건을 두지 않는다 — id가 식별자다.
+    """사용자를 나타냅니다. 동명이인이 있을 수 있으므로 이름에 고유 조건을 두지 않습니다.
+    ID가 식별자입니다.
 
-    email·password_hash는 로그인 계정 정보다. 스케줄링에만 쓰이고 아직
-    가입하지 않은 사람은 이 둘이 비어 있다 — 가입해야 로그인 계정이 된다.
-    할 수 있는 일은 member_permission_sets 가 가리키는 권한들이 정한다.
+    email과 password_hash는 로그인 계정 정보입니다. 스케줄링에만 사용되고, 아직
+    가입하지 않은 사용자는 이 둘이 null입니다. 가입해야만 로그인 계정이 됩니다.
+    수행 가능한 작업은 member_permission_sets가 참조하는 권한들이 정합니다.
 
-    cohort 는 기수다 — 연도로 환산하지 않고 숫자를 그대로 담는다.
+    cohort는 기수(입학 연도를 구분하는 번호)입니다. 연도로 환산하지 않고
+    숫자를 그대로 저장합니다.
 
-    사람을 가르는 것은 id 이지만, 사람이 사람을 가르는 값은 이름·학과·학번·기수 네
-    가지다(사용자 결정). 그 조합에 고유 조건을 걸어 같은 사람이 두 번 들어오지 않게
-    한다. 이름 하나만으로는 동명이인이 갈리지 않는다.
+    사용자를 식별하는 것은 ID이지만, 사용자가 사용자를 구분하는 값은
+    이름, 학과, 학번, 기수 네 가지입니다(사용자 결정). 그 조합에 고유 조건을 걸어
+    같은 사용자가 중복으로 등록되지 않도록 합니다. 이름 하나만으로는
+    동명이인을 구분할 수 없습니다.
 
-    학과·학번은 이 조건이 생기기 전에 들어온 행에는 비어 있다. Postgres 는 NULL 이
-    낀 조합을 겹침으로 보지 않으므로, 옛 행들이 서로 부딪히지 않는다.
+    학과와 학번은 이 조건이 생기기 전에 등록된 행에는 null입니다. PostgreSQL은
+    NULL이 있는 조합을 중복으로 보지 않으므로, 기존 행들이 서로 충돌하지 않습니다.
     """
 
     __tablename__ = "members"
@@ -123,7 +129,7 @@ class PermissionSet(Base):
 
 
 class MemberPermissionSet(Base):
-    """사람이 가진 묶음 하나. 한 사람이 여럿을 가질 수 있고, 실제 권한은 그 합집합이다."""
+    """사람이 가진 묶음 하나. 한 사람이 묶음을 2개 이상 가질 수 있고, 실제 권한은 그 합집합이다."""
 
     __tablename__ = "member_permission_sets"
 
@@ -139,10 +145,10 @@ class MemberPermissionSet(Base):
 
 
 class Team(Base):
-    """팀. 이름이 식별자이므로 겹칠 수 없다.
+    """팀입니다. 이름이 식별자이므로 중복될 수 없습니다.
 
-    팀이 어떤 악기를 몇 자리 갖는지는 team_slots 가 들고 있다 — 팀을 만들 때
-    악기마다 몇 명인지 정하면 그만큼 자리가 생기고, 그 자리를 사람으로 채운다.
+    팀이 어떤 포지션을 몇 자리 갖는지는 team_slots 가 보관합니다 — 팀을 생성할 때
+    포지션마다 몇 명인지 정하면 그만큼 자리가 생기고, 그 자리를 멤버로 채웁니다.
     """
 
     __tablename__ = "teams"
@@ -152,7 +158,7 @@ class Team(Base):
 
 
 class TeamSlot(Base):
-    """팀의 악기 자리 하나. (팀 + 악기 + 몇 번째) 가 자리를 가리키고, member_id 가
+    """팀의 포지션 자리 하나입니다. (팀 + 포지션 + 몇 번째) 가 자리를 가리키고, member_id 가
     그 자리에 앉은 사람이다.
 
     member_id 가 비어 있으면 아직 아무도 안 앉은 자리다 — 팀을 만들 때 자리부터
@@ -458,7 +464,7 @@ class Notification(Base):
     __tablename__ = "notifications"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # 목록 조회는 언제나 "내 것만"이라 이 한 열로 거른다.
+    # 목록 조회는 언제나 요청한 사용자의 행만 반환하므로 이 열 하나로 거릅니다.
     member_id: Mapped[int] = mapped_column(
         ForeignKey("members.id", ondelete="CASCADE"), index=True
     )

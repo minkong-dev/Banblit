@@ -7,18 +7,18 @@ import { App } from "./App";
 import { applyTheme, readSavedTheme } from "./lib/theme";
 import "./styles/base.css";
 
-// 고른 밝기를 첫 그림 전에 붙인다. 그리고 나서 붙이면 밝은 화면이 한 번 번쩍인다.
+// 선택한 테마를 첫 렌더링 전에 적용합니다. 이후에 적용하면 밝은 화면이 한 번 깜박입니다.
 applyTheme(readSavedTheme());
 
-// 화면에 떠 있는 모든 조회를 이 간격으로 다시 받는다(20초는 사용자 결정, 2026-09-14). 배정 결과·남의 예약·새 글·알림은
-// 이 브라우저의 동작 없이 서버에서 바뀌므로, refetch 하지 않으면 새로고침 전에는 영영 안 바뀐다.
-// ponytail: 떠 있는 조회 전부를 같은 간격으로 묻는다. 서버 부하가 문제가 되면 조회마다
-// 간격을 따로 주거나 서버가 밀어 주는 방식(SSE)으로 올린다.
+// 화면에 떠 있는 모든 query(TanStack Query가 관리하는 서버 조회 하나)를 이 간격으로 refetch합니다(20초는 사용자 결정, 2026-09-14). 배정 결과·남의 예약·새 글·알림은
+// 이 브라우저의 동작 없이 서버에서 변경되므로, refetch하지 않으면 새로고침 전에는 변경사항을 볼 수 없습니다.
+// ponytail: 떠 있는 모든 query를 같은 간격으로 요청합니다. 서버 부하가 문제가 되면 query마다
+// 간격을 따로 설정하거나 서버 푸시 방식(SSE, Server-Sent Events)으로 전환합니다.
 const LIVE_REFETCH_MS = 20_000;
 
-// 되묻는 횟수에 상한을 둔다. 서버가 죽어 있을 때 frontend 가 조용히 계속 두드리면
-// 사람은 멈춘 화면만 보게 된다. 한 번 더 해보고 안 되면 사유를 화면에 띄운다.
-// 창으로 돌아올 때도 다시 받는다 — 다른 탭에 갔다 온 사이 바뀐 것을 바로 보게 한다.
+// refetch 재시도 횟수에 상한을 둡니다. 서버가 작동하지 않을 때 frontend가 계속 요청하면
+// 사람은 멈춘 화면만 보게 됩니다. 한 번 더 시도한 후 실패하면 오류 메시지를 표시합니다.
+// 창으로 돌아왔을 때도 refetch합니다 — 다른 탭에 있던 동안 변경된 내용을 바로 볼 수 있게 합니다.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, refetchOnWindowFocus: true, refetchInterval: LIVE_REFETCH_MS },

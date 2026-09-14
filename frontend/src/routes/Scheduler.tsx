@@ -18,10 +18,10 @@ import type { Post, Reservation, ScheduleRow, Team, Unavailable } from "../lib/c
 import { dayLabel, dayOf, dayWithWeekday, hoursLabel, isRangeFree, mergeReservations, mergeSessions, monthCells, slotCountOf, slotIndex, slotLabel, stampLabel, takenGrid, WEEKDAY_NAMES, weekKeys } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
 
-// 오른쪽 공지 칸에 몇 줄까지 보일지. 전체 목록은 공지 화면(routes/Notices)이 그린다.
+// 오른쪽 공지 칸에 몇 줄까지 보일지. 전체 목록은 공지 화면(routes/Notices)이 그립니다.
 const RECENT_NOTICES = 3;
 
-/** 오른쪽 목록이 아직 못 그릴 상태면 그 사유를 한 줄로 돌려준다. 빈 문자열이면 목록을 그린다. */
+/** 오른쪽 목록이 아직 표시할 수 없는 상태면 그 사유를 한 줄로 반환합니다. 빈 문자열이면 목록을 표시합니다. */
 function listNote(
   isPending: boolean,
   error: unknown,
@@ -36,7 +36,7 @@ function listNote(
 
 
 
-/** 여러 기간의 시간표를 한 번에 받아, 실패한 기간은 사유만 모아 둔다. */
+/** 여러 기간의 시간표를 한 번에 받아, 실패한 기간은 사유만 모아 둡니다. */
 async function loadRows(periodIds: number[]): Promise<{ rows: ScheduleRow[]; failures: string[] }> {
   const rows: ScheduleRow[] = [];
   const failures: string[] = [];
@@ -59,14 +59,14 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
-/** 팀 하나의 자리를 "3/5명" 으로 적는다. 목록에 없는 팀이면 빈 문자열. */
+/** 팀 하나의 자리를 "3/5명"으로 표시합니다. 목록에 없는 팀이면 빈 문자열을 반환합니다. */
 function memberCountLabel(allTeams: Team[], teamId: number): string {
   const found = allTeams.find((team) => team.id === teamId);
-  // 자리 수와 앉은 수를 함께 보여준다 — 몇 자리 비었는지가 인원 수만큼 중요하다.
+  // 자리 수와 배정된 수를 함께 보여줍니다 — 몇 자리가 비었는지가 인원 수만큼 중요합니다.
   return found === undefined ? "" : `${found.filled_count}/${found.slot_count}명`;
 }
 
-/** 그날 화면에 보일 것만 고른다 — 내 일정은 내 팀과 내가 안 되는 시간, 전체는 예약된 것 전부. */
+/** 그날 화면에 표시할 항목만 선택합니다 — 내 일정은 내 팀과 내가 불가능한 시간, 전체는 예약된 것 전부입니다. */
 function visible(entries: Entry[], tab: TabKey, teams: DayTeam[]): Entry[] {
   const mine = new Set(teams.filter((team) => team.mine).map((team) => team.key));
   return tab === "me"
@@ -76,8 +76,8 @@ function visible(entries: Entry[], tab: TabKey, teams: DayTeam[]): Entry[] {
 
 type DayEntries = Record<string, Entry[]>;
 
-/** 확정된 시간표를 합주 한 번씩으로 합친 뒤 날짜별로 담는다. 서버는 한 시간짜리
- *  칸으로 주므로 맞닿은 칸을 먼저 이어 붙여야 사람이 읽는 한 번이 된다. */
+/** 확정된 시간표를 합주 한 번씩으로 합친 뒤 날짜별로 담습니다. 서버는 1시간 단위 시간 칸(slot)으로 주므로 맞닿은 칸을 먼저 이어야
+ *  사람이 읽는 한 번이 됩니다. */
 function assignedByDay(rows: ScheduleRow[], teams: DayTeam[], openHour: number): DayEntries {
   const sessions: Session[] = rows.map((row) => ({
     team: row.team, room: row.room, start: row.start, end: row.end,
@@ -96,14 +96,14 @@ function assignedByDay(rows: ScheduleRow[], teams: DayTeam[], openHour: number):
   return byDay;
 }
 
-/** 내가 못 나오는 시간을 날짜별로 담는다. 서버에 저장된 값을 그대로 옮긴다.
- *  받아오는 것이 내 것뿐이라 전부 내가 지울 수 있다. */
+/** 로그인한 사용자가 불가능한 시간을 날짜별로 담습니다. 서버에 저장된 값을 그대로 옮깁니다.
+ *  받아오는 것이 로그인한 사용자 것뿐이라 전부 삭제할 수 있습니다. */
 function offByDay(times: Unavailable[], openHour: number, days: string[]): DayEntries {
   const byDay: DayEntries = {};
   for (const item of times) {
-    // 반복은 서버가 배정을 돌 때 풀어내지만(api/period_input.py expand_unavailable),
-    // 달력은 저장된 줄 하나만 받는다. 보이는 날짜 위에 같은 규칙으로 다시 편다 —
-    // 이것이 없으면 매주 걸어 둔 것이 첫 날에만 떠서 안 걸린 것처럼 보인다.
+    // 반복은 서버가 배정을 진행할 때 풀어내지만(api/period_input.py expand_unavailable),
+    // 달력은 저장된 줄 하나만 받습니다. 보이는 날짜 위에 같은 규칙으로 다시 펼쳐 —
+    // 이것이 없으면 매주 등록한 것이 첫 날에만 떠서 등록되지 않은 것처럼 보입니다.
     for (const day of repeatDays(item, days)) {
       (byDay[day] ??= []).push({
         kind: "off",
@@ -111,7 +111,7 @@ function offByDay(times: Unavailable[], openHour: number, days: string[]): DayEn
         who: item.reason ?? "직접 등록",
         a: slotIndex(item.starts_at, openHour),
         b: slotIndex(item.ends_at, openHour),
-        // 되풀이된 자리는 저장된 줄이 아니므로 지우지 못한다. 원본 날짜에만 번호를 싣는다.
+        // 반복된 자리는 저장된 줄이 아니므로 삭제할 수 없습니다. 원본 날짜에만 id를 실습니다.
         removeIds: day === dayOf(item.starts_at) ? [item.id] : undefined,
       });
     }
@@ -119,7 +119,7 @@ function offByDay(times: Unavailable[], openHour: number, days: string[]): DayEn
   return byDay;
 }
 
-/** 이 불가능 시간이 걸리는 날짜들. 반복이 아니면 시작한 날 하나뿐이다. */
+/** 이 불가능 일정이 적용되는 날짜들입니다. 반복이 아니면 시작 날짜 하나뿐입니다. */
 function repeatDays(item: Unavailable, days: string[]): string[] {
   const first = dayOf(item.starts_at);
   if (!item.repeats_daily && !item.repeats_weekly) return [first];
@@ -138,8 +138,8 @@ function daysBetween(from: string, to: string): number {
   return Math.round(ms / 86_400_000);
 }
 
-/** 지금 보고 있는 달에 그릴 수 있는 날짜 전부. 앞뒤로 한 주씩 더 잡는 것은 주 보기가
- *  달을 걸칠 수 있어서다 — 반복을 펼 때만 쓰므로 조금 넉넉해도 괜찮다. */
+/** 현재 보고 있는 달에 표시할 수 있는 날짜 전부입니다. 앞뒤로 한 주씩 더 포함하는 것은 주 보기가
+ *  달의 경계를 넘을 수 있어서입니다 — 반복을 펼 때만 쓰므로 여유 있게 해도 괜찮습니다. */
 function visibleDays(year: number, month: number): string[] {
   const first = new Date(year, month, 1 - DAYS_PER_WEEK);
   const last = new Date(year, month + 1, DAYS_PER_WEEK);
@@ -154,13 +154,13 @@ function visibleDays(year: number, month: number): string[] {
 
 const DAYS_PER_WEEK = 7;
 
-/** 상시 개방기간 예약을 날짜별로 담는다. 서버는 한 시간짜리 칸을 하나씩 주므로 맞닿은
- *  칸을 먼저 한 건으로 이어야 사람이 보는 예약 한 번이 된다. team_id 로 실제 팀을
- *  찾는다 — 이름 대조보다 정확하다. 동명이인 규칙과 같은 이유로 사람도 팀도 번호로 가른다.
- *  내가 잡은 건에만 지울 번호를 실어, 남의 예약에는 취소가 뜨지 않게 한다. */
-// 주 보기는 방이 여는 시간만이 아니라 하루를 통째로 세운다. 방마다 여는 시각이 달라도
-// 같은 줄에 같은 시각이 오고, 방을 바꿔도 줄이 밀리지 않는다. 대신 줄이 많아 늘 스크롤이
-// 생기므로, 주 보기로 들어올 때 합주가 있는 구간으로 스스로 내려간다(weekBox 의 useEffect).
+/** 상시 개방 기간의 예약을 날짜별로 담습니다. 서버는 1시간 단위 시간 칸(slot)을 하나씩 주므로 맞닿은
+ *  칸을 먼저 하나로 이어야 사람이 보는 예약 한 번이 됩니다. team_id로 실제 팀을
+ *  찾습니다 — 이름 대조보다 정확합니다. 동명이인 규칙과 같은 이유로 사람도 팀도 번호로 구분합니다.
+ *  로그인한 사용자가 예약한 것만 삭제할 id를 실어, 남의 예약에는 취소 버튼이 표시되지 않게 합니다. */
+// 주 보기는 방이 여는 시간만이 아니라 하루를 통째로 표시합니다. 방마다 여는 시각이 달라도
+// 같은 줄에 같은 시각이 오고, 방을 바꿔도 줄이 밀리지 않습니다. 대신 줄이 많아 늘 스크롤이
+// 생기므로, 주 보기로 들어올 때 합주가 있는 구간으로 스스로 내려갑니다(weekBox의 useEffect).
 const WEEK_FIRST_HOUR = 1;
 const WEEK_LAST_HOUR = 23;
 const WEEK_HOURS = Array.from(
@@ -214,41 +214,41 @@ export function Scheduler() {
   const [to, setTo] = useState<number | null>(null);
   const [openDay, setOpenDay] = useState<string | null>(null);
 
-  // 합주실·기간 목록은 배정 여부와 상관없이 달력의 시간·날짜 범위를 정한다.
+  // 합주실·기간 목록은 배정 여부와 상관없이 달력의 시간·날짜 범위를 정합니다.
   const rooms = useRooms();
   const periods = usePeriods();
   const periodIds = periods.data?.periods.map((period) => period.id) ?? [];
   const roomIds = rooms.data?.rooms.map((room) => room.id) ?? [];
-  // 달력 한 달치 범위 — 예약 조회는 기간이 아니라 날짜 범위로 서버에 묻는다.
+  // 달력 한 달치 범위 — 예약 조회는 기간이 아니라 날짜 범위로 서버에 묻습니다.
   const monthFrom = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-01`;
   const monthLastDay = new Date(cursor.year, cursor.month + 1, 0).getDate();
   const monthTo = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(monthLastDay).padStart(2, "0")}`;
-  // 주 보기는 달을 벗어난 주로도 넘어간다. 그래서 예약은 달이 아니라 지금 보고 있는
-  // 날짜 범위로 묻는다 — 범위가 열쇠에 들어 있어 주를 옮기면 그 주치를 다시 받는다.
+  // 주 보기는 달을 벗어난 주로도 넘어갑니다. 그래서 예약은 달이 아니라 현재 보고 있는
+  // 날짜 범위로 묻습니다 — 범위가 query key에 들어 있어 주를 옮기면 그 주치를 다시 받습니다.
   const weekDayKeys = weekKeys(cursor.year, cursor.month, weekShift);
   const rangeFrom = week ? weekDayKeys[0] : monthFrom;
   const rangeTo = week ? weekDayKeys[6] : monthTo;
 
-  // 기간 목록이 오기 전에는 어느 기간의 시간표를 받을지 알 수 없어 쉰다.
+  // 기간 목록이 오기 전에는 어느 기간의 시간표를 받을지 알 수 없어 query를 비활성화합니다.
   const query = useQuery({
     queryKey: ["schedule", periodIds],
     queryFn: () => loadRows(periodIds),
     enabled: periods.data !== undefined,
   });
-  // 로그인한 사람 번호가 와야 그 사람의 못 나오는 시간을 물을 수 있다.
+  // 로그인한 사용자 id가 와야 그 사용자의 불가능 일정을 조회할 수 있습니다.
   const unavailableQuery = useQuery({
     queryKey: ["unavailable", me?.id],
     queryFn: () => loadUnavailable(me?.id ?? 0),
     enabled: me !== null,
   });
-  // 방 목록이 와야 어느 방의 예약을 물을지 안다.
+  // 방 목록이 와야 어느 방의 예약을 조회할지 알 수 있습니다.
   const reservationQuery = useQuery({
     queryKey: ["reservations", roomIds, rangeFrom, rangeTo],
     queryFn: () => loadReservationRows(roomIds, rangeFrom, rangeTo),
     enabled: rooms.data !== undefined,
   });
-  // 공지 화면(routes/Notices → PostBoard)이 쓰는 열쇠·주소를 그대로 쓴다. 두 화면이
-  // 같은 목록을 나눠 쓰므로, 공지를 쓰고 돌아오면 여기도 함께 새로 그려진다.
+  // 공지 화면(routes/Notices → PostBoard)이 쓰는 query key와 endpoint를 그대로 씁니다. 두 화면이
+  // 같은 목록을 공유하므로, 공지를 작성하고 돌아오면 여기도 함께 새로 그려집니다.
   const notices = useQuery({
     queryKey: ["board", "/notices"],
     queryFn: () => getJSON<{ posts: Post[] }>("/notices"),
@@ -259,8 +259,8 @@ export function Scheduler() {
     "아직 등록된 공지가 없습니다", "공지를 못 불러왔습니다",
   );
 
-  // query.data 가 없을 때만 매번 새 빈 배열이 생긴다 — 그동안은 아래 useMemo 들이
-  // 다시 도는데, 빈 배열을 다루는 계산이라 가벼워 따로 감쌀 만큼은 아니다.
+  // query.data가 없을 때만 매번 새 빈 배열이 생깁니다 — 그동안은 아래 useMemo들이
+  // 다시 실행되는데, 빈 배열을 다루는 계산이라 가벼워 따로 감쌀 만큼은 아닙니다.
   const rows = query.data?.rows ?? [];
 
   const teams = teamsOf(rows, teamIds, allTeams);
@@ -278,8 +278,8 @@ export function Scheduler() {
     [...(assigned[key] ?? []), ...(offEntries[key] ?? []), ...(bookEntries[key] ?? [])]
       .sort((x, y) => x.a - y.a);
 
-  // POST 가 끝난 뒤 화면이 새 값을 보게 한다 — 클라이언트 쪽에 따로 상태를 두지 않고
-  // 서버가 가진 값을 다시 물어 저장이 실제로 됐는지까지 함께 확인한다.
+  // POST가 끝난 뒤 화면이 새 값을 보게 합니다 — 클라이언트 쪽에 따로 상태를 두지 않고
+  // 서버가 가진 값을 다시 조회해 저장이 실제로 되었는지까지 함께 확인합니다.
   const onSaved = () => {
     void queryClient.invalidateQueries({ queryKey: ["unavailable"] });
     void queryClient.invalidateQueries({ queryKey: ["reservations"] });
@@ -433,8 +433,8 @@ export function Scheduler() {
   );
 
   const myTeams = teams.filter((team) => team.mine);
-  // 달력 위 화살표 하나가 두 가지를 옮긴다 — 달 보기에서는 달을, 주 보기에서는 주를.
-  // 달을 옮기면 주는 그 달 15일이 든 주로 돌아간다(weekShift 를 0으로 되돌린다).
+  // 달력 위 화살표 하나가 두 가지를 옮깁니다 — 달 보기에서는 달을, 주 보기에서는 주를.
+  // 달을 옮기면 주는 그 달 15일이 든 주로 돌아갑니다(weekShift를 0으로 초기화합니다).
   const shift = (step: number) => {
     if (week) {
       setWeekShift(weekShift + step);
@@ -452,8 +452,8 @@ export function Scheduler() {
     >
       <Tabs label="레이아웃" items={TABS} selected={tab} onSelect={setTab} />
 
-      {/* 합주실·기간·시간표 중 하나라도 실패하면 성공한 것만 그리고 첫 실패 사유를
-          알린다. 다시 불러오기는 셋을 한 번에 다시 부른다. */}
+      {/* 합주실·기간·시간표 중 하나라도 실패하면 성공한 것만 표시하고 첫 실패 사유를
+          알립니다. 다시 불러오기는 셋을 한 번에 다시 조회합니다. */}
       {rooms.isError || periods.isError || query.isError ? (
         <div className="cut">
           <p><b>스케줄을 불러오지 못했어요</b>{String(rooms.error ?? periods.error ?? query.error)}</p>
@@ -526,11 +526,11 @@ export function Scheduler() {
         </div>
       </Card>
 
-      {/* 알림은 상단바의 종으로 옮겼다. 이 칸은 달력을 보는 동안에만 보여서
-          게시판이나 설정에 있는 사람에게는 소식이 닿지 않았다. */}
+      {/* 알림은 상단바의 종으로 옮겼습니다. 이 칸은 달력을 보는 동안에만 표시되어
+          게시판이나 설정에 있는 사람에게는 소식이 닿지 않았습니다. */}
       <div className="rail">
         <Panel title="공지사항" hint="전체보기 ›" onOpen={() => void navigate("/notices")}>
-          {/* 여기서는 제목만 보여주고, 누르면 글을 펼칠 수 있는 공지 화면으로 넘긴다. */}
+          {/* 여기서는 제목만 표시하고, 누르면 글을 펼칠 수 있는 공지 화면으로 이동합니다. */}
           <ul>
             {noticeState !== "" ? (
               <li><button type="button" disabled><b>{noticeState}</b></button></li>

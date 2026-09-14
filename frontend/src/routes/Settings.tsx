@@ -32,10 +32,9 @@ import type { Period, Room, Team } from "../lib/contract";
 
 type Tab = "rooms" | "periods" | "members" | "reservations" | "account";
 
-// 탭마다 필요한 항목이 다르다. 가진 것만 보이므로, 아무 관리 항목도 없는 사람에게는
-// 계정 탭 하나가 남는다 — 내 정보·비밀번호·화면 밝기·탈퇴가 전부 자기 것에 대한
-// 설정이라 한 탭에 둔다.
-// needs 가 없는 탭은 로그인한 사람 누구에게나 보인다.
+// 탭마다 필요한 항목이 다릅니다. 가진 것만 보이므로, 관리 항목이 없는 사람에게는 계정 탭 하나만 남습니다.
+// 내 정보·비밀번호·화면 밝기·탈퇴는 전부 자기 계정에 대한 설정이라 한 탭에 둡니다.
+// needs가 없는 탭은 로그인한 모든 사람이 볼 수 있습니다.
 const TABS = [
   { key: "rooms" as const, text: "합주실", needs: ["room_create", "room_edit"] as const },
   { key: "periods" as const, text: "기간", needs: ["period_create", "period_edit"] as const },
@@ -56,16 +55,16 @@ const BLANK_PERIOD = {
 
 const KIND_TEXT = { open: "상시 개방", focused: "집중 합주" };
 
-/** 목록 줄 오른쪽에 붙는 한 줄. 집중 합주기간에만 계산 시각 둘이 더 붙는다. */
+/** 목록 줄 오른쪽에 붙는 한 줄입니다. 집중 합주기간(스케줄링을 자동으로 진행할 기간)일 때만 계산 시각 두 개가 더 붙습니다. */
 function periodSpan(period: Period): string {
   const days = ` · ${daysBetween(period.starts_on, period.ends_on)}일`;
   if (period.kind !== "focused") return days;
   return `${days} · 계산 ${period.first_run_at} · ${period.second_run_at}`;
 }
 
-/** 화면 밝기를 고르는 카드. 고른 값은 브라우저에 남아 다음에 열 때도 그대로 온다. */
+/** 화면 밝기를 선택하는 카드입니다. 선택한 값은 브라우저에 저장되어 다음에 열 때도 유지됩니다. */
 function ThemeCard() {
-  // 처음 값을 한 번만 읽는다. 이 뒤로는 사람이 고른 것이 정본이다.
+  // 초기값을 한 번만 읽습니다. 이후 사용자가 선택한 값이 정본입니다.
   const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
 
   const choices: { key: Theme; label: string }[] = [
@@ -101,25 +100,25 @@ export function Settings() {
   const client = useQueryClient();
   const { me } = useMe();
 
-  // 항목 하나만 있어도 그 탭을 연다 — 만들 수만 있고 못 고치는 사람도 목록은 봐야 한다.
+  // 항목 하나만 있어도 그 탭을 엽니다. 생성만 할 수 있고 수정할 수 없는 사람도 목록은 봐야 하기 때문입니다.
   const tabs = TABS.filter(
     (item) => item.needs === null || item.needs.some((need) => can(me, need)),
   );
-  // 권한을 잃은 채로 그 탭에 머물러 있지 않게, 없는 탭이면 남은 것 중 첫 탭을 보여준다.
-  // 화면 탭은 누구에게나 있으므로 tabs 가 비는 일은 없다.
+  // 권한을 잃은 채로 그 탭에 머물러 있지 않게, 없는 탭이면 남은 것 중 첫 탭을 보여줍니다.
+  // 계정 탭은 모든 사람이 볼 수 있으므로 tabs가 비는 일은 없습니다.
   const shown: Tab = tabs.some((item) => item.key === tab) ? tab : tabs[0].key;
 
   const rooms = useRooms();
   const periods = usePeriods();
-  // 팀 목록은 오른쪽 셈에만 쓴다. 질의 이름은 다른 화면이 쓰는 것과 같아, 이미 받아
-  // 둔 목록이 있으면 다시 부르지 않는다.
+  // 팀 목록은 오른쪽 계산에만 씁니다. query 이름이 다른 화면에서 쓰는 것과 같아서,
+  // 이미 받은 목록이 있으면 다시 조회하지 않습니다.
   const teams = useTeams();
 
   const roomList = rooms.data?.rooms ?? [];
   const periodList = periods.data?.periods ?? [];
   const teamList = teams.data?.teams ?? [];
 
-  // 저장이 끝나면 그 목록을 다시 받아온다. 화면이 스스로 값을 지어내지 않게 한다.
+  // 저장이 끝나면 목록을 서버에서 다시 조회합니다. 화면은 서버에서 받은 값만 표시합니다.
   function saved(key: string, text: string): () => void {
     return () => {
       void client.invalidateQueries({ queryKey: [key] });
@@ -175,7 +174,7 @@ export function Settings() {
   );
 }
 
-/** 합주실 서식의 입력칸들. */
+/** 합주실 서식의 입력칸들입니다. */
 function RoomFields(props: {
   form: { name: string; opens_at: string; closes_at: string };
   setForm: (next: { name: string; opens_at: string; closes_at: string }) => void;
@@ -325,7 +324,7 @@ function RoomCard(props: {
               <li className="editing" key={room.id}>
                 <RoomForm
                   start={room}
-                  // 자기 이름은 겹침으로 보지 않는다.
+                  // 자신의 이름은 중복 검사 대상에서 제외합니다.
                   taken={rooms.filter((other) => other.id !== room.id).map((other) => other.name)}
                   path={`/rooms/${room.id}`}
                   method="PATCH"
@@ -338,8 +337,8 @@ function RoomCard(props: {
                 />
               </li>
             ) : (
-              // onEdit 이 없으면 Row 가 연필을 그리지 않는다 — room_edit 이
-              // 없는 사람에게는 목록만 보인다.
+              // onEdit이 없으면 Row가 수정 버튼을 그리지 않습니다. room_edit 권한이 없는 사람에게는
+              // 목록만 표시됩니다.
               <Row
                 key={room.id}
                 title={room.name}
@@ -354,9 +353,9 @@ function RoomCard(props: {
         </ul>
       )}
 
-      {/* 합주실은 하나만 쓴다. 이미 하나 있으면 더하는 길을 두지 않는다 —
-          저장소와 배정 계산은 여럿을 다룰 수 있게 그대로 두고, 늘리는 길만 닫았다.
-          여러 방을 다시 쓸 일이 생기면 이 조건 하나를 떼면 된다. */}
+      {/* 합주실은 하나만 씁니다. 이미 하나 있으면 새로 추가하는 경로를 닫습니다.
+          저장소와 배정 계산은 합주실 2개 이상을 다룰 수 있게 그대로 두고, 추가 경로만 차단했습니다.
+          여러 합주실을 다시 쓸 일이 생기면 이 조건 하나를 제거하면 됩니다. */}
       {!canCreate || rooms.length > 0 ? null : (
         <div className="listfoot">
           <button className="new" onClick={() => setMaking(true)}>+ 새 합주실</button>
@@ -401,7 +400,7 @@ function RoomForm(props: {
         body: JSON.stringify(form),
       }),
     onSuccess: () => {
-      // 새로 만든 뒤에는 다음 것을 넣도록 서식을 비운다. 고치는 중이면 그대로 둔다.
+      // 새로 생성한 뒤에는 다음 항목을 입력하도록 서식을 비웁니다. 수정 중이면 그대로 둡니다.
       if (method === "POST") reset();
       onDone();
     },
@@ -409,8 +408,8 @@ function RoomForm(props: {
 
   const why = checkRoom(form, taken);
 
-  // 같은 화면에 추가 서식과 고치는 줄이 함께 뜬다. 라벨이 어느 입력칸을 가리키는지
-  // 흐려지지 않도록 화면 안 식별자를 서식마다 다르게 짓는다.
+  // 같은 화면에 추가 서식과 수정 줄이 함께 표시될 수 있습니다. 라벨이 어느 입력칸을 가리키는지
+  // 흐려지지 않도록, 화면 내 식별자를 서식마다 다르게 짓습니다.
   const at = (field: string): string => `${path}-${field}`;
   const whyId = at("why");
   const bad = formError(touched, why, send.error);
@@ -467,8 +466,8 @@ function PeriodCard(props: {
                 />
               </li>
             ) : (
-              // onEdit 이 없으면 Row 가 연필을 그리지 않는다 — period_edit 이
-              // 없는 사람에게는 목록만 보인다.
+              // onEdit이 없으면 Row가 수정 버튼을 그리지 않습니다. period_edit 권한이 없는 사람에게는
+              // 목록만 표시됩니다.
               <Row
                 key={period.id}
                 title={KIND_TEXT[period.kind] + (period.everyday ? " · 매일" : "")}
@@ -552,7 +551,7 @@ function PeriodForm(props: {
   );
 }
 
-/** 팀 목록이 성하면 팀 수와 소속 인원 수를, 아니면 왜 셀 수 없는지 돌려준다. */
+/** 팀 목록이 성공적으로 조회되면 팀 수와 배정된 인원 수를 반환합니다. 그렇지 않을 경우 조회할 수 없는 이유를 반환합니다. */
 function teamLine(teams: Team[], state: LoadState): string {
   if (state.kind === "loading") return "팀 리스트를 불러오는 중…";
   if (state.kind === "failed") return state.why;
@@ -561,7 +560,7 @@ function teamLine(teams: Team[], state: LoadState): string {
   return `팀 ${teams.length}개 · 포지션 ${slots}개 중 ${filled}명 배정됨`;
 }
 
-/** 지금 설정이면 실제로 얼마가 열리는지. 집중기간은 모든 팀이 같은 몫을 가져야 한다. */
+/** 현재 설정에서 실제로 얼마가 개방되는지를 표시합니다. 집중 합주기간은 모든 팀이 같은 배정을 받아야 합니다. */
 function Readout(props: {
   rooms: Room[];
   periods: Period[];
@@ -571,12 +570,13 @@ function Readout(props: {
 }) {
   const { rooms, periods, teams, teamsState, tab } = props;
 
-  // 집중기간이 여럿이면 첫 것만 센다. 어느 기간인지는 아래 날짜로 밝히므로 사람이
-  // 헷갈리지는 않는다. 여러 개를 견주는 것은 고를 자리를 만든 뒤에 한다.
+  // 집중 합주기간이 2개 이상이면 첫 번째 기간만 계산합니다. 어느 기간인지는 아래 날짜로 표시하므로
+  // 혼동하지 않습니다. 여러 개를 비교하는 기능은 선택지를 만든 뒤에 추가합니다.
   const focused = periods.filter((period) => period.kind === "focused");
   const period = tab === "periods" ? focused[0] : undefined;
   const days = period ? daysBetween(period.starts_on, period.ends_on) : 1;
-  // 팀 수는 팀 목록 endpoint 가 준다. 아직 못 받았으면 0 이고, 그러면 팀당 몫을 나누지 않는다.
+  // 팀 수는 팀 목록 endpoint(통신 지점)가 제공합니다. 아직 조회하지 못했으면 0이며,
+  // 이 경우 팀당 배정을 계산하지 않습니다.
   const count = teams.length;
   const sum = openingHours({ rooms, days, teams: count });
 

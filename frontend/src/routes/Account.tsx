@@ -32,9 +32,9 @@ import {
 } from "../lib/pipeline";
 
 
-// 사진은 화면에 붙박이로 두고 오른쪽 서식만 갈아 끼운다. 다섯 화면이 한 자리를 나눠 쓴다.
+// 사진은 화면에 고정하고 오른쪽 형식만 바꿉니다. 다섯 화면이 한 자리를 공유합니다.
 // 주소가 다섯 개로 나뉘어 있어 뒤로 가기와 링크 보내기가 제대로 동작하고,
-// layout route 라 화면을 오갈 때 왼쪽 사진은 다시 그려지지 않는다.
+// layout route이므로 화면을 오갈 때 왼쪽 사진은 다시 그려지지 않습니다.
 const HEADS: Record<string, { title: string; sub: string }> = {
   "/login": { title: "로그인", sub: "유일무이 버스킹 동아리 여섯줄 안에서." },
   "/signup": { title: "회원가입", sub: "가입에 필요한 정보를 작성해주세요." },
@@ -82,7 +82,7 @@ export function AccountLayout() {
 }
 
 /** 검사에 걸리면 사유를 화면에 걸고 멈춘다. 다 통과했을 때만 send 로 넘어간다.
- *  send 가 끝날 때까지 pending 이 켜져 있어 그동안 단추를 잠글 수 있다.
+ *  send 가 끝날 때까지 pending 이 켜져 있어 그동안 버튼를 잠글 수 있다.
  *  send 는 서버를 부르는 자리라 실패를 그 안에서 직접 잡아 처리해야 한다. */
 function useFormAction(
   check: (data: FormData) => Errors,

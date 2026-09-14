@@ -25,7 +25,7 @@ def create_period(
     first_run_at: str,
     second_run_at: str,
 ) -> Period:
-    """새 기간을 만든다. 경계에서 kind·날짜 순서를 사람이 읽을 문장으로 거절한다."""
+    """새 기간을 생성합니다. 경계에서 kind와 날짜 순서를 사람이 읽을 문장으로 검증합니다."""
     require_valid_kind(kind)
     starts = parse_calendar_date(starts_on, "시작일")
     ends = parse_calendar_date(ends_on, "종료일")
@@ -52,7 +52,7 @@ def _validated_changes(
     first_run_at: str | None,
     second_run_at: str | None,
 ) -> dict[str, object]:
-    """보낸 항목을 검증해 고칠 값만 담아 돌려준다. 안 보낸 항목은 담기지 않는다."""
+    """전달된 항목을 검증하여 수정할 값만 담아 반환합니다. 전달되지 않은 항목은 포함하지 않습니다."""
     changes: dict[str, object] = {}
     if kind is not None:
         require_valid_kind(kind)
@@ -83,13 +83,13 @@ def update_period(
     first_run_at: str | None,
     second_run_at: str | None,
 ) -> Period:
-    """period_id 의 기간에서 보낸 항목만 고쳐 저장하고, 고쳐진 기간을 돌려준다."""
+    """period_id의 기간에서 전달된 항목만 수정하여 저장하고, 수정된 기간을 반환합니다."""
     period = session.get(Period, period_id)
     if period is None:
         raise ValueError("그런 기간이 없습니다")
 
-    # _validated_changes 를 먼저 통과시킨 뒤에만 대입한다. 대입이 앞서면 검증이
-    # 실패해도 세션에 dirty 로 남아, 조회 한 줄만 끼어도 커밋 안 한 값이 저장된다.
+    # _validated_changes를 먼저 통과시킨 뒤에만 대입합니다. 대입이 앞서면 검증이
+    # 실패해도 세션에 dirty로 남아, 조회 한 줄만 끼어도 커밋하지 않은 값이 저장됩니다.
     changes = _validated_changes(
         period, kind, starts_on, ends_on, first_run_at, second_run_at
     )

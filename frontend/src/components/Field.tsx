@@ -1,6 +1,6 @@
-// 서식 한 줄과, 서식에서 값을 꺼내고 검사 결과를 추리는 것. 계정 화면 다섯 벌이 쓴다.
-// 합주실·기간 설정 화면은 쓰지 않는다 — 입력칸의 화면 안 식별자를 name 그대로 쓰는데,
-// 그 화면은 추가 서식과 고치는 줄이 함께 떠 있어 같은 식별자가 두 개 생긴다.
+// 입력 필드 하나와, 필드에서 값을 추출해 검증 결과를 도출하는 것입니다. 계정 화면 다섯 벌에서 씁니다.
+// 합주실·기간 설정 화면은 사용하지 않습니다 — 입력 필드의 DOM 식별자로 name을 그대로 사용하는데,
+// 그 화면에는 추가 필드와 수정 행이 함께 표시되어 같은 식별자가 두 개 생기기 때문입니다.
 
 import { useState } from "react";
 
@@ -8,13 +8,13 @@ import { EyeIcon, EyeOffIcon } from "./icons";
 
 export type Errors = Record<string, string>;
 
-/** 검사 결과에서 사유가 남은 것만 골라 낸다. 하나도 없으면 통과다. */
+/** 검증 결과에서 오류 메시지가 있는 것만 필터링합니다. 없으면 통과입니다. */
 export function failures(checked: Errors): Errors {
   return Object.fromEntries(Object.entries(checked).filter(([, message]) => message !== ""));
 }
 
-/** 보낸 서식 값에서 이름으로 값을 꺼낸다. 없거나 파일이면 빈 문자열 — 이 서식들에는
- *  파일 입력이 없으니, 값이 진짜 문자열일 때만 쓴다. */
+/** 제출된 폼 데이터에서 name으로 값을 추출합니다. 없거나 파일 객체면 빈 문자열입니다 — 이 필드들에는
+ *  파일 입력이 없으니, 값이 진짜 문자열일 때만 사용합니다. */
 export function fieldText(data: FormData, name: string): string {
   const value = data.get(name);
   return typeof value === "string" ? value : "";
@@ -30,8 +30,8 @@ export function Field(props: {
   error?: string;
 }) {
   const { name, label, type, placeholder, autoComplete, inputMode, error } = props;
-  // 비밀번호 칸에만 눈 단추가 붙는다. 누르면 type 이 text 로 바뀌어 글자가 그대로 보인다.
-  // 브라우저는 type=password 인 칸만 가리므로, 가리고 보이는 것을 type 으로 다룬다.
+  // 비밀번호 필드에만 눈 버튼가 붙습니다. 누르면 type이 text로 변경되어 문자가 그대로 표시됩니다.
+  // 브라우저는 type=password인 필드만 마스킹하므로, 마스킹 토글을 type으로 처리합니다.
   const [shown, setShown] = useState(false);
   const isPassword = type === "password";
   return (

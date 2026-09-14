@@ -27,8 +27,8 @@ def _signup(api_client: TestClient, **overrides: object) -> dict:
 
 
 def _set_cookie_headers(response: httpx.Response) -> list[str]:
-    # httpx.Headers는 같은 이름(set-cookie)이 여러 번 와도 하나로 합치므로, raw 목록을
-    # 직접 훑어야 쿠키 두 개(banblit_session·banblit_signed_in)를 각각 볼 수 있다.
+    # httpx.Headers는 같은 이름(set-cookie)이 여러 번 와도 하나로 합쳐지므로, raw 목록을
+    # 직접 확인해야 cookie 두 개(banblit_session·banblit_signed_in)를 각각 볼 수 있습니다.
     return [
         value.decode() for name, value in response.headers.raw if name.decode().lower() == "set-cookie"
     ]
@@ -192,8 +192,8 @@ def test_login_rejects_an_unknown_email_without_revealing_that(
 
 
 def test_me_returns_the_signed_in_account(api_client: TestClient) -> None:
-    # TestClient가 쿠키 저장소를 들고 있어, signup 응답의 Set-Cookie가 다음 요청에
-    # 자동으로 실린다 — 화면이 브라우저 쿠키로 하는 것과 같다.
+    # TestClient(테스트용 API 클라이언트)가 cookie 저장소를 들고 있어, signup 응답의 Set-Cookie가 다음 요청에
+    # 자동으로 담긴다. 화면이 브라우저 cookie로 하는 것과 같습니다.
     _signup(api_client)
 
     response = api_client.get("/me")
@@ -298,8 +298,8 @@ def test_login_removes_that_accounts_expired_session_row(
 def test_login_removes_only_the_dead_rows_of_that_account(
     api_client: TestClient, db_session: Session
 ) -> None:
-    """끊긴 행은 지우되 남의 계정 행은 건드리지 않아야 한다 — 지우는 조건에
-    계정 번호가 빠지면 다른 사람이 로그인 상태를 잃는다."""
+    """만료된 행은 삭제하되 남의 계정 행은 건드리지 않아야 합니다. 삭제 조건에
+    계정 번호가 빠지면 다른 사람이 로그인 상태를 잃습니다."""
     first = _signup(api_client)
     first_id = first["account"]["id"]
     api_client.post("/logout")
@@ -321,7 +321,7 @@ def test_login_removes_only_the_dead_rows_of_that_account(
 
 
 def _session_max_age(response: Response) -> int:
-    """Set-Cookie 에 실린 Max-Age 를 꺼낸다. 없으면 브라우저 닫을 때까지다."""
+    """Set-Cookie에 담긴 Max-Age를 추출합니다. 없으면 브라우저 닫을 때까지입니다."""
     for raw in response.headers.get_list("set-cookie"):
         if raw.startswith(f"{SESSION_COOKIE}="):
             for part in raw.split(";"):
@@ -335,7 +335,7 @@ def _session_max_age(response: Response) -> int:
 def test_login_without_keep_lasts_only_for_the_browser_session(
     api_client: TestClient, db_session: Session
 ) -> None:
-    """체크를 끄면 브라우저를 닫을 때 로그인이 풀린다 — 쿠키에 수명을 싣지 않는다."""
+    """체크를 끄면 브라우저를 닫을 때 로그인이 풀립니다. cookie에 수명을 담지 않습니다."""
     _signup(api_client)
 
     response = api_client.post(
@@ -368,7 +368,7 @@ def test_login_with_keep_lasts_far_longer(
 def test_keeping_the_login_also_stretches_the_row_on_the_server(
     api_client: TestClient, db_session: Session
 ) -> None:
-    """쿠키만 늘리면 서버 쪽 행이 먼저 만료돼 로그인이 풀린다. 둘이 함께 늘어야 한다."""
+    """cookie의 유효 기간을 늘리기만 하면 서버 쪽 행이 먼저 만료되어 로그인이 풀립니다. 둘이 함께 늘어야 합니다."""
     _signup(api_client)
     api_client.post(
         "/login",
@@ -394,10 +394,10 @@ def test_leaving_requires_login(api_client: TestClient) -> None:
 def test_leaving_removes_the_account_and_everything_it_left(
     api_client: TestClient, db_session: Session
 ) -> None:
-    """탈퇴하면 그 사람이 남긴 것도 함께 사라진다(사용자 결정).
+    """탈퇴하면 그 사람이 남긴 것도 함께 사라집니다(사용자 결정).
 
     글·댓글·예약을 남겨 두면 쓴 사람이 없는 글이 되고, 이름 자리에 무엇을 적을지를
-    또 정해야 한다. 통째로 지우는 쪽을 골랐다.
+    또 정해야 합니다. 통째로 삭제하는 쪽을 선택했습니다.
     """
     _signup(api_client)
     me = api_client.get("/me").json()["account"]
@@ -408,7 +408,7 @@ def test_leaving_removes_the_account_and_everything_it_left(
     assert response.status_code == 204
     assert db_session.get(Member, me["id"]) is None
     assert db_session.scalars(select(Post)).all() == []
-    # 쿠키도 함께 지워져 그 자리에서 로그아웃된다.
+    # cookie도 함께 삭제되어 그 자리에서 로그아웃됩니다.
     assert api_client.get("/me").status_code == 401
 
 

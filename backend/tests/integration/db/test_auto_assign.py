@@ -66,7 +66,7 @@ def _assignments(session: Session) -> list[Assignment]:
 
 
 def _count_assign_calls(monkeypatch: pytest.MonkeyPatch) -> list[int]:
-    # assign_period 를 감싸 호출 횟수만 센다. 계산 자체는 원본이 그대로 한다.
+    # assign_period를 감싸 호출 횟수만 셉니다. 계산 자체는 원본이 그대로 합니다.
     calls: list[int] = []
     real = auto_assign.assign_period
 
@@ -140,7 +140,7 @@ def test_does_not_run_a_slot_missed_yesterday(db_session: Session) -> None:
     _team_with_member(db_session, "A", "김민수")
     _room(db_session, "1번방")
 
-    # 어제 두 시각이 다 지났지만 오늘 9시는 아직 안 됐다 — 소급은 오늘까지만이다.
+    # 어제 두 시각이 다 지났지만 오늘 9시는 아직 안 됐습니다. 역산은 오늘까지만입니다.
     assert auto_assign.run_due_assignments(db_session, _at(8)) == []
     assert _runs(db_session) == []
 

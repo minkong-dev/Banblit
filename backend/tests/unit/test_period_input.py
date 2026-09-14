@@ -128,8 +128,8 @@ def test_weekly_repeat_stops_at_its_repeat_until_date() -> None:
 
 
 def test_repeats_weekly_none_is_treated_as_not_repeating() -> None:
-    # 세션에 넣지 않은 객체는 repeats_weekly가 아직 기본값(False)이 적용되지 않아
-    # None일 수 있다 — 이때도 반복 없는 1회짜리로 다뤄야 한다.
+    # 세션에 저장하지 않은 객체는 repeats_weekly가 아직 기본값(False)이 설정되지 않아
+    # None일 수 있습니다. 이때도 반복 없는 1회짜리로 처리해야 합니다.
     rows = [
         UnavailableTime(
             member_id=1,
@@ -148,7 +148,7 @@ def test_repeats_weekly_none_is_treated_as_not_repeating() -> None:
 
 
 def test_unavailable_time_straddling_the_window_start_is_kept() -> None:
-    # 시작은 기간 밖(7/31), 끝은 기간 안(8/1)에 걸쳐 있다 — 버려지면 안 된다.
+    # 시작은 기간 밖(7/31), 끝은 기간 안(8/1)에 걸쳐 있습니다. 제외되면 안 됩니다.
     rows = [_row(datetime(2026, 7, 31, 23, 0), datetime(2026, 8, 1, 1, 0))]
 
     result = expand_unavailable(rows, WINDOW_START, WINDOW_END)
@@ -159,7 +159,7 @@ def test_unavailable_time_straddling_the_window_start_is_kept() -> None:
 
 
 def test_unavailable_time_straddling_the_window_end_is_kept() -> None:
-    # 시작은 기간 안(8/14), 끝은 기간 밖(8/15 새벽)에 걸쳐 있다 — 버려지면 안 된다.
+    # 시작은 기간 안(8/14), 끝은 기간 밖(8/15 새벽)에 걸쳐 있습니다. 제외되면 안 됩니다.
     rows = [_row(datetime(2026, 8, 14, 23, 0), datetime(2026, 8, 15, 1, 0))]
 
     result = expand_unavailable(rows, WINDOW_START, WINDOW_END)
@@ -170,9 +170,9 @@ def test_unavailable_time_straddling_the_window_end_is_kept() -> None:
 
 
 def test_multiple_unavailable_times_for_the_same_person_are_all_kept() -> None:
-    """한 사람에게 불가능시간이 둘 이상이면 둘 다 결과에 담겨야 한다.
+    """한 멤버에게 불가능 시간이 둘 이상이면 둘 다 결과에 포함되어야 합니다.
     rows의 첫 원소만 처리하도록 망가뜨리면 두 번째 행(매주 반복)이 통째로
-    사라진다."""
+    제거되지 않아야 합니다."""
     rows = [
         _row(datetime(2026, 8, 3, 19, 0), datetime(2026, 8, 3, 21, 0)),
         _row(
@@ -221,7 +221,7 @@ def test_each_room_becomes_one_engine_room_per_day() -> None:
 
     engine_rooms = build_engine_rooms(rooms, days)
 
-    # 같은 합주실이 날짜마다 한 번씩, 저장소의 번호를 그대로 달고 나온다.
+    # 같은 합주실이 날짜마다 한 번씩, 저장소의 번호를 그대로 유지합니다.
     assert [r.id for r in engine_rooms] == [7, 7]
     assert engine_rooms[0].open_period.start == datetime(2026, 8, 1, 18, 0)
     assert engine_rooms[0].open_period.end == datetime(2026, 8, 1, 20, 0)
@@ -229,7 +229,7 @@ def test_each_room_becomes_one_engine_room_per_day() -> None:
 
 
 def test_rooms_with_the_same_name_stay_separate() -> None:
-    # 이름은 엔진에 가지 않는다. 이름이 같아도 번호가 다르면 다른 합주실이다.
+    # 이름은 배정 엔진에 전달되지 않습니다. 이름이 같아도 번호가 다르면 다른 합주실입니다.
     rooms = [
         _room(1, "1번방", time(18, 0), time(20, 0)),
         _room(2, "1번방", time(18, 0), time(20, 0)),
@@ -266,7 +266,7 @@ def test_slots_per_team_is_rejected_when_there_are_no_teams() -> None:
 
 
 def test_two_people_with_the_same_name_stay_separate() -> None:
-    # 동명이인은 저장소 번호로만 갈린다. 이름은 엔진에 가지 않는다.
+    # 동명이인은 저장소 번호로만 구분됩니다. 이름은 배정 엔진에 전달되지 않습니다.
     engine_teams = build_engine_teams(
         [10, 20], {10: [1], 20: [2]}, unavailable_by_member={}
     )

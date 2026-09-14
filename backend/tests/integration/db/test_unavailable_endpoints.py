@@ -123,7 +123,7 @@ def test_unavailable_time_keeps_the_reason_it_was_given(
     assert response.status_code == 201
     body = response.json()["time"]
     assert body["repeats_daily"] is True
-    # 앞뒤 공백은 걷어낸다.
+    # 앞뒤 공백은 제거합니다.
     assert body["reason"] == "기말고사"
 
 
@@ -218,7 +218,7 @@ def test_unavailable_time_creation_rejects_a_repeat_until_when_not_weekly(
 def test_unavailable_time_creation_of_an_unknown_member_is_rejected(
     api_client: TestClient, account: AccountFactory
 ) -> None:
-    # 없는 사람 번호도 "내 번호가 아닌 것"이라 본인 확인에서 먼저 걸린다.
+    # 없는 사람 번호도 "내 번호가 아닌 것"으로 본인 확인에서 먼저 거부됩니다.
     _, owner = account("이도현", "dohyun@example.com")
 
     response = api_client.post(

@@ -7,9 +7,9 @@ from backend.db.engine import create_db_engine
 def test_create_db_engine_applies_connect_and_pool_timeouts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """접속 대기와 풀 대기에 시간 제한을 붙인다.
+    """접속 대기와 풀 대기에 시간 제한을 설정합니다.
 
-    두 값의 기본값은 무한이라, DB가 느려지면 요청이 매달린 채 접속 풀을 다 쓴다.
+    기본값이 무한대이므로, DB가 느려지면 요청이 대기한 상태로 접속 풀을 모두 사용합니다.
     """
     captured: dict[str, object] = {}
 
@@ -33,7 +33,7 @@ def test_create_db_engine_applies_connect_and_pool_timeouts(
 def test_create_db_engine_falls_back_to_default_timeouts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """환경변수를 안 넣어도 시간 제한 없이 도는 일은 없어야 한다."""
+    """환경 변수가 없어도 기본값으로 시간 제한이 적용됩니다."""
     captured: dict[str, object] = {}
 
     def spy_create_engine(url: str, **options: object) -> str:
@@ -55,10 +55,10 @@ def test_create_db_engine_falls_back_to_default_timeouts(
 def test_create_db_engine_rejects_useless_timeout_values(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """0 이하이거나 숫자가 아닌 값은 기본값으로 되돌린다.
+    """0 이하이거나 숫자가 아닌 값은 기본값을 사용합니다.
 
-    음수는 psycopg 가 시간 제한 없음으로 받아들여, 막으려던 무한 대기를 다시 만든다.
-    빼기 기호가 둘인 값은 정수로 바꾸다 예외가 나 기동 자체가 죽는다.
+    음수는 psycopg가 시간 제한 없음으로 해석하므로, 차단하려던 무한 대기를 다시 만듭니다.
+    -- 형태의 값은 정수로 변환할 때 예외가 발생하여 서버 시작 자체가 실패합니다.
     """
     for bad in ("-5", "0", "--5", "5초", ""):
         captured: dict[str, object] = {}

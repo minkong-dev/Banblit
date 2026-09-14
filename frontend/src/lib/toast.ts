@@ -1,8 +1,8 @@
-// 짧은 알림 문구 하나. 어디서든 say() 를 부르면 껍데기(AppShell·AccountLayout)가 그린다 —
-// 부품 서명에 onSay 를 실어 나르지 않는다.
+// 짧은 알림 문구 하나입니다. 어디서든 say()를 호출하면 껍데기(AppShell·AccountLayout)가 표시합니다 —
+// 컴포넌트 서명에 onSay를 전달하지 않습니다.
 import { useSyncExternalStore } from "react";
 
-// 문구가 화면에 머무는 시간(밀리초).
+// 문구가 화면에 표시되는 시간(밀리초)입니다.
 const HOLD_MS = 2600;
 
 let current = "";
@@ -28,7 +28,7 @@ export function say(message: string): void {
   emit();
 }
 
-/** 지금 보여줄 문구. 없으면 빈 문자열. */
+/** 현재 표시할 문구입니다. 없으면 빈 문자열입니다. */
 export function useToast(): string {
   return useSyncExternalStore(subscribe, () => current, () => "");
 }

@@ -9,9 +9,10 @@ from backend.api.permission_service import account_permissions
 from backend.db.models import Member, Permission
 from backend.db.pipeline import get_session
 
-# 모든 endpoint 가 "지금 요청한 사람이 누구인가"를 확인하는 코드를 여기 하나로 모은다.
-# 라우터는 이 함수를 Depends로만 물리고, 쿠키를 직접 들여다보지 않는다.
-# 항목 하나가 필요한 endpoint 는 require_permission("항목 이름") 을 대신 물린다.
+# 모든 endpoint(API의 요청 주소 단위)가 현재 요청자를 확인하는 코드를 여기에 결합했습니다.
+# 라우터는 이 함수를 Depends로만 추가하고, cookie(HTTP 요청 헤더에 포함되는 사용자 정보)를
+# 직접 참조하지 않습니다. 특정 권한이 필요한 endpoint는 require_permission("권한 이름")을
+# 대신 추가합니다.
 UNAUTHORIZED_DETAIL = "로그인이 필요합니다"
 
 
@@ -36,10 +37,11 @@ FORBIDDEN_DETAIL = "권한이 없습니다"
 
 
 def require_permission(permission: Permission) -> Callable[..., Member]:
-    """permission 항목이 켜진 사람만 통과시키는 확인 함수를 만들어 돌려준다.
+    """permission(권한)이 설정된 사용자만 통과하게 하는 검증 함수를 반환합니다.
 
-    라우터는 Depends(require_permission("room_manage")) 처럼 만들어진 함수를 문다.
-    가진 항목은 permission set 여럿의 합집합이라, 하나라도 켜져 있으면 통과한다.
+    라우터는 Depends(require_permission("room_manage")) 형식으로 반환된 함수를 추가합니다.
+    사용자가 가진 권한은 여러 permission set(권한 집합)의 합집합이므로, 하나라도
+    설정되어 있으면 통과합니다.
     """
 
     def check(

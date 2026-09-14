@@ -1,11 +1,10 @@
-"""요청 제한. 같은 곳에서 짧은 시간에 몰아치는 요청을 거른다.
+"""요청 제한(rate limit). 같은 곳에서 짧은 시간에 집중적인 요청을 필터링합니다.
 
-로그인처럼 값을 맞혀 보는 자리에 건다. 한 번에 하나씩 넣어 보는 것을 막지 못하면
-짧은 비밀번호는 시간 문제로 뚫린다.
+로그인처럼 값을 시도해 보는 endpoint에 적용합니다. 한 번에 하나씩 입력해 보는 것을 막지 못하면
+짧은 비밀번호는 시간 문제로 뚫립니다.
 
-세는 자리는 process 안이다. api 를 여러 대로 늘리면 대마다 따로 세므로 실제 상한은
-대수만큼 커진다. 지금은 한 대로 띄우므로 그대로 두고, 늘릴 때 저장소를 바깥(예:
-Redis)으로 옮긴다.
+요청을 세는 위치는 process 내부입니다. API를 여러 대로 확장하면 대마다 따로 세므로 실제 상한은
+대수만큼 커집니다. 현재는 한 대로 띄우므로 그대로 두고, 확장할 때 저장소를 외부(예: Redis)로 옮깁니다.
 """
 
 import time
@@ -14,22 +13,22 @@ from collections.abc import Callable
 
 from fastapi import HTTPException, Request
 
-# 주소를 바꿔 가며 두드리면 기억이 무한히 쌓인다. 그 자체가 공격이 되므로 상한을 둔다.
+# 주소를 바꿔 가며 요청하면 기억이 무한히 쌓입니다. 그 자체가 공격이 되므로 상한을 둡니다.
 DEFAULT_MAX_CALLERS = 10_000
 
-# 만들어 둔 문지기들. 검사는 한 process 에서 여러 요청을 연달아 보내므로, 검사와 검사
-# 사이에 이것을 비워야 앞 검사가 뒤 검사를 막지 않는다(tests/conftest.py).
+# 만들어 둔 RateLimiter들입니다. 테스트는 한 process에서 여러 요청을 연달아 보내므로, 테스트 사이에
+# 이것을 초기화해야 앞 테스트가 뒤 테스트를 막지 않습니다(tests/conftest.py).
 _LIMITERS: "list[RateLimiter]" = []
 
 
 def reset_all() -> None:
-    """모든 문지기의 셈을 지운다. 검사 격리용이며 서버가 도는 중에는 부르지 않는다."""
+    """모든 RateLimiter의 상태를 초기화합니다. 테스트 격리용이며 서버가 실행 중에는 호출하지 않습니다."""
     for limiter in _LIMITERS:
         limiter.clear()
 
 
 class RateLimiter:
-    """부르는 곳마다 최근 몇 번 왔는지를 세어, 상한을 넘으면 기다릴 초를 돌려준다."""
+    """호출 주소마다 최근 요청 횟수를 추적하여, 상한을 초과하면 대기할 초를 반환합니다."""
 
     def __init__(
         self, limit: int, window_seconds: float, max_callers: int = DEFAULT_MAX_CALLERS
@@ -41,13 +40,13 @@ class RateLimiter:
         self._limit = limit
         self._window = window_seconds
         self._max_callers = max_callers
-        # 오래 안 보인 곳부터 버리려고 순서를 기억하는 dict 를 쓴다.
+        # 오래 사용하지 않은 호출자부터 제거하려고 순서를 유지하는 dict를 사용합니다.
         self._seen: OrderedDict[str, deque[float]] = OrderedDict()
 
     def check(self, caller: str, now: float) -> int | None:
-        """통과하면 None, 막히면 몇 초 뒤에 다시 오면 되는지를 돌려준다.
+        """통과할 경우 None을, 차단할 경우 몇 초 뒤 재시도할 수 있는지를 반환합니다.
 
-        막힌 요청은 세지 않는다 — 세면 계속 두드리는 동안 창이 밀려 영영 풀리지 않는다.
+        차단된 요청은 계산하지 않습니다 — 계산하면 계속 요청하는 동안 window가 밀려 영구적으로 차단됩니다.
         """
         hits = self._seen.get(caller)
         if hits is None:
@@ -55,12 +54,12 @@ class RateLimiter:
             self._seen[caller] = hits
         self._seen.move_to_end(caller)
 
-        # 창을 벗어난 것은 잊는다.
+        # window를 벗어난 것은 제거합니다.
         while hits and hits[0] <= now - self._window:
             hits.popleft()
 
         if len(hits) >= self._limit:
-            # 가장 오래된 것이 창을 벗어나는 시각까지 남은 초. 0 을 주면 곧바로 다시 온다.
+            # 가장 오래된 요청이 window를 벗어날 때까지 남은 초를 반환합니다. 1초 이상으로 보장합니다.
             return max(1, int(hits[0] + self._window - now))
 
         hits.append(now)
@@ -79,11 +78,11 @@ class RateLimiter:
 
 
 def caller_of(request: Request) -> str:
-    """요청을 보낸 곳을 한 글자열로. 앞단이 있으면 앞단이 본 상대를 쓴다.
+    """요청 발신자를 한 문자열로 반환합니다. reverse proxy가 있으면 reverse proxy가 본 발신자를 사용합니다.
 
-    앞단(caddy)은 자기가 본 상대를 X-Forwarded-For 맨 뒤에 붙인다. 앞쪽 값은 요청을
-    보낸 쪽이 지어낼 수 있으므로 맨 뒤만 믿는다 — 앞단이 하나뿐일 때 맞는 규칙이고,
-    앞단을 하나 더 두면 이 자리를 함께 고쳐야 한다.
+    reverse proxy(Caddy)는 본인이 본 발신자를 X-Forwarded-For 헤더의 맨 뒤에 추가합니다. 앞의 값은 요청 발신자가 조작할 수 있으므로
+    맨 뒤의 값만 신뢰합니다 — 이 규칙은 reverse proxy가 정확히 하나일 때 올바르므로,
+    reverse proxy를 하나 추가하면 이 함수도 함께 수정해야 합니다.
     """
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
@@ -94,9 +93,9 @@ def caller_of(request: Request) -> str:
 
 
 def limit_guesses(limit: int, window_seconds: float) -> Callable[[Request], None]:
-    """이 endpoint 에 걸 문지기를 만든다. 상한을 넘으면 429 로 돌려보낸다.
+    """endpoint에 적용할 rate limiter를 생성합니다. 상한을 초과하면 429 상태를 반환합니다.
 
-    문지기마다 제 셈을 들고 있어, endpoint 하나가 막혀도 다른 곳은 그대로 열려 있다.
+    각 limiter는 독립적인 상태를 유지하므로, 한 endpoint가 차단되어도 다른 endpoint는 그대로 열려 있습니다.
     """
     limiter = RateLimiter(limit=limit, window_seconds=window_seconds)
     _LIMITERS.append(limiter)
@@ -105,7 +104,7 @@ def limit_guesses(limit: int, window_seconds: float) -> Callable[[Request], None
         wait = limiter.check(caller_of(request), now=time.monotonic())
         if wait is None:
             return
-        # 몇 번 남았는지는 알려주지 않는다 — 상한을 알면 그 아래로 맞춰 계속 두드린다.
+        # 남은 시도 횟수를 알려주지 않습니다 — 상한을 알면 그 아래로 조절하여 계속 요청합니다.
         raise HTTPException(
             status_code=429,
             detail="요청이 너무 잦습니다. 잠시 뒤에 다시 시도해 주세요.",

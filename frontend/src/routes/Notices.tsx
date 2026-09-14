@@ -5,7 +5,7 @@ import { useMe } from "../components/hooks";
 import "../styles/board.css";
 import { can } from "../lib/account";
 
-/** 공지사항 — 전체 공개 글 목록과 상세. 팀 게시판과 같은 틀(board.css·PostBoard)을 쓴다. */
+/** 공지사항입니다. 전체 공개 글 목록과 상세를 표시합니다. 팀 게시판과 같은 틀(board.css와 PostBoard 컴포넌트)을 씁니다. */
 export function Notices() {
   const { me } = useMe();
 

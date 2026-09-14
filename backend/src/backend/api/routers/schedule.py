@@ -1,4 +1,4 @@
-"""확정 시간표·배정 계산·회차·되돌리기 endpoint. 시간표를 바꾸는 자리는 여기뿐이다."""
+"""확정 스케줄·배정 계산·회차·되돌리기 endpoint(API의 요청 주소 단위). 스케줄을 수정하는 자리는 여기뿐입니다."""
 
 from collections.abc import Callable
 from datetime import datetime
@@ -48,15 +48,15 @@ from backend.scheduling.pipeline import RoomSlot
 
 router = APIRouter()
 
-# 배정 계산을 접수해 배경 스레드에서 실행한다. 프로세스에 하나만 둔다 — 요청마다 새로
-# 만들면 스레드 풀과 작업 기록이 요청마다 따로 생겨 상한도 조회도 의미가 없어진다.
+# 배정 계산을 접수해 배경 스레드에서 실행합니다. 프로세스에 하나만 둡니다 — 요청마다 새로
+# 만들면 스레드 풀과 작업 기록이 요청마다 따로 생겨 상한도 조회도 의미가 없어집니다.
 job_runner: JobRunner[PeriodAssignResult] = JobRunner(
     max_concurrent=max_concurrent_jobs_from_env()
 )
 
 
 def _period(period_id: int, session: Session = Depends(get_session)) -> Period:
-    # 기간이 있는지는 endpoint 다섯이 똑같이 묻는다. 없으면 ValueError → 422.
+    # 기간 존재 여부는 5개 endpoint(API의 요청 주소 단위)가 동일하게 검증합니다. 없으면 ValueError → 422.
     return get_period_or_raise(session, period_id)
 
 
@@ -73,8 +73,8 @@ def _row_out(row: ScheduleRow) -> ScheduleRowOut:
 def read_schedule(
     period: Period = Depends(_period), session: Session = Depends(get_session)
 ) -> ScheduleOut:
-    # 남는 slot 을 시간표와 같은 응답에 싣는다. 화면은 open_slots 만 보고 예약 가능한
-    # 시간을 연다 — 따로 물으러 오게 두면 배정 계산을 다시 실행하는 endpoint 가 필요해진다.
+    # 사용 가능한 slot(1시간 단위 시간 칸)을 스케줄과 같은 응답에 실습니다. 화면은 open_slots만 보고 예약 가능한
+    # 시간을 표시합니다 — 따로 요청하게 두면 배정 계산을 다시 실행하는 endpoint가 필요해집니다.
     return ScheduleOut(
         rows=[_row_out(row) for row in list_schedule(session, period.id)],
         open_slots=[
@@ -85,7 +85,7 @@ def read_schedule(
 
 
 def _assignment_out(assignment: EngineAssignment, result: PeriodAssignResult) -> AssignmentOut:
-    # 엔진이 쓴 번호가 곧 DB 의 번호다. 이름만 대응표에서 찾아 붙인다.
+    # 엔진이 사용한 번호가 바로 DB의 번호입니다. 이름만 대응표에서 찾아 붙입니다.
     def to_slot(room_slot: RoomSlot) -> RoomSlotOut:
         return RoomSlotOut(
             room_id=room_slot.room_id,
@@ -139,11 +139,11 @@ def _submit(
     session_factory: Callable[[], Session],
     excluded_member_id: int | None,
 ) -> JobEnvelopeOut:
-    # 팀·합주실 존재 여부나 배정 계산 자체는 접수를 막을 이유가 아니라 배경 작업의
-    # 실패 사유이므로 job_runner 가 실행하는 쪽에서 다룬다.
+    # 팀·합주실 존재 여부나 배정 계산 자체는 접수를 거절할 이유가 아니라 배경 작업의
+    # 실패 원인이므로 job_runner가 실행하는 쪽에서 처리합니다.
     def compute() -> PeriodAssignResult:
-        # 요청을 받은 스레드의 session 을 그대로 넘기지 않는다. SQLAlchemy Session 은
-        # 스레드끼리 공유하면 안 되므로, 배경 스레드 전용 세션을 새로 연다.
+        # 요청을 받은 스레드의 session을 그대로 전달하지 않습니다. SQLAlchemy Session은
+        # 스레드끼리 공유하면 안 되므로, 배경 스레드 전용 session을 새로 엽니다.
         with session_factory() as job_session:
             result = assign_period(
                 job_session,
@@ -153,7 +153,7 @@ def _submit(
                 saved_at=datetime.now(),
                 excluded_member_id=excluded_member_id,
             )
-            # 저장이 실제로 된 때만 알린다 — 조율안만 나온 경우에는 보던 시간표가 그대로다.
+            # 저장이 실제로 된 때만 알립니다 — 조율안만 나온 경우에는 보던 스케줄이 그대로입니다.
             if result.saved:
                 notify_assignment_updated(job_session, period.id, datetime.now())
             return result
@@ -175,8 +175,8 @@ def assign_period_schedule(
     return _submit(period, req, session_factory, None)
 
 
-# 조율안을 고른다. 계산 결과는 프로세스 메모리에만 있어 조율안의 배정을 다시 꺼낼 수
-# 없으므로, 그 사람을 뺀 채로 다시 계산해 저장한다 — 저장 경로가 하나로 유지된다.
+# 조율안을 선택합니다. 계산 결과는 프로세스 메모리에만 있어 조율안의 배정을 다시 꺼낼 수
+# 없으므로, 그 사람을 제외한 채로 다시 계산해 저장합니다 — 저장 경로가 하나로 유지됩니다.
 @router.post(
     "/periods/{period_id}/proposals/{member_id}/confirm",
     response_model=JobEnvelopeOut,
@@ -192,7 +192,7 @@ def confirm_period_proposal(
     return _submit(period, req, session_factory, member_id)
 
 
-# 계산 결과와 아직 확정되지 않은 조율안, 거기서 빠지는 사람이 실린다 — assign_read 가 본다.
+# 계산 결과와 아직 확정되지 않은 조율안, 거기서 제외된 사람이 포함됩니다 — assign_read 권한이 조회합니다.
 @router.get(
     "/jobs/{job_id}",
     response_model=JobEnvelopeOut,
@@ -205,7 +205,7 @@ def read_job(job_id: str) -> JobEnvelopeOut:
     return JobEnvelopeOut(job=_job_out(job))
 
 
-# 되돌리기가 어느 회차로 갈지 고르는 목록. 되돌리기와 같은 자격으로 막는다.
+# 되돌리기할 회차를 선택하는 목록입니다. 되돌리기와 같은 권한으로 검증합니다.
 @router.get(
     "/periods/{period_id}/backups",
     response_model=BackupsOut,
@@ -222,7 +222,7 @@ def read_period_backups(
     )
 
 
-# 회차 하나를 눌러 그때 시간표를 본다. 목록에서 이어지는 화면이라 같은 자격으로 막는다.
+# 회차 하나를 선택해 당시 스케줄을 봅니다. 목록에서 이어지는 화면이므로 같은 권한으로 검증합니다.
 @router.get(
     "/periods/{period_id}/backups/{saved_at}",
     response_model=BackupRoundOut,
@@ -244,9 +244,9 @@ def read_period_backup_round(
 def rollback_period_schedule(
     period: Period = Depends(_period), session: Session = Depends(get_session)
 ) -> RollbackOut:
-    # rollback_schedule 이 되돌리기와 확정을 함께 끝낸다. 방·시각 충돌은 ValueError → 422.
+    # rollback_schedule이 되돌리기와 확정을 함께 완료합니다. 합주실·시각 충돌은 ValueError → 422.
     rolled_back = rollback_schedule(session, period.id)
-    # 되돌릴 백업이 없어 아무것도 안 바뀐 경우(False)에는 알리지 않는다.
+    # 되돌릴 백업이 없어 아무것도 바뀌지 않은 경우(False)에는 알리지 않습니다.
     if rolled_back:
         notify_assignment_updated(session, period.id, datetime.now())
     return RollbackOut(rolled_back=rolled_back)

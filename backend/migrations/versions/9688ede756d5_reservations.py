@@ -1,4 +1,4 @@
-"""reservations
+"""예약입니다.
 
 Revision ID: 9688ede756d5
 Revises: a1c7e5f3b9d2

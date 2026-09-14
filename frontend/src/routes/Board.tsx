@@ -8,7 +8,7 @@ import { useMe, useMyTeams, useTeams } from "../components/hooks";
 
 import "../styles/board.css";
 
-/** 팀 게시판 — 내가 속한 팀의 글만 본다. 팀이 여럿이면 탭으로 고른다. */
+/** 팀 게시판입니다. 내가 속한 팀의 글만 보며, 팀이 2개 이상이면 탭(화면 안에서 구역을 바꾸는 선택 항목)으로 고릅니다. */
 export function Board() {
   const { me } = useMe();
   const teams = useTeams();

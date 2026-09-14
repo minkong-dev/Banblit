@@ -19,18 +19,18 @@ import { Settings } from "./routes/Settings";
 import { Teams } from "./routes/Teams";
 import { isSignedIn } from "./lib/pipeline";
 
-/** 로그인 화면 뒤쪽 일곱 화면을 감싼다. 로그인 표시 쿠키가 없으면 감싼 화면을
- *  그리지 않고 로그인으로 보낸다 — 서버도 세션 없는 요청은 401로 거절하니,
- *  frontend 에서 먼저 걸러 빈 화면이 잠깐 보였다 튕기는 것을 막는다.
- *  ponytail: 표시용 쿠키는 서버가 세션을 취소해도 곧바로 사라지지 않는다(다른
- *  기기에서 로그아웃한 경우 등). 그때는 RequireAuth 를 통과하지만 뒤이은 요청이
- *  401로 거절된다. */
+/** 로그인 화면 뒤의 7개 화면을 감쌉니다. 로그인 표시 쿠키가 없으면 감싼 화면을
+ *  렌더링하지 않고 로그인으로 이동합니다 — 서버도 세션 없는 요청은 401로 거절하니,
+ *  frontend에서 먼저 필터링해 빈 화면이 잠깐 표시된 후 이동하는 것을 방지합니다.
+ *  ponytail: 표시용 쿠키는 서버가 세션을 취소해도 즉시 사라지지 않습니다(다른
+ *  기기에서 로그아웃한 경우 등). 이 경우 RequireAuth를 통과하지만 이후 요청이
+ *  401로 거절됩니다. */
 function RequireAuth(props: { children: ReactElement }): ReactElement {
   return isSignedIn() ? props.children : <Navigate to="/login" replace />;
 }
 
-// 계정 다섯 벌은 layout route 로 묶는다. 주소는 따로 갖되 왼쪽 사진은 다시 그려지지
-// 않는다 — 부모가 마운트된 채 자식만 바뀐다.
+// 계정 5개 화면을 layout route로 묶습니다. 주소는 각각 다르지만 왼쪽 이미지는 다시
+// 렌더링되지 않습니다 — 부모가 마운트된 상태에서 자식만 변경됩니다.
 export function App() {
   return (
     <Routes>

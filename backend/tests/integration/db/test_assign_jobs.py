@@ -19,10 +19,10 @@ def head_login(
     api_client: TestClient,
     account: AccountFactory,
 ) -> dict[str, str]:
-    """헤드매니저로 가입시키고, 그 쿠키를 클라이언트 기본값으로 실어 둔다.
+    """헤드매니저로 가입시키고, 그 cookie(브라우저가 저장해 요청마다 함께 보내는 값)를 클라이언트 기본값으로 담습니다.
 
-    poll_job 은 쿠키를 따로 싣지 않고 /jobs 를 조회하므로, 기본 쿠키가 있어야
-    작업 조회가 인증을 통과한다.
+    poll_job은 cookie를 따로 담지 않고 /jobs를 조회하므로, 기본 cookie가 있어야
+    작업 조회가 인증을 통과합니다.
     """
     _, cookies = account("박서연", "head@example.com")
     api_client.cookies.update(cookies)
@@ -158,7 +158,7 @@ def test_health_responds_while_an_assignment_job_is_running(
     head_login: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """이번 변경의 핵심 — 계산이 도는 동안에도 /health 가 붙잡히지 않고 답해야 한다."""
+    """이번 변경의 핵심 — 계산이 실행되는 동안에도 /health가 막히지 않고 응답해야 합니다."""
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
     room = Room(name="1번방", opens_at=clock(18, 0), closes_at=clock(19, 0))
@@ -209,6 +209,6 @@ def test_job_lookup_needs_assign_read(
     assert forbidden.status_code == 403
     assert "권한" in forbidden.json()["detail"]
 
-    # 없는 작업 번호로 불러, 항목을 가진 사람은 확인을 통과해 422 까지 가는 것을 본다.
+    # 없는 작업 번호로 불러, 권한이 있는 사람은 검증을 통과해 422까지 도달하는 것을 확인합니다.
     passed = api_client.get("/jobs/no-such-job", cookies=head)
     assert passed.status_code == 422

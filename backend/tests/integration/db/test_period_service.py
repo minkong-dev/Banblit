@@ -58,7 +58,7 @@ def test_successful_assignment_is_saved_as_the_current_schedule(
 ) -> None:
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
-    room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))  # 2칸
+    room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))  # 2개 slot
 
     result = assign_period(
         db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT
@@ -69,7 +69,7 @@ def test_successful_assignment_is_saved_as_the_current_schedule(
     saved = db_session.scalars(
         select(Assignment).where(Assignment.period_id == period_id)
     ).all()
-    assert len(saved) == 2  # 팀 하나가 전체 2칸을 가져간다
+    assert len(saved) == 2  # 팀 하나가 전체 2개 slot을 배정받습니다.
     assert {row.room_id for row in saved} == {room_id}
     assert {row.team_id for row in saved} == {team_id}
 
@@ -77,12 +77,12 @@ def test_successful_assignment_is_saved_as_the_current_schedule(
 def test_successful_assignment_round_trips_rooms_teams_and_times(
     db_session: Session,
 ) -> None:
-    """방 2개(운영시간이 다름)·팀 2개·이틀짜리 기간으로 되돌림 왕복을 구체값까지 확인한다."""
+    """방 2개(운영시간이 다름)·팀 2개·2일 기간으로 배정 왕복을 구체값까지 확인합니다."""
     period_id = _period(db_session, days=2)  # 8/1 ~ 8/2
     team_a = _team_with_member(db_session, "A", "김민수")
     team_b = _team_with_member(db_session, "B", "박지훈")
-    room_1 = _room(db_session, "1번방", time(18, 0), time(20, 0))  # 하루 2칸
-    room_2 = _room(db_session, "2번방", time(20, 0), time(22, 0))  # 하루 2칸, 다른 시간대
+    room_1 = _room(db_session, "1번방", time(18, 0), time(20, 0))  # 하루 2개 slot
+    room_2 = _room(db_session, "2번방", time(20, 0), time(22, 0))  # 하루 2개 slot, 다른 시간대
 
     result = assign_period(
         db_session, period_id, [team_a, team_b], [room_1, room_2], saved_at=SAVED_AT
@@ -94,7 +94,7 @@ def test_successful_assignment_round_trips_rooms_teams_and_times(
         select(Assignment).where(Assignment.period_id == period_id)
     ).all()
 
-    # 하루 4칸(방 2개 × 2칸) × 이틀 = 8칸, 팀 2개가 4칸씩 나눠 가진다.
+    # 하루 4개 slot(방 2개 × 2개 slot) × 2일 = 8개 slot, 팀 2개가 4개 slot씩 배정받습니다.
     assert len(saved) == 8
 
     operating_hours = {
@@ -120,7 +120,7 @@ def test_failed_assignment_saves_nothing_and_names_who_to_exclude(
 ) -> None:
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
-    # 두 번째 멤버를 넣고 그 사람만 운영시간 내내 불가능하게 만든다.
+    # 두 번째 멤버를 추가하고 그 멤버만 운영시간 내내 불가능하게 설정합니다.
     other = Member(name="이영희")
     db_session.add(other)
     db_session.flush()

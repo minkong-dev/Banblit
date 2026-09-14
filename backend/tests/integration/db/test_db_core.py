@@ -19,7 +19,7 @@ def test_team_name_must_be_unique(db_session: Session) -> None:
 
 
 def test_same_person_cannot_take_two_slots_of_one_team(db_session: Session) -> None:
-    """겸하면 배정 계산이 그 사람을 같은 시간에 두 번 센다."""
+    """중복 등록하면 배정 계산이 그 사람을 같은 시간에 두 번 셉니다."""
     member = Member(name="김민수")
     team = Team(name="A")
     db_session.add_all([member, team])
@@ -55,7 +55,7 @@ def test_one_person_may_sit_in_two_teams(db_session: Session) -> None:
 
 
 def test_many_empty_slots_may_share_a_team(db_session: Session) -> None:
-    """빈 자리끼리는 겹침 조건에 걸리지 않는다 — 저장소가 빈 값을 서로 다르게 본다."""
+    """빈 자리끼리는 겹침 조건에 걸리지 않습니다. 저장소가 빈 값을 서로 다르게 봅니다."""
     team = Team(name="A")
     db_session.add(team)
     db_session.flush()

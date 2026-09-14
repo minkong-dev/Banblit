@@ -1,4 +1,4 @@
-"""확정 시간표와 밀려난 회차를 읽는 자리. 라우터는 여기서 받은 줄에 이름만 얹어 내보낸다."""
+"""확정 스케줄과 밀려난 회차(backup round)를 조회하는 module입니다. 라우터는 여기서 반환된 행에 이름만 추가하여 응답합니다."""
 
 from datetime import datetime
 
@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team
 
 ScheduleRow = tuple[int, str, int, str, datetime, datetime]
-"""(팀 번호, 팀 이름, 합주실 번호, 합주실 이름, 시작, 끝)"""
+"""(팀 id, 팀 이름, 합주실 id, 합주실 이름, 시작 시각, 종료 시각)"""
 
 
 def get_period_or_raise(session: Session, period_id: int) -> Period:
@@ -19,7 +19,7 @@ def get_period_or_raise(session: Session, period_id: int) -> Period:
 
 
 def list_schedule(session: Session, period_id: int) -> list[ScheduleRow]:
-    """그 기간의 확정 배정을 시작 시각·합주실 이름 순으로 돌려준다."""
+    """그 기간의 확정 배정을 시작 시각과 합주실 이름 순으로 반환합니다."""
     rows = session.execute(
         select(Assignment, Team.name, Room.name)
         .join(Team, Team.id == Assignment.team_id)
@@ -34,10 +34,10 @@ def list_schedule(session: Session, period_id: int) -> list[ScheduleRow]:
 
 
 def list_backup_round(session: Session, period_id: int, saved_at: datetime) -> list[ScheduleRow]:
-    """밀려난 회차 하나의 시간표. 회차를 가리키는 값은 저장 시각이다.
+    """밀려난 회차(backup round) 하나의 스케줄을 반환합니다. 회차를 식별하는 값은 저장 시각입니다.
 
-    칸이 하나도 없는 회차는 애초에 저장되지 않는다. 빈 결과는 "그런 회차가 없다"는
-    뜻이므로, 빈 시간표를 돌려주는 대신 거절한다.
+    배정이 하나도 없는 회차는 애초에 저장되지 않습니다. 빈 결과는 "그런 회차가 없다"는
+    의미이므로, 빈 스케줄을 반환하는 대신 ValueError를 발생시킵니다.
     """
     rows = session.execute(
         select(AssignmentBackup, Team.name, Room.name)

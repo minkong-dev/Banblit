@@ -1,4 +1,4 @@
-"""assignment backups
+"""배정안 백업입니다.
 
 Revision ID: 0209dcead492
 Revises: fd4b8458697a

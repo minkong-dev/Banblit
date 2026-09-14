@@ -13,9 +13,9 @@ def _refuse_session() -> None:
 
 
 def test_database_down_answers_503_not_500() -> None:
-    """DB 가 끊겼을 때 무엇을 할지 정해두지 않으면 500 으로 새어 나간다.
+    """DB가 끊겼을 때 예외 처리를 하지 않으면 상태 코드 500으로 응답합니다.
 
-    사용자 잘못이 아니라 이쪽이 지금 못 받는 상태이므로 503 으로 답한다.
+    사용자의 잘못이 아니라 이 쪽이 현재 요청을 처리할 수 없는 상태이므로 503으로 응답합니다.
     """
     app.dependency_overrides[get_session] = _refuse_session
     try:
@@ -30,7 +30,7 @@ def test_database_down_answers_503_not_500() -> None:
 def test_database_down_is_written_to_the_log(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """사고가 나면 원인을 찾을 재료가 남아야 한다."""
+    """예외가 발생하면 원인을 파악할 수 있도록 로그에 기록됩니다."""
     app.dependency_overrides[get_session] = _refuse_session
     try:
         with caplog.at_level(logging.ERROR):
@@ -42,7 +42,7 @@ def test_database_down_is_written_to_the_log(
 
 
 def test_database_down_does_not_leak_internals_to_the_user() -> None:
-    """오류 문구가 내부 정보를 흘리면 안 된다 — 자세한 것은 기록에만 남긴다."""
+    """오류 메시지가 내부 정보를 포함하지 않도록 합니다. 자세한 내용은 로그에만 기록합니다."""
     app.dependency_overrides[get_session] = _refuse_session
     try:
         response = TestClient(app).get("/periods/1/schedule")

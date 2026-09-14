@@ -1,4 +1,4 @@
-"""assignment runs
+"""배정 계산 실행입니다.
 
 Revision ID: 0e65e95acef3
 Revises: b7f1a92c4d31
