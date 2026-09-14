@@ -8,6 +8,7 @@ sources:
   - backend/src/backend/api/schemas.py         # 팀·포지션 응답 서식
   - backend/migrations/versions/b2d94f7a1c05_team_slots_and_cohort.py # 소속을 포지션으로 옮긴 마이그레이션
   - backend/tests/integration/db/test_roster_endpoints.py # 팀·포지션 endpoint의 권한 갈림
+  - backend/tests/integration/db/test_member_expel_endpoints.py # 추방으로 계정이 삭제되면 포지션이 비워지는지의 시나리오
   - frontend/src/routes/Teams.tsx              # 팀 목록·포지션 구성·명단 화면
   - frontend/src/components/MemberSearch.tsx   # 포지션에 추가할 사람을 검색하는 입력칸
   - frontend/src/routes/Profile.tsx            # 내가 맡은 포지션을 표시하는 화면
@@ -101,7 +102,7 @@ erDiagram
 
 ### 사람을 삭제해도 포지션은 남습니다
 
-포지션에서 사람을 삭제하면 그 포지션은 **비워지지만 삭제되지 않습니다.** 계정을 삭제해도 같습니다. 포지션은 팀의 구성이므로, 사람이 나갔다고 포지션이 삭제되면 안 됩니다. 드럼 포지션이 빈 채로 남아 있어야 다음 사람을 그 포지션에 추가할 수 있습니다.
+포지션에서 사람을 삭제하면 그 포지션은 **비워지지만 삭제되지 않습니다.** 본인이 탈퇴하거나 "멤버 추방" 을 가진 사람이 추방해 계정이 삭제될 경우에도 같습니다. 그 사람이 맡던 포지션은 비워지고 유지됩니다. 포지션은 팀의 구성이므로, 사람이 나갔다고 포지션이 삭제되면 안 됩니다. 드럼 포지션이 빈 채로 남아 있어야 다음 사람을 그 포지션에 추가할 수 있습니다.
 
 반대로 팀을 삭제하면 그 팀의 포지션은 함께 삭제됩니다. 팀이 삭제된 뒤의 포지션은 참조할 팀이 없습니다.
 
