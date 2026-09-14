@@ -195,7 +195,7 @@ export function DayDialog(props: {
       setError(error instanceof Error ? error.message : "삭제하지 못했어요.");
       // 실패해도 서버 값을 다시 받습니다. 예약은 시간 칸마다 삭제하므로 앞쪽 몇 칸은 이미 삭제되었을
       // 수 있는데, 화면이 옛 id를 그대로 들고 있으면 다시 눌러도 이미 없는 칸부터
-      // 삭제하려다 같은 자리에서 멈춘다.
+      // 삭제하려다 같은 자리에서 멈춥니다.
       onSaved();
       return;
     }
@@ -255,9 +255,9 @@ export function DayDialog(props: {
   const addBooking = async () => {
     const { a, b } = fixed ? { a: fixed.from, b: fixed.to } : book;
     if (b <= a) { setError("끝 시간을 시작 시간 이후로 설정해주세요."); return; }
-    // 선착순이므로 이미 찬 칸이 하나라도 있으면 먼저 걸러 서버까지 가지 않는다.
+    // 선착순이므로 이미 찬 칸이 하나라도 있으면 먼저 걸러 서버까지 가지 않습니다.
     // 두 사람이 동시에 노려 이 검사를 둘 다 통과해도, 최종 판정은 서버(선착순 유니크
-    // 제약)가 하므로 아래 catch 에서 서버가 돌려준 사유를 그대로 보여준다.
+    // 제약)가 하므로 아래 catch 에서 서버가 돌려준 사유를 그대로 보여줍니다.
     for (let i = a; i < b; i += 1) {
       if (grid[i]) { setError(`${label(i)}은 이미 예약되어있어요. 다른 시간을 선택해주세요.`); return; }
     }
@@ -338,7 +338,7 @@ export function DayDialog(props: {
                 key={choice.key}
                 type="button"
                 className={`rep${on ? " on" : ""}`}
-                // 같은 것을 다시 누르면 꺼진다 — 반복을 끄려고 다른 자리를 찾지 않아도 된다.
+                // 같은 것을 다시 누르면 꺼집니다 — 반복을 끄려고 다른 자리를 찾지 않아도 됩니다.
                 aria-pressed={on}
                 onClick={() => setRepeat(on ? "none" : choice.key)}
               >
@@ -356,7 +356,7 @@ export function DayDialog(props: {
         {fixed
           ? <div className="bigtime"><b>{label(fixed.from)} – {endLabel(fixed.to)}</b><small>해당 시간으로 예약할게요</small></div>
           : timeline(booked)}
-        {/* 합주실을 먼저 고른다 — 아래 시각 고르기가 그 합주실에 찬 자리만 잠근다. */}
+        {/* 합주실을 먼저 고릅니다 — 아래 시각 고르기가 그 합주실에 찬 자리만 잠급니다. */}
         <p className="cap2">합주실을 선택해주세요</p>
         <div className="pick">
           <div className="fld">
@@ -388,7 +388,7 @@ export function DayDialog(props: {
   const hint = `${roomsLabel || "합주실"} · ${hourText(openHour)}–${hourText(closeHour)}`
     + ` · 1시간 단위 · ${inFocus ? "배정된 기간" : "배정 없음"}`;
 
-  // 보기만 하는 탭(all)에는 아래 버튼 줄을 주지 않는다 — Modal 이 줄 자체를 그리지 않는다.
+  // 보기만 하는 탭(all)에는 아래 버튼 줄을 주지 않습니다 — Modal 이 줄 자체를 그리지 않습니다.
   const foot = tab === "all" ? undefined : (
     <>
       <button className="ghost" onClick={onClose}>닫기</button>

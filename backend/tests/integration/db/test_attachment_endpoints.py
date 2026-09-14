@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-# account 픽스처를 부른 순서가 곧 역할이다 — 이 파일의 첫 호출이 헤드매니저다.
+# account 픽스처를 부른 순서가 곧 역할입니다 — 이 파일의 첫 호출이 헤드매니저입니다.
 from conftest import AccountFactory
 
 Cookies = dict[str, str]

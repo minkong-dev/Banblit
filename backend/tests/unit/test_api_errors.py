@@ -5,7 +5,7 @@ from backend.api.app import app
 
 
 def _with_route(path: str, raiser: Exception) -> Response:
-    """path 에 raiser 를 던지는 임시 경로를 달아 한 번 부르고 다시 뗀다."""
+    """path 에 raiser 를 던지는 임시 경로를 달아 한 번 부르고 다시 뗍니다."""
 
     @app.get(path)
     def boom() -> None:

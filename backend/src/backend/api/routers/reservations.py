@@ -48,7 +48,7 @@ def _rows_out(rows: list[ReservationRow]) -> ReservationsOut:
 
 
 # 일정 확인은 로그인한 사람이면 누구나 합니다. 사용자 신원을 사용하지 않으므로 사용하지 않는
-# 매개변수를 남기지 않도록 dependencies에 건다.
+# 매개변수를 남기지 않도록 dependencies에 겁니다.
 @router.get(
     "/rooms/{room_id}/reservations",
     response_model=ReservationsOut,
@@ -60,7 +60,7 @@ def read_room_reservations(
     to: str = Query(),
     session: Session = Depends(get_session),
 ) -> ReservationsOut:
-    # from_ 은 파이썬이 예약어 from 을 매개변수 이름으로 못 써 붙인 이름이다.
+    # from_ 은 파이썬이 예약어 from 을 매개변수 이름으로 못 써 붙인 이름입니다.
     # alias="from" 이 실제 쿼리 문자열 키를 맞춘다(?from=...&to=...).
     # from_은 Python의 예약어이므로 매개변수 이름으로 사용할 수 없어서 붙인 이름입니다.
     # alias="from"이 실제 query string 키와 맞춥니다(?from=...&to=...).

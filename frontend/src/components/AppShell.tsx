@@ -46,7 +46,7 @@ function NavList({ items, current }: { items: readonly NavItem[]; current: NavKe
 export function AppShell(props: {
   /** 화면별 CSS가 격리되는 이름입니다 — scheduler, admin 등. */
   page: string;
-  /** 사이드바에 없는 화면(프로필 설정)은 아무 항목도 켜지 않도록 비워 둔다. */
+  /** 사이드바에 없는 화면(프로필 설정)은 아무 항목도 켜지 않도록 비워 둡니다. */
   current?: NavKey;
   /** 사이드바 맨 아래에 덧붙일 것. */
   sideExtra?: ReactNode;
@@ -193,7 +193,7 @@ export function ProfileMenu() {
   );
 }
 
-/** 오른쪽 목록 한 칸입니다. onOpen이 있으면 제목이 눌리는 버튼가 됩니다. */
+/** 오른쪽 목록 한 칸입니다. onOpen이 있으면 제목이 눌리는 버튼이 됩니다. */
 export function Panel(props: {
   title: string;
   hint?: string;

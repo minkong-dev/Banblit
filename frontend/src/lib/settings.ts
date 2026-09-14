@@ -54,13 +54,13 @@ export function slotsBetween(opens: string, closes: string): number {
 }
 
 export type Capacity = {
-  /** 하루에 열리는 한 시간짜리 자리 — 방을 모두 더한 것. */
+  /** 하루에 열리는 한 시간짜리 자리 — 합주실을 모두 더한 것. */
   perDay: number;
   /** 기간 전체의 한 시간짜리 자리. */
   total: number;
-  /** 팀 하나가 갖는 한 시간짜리 자리. 집중기간은 모든 팀이 정확히 같은 개수를 갖는다. */
+  /** 팀 하나가 갖는 한 시간짜리 자리. 집중기간은 모든 팀이 정확히 같은 개수를 갖습니다. */
   perTeam: number;
-  /** 팀에 고르게 나눠주고 남는 한 시간짜리 자리. 예약으로 쓸 수 있다. */
+  /** 팀에 고르게 나눠주고 남는 한 시간짜리 자리. 예약으로 쓸 수 있습니다. */
   leftover: number;
 };
 
@@ -72,7 +72,7 @@ export function capacity(input: {
   const { rooms, days, teams } = input;
   const perDay = rooms.reduce((sum, room) => sum + slotsBetween(room.opens_at, room.closes_at), 0);
   const total = perDay * Math.max(0, days);
-  // teams 가 0 이면 나누지 않고 total 을 그대로 leftover 에 담는다.
+  // teams 가 0 이면 나누지 않고 total 을 그대로 leftover 에 담습니다.
   const perTeam = teams > 0 ? Math.floor(total / teams) : 0;
   return { perDay, total, perTeam, leftover: total - perTeam * teams };
 }

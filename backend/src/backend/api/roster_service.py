@@ -131,7 +131,7 @@ def require_slot_counts(counts: dict[str, int]) -> dict[Instrument, int]:
     if total == 0:
         raise ValueError("포지션을 하나 이상 골라 주세요")
     if total > MAX_SLOTS_PER_TEAM:
-        raise ValueError(f"한 팀의 포지션는 {MAX_SLOTS_PER_TEAM}개까지입니다")
+        raise ValueError(f"한 팀의 포지션은 {MAX_SLOTS_PER_TEAM}개까지입니다")
     return checked
 
 
@@ -146,7 +146,7 @@ def _get_slot_or_raise(session: Session, team_id: int, slot_id: int) -> TeamSlot
     slot = session.get(TeamSlot, slot_id)
     # slot_id만 맞고 팀이 다르면 없는 것으로 취급합니다 — 다른 팀의 포지션을 번호로 건드릴 수 없습니다.
     if slot is None or slot.team_id != team_id:
-        raise ValueError("그런 포지션가 없습니다")
+        raise ValueError("그런 포지션이 없습니다")
     return slot
 
 

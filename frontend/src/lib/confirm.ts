@@ -11,7 +11,7 @@ export function objectParticle(word: string): string {
   return (code - 0xac00) % 28 === 0 ? "를" : "을";
 }
 
-/** "새벽 네시를 삭제할까요?" 처럼 묻는다. 확인을 누르면 true. */
+/** "새벽 네시를 삭제할까요?" 처럼 묻습니다. 확인을 누르면 true. */
 export function askDelete(name: string): boolean {
   return window.confirm(`${name}${objectParticle(name)} 삭제할까요?`);
 }

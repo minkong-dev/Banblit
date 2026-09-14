@@ -165,8 +165,8 @@ def test_a_failing_period_does_not_stop_the_next_one(
     healthy_id = _period(db_session)
     _team_with_member(db_session, "A", "김민수")
     _room(db_session, "1번방")
-    # 실패한 기간은 되돌리기(rollback)로 자기 작업만 버린다. 실제 저장소의 기간은
-    # 이미 커밋된 줄이므로, 검사도 심어둔 것을 커밋해 같은 조건으로 맞춘다.
+    # 실패한 기간은 되돌리기(rollback)로 자기 작업만 버립니다. 실제 저장소의 기간은
+    # 이미 커밋된 줄이므로, 검사도 심어둔 것을 커밋해 같은 조건으로 맞춥니다.
     db_session.commit()
     real = auto_assign.assign_period
 
@@ -182,7 +182,7 @@ def test_a_failing_period_does_not_stop_the_next_one(
     assert [result.period_id for result in results] == [broken_id, healthy_id]
     assert results[0].error is not None
     assert results[1].error is None
-    # 터진 기간은 표시를 남기지 않아 다음 확인 때 다시 시도된다.
+    # 터진 기간은 표시를 남기지 않아 다음 확인 때 다시 시도됩니다.
     assert [(run.period_id, run.slot) for run in _runs(db_session)] == [
         (healthy_id, "first")
     ]

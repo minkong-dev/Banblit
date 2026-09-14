@@ -73,7 +73,7 @@ test("직접 승인 팀은 승인해야 명단에 오르고 그전에는 인원 
   await page.getByRole("button", { name: new RegExp(escapeRegExp(team.name)) }).click();
   await page.getByRole("button", { name: `${applicantName} 참가 승인` }).click();
 
-  // 승인 대기 중인 신청과 확정된 명단이 같은 상자를 씁니다. 승인 버튼가 사라지는 것을 먼저
+  // 승인 대기 중인 신청과 확정된 명단이 같은 상자를 씁니다. 승인 버튼이 사라지는 것을 먼저
   // 기다리지 않으면 신청 줄에 그대로 있는 이름을 명단으로 잘못 보고, 아직 완료되지 않은 승인을 검사합니다.
   await expect(page.getByRole("button", { name: `${applicantName} 참가 승인` })).toHaveCount(0);
   await expect(page.getByText(applicantName)).toBeVisible();

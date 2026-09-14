@@ -71,7 +71,7 @@ def test_require_password_accepts_all_four_kinds_of_character() -> None:
     require_password("Abcdef1!")
 
 
-# 각 줄이 규칙 하나씩을 어긴다 — 짧음, 김, 소문자 없음, 대문자 없음, 숫자 없음, 특수기호 없음.
+# 각 줄이 규칙 하나씩을 어깁니다 — 짧음, 김, 소문자 없음, 대문자 없음, 숫자 없음, 특수기호 없음.
 @pytest.mark.parametrize(
     "value",
     ["Abcde1!", "Abcdefghij1234567890!", "ABCDEF1!", "abcdef1!", "Abcdefg!", "Abcdefg1"],
@@ -142,7 +142,7 @@ def test_parse_clock_rejects_a_bad_run_time() -> None:
 
 
 def test_parse_clock_does_not_require_a_on_the_hour() -> None:
-    # 자동 연산 시각은 격자 제약이 없다 — 09:17 같은 값도 받아들여야 한다.
+    # 자동 연산 시각은 격자 제약이 없습니다 — 09:17 같은 값도 받아들여야 합니다.
     assert parse_clock("09:17", "1차 연산 시각") == time(9, 17)
 
 

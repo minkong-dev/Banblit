@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from ortools.sat.python import cp_model
 
-# 한 번의 계산에 허락하는 시간. 넘기면 지금까지 찾은 것으로 답한다.
+# 한 번의 계산에 허락하는 시간. 넘기면 지금까지 찾은 것으로 답합니다.
 SOLVER_TIME_LIMIT_SECONDS = 60.0
 
 from backend.scheduling.availability import Team, is_team_available

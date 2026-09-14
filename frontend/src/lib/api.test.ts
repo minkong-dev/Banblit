@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { getJSON, REQUEST_TIMEOUT_MS, sendFile, UPLOAD_TIMEOUT_MS } from "./api";
 
-/** fetch 를 가짜로 세운다. 단위 테스트는 실제 서버에 닿지 않는다. */
+/** fetch 를 가짜로 세웁니다. 단위 테스트는 실제 서버에 닿지 않습니다. */
 function stubFetch(handler: () => Promise<Response> | Promise<never>): void {
   vi.stubGlobal("fetch", vi.fn(handler));
 }
@@ -81,7 +81,7 @@ describe("getJSON", () => {
   });
 });
 
-/** XMLHttpRequest 를 가짜로 세운다. 단위 테스트는 실제 서버에 닿지 않는다. */
+/** XMLHttpRequest 를 가짜로 세웁니다. 단위 테스트는 실제 서버에 닿지 않습니다. */
 class FakeUpload {
   static last: FakeUpload;
   headers: Record<string, string> = {};

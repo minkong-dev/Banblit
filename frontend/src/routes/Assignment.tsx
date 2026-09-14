@@ -20,7 +20,7 @@ const MINUTES_PER_HOUR = 60;
 type View = { kind: "now" } | { kind: "proposal"; index: number } | { kind: "round"; at: string };
 const NOW: View = { kind: "now" };
 
-// 탭은 글자 키만 받는다. 글자와 View 를 오가는 곳은 아래 둘뿐이다.
+// 탭은 글자 키만 받습니다. 글자와 View 를 오가는 곳은 아래 둘뿐입니다.
 function tabKey(view: View): string {
   if (view.kind === "proposal") return `p${view.index}`;
   return view.kind === "round" ? `r:${view.at}` : "now";
@@ -32,7 +32,7 @@ function viewOf(key: string): View {
 }
 
 
-/** 팀별로 나뉘어 온 칸을 한 줄로 펴서 합주 한 번씩으로 합친다. */
+/** 팀별로 나뉘어 온 칸을 한 줄로 펴서 합주 한 번씩으로 합칩니다. */
 function sessionsOf(byTeam: Record<string, Slot[]>): Session[] {
   const flat: Session[] = [];
   for (const [team, slots] of Object.entries(byTeam)) {
@@ -89,8 +89,8 @@ export function Assignment() {
     },
     enabled: activePeriodId !== null,
   });
-  // schedule.data 가 없을 때만 매번 새 빈 배열이 생긴다 — 아래 useMemo 가 그동안 다시
-  // 돌아도 빈 배열을 합치는 가벼운 계산이라 따로 감쌀 만큼은 아니다.
+  // schedule.data 가 없을 때만 매번 새 빈 배열이 생깁니다 — 아래 useMemo 가 그동안 다시
+  // 돌아도 빈 배열을 합치는 가벼운 계산이라 따로 감쌀 만큼은 아닙니다.
   const rows = schedule.data?.rows ?? [];
 
   const recompute = useMutation({
@@ -345,7 +345,7 @@ export function Assignment() {
           생성된 팀과 가입한 멤버가 있는지 확인해주세요.
         </p>
         {counts}
-        {/* 계산 버튼를 감춘 사람에게 그 버튼를 누르라고 안내하지 않는다. */}
+        {/* 계산 버튼을 감춘 사람에게 그 버튼을 누르라고 안내하지 않습니다. */}
         <div className="note">
           {canRun ? (
             <>

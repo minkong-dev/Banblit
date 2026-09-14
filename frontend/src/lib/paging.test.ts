@@ -34,7 +34,7 @@ describe("pageSlice", () => {
 
 describe("clampPage", () => {
   test("글이 줄어 쪽이 사라지면 마지막 쪽으로 당긴다", () => {
-    // 3쪽을 보고 있는데 글이 지워져 2쪽까지만 남은 경우다.
+    // 3쪽을 보고 있는데 글이 지워져 2쪽까지만 남은 경우입니다.
     expect(clampPage(3, 2)).toBe(2);
   });
 

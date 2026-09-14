@@ -13,8 +13,8 @@ import {
   weekKeys,
 } from "./pipeline";
 
-/** vitest는 브라우저가 아니라 Node에서 돈다 — document 를 기본으로 주지 않아
- *  api.test.ts 가 localStorage 를 세우던 것과 같은 방식으로 흉내낸다. */
+/** vitest는 브라우저가 아니라 Node에서 돕니다 — document 를 기본으로 주지 않아
+ *  api.test.ts 가 localStorage 를 세우던 것과 같은 방식으로 흉내냅니다. */
 function stubCookie(value: string): void {
   vi.stubGlobal("document", { cookie: value });
 }
@@ -60,7 +60,7 @@ describe("logOut", () => {
 
 describe("weekKeys", () => {
   it("그 달 15일이 든 주를 일요일부터 토요일까지 돌려준다", () => {
-    // 2026년 9월 15일은 화요일이고, 그 주 일요일은 9월 13일이다.
+    // 2026년 9월 15일은 화요일이고, 그 주 일요일은 9월 13일입니다.
     expect(weekKeys(2026, 8, 0)).toEqual([
       "2026-09-13", "2026-09-14", "2026-09-15",
       "2026-09-16", "2026-09-17", "2026-09-18", "2026-09-19",
@@ -82,13 +82,13 @@ describe("weekKeys", () => {
   });
 
   it("해를 넘어가도 이어진다", () => {
-    // 2026년 12월 15일이 든 주는 12월 13일에 시작한다. 세 주 뒤는 2027년이다.
+    // 2026년 12월 15일이 든 주는 12월 13일에 시작합니다. 세 주 뒤는 2027년입니다.
     expect(weekKeys(2026, 11, 3)[0]).toBe("2027-01-03");
   });
 });
 
-/** fetch 에 실린 본문은 BodyInit 이라 그대로는 못 읽는다 — 글자로 보낸 것만 다루므로
- *  string 으로 좁혀 JSON 으로 되돌린다. */
+/** fetch 에 실린 본문은 BodyInit 이라 그대로는 못 읽습니다 — 글자로 보낸 것만 다루므로
+ *  string 으로 좁혀 JSON 으로 되돌립니다. */
 function sentBody(init: RequestInit | undefined): Record<string, unknown> {
   return JSON.parse(init?.body as string) as Record<string, unknown>;
 }
@@ -228,7 +228,7 @@ describe("아이디 찾기와 비밀번호 재설정", () => {
 
 describe("cancelBooking", () => {
   it("이어 잡은 칸을 번호마다 하나씩 지운다", async () => {
-    // Arrange — 서버는 칸 하나씩만 지운다. 한 건이 세 칸이면 세 번 불러야 한다.
+    // Arrange — 서버는 칸 하나씩만 지웁니다. 한 건이 세 칸이면 세 번 불러야 합니다.
     const spy = vi.fn(
       async (_input: RequestInfo | URL, _init?: RequestInit) =>
         new Response(null, { status: 204 }),
@@ -248,7 +248,7 @@ describe("cancelBooking", () => {
   });
 
   it("한 칸이 걸리면 거기서 멈추고 사유를 올린다", async () => {
-    // 이미 지운 칸은 되살리지 않는다 — 다시 눌러 남은 것을 마저 지우면 된다.
+    // 이미 지운 칸은 되살리지 않습니다 — 다시 눌러 남은 것을 마저 지우면 됩니다.
     const spy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) =>
       String(input).endsWith("/12")
         ? new Response(JSON.stringify({ detail: "취소할 예약이 없습니다" }), { status: 404 })

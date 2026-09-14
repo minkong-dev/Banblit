@@ -7,7 +7,7 @@ from backend.db.models import Instrument, Permission
 from backend.db.models import NotificationKind
 
 class RoomSlotOut(BaseModel):
-    # 배정의 1시간 slot(1시간 단위 시간 칸). 방은 DB의 번호와 이름을 함께 반환합니다.
+    # 배정의 1시간 slot(1시간 단위 시간 칸)입니다. 합주실은 DB의 번호와 이름을 함께 반환합니다.
     room_id: int
     room: str
     start: datetime
@@ -159,7 +159,7 @@ class PeriodUpdateIn(BaseModel):
 class TeamOut(BaseModel):
     id: int
     name: str
-    # 포지션 전체 수와 그중 사람이 들어간 수. 둘을 함께 주어야 화면이 몇 포지션이 비었는지 안다.
+    # 포지션 전체 수와 그중 사람이 들어간 수. 둘을 함께 주어야 화면이 몇 포지션이 비었는지 압니다.
     slot_count: int
     filled_count: int
 
@@ -374,7 +374,7 @@ class MyTeamOut(BaseModel):
 
 class MeOut(BaseModel):
     account: AccountOut
-    # 내가 들어가 있는 포지션을 팀 번호 순으로 담는다. 화면이 내 팀을 가려내는 근거다.
+    # 내가 들어가 있는 포지션을 팀 번호 순으로 담습니다. 화면이 내 팀을 가려내는 근거입니다.
     teams: list[MyTeamOut]
 
 
@@ -384,7 +384,7 @@ class SignupIn(BaseModel):
     student_no: str = Field(max_length=20)
     email: str = Field(max_length=254)
     password: str = Field(max_length=100)
-    # 기수. 1981년이 1기지만 연도로 환산하지 않고 숫자를 그대로 받는다.
+    # 기수. 1981년이 1기지만 연도로 환산하지 않고 숫자를 그대로 받습니다.
     cohort: int
 
 
@@ -401,7 +401,7 @@ class PasswordChangeIn(BaseModel):
 class LoginIn(BaseModel):
     email: str = Field(max_length=254)
     password: str = Field(max_length=100)
-    # 로그인 상태 유지. 끄면 브라우저를 닫을 때 풀린다.
+    # 로그인 상태 유지. 끄면 브라우저를 닫을 때 풀립니다.
     keep: bool = False
 
 
@@ -430,7 +430,7 @@ class UnavailableCreateIn(BaseModel):
     repeats_daily: bool = False
     repeats_weekly: bool = False
     repeat_until: date | None = None
-    # 사유는 사람이 적는 한 줄이다. 안 적어도 등록된다.
+    # 사유는 사람이 적는 한 줄입니다. 안 적어도 등록됩니다.
     reason: str | None = Field(default=None, max_length=200)
 
 
@@ -451,7 +451,7 @@ class ReservationsOut(BaseModel):
 
 
 class ReservationCreateIn(BaseModel):
-    # 예약하는 사람은 요청 본문이 아니라 인증 쿠키의 주인이다.
+    # 예약하는 사람은 요청 본문이 아니라 인증 쿠키의 주인입니다.
     room_id: int
     team_id: int | None = None
     starts_at: datetime
@@ -459,14 +459,14 @@ class ReservationCreateIn(BaseModel):
 
 
 class ReservationUpdateIn(BaseModel):
-    # 옮길 시각만 받는다. 방·팀·주인은 원래 예약의 값을 그대로 쓴다.
+    # 옮길 시각만 받습니다. 방·팀·주인은 원래 예약의 값을 그대로 씁니다.
     starts_at: datetime
     ends_at: datetime
 
 
 class NotificationOut(BaseModel):
     id: int
-    # 무슨 일이 있었는지만 담는다. 사람이 읽을 문장은 화면이 이 값으로 만든다.
+    # 무슨 일이 있었는지만 담습니다. 사람이 읽을 문장은 화면이 이 값으로 만듭니다.
     kind: NotificationKind
     created_at: str
     read: bool
@@ -477,8 +477,8 @@ class NotificationsOut(BaseModel):
 
 
 class FindIdIn(BaseModel):
-    # 길이 상한은 SignupIn·LoginIn 과 같은 값이다. 로그인 없이 열려 있는 endpoint 라
-    # 아무 길이나 받으면 큰 글자를 계속 보내는 것만으로 서버를 붙잡아 둘 수 있다.
+    # 길이 상한은 SignupIn·LoginIn 과 같은 값입니다. 로그인 없이 열려 있는 endpoint 라
+    # 아무 길이나 받으면 큰 글자를 계속 보내는 것만으로 서버를 붙잡아 둘 수 있습니다.
     name: str = Field(max_length=100)
     email: str = Field(max_length=254)
 
@@ -488,12 +488,12 @@ class PasswordResetIn(BaseModel):
 
 
 class PasswordResetConfirmIn(BaseModel):
-    # 토큰은 secrets.token_urlsafe(32) 가 낸 43글자다. 넉넉히 잡아도 100 이면 충분하다.
+    # 토큰은 secrets.token_urlsafe(32) 가 낸 43글자입니다. 넉넉히 잡아도 100 이면 충분하입니다.
     token: str = Field(max_length=100)
     password: str = Field(max_length=100)
 
 
 class AckOut(BaseModel):
-    # 아이디 찾기와 비밀번호 재설정 요청이 함께 쓴다. 계정이 있든 없든 이 한 가지
-    # 답만 나가야 그 이메일이 가입돼 있는지가 응답으로 새지 않는다.
+    # 아이디 찾기와 비밀번호 재설정 요청이 함께 씁니다. 계정이 있든 없든 이 한 가지
+    # 답만 나가야 그 이메일이 가입돼 있는지가 응답으로 새지 않습니다.
     ok: bool = True

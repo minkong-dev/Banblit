@@ -77,7 +77,7 @@ def test_successful_assignment_is_saved_as_the_current_schedule(
 def test_successful_assignment_round_trips_rooms_teams_and_times(
     db_session: Session,
 ) -> None:
-    """방 2개(운영시간이 다름)·팀 2개·2일 기간으로 배정 왕복을 구체값까지 확인합니다."""
+    """합주실 2개(운영시간이 다름)·팀 2개·2일 기간으로 배정 왕복을 구체값까지 확인합니다."""
     period_id = _period(db_session, days=2)  # 8/1 ~ 8/2
     team_a = _team_with_member(db_session, "A", "김민수")
     team_b = _team_with_member(db_session, "B", "박지훈")
@@ -94,7 +94,7 @@ def test_successful_assignment_round_trips_rooms_teams_and_times(
         select(Assignment).where(Assignment.period_id == period_id)
     ).all()
 
-    # 하루 4개 slot(방 2개 × 2개 slot) × 2일 = 8개 slot, 팀 2개가 4개 slot씩 배정받습니다.
+    # 하루 4개 slot(합주실 2개 × 2개 slot) × 2일 = 8개 slot, 팀 2개가 4개 slot씩 배정받습니다.
     assert len(saved) == 8
 
     operating_hours = {
@@ -212,7 +212,7 @@ def test_failed_reassignment_preserves_the_current_schedule(
         ).all()
     }
 
-    # 유일한 멤버를 운영시간 내내 불가능하게 만들어 재계산을 불가능하게 한다.
+    # 유일한 멤버를 운영시간 내내 불가능하게 만들어 재계산을 불가능하게 합니다.
     member_id = db_session.scalars(
         select(Member.id).where(Member.name == "김민수")
     ).one()
@@ -272,7 +272,7 @@ def test_overlapping_period_room_conflict_is_rejected_not_500(
 ) -> None:
     """날짜가 겹치는 두 기간이 같은 방·같은 시각을 쓰면 (room_id, starts_at) 유니크
     제약에 걸린다 — 사용자가 만들 수 있는 상황이므로 500이 아니라 422(ValueError)로
-    거부되어야 하고, 첫 번째 기간의 현행 시간표는 그대로 남아 있어야 한다."""
+    거부되어야 하고, 첫 번째 기간의 현행 시간표는 그대로 남아 있어야 합니다."""
     period_a = _period(db_session)
     period_b = _period(db_session)
     team_a = _team_with_member(db_session, "A", "김민수")
@@ -319,7 +319,7 @@ def test_duplicate_room_id_is_rejected(db_session: Session) -> None:
 
 
 def test_two_week_schedule_for_four_teams_finishes(db_session: Session) -> None:
-    """2주 × 방 2개 × 팀 4개 — 실제로 쓰일 만한 크기가 계산되는지 확인한다.
+    """2주 × 합주실 2개 × 팀 4개 — 실제로 쓰일 만한 크기가 계산되는지 확인합니다.
 
     계산 시간 자체는 단언하지 않는다(기계마다 다르다). 이 테스트가 도는 시간이
     곧 실측값이므로, `pytest --durations`로 확인해 문서에 적는다.
@@ -357,7 +357,7 @@ def test_two_week_schedule_for_four_teams_finishes(db_session: Session) -> None:
 def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
     db_session: Session,
 ) -> None:
-    """기간 마지막 날(둘째 날)에 걸린 불가능시간도 첫날과 똑같이 배정을 막아야 한다.
+    """기간 마지막 날(둘째 날)에 걸린 불가능시간도 첫날과 똑같이 배정을 막아야 합니다.
 
     기간의 끝을 시작일 기준으로 계산하면(예: window_end를 starts_on으로 잡으면)
     둘째 날의 불가능시간이 창 밖으로 밀려 통째로 버려진다 — 그러면 이영희가
@@ -369,7 +369,7 @@ def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
     db_session.add(other)
     db_session.flush()
     seat(db_session, team_id, other.id)
-    # 마지막 날(8/2)에만 걸리는 불가능시간 — 첫날(8/1)에는 아무 제약이 없다.
+    # 마지막 날(8/2)에만 걸리는 불가능시간 — 첫날(8/1)에는 아무 제약이 없습니다.
     db_session.add(
         UnavailableTime(
             member_id=other.id,
@@ -397,7 +397,7 @@ def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
 def test_multiple_unavailable_times_for_the_same_person_all_block_assignment(
     db_session: Session,
 ) -> None:
-    """한 사람에게 불가능시간이 둘 이상이면 둘 다 걸러져야 한다.
+    """한 사람에게 불가능시간이 둘 이상이면 둘 다 걸러져야 합니다.
 
     첫 번째 것만 반영하면(예: expand_unavailable이 rows의 첫 원소만 쓰면) 두 번째
     구간이 열려 있는 것처럼 보여, 실제로는 불가능한 배정이 가능하다고 잘못 판단한다.
@@ -448,7 +448,7 @@ def test_multiple_unavailable_times_for_the_same_person_all_block_assignment(
 def test_excluding_the_proposed_member_makes_the_assignment_savable(
     db_session: Session,
 ) -> None:
-    """조율안 확정 경로 — 조율안이 지목한 사람을 빼면 그대로 현행 시간표가 된다."""
+    """조율안 확정 경로 — 조율안이 지목한 사람을 빼면 그대로 현행 시간표가 됩니다."""
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
     blocked = Member(name="이영희")
@@ -510,7 +510,7 @@ def test_excluding_someone_outside_the_roster_is_rejected(
 def test_open_slots_come_from_the_saved_schedule_without_recomputing(
     db_session: Session,
 ) -> None:
-    """남는 칸은 저장된 배정에서 되읽는다 — 배정 계산을 다시 돌리지 않는다."""
+    """남는 칸은 저장된 배정에서 되읽습니다 — 배정 계산을 다시 돌리지 않습니다."""
     period_id = _period(db_session)  # 8/1 하루
     team_a = _team_with_member(db_session, "A", "김민수")
     team_b = _team_with_member(db_session, "B", "박지훈")

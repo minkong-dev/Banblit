@@ -113,7 +113,7 @@ export function Row(props: {
   );
 }
 
-/** 서식 꼬리 — 취소·저장 버튼와 사유. 세 서식이 같은 것을 쓴다. */
+/** 서식 꼬리 — 취소·저장 버튼과 사유. 세 서식이 같은 것을 씁니다. */
 export function FormTail(props: {
   submit: string;
   pending: boolean;

@@ -104,7 +104,7 @@ export function ClockIcon(props: IconProps) {
 }
 
 /** 체크 아이콘입니다. 켜고 끄는 자리에 사용합니다.
- *  자리가 밀리지 않게 켠 쪽과 끈 쪽이 같은 그림을 쓴다. */
+ *  자리가 밀리지 않게 켠 쪽과 끈 쪽이 같은 그림을 씁니다. */
 export function CheckIcon(props: IconProps) {
   return <Stroke width={2.6} {...props}><path d="M4.5 12.5l5 5 10-11" /></Stroke>;
 }

@@ -12,7 +12,7 @@ from backend.db.models import (
 )
 from backend.db.pipeline import commit_translating
 
-# 걸릴 수 있는 제약과 그때 사람에게 보일 문장입니다. 이름은 마이그레이션이 만든 것입니다.
+# 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 바꾸는 단계별 기록)이 정한 이름입니다.
 SET_MESSAGES = {"permission_sets_name_key": "이미 있는 권한 묶음 이름입니다"}
 
 # 아무도 없는 DB에 처음 가입한 사람이 받는 permission set의 이름입니다. 마이그레이션이

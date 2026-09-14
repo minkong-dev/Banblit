@@ -69,7 +69,7 @@ export function AccountLayout() {
           </div>
 
           <div className="legal">
-            {/* 아직 만들지 않은 페이지다 — 진짜 없는 곳으로 보내는 대신 눌리지 않는 글로 둔다. */}
+            {/* 아직 만들지 않은 페이지입니다 — 진짜 없는 곳으로 보내는 대신 눌리지 않는 글로 둡니다. */}
             <button type="button" disabled>서비스 이용약관</button>
             <button type="button" disabled>개인정보 처리방침</button>
           </div>
@@ -81,9 +81,9 @@ export function AccountLayout() {
   );
 }
 
-/** 검사에 걸리면 사유를 화면에 걸고 멈춘다. 다 통과했을 때만 send 로 넘어간다.
- *  send 가 끝날 때까지 pending 이 켜져 있어 그동안 버튼를 잠글 수 있다.
- *  send 는 서버를 부르는 자리라 실패를 그 안에서 직접 잡아 처리해야 한다. */
+/** 검사에 걸리면 사유를 화면에 걸고 멈춥니다. 다 통과했을 때만 send 로 넘어갑니다.
+ *  send 가 끝날 때까지 pending 이 켜져 있어 그동안 버튼을 잠글 수 있습니다.
+ *  send 는 서버를 부르는 자리라 실패를 그 안에서 직접 잡아 처리해야 합니다. */
 function useFormAction(
   check: (data: FormData) => Errors,
   send: (data: FormData) => Promise<void>,
@@ -98,8 +98,8 @@ function useFormAction(
     {},
   );
 
-  // <form action={dispatch}> 로 걸지 않는다 — React 는 action 이 끝나면 서식을 비우는데,
-  // 검사에 걸려 사유만 돌려준 경우에도 비워져 사람이 처음부터 다시 적어야 한다.
+  // <form action={dispatch}> 로 걸지 않습니다 — React 는 action 이 끝나면 서식을 비우는데,
+  // 검사에 걸려 사유만 돌려준 경우에도 비워져 사람이 처음부터 다시 적어야 합니다.
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     dispatch(new FormData(event.currentTarget));
@@ -119,7 +119,7 @@ export function SignIn() {
         await logIn(
           fieldText(data, "mail").trim(),
           fieldText(data, "pw"),
-          // 체크박스는 켜졌을 때만 값을 낸다. 안 켜졌으면 빈 문자열이다.
+          // 체크박스는 켜졌을 때만 값을 냅니다. 안 켜졌으면 빈 문자열입니다.
           fieldText(data, "keep") !== "",
         );
         say("로그인했어요");
@@ -149,7 +149,7 @@ export function SignIn() {
 
       <div className="or">또는</div>
       <div className="social">
-        {/* 구글·카카오 로그인은 외부 서비스 등록과 키가 있어야 한다 — 아직 없어 눌리지
+        {/* 구글·카카오 로그인은 외부 서비스 등록과 키가 있어야 합니다 — 아직 없어 눌리지
             않는 상태로 둔다. AccountLayout 아래쪽의 "서비스 이용약관"과 같은 방식이다. */}
         <button type="button" className="google" disabled>
           <GoogleIcon />구글로 계속하기
@@ -223,8 +223,8 @@ export function SignUp() {
   );
 }
 
-// 계정이 있든 없든 같은 문구를 보여준다. 갈라 보여주면 그 이메일이 가입돼 있는지를
-// 알려주는 셈이 된다 — 서버도 같은 이유로 같은 응답을 준다.
+// 계정이 있든 없든 같은 문구를 보여줍니다. 갈라 보여주면 그 이메일이 가입돼 있는지를
+// 알려주는 셈이 됩니다 — 서버도 같은 이유로 같은 응답을 줍니다.
 const MAIL_SENT = "메일을 보냈어요 · 전송된 메일을 확인해주세요";
 
 export function FindId() {
@@ -266,8 +266,8 @@ export function FindPassword() {
     }),
     async (data) => {
       try {
-        // 재설정 화면으로 바로 넘기지 않는다. 토큰은 메일로 가고, 그 메일의 링크가
-        // 토큰을 주소에 달고 재설정 화면을 연다.
+        // 재설정 화면으로 바로 넘기지 않습니다. 토큰은 메일로 가고, 그 메일의 링크가
+        // 토큰을 주소에 달고 재설정 화면을 엽니다.
         await requestPasswordReset(fieldText(data, "fpwMail").trim());
         say(MAIL_SENT);
       } catch (error) {
@@ -292,8 +292,8 @@ export function FindPassword() {
 
 export function ResetPassword() {
   const navigate = useNavigate();
-  // 메일의 링크가 /reset-password?token=... 으로 들어온다. 입력칸으로 받지 않는다 —
-  // 43글자짜리 무작위 문자열을 사람이 옮겨 적을 자리가 아니다.
+  // 메일의 링크가 /reset-password?token=... 으로 들어옵니다. 입력칸으로 받지 않습니다 —
+  // 43글자짜리 무작위 문자열을 사람이 옮겨 적을 자리가 아닙니다.
   const token = useSearchParams()[0].get("token") ?? "";
 
   const { errors, onSubmit, isPending } = useFormAction(
@@ -317,12 +317,12 @@ export function ResetPassword() {
       try {
         await resetPassword(token, fieldText(data, "rpwNew"));
         say("비밀번호를 변경했어요 · 새 비밀번호로 로그인해주세요");
-        // navigate 는 viewTransition 옵션을 줄 때만 Promise 를 돌려준다. 이 화면은
-        // 그 옵션을 쓰지 않아 실제로는 항상 void 라 명시적으로 무시한다.
+        // navigate 는 viewTransition 옵션을 줄 때만 Promise 를 돌려줍니다. 이 화면은
+        // 그 옵션을 쓰지 않아 실제로는 항상 void 라 명시적으로 무시합니다.
         void navigate("/login");
       } catch (error) {
-        // 만료됐거나 이미 쓴 링크는 입력이 틀린 것이 아니라 서버가 거절한 것이다 —
-        // 로그인 화면이 서버 거절을 알리는 자리와 같은 자리에 띄운다.
+        // 만료됐거나 이미 쓴 링크는 입력이 틀린 것이 아니라 서버가 거절한 것입니다 —
+        // 로그인 화면이 서버 거절을 알리는 자리와 같은 자리에 띄웁니다.
         say(reason(error));
       }
     },

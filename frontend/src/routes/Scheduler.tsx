@@ -158,8 +158,8 @@ const DAYS_PER_WEEK = 7;
  *  칸을 먼저 하나로 이어야 사람이 보는 예약 한 번이 됩니다. team_id로 실제 팀을
  *  찾습니다 — 이름 대조보다 정확합니다. 동명이인 규칙과 같은 이유로 사람도 팀도 번호로 구분합니다.
  *  로그인한 사용자가 예약한 것만 삭제할 id를 실어, 남의 예약에는 취소 버튼이 표시되지 않게 합니다. */
-// 주 보기는 방이 여는 시간만이 아니라 하루를 통째로 표시합니다. 방마다 여는 시각이 달라도
-// 같은 줄에 같은 시각이 오고, 방을 바꿔도 줄이 밀리지 않습니다. 대신 줄이 많아 늘 스크롤이
+// 주 보기는 합주실이 여는 시간만이 아니라 하루를 통째로 표시합니다. 합주실마다 여는 시각이 달라도
+// 같은 줄에 같은 시각이 오고, 합주실을 바꿔도 줄이 밀리지 않습니다. 대신 줄이 많아 늘 스크롤이
 // 생기므로, 주 보기로 들어올 때 합주가 있는 구간으로 스스로 내려갑니다(weekBox의 useEffect).
 const WEEK_FIRST_HOUR = 1;
 const WEEK_LAST_HOUR = 23;
@@ -241,7 +241,7 @@ export function Scheduler() {
     queryFn: () => loadUnavailable(me?.id ?? 0),
     enabled: me !== null,
   });
-  // 방 목록이 와야 어느 방의 예약을 조회할지 알 수 있습니다.
+  // 합주실 목록이 와야 어느 합주실의 예약을 조회할지 알 수 있습니다.
   const reservationQuery = useQuery({
     queryKey: ["reservations", roomIds, rangeFrom, rangeTo],
     queryFn: () => loadReservationRows(roomIds, rangeFrom, rangeTo),
@@ -375,14 +375,14 @@ export function Scheduler() {
     </>
   );
 
-  // weekKeys 가 일요일부터 이레 치 날짜를 내주므로, 배열 안의 자리가 곧 요일이다.
+  // weekKeys 가 일요일부터 이레 치 날짜를 내주므로, 배열 안의 자리가 곧 요일입니다.
   const weekLabel = weekDayKeys[0].slice(5, 7) === weekDayKeys[6].slice(5, 7)
     ? `${dayLabel(weekDayKeys[0])} – ${Number(weekDayKeys[6].slice(8, 10))}일`
     : `${dayLabel(weekDayKeys[0])} – ${dayLabel(weekDayKeys[6])}`;
 
-  // 하루 스물세 줄 중 합주는 방이 여는 몇 줄에만 있다. 주 보기로 들어올 때마다 그 줄이
-  // 맨 위에 오게 내려 준다 — 안 그러면 늘 01:00 부터 보게 되어 매번 사람이 굴려야 한다.
-  // 줄 높이는 CSS 가 정하므로 계산하지 않고 실제로 그려진 자리를 잰다.
+  // 하루 스물세 줄 중 합주는 합주실이 여는 몇 줄에만 있습니다. 주 보기로 들어올 때마다 그 줄이
+  // 맨 위에 오게 내려 줍니다 — 안 그러면 늘 01:00 부터 보게 되어 매번 사람이 굴려야 합니다.
+  // 줄 높이는 CSS 가 정하므로 계산하지 않고 실제로 그려진 자리를 잽니다.
   const weekBox = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!week) return;
@@ -415,7 +415,7 @@ export function Scheduler() {
                       {entry.kind === "off"
                         ? "불가능 일정"
                         : teams.find((team) => team.key === entry.team)?.name ?? "개인"}
-                      {/* 합주실을 함께 적는다. 붙어 있는 두 칸이 따로 그려지는 유일한 까닭이
+                      {/* 합주실을 함께 적습니다. 붙어 있는 두 칸이 따로 그려지는 유일한 까닭이
                           방이 다른 것인데, 방을 안 적으면 왜 갈라졌는지 읽을 수가 없다. */}
                       <small>
                         {label(entry.a)}–{endLabel(entry.b)}

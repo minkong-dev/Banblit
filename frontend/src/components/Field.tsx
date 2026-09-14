@@ -30,7 +30,7 @@ export function Field(props: {
   error?: string;
 }) {
   const { name, label, type, placeholder, autoComplete, inputMode, error } = props;
-  // 비밀번호 필드에만 눈 버튼가 붙습니다. 누르면 type이 text로 변경되어 문자가 그대로 표시됩니다.
+  // 비밀번호 필드에만 눈 버튼이 붙습니다. 누르면 type이 text로 변경되어 문자가 그대로 표시됩니다.
   // 브라우저는 type=password인 필드만 마스킹하므로, 마스킹 토글을 type으로 처리합니다.
   const [shown, setShown] = useState(false);
   const isPassword = type === "password";

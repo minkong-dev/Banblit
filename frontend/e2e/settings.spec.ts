@@ -65,7 +65,7 @@ test("정시가 아닌 시각은 저장 단추를 막는다", async ({ page }) =
 
   await addForm.getByLabel("이름").fill(`E2E 검사용 합주실 ${Date.now()}`);
   await addForm.getByLabel("닫는 시각").fill("23:00");
-  // 정시가 아닌 값입니다. 저장 버튼가 차단되고 사유가 표시되어야 합니다.
+  // 정시가 아닌 값입니다. 저장 버튼이 차단되고 사유가 표시되어야 합니다.
   await addForm.getByLabel("여는 시각").fill("18:20");
 
   await expect(addForm.getByRole("button", { name: "합주실 추가" })).toBeDisabled();

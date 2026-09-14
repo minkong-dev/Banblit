@@ -11,7 +11,7 @@ from backend.jobs import auto_assign
 from backend.api.period_service import assign_period
 from backend.db.models import Notification, Period, Room, Team, TeamSlot
 
-# account 픽스처를 부른 순서가 곧 역할이다 — 이 파일의 첫 호출이 헤드매니저다.
+# account 픽스처를 부른 순서가 곧 역할입니다 — 이 파일의 첫 호출이 헤드매니저입니다.
 from conftest import AccountFactory
 
 TODAY = date.today()
@@ -64,7 +64,7 @@ def _notifications(client: TestClient, cookies: dict[str, str]) -> list[dict[str
 def assigned_member(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> tuple[int, dict[str, str]]:
-    """배정 대상 팀에 든 계정 하나와 그 인증 쿠키. 기간·합주실도 함께 심는다."""
+    """배정 대상 팀에 든 계정 하나와 그 인증 쿠키. 기간·합주실도 함께 심습니다."""
     member_id, cookies = account("김민수", "minsu@example.com")
     _period(db_session)
     _team_with(db_session, "A팀", member_id)
@@ -155,7 +155,7 @@ def test_a_person_pressing_recalculate_also_leaves_a_notification(
     poll_job: Callable[[str], dict[str, Any]],
 ) -> None:
     """자동으로 실행된 것이든 사람이 누른 것이든, 시간표가 새로 저장되면 알립니다."""
-    # 이 파일의 첫 계정이 헤드매니저다 — assigned_member 가 그것을 만든다.
+    # 이 파일의 첫 계정이 헤드매니저입니다 — assigned_member 가 그것을 만듭니다.
     _, cookies = assigned_member
     api_client.cookies.update(cookies)
     period_id = db_session.scalars(select(Period.id)).one()
@@ -180,11 +180,11 @@ def test_rolling_back_leaves_a_notification(
     db_session: Session,
     assigned_member: tuple[int, dict[str, str]],
 ) -> None:
-    """되돌리기도 사람이 보는 시간표를 바꾸므로 알린다."""
+    """되돌리기도 사람이 보는 시간표를 바꾸므로 알립니다."""
     _, cookies = assigned_member
     period_id = db_session.scalars(select(Period.id)).one()
-    # 두 번 저장해야 되돌릴 백업 회차가 생긴다. 자동 배정은 같은 날 같은 시각을
-    # 두 번 돌지 않으므로 저장하는 자리를 직접 두 번 부른다.
+    # 두 번 저장해야 되돌릴 백업 회차가 생깁니다. 자동 배정은 같은 날 같은 시각을
+    # 두 번 돌지 않으므로 저장하는 자리를 직접 두 번 부릅니다.
     team_ids = list(db_session.scalars(select(Team.id)))
     room_ids = list(db_session.scalars(select(Room.id)))
     for hour in (18, 19):

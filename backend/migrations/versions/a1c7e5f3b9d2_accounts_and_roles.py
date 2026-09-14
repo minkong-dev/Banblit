@@ -48,7 +48,7 @@ def upgrade() -> None:
         sa.UniqueConstraint('member_id', 'position_id'),
     )
 
-    # 화면(SignUp)의 포지션 선택지가 서버 목록보다 하나 더 많다 — 빠진 것만 채운다.
+    # 화면(SignUp)의 포지션 선택지가 서버 목록보다 하나 더 많습니다 — 빠진 것만 채웁니다.
     op.execute(
         "INSERT INTO positions (name) VALUES ('서포터즈') "
         "ON CONFLICT (name) DO NOTHING"

@@ -31,7 +31,7 @@ export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
       // 본문이 있으면 JSON으로 알립니다. 없으면 브라우저가 text/plain으로
       // 보내고 서버는 본문을 읽지 못해 422로 거절합니다. 호출 지점마다 붙이면
-      // 한 곳이 빠졌을 때 그 화면만 조용히 깨지므로 여기서 한 번에 붙입니다.
+      // 한 곳이 빠졌을 때 그 화면만 오류 메시지 없이 깨지므로 여기서 한 번에 붙입니다.
       // 파일 업로드는 sendFile이 별도로 관리합니다 — multipart/form-data는
       // 경계 문자열이 필요하므로 브라우저가 직접 정해야 합니다.
       headers: init?.body === undefined
