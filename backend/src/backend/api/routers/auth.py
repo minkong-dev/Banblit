@@ -20,7 +20,7 @@ from backend.api.password_reset import (
     reset_password,
     send_id_reminder,
 )
-from backend.api.permission_service import account_permissions
+from backend.api.permission_service import account_permission_set_names, account_permissions
 from backend.api.rate_limit import limit_guesses
 from backend.api.roster_service import list_my_teams
 from backend.api.schemas import (
@@ -105,6 +105,7 @@ def _account_out(session: Session, member: Member) -> AccountOut:
         email=member.email or "",
         role="head_manager" if len(permissions) == len(PERMISSIONS) else "member",
         permissions=permissions,  # type: ignore[arg-type]
+        permission_sets=account_permission_set_names(session, member.id),
         cohort=member.cohort,
     )
 

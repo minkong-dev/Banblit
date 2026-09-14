@@ -1,6 +1,6 @@
 from datetime import date, datetime, time
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from backend.api.input import (
@@ -54,15 +54,14 @@ def _require_not_in_focused_period(session: Session, day: date) -> None:
     예약이 열렸지만, 등록을 잊으면 예약이 불가능하므로 기본값으로 예약을 허용하도록 규칙을
     변경했습니다(사용자 결정).
 
-    집중 합주기간이라도 "매일"(everyday) 옵션이 켜져 있으면 차단하지 않습니다. 그 옵션은 상시 기간처럼
-    운영한다는 뜻이므로, 자동 배정이 모든 slot 을 차지하지 않습니다.
+    "매일"(everyday) 이 켜진 집중 합주기간은 종료일이 없습니다(사용자 결정 2026-09-11). 시작일이
+    지난 모든 날에 자동 배정이 실행되므로, 저장된 종료일 뒤의 날짜도 차단합니다.
     """
     covered = session.execute(
         select(Period.id).where(
             Period.kind == "focused",
-            Period.everyday.is_(False),
             Period.starts_on <= day,
-            Period.ends_on >= day,
+            or_(Period.everyday.is_(True), Period.ends_on >= day),
         )
     ).first()
     if covered is not None:

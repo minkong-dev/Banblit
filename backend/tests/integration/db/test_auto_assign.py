@@ -187,3 +187,20 @@ def test_a_failing_period_does_not_stop_the_next_one(
         (healthy_id, "first")
     ]
     assert len(_assignments(db_session)) == 2
+
+
+def test_an_everyday_period_keeps_running_after_its_end_date(db_session: Session) -> None:
+    """everyday 가 켜진 집중 합주기간은 종료일 없이 매일 계산 시각마다 실행됩니다(사용자 결정 2026-09-11)."""
+    period_id = _period(
+        db_session, starts_on=TODAY - timedelta(days=3), ends_on=TODAY - timedelta(days=1)
+    )
+    db_session.get(Period, period_id).everyday = True
+    db_session.flush()
+    _team_with_member(db_session, "A", "김민수")
+    _room(db_session, "1번방")
+
+    results = auto_assign.run_due_assignments(db_session, _at(10))
+
+    assert [result.period_id for result in results] == [period_id]
+    assert results[0].saved is True
+    assert {row.starts_at.date() for row in _assignments(db_session)} == {TODAY}

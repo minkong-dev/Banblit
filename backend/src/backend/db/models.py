@@ -34,6 +34,7 @@ Permission = Literal[
     "team_delete",  # 팀 삭제
     "member_add",  # 팀 포지션에 멤버 배정
     "member_remove",  # 팀 포지션에서 다른 멤버 제외
+    "member_expel",  # 멤버 추방(계정 삭제)
     "notice_write",  # 공지 작성
     "board_moderate",  # 다른 사용자의 글·댓글 수정·삭제
     "reservation_manage",  # 다른 사용자의 예약 수정·취소

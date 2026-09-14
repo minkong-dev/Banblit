@@ -7,6 +7,7 @@ from backend.api.roster_service import assign_slot as assign_slot_row
 from backend.api.roster_service import clear_slot as clear_slot_row
 from backend.api.roster_service import create_team as create_team_row
 from backend.api.roster_service import delete_team as delete_team_row
+from backend.api.roster_service import expel_member as expel_member_row
 from backend.api.roster_service import replace_slots as replace_slots_rows
 from backend.api.roster_service import (
     list_members,
@@ -222,10 +223,20 @@ def delete_slot_member(
     """
     slot = session.get(TeamSlot, slot_id)
     if slot is None or slot.team_id != team_id:
-        raise HTTPException(status_code=422, detail="그런 포지션이 없습니다")
+        raise HTTPException(status_code=422, detail="해당하는 포지션이 없습니다")
 
     mine = slot.member_id == requester.id
     if not mine and "member_remove" not in account_permissions(session, requester.id):
-        raise HTTPException(status_code=403, detail="권한이 없습니다")
+        raise HTTPException(status_code=403, detail="관련된 권한을 가지고있지 않습니다")
 
     clear_slot_row(session, team_id, slot_id)
+
+
+@router.delete("/members/{member_id}", status_code=204)
+def expel_member(
+    member_id: int,
+    requester: Member = Depends(require_permission("member_expel")),
+    session: Session = Depends(get_session),
+) -> None:
+    """멤버를 추방합니다. 추방은 계정 삭제와 같습니다(사용자 결정 2026-09-14). 자기 자신은 추방할 수 없습니다."""
+    expel_member_row(session, member_id, requester)
