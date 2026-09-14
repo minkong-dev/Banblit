@@ -169,29 +169,26 @@ assert_deploy_env() {
 
 # migration 이 값을 지우면 되돌릴 곳이 필요하다. backup service 는 6시간마다 뜨므로
 # 그것만 믿으면 되돌릴 지점이 그만큼 어긋난다. 고치기 직전 상태를 한 벌 더 뜬다.
+#
+# 뜨는 일은 backup service 를 빌려 시킨다. host 의 backups 폴더는 그 container 가
+# root 로 만든 것이라 로그인한 사용자가 직접 쓰면 Permission denied 가 난다.
+# 접속 정보도 그 service 의 환경변수에 이미 들어 있다.
 backup_db() {
-  local user database out stamp file
-  user="$(env_value POSTGRES_USER)"
-  database="$(env_value POSTGRES_DB)"
-  out="$(env_value BACKUP_DIR)"
-  out="${out:-./backups}"
-  [ -n "$user" ] && [ -n "$database" ] || {
-    fail "POSTGRES_USER·POSTGRES_DB 를 .env 에서 읽지 못했습니다."
-    exit 1
-  }
-
-  mkdir -p "$out"
+  local stamp
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-  file="$out/pre-migrate-$stamp.sql.gz"
 
-  # 맨 위 set -o pipefail 이 있어 pg_dump 가 죽으면 gzip 이 성공해도 실패로 잡힌다.
-  if ! "${COMPOSE[@]}" exec -T db pg_dump --clean --if-exists -U "$user" -d "$database"       | gzip > "$file.part"; then
-    rm -f "$file.part"
+  # 정기 백업과 같은 자리에 같은 방식으로 남긴다(deploy/backup.sh).
+  # 다 뜨기 전에 끊기면 .part 로 남아 온전한 백업과 구분된다.
+  "${COMPOSE[@]}" run --rm --no-deps -T -e "STAMP=$stamp" --entrypoint bash backup -c '
+    set -euo pipefail
+    out="/backups/pre-migrate-$STAMP.sql.gz"
+    pg_dump --clean --if-exists -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB" | gzip > "$out.part"
+    mv "$out.part" "$out"
+  ' || {
     fail "백업을 뜨지 못했습니다. migration 을 실행하지 않습니다."
     exit 1
-  fi
-  mv "$file.part" "$file"
-  good "$file"
+  }
+  good "pre-migrate-$stamp.sql.gz"
 }
 
 wait_url() {
