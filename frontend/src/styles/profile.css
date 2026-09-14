@@ -1,16 +1,16 @@
-/* 프로필 화면만의 규칙. 색은 base.css, 상단바·사이드바·카드는 shell.css 가 준다. */
+/* 프로필 화면만의 규칙입니다. 색은 base.css, 상단바·사이드바·카드는 shell.css 가 정의합니다. */
 body[data-page="profile"] {
-  /* 정보 카드 하나뿐이라 세로 하한이 있다 — 그보다 낮은 창에서는 문서가 구른다. */
+  /* 정보 카드 하나뿐이라 최소 세로 높이가 있습니다. 그보다 낮은 창에서는 문서가 스크롤됩니다. */
   --minh: 520px;
   min-height: var(--minh); height: max(100vh, var(--minh));
   .shell { height: calc(max(100vh, var(--minh)) - 62px); }
 
-  /* 오른쪽 목록 없이 정보 카드 하나만 가운데로 모은다. */
+  /* 오른쪽 목록 없이 정보 카드 하나만 가운데로 모읍니다. */
   .page { grid-template-columns: minmax(0, 560px); justify-content: center; }
 
   .note { margin: 10px 0 0; font-size: 12.5px; color: var(--t3); line-height: 1.6; }
 
-  /* 카드 머리 — 큰 얼굴 + 이름 + 역할 */
+  /* 카드 제목 영역입니다. 큰 프로필 사진 + 이름 + 역할 */
   .prohead { display: flex; align-items: center; gap: 16px; padding: 24px 24px 20px; border-bottom: 1px solid var(--line); }
   .prohead .big { width: 64px; height: 64px; border-radius: 20px; background: var(--brand); color: var(--brand-on); display: grid; place-items: center; font-size: 20px; font-weight: 700; flex: none; }
   .prohead h1 { margin: 0; font-size: 20px; font-weight: 700; }
@@ -18,7 +18,7 @@ body[data-page="profile"] {
 
   .read { padding: 18px 24px 22px; display: flex; flex-direction: column; gap: 14px; }
   .read dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 12px 14px; font-size: 14.5px; }
-  /* afrow 는 dt+dd 한 쌍을 담는 div — display:contents 로 grid 배치를 그대로 dt·dd 에 넘긴다. */
+  /* afrow 는 dt+dd 한 쌍을 담는 div 입니다. display:contents 로 grid 배치를 그대로 dt·dd 에 적용합니다. */
   .read .afrow { display: contents; }
   .read dt { color: var(--t3); }
   .read dd { margin: 0; text-align: right; font-weight: 500; }

@@ -17,7 +17,7 @@ from backend.db.models import Member
 from backend.db.pipeline import commit_translating
 
 # scrypt 는 표준 라이브러리(hashlib)가 제공하는 메모리-하드 KDF(Key Derivation Function)입니다. bcrypt·argon2용
-# 추가 패키지를 설치하지 않고도 비밀번호를 안전하게 저장할 수 있으므로 이 값들을 사용합니다.
+# 추가 패키지를 설치하지 않고도 비밀번호를 안전하게 저장할 수 있으므로 scrypt 를 사용합니다.
 # 매개변수는 OWASP 권고 최솟값(N=2^14, r=8, p=1)을 따릅니다.
 _SCRYPT_N = 2**14
 _SCRYPT_R = 8
@@ -53,7 +53,8 @@ def verify_password(password: str, stored: str) -> bool:
     candidate = hashlib.scrypt(
         password.encode(), salt=bytes.fromhex(salt_hex), n=n, r=r, p=p, dklen=dklen
     )
-    # 길이가 같아도 시간차 비교(==)는 앞자리부터 다르면 더 빨리 끝납니다. 해시 값을 한 글자씩 추측하지 못하도록 hmac.compare_digest 로 항상 같은 시간에 비교합니다.
+    # == 비교는 앞자리부터 다르면 더 빨리 끝나므로 비교 시간으로 해시 값을 한 글자씩 추측할 수 있습니다.
+    # hmac.compare_digest 는 값과 무관하게 항상 같은 시간에 비교합니다.
     return hmac.compare_digest(candidate, bytes.fromhex(derived_hex))
 
 
@@ -64,8 +65,9 @@ def _needs_rehash(stored: str) -> bool:
 
 
 def _is_first_account(session: Session) -> bool:
-    # 권한을 가진 사람의 수는 정해져 있지 않지만(.cluedoc/accounts-and-roles), 시작할 때는 아무도 없을 수 없습니다.
-    # 가장 먼저 가입하는 사람에게 모든 권한을 부여하면, 그다음부터는 그 사람이 권한을 배정하거나 새로 정의합니다.
+    # 권한을 가진 사람의 수는 정해져 있지 않지만(.cluedoc/accounts-and-roles), 권한을 가진 사람이 0명이면
+    # 권한을 배정할 사람이 없습니다. 가장 먼저 가입하는 사람에게 모든 권한을 부여하면, 그다음부터는
+    # 그 사람이 다른 사람에게 권한을 배정하거나 permission set(권한 집합)을 새로 정의합니다.
     already_signed_up = session.scalar(
         select(Member.id).where(Member.password_hash.is_not(None))
     )
@@ -81,7 +83,7 @@ def signup(
     password: str,
     cohort: int,
 ) -> Member:
-    """새 계정을 만듭니다. 이름은 중복을 허용하고, 이메일만 겹칠 수 없습니다.
+    """새 계정을 만듭니다. 이름 중복은 허용합니다. 이메일이 같거나 이름·학과·학번·기수가 모두 같은 계정이 있으면 거부합니다.
 
     cohort 를 받는 이유는 동명이인 때문입니다. 화면에서 두 사람을 구분하는 유일한 값이 이름 옆의 기수이므로, 가입 시 입력받지 않으면 나중에 채울 수 없습니다."""
     clean_name = require_non_empty(name, "이름")
@@ -101,9 +103,10 @@ def signup(
         password_hash=hash_password(password),
     )
     session.add(member)
-    # 이메일·신원 제약 위반은 이 flush 에서 감지됩니다. 아래 커밋보다 앞입니다.
+    # 이메일·신원 제약 위반은 아래 commit 이 아니라 이 flush 에서 감지됩니다.
     commit_translating(session, MEMBER_MESSAGES, session.flush)
-    # 계정이 flush 된 후 first 를 사용합니다. 이미 session 에 있으므로, 여기서 다시 세면 "첫 계정"이 아니게 됩니다.
+    # first 는 flush 전에 계산한 값입니다. flush 후에 _is_first_account 를 다시 호출하면 방금 추가한
+    # 계정이 포함되어 False 를 반환합니다.
     if first:
         grant_full_permissions(session, member.id)
     commit_translating(session, MEMBER_MESSAGES)
@@ -113,7 +116,7 @@ def signup(
 def update_profile(
     session: Session, member: Member, name: str, cohort: int | None
 ) -> Member:
-    """로그인 사용자의 이름과 기수를 수정합니다. 이메일은 여기서 처리하지 않습니다. 로그인 식별자이므로 변경하려면 새 주소의 소유권을 확인하는 별도 절차가 필요합니다."""
+    """로그인 사용자의 이름과 기수를 수정합니다. 이메일은 이 함수에서 수정하지 않습니다. 로그인 식별자이므로 변경하려면 새 주소의 소유권을 확인하는 별도 절차가 필요합니다."""
     member.name = require_non_empty(name, "이름")
     member.cohort = None if cohort is None else require_cohort(cohort)
     session.commit()

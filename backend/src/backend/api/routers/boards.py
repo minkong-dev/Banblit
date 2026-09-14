@@ -139,8 +139,8 @@ def read_post_detail(
     return PostDetailOut(
         post=_post_out(post, author, len(comment_rows)),
         comments=[_comment_out(comment, author) for comment, author in comment_rows],
-        # 열람 권한은 위의 get_post_with_comments가 이미 검증했습니다. 여기서 다시
-        # 검증하면 같은 소속 조회가 한 요청에 두 번 실행됩니다.
+        # 열람 권한은 위의 get_post_with_comments 가 이미 검증했습니다. 이 함수에서 다시
+        # 검증하면 같은 팀 소속 조회가 한 요청에 2번 실행됩니다.
         attachments=[_attachment_out(row) for row in attachments_of_post(session, post.id)],
     )
 
@@ -203,7 +203,7 @@ def upload_attachment(
 ) -> AttachmentEnvelopeOut:
     # file.file은 framework가 이미 임시 파일로 준비한 파일 객체입니다. 서비스에는
     # UploadFile이 아니라 읽을 수 있는 객체만 전달합니다 — 서비스가 endpoint(API의 요청 주소 단위) 형식을 모르게 둡니다.
-    # 파일 크기 상한 검사를 여기 두지 않습니다. 이 함수에 도달하기 전에 nginx의
+    # 파일 크기 상한 검사를 이 함수에 두지 않습니다. 이 함수에 도달하기 전에 nginx 의
     # client_max_body_size(frontend/nginx.conf.template)가 이미 거부했습니다.
     attachment = save_attachment(
         session,
@@ -261,7 +261,7 @@ def delete_post_endpoint(
     session: Session = Depends(get_session),
 ) -> None:
     post = require_post_author(session, post_id, requester)
-    # attachments 테이블의 행이 사라지기 전에 디스크의 파일부터 삭제합니다. 순서를 바꾸면
+    # attachments table 의 행이 삭제되기 전에 디스크의 파일부터 삭제합니다. 순서를 바꾸면
     # 어느 파일이 이 게시글의 파일이었는지 추적할 수 없게 되어, 아무도 삭제하지 못하는 파일이 남습니다.
     remove_post_files(session, post_id)
     session.delete(post)

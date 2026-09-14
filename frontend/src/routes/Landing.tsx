@@ -203,7 +203,7 @@ export function Landing() {
       <footer>
         <div className="wrap row">
           <span className="b">BANBLIT</span>
-          {/* 아직 만들지 않은 페이지입니다 — 진짜 없는 곳으로 보내는 대신 눌리지 않는 글로 둡니다. */}
+          {/* 아직 만들지 않은 페이지입니다. 존재하지 않는 주소로 이동시키는 대신 클릭할 수 없는 텍스트로 둡니다. */}
           <button type="button" disabled>이용약관</button>
           <button type="button" disabled>개인정보 처리방침</button>
           <button type="button" disabled>문의</button>

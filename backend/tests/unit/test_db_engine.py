@@ -7,9 +7,9 @@ from backend.db.engine import create_db_engine
 def test_create_db_engine_applies_connect_and_pool_timeouts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """접속 대기와 풀 대기에 시간 제한을 설정합니다.
+    """connection 대기와 pool 대기에 시간 제한을 설정합니다.
 
-    기본값이 무한대이므로, DB가 느려지면 요청이 대기한 상태로 접속 풀을 모두 사용합니다.
+    기본값이 무한대이므로, DB 가 느려지면 대기 중인 요청이 connection pool 을 모두 차지합니다.
     """
     captured: dict[str, object] = {}
 

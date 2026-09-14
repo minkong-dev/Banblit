@@ -19,7 +19,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """스키마를 업그레이드합니다."""
+    """schema 를 upgrade 합니다."""
     # 기존 팀의 join_policy는 'auto'(즉시 승인)로 설정하여 현재 동작을 유지합니다.
     op.add_column(
         'teams',
@@ -40,9 +40,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """스키마를 다운그레이드합니다."""
+    """schema 를 downgrade 합니다."""
     # pending 상태의 멤버십은 확정되지 않은 소속이므로, status 열을 삭제하기 전에 행을 삭제합니다.
-    # 이를 생략하면 status 열이 없어지는 순간 pending 상태의 행들이 승인된 상태로 간주됩니다.
+    # 이 삭제를 생략하면 status 열이 없어지는 순간 pending 상태의 행들이 승인된 상태로 간주됩니다.
     op.execute("DELETE FROM memberships WHERE status = 'pending'")
 
     op.drop_constraint('memberships_status_valid', 'memberships', type_='check')

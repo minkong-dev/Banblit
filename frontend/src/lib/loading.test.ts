@@ -24,7 +24,7 @@ describe("loadState — 물어본 결과를 상태 값으로", () => {
   });
 
   it("불러오는 중이면 걸린 것보다 그쪽을 먼저 말한다", () => {
-    // 다시 불러오는 동안에는 지난번 사유가 아니라 불러오는 중이 맞습니다.
+    // 다시 불러오는 동안에는 이전 오류 메시지가 아니라 불러오는 중 상태여야 합니다.
     expect(loadState({ isPending: true, error: new Error("지난번 사유") })).toEqual({
       kind: "loading",
     });
@@ -45,7 +45,7 @@ describe("stateText — 목록 대신 넣을 한 줄", () => {
   });
 
   it("사유가 loading 이라는 글자여도 불러오는 중으로 읽지 않는다", () => {
-    // 문자열 한 값에 세 의미를 담던 때 서로를 가리던 자리입니다.
+    // 문자열 값 하나에 상태 3가지를 담았을 때 오류 메시지와 상태가 충돌하던 경우입니다.
     expect(stateText({ kind: "failed", why: "loading" }, "아직 없습니다")).toBe("loading");
   });
 });

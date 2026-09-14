@@ -61,7 +61,7 @@ def test_two_sets_give_their_union(
         assert granted.status_code == 201, granted.text
 
     assert set(_my_permissions(api_client, member)) == {"room_create", "period_create"}
-    # 합집합의 권한이 글자로만 맞는 것이 아니라 실제로 작동합니다.
+    # 합집합으로 얻은 권한이 응답 목록에만 있는 것이 아니라 실제 요청에서 통과하는지 확인합니다.
     made_room = api_client.post(
         "/rooms",
         json={"name": "합주실A", "opens_at": "09:00", "closes_at": "22:00"},
@@ -126,7 +126,7 @@ def test_revoking_a_set_takes_its_permissions_back(
 def test_permission_grant_holder_changes_their_own_set(
     api_client: TestClient, account: AccountFactory
 ) -> None:
-    """permission_grant 권한을 가진 사용자는 자신의 권한 묶음도 수정할 수 있습니다. 이는 다른 사용자에게 권한을 이양하고 그 역할에서 물러나는 방법입니다."""
+    """permission_grant 권한을 가진 사용자는 자신의 permission set(권한 집합)도 회수할 수 있습니다. 다른 사용자에게 권한을 부여하고 자신은 그 역할에서 물러나는 방법입니다."""
     head_id, head = account("헤드", "head@example.com")
     own = api_client.get("/permission-sets", cookies=head).json()["permission_sets"][0]
 

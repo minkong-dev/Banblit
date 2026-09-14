@@ -1,4 +1,4 @@
-// 글과 댓글 작성의 검증과 표시입니다. 화면과 서버는 건드리지 않습니다.
+// 글과 댓글 작성의 검증과 표시입니다. 화면이나 서버와 상호작용하지 않습니다.
 // 검증 함수는 값이 유효하면 빈 문자열을, 아니면 사람이 읽을 수 있는 사유를 반환합니다.
 
 const TITLE_MAX = 200;
@@ -21,7 +21,7 @@ export function commentMessage(body: string): string {
 }
 
 // ===== 첨부파일 =====
-// 크기 상한과 허용 확장자를 적는 자리는 여기 하나입니다. 화면은 이 값을 다시 적지 않습니다.
+// 크기 상한과 허용 확장자를 정의하는 곳은 이 파일 하나입니다. 화면은 이 값을 다시 적지 않습니다.
 
 export const MAX_ATTACHMENT_BYTES = 300 * 1024 * 1024;
 
@@ -33,11 +33,11 @@ const ALLOWED_EXTENSIONS = new Set([
   "zip",
 ]);
 
-// 사람에게 보여주는 형식 목록입니다. 위 ALLOWED_EXTENSIONS 를 전부 적으면 읽기 어려워 흔한 것만 적습니다.
-// 두 곳에서 서로 다르게 적혔던 것을 여기에 통일했습니다.
+// 사용자에게 표시하는 형식 목록입니다. 위 ALLOWED_EXTENSIONS 를 전부 적으면 읽기 어려워 자주 쓰는 확장자만 적습니다.
+// 두 화면에 서로 다르게 적혀 있던 목록을 이 상수로 통일했습니다.
 const ALLOWED_TEXT = "이미지, 소리파일, 영상, 문서(md, txt, pdf, docx, ppt, pptx, hwp, xlsx, zip)";
 
-/** <input type="file"> 의 accept 에 그대로 넣는 값입니다. 허용 확장자를 적는 자리를 하나로 유지합니다.
+/** <input type="file"> 의 accept 에 그대로 넣는 값입니다. 허용 확장자를 정의하는 곳을 하나로 유지합니다.
  *  파일 선택 창을 필터링할 뿐이므로 검증을 대신하지 못합니다. 사용자는 "모든 파일"을 선택해 넘길 수 있습니다. */
 export const ATTACHMENT_ACCEPT = [...ALLOWED_EXTENSIONS].map((extension) => `.${extension}`).join(",");
 
@@ -60,7 +60,7 @@ export function fileSizeLabel(bytes: number): string {
 }
 
 export function attachmentMessage(name: string, size: number): string {
-  // 마지막 점 뒤가 확장자입니다. 점이 맨 앞에 있으면 (.zip) 그것은 이름이지 확장자가 아닙니다.
+  // 마지막 점 뒤가 확장자입니다. 점이 맨 앞에 있으면(.zip) 그 점은 이름의 일부이지 확장자가 아닙니다.
   const dot = name.lastIndexOf(".");
   const extension = dot > 0 ? name.slice(dot + 1).toLowerCase() : "";
   if (!ALLOWED_EXTENSIONS.has(extension)) {
@@ -77,7 +77,7 @@ export function attachmentMessage(name: string, size: number): string {
 
 /** 수정은 작성자만, 삭제는 작성자이거나 \"타 멤버 글 수정 및 삭제\"(board_moderate) 권한자입니다.
  *  서버(board_service.py require_post_author)는 권한자에게 수정도 허용하지만, 화면은 삭제
- *  버튼만 표시합니다(사용자 결정 2026-09-11). 아직 누구인지 모르면(meId null) 아무것도 할 수 없습니다. */
+ *  버튼만 표시합니다(사용자 결정 2026-09-11). 로그인 계정을 아직 조회하지 못했으면(meId null) 아무것도 할 수 없습니다. */
 export function boardActions(
   authorId: number,
   meId: number | null,

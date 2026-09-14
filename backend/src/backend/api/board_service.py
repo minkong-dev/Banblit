@@ -17,7 +17,8 @@ def _require_team_exists(session: Session, team_id: int) -> None:
 
 
 def _require_team_member(session: Session, team_id: int, member_id: int) -> None:
-    # 인증된 사람이라도 팀 소속이 아니면 권한 문제입니다(PermissionError). 팀/게시글이 없는 경우(ValueError)와는 다음에 할 일이 다르므로 구분합니다.
+    # 인증된 사람이라도 팀 소속이 아니면 PermissionError(403)입니다. 팀이나 게시글이 없는 경우는
+    # ValueError(422)이며, 응답 상태 코드가 다르므로 구분합니다.
     row = session.execute(
         select(TeamSlot.id).where(
             TeamSlot.team_id == team_id,
@@ -44,7 +45,7 @@ def require_post_readable(session: Session, post_id: int, requester: Member) -> 
 def require_post_author(session: Session, post_id: int, requester: Member) -> Post:
     """게시글을 읽을 수 있는지 먼저 확인한 뒤, 작성자이면 게시글을 반환합니다.
 
-    board_moderate 권한을 가진 사람은 다른 사람의 글도 수정할 수 있습니다. 부적절한 글을 아무도 처리하지 못하는 상태를 피하기 위함입니다.
+    board_moderate 권한을 가진 사람은 다른 사람의 글도 수정·삭제할 수 있습니다. 부적절한 글을 작성자 외에 아무도 삭제하지 못하는 상태를 피하기 위해서입니다.
     """
     post = require_post_readable(session, post_id, requester)
     if post.author_id != requester.id and "board_moderate" not in account_permissions(
@@ -160,7 +161,7 @@ def get_post_with_comments(
 def update_post(
     session: Session, post_id: int, title: str, body: str, requester: Member
 ) -> tuple[Post, str]:
-    """게시글을 수정합니다. 작성자 본인만 수정할 수 있습니다. require_post_author 에서 판정합니다."""
+    """게시글을 수정합니다. 작성자 본인 또는 board_moderate 권한을 가진 사람만 수정할 수 있습니다. require_post_author 가 판정합니다."""
     post = require_post_author(session, post_id, requester)
     post.title = require_non_empty(title, "제목")
     post.body = require_non_empty(body, "내용")
@@ -169,7 +170,7 @@ def update_post(
 
 
 def require_comment_author(session: Session, comment_id: int, requester: Member) -> Comment:
-    """댓글을 작성한 사람 본인이면 그 댓글을 반환합니다.
+    """댓글 작성자 본인 또는 board_moderate 권한을 가진 사람이면 그 댓글을 반환합니다.
 
     댓글이 달린 게시글을 읽을 수 있는지도 함께 확인합니다. 팀 게시판의 댓글은 해당 팀 소속만 접근할 수 있으며, 팀에서 제외된 후에는 자신의 댓글도 수정할 수 없습니다.
     """

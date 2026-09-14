@@ -66,7 +66,7 @@ def test_one_team_cannot_occupy_two_rooms_at_the_same_time() -> None:
 
 
 def test_shared_member_cannot_be_in_two_rooms_at_the_same_time() -> None:
-    # 멤버 7은 두 팀에 모두 속합니다. 합주실이 둘이어도 몸은 하나입니다.
+    # 멤버 7은 두 팀에 모두 속합니다. 합주실이 2개여도 같은 시간에 한 곳에만 있을 수 있습니다.
     room_a = Room(id=1, open_period=TimeInterval(_at(18), _at(19)))
     room_b = Room(id=2, open_period=TimeInterval(_at(18), _at(19)))
     team_a = Team(id=10, members=[Member(id=7, unavailable=[])])

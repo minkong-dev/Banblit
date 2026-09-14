@@ -12,13 +12,13 @@ export function emailMessage(value: string): string {
   return EMAIL.test(value) ? "" : "이메일 형식이 맞는지 확인해주세요.";
 }
 
-/** 로그인 입력 필드입니다. 강화된 규칙을 적용하지 않습니다. 여기서 규칙을 강화하면 규칙 변경 전에 생성한 계정이 로그인할 수 없게 됩니다. 유효성은 서버가 판단합니다. */
+/** 로그인 입력 필드입니다. 강화된 규칙을 적용하지 않습니다. 이 함수에서 규칙을 강화하면 규칙 변경 전에 생성한 계정이 로그인할 수 없게 됩니다. 유효성은 서버가 판단합니다. */
 export function passwordMessage(value: string): string {
   if (!value) return "비밀번호를 입력해 주세요.";
   return value.length < PASSWORD_MIN ? "비밀번호는 8자 이상으로 작성해주세요." : "";
 }
 
-/** 새로 설정하는 비밀번호가 충족해야 할 규칙입니다. 가입과 재설정이 이 함수를 공유합니다. 화면마다 따로 정의하면 한쪽만 느슨해질 수 있습니다. 서버의 같은 규칙은 input.py의 require_password()입니다. 빈 값은 호출하는 쪽이 먼저 검증합니다. 화면마다 호출하는 문구가 다르기 때문입니다. */
+/** 새로 설정하는 비밀번호가 충족해야 할 규칙입니다. 가입과 재설정이 이 함수를 공유합니다. 화면마다 따로 정의하면 규칙이 어긋납니다. 서버의 같은 규칙은 input.py 의 require_password() 입니다. 빈 값은 호출자가 먼저 검증합니다. 화면마다 표시하는 문구가 다르기 때문입니다. */
 function passwordRuleMessage(value: string): string {
   if (value.length < STRONG_MIN || value.length > STRONG_MAX) {
     return "8자에서 20자 사이로 입력해주세요.";
@@ -30,13 +30,13 @@ function passwordRuleMessage(value: string): string {
   return "";
 }
 
-/** 가입에서 처음 정하는 비밀번호. */
+/** 가입에서 처음 정하는 비밀번호입니다. */
 export function signupPasswordMessage(value: string): string {
   if (!value) return "비밀번호를 입력해 주세요.";
   return passwordRuleMessage(value);
 }
 
-/** 재설정에서 다시 정하는 비밀번호. */
+/** 재설정에서 다시 정하는 비밀번호입니다. */
 export function strongPasswordMessage(value: string): string {
   if (!value) return "새 비밀번호를 입력해주세요.";
   return passwordRuleMessage(value);

@@ -1,18 +1,18 @@
-/* 설정 화면만의 규칙. 색은 base.css, 상단바·사이드바·탭·카드·입력칸·단추는 shell.css 가 준다. */
+/* 설정 화면만의 규칙입니다. 색은 base.css, 상단바·사이드바·탭·카드·입력칸·버튼은 shell.css 가 정의합니다. */
 body[data-page="settings"] {
 
-  /* 오른쪽 칸이 없는 탭(멤버·계정)은 한 칸이다. 두 칸으로 두면 빈 곁칸이 자리만 차지한다. */
+  /* 오른쪽 칸이 없는 탭(멤버·계정)은 1열입니다. 2열로 두면 빈 오른쪽 칸이 공간만 차지합니다. */
   .page:not(:has(.rail)) { grid-template-columns: minmax(0, 1fr); column-gap: 0; }
 
-  /* 목록은 스크롤하지 않는다 — 들어가는 만큼만 보여주고 나머지는 쪽으로 넘긴다.
-     카드가 여럿인 화면(계정)은 쪽으로 나눌 것이 아니라 죽 이어 읽는 것이므로 여기서 스크롤한다. */
+  /* 목록은 스크롤하지 않습니다. 들어가는 만큼만 표시하고 나머지는 page 로 나눕니다.
+     카드가 2개 이상인 화면(계정)은 page 로 나누지 않고 이어서 읽는 화면이므로 이 요소에서 스크롤합니다. */
   .main { overflow: hidden; }
   .main:has(> .card ~ .card) { overflow-y: auto; }
-  /* flex 세로줄에서 자식은 기본으로 줄어든다. 그대로 두면 카드 넷이 창 높이에 맞춰
-     찌그러지고 넘치는 부분이 카드의 overflow:hidden 에 잘린다. */
+  /* flex 세로 배치에서 자식은 기본으로 줄어듭니다. 그대로 두면 카드 4개가 창 높이에 맞춰
+     줄어들고 넘치는 부분이 카드의 overflow:hidden 에 잘립니다. */
   .main > .card { flex: none; }
-  /* 카드가 하나뿐일 때만 세로를 채운다 — 쪽 넘기기 줄을 카드 바닥에 붙이려면
-     카드가 남는 높이를 가져야 한다. */
+  /* 카드가 하나뿐일 때만 세로를 채웁니다. pagination 줄을 카드 아래에 붙이려면
+     카드가 남는 높이를 가져야 합니다. */
   .main > .card:only-child { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .main > .card:only-child > .rows { flex: 1; min-height: 0; overflow: hidden; }
   .main > .card:only-child > .listfoot { margin-top: auto; }
@@ -21,15 +21,15 @@ body[data-page="settings"] {
   .rows .when { font-size: 13.5px; color: var(--t2); }
   .rows .when b { font-weight: 700; color: var(--t1); }
   .rows .span { font-size: 12.5px; color: var(--t3); }
-  /* 고치는 중인 줄은 값 대신 입력칸이 들어선다. */
+  /* 수정 중인 줄은 값 대신 입력칸이 표시됩니다. */
   .rows li.editing { grid-template-columns: minmax(0, 1fr); }
-  /* 카드 안쪽 여백. sethead·listfoot 과 같은 20px 을 써서 세로로 줄이 맞는다. */
+  /* 카드 안쪽 여백입니다. sethead·listfoot 과 같은 20px 을 사용해 세로 줄이 맞습니다. */
   .card > .fields { padding: 4px 20px 14px; }
-  /* 입력칸의 높이·테두리는 글씨를 넣는 칸의 것이다. 체크박스에 걸면 네모가 늘어난다. */
-  /* 체크 표시는 base.css 의 .chk 가 그린다. 여기서는 위아래 자리만 준다. */
+  /* 입력칸의 높이·테두리는 문자 입력칸의 값입니다. 체크박스에 적용하면 네모가 늘어납니다. */
+  /* 체크 표시는 base.css 의 .chk 가 그립니다. 이 규칙에서는 위아래 여백만 정합니다. */
   .fields .chk { margin: 12px 0; }
 
-  /* 오른쪽 — 지금 설정이면 실제로 얼마가 열리는지 */
+  /* 오른쪽 칸입니다. 현재 설정으로 실제로 몇 자리가 열리는지 표시합니다 */
   .read { padding: 4px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
   .read .big { font-size: 30px; font-weight: 700; letter-spacing: -.04em; line-height: 1.2; }
   .read .big small { display: block; margin-top: 4px; font-size: 13px; font-weight: 400; color: var(--t3); letter-spacing: -.02em; }
@@ -40,7 +40,7 @@ body[data-page="settings"] {
   .read .teams { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--t2); border-top: 1px solid var(--line); padding-top: 14px; }
   .read .note { margin: 0; font-size: 12.5px; color: var(--t3); line-height: 1.6; }
 
-  /* 권한 한 줄 — 왼쪽에 이름과 설명, 오른쪽에 스위치. */
+  /* 권한 항목 한 줄입니다. 왼쪽에 이름과 설명, 오른쪽에 스위치. */
   .switches { list-style: none; margin: 0; padding: 4px 20px 12px; display: flex; flex-direction: column; }
   .switches li { display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; border-top: 1px solid var(--line); }
   .switches li:first-child { border-top: none; }
@@ -63,16 +63,16 @@ body[data-page="settings"] {
   .switches .sw:checked::after { transform: translateX(18px); }
   .switches .sw:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
-  /* 밝게·어둡게 둘 중 하나. 고른 쪽만 바탕이 찬다. */
+  /* 밝게·어둡게 둘 중 하나입니다. 선택한 쪽만 바탕색이 채워집니다. */
   .display { padding: 18px 20px; }
   .read .pick, .display .pick { display: flex; gap: 8px; max-width: 320px; }
   .read .pick button, .display .pick button { flex: 1; min-height: 44px; border-radius: 12px; background: var(--card-2); color: var(--t2); font-size: 14px; font-weight: 700; transition: background-color .15s ease, color .15s ease; }
   .read .pick button:hover, .display .pick button:hover { color: var(--t1); }
   .read .pick button[aria-pressed="true"], .display .pick button[aria-pressed="true"] { background: var(--brand); color: var(--brand-on); }
 
-  /* ===== 권한 카드 줄 =====
-     정사각형 카드가 가로로 늘어선다. 한 화면에 다 안 들어가면 ‹ › 로 민다 —
-     세로로 쌓으면 권한이 몇 개인지가 한눈에 안 들어온다. */
+  /* ===== permission set 카드 줄 =====
+     정사각형 카드가 가로로 배치됩니다. 한 화면에 다 들어가지 않으면 ‹ › 로 넘깁니다.
+     세로로 쌓으면 permission set 이 몇 개인지 한눈에 보이지 않습니다. */
   .sethead .railnav { margin-left: auto; display: flex; gap: 2px; }
   .sethead .railfilter {
     margin-left: auto; min-height: 40px; padding: 8px 12px;
@@ -83,13 +83,13 @@ body[data-page="settings"] {
   .tiles {
     list-style: none; margin: 0; padding: 4px 20px 18px;
     display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
-    /* 카드 폭을 재는 기준점. 아래 cqi 는 창이 아니라 이 줄의 폭을 뜻한다 —
-       창 크기를 기준으로 하면 곁칸이 열리고 닫힐 때 타일 크기가 같이 흔들린다. */
+    /* 카드 폭을 측정하는 기준 요소입니다. 아래 cqi 는 창이 아니라 이 줄의 폭을 뜻합니다.
+       창 크기를 기준으로 하면 오른쪽 칸이 열리고 닫힐 때 타일 크기가 같이 변합니다. */
     container-type: inline-size;
   }
   .tile {
-    /* 타일 크기는 개수와 상관없이 같다. 몇 장뿐일 때 늘려 줄을 채우면 정사각형이
-       화면 높이만큼 커진다 — 늘리지 않고, 넘칠 때만 ‹ › 로 민다. */
+    /* 타일 크기는 개수와 상관없이 같습니다. 카드가 적을 때 늘려 줄을 채우면 정사각형이
+       화면 높이만큼 커집니다. 늘리지 않고, 넘칠 때만 ‹ › 로 넘깁니다. */
     flex: 0 0 clamp(180px, 22cqi, 260px); aspect-ratio: 1; scroll-snap-align: start;
     display: flex; flex-direction: column; gap: 6px;
     padding: 16px; border: 1px solid var(--line); border-radius: 16px;
@@ -98,8 +98,8 @@ body[data-page="settings"] {
   .tilehead { display: flex; align-items: baseline; gap: 8px; }
   .tilehead b { font-size: 15.5px; font-weight: 700; }
   .tilehead span { font-size: 13px; color: var(--t3); }
-  /* 켜진 항목은 카드에 적지 않는다 — 카드는 "무엇을 하는 사람인가" 만 말한다.
-     항목 목록은 연필로 열어 본다. */
+  /* 켜진 항목은 카드에 표시하지 않습니다. 카드는 "어떤 역할의 사람인가" 만 표시합니다.
+     항목 목록은 수정 아이콘으로 열어서 봅니다. */
   .tilenote { margin: 0; flex: 1; min-height: 0; overflow: hidden; font-size: 13.5px; color: var(--t2); line-height: 1.5; }
   .tileacts { display: flex; gap: 2px; margin-top: auto; }
 
@@ -108,10 +108,10 @@ body[data-page="settings"] {
   .tile.add button:hover { color: var(--brand); }
 
   /* ===== 멤버 표 =====
-     명단은 카드가 가진 높이를 남김없이 쓰고 그 안에서만 구른다. */
+     명단은 카드의 높이를 전부 사용하고 그 안에서만 스크롤합니다. */
   .roster { padding: 0 20px 18px; flex: 1; min-height: 0; overflow-y: auto; }
-  /* 권한 줄 + 명단 두 장이 있는 탭은 화면이 통째로 구르지 않는다 — 아래 카드가
-     남는 높이를 가져가고, 구르는 것은 그 안의 표뿐이다. */
+  /* permission set 줄 + 명단 카드 2장이 있는 탭은 화면 전체가 스크롤되지 않습니다. 아래 카드가
+     남는 높이를 가져가고, 스크롤되는 요소는 그 안의 표뿐입니다. */
   .main:has(.roster) { overflow: hidden; }
   .main:has(.roster) > .card:last-child {
     flex: 1; display: flex; flex-direction: column; min-height: 0;
@@ -123,11 +123,11 @@ body[data-page="settings"] {
     color: var(--t3); border-bottom: 1px solid var(--line);
   }
   .roster td { padding: 11px 10px; font-size: 14px; border-bottom: 1px solid var(--line); }
-  /* 칸은 값이 차지하는 만큼만 쓰고, 남는 가로는 맨 끝의 빈 칸이 전부 먹는다.
-     그러지 않으면 넓은 화면에서 이름과 학과 사이가 손가락 몇 뼘씩 벌어진다. */
+  /* 열은 값이 차지하는 만큼만 사용하고, 남는 가로 공간은 맨 끝의 빈 열이 전부 차지합니다.
+     그러지 않으면 넓은 화면에서 이름과 학과 사이가 크게 벌어집니다. */
   .roster :is(th, td):not(.fill) { width: 1%; white-space: nowrap; }
   .roster :is(th, td).fill { width: auto; }
-  /* 칸마다 최소 폭을 글자 수로 준다 — 글자 크기가 바뀌면 같이 따라온다. */
+  /* 열마다 최소 폭을 글자 수(ch)로 정합니다. 글자 크기가 바뀌면 같이 바뀝니다. */
   .roster :is(th, td):nth-child(1) { min-width: 7ch; }
   .roster :is(th, td):nth-child(2) { min-width: 14ch; }
   .roster :is(th, td):nth-child(3) { min-width: 10ch; }

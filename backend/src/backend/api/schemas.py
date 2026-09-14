@@ -52,7 +52,7 @@ class PeriodAssignIn(BaseModel):
 
 
 class BackupOut(BaseModel):
-    # 회차를 구분하는 값은 저장 시각입니다. assignment_backups에 별도 회차 번호가 없습니다.
+    # 배정기록을 구분하는 값은 저장 시각입니다. assignment_backups에 별도 배정기록 번호가 없습니다.
     saved_at: datetime
     slot_count: int
 
@@ -62,8 +62,8 @@ class BackupsOut(BaseModel):
 
 
 class BackupRoundOut(BaseModel):
-    # 지난 회차의 시간표입니다. 확정 시간표(ScheduleOut)와 row(데이터베이스 행) 구조는 같지만
-    # open_slots는 없습니다. 지나간 회차에 예약을 개방할 필요가 없습니다.
+    # 지난 배정기록의 시간표입니다. 확정 시간표(ScheduleOut)와 row(데이터베이스 행) 구조는 같지만
+    # open_slots는 없습니다. 지나간 배정기록에 예약을 개방할 필요가 없습니다.
     rows: list[ScheduleRowOut]
 
 
@@ -159,7 +159,7 @@ class PeriodUpdateIn(BaseModel):
 class TeamOut(BaseModel):
     id: int
     name: str
-    # 포지션 전체 수와 그중 사람이 들어간 수. 둘을 함께 주어야 화면이 몇 포지션이 비었는지 압니다.
+    # 포지션 전체 수와 그중 멤버가 배정된 수입니다. 둘을 함께 반환해야 화면이 비어 있는 포지션 수를 계산할 수 있습니다.
     slot_count: int
     filled_count: int
 
@@ -181,10 +181,9 @@ class TeamSlotsIn(BaseModel):
 
 
 class TeamCreateIn(BaseModel):
-    # 생성자는 요청 본문이 아니라 인증 cookie(HTTP 요청 헤더에 포함되는 사용자 정보)의 소유자입니다.
+    # 팀을 생성하는 사람은 요청 본문이 아니라 인증 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 확인한 요청자입니다.
     name: str
-    # 포지션마다 몇 자리인지입니다. 0인 포지션은 요청에 포함해도 되고 제외해도 됩니다.
-    # 포지션을 만들지 않습니다.
+    # 포지션마다 자리 수입니다. 0 인 포지션은 요청에 포함해도 되고 제외해도 되며, 포지션을 생성하지 않습니다.
     slots: dict[str, int]
 
 
@@ -198,7 +197,7 @@ class SlotOut(BaseModel):
     instrument: Instrument
     # 같은 포지션이 1명 이상일 때 몇 번째인지입니다. 화면은 "일렉 2" 처럼 포지션에 숫자를 부여해 표시합니다.
     ordinal: int
-    # 아직 아무도 배정되지 않은 포지션은 세 필드가 모두 null입니다.
+    # 아직 멤버가 배정되지 않은 포지션은 member_id·member_name·member_cohort 가 모두 null 입니다.
     member_id: int | None = None
     member_name: str | None = None
     member_cohort: int | None = None
@@ -219,8 +218,8 @@ class SlotAssignIn(BaseModel):
 class MemberOut(BaseModel):
     id: int
     name: str
-    # 사용자를 구분하는 값입니다. 이름, 학과, 학번, 기수 네 가지입니다. 이 조건이
-    # 생기기 전에 등록된 사용자는 학과와 학번이 null입니다.
+    # 사용자를 구분하는 값은 이름, 학과, 학번, 기수 4가지입니다. 이 제약이
+    # 추가되기 전에 등록된 사용자는 학과와 학번이 null 입니다.
     department: str | None = None
     student_no: str | None = None
     cohort: int | None = None
@@ -304,8 +303,8 @@ class CommentEnvelopeOut(BaseModel):
 
 
 class PostCreateIn(BaseModel):
-    # author_id는 여기 없습니다. 글쓴이는 인증 token(세션 정보)으로 확인한 요청자입니다.
-    # 클라이언트가 보내도 스키마에 없는 항목이므로 무시됩니다.
+    # author_id 는 이 schema 에 없습니다. 작성자는 인증 cookie 로 확인한 요청자입니다.
+    # 클라이언트가 보내도 schema 에 없는 항목이므로 무시됩니다.
     title: str = Field(max_length=200)
     body: str = Field(max_length=20000)
 
@@ -318,8 +317,8 @@ class AccountOut(BaseModel):
     id: int
     name: str
     email: str
-    # role은 permissions에서 추출한 값입니다. 18가지 권한이 모두 설정되어 있으면
-    # head_manager입니다. 화면이 아직 이 값으로 레이블(화면에 표시되는 텍스트)을
+    # role 은 permissions 에서 계산한 값입니다. PERMISSIONS 의 항목 전부가 설정되어 있으면
+    # head_manager 입니다. 화면이 아직 이 값으로 label(화면에 표시되는 텍스트)을
     # 선택하고 있어 함께 제공합니다.
     role: Literal["head_manager", "member"]
     permissions: list[Permission]
@@ -329,7 +328,7 @@ class AccountOut(BaseModel):
 
 class PermissionSetIn(BaseModel):
     name: str = Field(max_length=50)
-    # 무엇을 하는 사람에게 주는 권한인지입니다. 반드시 기록합니다(사용자 결정).
+    # 이 permission set 을 어떤 역할의 사람에게 부여하는지 설명하는 문장입니다. 비워 둘 수 없습니다(사용자 결정).
     description: str = Field(max_length=200)
     permissions: list[Permission] = Field(max_length=20)
 
@@ -348,8 +347,8 @@ class PermissionSetOut(BaseModel):
     name: str
     description: str
     permissions: list[Permission]
-    # ID만 제공하면 화면이 이름을 다른 목록에서 찾아야 합니다. 그 목록은 page(화면 분할
-    # 단위) 단위라 모두 있지 않을 수 있습니다. 이름까지 여기에 포함해 보냅니다.
+    # id 만 제공하면 화면이 이름을 멤버 목록에서 찾아야 합니다. 멤버 목록은 page(한 번에 받는
+    # 행 묶음) 단위로 받으므로 아직 받지 않은 멤버가 있을 수 있습니다. 그래서 이름까지 포함합니다.
     members: list[PermissionSetMemberOut]
 
 
@@ -374,7 +373,7 @@ class MyTeamOut(BaseModel):
 
 class MeOut(BaseModel):
     account: AccountOut
-    # 내가 들어가 있는 포지션을 팀 번호 순으로 담습니다. 화면이 내 팀을 가려내는 근거입니다.
+    # 요청자가 배정된 포지션을 팀 번호 순으로 포함합니다. 화면이 "내 팀"을 구분하는 근거입니다.
     teams: list[MyTeamOut]
 
 
@@ -384,7 +383,7 @@ class SignupIn(BaseModel):
     student_no: str = Field(max_length=20)
     email: str = Field(max_length=254)
     password: str = Field(max_length=100)
-    # 기수. 1981년이 1기지만 연도로 환산하지 않고 숫자를 그대로 받습니다.
+    # 기수입니다. 1981년이 1기지만 연도로 환산하지 않고 숫자를 그대로 받습니다.
     cohort: int
 
 
@@ -401,7 +400,7 @@ class PasswordChangeIn(BaseModel):
 class LoginIn(BaseModel):
     email: str = Field(max_length=254)
     password: str = Field(max_length=100)
-    # 로그인 상태 유지. 끄면 브라우저를 닫을 때 풀립니다.
+    # 로그인 상태 유지 여부입니다. False 이면 브라우저를 닫을 때 로그인이 해제됩니다.
     keep: bool = False
 
 
@@ -430,7 +429,7 @@ class UnavailableCreateIn(BaseModel):
     repeats_daily: bool = False
     repeats_weekly: bool = False
     repeat_until: date | None = None
-    # 사유는 사람이 적는 한 줄입니다. 안 적어도 등록됩니다.
+    # 사유는 사용자가 입력하는 한 줄 문장입니다. 입력하지 않아도 등록됩니다.
     reason: str | None = Field(default=None, max_length=200)
 
 
@@ -451,7 +450,7 @@ class ReservationsOut(BaseModel):
 
 
 class ReservationCreateIn(BaseModel):
-    # 예약하는 사람은 요청 본문이 아니라 인증 쿠키의 주인입니다.
+    # 예약자는 요청 본문이 아니라 인증 cookie 로 확인한 요청자입니다.
     room_id: int
     team_id: int | None = None
     starts_at: datetime
@@ -459,14 +458,14 @@ class ReservationCreateIn(BaseModel):
 
 
 class ReservationUpdateIn(BaseModel):
-    # 옮길 시각만 받습니다. 방·팀·주인은 원래 예약의 값을 그대로 씁니다.
+    # 이동할 시각만 받습니다. 합주실·팀·예약자는 원래 예약의 값을 그대로 사용합니다.
     starts_at: datetime
     ends_at: datetime
 
 
 class NotificationOut(BaseModel):
     id: int
-    # 무슨 일이 있었는지만 담습니다. 사람이 읽을 문장은 화면이 이 값으로 만듭니다.
+    # 알림의 종류만 포함합니다. 사람이 읽을 문장은 화면이 이 값으로 만듭니다.
     kind: NotificationKind
     created_at: str
     read: bool
@@ -478,7 +477,7 @@ class NotificationsOut(BaseModel):
 
 class FindIdIn(BaseModel):
     # 길이 상한은 SignupIn·LoginIn 과 같은 값입니다. 로그인 없이 열려 있는 endpoint 라
-    # 아무 길이나 받으면 큰 글자를 계속 보내는 것만으로 서버를 붙잡아 둘 수 있습니다.
+    # 길이를 제한하지 않으면 긴 문자열을 계속 보내는 것만으로 서버 자원을 소모시킬 수 있습니다.
     name: str = Field(max_length=100)
     email: str = Field(max_length=254)
 
@@ -488,12 +487,12 @@ class PasswordResetIn(BaseModel):
 
 
 class PasswordResetConfirmIn(BaseModel):
-    # 토큰은 secrets.token_urlsafe(32) 가 낸 43글자입니다. 넉넉히 잡아도 100 이면 충분하입니다.
+    # token 은 secrets.token_urlsafe(32) 가 생성한 43글자입니다. 상한 100 은 그보다 큽니다.
     token: str = Field(max_length=100)
     password: str = Field(max_length=100)
 
 
 class AckOut(BaseModel):
-    # 아이디 찾기와 비밀번호 재설정 요청이 함께 씁니다. 계정이 있든 없든 이 한 가지
-    # 답만 나가야 그 이메일이 가입돼 있는지가 응답으로 새지 않습니다.
+    # 아이디 찾기와 비밀번호 재설정 요청이 함께 사용합니다. 계정이 있든 없든 이 응답 하나만
+    # 반환해야 그 이메일이 가입되어 있는지가 응답으로 드러나지 않습니다.
     ok: bool = True

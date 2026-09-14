@@ -48,7 +48,7 @@ def _rows_out(rows: list[ReservationRow]) -> ReservationsOut:
 
 
 # 일정 확인은 로그인한 사람이면 누구나 합니다. 사용자 신원을 사용하지 않으므로 사용하지 않는
-# 매개변수를 남기지 않도록 dependencies에 겁니다.
+# 매개변수를 남기지 않도록 dependencies 에 추가합니다.
 @router.get(
     "/rooms/{room_id}/reservations",
     response_model=ReservationsOut,
@@ -60,10 +60,8 @@ def read_room_reservations(
     to: str = Query(),
     session: Session = Depends(get_session),
 ) -> ReservationsOut:
-    # from_ 은 파이썬이 예약어 from 을 매개변수 이름으로 못 써 붙인 이름입니다.
-    # alias="from" 이 실제 쿼리 문자열 키를 맞춘다(?from=...&to=...).
-    # from_은 Python의 예약어이므로 매개변수 이름으로 사용할 수 없어서 붙인 이름입니다.
-    # alias="from"이 실제 query string 키와 맞춥니다(?from=...&to=...).
+    # from 은 Python 의 예약어이므로 매개변수 이름으로 사용할 수 없어 from_ 으로 지었습니다.
+    # alias="from" 이 실제 query string(URL 의 ? 뒤에 오는 key=value 목록) 키와 맞춥니다(?from=...&to=...).
     from_date = parse_calendar_date(from_, "from")
     to_date = parse_calendar_date(to, "to")
     rows = list_reservations(session, room_id, from_date, to_date)
@@ -76,7 +74,7 @@ def create_reservation_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> ReservationsOut:
-    # 예약의 주인은 요청 body(본문)가 아니라 cookie(브라우저가 저장해 요청마다 함께 보내는 값)의 주인입니다 — 다른 사람 이름으로 예약할 수 없습니다.
+    # 예약자는 요청 body(본문)가 아니라 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 확인한 requester 입니다. 다른 사람 이름으로 예약할 수 없습니다.
     rows, room_name, member_name, team_name = create_reservation(
         session,
         req.room_id,
@@ -96,7 +94,7 @@ def update_reservation_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> ReservationsOut:
-    # slot(1시간 단위 시간 칸)을 다시 잡는 것이므로, 예약 시각은 이동한 현재 시간입니다.
+    # slot(1시간 단위 시간 칸)을 새로 예약하는 것과 같으므로, created_at 은 이동을 요청한 현재 시각입니다.
     rows, room_name, member_name, team_name = update_reservation(
         session,
         reservation_id,

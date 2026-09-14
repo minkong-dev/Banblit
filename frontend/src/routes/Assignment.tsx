@@ -16,11 +16,11 @@ import type { Session } from "../lib/pipeline";
 
 const MINUTES_PER_HOUR = 60;
 
-/** 달력이 보이는 것 — 지금 확정된 시간표, 조율안 n번, 지난 회차 하나. */
+/** 달력에 표시하는 대상입니다. 현재 확정된 시간표, n번째 조율안, 지난 배정기록 하나 중 하나입니다. */
 type View = { kind: "now" } | { kind: "proposal"; index: number } | { kind: "round"; at: string };
 const NOW: View = { kind: "now" };
 
-// 탭은 글자 키만 받습니다. 글자와 View 를 오가는 곳은 아래 둘뿐입니다.
+// 탭은 문자열 키만 받습니다. 문자열과 View 를 변환하는 함수는 아래 2개뿐입니다.
 function tabKey(view: View): string {
   if (view.kind === "proposal") return `p${view.index}`;
   return view.kind === "round" ? `r:${view.at}` : "now";
@@ -32,7 +32,7 @@ function viewOf(key: string): View {
 }
 
 
-/** 팀별로 나뉘어 온 칸을 한 줄로 펴서 합주 한 번씩으로 합칩니다. */
+/** 팀별로 나뉘어 온 slot 을 하나의 목록으로 합쳐 연속된 slot 을 합주 한 번으로 묶습니다. */
 function sessionsOf(byTeam: Record<string, Slot[]>): Session[] {
   const flat: Session[] = [];
   for (const [team, slots] of Object.entries(byTeam)) {
@@ -66,14 +66,14 @@ export function Assignment() {
   const queryClient = useQueryClient();
   const [periodId, setPeriodId] = useState<number | null>(null);
   const [view, setView] = useState<View>(NOW);
-  // 계산 시각은 수정한 것만 여기 담습니다. 기간을 바꾸면 담긴 id가 맞지 않으므로 그때는
-  // 다시 서버 값으로 돌아갑니다 — useEffect로 맞추지 않고 렌더할 때마다 id를 비교합니다.
+  // 계산 시각은 수정한 값만 이 state 에 담습니다. 기간을 바꾸면 담긴 id 가 맞지 않으므로 그때는
+  // 다시 서버 값을 사용합니다. useEffect 로 동기화하지 않고 렌더할 때마다 id 를 비교합니다.
   const [runForm, setRunForm] = useState<{ id: number; first: string; second: string } | null>(null);
 
   const periods = usePeriods();
-  // 이 화면은 집중 합주 기간만 다룹니다 — 상시 개방 기간은 자동 배정 대상이 아닙니다.
+  // 이 화면은 집중 합주기간만 다룹니다. 상시 기간은 자동 배정 대상이 아닙니다.
   const focusedPeriods = (periods.data?.periods ?? []).filter((period) => period.kind === "focused");
-  // 사람이 아직 고르지 않았으면 목록의 첫 기간을 사용합니다. useEffect로 동기화하지 않고
+  // 사용자가 아직 선택하지 않았으면 목록의 첫 기간을 사용합니다. useEffect 로 동기화하지 않고
   // 렌더할 때마다 이렇게 계산합니다.
   const activePeriodId = periodId ?? focusedPeriods[0]?.id ?? null;
 
@@ -89,8 +89,8 @@ export function Assignment() {
     },
     enabled: activePeriodId !== null,
   });
-  // schedule.data 가 없을 때만 매번 새 빈 배열이 생깁니다 — 아래 useMemo 가 그동안 다시
-  // 돌아도 빈 배열을 합치는 가벼운 계산이라 따로 감쌀 만큼은 아닙니다.
+  // schedule.data 가 없을 때만 매번 새 빈 배열이 생깁니다. 아래 useMemo 가 그동안 다시
+  // 실행되어도 빈 배열을 합치는 가벼운 계산이라 useMemo 로 감쌀 필요가 없습니다.
   const rows = schedule.data?.rows ?? [];
 
   const recompute = useMutation({
@@ -102,7 +102,7 @@ export function Assignment() {
     onSuccess: async (result) => {
       // 저장까지 끝났으면 확정된 시간표를 다시 받아 화면과 서버를 맞춥니다.
       await queryClient.invalidateQueries({ queryKey: ["schedule", activePeriodId] });
-      // 저장이 되었으면 이전 시간표가 회차로 밀려나므로 목록도 다시 받습니다.
+      // 저장이 되었으면 이전 시간표가 배정기록으로 밀려나므로 목록도 다시 받습니다.
       await queryClient.invalidateQueries({ queryKey: ["backups", activePeriodId] });
       setView(NOW);
       say(runResultText(result));
@@ -110,7 +110,7 @@ export function Assignment() {
     onError: (error) => say(reason(error, "엔진이 연산에 실패했어요")),
   });
 
-  // 조율안 확정 — 그 사람을 제외한 채로 같은 계산을 다시 실행해 저장합니다. 서버 경로가
+  // 조율안 확정입니다. 조율안이 지목한 멤버를 제외한 채로 같은 계산을 다시 실행해 저장합니다. 서버 경로가
   // 다를 뿐 결과를 받는 방식은 재계산과 같습니다.
   const confirm = useMutation({
     mutationFn: (memberId: number) => {
@@ -131,24 +131,24 @@ export function Assignment() {
   const rollback = useMutation({
     mutationFn: () => {
       if (activePeriodId === null) throw new Error("선택할 집중 합주기간이 없어요");
-      // 회차를 받지 않는 endpoint입니다. 언제나 바로 직전 회차로만 되돌아갑니다.
+      // 배정기록을 받지 않는 endpoint입니다. 언제나 바로 직전 배정기록으로만 되돌아갑니다.
       return getJSON<{ rolled_back: boolean }>(`/periods/${activePeriodId}/rollback`, {
         method: "POST",
       });
     },
     onSuccess: async (result) => {
       await queryClient.invalidateQueries({ queryKey: ["schedule", activePeriodId] });
-      // 되돌린 회차는 목록에서 제거됩니다.
+      // 되돌린 배정기록은 목록에서 제거됩니다.
       await queryClient.invalidateQueries({ queryKey: ["backups", activePeriodId] });
       setView(NOW);
       say(result.rolled_back ? "이전 배정안으로 되돌렸어요" : "이전 배정기록이 없어요");
     },
-    // 서버가 거절한 사유를 그대로 표시합니다 — 방·시각이 겹쳐 되돌릴 수 없는 경우가 있습니다.
+    // 서버가 거절한 사유를 그대로 표시합니다. 합주실·시각이 겹쳐 되돌릴 수 없는 경우가 있습니다.
     onError: (error) => say(error instanceof Error ? error.message : "이전 배정기록으로 되돌리는데 실패했어요"),
   });
 
-  // 되돌리기 항목이 없으면 이 목록도 조회하지 않습니다 — 서버가 같은 항목으로 차단하고 있어
-  // 조회해도 403이고, 화면에도 그 칸을 두지 않습니다.
+  // rollback 권한이 없으면 이 목록도 조회하지 않습니다. 서버가 같은 권한으로 차단하고 있어
+  // 조회해도 403 이고, 화면에도 그 영역을 표시하지 않습니다.
   const canRollbackNow = can(me, "rollback");
   const backups = useQuery({
     queryKey: ["backups", activePeriodId],
@@ -159,7 +159,7 @@ export function Assignment() {
     enabled: activePeriodId !== null && canRollbackNow,
   });
 
-  // 선택한 회차입니다. 조율안과 같은 view 하나를 쓰므로 달력·아래 설명·탭이 한 값만 보고 나뉩니다.
+  // 선택한 배정기록입니다. 조율안과 같은 view 값 하나를 사용하므로 달력·아래 설명·탭이 값 하나로 결정됩니다.
   const roundAt = view.kind === "round" ? view.at : null;
   const round = useQuery({
     queryKey: ["backup-round", activePeriodId, roundAt],
@@ -181,7 +181,7 @@ export function Assignment() {
       });
     },
     onSuccess: async () => {
-      // 수정한 값을 서버에서 다시 받아 화면과 맞춥니다. 받아온 뒤에는 수정 기록을 지웁니다.
+      // 수정한 값을 서버에서 다시 받아 화면과 맞춥니다. 받아온 뒤에는 수정 기록을 삭제합니다.
       await queryClient.invalidateQueries({ queryKey: ["periods"] });
       setRunForm(null);
       say("엔진 연산 시간을 저장했어요");
@@ -196,8 +196,8 @@ export function Assignment() {
     [rows],
   );
 
-  // recompute.data가 없을 때만 매번 새 빈 배열이 생깁니다 — 재계산 전에는 proposals를
-  // 쓰는 곳도 없어 아래 useMemo가 다시 실행되어도 비용이 없습니다.
+  // recompute.data 가 없을 때만 매번 새 빈 배열이 생깁니다. 재계산 전에는 proposals 를
+  // 사용하는 곳도 없어 아래 useMemo 가 다시 실행되어도 비용이 없습니다.
   const proposals = recompute.data?.proposals ?? [];
   const proposalIndex = view.kind === "proposal" ? view.index : null;
   const roundRows = round.data?.rows ?? [];
@@ -257,8 +257,8 @@ export function Assignment() {
     </div>
   );
 
-  // 버튼마다 필요한 항목이 다릅니다 — 계산은 assign_run, 되돌리기는 rollback.
-  // 둘 다 없으면 줄 자체를 두지 않습니다.
+  // 버튼마다 필요한 권한이 다릅니다. 계산은 assign_run, 되돌리기는 rollback 입니다.
+  // 둘 다 없으면 버튼 줄 자체를 표시하지 않습니다.
   const canRun = can(me, "assign_run");
   const canRollback = canRollbackNow;
   const again = !canRun && !canRollback ? null : (
@@ -269,8 +269,8 @@ export function Assignment() {
           {recompute.isPending ? "스케줄링 진행 중…" : "스케줄링"}
         </button>
       )}
-      {/* ponytail: 되돌리기는 확인할 수 없어 한 번 되묻습니다. 이 화면에는 확인 dialog(화면 위에 뜨는 대화 상자)가
-          없어 브라우저 기본 대화상자를 씁니다. 화면 자체의 dialog가 생기면 그것으로 옮깁니다. */}
+      {/* ponytail: 되돌리기는 취소할 수 없어 확인을 한 번 요청합니다. 이 화면에는 확인 dialog(화면 위에 뜨는 대화 상자)가
+          없어 브라우저 기본 대화상자를 사용합니다. 화면 자체의 dialog 가 생기면 그 dialog 로 교체합니다. */}
       {!canRollback ? null : (
         <button className="btn" disabled={rollback.isPending || activePeriodId === null}
           onClick={() => {
@@ -378,7 +378,7 @@ export function Assignment() {
 
   // ── 오른쪽 칸 ───────────────────────────────────────────────────────────────
   // 되돌리기 권한이 있는 사용자에게만 이전 배정 기록을 표시합니다.
-  // 서버가 같은 항목으로 차단하고 있어, 감추는 것은 정리일 뿐 근거가 아닙니다.
+  // 서버가 같은 권한으로 차단하고 있으므로, 화면에서 감추는 것은 정리일 뿐 권한 판정이 아닙니다.
   const rounds = backups.data?.backups ?? [];
   let roundList;
   if (!canRollback) {
@@ -390,7 +390,7 @@ export function Assignment() {
   } else if (rounds.length === 0) {
     roundList = <li className="empty">이전 배정기록이 없어요.</li>;
   } else {
-    // 최근 것이 위로 오게 뒤집습니다. 되돌리기는 언제나 맨 위 회차로만 갑니다.
+    // 최근 배정기록이 위로 오게 순서를 뒤집습니다. 되돌리기는 언제나 맨 위 배정기록으로만 복원합니다.
     roundList = [...rounds]
       .sort((a, b) => b.saved_at.localeCompare(a.saved_at))
       .map((backup, index) => (
@@ -412,8 +412,8 @@ export function Assignment() {
     </Panel>
   );
 
-  // 계산 시각은 기간에 딸린 값이라 기간 항목이 구분합니다. 설정 화면의 기간 서식과
-  // 같은 값을 같은 endpoint로 수정합니다 — 여기서는 두 시각만 따로 수정할 수 있게 둡니다.
+  // 계산 시각은 기간에 속한 값이라 period_edit 권한이 필요합니다. 설정 화면의 기간 form 과
+  // 같은 값을 같은 endpoint 로 수정합니다. 이 화면에서는 두 시각만 따로 수정할 수 있게 둡니다.
   const canManagePeriod = can(me, "period_edit");
   const activePeriod = focusedPeriods.find((period) => period.id === activePeriodId) ?? null;
   const shownRun = runForm !== null && runForm.id === activePeriodId
@@ -491,7 +491,7 @@ export function Assignment() {
               {" · 기간 "}
               <select value={activePeriodId ?? ""} aria-label="기간 선택"
                 onChange={(event) => { setPeriodId(Number(event.target.value)); setView(NOW); }}>
-                {/* id가 아니라 날짜 범위로 표시합니다 — 사람·기간을 번호로 부르지 않습니다. */}
+                {/* id 가 아니라 날짜 범위로 표시합니다. 화면에서 기간을 번호로 표시하지 않습니다. */}
                 {focusedPeriods.map((period) => (
                   <option value={period.id} key={period.id}>
                     {period.starts_on} – {period.ends_on}

@@ -1,5 +1,5 @@
-// 서버가 제공한 배정안을 화면이 읽을 형식으로 변환합니다. 여기 있는 것은 모두 계산이므로
-// 화면도 서버도 수정하지 않습니다.
+// 서버가 제공한 배정안을 화면이 읽을 형식으로 변환합니다. 이 파일의 함수는 모두 순수 계산이므로
+// 화면이나 서버와 상호작용하지 않습니다.
 
 import { slotLabel } from "./calendar";
 
@@ -11,7 +11,7 @@ export type Session = {
 };
 
 export function mergeSessions(items: Session[]): Session[] {
-  // items를 팀·합주실·시작시각 순으로 정렬한 후, 앞 slot(1시간 단위 시간 칸)의 종료시각과 맞닿은 slot을 연결해 연속된 slot의 나열을 "합주 한 번"으로 변환합니다. 입력받은 목록은 고치지 않습니다. localeCompare()는 같으면 0을 반환합니다. || 연산자는 앞이 같을 때만 다음을 검토합니다.
+  // items 를 팀·합주실·시작시각 순으로 정렬한 후, 앞 slot(1시간 단위 시간 칸)의 종료시각과 맞닿은 slot 을 연결해 연속된 slot 의 나열을 "합주 한 번"으로 변환합니다. 입력받은 목록은 수정하지 않습니다. localeCompare() 는 같으면 0 을 반환합니다. || 연산자는 앞이 0 일 때만 다음을 비교합니다.
   const sorted = [...items].sort((a, b) =>
     a.team.localeCompare(b.team)
     || a.room.localeCompare(b.room)
@@ -57,7 +57,7 @@ export type Booking = {
   end: string;
 };
 
-/** 서버가 제공한 slot(1시간 단위 시간 칸) 단위 예약을 사용자가 보는 한 건으로 연결합니다. 입력받은 목록은 고치지 않습니다. */
+/** 서버가 제공한 slot(1시간 단위 시간 칸) 단위 예약을 사용자가 보는 한 건으로 연결합니다. 입력받은 목록은 수정하지 않습니다. */
 export function mergeReservations(rows: readonly ReservationSlot[]): Booking[] {
   // 같은 위치(합주실·팀·예약자)별로 모아 시각 순으로 정렬한 후, 앞 slot의 종료시각과 맞닿은 slot만 연결합니다. 위치가 다르면 시각이 맞닿아도 별도입니다. 취소 권한은 예약자에게만 있어, 다른 사용자의 slot을 한 건으로 묶으면 삭제할 수 없는 ID가 섞입니다.
   const sorted = [...rows].sort((a, b) =>

@@ -1,5 +1,5 @@
 // 오래 걸리는 계산을 접수하고 완료될 때까지 다시 조회(refetch: 같은 조회를 다시 보내 값을 갱신하는 것)하는 부분입니다.
-// 화면이나 서버와 상호작용하지 않습니다 — 실제로 조회하는 일은 넘겨받은 read가 합니다.
+// 화면이나 서버와 상호작용하지 않습니다. 실제 조회는 매개변수로 받은 read 가 합니다.
 // 호출 순서는 pipeline.ts가 정합니다.
 
 export type JobStatus = "queued" | "running" | "done" | "failed";
@@ -15,7 +15,7 @@ export type Job<T> = {
 export const JOB_POLL_MS = 700;
 
 /** 이 시간까지 끝나지 않으면 대기를 중단합니다(밀리초).
- *  배정안까지 계산하는 데 20초대가 나온 경우가 있어서 그 3배쯤을 설정합니다. */
+ *  배정안까지 계산하는 데 최대 22초가 측정된 적이 있어 그 약 3배인 60초로 설정합니다. */
 export const JOB_DEADLINE_MS = 60000;
 
 export async function awaitJob<T>(

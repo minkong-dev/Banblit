@@ -2,7 +2,7 @@
 
 import type { Account, Permission } from "./contract";
 
-/** 프로필 카드에 표시하는 역할 표시입니다. 화면 네 곳(Board·Notices·Profile·Teams)에서 사용합니다. */
+/** 프로필 카드에 표시하는 역할 이름입니다. 화면 4곳(Board·Notices·Profile·Teams)에서 사용합니다. */
 export function roleLabel(role: Account["role"]): string {
   return role === "head_manager" ? "헤드매니저" : "일반멤버";
 }
@@ -107,9 +107,9 @@ export const PERMISSION_ITEMS: readonly {
   },
 ];
 
-/** me가 item을 가졌는지 판정합니다. 아직 받아오지 못했거나 응답에 permissions가 없으면 없는 것으로 봅니다.
- *  잠깐 보였다 사라지는 버튼보다 처음부터 없는 편이 낫습니다.
- *  화면이 감추는 것일 뿐 진짜 판정은 서버가 합니다. */
+/** me 가 item 권한을 가졌는지 판정합니다. 아직 조회하지 못했거나 응답에 permissions 가 없으면 없다고 판정합니다.
+ *  잠깐 표시되었다 사라지는 버튼보다 처음부터 없는 편이 낫습니다.
+ *  화면이 버튼을 감추는 것일 뿐 실제 권한 판정은 서버가 합니다. */
 export function can(me: Account | null, item: Permission): boolean {
   return me?.permissions?.includes(item) ?? false;
 }

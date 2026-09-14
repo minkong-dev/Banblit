@@ -1,19 +1,19 @@
-/* 팀 찾기 화면만의 규칙. 색은 base.css, 상단바·사이드바·카드·목록 줄·포지션표는 shell.css 가 준다. */
+/* 팀 찾기 화면만의 규칙입니다. 색은 base.css, 상단바·사이드바·카드·목록 줄·포지션 목록은 shell.css 가 정의합니다. */
 body[data-page="teams"] {
 
-  /* 오른쪽 칸이 없다 — 포지션표가 모달로 빠져서 목록이 남는 폭을 다 쓴다. */
+  /* 오른쪽 칸이 없습니다. 포지션 목록이 modal 로 이동해서 목록이 남는 폭을 전부 사용합니다. */
   .page { grid-template-columns: minmax(0, 1fr); }
 
-  /* 목록은 스크롤하지 않는다 — 들어가는 만큼만 보여주고 나머지는 쪽으로 넘긴다.
-     그래서 쪽 넘기기 줄이 창 크기와 상관없이 늘 카드 바닥에 있다. */
+  /* 목록은 스크롤하지 않습니다. 들어가는 만큼만 표시하고 나머지는 page 로 나눕니다.
+     그래서 pagination 줄이 창 크기와 상관없이 항상 카드 아래에 있습니다. */
   .main { overflow: hidden; }
   .main > .card:only-child { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .main > .card:only-child > .rows { flex: 1; min-height: 0; overflow: hidden; }
   .main > .card:only-child > .listfoot { margin-top: auto; }
   .rows li { padding: 4px 12px; }
 
-  /* 팀 한 줄이 두 조각이다 — 왼쪽은 눌러서 포지션표를 여는 단추, 오른쪽은 연필과
-     쓰레기통. 단추 안에 단추를 넣을 수 없어 나란히 둔다. */
+  /* 팀 한 줄이 요소 2개입니다. 왼쪽은 클릭해서 포지션 목록을 여는 버튼, 오른쪽은 수정·삭제
+     아이콘입니다. 버튼 안에 버튼을 넣을 수 없어 나란히 둡니다. */
   .teamline { display: flex; align-items: center; gap: 4px; }
   .teamline .teamrow2 { flex: 1; min-width: 0; }
   .teamline .acts { flex: none; align-items: center; gap: 2px; }

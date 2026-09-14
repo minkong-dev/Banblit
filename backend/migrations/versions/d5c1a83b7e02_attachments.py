@@ -19,7 +19,7 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """스키마를 업그레이드합니다."""
+    """schema 를 upgrade 합니다."""
     op.create_table(
         'attachments',
         sa.Column('id', sa.Integer(), nullable=False),
@@ -39,6 +39,6 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    """스키마를 다운그레이드합니다."""
+    """schema 를 downgrade 합니다."""
     op.drop_index(op.f('ix_attachments_post_id'), table_name='attachments')
     op.drop_table('attachments')

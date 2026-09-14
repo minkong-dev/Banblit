@@ -20,29 +20,29 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-# 수행 가능한 작업입니다. 생성·수정·삭제·조회를 따로 두어, 권한을 만드는 사람이
-# 필요한 것만 선택해 묶을 수 있게 합니다. 항목이 늘면 그것을 처리하는 서버 코드도
-# 같이 늘어나므로 데이터가 아니라 여기에 고정합니다. 활성화/비활성화만 permission_sets에
+# 권한 항목입니다. 생성·수정·삭제·조회를 따로 두어, permission set(권한 집합)을 만드는 사람이
+# 필요한 항목만 선택해 묶을 수 있게 합니다. 항목이 늘면 그 항목을 처리하는 서버 코드도
+# 같이 늘어나므로 데이터가 아니라 이 코드에 고정합니다. 활성화/비활성화 여부만 permission_sets 에
 # 저장합니다.
 Permission = Literal[
-    "room_create",  # 합주실 만들기
-    "room_edit",  # 합주실 여닫는 시각 고치기
-    "period_create",  # 기간 만들기
-    "period_edit",  # 기간 고치기
-    "team_create",  # 팀 만들기
-    "team_edit",  # 팀 이름 바꾸기
-    "team_delete",  # 팀 지우기
-    "member_add",  # 팀 포지션에 사람 넣기
-    "member_remove",  # 팀 포지션에서 사람 빼기
-    "notice_write",  # 공지 쓰기
-    "board_moderate",  # 남의 글·댓글 수정·삭제
-    "reservation_manage",  # 남의 예약 수정·취소
+    "room_create",  # 합주실 생성
+    "room_edit",  # 합주실 여는 시각·닫는 시각 수정
+    "period_create",  # 기간 생성
+    "period_edit",  # 기간 수정
+    "team_create",  # 팀 생성
+    "team_edit",  # 팀 이름·포지션 구성 수정
+    "team_delete",  # 팀 삭제
+    "member_add",  # 팀 포지션에 멤버 배정
+    "member_remove",  # 팀 포지션에서 다른 멤버 제외
+    "notice_write",  # 공지 작성
+    "board_moderate",  # 다른 사용자의 글·댓글 수정·삭제
+    "reservation_manage",  # 다른 사용자의 예약 수정·취소
     "assign_run",  # 배정 계산 실행
-    "assign_read",  # 계산 결과·조율안 보기
+    "assign_read",  # 계산 결과·조율안 조회
     "proposal_confirm",  # 조율안 확정
     "rollback",  # 되돌리기
-    "permission_manage",  # 권한 만들기·수정·삭제
-    "permission_grant",  # 사람에게 권한 주고 뺏기
+    "permission_manage",  # permission set 생성·수정·삭제
+    "permission_grant",  # 멤버에게 permission set 부여·회수
 ]
 
 PERMISSIONS: tuple[Permission, ...] = get_args(Permission)
@@ -52,13 +52,13 @@ _PERMISSION_ARRAY_SQL = "ARRAY[{}]::text[]".format(
     ", ".join(f"'{name}'" for name in PERMISSIONS)
 )
 
-# 팀을 생성할 때 선택하는 포지션 종류입니다. 자리 하나가 이 중 하나를 할당받습니다.
-# 같은 포지션을 2자리 이상 두면 ordinal(순서 번호)로 구분됩니다. 예: 일렉 두 포지션은
-# (일렉, 1)과 (일렉, 2)입니다. 기간의 종류는 다음과 같습니다.
-# 집중 합주기간(focused)만 자동 배정이 실행됩니다.
+# 기간의 종류입니다. 집중 합주기간(focused)만 자동 배정이 실행됩니다.
 PeriodKind = Literal["open", "focused"]
 PERIOD_KINDS: tuple[PeriodKind, ...] = get_args(PeriodKind)
 
+# 팀을 생성할 때 선택하는 포지션 종류입니다. 자리 하나가 이 중 하나를 할당받습니다.
+# 같은 포지션을 2자리 이상 두면 ordinal(순서 번호)로 구분합니다. 예: 일렉 2자리는
+# (일렉, 1)과 (일렉, 2)입니다.
 Instrument = Literal["보컬", "일렉", "통기타", "베이스", "신디", "드럼"]
 INSTRUMENTS: tuple[Instrument, ...] = get_args(Instrument)
 
@@ -76,20 +76,20 @@ class Member(Base):
     """사용자를 나타냅니다. 동명이인이 있을 수 있으므로 이름에 고유 조건을 두지 않습니다.
     ID가 식별자입니다.
 
-    email과 password_hash는 로그인 계정 정보입니다. 스케줄링에만 사용되고, 아직
-    가입하지 않은 사용자는 이 둘이 null입니다. 가입해야만 로그인 계정이 됩니다.
-    수행 가능한 작업은 member_permission_sets가 참조하는 권한들이 정합니다.
+    email 과 password_hash 는 로그인 계정 정보입니다. 명단에만 등록되고 아직 가입하지 않은
+    사용자는 email 과 password_hash 가 null 입니다. 가입해야만 로그인 계정이 됩니다.
+    수행 가능한 작업은 member_permission_sets 가 참조하는 permission set(권한 집합)이 정합니다.
 
-    cohort는 기수(입학 연도를 구분하는 번호)입니다. 연도로 환산하지 않고
+    cohort 는 기수(입학 연도를 구분하는 번호)입니다. 연도로 환산하지 않고
     숫자를 그대로 저장합니다.
 
-    사용자를 식별하는 것은 ID이지만, 사용자가 사용자를 구분하는 값은
-    이름, 학과, 학번, 기수 네 가지입니다(사용자 결정). 그 조합에 고유 조건을 걸어
+    시스템은 사용자를 id 로 식별하지만, 사용자가 다른 사용자를 구분하는 값은
+    이름, 학과, 학번, 기수 4가지입니다(사용자 결정). 그 조합에 unique 제약을 두어
     같은 사용자가 중복으로 등록되지 않도록 합니다. 이름 하나만으로는
     동명이인을 구분할 수 없습니다.
 
-    학과와 학번은 이 조건이 생기기 전에 등록된 행에는 null입니다. PostgreSQL은
-    NULL이 있는 조합을 중복으로 보지 않으므로, 기존 행들이 서로 충돌하지 않습니다.
+    학과와 학번은 이 제약이 추가되기 전에 등록된 행에는 null 입니다. PostgreSQL 은
+    NULL 이 있는 조합을 중복으로 보지 않으므로, 기존 행들이 서로 충돌하지 않습니다.
     """
 
     __tablename__ = "members"
@@ -108,10 +108,10 @@ class Member(Base):
 
 
 class PermissionSet(Base):
-    """권한 묶음. 이름이 식별자라 겹칠 수 없고, permissions 는 켜진 항목 목록입니다.
+    """permission set(권한 집합)입니다. 이름이 식별자이므로 중복될 수 없고, permissions 는 활성화된 항목 목록입니다.
 
-    description 은 이 권한이 무엇을 하는 사람에게 주는 것인지를 적는 자리다. 항목
-    목록만으로는 "왜 이 묶음이 있는가"가 남지 않아, 만들 때 반드시 적게 한다.
+    description 은 이 permission set 을 어떤 역할의 사람에게 부여하는지 적는 열입니다. 항목
+    목록만으로는 "왜 이 permission set 이 있는가"가 남지 않으므로, 생성할 때 반드시 입력받습니다.
     """
 
     __tablename__ = "permission_sets"
@@ -129,7 +129,7 @@ class PermissionSet(Base):
 
 
 class MemberPermissionSet(Base):
-    """사람이 가진 묶음 하나. 한 사람이 묶음을 2개 이상 가질 수 있고, 실제 권한은 그 합집합입니다."""
+    """멤버가 가진 permission set 하나입니다. 한 멤버가 permission set 을 2개 이상 가질 수 있고, 실제 권한은 그 합집합입니다."""
 
     __tablename__ = "member_permission_sets"
 
@@ -147,8 +147,8 @@ class MemberPermissionSet(Base):
 class Team(Base):
     """팀입니다. 이름이 식별자이므로 중복될 수 없습니다.
 
-    팀이 어떤 포지션을 몇 자리 갖는지는 team_slots 가 보관합니다 — 팀을 생성할 때
-    포지션마다 몇 명인지 정하면 그만큼 자리가 생기고, 그 자리를 멤버로 채웁니다.
+    팀이 어떤 포지션을 몇 자리 갖는지는 team_slots 가 저장합니다. 팀을 생성할 때
+    포지션마다 자리 수를 정하면 그만큼 자리가 생성되고, 그 자리에 멤버를 배정합니다.
     """
 
     __tablename__ = "teams"
@@ -158,19 +158,19 @@ class Team(Base):
 
 
 class TeamSlot(Base):
-    """팀의 포지션 자리 하나입니다. (팀 + 포지션 + 몇 번째) 가 자리를 가리키고, member_id 가
-    그 자리에 앉은 사람이다.
+    """팀의 포지션 자리 하나입니다. (team_id, instrument, ordinal) 이 자리를 식별하고, member_id 가
+    그 자리에 배정된 멤버입니다.
 
-    member_id 가 비어 있으면 아직 아무도 안 앉은 자리다 — 팀을 만들 때 자리부터
-    생기고 사람은 나중에 채우므로, 사람이 없는 자리가 정상 상태다. 그래서 이 표는
-    "소속"이 아니라 "자리"다.
+    member_id 가 null 이면 아직 멤버가 배정되지 않은 자리입니다. 팀을 생성할 때 자리부터
+    생성되고 멤버는 나중에 배정하므로, 멤버가 없는 자리가 정상 상태입니다. 그래서 이 table 은
+    "소속"이 아니라 "자리"를 저장합니다.
 
-    사람이 지워지면 그 자리는 비워지되 사라지지는 않는다 — 자리는 팀의 구성이라
-    사람이 나갔다고 팀에 구멍이 나면 안 된다.
+    멤버가 삭제되면 그 자리는 member_id 가 null 이 되고 자리 자체는 삭제되지 않습니다(ON DELETE SET NULL).
+    자리는 팀의 구성이므로 멤버가 탈퇴해도 팀의 자리 수가 줄면 안 됩니다.
 
-    한 사람이 같은 팀의 두 자리를 겸할 수 없다. 겸하면 배정 계산이 그 사람을 같은
-    시간에 두 번 세게 된다. 빈 자리끼리는 이 조건에 걸리지 않는다 — 저장소가 빈 값을
-    서로 다른 값으로 보기 때문이다.
+    한 멤버가 같은 팀의 두 자리에 배정될 수 없습니다(team_id, member_id unique 제약). 배정되면 배정 계산이
+    그 멤버를 같은 시간에 2번 세기 때문입니다. 빈 자리끼리는 이 제약에 위반되지 않습니다. PostgreSQL 이
+    NULL 을 서로 다른 값으로 보기 때문입니다.
     """
 
     __tablename__ = "team_slots"
@@ -192,15 +192,15 @@ class TeamSlot(Base):
 
 
 class UnavailableTime(Base):
-    """멤버의 불가능 시간. 반복이 켜지면 repeat_until까지 매일 또는 매주 되풀이합니다.
+    """멤버의 불가능 시간입니다. 반복이 켜지면 repeat_until 까지 매일 또는 매주 반복합니다.
 
-    시각은 시간대 없는 값으로 저장한다 — 엔진의 TimeInterval 계약과 동일.
+    시각은 tzinfo(시간대 정보)가 없는 값으로 저장합니다. 엔진의 TimeInterval 과 같은 규칙입니다.
 
-    반복은 두 값이 갈라 가진다. 둘 다 켜는 것은 뜻이 없으므로 경계에서 막는다
-    (api/input.py require_one_repeat_cycle). 하나의 열로 합치지 않는 것은 이미
-    repeats_weekly 로 저장된 줄이 있어서다.
+    반복은 repeats_daily 와 repeats_weekly 두 열로 저장합니다. 둘 다 켜는 것은 의미가 없으므로
+    경계에서 거부합니다(api/input.py 의 require_one_repeat_cycle). 하나의 열로 합치지 않는 이유는
+    이미 repeats_weekly 로 저장된 행이 있기 때문입니다.
 
-    reason 은 사람이 적는 사유다. 엔진은 보지 않고 화면에만 쓴다 — 비워 둘 수 있다.
+    reason 은 사용자가 입력하는 사유입니다. 엔진은 사용하지 않고 화면에만 표시합니다. null 을 허용합니다.
     """
 
     __tablename__ = "unavailable_times"
@@ -220,7 +220,7 @@ class UnavailableTime(Base):
 
 
 class Room(Base):
-    """합주실. 이름이 식별자라 겹칠 수 없고, 여닫는 시각은 정시여야 합니다."""
+    """합주실입니다. 이름이 식별자이므로 중복될 수 없고, 여는 시각과 닫는 시각은 정시여야 합니다."""
 
     __tablename__ = "rooms"
 
@@ -243,9 +243,9 @@ class Room(Base):
 
 
 class Period(Base):
-    """기간. open이면 선착순 예약, focused면 자동 배정 대상.
+    """기간입니다. kind 가 open 이면 선착순 예약 기간, focused 면 자동 배정 대상인 집중 합주기간입니다.
 
-    everyday는 집중기간의 "매일" 옵션. first/second_run_at은 하루 2회 연산 시각.
+    everyday 는 집중 합주기간의 "매일" 옵션입니다. first_run_at 과 second_run_at 은 하루 2회 계산하는 시각입니다.
     """
 
     __tablename__ = "periods"
@@ -265,10 +265,10 @@ class Period(Base):
 
 
 class AssignmentRun(Base):
-    """자동 배정이 끝난 연산 시각 하나. 같은 기간·같은 날짜·같은 시각은 한 번만 남습니다.
+    """자동 배정이 완료된 계산 1회의 기록입니다. 같은 기간·같은 날짜·같은 계산 시각은 1개만 저장됩니다.
 
-    slot 은 Period 의 어느 연산 시각인지다 — 'first'는 first_run_at, 'second'는
-    second_run_at. ran_at 은 계산이 끝난 시각이다.
+    slot 은 Period 의 어느 계산 시각인지입니다. 'first' 는 first_run_at, 'second' 는
+    second_run_at 입니다. ran_at 은 계산이 완료된 시각입니다.
     """
 
     __tablename__ = "assignment_runs"
@@ -288,7 +288,7 @@ class AssignmentRun(Base):
 
 
 class Assignment(Base):
-    """확정된 배정 한 칸. 같은 합주실의 같은 시각에는 하나만 존재할 수 있습니다."""
+    """확정된 배정 slot(1시간 단위 시간 칸) 하나입니다. 같은 합주실의 같은 시각에는 하나만 존재할 수 있습니다."""
 
     __tablename__ = "assignments"
 
@@ -308,17 +308,17 @@ class Assignment(Base):
 
 
 class Post(Base):
-    """게시판 글. team_id 가 있으면 그 팀 게시판 글, NULL 이면 공지사항입니다.
+    """게시판 글입니다. team_id 가 있으면 그 팀 게시판 글, NULL 이면 공지사항입니다.
 
-    같은 표를 두 화면이 공유하므로 화면·endpoint 도 한 벌만 두면 된다.
+    같은 table 을 두 화면이 공유하므로 화면과 endpoint(API의 요청 주소 단위)도 하나씩만 둡니다.
     """
 
     __tablename__ = "posts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # 색인을 붙입니다 — 공지 목록(team_id IS NULL)과 팀 게시판 목록(team_id = 값) 모두
-    # 이 한 열로 거르므로, btree 색인 하나면 두 조회 다 걸립니다. Postgres의 btree는
-    # NULL도 색인하므로 IS NULL 조회에도 그대로 쓰입니다.
+    # index 를 둡니다. 공지 목록(team_id IS NULL)과 팀 게시판 목록(team_id = 값) 모두
+    # 이 열 하나로 필터링하므로, btree index 하나를 두 조회가 모두 사용합니다. PostgreSQL 의 btree 는
+    # NULL 도 index 에 포함하므로 IS NULL 조회에도 사용됩니다.
     team_id: Mapped[int | None] = mapped_column(
         ForeignKey("teams.id", ondelete="CASCADE"), nullable=True, index=True
     )
@@ -336,7 +336,7 @@ class Post(Base):
 
 
 class Comment(Base):
-    """게시글 댓글."""
+    """게시글의 댓글입니다."""
 
     __tablename__ = "comments"
 
@@ -354,9 +354,9 @@ class Comment(Base):
 
 
 class Attachment(Base):
-    """글에 붙은 파일 하나. 내용은 서버 디스크에 있고 이 표에는 그 위치만 있습니다.
+    """게시글의 첨부 파일 하나입니다. 파일 내용은 서버 디스크에 있고 이 table 에는 그 위치만 저장합니다.
 
-    name 은 화면에 보여줄 이름, stored_name 은 디스크에 놓인 이름이다.
+    name 은 화면에 표시할 이름, stored_name 은 디스크에 저장된 파일 이름입니다.
     """
 
     __tablename__ = "attachments"
@@ -378,12 +378,12 @@ class Attachment(Base):
 
 
 class Reservation(Base):
-    """예약 한 칸 — 집중 합주기간이 아닌 날의 한 시간.
+    """예약 slot(1시간 단위 시간 칸) 하나입니다. 집중 합주기간이 아닌 날의 1시간입니다.
 
-    Assignment와 같은 결로 방·시각당 하나만 존재한다(room_id, starts_at 유니크).
-    여러 칸을 이어 쓴 예약은 이 표에 칸 수만큼 행으로 남는다 — 화면이 Assignment 조각을
-    잇는 것과 같은 방식으로 이어붙인다.
-    team_id가 있으면 팀 예약, 없으면 member_id 개인이 직접 잡은 예약이다.
+    Assignment 와 같은 규칙으로 합주실·시각당 하나만 존재합니다(room_id, starts_at unique 제약).
+    여러 slot 을 이어서 예약하면 이 table 에 slot 수만큼 행이 저장됩니다. 화면이 Assignment 행을
+    이어 붙이는 것과 같은 방식으로 표시합니다.
+    team_id 가 있으면 팀 예약, 없으면 member_id 멤버의 개인 예약입니다.
     """
 
     __tablename__ = "reservations"
@@ -407,10 +407,11 @@ class Reservation(Base):
 
 
 class LoginSession(Base):
-    """로그인 세션 한 건. 토큰 원문이 아니라 해시(token_hash)만 저장합니다 — DB가 새어도
-    그 값으로는 로그인하지 못한다. revoked_at이 채워지거나 expires_at이 지나면 무효.
+    """로그인 session(로그인 상태를 담는 서버 쪽 기록) 하나입니다. token 원문이 아니라 해시(token_hash)만
+    저장합니다. DB 가 유출되어도 해시 값으로는 로그인할 수 없습니다. revoked_at 이 설정되거나
+    expires_at 이 지나면 무효입니다.
 
-    클래스 이름을 LoginSession으로 둔 것은 SQLAlchemy의 Session과 겹치지 않기 위해서다.
+    class 이름을 LoginSession 으로 둔 이유는 SQLAlchemy 의 Session 과 겹치지 않게 하기 위해서입니다.
     """
 
     __tablename__ = "sessions"
@@ -426,10 +427,10 @@ class LoginSession(Base):
 
 
 class AssignmentBackup(Base):
-    """이전 배정 스냅샷. 재연산 때 현행(assignments)에서 이리로 옮깁니다.
+    """이전 배정의 백업입니다. 다시 계산할 때 현행 table(assignments)의 행을 이 table 로 옮깁니다.
 
-    saved_at은 백업된 시각이다 — 같은 기간의 여러 백업을 구분하고 정렬하는 기준.
-    현행과 달리 여러 회차가 공존하므로 room+시각 유니크를 두지 않는다.
+    saved_at 은 백업된 시각입니다. 같은 기간의 여러 백업 배정기록을 구분하고 정렬하는 기준입니다.
+    현행 table 과 달리 여러 배정기록이 공존하므로 (room_id, starts_at) unique 제약을 두지 않습니다.
     """
 
     __tablename__ = "assignment_backups"
@@ -447,24 +448,24 @@ class AssignmentBackup(Base):
     __table_args__ = (CheckConstraint("ends_at > starts_at"),)
 
 
-# 알릴 만한 일의 종류. 문구는 여기 두지 않습니다 — 표에는 종류만 남기고 사람이 읽을
-# 문장은 화면이 만듭니다. 문구를 고칠 때 이미 쌓인
-# 줄까지 함께 바뀌고, 표에 손댈 일도 없습니다.
+# 알림의 종류입니다. 문구는 이 코드에 두지 않습니다. table 에는 종류만 저장하고 사람이 읽을
+# 문장은 화면이 만듭니다. 그래서 문구를 수정하면 이미 저장된 알림에도 적용되고, table 을
+# 수정할 필요가 없습니다.
 NotificationKind = Literal["assignment_updated"]
 NOTIFICATION_KINDS: tuple[NotificationKind, ...] = get_args(NotificationKind)
 
 
 class Notification(Base):
-    """사람 한 명에게 남은 화면 안 알림 하나. read_at 이 비어 있으면 아직 안 읽은 것입니다.
+    """멤버 1명에게 표시하는 화면 알림 하나입니다. read_at 이 null 이면 아직 읽지 않은 알림입니다.
 
-    읽음을 알림마다 두는 것은 나중에 하나씩 읽는 화면이 생겨도 표가 그대로이기
-    때문이다. "언제까지 읽었다" 한 값으로 두면 그때 표를 다시 만들어야 한다.
+    읽음 여부를 알림마다 두는 이유는 나중에 알림을 하나씩 읽는 화면이 생겨도 table 을 변경할
+    필요가 없기 때문입니다. "언제까지 읽었다"는 값 하나로 두면 그때 table 을 다시 만들어야 합니다.
     """
 
     __tablename__ = "notifications"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # 목록 조회는 언제나 요청한 사용자의 행만 반환하므로 이 열 하나로 거릅니다.
+    # 목록 조회는 언제나 요청한 사용자의 행만 반환하므로 이 열 하나로 필터링합니다.
     member_id: Mapped[int] = mapped_column(
         ForeignKey("members.id", ondelete="CASCADE"), index=True
     )
@@ -476,11 +477,11 @@ class Notification(Base):
 
 
 class PasswordResetToken(Base):
-    """비밀번호 재설정 토큰 한 건. 세션(sessions)과 같은 얼개로 원문이 아니라 해시만
-    저장한다 — DB가 새어도 그 값으로는 비밀번호를 바꾸지 못한다.
+    """비밀번호 재설정 token 하나입니다. sessions table 과 같은 구조로 원문이 아니라 해시만
+    저장합니다. DB 가 유출되어도 해시 값으로는 비밀번호를 변경할 수 없습니다.
 
-    used_at이 채워지거나 expires_at이 지나면 무효다. 한 번 쓰면 죽으므로 sessions의
-    revoked_at과 달리 이름이 used_at이다.
+    used_at 이 설정되거나 expires_at 이 지나면 무효입니다. 한 번 사용하면 무효가 되므로 sessions 의
+    revoked_at 과 달리 열 이름이 used_at 입니다.
     """
 
     __tablename__ = "password_reset_tokens"

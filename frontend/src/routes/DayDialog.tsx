@@ -21,7 +21,7 @@ import type { Room } from "../lib/contract";
 import { say } from "../lib/toast";
 import type { DayTeam } from "../lib/roster";
 
-/** 하루에 놓인 것 하나입니다. 배정은 서버가 준 것이고, 예약과 불가능 일정은 화면이 넣은 것입니다. */
+/** 하루에 표시하는 항목 하나입니다. 배정은 서버가 계산한 항목이고, 예약과 불가능 일정은 사용자가 등록한 항목입니다. */
 export type Entry = {
   kind: "assign" | "book" | "off";
   team: string | null;
@@ -39,7 +39,7 @@ function hourText(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
 }
 
-/** 반복 선택지에 세우는 두 항목입니다. 하나만 켜집니다. */
+/** 반복 선택지의 항목 2개입니다. 하나만 켜집니다. */
 const REPEAT_CHOICES: readonly { key: Exclude<RepeatCycle, "none">; label: string }[] = [
   { key: "daily", label: "매일 불가능해요" },
   { key: "weekly", label: "매주 이 시간은 불가능해요" },
@@ -76,14 +76,14 @@ export function DayDialog(props: {
   const [error, setError] = useState("");
   const [who, setWho] = useState("me");
   const [roomId, setRoomId] = useState<number | null>(null);
-  // 매일과 매주는 하나만 선택합니다. 같은 것을 다시 누르면 반복이 꺼집니다.
+  // 매일과 매주는 하나만 선택합니다. 같은 항목을 다시 누르면 반복이 꺼집니다.
   const [repeat, setRepeat] = useState<RepeatCycle>("none");
   const [offReason, setOffReason] = useState("");
   // 시각 두 시간 칸입니다. 기본은 그날 여는 칸부터 닫는 칸까지 전부입니다.
   const [off, setOff] = useState({ a: 0, b: slotCount });
   const [book, setBook] = useState({ a: 0, b: slotCount });
 
-  // 아직 아무것도 선택하지 않았으면 목록의 첫 합주실입니다 — dialog를 열자마자 어딘가는 정해져 있어야 합니다.
+  // 아직 아무것도 선택하지 않았으면 목록의 첫 합주실입니다. dialog 를 열자마자 합주실 하나는 선택되어 있어야 합니다.
   const room = rooms.find((item) => item.id === roomId) ?? rooms[0] ?? null;
 
   const label = (index: number) => slotLabel(index, openHour);
@@ -94,19 +94,19 @@ export function DayDialog(props: {
       : teams.find((team) => team.key === entry.team)?.name ?? entry.who ?? "개인";
 
   const booked = entries.filter((entry) => entry.kind !== "off");
-  // 선착순은 합주실마다 따로 계산합니다 — 선택한 합주실에 놓인 것만 그 시각을 차단합니다.
+  // 선착순은 합주실마다 따로 계산합니다. 선택한 합주실에 등록된 항목만 그 시각을 차단합니다.
   const grid = takenGrid(
     booked.filter((entry) => room !== null && entry.room === room.name),
     slotCount,
   );
-  // 내 팀에 배정된 것과, 내가 직접 등록한 것(removeIds가 실린 것). 개인 이름으로 한 예약은
+  // 내 팀에 배정된 항목과, 내가 직접 등록한 항목(removeIds 가 있는 항목)입니다. 개인 이름으로 한 예약은
   // 팀이 없어 팀만 보고는 구분할 수 없습니다.
   const mine = entries.filter(
     (entry) => entry.removeIds !== undefined
       || (entry.team !== null && teams.some((t) => t.key === entry.team && t.mine)),
   );
 
-  // 로그인한 사용자가 삭제할 수 있는 것만 모읍니다. 다른 사용자의 예약과 서버가 배정한 것에는 removeIds가 없습니다.
+  // 로그인한 사용자가 삭제할 수 있는 항목만 모읍니다. 다른 사용자의 예약과 서버가 배정한 항목에는 removeIds 가 없습니다.
   const removable = entries.filter((entry) => entry.removeIds !== undefined);
 
   /** 하루를 세로 띠로 표시합니다. 시각은 왼쪽에 시간 단위로만 적습니다. */
@@ -143,7 +143,7 @@ export function DayDialog(props: {
     (rosters[index]?.data ?? []).map((member) => ({ team, member })));
   const rosterError = rosters.find((query) => query.isError)?.error;
 
-  /** 시각 두 개를 선택하는 자리입니다. 이미 차 있는 칸은 선택할 수 없게 차단합니다. */
+  /** 시작 시각과 종료 시각을 선택하는 입력입니다. 이미 예약된 slot 은 선택할 수 없게 차단합니다. */
   const picker = (
     prefix: string,
     range: { a: number; b: number },
@@ -180,7 +180,7 @@ export function DayDialog(props: {
     </div>
   );
 
-  /** 등록한 것 하나를 삭제합니다. 예약은 시간 칸마다 id가 다르므로 여러 개를 한 번에 넘깁니다. */
+  /** 등록한 항목 하나를 삭제합니다. 예약은 slot 마다 id 가 다르므로 id 여러 개를 한 번에 전달합니다. */
   const removeEntry = async (entry: Entry) => {
     const ids = entry.removeIds;
     if (ids === undefined || memberId === null) return;
@@ -193,9 +193,9 @@ export function DayDialog(props: {
       await (booking ? cancelBooking(ids) : removeUnavailable(memberId, ids[0]));
     } catch (error) {
       setError(error instanceof Error ? error.message : "삭제하지 못했어요.");
-      // 실패해도 서버 값을 다시 받습니다. 예약은 시간 칸마다 삭제하므로 앞쪽 몇 칸은 이미 삭제되었을
-      // 수 있는데, 화면이 옛 id를 그대로 들고 있으면 다시 눌러도 이미 없는 칸부터
-      // 삭제하려다 같은 자리에서 멈춥니다.
+      // 실패해도 서버 값을 다시 받습니다. 예약은 slot 마다 삭제하므로 앞쪽 slot 은 이미 삭제되었을
+      // 수 있는데, 화면이 이전 id 를 그대로 가지고 있으면 다시 눌러도 이미 없는 slot 부터
+      // 삭제하려다 같은 위치에서 실패합니다.
       onSaved();
       return;
     }
@@ -204,8 +204,8 @@ export function DayDialog(props: {
     say(booking ? "예약을 취소했어요" : "해당 불가능 일정을 삭제했어요");
   };
 
-  /** 타임라인 아래에 서는 목록입니다. 로그인한 사용자가 이 날 등록한 것만 줄로 세워 삭제할 수 있게 합니다.
-   *  막대 안에 삭제 버튼을 넣지 않는 것은 1시간 칸짜리 막대가 14px이라 누를 자리가 없어서입니다. */
+  /** 타임라인 아래의 목록입니다. 로그인한 사용자가 이날 등록한 항목만 나열해 삭제할 수 있게 합니다.
+   *  막대 안에 삭제 버튼을 넣지 않는 이유는 1시간 slot 막대가 14px 이라 클릭 영역이 없기 때문입니다. */
   const myList = removable.length === 0 ? null : (
     <div className="people">
       <h3>등록된 불가능 일정</h3>
@@ -255,9 +255,9 @@ export function DayDialog(props: {
   const addBooking = async () => {
     const { a, b } = fixed ? { a: fixed.from, b: fixed.to } : book;
     if (b <= a) { setError("끝 시간을 시작 시간 이후로 설정해주세요."); return; }
-    // 선착순이므로 이미 찬 칸이 하나라도 있으면 먼저 걸러 서버까지 가지 않습니다.
-    // 두 사람이 동시에 노려 이 검사를 둘 다 통과해도, 최종 판정은 서버(선착순 유니크
-    // 제약)가 하므로 아래 catch 에서 서버가 돌려준 사유를 그대로 보여줍니다.
+    // 선착순이므로 이미 예약된 slot 이 하나라도 있으면 먼저 거부해 서버를 호출하지 않습니다.
+    // 두 사람이 동시에 시도해 이 검증을 둘 다 통과해도, 최종 판정은 서버(unique
+    // 제약)가 하므로 아래 catch 에서 서버가 반환한 사유를 그대로 표시합니다.
     for (let i = a; i < b; i += 1) {
       if (grid[i]) { setError(`${label(i)}은 이미 예약되어있어요. 다른 시간을 선택해주세요.`); return; }
     }
@@ -338,7 +338,7 @@ export function DayDialog(props: {
                 key={choice.key}
                 type="button"
                 className={`rep${on ? " on" : ""}`}
-                // 같은 것을 다시 누르면 꺼집니다 — 반복을 끄려고 다른 자리를 찾지 않아도 됩니다.
+                // 같은 항목을 다시 누르면 꺼집니다. 반복을 끄는 별도 버튼이 필요 없습니다.
                 aria-pressed={on}
                 onClick={() => setRepeat(on ? "none" : choice.key)}
               >
@@ -356,7 +356,7 @@ export function DayDialog(props: {
         {fixed
           ? <div className="bigtime"><b>{label(fixed.from)} – {endLabel(fixed.to)}</b><small>해당 시간으로 예약할게요</small></div>
           : timeline(booked)}
-        {/* 합주실을 먼저 고릅니다 — 아래 시각 고르기가 그 합주실에 찬 자리만 잠급니다. */}
+        {/* 합주실을 먼저 선택합니다. 아래 시각 선택이 그 합주실의 예약된 slot 만 차단합니다. */}
         <p className="cap2">합주실을 선택해주세요</p>
         <div className="pick">
           <div className="fld">
@@ -388,7 +388,7 @@ export function DayDialog(props: {
   const hint = `${roomsLabel || "합주실"} · ${hourText(openHour)}–${hourText(closeHour)}`
     + ` · 1시간 단위 · ${inFocus ? "배정된 기간" : "배정 없음"}`;
 
-  // 보기만 하는 탭(all)에는 아래 버튼 줄을 주지 않습니다 — Modal 이 줄 자체를 그리지 않습니다.
+  // 조회 전용 탭(all)에는 아래 버튼 줄을 전달하지 않습니다. Modal 이 줄 자체를 렌더하지 않습니다.
   const foot = tab === "all" ? undefined : (
     <>
       <button className="ghost" onClick={onClose}>닫기</button>

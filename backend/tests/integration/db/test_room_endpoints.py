@@ -153,13 +153,13 @@ def test_room_creation_treats_a_whitespace_only_difference_as_a_duplicate(
 def test_room_name_race_at_commit_time_is_translated_not_500(
     test_engine: Engine, db_session: Session
 ) -> None:
-    """이름 중복을 사전 검사(SELECT)하고 commit 사이에는 잠금이 없습니다.
+    """이름 중복 사전 검사(SELECT)와 commit 사이에는 lock 이 없습니다.
 
-    같은 이름으로 두 요청이 동시에 들어오면 둘 다 사전 검사를 통과하고, 나중 커밋에서
-    rooms_name_key 위반이 실제로 발생합니다. 완전히 동시인 두 요청은 스레드 없이 재현할 수
-    없어서, 두 독립 세션이 순서대로 커밋할 때 두 번째 커밋에서 IntegrityError가 발생하고 그것이
-    현재 사용하는 것과 같은 메시지의 ValueError로 변환되는지를 직접 검증합니다. db_session은
-    이 검사가 남긴 행을 다른 검사로부터 격리하는 정리 목적으로만 받습니다.
+    같은 이름으로 두 요청이 동시에 들어오면 둘 다 사전 검사를 통과하고, 나중에 commit 한 쪽에서
+    rooms_name_key 위반이 발생합니다. 완전히 동시인 두 요청은 스레드 없이 재현할 수
+    없어서, 독립된 두 session 이 순서대로 commit 할 때 두 번째 commit 에서 IntegrityError 가 발생하고
+    그 예외가 ROOM_MESSAGES 의 문장을 담은 ValueError 로 변환되는지를 직접 검증합니다. db_session 은
+    이 테스트가 남긴 행을 다른 테스트로부터 격리하는 정리 목적으로만 받습니다.
     """
     session_a = Session(test_engine)
     session_b = Session(test_engine)

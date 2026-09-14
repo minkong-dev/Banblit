@@ -1,4 +1,4 @@
-"""api/input.py의 입력 검증입니다. 빈 문자열·시간·날짜·구간 — 모든 입력 유형에 같은 검증 규칙이 적용됩니다."""
+"""api/input.py 의 입력 검증 테스트입니다. 빈 문자열·시각·날짜·구간 모든 입력 유형에 같은 검증 규칙이 적용됩니다."""
 
 from datetime import date, datetime
 from datetime import date, time
@@ -71,7 +71,7 @@ def test_require_password_accepts_all_four_kinds_of_character() -> None:
     require_password("Abcdef1!")
 
 
-# 각 줄이 규칙 하나씩을 어깁니다 — 짧음, 김, 소문자 없음, 대문자 없음, 숫자 없음, 특수기호 없음.
+# 각 값이 규칙 하나씩을 위반합니다. 순서대로 너무 짧음, 너무 김, 소문자 없음, 대문자 없음, 숫자 없음, 특수기호 없음.
 @pytest.mark.parametrize(
     "value",
     ["Abcde1!", "Abcdefghij1234567890!", "ABCDEF1!", "abcdef1!", "Abcdefg!", "Abcdefg1"],
@@ -142,7 +142,7 @@ def test_parse_clock_rejects_a_bad_run_time() -> None:
 
 
 def test_parse_clock_does_not_require_a_on_the_hour() -> None:
-    # 자동 연산 시각은 격자 제약이 없습니다 — 09:17 같은 값도 받아들여야 합니다.
+    # 자동 계산 시각은 정시 제약이 없습니다. 09:17 같은 값도 허용해야 합니다.
     assert parse_clock("09:17", "1차 연산 시각") == time(9, 17)
 
 

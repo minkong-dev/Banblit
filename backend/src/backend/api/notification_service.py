@@ -11,8 +11,8 @@ def notify_assignment_updated(
 ) -> int:
     """해당 기간에 slot(1시간 단위 시간 칸)을 배정받은 팀에 속한 모든 멤버에게 알림을 생성하고, 생성된 개수를 반환합니다.
 
-    저장된 배정 기록에서 팀 번호를 추출하여 명단을 작성합니다 — 계산에 입력한 팀 목록이
-    아니라 실제로 slot을 배정받은 팀을 기준으로 합니다. 한 멤버가 여러 팀에 속한 경우에도 한 줄만 생성됩니다.
+    저장된 Assignment 행에서 팀 번호를 조회해 대상 멤버를 정합니다. 계산에 입력한 팀 목록이
+    아니라 실제로 slot 을 배정받은 팀을 기준으로 합니다. 한 멤버가 여러 팀에 속한 경우에도 알림은 1개만 생성합니다.
     """
     member_ids = session.scalars(
         select(TeamSlot.member_id)
@@ -47,7 +47,7 @@ def list_notifications(session: Session, member_id: int) -> list[Notification]:
 
 
 def mark_all_read(session: Session, member_id: int, read_at: datetime) -> None:
-    """해당 멤버의 미읽 알림에 읽은 시간을 설정합니다. 이미 읽은 알림은 변경하지 않습니다."""
+    """해당 멤버의 읽지 않은 알림에 read_at 을 설정합니다. 이미 읽은 알림은 변경하지 않습니다."""
     session.execute(
         update(Notification)
         .where(Notification.member_id == member_id)

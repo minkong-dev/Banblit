@@ -1,52 +1,52 @@
-/* 모든 화면이 함께 쓰는 초기화. 화면마다 다른 값은 각 화면 CSS 가 갖는다.
-   화면 CSS 는 body[data-page="..."] 안에 갇혀 있어 서로 섞이지 않는다 —
-   스케줄러와 배정 화면은 같은 이름의 클래스를 서른 개 넘게 서로 다른 규칙으로 쓴다. */
+/* 모든 화면이 함께 사용하는 초기화입니다. 화면마다 다른 값은 각 화면 CSS 가 정의합니다.
+   화면 CSS 는 body[data-page="..."] 선택자 안에 격리되어 서로 영향을 주지 않습니다.
+   스케줄러와 배정 화면은 같은 이름의 클래스 30개 이상을 서로 다른 규칙으로 사용합니다. */
 
 *, *::before, *::after { box-sizing: border-box; }
 html { overflow: auto; }
 body { margin: 0; }
 [hidden] { display: none !important; }
 
-/* 스크롤 막대를 감춘다. 구르는 것은 그대로 되고 막대만 안 보인다 — 화면 곳곳이
-   제 안에서 구르는 구조라, 막대가 보이면 자리마다 회색 줄이 그어진다. */
+/* 스크롤 막대를 감춥니다. 스크롤은 그대로 동작하고 막대만 표시하지 않습니다. 화면 곳곳이
+   각자 스크롤하는 구조라, 막대가 보이면 영역마다 회색 줄이 생깁니다. */
 * { scrollbar-width: none; }
 *::-webkit-scrollbar { width: 0; height: 0; }
 
-/* 본문이 가로로 늘어날 수 있는 한계. 모니터가 넓다고 표와 칸이 끝까지 벌어지면
-   눈이 한 줄을 따라가지 못한다 — 넓은 화면에서는 본문을 이 폭까지만 키우고
-   남는 자리는 좌우 여백으로 둔다(가운데 정렬). 달력처럼 넓을수록 좋은 화면은
-   이 값을 쓰지 않는다. */
+/* 본문의 최대 가로 폭입니다. 모니터가 넓다고 표와 칸이 끝까지 벌어지면
+   사용자가 한 줄을 읽기 어렵습니다. 넓은 화면에서는 본문을 이 폭까지만 키우고
+   남는 공간은 좌우 여백으로 둡니다(가운데 정렬). 달력처럼 넓을수록 좋은 화면은
+   이 값을 사용하지 않습니다. */
 :root { --content: 1440px; }
 
-/* 이 제품의 색. 사용자가 정한 값에 "지정" 표시를 붙였다.
-   코랄은 하나뿐이다 — 강조가 필요한 자리는 어디서나 --coral 을 그대로 쓰고,
-   자리마다 밝기를 바꾸지 않는다. 코랄 위에 글자가 얹히면 언제나 --coral-ink 다.
-   --coral-press 는 다른 코랄이 아니라 눌렸을 때만 쓰는 같은 색의 어두운 단계다. */
+/* 이 제품의 색입니다. 사용자가 정한 값에 "지정" 표시를 붙였습니다.
+   코랄은 하나뿐입니다. 강조가 필요한 곳은 어디서나 --coral 을 그대로 사용하고,
+   곳마다 밝기를 바꾸지 않습니다. 코랄 위의 글자색은 언제나 --coral-ink 입니다.
+   --coral-press 는 다른 코랄이 아니라 눌렸을 때만 사용하는 같은 색의 어두운 단계입니다. */
 :root {
-  --coral: #FF7F50;       /* 지정 — 주색 */
+  --coral: #FF7F50;       /* 지정. 주색 */
   --coral-press: #E8683A;
   --coral-ink: #2E1006;
-  --coral-lite: #FFB4A2;  /* 지정 — 어두운 바탕에서 코랄을 더 띄울 때 */
-  --coral-soft: #FFF1E6;  /* 지정 — 코랄 계열의 옅은 바탕 */
+  --coral-lite: #FFB4A2;  /* 지정. 어두운 바탕에서 코랄을 더 밝게 표시할 때 */
+  --coral-soft: #FFF1E6;  /* 지정. 코랄 계열의 옅은 바탕 */
   --coral-soft-dark: #3A211A;
 
-  /* 캘린더 칩은 색 자체가 팀을 가리키는 자리라 파랑·보라·금색과 한 벌로 움직인다.
-     주색으로서의 코랄이 아니라 그 네 칸 중 첫 칸이므로 다른 셋과 같은 규칙
-     — 옅은 바탕에 읽히는 글자 — 을 따른다. */
+  /* 캘린더 칩은 색 자체가 팀을 구분하는 값이라 파랑·보라·금색과 한 묶음으로 사용합니다.
+     주색으로서의 코랄이 아니라 팀 색 4개 중 첫 번째이므로 다른 3개와 같은 규칙
+     (옅은 바탕에 읽히는 글자)을 따릅니다. */
   --coral-chip: #FFE8DD;
   --coral-chip-ink: #B3451E;
   --coral-chip-dark: #43201A;
 
-  /* 세이지 — 확정·성공 신호. 코랄이 주색이라 초록에 신호 자리가 났다. */
+  /* 세이지는 확정·성공 표시 색입니다. 코랄이 주색이라 초록을 표시 색으로 사용합니다. */
   --sage: #3A5A40;        /* 지정 */
   --sage-lite: #6B9080;   /* 지정 */
   --sage-soft: #E7EFEA;
   --sage-soft-dark: #1B2A22;
 }
 
-/* 화면 팔레트 — 여섯 화면이 같은 값을 쓴다. light-dark(밝은 값, 어두운 값) 은 그 값을
-   쓰는 자리의 color-scheme 을 보고 하나를 고른다. 어느 쪽인지는 shell.css 가 body 에
-   정한다(main.tsx 가 첫 그림 전에 html 의 data-theme 을 박는다). */
+/* 화면 팔레트입니다. 화면 6개가 같은 값을 사용합니다. light-dark(밝은 값, 어두운 값) 은 그 값을
+   사용하는 곳의 color-scheme 을 보고 하나를 고릅니다. 어느 쪽인지는 shell.css 가 body 에
+   정합니다(main.tsx 가 첫 렌더링 전에 html 의 data-theme 을 설정합니다). */
 :root {
   --bg: light-dark(#F2F4F6, #0E1013);
   --card: light-dark(#FFFFFF, #191C20);
@@ -56,14 +56,14 @@ body { margin: 0; }
   --t1: light-dark(#191F28, #E9EDF0);
   --t2: light-dark(#4E5968, #A0AAB4);
   --t3: light-dark(#8B95A1, #6E7882);
-  /* 코랄과 그 위 글자색은 밝은 화면과 어두운 화면이 같다. 바탕만 갈린다. */
+  /* 코랄과 그 위 글자색은 밝은 화면과 어두운 화면이 같습니다. 바탕색만 다릅니다. */
   --brand: var(--coral); --brand-press: var(--coral-press); --brand-on: var(--coral-ink);
   --brand-tint: light-dark(var(--coral-soft), var(--coral-soft-dark));
   --green: light-dark(var(--sage), var(--sage-lite));
   --green-tint: light-dark(var(--sage-soft), var(--sage-soft-dark));
   --amber: light-dark(#E8890C, #FFB84D); --amber-tint: light-dark(#FFF4E0, #33270D);
   --red: light-dark(#F04452, #FF6B75); --red-tint: light-dark(#FDECEE, #331A1D);
-  /* 달력의 팀 색 네 칸 */
+  /* 달력의 팀 색 4개 */
   --c1: light-dark(var(--coral-chip-ink), var(--coral-lite)); --c1-tint: light-dark(var(--coral-chip), var(--coral-chip-dark));
   --c2: light-dark(#43679B, #8FB3E0); --c2-tint: light-dark(#E5EDF7, #17222F);
   --c3: light-dark(#715599, #B49BE0); --c3-tint: light-dark(#EDE8F7, #241E33);
@@ -72,21 +72,21 @@ body { margin: 0; }
   --shadow: 0 1px 2px light-dark(rgba(0,23,51,.04), rgba(0,0,0,.4)), 0 8px 24px light-dark(rgba(0,23,51,.07), rgba(0,0,0,.35));
   --shadow-up: 0 12px 48px light-dark(rgba(0,23,51,.18), rgba(0,0,0,.6));
 
-  /* 왼쪽 메뉴 폭과 창의 가로 하한. 하한 아래에서는 배치를 바꾸지 않고 문서가 구른다. */
+  /* 왼쪽 메뉴 폭과 창의 최소 가로 폭입니다. 최소 폭 아래에서는 배치를 바꾸지 않고 문서가 가로로 스크롤됩니다. */
   --side: clamp(232px, 15%, 300px);
   --minw: 1060px;
 }
 
-/* 체크칸 — 브라우저 기본 네모 대신 테두리 없는 체크 표시를 세운다(components/CheckMark.tsx).
-   진짜 input 은 지우지 않고 눈에서만 감춘다. display:none 이나 visibility:hidden 으로
-   지우면 키보드가 닿지 못하고 낭독기가 읽지 못한다. */
+/* 체크박스입니다. 브라우저 기본 네모 대신 테두리 없는 체크 표시를 사용합니다(components/CheckMark.tsx).
+   실제 input 은 삭제하지 않고 시각적으로만 감춥니다. display:none 이나 visibility:hidden 으로
+   감추면 키보드로 이동할 수 없고 스크린 리더가 읽지 못합니다. */
 .chk { display: inline-flex; align-items: center; position: relative; flex: none; }
 .chk input {
   position: absolute; inset: 0; width: 100%; height: 100%;
   margin: 0; opacity: 0; cursor: pointer;
 }
 .chk input:disabled { cursor: default; }
-/* 끈 상태도 자리를 지킨다 — 켤 때 옆의 글자가 밀리지 않는다. */
+/* 끈 상태도 같은 크기를 차지합니다. 켤 때 옆의 글자가 밀리지 않습니다. */
 .chkmark {
   width: 20px; height: 20px; flex: none;
   color: var(--t3, currentColor); opacity: .3;

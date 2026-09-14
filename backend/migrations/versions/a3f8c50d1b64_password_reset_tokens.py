@@ -1,4 +1,4 @@
-"""비밀번호 재설정 토큰입니다.
+"""비밀번호 재설정 token table 을 생성합니다.
 
 Revision ID: a3f8c50d1b64
 Revises: f6e0b91a7c48
@@ -20,8 +20,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # 비밀번호 재설정 토큰입니다. sessions와 같은 구조로 원본이 아니라 해시만 저장합니다.
-    # used_at이 채워지면 해당 토큰은 더 이상 사용할 수 없습니다. 한 번만 사용됩니다.
+    # 비밀번호 재설정 token 입니다. sessions 와 같은 구조로 원문이 아니라 해시만 저장합니다.
+    # used_at 이 설정되면 해당 token 은 더 이상 사용할 수 없습니다. 한 번만 사용됩니다.
     op.create_table(
         'password_reset_tokens',
         sa.Column('id', sa.Integer(), nullable=False),

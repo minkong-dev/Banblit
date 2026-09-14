@@ -48,7 +48,7 @@ test("합주실을 고치면 저장되고 다시 열어도 남아 있다", async
     .filter({ has: page.getByRole("button", { name: editButtonName }) });
   await expect(rowAfterReload).toContainText(changedOpensAt);
 
-  // 복원합니다. 다음 번 테스트도, 이 값을 보는 사람도 원래 시각을 봐야 하기 때문입니다.
+  // 복원합니다. 다음 테스트도, 이 값을 보는 사용자도 원래 시각을 봐야 하기 때문입니다.
   await page.getByRole("button", { name: editButtonName }).click();
   await page.locator("li.editing").getByLabel("여는 시각").fill(room.opens_at);
   await page.locator("li.editing").getByRole("button", { name: "저장" }).click();

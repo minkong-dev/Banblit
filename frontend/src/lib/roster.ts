@@ -1,4 +1,4 @@
-// 팀 생성과 자리 배정의 검증과 이름 정의입니다. 화면과 서버는 건드리지 않습니다.
+// 팀 생성과 자리 배정의 검증과 이름 정의입니다. 화면이나 서버와 상호작용하지 않습니다.
 // 검증 함수는 값이 유효하면 빈 문자열을, 아니면 사람이 읽을 수 있는 사유를 반환합니다.
 
 import type { Instrument, MyTeam } from "./contract";
@@ -11,7 +11,7 @@ export function teamNameMessage(name: string, taken: string[]): string {
   return uniqueNameMessage(name, taken, "팀");
 }
 
-/** 포지션마다 몇 자리인지 정한 것을 전송하기 전에 검증합니다. 서버도 같은 것을 다시 검증합니다. */
+/** 포지션마다 정한 자리 수를 전송하기 전에 검증합니다. 서버도 같은 값을 다시 검증합니다. */
 export function slotCountsMessage(counts: Record<string, number>): string {
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
   if (total === 0) return "포지션을 한 자리 이상 추가해주세요.";
@@ -28,14 +28,14 @@ export function slotName(
   return sameInstrumentCount > 1 ? `${instrument} ${ordinal}` : instrument;
 }
 
-/** 사람 이름 옆에 기수를 붙입니다. 동명이인을 화면에서 구분하는 값이 이것뿐입니다. */
+/** 사람 이름 옆에 기수를 붙입니다. 동명이인을 화면에서 구분하는 값이 기수뿐입니다. */
 export function memberLabel(name: string, cohort: number | null): string {
   return cohort === null ? name : `${name} (${cohort}기)`;
 }
 
 export type TeamRow = { team_id: number; team: string };
 
-// 달력과 목록에 사용되는 팀 색은 네 가지를 순환합니다. CSS 변수 --c1~--c4 와 짝입니다.
+// 달력과 목록에 사용되는 팀 색은 4가지를 순환합니다. CSS 변수 --c1~--c4 와 대응합니다.
 const TEAM_COLORS = 4;
 
 /** 목록에서 index(목록에서의 위치 번호) 번째 팀에 줄 색 이름입니다. 목록 안 순서가 곧 색이므로,
@@ -55,8 +55,8 @@ export function teamsOf(
 ): DayTeam[] {
   // 확정된 일정에 나온 팀을 번호 순서대로 수집합니다. 색은 전체 팀 목록(allTeams)에서의
   // 위치로 매깁니다. 이는 프로필 카드(components/hooks useMyTeams)와 같은 규칙이므로 같은 팀이
-  // 두 곳에서 다른 색으로 보이지 않습니다. 목록을 아직 받지 못했으면 일정 순서로 임시로 칠합니다.
-  // mine 은 목록에서의 위치가 아니라 myTeamIds(로그인한 계정이 실제로 앉은 자리)로 결정합니다.
+  // 두 곳에서 다른 색으로 표시되지 않습니다. 목록을 아직 받지 못했으면 일정 순서로 임시 색을 정합니다.
+  // mine 은 목록에서의 위치가 아니라 myTeamIds(로그인한 계정이 실제로 배정된 자리)로 결정합니다.
   const seen = new Map<number, string>();
   for (const row of rows) {
     if (!seen.has(row.team_id)) seen.set(row.team_id, row.team);

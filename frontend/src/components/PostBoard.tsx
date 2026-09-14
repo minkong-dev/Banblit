@@ -116,11 +116,11 @@ function WriteForm(props: {
   const [files, setFiles] = useState<File[]>([]);
   // 파일 업로드 진행 상황을 표시합니다. 비어 있으면 업로드 중이 아닙니다.
   const [stage, setStage] = useState("");
-  // 글은 생성되었지만 attachment(첨부 파일) 업로드에서 실패했을 때의 글 id.
+  // 글은 생성되었지만 attachment(첨부 파일) 업로드에서 실패했을 때의 글 id 입니다.
   // null 이면 글을 아직 생성하지 않았습니다.
   const [postedId, setPostedId] = useState<number | null>(null);
   const [touched, setTouched] = useState(false);
-  // 선택한 파일은 브라우저가 관리하므로 code(코드)에서 값을 설정할 수 없습니다.
+  // 선택한 파일은 브라우저가 관리하므로 코드에서 값을 설정할 수 없습니다.
   // 업로드 완료 후 입력 칸을 초기화하려면 DOM 요소에 직접 접근해야 합니다.
   const picker = useRef<HTMLInputElement>(null);
 
@@ -147,13 +147,13 @@ function WriteForm(props: {
 
   const send = useMutation({
     mutationFn: async () => {
-      // 글이 먼저입니다 — 첨부는 붙을 글 번호를 받아야 올릴 수 있습니다. 앞서 만들어 둔 글이
-      // 있으면(첨부에서만 걸린 경우) 다시 만들지 않습니다. 그러지 않으면 다시 누를 때
+      // 글을 먼저 생성합니다. 첨부는 글 번호를 받아야 업로드할 수 있습니다. 앞서 생성한 글이
+      // 있으면(첨부 업로드에서만 실패한 경우) 다시 생성하지 않습니다. 다시 생성하면 재시도할 때
       // 같은 글이 하나 더 생깁니다.
       let postId = postedId;
       if (postId === null) {
         const { post } = await getJSON<{ post: Post }>(writePath, {
-          // author_id 는 안 보냅니다 — 서버가 요청에 실린 토큰으로 글쓴이를 정합니다.
+          // author_id 는 보내지 않습니다. 서버가 요청의 인증 cookie 로 작성자를 정합니다.
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title, body }),
@@ -203,7 +203,7 @@ function WriteForm(props: {
             id="postTitle"
             value={title}
             // 업로드 중 또는 글은 생성되었으나 attachment 업로드에서 실패했을 때 비활성화합니다.
-            // 이미 제출된 값이므로 여기서 수정해도 반영되지 않습니다.
+            // 이미 제출된 값이므로 이 form 에서 수정해도 반영되지 않습니다.
             disabled={send.isPending || postedId !== null}
             aria-invalid={bad !== ""}
             aria-describedby={bad === "" ? undefined : "postWhy"}

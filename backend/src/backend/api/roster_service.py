@@ -13,15 +13,15 @@ from backend.db.models import (
 )
 from backend.db.pipeline import commit_translating
 
-# 걸릴 수 있는 제약과 그때 사람에게 보일 문장입니다. 이름은 마이그레이션이 만든 것입니다.
+# 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 바꾸는 단계별 기록)이 정한 이름입니다.
 ROSTER_MESSAGES = {
     "teams_name_key": "이미 있는 팀 이름입니다",
     "team_slots_team_id_member_id_key": "이미 그 팀의 다른 포지션에 있는 사람입니다",
     "team_slots_team_id_instrument_ordinal_key": "이미 있는 포지션입니다",
 }
 
-# 한 팀의 포지션 수 상한입니다. 배정 계산이 팀당 멤버를 최대 10명까지만 받으므로 그 값에 맞춥니다 —
-# 여기서 더 받아 두면 포지션은 생성되지만 배정이 전체적으로 실패합니다.
+# 한 팀의 포지션 수 상한입니다. 배정 계산이 팀당 멤버를 최대 10명까지만 받으므로 그 값에 맞춥니다.
+# 이 값보다 크게 허용하면 포지션은 생성되지만 그 팀이 포함된 배정 계산이 실패합니다.
 MAX_SLOTS_PER_TEAM = 10
 
 
@@ -46,7 +46,7 @@ def list_teams(session: Session) -> list[tuple[Team, int, int]]:
 def list_slots(session: Session, team_id: int) -> list[tuple[TeamSlot, Member | None]]:
     """팀의 포지션을 포지션·번호 순으로, 그 포지션에 배정된 멤버와 함께 반환합니다.
 
-    빈 포지션도 함께 포함됩니다 — 화면이 채워야 할 곳을 표시해야 하므로 제외하면 안 됩니다.
+    빈 포지션도 함께 포함합니다. 화면이 비어 있는 포지션을 표시해야 하므로 제외하면 안 됩니다.
     """
     _get_team_or_raise(session, team_id)
     rows = session.execute(
@@ -100,8 +100,8 @@ def list_members(
 def search_members(session: Session, query: str, limit: int = 20) -> list[Member]:
     """이름으로 멤버를 검색합니다. 포지션에 배정할 멤버를 선택하는 검색 UI가 사용합니다.
 
-    빈 검색어에 전체 목록을 반환하지 않습니다 — 명단 전체가 노출되는 endpoint가 되면 안 됩니다.
-    동명이인이 있으므로 결과에는 기수도 포함됩니다(호출 쪽이 표시합니다).
+    빈 검색어에 전체 목록을 반환하지 않습니다. 명단 전체가 노출되는 endpoint 가 되면 안 됩니다.
+    동명이인이 있으므로 결과에는 기수도 포함됩니다(호출자가 표시합니다).
     """
     trimmed = query.strip()
     if not trimmed:
@@ -144,7 +144,7 @@ def _get_team_or_raise(session: Session, team_id: int) -> Team:
 
 def _get_slot_or_raise(session: Session, team_id: int, slot_id: int) -> TeamSlot:
     slot = session.get(TeamSlot, slot_id)
-    # slot_id만 맞고 팀이 다르면 없는 것으로 취급합니다 — 다른 팀의 포지션을 번호로 건드릴 수 없습니다.
+    # slot_id 만 맞고 팀이 다르면 없는 포지션으로 처리합니다. 다른 팀의 포지션을 번호만으로 수정할 수 없습니다.
     if slot is None or slot.team_id != team_id:
         raise ValueError("그런 포지션이 없습니다")
     return slot
@@ -187,7 +187,7 @@ def replace_slots(session: Session, team_id: int, counts: dict[str, int]) -> Non
     (포지션, 번호)는 그대로 유지하여 그 포지션에 배정된 멤버가 남습니다 — 드럼을 1개에서 2개로
     증가시켰다고 원래 드럼을 연주하던 멤버가 포지션을 잃으면 안 됩니다.
 
-    감소할 때는 번호가 큰 포지션부터 삭제합니다. 거기 배정된 멤버는 팀에서 제거됩니다.
+    감소할 때는 번호가 큰 포지션부터 삭제합니다. 삭제되는 포지션에 배정된 멤버는 팀에서 제거됩니다.
     """
     _get_team_or_raise(session, team_id)
     checked = require_slot_counts(counts)
@@ -215,7 +215,7 @@ def replace_slots(session: Session, team_id: int, counts: dict[str, int]) -> Non
 def delete_team(session: Session, team_id: int) -> None:
     """팀을 삭제합니다. 포지션은 팀의 구성이므로 함께 삭제됩니다.
 
-    포지션에 배정된 멤버는 그대로 남습니다 — 멤버는 팀보다 먼저 삭제되지 않습니다.
+    포지션에 배정되어 있던 멤버 행은 삭제하지 않습니다.
     """
     team = _get_team_or_raise(session, team_id)
     session.execute(delete(TeamSlot).where(TeamSlot.team_id == team_id))

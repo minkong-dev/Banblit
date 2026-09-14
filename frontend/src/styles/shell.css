@@ -1,10 +1,10 @@
-/* ===== 껍데기 =====
-   상단바·사이드바·탭·카드·프로필 말풍선·토스트·목록 부품. 여섯 화면이 똑같이 쓴다.
-   :where() 로 감싸 우선순위를 0 으로 둔다 — 화면 CSS(body[data-page="…"]) 가 같은
-   이름을 다르게 쓰면 언제나 화면 쪽이 이긴다. */
+/* ===== 공통 layout =====
+   상단바·사이드바·탭·카드·프로필 카드·토스트·목록 부품입니다. 화면 6개가 같은 규칙을 사용합니다.
+   :where() 로 감싸 우선순위를 0 으로 둡니다. 화면 CSS(body[data-page="…"]) 가 같은
+   이름을 다르게 정의하면 언제나 화면 CSS 가 적용됩니다. */
 
-/* 밝은지 어두운지는 여기서 정한다. base.css 의 light-dark() 값이 이 color-scheme 을 본다.
-   계정·랜딩 화면은 이 표시가 없어 자기 색을 그대로 쓴다. */
+/* 밝은 화면인지 어두운 화면인지는 이 규칙이 정합니다. base.css 의 light-dark() 값이 이 color-scheme 을 참조합니다.
+   계정·랜딩 화면은 이 속성이 없어 자기 색을 그대로 사용합니다. */
 body[data-shell] { color-scheme: light dark; }
 html[data-theme="light"] body[data-shell] { color-scheme: light; }
 html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
@@ -40,8 +40,8 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .profbtn .ar { color: var(--t3); font-size: 11px; }
   .role { font-size: 11.5px; font-weight: 700; color: var(--brand-on); background: var(--brand); padding: 3px 9px; border-radius: 999px; }
 
-  /* 프로필 말풍선. .profwrap 은 여는 단추와 말풍선을 한 자리에 묶기만 한다 —
-     display:contents 라 배치에는 아무 영향이 없다. */
+  /* 프로필 카드입니다. .profwrap 은 여는 버튼과 프로필 카드를 한 요소로 묶기만 합니다.
+     display:contents 라 배치에는 영향이 없습니다. */
   .profwrap { display: contents; }
   .pop {
     position: absolute; right: 18px; top: 66px; z-index: 50;
@@ -78,8 +78,8 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .side .cap { font-size: 12px; color: var(--t3); padding: 0 12px; }
   .side .sep { border-top: 1px solid var(--line); }
 
-  /* 본문 — 탭 한 줄 위, 본문과 곁칸이 아래. 본문은 --content 까지만 커지고 가운데로 온다.
-     달력 화면은 max-width: none 으로 이 상한을 푼다. */
+  /* 본문입니다. 탭 한 줄이 위, 본문과 오른쪽 칸이 아래입니다. 본문은 --content 까지만 커지고 가운데 정렬됩니다.
+     달력 화면은 max-width: none 으로 이 상한을 해제합니다. */
   .page {
     height: 100%; padding: 18px; min-height: 0;
     width: 100%; max-width: var(--content); margin-inline: auto;
@@ -102,7 +102,7 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, calc(100% + 26px)); z-index: 60; padding: 14px 22px; background: var(--t1); color: var(--card); font-size: 14.5px; font-weight: 500; border-radius: 14px; transition: transform .26s cubic-bezier(.22,1,.36,1); }
   .toast.on { transform: translate(-50%, 0); }
 
-  /* 카드 머리·목록 줄·입력칸·단추 — 팀·게시판·설정이 같은 모양으로 쓴다 */
+  /* 카드 제목·목록 줄·입력칸·버튼입니다. 팀·게시판·설정이 같은 모양으로 사용합니다. */
   .sethead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 16px 20px; border-bottom: 1px solid var(--line); }
   .sethead b { font-size: 16.5px; font-weight: 700; }
   .sethead span { font-size: 13.5px; color: var(--t3); }
@@ -113,7 +113,7 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .fields label { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--t3); }
   .fields input, .fields select, .fields textarea { min-height: 44px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--card); color: var(--t1); font: inherit; letter-spacing: inherit; }
   .fields input:focus-visible, .fields select:focus-visible, .fields textarea:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
-  /* 여백을 뺀 나머지를 고르게 나눠 갖는다. 한 줄에 둘이면 반씩, 셋이면 삼분의 일씩이다. */
+  /* 여백을 뺀 나머지를 고르게 나눠 갖습니다. 한 줄에 둘이면 반씩, 셋이면 삼분의 일씩입니다. */
   .fields .wide { flex: 1 1 180px; }
   .fields .wide input, .fields .wide textarea { width: 100%; }
   .btn { min-height: 44px; padding: 11px 18px; border-radius: 10px; font-size: 14px; font-weight: 700; background: var(--card-2); color: var(--t2); }
@@ -132,8 +132,8 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 }
 
-/* ===== 알림 종과 말풍선 =====
-   말풍선을 이 상자에 붙여 두므로 프로필 단추 폭이 바뀌어도 화살표가 종 위에 남는다. */
+/* ===== 알림 아이콘과 프로필 카드 =====
+   프로필 카드를 이 상자에 붙여 두므로 프로필 버튼 폭이 바뀌어도 화살표가 알림 아이콘 위에 유지됩니다. */
 .notes { position: relative; display: flex; align-items: center; }
 
 .notes .bell { position: relative; }
@@ -144,7 +144,7 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   background: var(--red); color: #fff;
   font-size: 11px; font-weight: 700; line-height: 1;
   border-radius: 999px;
-  /* 종 그림과 겹쳐도 숫자가 읽히도록 상단바 바탕색으로 한 겹 두른다. */
+  /* 알림 아이콘과 겹쳐도 숫자가 읽히도록 상단바 바탕색으로 테두리를 둡니다. */
   box-shadow: 0 0 0 2px var(--card);
 }
 
@@ -156,7 +156,7 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   transition: opacity .16s ease, transform .16s ease;
 }
 .notes .notepop.on { opacity: 1; transform: none; pointer-events: auto; }
-/* 종 한가운데를 가리킨다 — 종은 44px 이므로 오른쪽에서 22px 에서 화살표 폭의 절반을 뺀다. */
+/* 알림 아이콘 한가운데를 가리킵니다. 아이콘은 44px 이므로 오른쪽에서 22px 에서 화살표 폭의 절반을 뺍니다. */
 .notes .notepop::before {
   content: ""; position: absolute; right: 15px; top: -7px;
   width: 14px; height: 14px; background: var(--card);
@@ -177,23 +177,23 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
 .notes .note { padding: 10px 10px; border-radius: 10px; }
 .notes .note b { display: block; font-size: 14px; font-weight: 500; color: var(--t1); }
 .notes .note small { font-size: 12.5px; color: var(--t3); }
-/* 안 읽은 줄에 붙는 점. 오른쪽 칸 목록이 쓰던 것과 같은 표시다. */
+/* 읽지 않은 줄에 붙는 점입니다. 오른쪽 칸 목록이 사용하던 것과 같은 표시입니다. */
 .notes .note .new {
   display: inline-block; width: 5px; height: 5px; border-radius: 50%;
   background: var(--red); vertical-align: 2px; margin-right: 5px;
 }
 .notes .note.unread { background: var(--card-2); }
 
-/* 좁은 화면에서는 상단바 폭을 넘지 않게 붙인다. */
+/* 좁은 화면에서는 상단바 폭을 넘지 않게 붙입니다. */
 @media (max-width: 420px) {
   .notes .notepop { width: min(320px, calc(100vw - 28px)); right: -8px; }
 }
 
 /* ===== 모달 ===== */
 dialog { width: min(560px, calc(100vw - 40px)); max-height: 92vh; padding: 0; border: none; border-radius: 22px; background: var(--card); color: var(--t1); box-shadow: var(--shadow-up); overflow: hidden; }
-/* 열렸을 때만 flex 로 세운다. dialog 자체에 display 를 주면 닫혀 있어도 보인다 —
-   브라우저가 dialog:not([open]) 에 display:none 을 거는 방식이라 덮어써 버린다.
-   머리와 발이 제 높이를 갖고 몸이 남는 높이를 다 쓴다. */
+/* 열렸을 때만 flex 로 배치합니다. dialog 자체에 display 를 지정하면 닫혀 있어도 표시됩니다.
+   브라우저가 dialog:not([open]) 에 display:none 을 적용하는 방식이라 그 규칙을 덮어쓰기 때문입니다.
+   제목과 버튼 줄이 자기 높이를 갖고 본문이 남는 높이를 전부 사용합니다. */
 dialog[open] { display: flex; flex-direction: column; }
 .mhead, .mfoot { flex: none; }
 dialog::backdrop { background: rgba(10,14,20,.5); }
@@ -207,7 +207,7 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 .mhead button { margin-left: auto; width: 40px; height: 40px; display: grid; place-items: center; color: var(--t3); border-radius: 12px; }
 .mhead button:hover { background: var(--card-2); color: var(--t1); }
 .mhead svg { width: 20px; height: 20px; }
-/* 머리와 발이 제 높이를 갖고 몸이 남는 높이를 다 쓴다. */
+/* 제목과 버튼 줄이 자기 높이를 갖고 본문이 남는 높이를 전부 사용합니다. */
 .mbody { padding: 0 26px 22px; flex: 1; min-height: 0; overflow-y: auto; }
 .mfoot { padding: 16px 26px 22px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
 .primary { flex: 1; min-height: 54px; padding: 15px; background: var(--brand); color: var(--brand-on); border-radius: 14px; font-size: 16px; font-weight: 700; transition: background-color .15s ease; }
@@ -215,7 +215,7 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 .ghost { min-height: 54px; padding: 15px 22px; background: var(--card-2); color: var(--t2); border-radius: 14px; font-size: 16px; font-weight: 700; }
 .ghost:hover { color: var(--t1); }
 
-/* 숫자 조절 — 왼쪽에 이름, 오른쪽에 `− 2 +`. 모달 안에서만 쓰므로 여기 둔다. */
+/* 숫자 조절입니다. 왼쪽에 이름, 오른쪽에 `− 2 +` 를 표시합니다. modal 안에서만 사용하므로 이 파일에 둡니다. */
 .stepper { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
 .stepper:first-of-type { border-top: none; }
 .stepper > span { font-size: 14.5px; font-weight: 500; }
@@ -232,9 +232,9 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 .stepbox button[disabled] { opacity: .3; cursor: default; }
 .stepbox b { min-width: 30px; text-align: center; font-size: 16px; font-weight: 700; }
 
-/* 목록 맨 아래 한 줄. 쪽 넘기기가 가운데, 만드는 단추가 오른쪽 끝이다.
-   쪽이 하나뿐이면 가운데가 비고 단추만 남는다. 팀·합주실·기간·권한·게시판이
-   같은 줄을 쓴다. */
+/* 목록 맨 아래 한 줄입니다. pagination 이 가운데, 추가 버튼이 오른쪽 끝입니다.
+   page 가 하나뿐이면 가운데가 비고 버튼만 남습니다. 팀·합주실·기간·permission set·게시판이
+   같은 줄을 사용합니다. */
 .listfoot {
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
   gap: 12px; padding: 14px 20px 18px; border-top: 1px solid var(--line);
@@ -254,12 +254,12 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
   transition: background-color .15s ease;
 }
 .listfoot .new:hover { background: var(--brand-press); }
-/* 되돌릴 수 없는 단추. 색으로도 다른 동작임을 말한다. */
+/* 되돌릴 수 없는 동작의 버튼입니다. 색으로도 다른 동작임을 표시합니다. */
 .listfoot .new.danger { background: var(--red); }
 .listfoot .new[disabled] { opacity: .45; cursor: default; }
 
-/* ===== 사람 찾기 =====
-   팀 만들기 위에 한 겹 더 뜨는 모달의 알맹이다. 빈 검색어에는 아무것도 나오지 않는다. */
+/* ===== 멤버 검색 =====
+   팀 생성 modal 위에 한 겹 더 표시되는 modal 의 내용입니다. 빈 검색어에는 아무것도 표시하지 않습니다. */
 .seek input {
   width: 100%; min-height: 50px; padding: 13px 15px;
   background: var(--card-2); color: var(--t1);
@@ -268,8 +268,8 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 }
 .seek input:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
 .seek .empty { padding: 26px 0; text-align: center; }
-/* 자체 스크롤을 두지 않는다. 모달 몸통이 이미 남는 높이를 다 쓰고 넘칠 때만
-   스크롤하므로, 여기에 또 상한을 두면 스크롤 안에 스크롤이 생긴다. */
+/* 자체 스크롤을 두지 않습니다. modal 본문이 이미 남는 높이를 전부 사용하고 넘칠 때만
+   스크롤하므로, 이 요소에 또 상한을 두면 스크롤 안에 스크롤이 생깁니다. */
 .found { list-style: none; margin: 12px 0 0; padding: 0; }
 .found li + li { border-top: 1px solid var(--line); }
 .found button {
@@ -279,9 +279,9 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 }
 .found button:hover { background: var(--card-2); }
 
-/* ===== 자리표 =====
-   팀의 자리를 한 줄씩 세운다. 빈 자리도 함께 나온다 — 채워야 할 곳을 보여주는 것이
-   이 표의 일이다. 팀 만들기 모달의 2단계도 같은 표를 쓴다. */
+/* ===== 포지션 목록 =====
+   팀의 자리를 한 줄씩 표시합니다. 빈 자리도 함께 표시합니다. 비어 있는 포지션을 표시하는 것이
+   이 목록의 목적입니다. 팀 생성 modal 의 2단계도 같은 목록을 사용합니다. */
 .lineup { list-style: none; margin: 0; padding: 0; }
 .seat {
   display: flex; align-items: center; gap: 12px;
@@ -297,5 +297,5 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 .mbody .seat { padding-left: 0; padding-right: 0; }
 .mbody .lineup { margin: 0; }
 
-/* 모달 안의 작은 소제목. 목록과 그 아래 입력칸을 가른다. */
+/* modal 안의 작은 소제목입니다. 목록과 그 아래 입력칸을 구분합니다. */
 .mbody .cap2 { margin: 18px 0 8px; font-size: 13px; font-weight: 700; color: var(--t2); }

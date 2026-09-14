@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import Comment, Member, Post, Team, TeamSlot
 
-# account 픽스처를 부른 순서가 곧 역할입니다 — 이 파일의 첫 호출이 헤드매니저입니다.
+# account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 이 파일의 첫 호출이 헤드매니저입니다.
 from conftest import AccountFactory, seat
 
 
@@ -397,8 +397,8 @@ def test_comment_creation_allows_a_team_member_on_a_team_post(
 def test_post_author_is_taken_from_the_token_not_the_request_body(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    # author_id는 이제 schema에 없으니 제출해도 무시되어야 합니다. 반환되는 글쓴이는
-    # 언제나 token이 가리키는 계정입니다.
+    # author_id 는 schema 에 없으므로 보내도 무시되어야 합니다. 반환되는 작성자는
+    # 언제나 인증 cookie 로 확인한 계정입니다.
     _, head = account("박서연", "head@example.com")
 
     response = api_client.post(

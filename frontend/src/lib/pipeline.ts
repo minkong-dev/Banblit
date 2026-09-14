@@ -1,4 +1,4 @@
-// lib 모듈의 시퀀스 파일입니다. 어느 검사를 어느 순서로 호출할지 여기서 정합니다.
+// lib 모듈의 시퀀스 파일입니다. 어느 검증을 어느 순서로 호출할지 이 파일에서 정합니다.
 
 import { getJSON, sendFile } from "./api";
 import type { Account, Me, Member, Notification, Reservation, Unavailable } from "./contract";
@@ -56,13 +56,13 @@ export function checkRoom(form: RoomForm, taken: string[]): string {
   const name = roomNameMessage(form.name, taken);
   if (name !== "") return name;
 
-  // 여는 시각과 닫는 시각은 한 쌍으로만 검증합니다. 격자를 벗어났는지와
-  // 순서가 뒤집혔는지를 따로 물으면 둘 다 어긋났을 때 두 번 다시 조회하게 됩니다.
+  // 여는 시각과 닫는 시각은 한 쌍으로만 검증합니다. 정시 격자를 벗어났는지와
+  // 순서가 뒤집혔는지를 따로 검증하면 둘 다 위반했을 때 오류 메시지가 2번에 나뉘어 표시됩니다.
   return openHoursMessage(form.opens_at, form.closes_at);
 }
 
 export function checkPeriod(form: PeriodForm): string {
-  // 기간은 시작일과 종료일 두 개입니다. 종류와 계산 시각은 선택 옵션이라 검증할 것이 없습니다.
+  // 기간은 시작일과 종료일 2개를 검증합니다. 종류와 계산 시각은 선택 옵션이라 검증할 항목이 없습니다.
   return dateRangeMessage(form.starts_on, form.ends_on);
 }
 
@@ -75,7 +75,7 @@ export function openingHours(input: Opening): {
   leftover: string;
   raw: Capacity;
 } {
-  // capacity()로 slot(1시간 단위 시간 칸)의 개수를 먼저 계산하고, 그것을 hoursLabel()로 시각으로 변환합니다.
+  // capacity()로 slot(1시간 단위 시간 칸)의 개수를 먼저 계산하고, 그 개수를 hoursLabel()로 시간 문자열로 변환합니다.
   // 순서가 반대일 수 없습니다. 화면은 slot 개수를 그대로 표시하지 않습니다.
   const raw = capacity(input);
   return {
@@ -92,7 +92,7 @@ export function daysBetween(from: string, to: string): number {
   return datesBetween(from, to).length;
 }
 
-// 스케줄러 화면이 사용하는 계산입니다. 합주실과 기간 사이에 순서 의존이 없어 그대로 재내보냅니다.
+// 스케줄러 화면이 사용하는 계산입니다. 합주실과 기간 사이에 순서 의존이 없어 그대로 export 합니다.
 // roomBounds()는 달력의 여닫는 시각을, focusedRange()는 자동 배정 띠의 날짜 범위를 반환합니다.
 export { focusedRange, roomBounds };
 
@@ -107,12 +107,12 @@ export function checkPost(form: PostForm): string {
 }
 
 
-/** 선택한 파일을 앞에서부터 검증해, 처음 걸린 것의 이름과 오류 메시지를 반환합니다. */
+/** 선택한 파일을 앞에서부터 검증해, 처음 위반한 파일의 이름과 오류 메시지를 반환합니다. */
 export function checkAttachments(files: { name: string; size: number }[]): string {
-  // 전송 전에 여기서 한 번 검증합니다. 서버도 같은 검증을 다시 수행하므로 이 검사는
-  // 사용자가 즉시 알아채도록 하는 것이지 보안 검증이 아닙니다. 브라우저에서 실행하는
-  // 검사는 얼마든지 건너뛸 수 있습니다.
-  // 오류 메시지를 한 번에 하나만 표시하므로, 2개 이상 걸려도 첫 번째 파일만 알립니다.
+  // 전송 전에 이 함수에서 한 번 검증합니다. 서버도 같은 검증을 다시 수행하므로 이 검증은
+  // 사용자가 즉시 알 수 있게 하는 것이지 보안 검증이 아닙니다. 브라우저에서 실행하는
+  // 검증은 사용자가 건너뛸 수 있습니다.
+  // 오류 메시지를 한 번에 하나만 표시하므로, 2개 이상 위반해도 첫 번째 파일만 알립니다.
   for (const file of files) {
     const why = attachmentMessage(file.name, file.size);
     if (why !== "") return `${file.name}: ${why}`;
@@ -120,11 +120,11 @@ export function checkAttachments(files: { name: string; size: number }[]): strin
   return "";
 }
 
-// 팀·포지션을 두고 화면이 하는 계산. 서로 기다릴 것이 없어 그대로 다시 내보냅니다.
+// 팀·포지션에 대해 화면이 하는 계산입니다. 순서 의존이 없어 그대로 export 합니다.
 export { colorKey, memberLabel, myTeamIds, slotName };
 export { teamNameMessage as checkTeamName, slotCountsMessage as checkSlotCounts };
 
-// 게시판·공지 화면이 쓰는 계산. fileSizeLabel 은 order 의존이 없어 그대로 다시 내보냅니다.
+// 게시판·공지 화면이 사용하는 계산입니다. fileSizeLabel 은 순서 의존이 없어 그대로 export 합니다.
 export { ATTACHMENT_ACCEPT, ATTACHMENT_HINT, boardActions, fileSizeLabel };
 
 
@@ -136,7 +136,7 @@ export async function runAssignment<T>(
   /** 조율안을 선택했으면 그 안에서 제외할 멤버의 번호입니다. 그 멤버를 제외하고 다시 계산해 저장합니다. */
   excludeMemberId?: number,
 ): Promise<T> {
-  // 접수(POST 요청)가 먼저입니다. 서버는 계산을 기다리지 않고 job(서버가 접수해 뒤에서 돌리는 계산 하나) 번호만 반환합니다. 그 번호로
+  // 접수(POST 요청)가 먼저입니다. 서버는 계산을 기다리지 않고 job(서버가 접수해 백그라운드에서 실행하는 계산 하나) 번호만 반환합니다. 그 번호로
   // awaitJob()이 완료될 때까지 다시 조회합니다. 순서가 반대일 수 없고, 접수 응답을 결과로 사용하면
   // 계산이 시작되지도 않은 값을 화면에 표시하게 됩니다.
   const path = excludeMemberId === undefined
@@ -212,7 +212,7 @@ export type ReservationForm = {
 };
 
 /** 예약 한 건을 취소합니다. 서버는 slot(1시간 단위 시간 칸) 하나씩만 삭제하므로 그 예약에 포함된 ID를 차례로 삭제합니다.
- *  한 slot이 실패하면 거기서 멈춥니다. 이미 삭제한 slot을 복구하는 기능이 서버에 없고, 복구할
+ *  한 slot 이 실패하면 그 slot 에서 멈춥니다. 이미 삭제한 slot 을 복구하는 기능이 서버에 없고, 복구할
  *  이유도 없습니다. 다시 호출하면 남은 slot을 계속 삭제합니다. */
 export async function cancelBooking(reservationIds: readonly number[]): Promise<void> {
   for (const id of reservationIds) {
@@ -233,8 +233,8 @@ export async function addReservation(form: ReservationForm): Promise<Reservation
   return body.reservations;
 }
 
-// 아래는 화면이 직접 사용하는 것들입니다. 순서 의존이 없어 그대로 재내보내지만, 화면이
-// 기능 파일을 직접 참조하지 않도록 호출 지점을 여기 한 곳으로 집중합니다.
+// 아래는 화면이 직접 사용하는 함수입니다. 순서 의존이 없어 그대로 export 하지만, 화면이
+// 기능 파일을 직접 참조하지 않도록 호출 지점을 이 파일 하나로 모읍니다.
 export {
   dayOf,
   hhmm,
@@ -259,7 +259,7 @@ export {
 
 export type SignUpForm = {
   name: string;
-  // 멤버를 구분하는 값의 일부입니다. 이름·학과·학번·기수 네 항목이 모두 같아야 같은 멤버입니다.
+  // 멤버를 구분하는 값의 일부입니다. 이름·학과·학번·기수 4개 항목이 모두 같아야 같은 멤버입니다.
   department: string;
   student_no: string;
   email: string;
@@ -268,7 +268,7 @@ export type SignUpForm = {
 };
 
 export async function signUp(form: SignUpForm): Promise<Account> {
-  // 가입 성공 응답은 계정만 포함합니다. 세션은 서버가 httpOnly 쿠키(banblit_session)로
+  // 가입 성공 응답은 계정만 포함합니다. session 은 서버가 httpOnly cookie(banblit_session)로
   // 전송하고, 화면은 그 값을 읽거나 수정하지 않습니다.
   const { account } = await getJSON<{ account: Account }>("/signup", {
     method: "POST",
@@ -280,7 +280,7 @@ export async function signUp(form: SignUpForm): Promise<Account> {
 export async function logIn(
   email: string,
   password: string,
-  /** 로그인 상태 유지 여부입니다. false로 설정하면 브라우저를 닫을 때 로그아웃됩니다. 세션의 유효기간은 서버가 정합니다. */
+  /** 로그인 상태 유지 여부입니다. false 로 설정하면 브라우저를 닫을 때 로그아웃됩니다. session 의 유효 기간은 서버가 정합니다. */
   keep: boolean,
 ): Promise<Account> {
   const { account } = await getJSON<{ account: Account }>("/login", {
@@ -291,7 +291,7 @@ export async function logIn(
 }
 
 export async function findId(name: string, email: string): Promise<void> {
-  // 일치하는 계정이 있든 없든 서버는 같은 응답을 반환합니다. 학번을 알려주는 것은 응답 본문이 아니라
+  // 일치하는 계정이 있든 없든 서버는 같은 응답을 반환합니다. 아이디를 알려주는 것은 응답 본문이 아니라
   // 해당 이메일 주소로 전송되는 메일입니다. 따라서 반환할 값이 없습니다.
   await getJSON("/find-id", {
     method: "POST",
@@ -308,8 +308,8 @@ export async function requestPasswordReset(email: string): Promise<void> {
 }
 
 export async function resetPassword(token: string, password: string): Promise<void> {
-  // 이메일로 수신한 토큰과 새 비밀번호를 함께 전송합니다. 서버는 토큰을 한 번 사용한 후 폐기하며,
-  // 해당 계정의 모든 활성 로그인 세션도 종료합니다.
+  // 이메일로 수신한 token 과 새 비밀번호를 함께 전송합니다. 서버는 token 을 한 번 사용한 후 무효화하며,
+  // 해당 계정의 모든 활성 로그인 session 도 종료합니다.
   await getJSON("/password-reset/confirm", {
     method: "POST",
     body: JSON.stringify({ token, password }),
@@ -321,18 +321,18 @@ export async function fetchMe(): Promise<Me> {
   return getJSON<Me>("/me");
 }
 
-// 표시용 쿠키 이름입니다. 실제 세션(banblit_session)은 httpOnly 속성이라 여기서 읽을 수 없습니다.
-// 이름을 적는 자리는 여기 하나입니다.
+// 로그인 여부 표시용 cookie 이름입니다. 실제 session cookie(banblit_session)는 httpOnly 속성이라 화면에서 읽을 수 없습니다.
+// 이 이름을 정의하는 곳은 이 상수 하나입니다.
 const SIGNED_IN_COOKIE = "banblit_signed_in";
 
-/** 로그인 여부만 나타내는 쿠키의 존재 여부를 확인합니다. document.cookie를 읽는 것은 상태를
- *  조회하는 작업이므로 시퀀스 파일인 여기에 있습니다. */
+/** 로그인 여부만 나타내는 cookie 의 존재 여부를 확인합니다. document.cookie 를 읽는 것은 상태를
+ *  조회하는 작업이므로 시퀀스 파일인 이 파일에 둡니다. */
 export function isSignedIn(): boolean {
   return document.cookie.split("; ").includes(`${SIGNED_IN_COOKIE}=1`);
 }
 
 export async function logOut(): Promise<void> {
-  // 서버가 세션을 무효로 설정하고 쿠키 두 개를 삭제합니다.
+  // 서버가 session 을 무효로 설정하고 cookie 2개를 삭제합니다.
   await getJSON("/logout", { method: "POST" });
 }
 
@@ -344,9 +344,9 @@ export async function loadTeamMembers(teamId: number): Promise<Member[]> {
 }
 
 // 알림입니다. 목록을 조회한 후에야 읽지 않은 개수를 계산할 수 있고, 읽음 표시는 목록을 다시 조회해야
-// 화면에 반영됩니다. 호출 순서가 중요하므로 여기 집중합니다.
+// 화면에 반영됩니다. 호출 순서가 중요하므로 이 파일에 모읍니다.
 export async function loadNotifications(): Promise<Notification[]> {
-  // ponytail: 오래된 알림을 삭제하거나 일부만 조회하는 기능은 구현하지 않았습니다. 사용자당 하루에 최대 두 줄까지 누적됩니다. 목록 크기가 커지면 여기에 개수 제한을 추가하고 서버도 함께 적용합니다.
+  // ponytail: 오래된 알림을 삭제하거나 일부만 조회하는 기능은 구현하지 않았습니다. 사용자당 하루에 최대 알림 2개가 누적됩니다. 목록 크기가 커지면 이 함수에 개수 제한을 추가하고 서버도 함께 적용합니다.
   const body = await getJSON<{ notifications: Notification[] }>("/notifications");
   return body.notifications;
 }
@@ -356,5 +356,5 @@ export async function markNotificationsRead(): Promise<void> {
   await getJSON("/notifications/read", { method: "POST" });
 }
 
-// 알림 문구 생성과 읽지 않은 개수 계산 사이에 순서 의존이 없어 그대로 재내보냅니다.
+// 알림 문구 생성과 읽지 않은 개수 계산 사이에 순서 의존이 없어 그대로 export 합니다.
 export { notificationText, unreadCount } from "./notifications";

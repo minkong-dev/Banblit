@@ -8,7 +8,7 @@ from backend.api.job_runner import DEFAULT_MAX_CONCURRENT_JOBS, JobRunner, max_c
 
 
 def _wait_until(predicate: Callable[[], bool], timeout: float = 5.0) -> None:
-    # predicate()가 참이 될 때까지 계속 확인합니다. 배경 스레드가 store를
+    # predicate() 가 True 가 될 때까지 계속 확인합니다. 백그라운드 스레드가 store 를
     # 갱신하는 시점은 테스트 스레드와 다르므로, 값을 한 번만 확인하고 판단할 수 없습니다.
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:

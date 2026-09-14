@@ -40,8 +40,8 @@ def create_session(
 ) -> str:
     """새 session token(임시로 발급하는 인증 문자열)을 생성하여 저장하고, token 원문을 반환합니다.
 
-    쌓인 만료된 행은 새 행과 같은 커밋에서 함께 삭제합니다. 로그인·가입이 login_sessions
-    table 에 행을 추가하는 유일한 코드이므로, 여기 외에 정리할 곳이 없습니다.
+    쌓인 만료된 행은 새 행과 같은 commit 에서 함께 삭제합니다. 로그인·가입이 login_sessions
+    table 에 행을 추가하는 유일한 코드이므로, 이 함수 외에 삭제할 곳이 없습니다.
 
     ponytail: 로그인하지 않는 계정의 행은 계속 남습니다. 해당 계정 수가 문제되면
     주기적 삭제를 추가합니다. 현재 이 저장소에는 scheduled(시간을 정해 자동으로 실행하는) 작업 기능이 없습니다.
@@ -71,7 +71,7 @@ def resolve_session(session: Session, token: str, now: datetime) -> LoginSession
 
 
 def revoke_session(session: Session, token: str, now: datetime) -> None:
-    """해당 token 의 session 을 취소합니다. 존재하지 않는 token 이어도 오류를 발생시키지 않습니다. 이미 로그아웃된 것과 구분할 필요가 없기 때문입니다."""
+    """해당 token 의 session 을 취소합니다. 존재하지 않는 token 이어도 오류를 발생시키지 않습니다. 이미 로그아웃된 token 과 구분할 필요가 없기 때문입니다."""
     session.execute(
         update(LoginSession)
         .where(LoginSession.token_hash == hash_token(token))

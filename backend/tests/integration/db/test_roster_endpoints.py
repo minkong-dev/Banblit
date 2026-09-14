@@ -7,8 +7,8 @@ from backend.api.roster_service import ROSTER_MESSAGES
 from backend.db.pipeline import commit_translating
 from backend.db.models import Member, Team, TeamSlot
 
-# account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다 — 첫 호출이 헤드매니저,
-# 그 뒤는 멤버입니다. 멤버 계정이 필요한 검사는 헤드매니저를 먼저 만들어야 합니다.
+# account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 첫 호출이 헤드매니저,
+# 그 뒤는 일반 멤버입니다. 일반 멤버 계정이 필요한 테스트는 헤드매니저를 먼저 만들어야 합니다.
 from conftest import AccountFactory, seat
 
 
@@ -26,7 +26,7 @@ def _team(session: Session, name: str, slots: int = 0) -> Team:
 
 
 def _member(session: Session, name: str, cohort: int | None = None) -> Member:
-    """로그인과 무관하게 명단에만 있는 사람입니다 — 순수 SQLAlchemy 객체로 추가합니다."""
+    """로그인 계정 없이 명단에만 있는 멤버를 생성합니다. SQLAlchemy 객체로 직접 추가합니다."""
     member = Member(name=name, cohort=cohort)
     session.add(member)
     session.flush()
@@ -58,7 +58,7 @@ def test_teams_list_is_empty_when_no_teams(
 def test_teams_carry_both_slot_count_and_filled_count(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """자리 수와 점유 수를 함께 반환합니다 — 하나만 반환하면 빈 자리가 몇 개인지 화면이 알 수 없습니다."""
+    """자리 수와 배정된 수를 함께 반환합니다. 하나만 반환하면 빈 자리가 몇 개인지 화면이 계산할 수 없습니다."""
     _, cookies = account("박서연", "head@example.com")
     team = _team(db_session, "청산", slots=3)
     seat(db_session, team.id, _member(db_session, "황찬우").id, instrument="일렉")
@@ -85,7 +85,7 @@ def test_team_slots_read_requires_authentication(
 def test_empty_slots_are_listed_too(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """빈 자리를 제외하면 화면이 채워야 할 곳을 표시할 수 없습니다."""
+    """빈 자리를 제외하면 화면이 비어 있는 포지션을 표시할 수 없습니다."""
     _, cookies = account("박서연", "head@example.com")
     team = _team(db_session, "청산", slots=1)
     seat(db_session, team.id, _member(db_session, "황찬우", cohort=44).id)
@@ -144,7 +144,7 @@ def test_member_search_returns_nothing_for_an_empty_query(
 def test_member_search_finds_by_partial_name_with_cohort(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """동명이인은 기수로 구분합니다 — 검색 결과에 기수가 함께 표시되어야 선택할 수 있습니다."""
+    """동명이인은 기수로 구분합니다. 검색 결과에 기수가 함께 표시되어야 선택할 수 있습니다."""
     _, cookies = account("박서연", "head@example.com")
     _member(db_session, "박민경", cohort=47)
     _member(db_session, "박민경", cohort=49)
@@ -181,7 +181,7 @@ def test_team_creation_rejects_a_plain_member(
 def test_team_is_created_with_its_instrument_slots(
     api_client: TestClient, account: AccountFactory
 ) -> None:
-    """팀과 자리를 한 번에 생성합니다 — 자리 없는 팀이 일시적으로 저장되면 안 됩니다."""
+    """팀과 자리를 한 번에 생성합니다. 자리 없는 팀이 일시적으로라도 저장되면 안 됩니다."""
     _, head = account("박서연", "head@example.com")
 
     created = api_client.post(
@@ -228,7 +228,7 @@ def test_team_creation_rejects_zero_slots(
 def test_team_creation_rejects_more_slots_than_the_engine_takes(
     api_client: TestClient, account: AccountFactory
 ) -> None:
-    """배정 엔진이 팀당 최대 10명까지만 처리합니다 — 그보다 많은 자리는 생성해도 사용할 수 없습니다."""
+    """배정 엔진이 팀당 최대 10명까지만 처리합니다. 그보다 많은 자리는 생성해도 사용할 수 없습니다."""
     _, head = account("박서연", "head@example.com")
 
     response = api_client.post(
@@ -279,7 +279,7 @@ def test_team_creation_rejects_a_whitespace_only_name(
 def test_team_name_race_at_commit_time_is_translated_not_500(
     test_engine: Engine, db_session: Session
 ) -> None:
-    """사전 검사(SELECT)와 commit 사이에는 잠금이 없습니다 — 나중 커밋이 제약을 위반합니다."""
+    """사전 검사(SELECT)와 commit 사이에는 lock 이 없습니다. 나중에 commit 한 쪽이 제약을 위반합니다."""
     db_session.add(Team(name="청산"))
     db_session.commit()
 
@@ -289,7 +289,7 @@ def test_team_name_race_at_commit_time_is_translated_not_500(
             commit_translating(other, ROSTER_MESSAGES)
 
 
-# ── 팀 이름 고치기 ─────────────────────────────────────────────────────────
+# ── 팀 이름 수정 ───────────────────────────────────────────────────────────
 
 
 def test_team_patch_requires_authentication(
@@ -370,7 +370,7 @@ def test_team_patch_of_unknown_id_is_rejected(
     assert response.status_code == 422
 
 
-# ── 자리에 사람 앉히기 ─────────────────────────────────────────────────────
+# ── 자리에 멤버 배정 ───────────────────────────────────────────────────────
 
 
 def test_seating_requires_authentication(
@@ -449,7 +449,7 @@ def test_seating_replaces_whoever_sat_there(
 def test_seating_rejects_someone_already_in_another_slot_of_the_team(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """한 사람이 같은 팀의 두 자리를 겸하면 배정 엔진이 그 사람을 같은 시간에 중복 계산합니다."""
+    """한 멤버가 같은 팀의 두 자리에 배정되면 배정 엔진이 그 멤버를 같은 시간에 2번 셉니다."""
     _, head = account("박서연", "head@example.com")
     team = _team(db_session, "청산", slots=2)
     member = _member(db_session, "황찬우")
@@ -488,7 +488,7 @@ def test_seating_rejects_an_unknown_member(
 def test_seating_rejects_a_slot_from_another_team(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """자리 번호만 같고 팀이 다르면 없는 것으로 취급합니다."""
+    """자리 번호만 같고 팀이 다르면 없는 자리로 처리합니다."""
     _, head = account("박서연", "head@example.com")
     mine = _team(db_session, "청산", slots=1)
     other = _team(db_session, "곰팡이", slots=1)
@@ -521,7 +521,7 @@ def test_clearing_a_slot_requires_authentication(
 def test_a_member_can_leave_their_own_slot_without_any_permission(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """스스로 빠지는 것은 권한 항목이 없어도 됩니다."""
+    """자신을 포지션에서 제외하는 것은 member_remove 권한이 없어도 됩니다."""
     account("박서연", "head@example.com")
     plain_id, plain = account("이도현", "member@example.com")
     team = _team(db_session, "청산")
@@ -552,7 +552,7 @@ def test_a_plain_member_cannot_clear_someone_elses_slot(
 def test_clearing_keeps_the_slot_itself(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """팀 구성이 바뀐 것이 아니라 사람만 제거된 것입니다."""
+    """팀 구성이 바뀐 것이 아니라 멤버 배정만 해제된 것입니다."""
     _, head = account("박서연", "head@example.com")
     team = _team(db_session, "청산")
     seat(db_session, team.id, _member(db_session, "황찬우").id)
@@ -599,7 +599,7 @@ def test_deleting_a_team_removes_its_slots_too(
     team_id = team.id
 
     assert api_client.delete(f"/teams/{team_id}", cookies=head).status_code == 204
-    # 없는 팀을 조회하면 422를 반환합니다 — 이 저장소가 "그런 것이 없다"를 응답하는 방식입니다.
+    # 없는 팀을 조회하면 422 를 반환합니다. 이 저장소는 요청한 대상이 없을 때 422 로 응답합니다.
     assert api_client.get(f"/teams/{team_id}/slots", cookies=head).status_code == 422
     assert db_session.scalars(
         select(TeamSlot).where(TeamSlot.team_id == team_id)
@@ -636,7 +636,7 @@ def test_changing_the_lineup_requires_team_edit(
 def test_adding_a_position_keeps_the_people_already_there(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """드럼이 하나에서 둘로 늘어도, 이미 점유한 자리에는 사람이 남습니다."""
+    """드럼이 1자리에서 2자리로 늘어도, 이미 배정된 자리의 멤버는 유지됩니다."""
     head_id, head = account("박서연", "head@example.com")
     team = _team(db_session, "청산")
     db_session.add(TeamSlot(team_id=team.id, instrument="드럼", ordinal=1))
@@ -660,7 +660,7 @@ def test_adding_a_position_keeps_the_people_already_there(
 def test_removing_a_position_drops_the_last_one(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """드럼이 둘에서 하나로 줄면 번호가 큰 자리가 삭제됩니다."""
+    """드럼이 2자리에서 1자리로 줄면 번호가 큰 자리가 삭제됩니다."""
     _, head = account("박서연", "head@example.com")
     team = _team(db_session, "청산")
     db_session.add_all(

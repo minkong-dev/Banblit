@@ -1,4 +1,4 @@
-"""회차 및 배정입니다.
+"""기간(periods)과 배정(assignments) table 을 생성합니다.
 
 Revision ID: 9f358ed961f2
 Revises: 08a3734da800

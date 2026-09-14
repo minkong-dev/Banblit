@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from ortools.sat.python import cp_model
 
-# 한 번의 계산에 허락하는 시간. 넘기면 지금까지 찾은 것으로 답합니다.
+# 계산 1회에 허용하는 시간(초)입니다. 초과하면 그때까지 찾은 배정안을 반환합니다.
 SOLVER_TIME_LIMIT_SECONDS = 60.0
 
 from backend.scheduling.availability import Team, is_team_available
@@ -91,7 +91,7 @@ def assign(
     rooms: list[Room],
     slots_per_team: int,
 ) -> Assignment:
-    """각 팀에게, 그 팀이 가능한 시간의 빈 합주실을 필요한 개수만큼 배정합니다.
+    """각 팀에게, 그 팀이 사용 가능한 시간의 빈 합주실 slot 을 slots_per_team 개 배정합니다.
 
     slot(1시간 단위 시간 칸) 하나에는 팀 하나만 배정됩니다. 팀 하나는 같은 시간에
     여러 합주실을 동시에 사용할 수 없으며, 여러 팀에 속한 멤버도 같은 시간에
@@ -141,8 +141,8 @@ def assign(
 
     solver = cp_model.CpSolver()
     # 시간 제한이 없으면 풀리지 않는 입력 하나가 worker 를 무한정 점유하게 됩니다.
-    # 실측 최댓값(약 22초)의 3배 정도에서 중단하고, 그때까지 찾지 못했으면
-    # feasible 이 아닌 것으로 취급합니다.
+    # 실측 최댓값(약 22초)의 약 3배에서 중단하고, 그때까지 찾지 못했으면
+    # feasible=False 로 처리합니다.
     solver.parameters.max_time_in_seconds = SOLVER_TIME_LIMIT_SECONDS
     status = solver.solve(model)
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):

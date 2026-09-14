@@ -1,6 +1,6 @@
 """잘못된 입력을 오류 없이 통과시키지 않고 거부하는지 검증합니다.
 
-여기서 막지 못하면 엔진이 error 를 발생시키지 않고 잘못된 배정안을 출력합니다.
+이 검증을 통과시키면 엔진이 error 를 발생시키지 않고 잘못된 배정안을 출력합니다.
 """
 
 from datetime import datetime, timedelta, timezone
@@ -45,12 +45,12 @@ def test_interval_rejects_mixed_timezone_awareness() -> None:
 
 
 def test_interval_rejects_timezone_aware_values() -> None:
-    # 시간대 지원은 미구현입니다. 오류 메시지 없이 오류 계산하는 것보다 거부합니다.
+    # 시간대 지원은 미구현입니다. error 없이 잘못된 결과를 계산하는 것보다 거부하는 편이 낫습니다.
     with pytest.raises(ValueError):
         TimeInterval(_at(18).replace(tzinfo=KST), _at(19).replace(tzinfo=KST))
 
 
-# ── 한 칸은 합주실 번호와 시각으로 하나뿐이어야 한다 ────────────
+# ── slot 은 합주실 번호와 시각으로 유일해야 합니다 ──────────────
 
 
 def test_rejects_the_same_room_opening_twice_over_the_same_time() -> None:

@@ -3,8 +3,8 @@ import { expect, test } from "@playwright/test";
 import { findFocusedPeriods, loginForTests } from "./helpers";
 
 // 배정 계산은 실측 1초 안팎이지만(2026-09-04), 컨테이너 부하에 따라 늘어날 수 있어
-// 넉넉히 20초를 둡니다. frontend(lib/jobs.ts)의 JOB_DEADLINE_MS(60초)보다는 작습니다 — 그보다
-// 오래 걸리면 frontend도 스스로 포기하므로 그 이상 기다릴 이유가 없습니다.
+// 20초를 둡니다. frontend(lib/jobs.ts)의 JOB_DEADLINE_MS(60초)보다는 작습니다. 60초보다
+// 오래 걸리면 frontend 도 조회를 중단하므로 그 이상 기다릴 이유가 없습니다.
 const ASSIGN_WAIT_MS = 20_000;
 
 test.describe("배정 다시 계산", () => {
@@ -15,7 +15,7 @@ test.describe("배정 다시 계산", () => {
   test("기간 고르기는 번호가 아니라 날짜 범위로 나온다", async ({ page }) => {
     await page.goto("/admin");
     const select = page.getByLabel("기간 고르기");
-    // 기간 목록이 오기 전에는 선택지가 비어 있습니다 — 처음 하나가 도달할 때까지 기다립니다.
+    // 기간 목록이 도착하기 전에는 선택지가 비어 있습니다. 첫 항목이 표시될 때까지 기다립니다.
     await expect(select.locator("option").first()).toBeAttached();
     const optionTexts = await select.locator("option").allTextContents();
     for (const text of optionTexts) {
@@ -45,8 +45,8 @@ test.describe("배정 다시 계산", () => {
       page.getByText(/배정을 새로 확정했습니다|배정은 됐지만 저장되지 않았습니다/),
     ).toBeVisible();
 
-    // 되돌립니다 — 재계산이 만든 새 배정을 삭제하고 원래 저장되어 있던 배정을 복구합니다.
-    // save_schedule이 재계산 직전 현행을 백업한 회차로 남겨 두므로 rollback으로 그대로 돌아갑니다.
+    // 되돌립니다. 재계산이 만든 새 배정을 삭제하고 원래 저장되어 있던 배정을 복구합니다.
+    // save_schedule 이 재계산 직전 현행을 백업 배정기록으로 남겨 두므로 rollback 으로 그대로 복구됩니다.
     const rollback = await request.post(`/api/periods/${withSchedule.id}/rollback`);
     expect(rollback.ok()).toBe(true);
 
@@ -73,9 +73,9 @@ test.describe("배정 다시 계산", () => {
 
     const recomputeButton = page.getByRole("button", { name: /다시 계산|계산하는 중/ });
     await recomputeButton.click();
-    // slot 이 안 맞는다는 판정은 CP-SAT 이 탐색 없이 곧장 끝낼 때가 있어 "계산하는
-    // 중…" 이 뜨는 순간을 못 볼 수 있다("저장된 배정이…" 테스트가 그 문구는 이미 봅니다).
-    // 여기서는 끝난 뒤의 결과만 확실히 잡습니다.
+    // slot 이 부족하다는 판정은 CP-SAT 이 탐색 없이 즉시 끝낼 때가 있어 "계산하는
+    // 중…" 문구가 표시되는 순간을 놓칠 수 있습니다("저장된 배정이…" 테스트가 그 문구를 이미 확인합니다).
+    // 이 테스트에서는 계산이 끝난 뒤의 결과만 확인합니다.
     await expect(recomputeButton).toHaveText("지금 다시 계산", { timeout: ASSIGN_WAIT_MS });
 
     await expect(page.getByText(/조율안 \d+개/)).toBeVisible();

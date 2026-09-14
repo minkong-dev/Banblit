@@ -1,10 +1,11 @@
-"""요청 제한(rate limit). 같은 곳에서 짧은 시간에 집중적인 요청을 필터링합니다.
+"""rate limit(같은 요청자가 정해진 시간 안에 보낼 수 있는 요청 횟수 제한)입니다.
 
-로그인처럼 값을 시도해 보는 endpoint에 적용합니다. 한 번에 하나씩 입력해 보는 것을 막지 못하면
-짧은 비밀번호는 시간 문제로 뚫립니다.
+로그인처럼 값을 시도해 보는 endpoint(API의 요청 주소 단위)에 적용합니다. 비밀번호를 하나씩
+시도하는 것을 막지 못하면 짧은 비밀번호는 시도 횟수만 충분하면 맞힐 수 있습니다.
 
-요청을 세는 위치는 process 내부입니다. API를 여러 대로 확장하면 대마다 따로 세므로 실제 상한은
-대수만큼 커집니다. 현재는 한 대로 띄우므로 그대로 두고, 확장할 때 저장소를 외부(예: Redis)로 옮깁니다.
+요청을 세는 위치는 process 메모리입니다. API 서버를 여러 대로 확장하면 서버마다 따로 세므로
+실제 상한은 서버 대수만큼 커집니다. 현재는 1대로 실행하므로 그대로 두고, 확장할 때 저장소를
+외부(예: Redis)로 옮깁니다.
 """
 
 import time
@@ -13,11 +14,11 @@ from collections.abc import Callable
 
 from fastapi import HTTPException, Request
 
-# 주소를 바꿔 가며 요청하면 기억이 무한히 쌓입니다. 그 자체가 공격이 되므로 상한을 둡니다.
+# IP 주소를 바꿔 가며 요청하면 _seen 의 항목이 무한히 쌓입니다. 메모리를 고갈시키는 공격이 되므로 상한을 둡니다.
 DEFAULT_MAX_CALLERS = 10_000
 
-# 만들어 둔 RateLimiter들입니다. 테스트는 한 process에서 여러 요청을 연달아 보내므로, 테스트 사이에
-# 이것을 초기화해야 앞 테스트가 뒤 테스트를 막지 않습니다(tests/conftest.py).
+# 생성된 RateLimiter 전부입니다. 테스트는 한 process 에서 여러 요청을 연달아 보내므로, 테스트 사이에
+# reset_all 로 초기화해야 앞 테스트의 요청이 뒤 테스트를 차단하지 않습니다(tests/conftest.py).
 _LIMITERS: "list[RateLimiter]" = []
 
 
@@ -54,7 +55,7 @@ class RateLimiter:
             self._seen[caller] = hits
         self._seen.move_to_end(caller)
 
-        # window를 벗어난 것은 제거합니다.
+        # window 를 벗어난 요청 시각은 제거합니다.
         while hits and hits[0] <= now - self._window:
             hits.popleft()
 

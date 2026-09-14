@@ -32,7 +32,7 @@ import type { Period, Room, Team } from "../lib/contract";
 
 type Tab = "rooms" | "periods" | "members" | "reservations" | "account";
 
-// 탭마다 필요한 항목이 다릅니다. 가진 것만 보이므로, 관리 항목이 없는 사람에게는 계정 탭 하나만 남습니다.
+// 탭마다 필요한 권한 항목이 다릅니다. 가진 권한의 탭만 표시되므로, 관리 권한이 없는 사람에게는 계정 탭 하나만 남습니다.
 // 내 정보·비밀번호·화면 밝기·탈퇴는 전부 자기 계정에 대한 설정이라 한 탭에 둡니다.
 // needs가 없는 탭은 로그인한 모든 사람이 볼 수 있습니다.
 const TABS = [
@@ -100,17 +100,17 @@ export function Settings() {
   const client = useQueryClient();
   const { me } = useMe();
 
-  // 항목 하나만 있어도 그 탭을 엽니다. 생성만 할 수 있고 수정할 수 없는 사람도 목록은 봐야 하기 때문입니다.
+  // 권한 항목 하나만 있어도 그 탭을 엽니다. 생성만 할 수 있고 수정할 수 없는 사람도 목록은 봐야 하기 때문입니다.
   const tabs = TABS.filter(
     (item) => item.needs === null || item.needs.some((need) => can(me, need)),
   );
-  // 권한을 잃은 채로 그 탭에 머물러 있지 않게, 없는 탭이면 남은 것 중 첫 탭을 보여줍니다.
+  // 권한을 잃은 채로 그 탭에 머물러 있지 않게, 없는 탭이면 남은 탭 중 첫 탭을 표시합니다.
   // 계정 탭은 모든 사람이 볼 수 있으므로 tabs가 비는 일은 없습니다.
   const shown: Tab = tabs.some((item) => item.key === tab) ? tab : tabs[0].key;
 
   const rooms = useRooms();
   const periods = usePeriods();
-  // 팀 목록은 오른쪽 계산에만 씁니다. query 이름이 다른 화면에서 쓰는 것과 같아서,
+  // 팀 목록은 오른쪽 계산에만 사용합니다. queryKey 가 다른 화면에서 사용하는 것과 같아서,
   // 이미 받은 목록이 있으면 다시 조회하지 않습니다.
   const teams = useTeams();
 
@@ -174,7 +174,7 @@ export function Settings() {
   );
 }
 
-/** 합주실 서식의 입력칸들입니다. */
+/** 합주실 form 의 입력칸입니다. */
 function RoomFields(props: {
   form: { name: string; opens_at: string; closes_at: string };
   setForm: (next: { name: string; opens_at: string; closes_at: string }) => void;
@@ -223,7 +223,7 @@ function RoomFields(props: {
   );
 }
 
-/** 기간 서식의 입력칸들. 집중 합주기간일 때만 계산 시각 두 칸이 더 나옵니다. */
+/** 기간 form 의 입력칸입니다. 집중 합주기간일 때만 계산 시각 입력칸 2개가 더 표시됩니다. */
 function PeriodFields(props: {
   form: Omit<Period, "id">;
   setForm: (next: Omit<Period, "id">) => void;
@@ -353,7 +353,7 @@ function RoomCard(props: {
         </ul>
       )}
 
-      {/* 합주실은 하나만 씁니다. 이미 하나 있으면 새로 추가하는 경로를 닫습니다.
+      {/* 합주실은 하나만 사용합니다. 이미 하나 있으면 추가 form 을 표시하지 않습니다.
           저장소와 배정 계산은 합주실 2개 이상을 다룰 수 있게 그대로 두고, 추가 경로만 차단했습니다.
           여러 합주실을 다시 쓸 일이 생기면 이 조건 하나를 제거하면 됩니다. */}
       {!canCreate || rooms.length > 0 ? null : (
@@ -400,7 +400,7 @@ function RoomForm(props: {
         body: JSON.stringify(form),
       }),
     onSuccess: () => {
-      // 새로 생성한 뒤에는 다음 항목을 입력하도록 서식을 비웁니다. 수정 중이면 그대로 둡니다.
+      // 새로 생성한 뒤에는 다음 항목을 입력하도록 form 을 비웁니다. 수정 중이면 그대로 둡니다.
       if (method === "POST") reset();
       onDone();
     },
@@ -408,8 +408,8 @@ function RoomForm(props: {
 
   const why = checkRoom(form, taken);
 
-  // 같은 화면에 추가 서식과 수정 줄이 함께 표시될 수 있습니다. 라벨이 어느 입력칸을 가리키는지
-  // 흐려지지 않도록, 화면 내 식별자를 서식마다 다르게 짓습니다.
+  // 같은 화면에 추가 form 과 수정 행이 함께 표시될 수 있습니다. label 이 어느 입력칸을 가리키는지
+  // 모호해지지 않도록, 화면 내 식별자를 form 마다 다르게 짓습니다.
   const at = (field: string): string => `${path}-${field}`;
   const whyId = at("why");
   const bad = formError(touched, why, send.error);
@@ -575,7 +575,7 @@ function Readout(props: {
   const focused = periods.filter((period) => period.kind === "focused");
   const period = tab === "periods" ? focused[0] : undefined;
   const days = period ? daysBetween(period.starts_on, period.ends_on) : 1;
-  // 팀 수는 팀 목록 endpoint(통신 지점)가 제공합니다. 아직 조회하지 못했으면 0이며,
+  // 팀 수는 팀 목록 endpoint(API의 요청 주소 단위)가 제공합니다. 아직 조회하지 못했으면 0 이며,
   // 이 경우 팀당 배정을 계산하지 않습니다.
   const count = teams.length;
   const sum = openingHours({ rooms, days, teams: count });

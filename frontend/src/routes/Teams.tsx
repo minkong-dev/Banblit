@@ -189,9 +189,9 @@ function EditTeam(props: {
 /** 선택한 팀의 포지션 구성입니다. 빈 포지션도 함께 표시됩니다. 채워야 할 자리를 명확히 보여주는 것이 이 화면의 목적입니다. */
 function Lineup(props: {
   teamId: number;
-  /** 빈 포지션에 멤버를 추가할 수 있는지 여부입니다 */
+  /** 빈 포지션에 멤버를 배정할 수 있는지 여부입니다. */
   canAdd: boolean;
-  /** 멤버가 배정된 포지션을 비울 수 있는지 여부입니다 */
+  /** 멤버가 배정된 포지션을 비울 수 있는지 여부입니다. */
   canRemove: boolean;
 }) {
   const { teamId, canAdd, canRemove } = props;

@@ -1,7 +1,7 @@
-/* 배정 결과 화면만의 규칙. 색은 base.css, 상단바·사이드바·탭·카드·곁칸은 shell.css 가 준다. */
+/* 배정 결과 화면만의 규칙입니다. 색은 base.css, 상단바·사이드바·탭·카드·오른쪽 칸은 shell.css 가 정의합니다. */
 body[data-page="admin"] {
 
-  /* 달력은 넓을수록 좋다 — 본문 폭 상한을 풀고, 곁칸은 제 안에서 구른다. */
+  /* 달력은 넓을수록 좋습니다. 본문 폭 상한을 해제하고, 오른쪽 칸은 자체 스크롤합니다. */
   .page { max-width: none; }
   .rail { overflow-y: auto; }
 
@@ -42,7 +42,7 @@ body[data-page="admin"] {
   .cnt.short b { color: var(--red); }
 
   .act { display: flex; gap: 10px; flex-wrap: wrap; }
-  /* 이 화면의 단추는 한 단계 크다 — 계산·되돌리기가 화면의 주된 동작이다. */
+  /* 이 화면의 버튼은 한 단계 큽니다. 계산·되돌리기가 화면의 주된 동작입니다. */
   .btn { min-height: 50px; padding: 14px 22px; border-radius: 12px; font-size: 15px; transition: background-color .15s ease, color .15s ease; }
   .btn.main { background: var(--brand); color: var(--brand-on); }
   .btn.main:hover { background: var(--brand-press); }
@@ -51,7 +51,7 @@ body[data-page="admin"] {
   .note { padding: 15px 17px; background: var(--amber-tint); border-radius: 13px; font-size: 13.5px; color: var(--t2); line-height: 1.75; margin-bottom: 18px; }
   .note b { color: var(--t1); font-weight: 700; }
 
-  /* 오른쪽 — 지난 계산 회차. 줄 전체가 단추다. */
+  /* 오른쪽 칸의 지난 배정기록 목록입니다. 줄 전체가 버튼입니다. */
   .panel .round {
     display: block; width: 100%; text-align: left;
     padding: 12px 10px; border-radius: 12px;
@@ -63,7 +63,7 @@ body[data-page="admin"] {
   .panel .round small { font-size: 12.5px; color: var(--t3); }
   .panel li.empty { padding: 12px 10px; font-size: 13.5px; color: var(--t3); line-height: 1.7; }
 
-  /* 오른쪽 — 계산이 도는 시각 */
+  /* 오른쪽 칸의 계산 시각 */
   .times { padding: 18px; }
   .times .k { font-size: 12.5px; color: var(--t3); }
   .times .t { font-size: 22px; font-weight: 700; letter-spacing: -.04em; margin: 4px 0 14px; }

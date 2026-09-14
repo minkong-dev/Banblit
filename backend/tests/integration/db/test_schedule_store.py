@@ -103,7 +103,7 @@ def test_second_save_archives_previous(db_session: Session) -> None:
 def test_backups_keep_only_two_most_recent(db_session: Session) -> None:
     period_id, team_id, room_id = _scaffold(db_session)
 
-    # 네 번 저장하면 백업 회차 3개(9:00·21:00·다음날 9:00)가 생기고,
+    # 네 번 저장하면 백업 배정기록 3개(9:00·21:00·다음날 9:00)가 생기고,
     # 최신 2개만 남아야 합니다.
     save_schedule(db_session, period_id, [_row(team_id, room_id, 18)],
                   saved_at=datetime(2026, 8, 1, 8, 0))
@@ -150,10 +150,10 @@ def test_rollback_restores_previous_schedule(db_session: Session) -> None:
 def test_rollback_after_third_save_leaves_older_backup_intact(
     db_session: Session,
 ) -> None:
-    """세 번째 저장(s3) 뒤 롤백 1회는 s2로 되돌리고, s2 백업 회차만 남겨야 합니다.
+    """세 번째 저장(s3) 뒤 롤백 1회는 s2로 되돌리고, s2 백업 배정기록만 남겨야 합니다.
 
-    s1은 아카이브할 현행이 없어 백업을 만들지 않으므로 회차는 s2·s3 두 개다.
-    이 상태에서 롤백하면 최신 회차(s3)만 지워지고 s2는 그대로 살아있어야 한다.
+    s1 은 백업할 현행이 없어 백업을 만들지 않으므로 백업 배정기록은 s2·s3 2개입니다.
+    이 상태에서 rollback 하면 최신 배정기록(s3)만 삭제되고 s2 는 그대로 남아야 합니다.
     """
     period_id, team_id, room_id = _scaffold(db_session)
 
@@ -206,7 +206,7 @@ def test_rollback_without_backup_returns_false(db_session: Session) -> None:
 
 
 def test_two_periods_do_not_interfere(db_session: Session) -> None:
-    """서로 다른 기간의 저장·프루닝·롤백은 다른 기간의 현행·백업을 건드리지 않습니다."""
+    """한 기간의 저장·오래된 백업 삭제·rollback 은 다른 기간의 현행·백업을 변경하지 않습니다."""
     period1_id, team1_id, room1_id = _scaffold(db_session)
 
     period2 = Period(
@@ -223,10 +223,10 @@ def test_two_periods_do_not_interfere(db_session: Session) -> None:
     db_session.flush()
     period2_id, team2_id, room2_id = period2.id, team2.id, room2.id
 
-    # period1: 두 번 저장해 백업 회차 1개(saved_at=8/1 23:00)를 만들어둡니다.
+    # period1: 두 번 저장해 백업 배정기록 1개(saved_at=8/1 23:00)를 만들어둡니다.
     # 이 saved_at은 아래 period2의 백업 saved_at들(9:00·21:00·22:00)과
-    # 절대 겹치지 않게 잡습니다 — 프루닝이 period_id를 무시하면 period2의
-    # keep 목록에 없다는 이유로 이 회차가 잘못 지워지는 것을 검증하기 위해서입니다.
+    # 겹치지 않게 정합니다. _prune_backups 가 period_id 를 무시하면 period2 의
+    # keep 목록에 없다는 이유로 이 배정기록이 잘못 삭제되는 것을 검증하기 위해서입니다.
     save_schedule(db_session, period1_id, [_row(team1_id, room1_id, 10)],
                   saved_at=datetime(2026, 8, 1, 7, 0))
     db_session.commit()
@@ -234,10 +234,10 @@ def test_two_periods_do_not_interfere(db_session: Session) -> None:
                   saved_at=datetime(2026, 8, 1, 23, 0))
     db_session.commit()
 
-    # period2: 네 번 저장해 프루닝을 실제로 일으킨 뒤 롤백까지 수행합니다.
-    # (1번째 저장은 아카이브할 현행이 없어 백업을 만들지 않으므로, 백업 회차가
-    # 3개(9:00·21:00·22:00)가 되는 4번째 저장에서야 BACKUP_KEEP=2를 넘겨
-    # 가장 오래된 회차(9:00)가 실제로 지워집니다.)
+    # period2: 4번 저장해 오래된 백업 삭제를 실제로 일으킨 뒤 rollback 까지 수행합니다.
+    # (1번째 저장은 백업할 현행이 없어 백업을 만들지 않으므로, 백업 배정기록이
+    # 3개(9:00·21:00·22:00)가 되는 4번째 저장에서야 BACKUP_KEEP=2 를 넘겨
+    # 가장 오래된 배정기록(9:00)이 실제로 삭제됩니다.)
     save_schedule(db_session, period2_id, [_row(team2_id, room2_id, 18)],
                   saved_at=datetime(2026, 8, 1, 8, 0))
     db_session.commit()
@@ -265,9 +265,9 @@ def test_two_periods_do_not_interfere(db_session: Session) -> None:
     assert [b.saved_at for b in backups1] == [datetime(2026, 8, 1, 23, 0)]
     assert [b.starts_at for b in backups1] == [datetime(2026, 8, 1, 10, 0)]
 
-    # period2도 자신의 저장·프루닝·롤백 결과대로 정상 동작해야 합니다.
-    # 4번째 저장에서 9:00 회차가 프루닝으로 지워졌고, 롤백은 최신 회차(22:00,
-    # starts_at 20:00)를 현행으로 되돌린 뒤 그 회차를 지웁니다 — 남는 백업은
+    # period2 도 자신의 저장·오래된 백업 삭제·rollback 결과대로 동작해야 합니다.
+    # 4번째 저장에서 9:00 배정기록이 삭제되었고, rollback 은 최신 배정기록(22:00,
+    # starts_at 20:00)을 현행으로 되돌린 뒤 그 배정기록을 삭제합니다. 남는 백업은
     # 21:00(starts_at 19:00) 하나입니다.
     current2 = db_session.scalars(
         select(Assignment).where(Assignment.period_id == period2_id)
@@ -285,7 +285,7 @@ def test_backup_rounds_are_listed_newest_first_with_their_slot_counts(
 ) -> None:
     period_id, team_id, room_id = _scaffold(db_session)
 
-    # 첫 저장은 현행이 비어 있어 백업 회차를 만들지 않습니다.
+    # 첫 저장은 현행이 비어 있어 백업 배정기록을 만들지 않습니다.
     save_schedule(
         db_session,
         period_id,

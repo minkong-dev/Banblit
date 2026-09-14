@@ -1,7 +1,7 @@
 // 켜고 끄는 항목 하나입니다. 브라우저 기본 체크박스 대신 테두리 없는 체크 표시를 표시합니다.
 //
-// 실제 input을 삭제하지 않고 시각적으로만 감춥니다 — 키보드로 이동하기와 스크린 리더가
-// "선택 안 됨/선택됨"으로 읽는 것도 그 input이 처리합니다. 그림만 표시하면 둘 다 사라집니다.
+// 실제 input 을 삭제하지 않고 시각적으로만 감춥니다. 키보드 이동과 스크린 리더가
+// "선택 안 됨/선택됨"으로 읽는 것도 그 input 이 처리합니다. 아이콘만 표시하면 둘 다 동작하지 않습니다.
 //
 // label을 자동으로 생성하지 않으므로 부모 label 안에 삽입해야 합니다. label 안에 label을
 // 두는 것은 올바른 마크업이 아닙니다.
@@ -16,7 +16,7 @@ export function CheckMark(props: {
   onChange?: (checked: boolean) => void;
   defaultChecked?: boolean;
   disabled?: boolean;
-  /** 감싸는 label이 없을 때만 지정합니다 — 스크린 리더가 읽을 이름이 사라지지 않게. */
+  /** 감싸는 label 이 없을 때만 지정합니다. 스크린 리더가 읽을 이름이 없어지지 않게 하기 위해서입니다. */
   label?: string;
 }) {
   const { id, name, checked, onChange, defaultChecked, disabled, label } = props;

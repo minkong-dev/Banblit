@@ -1,7 +1,7 @@
 // 설정 화면의 멤버 구역입니다. 카드 두 장이 수직으로 배치됩니다.
 //
-// 위쪽 — 권한 묶음입니다. 정사각형 카드가 수평으로 늘어서며, 한 화면에 모두 보이지 않으면 < > 버튼으로 넘깁니다.
-// 아래쪽 — 가입한 모든 사람입니다. 권한으로 필터링하여 보이며, 아래로 스크롤하면 다음 페이지를 불러옵니다.
+// 위쪽은 permission set(권한 집합)입니다. 정사각형 카드가 수평으로 배치되며, 한 화면에 모두 보이지 않으면 < > 버튼으로 넘깁니다.
+// 아래쪽은 가입한 모든 멤버입니다. 아래로 스크롤하면 다음 page 를 불러옵니다.
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
@@ -32,7 +32,7 @@ type Draft = { name: string; description: string; permissions: Permission[] };
 
 const BLANK: Draft = { name: "", description: "", permissions: [] };
 
-/** 권한을 생성하거나 수정하는 모달입니다. 설명은 필수입니다. 항목 목록만으로는 "이 권한 묶음이 필요한 이유"가 명확하지 않습니다. */
+/** permission set 을 생성하거나 수정하는 modal 입니다. 설명은 필수입니다. 항목 목록만으로는 "이 permission set 이 필요한 이유"가 명확하지 않습니다. */
 function SetForm(props: {
   start: Draft;
   taken: string[];
@@ -142,7 +142,7 @@ function SetForm(props: {
   );
 }
 
-/** 멤버에게 권한을 부여하거나 제거합니다. */
+/** 멤버에게 permission set 을 부여하거나 회수합니다. */
 function GrantModal(props: {
   set: PermissionSet;
   onClose: () => void;
@@ -206,7 +206,7 @@ function GrantModal(props: {
   );
 }
 
-/** 권한 카드 한 장입니다. 정사각형 카드이며 이름, 멤버 수, 설명이 포함됩니다. */
+/** permission set 카드 한 장입니다. 정사각형 카드이며 이름, 멤버 수, 설명이 포함됩니다. */
 function SetTile(props: {
   set: PermissionSet;
   onGrant: () => void;
@@ -236,7 +236,7 @@ function SetTile(props: {
   );
 }
 
-/** 권한 카드 행입니다. 카드가 수평으로 배치되며, 한 화면에 모두 보이지 않으면 < > 버튼으로 넘깁니다. */
+/** permission set 카드 행입니다. 카드가 수평으로 배치되며, 한 화면에 모두 보이지 않으면 < > 버튼으로 넘깁니다. */
 function SetRail() {
   const client = useQueryClient();
   const track = useRef<HTMLUListElement | null>(null);
@@ -390,7 +390,7 @@ function MemberRoster(props: {
               <th>학번</th>
               <th>기수</th>
               <th>권한</th>
-              {/* 남는 가로 공간을 차지하는 빈 칸입니다. 이것이 없으면 넓은 화면에서 앞의 칼럼들이 가로 공간을 나눠 가지느라 값 사이가 크게 벌어집니다. */}
+              {/* 남는 가로 공간을 차지하는 빈 칸입니다. 이 요소가 없으면 넓은 화면에서 앞의 열들이 가로 공간을 나눠 가져 값 사이가 크게 벌어집니다. */}
               <th className="fill" aria-hidden="true" />
             </tr>
           </thead>

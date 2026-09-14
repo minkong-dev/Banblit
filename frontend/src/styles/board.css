@@ -1,19 +1,19 @@
-/* 게시판·공지 화면만의 규칙. 색은 base.css, 상단바·사이드바·카드·입력칸·단추는 shell.css 가 준다. */
+/* 게시판·공지 화면만의 규칙입니다. 색은 base.css, 상단바·사이드바·카드·입력칸·버튼은 shell.css 가 정의합니다. */
 body[data-page="board"] {
 
-  /* 오른쪽 칸이 없다 — 목록·상세·글쓰기가 전부라 한 칸이 남는 폭을 다 쓴다. */
+  /* 오른쪽 칸이 없습니다. 목록·상세·글쓰기가 전부라 한 칸이 남는 폭을 전부 사용합니다. */
   .page { grid-template-columns: minmax(0, 1fr); }
 
-  /* 목록은 스크롤하지 않는다 — 들어가는 만큼만 보여주고 나머지는 쪽으로 넘긴다.
-     그래서 쪽 넘기기 줄이 창 크기와 상관없이 늘 카드 바닥에 있다. */
+  /* 목록은 스크롤하지 않습니다. 들어가는 만큼만 표시하고 나머지는 page 로 나눕니다.
+     그래서 pagination 줄이 창 크기와 상관없이 항상 카드 아래에 있습니다. */
   .main { overflow: hidden; }
-  /* 카드가 하나뿐일 때만 세로를 채운다 — 쪽 넘기기 줄을 카드 바닥에 붙이려면
-     카드가 남는 높이를 가져야 한다. */
+  /* 카드가 하나뿐일 때만 세로를 채웁니다. pagination 줄을 카드 아래에 붙이려면
+     카드가 남는 높이를 가져야 합니다. */
   .main > .card:only-child { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .main > .card:only-child > .rows { flex: 1; min-height: 0; overflow: hidden; }
   .main > .card:only-child > .listfoot { margin-top: auto; }
 
-  /* 글쓰기 칸은 여러 줄 입력이라 위로 맞추고 폭을 다 쓴다. */
+  /* 글쓰기 칸은 여러 줄 입력이라 위로 정렬하고 폭을 전부 사용합니다. */
   .fields { align-items: flex-start; }
   .fields textarea { resize: vertical; min-height: 96px; line-height: 1.5; }
   .fields .wide { flex: 1 1 100%; }
@@ -23,18 +23,18 @@ body[data-page="board"] {
   .addrow .why { margin-top: 10px; }
   .note { margin: 0 0 12px; font-size: 12.5px; color: var(--t3); line-height: 1.6; }
 
-  /* 목록 한 줄 — 제목 단추 + 오른쪽 댓글 수 */
+  /* 목록 한 줄입니다. 제목 버튼 + 오른쪽 댓글 수 */
   .postrow { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; border-radius: 10px; padding: 4px 6px; margin: -4px -6px; }
   .postrow:hover { background: var(--card-2); }
   .postrow b { font-size: 15px; font-weight: 700; }
   .meta { font-size: 12.5px; color: var(--t3); }
   .cnt { font-size: 12.5px; color: var(--t3); white-space: nowrap; }
 
-  /* 상세 — 목록 자리를 그대로 이어받는다 */
+  /* 상세입니다. 목록의 영역을 그대로 사용합니다 */
   .thread { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
   .back { align-self: flex-start; font-size: 13.5px; color: var(--t2); padding: 8px 4px; border-radius: 8px; }
   .back:hover { color: var(--t1); }
-  /* 목록으로 돌아가는 자리와 글 지우는 자리를 한 줄에 양끝으로 둔다. */
+  /* 목록으로 돌아가는 버튼과 글 삭제 버튼을 한 줄의 양끝에 둡니다. */
   .threadtop { display: flex; align-items: center; gap: 12px; }
   .threadtop .back { align-self: center; }
   .threadtop .btn { margin-left: auto; }
@@ -44,7 +44,7 @@ body[data-page="board"] {
   .comments { border-top: 1px solid var(--line); padding-top: 14px; }
   .cap2 { font-size: 13.5px; color: var(--t2); font-weight: 500; margin: 0 0 10px; }
   .comments ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
-  /* 댓글 한 줄. 글쓴이·시각과 본문이 왼쪽에 쌓이고, 연필·쓰레기통이 오른쪽 끝에 선다. */
+  /* 댓글 한 줄입니다. 작성자·시각과 본문이 왼쪽에 세로로 배치되고, 수정·삭제 아이콘이 오른쪽 끝에 배치됩니다. */
   .comment { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; column-gap: 8px; }
   .comment .meta, .comment p { grid-column: 1; }
   .comment .acts { grid-column: 2; grid-row: 1 / span 2; align-items: center; gap: 2px; }
