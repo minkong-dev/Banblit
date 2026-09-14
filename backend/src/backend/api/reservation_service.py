@@ -11,11 +11,11 @@ from backend.api.input import (
 from backend.api.permission_service import account_permissions
 from backend.db.models import Member, Period, Reservation, Room, Team, TeamSlot
 from backend.db.pipeline import commit_translating
-from backend.scheduling.pipeline import TimeInterval, generate_slots
 
-# 선착순은 (room_id, starts_at) unique 제약이 commit 시점에 정합니다. 먼저 commit 한 요청이 그 slot(1시간 단위 시간 칸)을 가져갑니다.
+# 선착순은 겹침 금지 제약이 commit 시점에 정합니다. 먼저 commit 한 요청이 그 구간을 가져갑니다.
+# 제약 이름은 migration 이 정한 이름입니다(c8e4a1b60d93_reservation_as_one_row.py).
 RESERVATION_MESSAGES = {
-    "reservations_room_id_starts_at_key": "이미 다른 사람이 예약한 시간입니다. 다른 시간을 골라 주세요",
+    "reservations_no_overlap": "이미 다른 사람이 예약한 시간입니다. 다른 시간을 골라 주세요",
 }
 
 ReservationRow = tuple[Reservation, str, str | None, str]
@@ -68,18 +68,21 @@ def _require_not_in_focused_period(session: Session, day: date) -> None:
         raise ValueError("집중 합주기간이라 예약할 수 없습니다")
 
 
-def _planned_rows(
+def _planned_row(
     session: Session,
     room_id: int,
     requester: Member,
     team_id: int | None,
+    name: str | None,
     starts_at: datetime,
     ends_at: datetime,
     created_at: datetime,
-) -> tuple[list[Reservation], Room, Team | None]:
-    """요청한 구간을 검증하고 1시간 단위 slot 행 목록을 생성하여, 합주실·팀과 함께 반환합니다.
+) -> tuple[Reservation, Room, Team | None]:
+    """요청한 구간을 검증하고 예약 행 하나를 만들어, 합주실·팀과 함께 반환합니다.
 
     행은 아직 session 에 추가하지 않습니다. 추가할 시점과 commit 범위는 호출자가 정합니다.
+    겹치는지는 여기서 보지 않습니다. 조회해서 확인하면 그 사이에 들어온 다른 요청을 놓치므로,
+    판정을 commit 시점의 겹침 금지 제약 하나에 맡깁니다.
     """
     require_valid_slot_bounds(starts_at, ends_at)
     require_same_day(starts_at, ends_at)
@@ -91,19 +94,16 @@ def _planned_rows(
         _require_team_member(session, team_id, requester.id)
     _require_not_in_focused_period(session, starts_at.date())
 
-    slots = generate_slots(TimeInterval(start=starts_at, end=ends_at))
-    rows = [
-        Reservation(
-            room_id=room_id,
-            team_id=team_id,
-            member_id=requester.id,
-            starts_at=slot.start,
-            ends_at=slot.end,
-            created_at=created_at,
-        )
-        for slot in slots
-    ]
-    return rows, room, team
+    row = Reservation(
+        room_id=room_id,
+        team_id=team_id,
+        member_id=requester.id,
+        name=name,
+        starts_at=starts_at,
+        ends_at=ends_at,
+        created_at=created_at,
+    )
+    return row, room, team
 
 
 def create_reservation(
@@ -111,22 +111,22 @@ def create_reservation(
     room_id: int,
     requester: Member,
     team_id: int | None,
+    name: str | None,
     starts_at: datetime,
     ends_at: datetime,
     created_at: datetime,
-) -> tuple[list[Reservation], str, str, str | None]:
-    """예약을 1시간 단위 slot 행으로 분할하여 생성합니다. slot 이 하나라도 이미 예약되어 있으면 전체를 rollback 합니다.
+) -> tuple[Reservation, str, str, str | None]:
+    """예약 한 건을 만듭니다. 그 시간이 이미 차 있으면 commit 이 겹침 금지 제약에 걸려 거절됩니다.
 
-    선착순은 reservations table 의 (room_id, starts_at) unique 제약이 commit 시점에 정합니다.
-    schedule_service.save_schedule 과 같은 방식입니다. 검증 과정에서 이미 조회한 합주실·멤버·팀의
-    이름을 함께 반환하므로, 호출자가 이름을 표시하려고 다시 조회할 필요가 없습니다.
+    검증 과정에서 이미 조회한 합주실·멤버·팀의 이름을 함께 반환하므로, 호출자가 이름을
+    표시하려고 다시 조회할 필요가 없습니다.
     """
-    rows, room, team = _planned_rows(
-        session, room_id, requester, team_id, starts_at, ends_at, created_at
+    row, room, team = _planned_row(
+        session, room_id, requester, team_id, name, starts_at, ends_at, created_at
     )
-    session.add_all(rows)
+    session.add(row)
     commit_translating(session, RESERVATION_MESSAGES)
-    return rows, room.name, requester.name, team.name if team is not None else None
+    return row, room.name, requester.name, team.name if team is not None else None
 
 
 def list_reservations(
@@ -157,13 +157,19 @@ def list_reservations(
 def _get_own_reservation(
     session: Session, reservation_id: int, requester: Member, verb: str
 ) -> Reservation:
-    """reservation_id의 slot을 찾아, 그 slot을 예약한 멤버가 requester일 때만 반환합니다.
+    """reservation_id 의 예약을 찾아, 그 예약을 한 멤버가 requester 일 때만 반환합니다.
 
-    없는 slot 은 ValueError, 다른 사용자의 slot 은 PermissionError 로 구분하여 발생시킵니다. 호출자가
+    없는 예약은 ValueError, 다른 사용자의 예약은 PermissionError 로 구분하여 발생시킵니다. 호출자가
     "잘못된 요청"(422)과 "권한 없음"(403)을 다른 HTTP 상태 코드로 반환합니다. verb 는 오류 메시지에
     들어가는 동작 이름입니다("취소할", "옮길").
+
+    행을 잠급니다(with_for_update). 잠그지 않으면 읽은 뒤 commit 하기 전에 reservation_manage
+    권한자가 같은 예약을 취소할 수 있고, 그때 UPDATE 는 없는 행에 적용되어 0행을 고치고도
+    성공으로 commit 됩니다. 옮기지 못한 예약을 옮겼다고 응답하게 됩니다.
     """
-    reservation = session.get(Reservation, reservation_id)
+    reservation = session.scalars(
+        select(Reservation).where(Reservation.id == reservation_id).with_for_update()
+    ).first()
     if reservation is None:
         raise ValueError("그런 예약이 없습니다")
     # reservation_manage 권한을 가진 멤버는 다른 사용자의 예약도 취소·이동할 수 있습니다. 이 권한이
@@ -176,15 +182,11 @@ def _get_own_reservation(
 
 
 def cancel_reservation(session: Session, reservation_id: int, requester: Member) -> None:
-    """예약 slot 하나를 취소합니다. 그 slot 을 예약한 멤버 본인 또는 reservation_manage 권한을 가진 멤버만 삭제할 수 있습니다.
+    """예약 한 건을 취소합니다. 예약한 멤버 본인 또는 reservation_manage 권한을 가진 멤버만 삭제할 수 있습니다.
 
-    ponytail: 여러 slot 을 이어서 예약하면 각 slot 마다 id 가 다르므로, 화면(DayDialog 의 삭제 버튼 →
-    pipeline.ts cancelBooking)이 각 slot 마다 이 endpoint 를 순차적으로 호출합니다. 중간에 하나가
-    실패하면 실패한 slot 앞의 slot 만 삭제되고 나머지는 남습니다. "예약 하나를 통째로 취소"가 한 번의
-    요청이어야 하면 그때 예약을 묶는 ID 를 추가합니다.
+    예약이 행 하나이므로 요청도 한 번이고, 일부만 취소된 예약이 남지 않습니다.
     """
-    reservation = _get_own_reservation(session, reservation_id, requester, "취소할")
-    session.delete(reservation)
+    session.delete(_get_own_reservation(session, reservation_id, requester, "취소할"))
     session.commit()
 
 
@@ -194,31 +196,28 @@ def update_reservation(
     requester: Member,
     starts_at: datetime,
     ends_at: datetime,
-    created_at: datetime,
-) -> tuple[list[Reservation], str, str, str | None]:
-    """예약 slot 하나를 다른 시각으로 이동합니다. 합주실과 팀은 그대로 두고 시각만 변경합니다.
+) -> tuple[Reservation, str, str, str | None]:
+    """예약 한 건을 다른 구간으로 옮깁니다. 합주실·팀·이름은 그대로 두고 시각만 바꿉니다.
 
-    기존 slot 을 삭제하고 새 slot 을 추가하는 작업을 한 transaction 에서 수행합니다. 이동할 slot 이 이미
-    예약되어 있으면 commit 이 unique 제약에 실패하고, rollback 이 기존 slot 까지 함께 복구하여 원래 예약을
-    잃지 않습니다. 삭제를 먼저 flush 하는 이유는 SQLAlchemy 가 기본적으로 INSERT 를 DELETE 보다 먼저
-    전송하기 때문입니다. flush 하지 않으면 같은 slot 이나 인접한 slot 으로 이동할 때 자기 자신과 충돌합니다.
+    행 하나의 값만 고치므로 삭제와 추가로 나눌 일이 없습니다. 옮길 자리가 이미 차 있으면
+    commit 이 겹침 금지 제약에 걸리고, rollback 이 원래 시각을 되돌려 예약을 잃지 않습니다.
 
-    ponytail: cancel_reservation 과 같은 한계로, 이동 단위는 slot 하나입니다. 여러 slot 을
-    이어서 예약한 경우를 통째로 이동하려면 각 slot 마다 이 endpoint 를 호출해야 합니다. 새
-    구간이 여러 slot 이면 create_reservation 과 같은 규칙으로 분할되어 slot 개수가 증가합니다.
+    자기 자신과는 겹쳐도 됩니다. 제약은 행끼리만 보고 고치는 중인 행은 한 행이라 자기와
+    비교하지 않습니다. 그래서 1시간 뒤로 30분만 미는 것처럼 원래 구간과 겹치는 이동이 됩니다.
     """
     reservation = _get_own_reservation(session, reservation_id, requester, "옮길")
-    rows, room, team = _planned_rows(
-        session,
-        reservation.room_id,
-        requester,
-        reservation.team_id,
-        starts_at,
-        ends_at,
-        created_at,
-    )
-    session.delete(reservation)
-    session.flush()
-    session.add_all(rows)
+    room = _get_room_or_raise(session, reservation.room_id)
+
+    require_valid_slot_bounds(starts_at, ends_at)
+    require_same_day(starts_at, ends_at)
+    require_within_room_hours(room.opens_at, room.closes_at, starts_at, ends_at)
+    _require_not_in_focused_period(session, starts_at.date())
+
+    reservation.starts_at = starts_at
+    reservation.ends_at = ends_at
     commit_translating(session, RESERVATION_MESSAGES)
-    return rows, room.name, requester.name, team.name if team is not None else None
+
+    team = None
+    if reservation.team_id is not None:
+        team = session.get(Team, reservation.team_id)
+    return reservation, room.name, requester.name, team.name if team is not None else None

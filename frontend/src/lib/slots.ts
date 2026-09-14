@@ -30,9 +30,10 @@ export function mergeSessions(items: Session[]): Session[] {
   return merged;
 }
 
-/** mergeReservations()이 수신하는 slot(1시간 단위 시간 칸) 하나입니다. 서버 응답(lib/contract의 Reservation)에서
- *  이 계산이 사용하는 값만 추출한 형태입니다. */
-export type ReservationSlot = {
+/** 예약 한 건입니다. 서버가 구간 한 행으로 주므로 화면에서 잇는 계산이 없습니다.
+ *  서버 응답(lib/contract의 Reservation)에서 화면이 쓰는 값만 추린 형태입니다. */
+export type Booking = {
+  /** 취소와 이동은 이 번호 하나로 합니다. */
   id: number;
   room: string;
   /** 예약한 팀의 번호입니다. 없으면 멤버가 개인으로 예약한 것입니다. 팀을 이름이 아니라 번호로 구분합니다. 동명이인처럼 같은 이름의 팀이 있을 수 있기 때문입니다. */
@@ -40,61 +41,11 @@ export type ReservationSlot = {
   team: string | null;
   memberId: number;
   member: string;
+  /** 예약자가 붙인 이름입니다. 비어 있으면 화면이 팀 이름이나 예약자 이름을 대신 씁니다. */
+  name: string | null;
   start: string;
   end: string;
 };
-
-/** 예약 한 건입니다. 연속된 여러 slot을 연결한 것입니다. */
-export type Booking = {
-  /** 연결된 slot들의 ID입니다. 예약 취소는 slot마다 따로 삭제하므로 모든 ID를 보관해야 합니다. */
-  ids: number[];
-  room: string;
-  teamId: number | null;
-  team: string | null;
-  memberId: number;
-  member: string;
-  start: string;
-  end: string;
-};
-
-/** 서버가 제공한 slot(1시간 단위 시간 칸) 단위 예약을 사용자가 보는 한 건으로 연결합니다. 입력받은 목록은 수정하지 않습니다. */
-export function mergeReservations(rows: readonly ReservationSlot[]): Booking[] {
-  // 같은 위치(합주실·팀·예약자)별로 모아 시각 순으로 정렬한 후, 앞 slot의 종료시각과 맞닿은 slot만 연결합니다. 위치가 다르면 시각이 맞닿아도 별도입니다. 취소 권한은 예약자에게만 있어, 다른 사용자의 slot을 한 건으로 묶으면 삭제할 수 없는 ID가 섞입니다.
-  const sorted = [...rows].sort((a, b) =>
-    a.room.localeCompare(b.room)
-    || a.memberId - b.memberId
-    || (a.teamId ?? 0) - (b.teamId ?? 0)
-    || a.start.localeCompare(b.start),
-  );
-
-  const merged: Booking[] = [];
-  for (const row of sorted) {
-    const last = merged[merged.length - 1];
-    const joins = last !== undefined
-      && last.room === row.room
-      && last.memberId === row.memberId
-      && last.teamId === row.teamId
-      && last.end === row.start;
-    if (joins) {
-      last.ids.push(row.id);
-      last.end = row.end;
-    } else {
-      merged.push({
-        ids: [row.id],
-        room: row.room,
-        teamId: row.teamId,
-        team: row.team,
-        memberId: row.memberId,
-        member: row.member,
-        start: row.start,
-        end: row.end,
-      });
-    }
-  }
-  return merged;
-}
-
-// 서버는 시간대가 붙지 않은 ISO 문자열("2026-09-14T19:00:00" 형식의 시각 문자열)을 제공합니다. Date로 변환하면 브라우저가 기본 시간대를 적용해 날짜가 하루씩 밀릴 수 있으므로, 수신한 문자열을 그대로 자릅니다.
 
 export function dayOf(iso: string): string {
   // "2026-09-14T18:30:00"에서 "2026-09-14"를 잘라 반환합니다.
@@ -116,8 +67,8 @@ export function isoAt(dayKey: string, index: number, openHour: number): string {
   return `${dayKey}T${slotLabel(index, openHour)}:00`;
 }
 
-/** 설정의 예약 탭이 표시하는 목록입니다. 한 건으로 연결한 후 합주실과 무관하게 시작시각 순으로 정렬합니다.
- *  mergeReservations()는 합주실·사용자 순으로 정렬하므로, 사용자가 "다음 예약이 무엇인지" 확인하기에는 맞지 않습니다. */
-export function upcomingBookings(rows: readonly ReservationSlot[]): Booking[] {
-  return mergeReservations(rows).sort((a, b) => a.start.localeCompare(b.start));
+/** 설정의 예약 탭이 표시하는 목록입니다. 합주실과 무관하게 시작 시각 순으로 세웁니다.
+ *  사용자가 보려는 것이 "다음 예약이 무엇인지"라서 합주실보다 시각이 먼저입니다. */
+export function upcomingBookings(rows: readonly Booking[]): Booking[] {
+  return [...rows].sort((a, b) => a.start.localeCompare(b.start));
 }

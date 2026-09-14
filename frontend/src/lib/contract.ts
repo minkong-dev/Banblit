@@ -210,6 +210,8 @@ export type Reservation = {
   team: string | null;
   member_id: number;
   member: string;
+  /** 예약자가 붙인 이름입니다. 비어 있으면 화면이 팀 이름이나 예약자 이름을 대신 씁니다. */
+  name: string | null;
   start: string;
   end: string;
 };

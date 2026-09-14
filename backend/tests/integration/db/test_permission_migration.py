@@ -53,8 +53,10 @@ def test_the_head_manager_role_survives_the_move(
     with engine.begin() as connection:
         connection.execute(
             text(
-                "INSERT INTO members (name, role)"
-                " VALUES ('헤드', 'head_manager'), ('멤버', 'member')"
+                # password_hash 를 채웁니다. 가입한 적 없는 행을 지우는 migration
+                # (b3d9f27c0a41)이 head 까지 가는 길에 있어서, 비워 두면 두 사람이 사라집니다.
+                "INSERT INTO members (name, role, password_hash)"
+                " VALUES ('헤드', 'head_manager', 'x'), ('멤버', 'member', 'x')"
             )
         )
 
