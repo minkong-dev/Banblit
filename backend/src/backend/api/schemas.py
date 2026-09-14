@@ -443,6 +443,8 @@ class ReservationOut(BaseModel):
     team: str | None
     member_id: int
     member: str
+    # 캘린더에 표시할 이름입니다. 비어 있으면 화면이 팀 이름이나 예약자 이름을 대신 씁니다.
+    name: str | None
     start: datetime
     end: datetime
 
@@ -455,6 +457,7 @@ class ReservationCreateIn(BaseModel):
     # 예약자는 요청 본문이 아니라 인증 cookie 로 확인한 요청자입니다.
     room_id: int
     team_id: int | None = None
+    name: str | None = Field(default=None, max_length=60)
     starts_at: datetime
     ends_at: datetime
 

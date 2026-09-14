@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dayOf, hhmm, isoAt, mergeReservations, mergeSessions, slotIndex, upcomingBookings } from "./slots";
+import { dayOf, hhmm, isoAt, mergeSessions, slotIndex, upcomingBookings } from "./slots";
 import type { Session } from "./slots";
 
 const slot = (team: string, room: string, start: string, end: string): Session => ({
@@ -110,102 +110,32 @@ describe("isoAt — slotIndex 의 반대 방향", () => {
   });
 });
 
-describe("mergeReservations — 칸마다 쪼개진 예약을 한 건으로 잇는다", () => {
-  const row = (id: number, start: string, end: string, over: Partial<{
-    room: string; teamId: number | null; team: string | null; memberId: number; member: string;
-  }> = {}) => ({
-    id,
-    room: over.room ?? "합주실 A",
-    teamId: over.teamId === undefined ? null : over.teamId,
-    team: over.team === undefined ? null : over.team,
-    memberId: over.memberId ?? 7,
-    member: over.member ?? "고윤서",
-    start,
-    end,
+describe("upcomingBookings — 설정의 예약 탭이 보는 목록", () => {
+  const booking = (id: number, room: string, start: string, end: string) => ({
+    id, room, teamId: null, team: null, memberId: 7, member: "고윤서", name: null, start, end,
   });
 
-  it("맞닿은 칸을 한 건으로 잇고 칸 번호를 모두 든다", () => {
-    // Arrange: 18시부터 3칸을 이어서 예약한 경우입니다.
+  it("합주실과 무관하게 시작 시각 순으로 세운다", () => {
     const rows = [
-      row(1, "2026-09-14T18:00:00", "2026-09-14T19:00:00"),
-      row(2, "2026-09-14T19:00:00", "2026-09-14T20:00:00"),
-      row(3, "2026-09-14T20:00:00", "2026-09-14T21:00:00"),
+      booking(3, "합주실 B", "2026-09-21T18:00:00", "2026-09-21T20:00:00"),
+      booking(1, "합주실 A", "2026-09-20T20:00:00", "2026-09-20T21:00:00"),
     ];
 
-    // Act
-    const merged = mergeReservations(rows);
-
-    // Assert
-    expect(merged).toHaveLength(1);
-    expect(merged[0].ids).toEqual([1, 2, 3]);
-    expect(merged[0].start).toBe("2026-09-14T18:00:00");
-    expect(merged[0].end).toBe("2026-09-14T21:00:00");
-  });
-
-  it("사이가 떨어져 있으면 두 건으로 둔다", () => {
-    const merged = mergeReservations([
-      row(1, "2026-09-14T18:00:00", "2026-09-14T19:00:00"),
-      row(2, "2026-09-14T21:00:00", "2026-09-14T22:00:00"),
+    expect(upcomingBookings(rows).map((item) => [item.room, item.start])).toEqual([
+      ["합주실 A", "2026-09-20T20:00:00"],
+      ["합주실 B", "2026-09-21T18:00:00"],
     ]);
-
-    expect(merged.map((booking) => booking.ids)).toEqual([[1], [2]]);
-  });
-
-  it("맞닿아 있어도 잡은 사람이 다르면 잇지 않는다", () => {
-    // 취소는 예약자만 할 수 있으므로, 다른 사용자의 slot 까지 한 건으로 묶으면 안 됩니다.
-    const merged = mergeReservations([
-      row(1, "2026-09-14T18:00:00", "2026-09-14T19:00:00", { memberId: 7 }),
-      row(2, "2026-09-14T19:00:00", "2026-09-14T20:00:00", { memberId: 8, member: "권도현" }),
-    ]);
-
-    expect(merged).toHaveLength(2);
-  });
-
-  it("맞닿아 있어도 합주실이 다르면 잇지 않는다", () => {
-    const merged = mergeReservations([
-      row(1, "2026-09-14T18:00:00", "2026-09-14T19:00:00", { room: "합주실 A" }),
-      row(2, "2026-09-14T19:00:00", "2026-09-14T20:00:00", { room: "합주실 B" }),
-    ]);
-
-    expect(merged).toHaveLength(2);
-  });
-
-  it("맞닿아 있어도 이름을 건 팀이 다르면 잇지 않는다", () => {
-    const merged = mergeReservations([
-      row(1, "2026-09-14T18:00:00", "2026-09-14T19:00:00", { teamId: null }),
-      row(2, "2026-09-14T19:00:00", "2026-09-14T20:00:00", { teamId: 3, team: "여섯줄" }),
-    ]);
-
-    expect(merged).toHaveLength(2);
   });
 
   it("받은 목록을 고치지 않는다", () => {
     const rows = [
-      row(2, "2026-09-14T19:00:00", "2026-09-14T20:00:00"),
-      row(1, "2026-09-14T18:00:00", "2026-09-14T19:00:00"),
+      booking(2, "합주실 A", "2026-09-21T19:00:00", "2026-09-21T20:00:00"),
+      booking(1, "합주실 A", "2026-09-21T18:00:00", "2026-09-21T19:00:00"),
     ];
     const before = [...rows];
 
-    mergeReservations(rows);
+    upcomingBookings(rows);
 
     expect(rows).toEqual(before);
-  });
-});
-
-describe("upcomingBookings — 설정의 예약 탭이 보는 목록", () => {
-  const slot = (id: number, room: string, start: string, end: string) => ({
-    id, room, teamId: null, team: null, memberId: 7, member: "고윤서", start, end,
-  });
-
-  it("합주실과 무관하게 시작 시각 순으로 세우고, 맞닿은 칸은 한 건으로 잇는다", () => {
-    const rows = [
-      slot(3, "합주실 B", "2026-09-20T20:00:00", "2026-09-20T21:00:00"),
-      slot(1, "합주실 A", "2026-09-21T18:00:00", "2026-09-21T19:00:00"),
-      slot(2, "합주실 A", "2026-09-21T19:00:00", "2026-09-21T20:00:00"),
-    ];
-    expect(upcomingBookings(rows).map((booking) => [booking.room, booking.ids])).toEqual([
-      ["합주실 B", [3]],
-      ["합주실 A", [1, 2]],
-    ]);
   });
 });

@@ -221,13 +221,9 @@ export type ReservationForm = {
   ends_at: string;
 };
 
-/** 예약 한 건을 취소합니다. 서버는 slot(1시간 단위 시간 칸) 하나씩만 삭제하므로 그 예약에 포함된 ID를 차례로 삭제합니다.
- *  한 slot 이 실패하면 그 slot 에서 멈춥니다. 이미 삭제한 slot 을 복구하는 기능이 서버에 없고, 복구할
- *  이유도 없습니다. 다시 호출하면 남은 slot을 계속 삭제합니다. */
-export async function cancelBooking(reservationIds: readonly number[]): Promise<void> {
-  for (const id of reservationIds) {
-    await getJSON(`/reservations/${id}`, { method: "DELETE" });
-  }
+/** 예약 한 건을 취소합니다. 서버가 구간 한 행으로 들고 있어 요청도 한 번입니다. */
+export async function cancelBooking(reservationId: number): Promise<void> {
+  await getJSON(`/reservations/${reservationId}`, { method: "DELETE" });
 }
 
 /** 자신이 등록한 불가능 일정 하나를 삭제합니다. 다른 사용자의 일정은 서버가 없는 일정과 같게 거절합니다. */
@@ -254,7 +250,6 @@ export {
   dayOf,
   hhmm,
   isoAt,
-  mergeReservations,
   mergeSessions,
   slotIndex,
   upcomingBookings,

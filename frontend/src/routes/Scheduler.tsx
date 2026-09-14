@@ -15,7 +15,7 @@ import type { DayTeam } from "../lib/roster";
 import { useMe, usePeriods, useRooms } from "../components/hooks";
 import "../styles/scheduler.css";
 import type { Post, Reservation, ScheduleRow, Team, Unavailable } from "../lib/contract";
-import { dayLabel, dayOf, dayWithWeekday, hoursLabel, isRangeFree, mergeReservations, mergeSessions, monthCells, slotCountOf, slotIndex, slotLabel, stampLabel, takenGrid, WEEKDAY_NAMES, weekKeys } from "../lib/pipeline";
+import { dayLabel, dayOf, dayWithWeekday, hoursLabel, isRangeFree, mergeSessions, monthCells, slotCountOf, slotIndex, slotLabel, stampLabel, takenGrid, WEEKDAY_NAMES, weekKeys } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
 
 // 오른쪽 공지 칸에 표시할 최대 줄 수입니다. 전체 목록은 공지 화면(routes/Notices)이 표시합니다.
@@ -154,9 +154,9 @@ function visibleDays(year: number, month: number): string[] {
 
 const DAYS_PER_WEEK = 7;
 
-/** 예약을 날짜별로 담습니다. 서버는 slot(1시간 단위 시간 칸)을 하나씩 주므로 맞닿은
- *  slot 을 먼저 하나로 연결해야 사용자가 보는 예약 한 건이 됩니다. team_id 로 실제 팀을
- *  찾습니다. 이름 비교보다 정확합니다. 동명이인 규칙과 같은 이유로 사람도 팀도 번호로 구분합니다.
+/** 예약을 날짜별로 담습니다. 서버가 구간 한 행으로 주므로 잇는 계산이 없습니다.
+ *  team_id 로 실제 팀을 찾습니다. 이름 비교보다 정확합니다. 동명이인 규칙과 같은 이유로
+ *  사람도 팀도 번호로 구분합니다.
  *  로그인한 사용자가 예약한 건에만 삭제할 id 를 포함해, 다른 사용자의 예약에는 취소 버튼이 표시되지 않게 합니다. */
 // 주 보기는 합주실이 여는 시간만이 아니라 하루를 통째로 표시합니다. 합주실마다 여는 시각이 달라도
 // 같은 줄에 같은 시각이 오고, 합주실을 바꿔도 줄이 밀리지 않습니다. 대신 줄이 많아 늘 스크롤이
@@ -175,28 +175,18 @@ function hourLabel(hour: number): string {
 function bookedByDay(
   rows: Reservation[], teams: DayTeam[], openHour: number, myMemberId: number | null,
 ): DayEntries {
-  const bookings = mergeReservations(rows.map((row) => ({
-    id: row.id,
-    room: row.room,
-    teamId: row.team_id,
-    team: row.team,
-    memberId: row.member_id,
-    member: row.member,
-    start: row.start,
-    end: row.end,
-  })));
-
   const byDay: DayEntries = {};
-  for (const booking of bookings) {
-    const team = teams.find((item) => item.id === booking.teamId);
+  for (const booking of rows) {
+    const team = teams.find((item) => item.id === booking.team_id);
     (byDay[dayOf(booking.start)] ??= []).push({
       kind: "book",
       team: team?.key ?? null,
       room: booking.room,
-      who: booking.team ?? booking.member,
+      // 예약자가 붙인 이름이 있으면 그것을, 없으면 팀 이름을, 팀도 없으면 예약자 이름을 씁니다.
+      who: booking.name ?? booking.team ?? booking.member,
       a: slotIndex(booking.start, openHour),
       b: slotIndex(booking.end, openHour),
-      removeIds: booking.memberId === myMemberId ? booking.ids : undefined,
+      bookingId: booking.member_id === myMemberId ? booking.id : undefined,
     });
   }
   return byDay;

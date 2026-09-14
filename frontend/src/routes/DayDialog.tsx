@@ -29,9 +29,12 @@ export type Entry = {
   who?: string;
   a: number;
   b: number;
-  /** 로그인한 사용자가 삭제할 수 있는 예약·불가능 일정이면, 삭제할 때 서버에 넘길 id 입니다. 예약은 slot 마다 id 가 다르므로
-   *  2개 이상입니다. 없으면 다른 사용자의 예약이거나 서버가 배정한 일정이라 화면에서 삭제하지 못합니다. */
+  /** 로그인한 사용자가 삭제할 수 있는 불가능 일정이면, 삭제할 때 서버에 넘길 id 입니다.
+   *  없으면 반복으로 전개한 항목이라 화면에서 삭제하지 못합니다. */
   removeIds?: number[];
+  /** 로그인한 사용자가 취소할 수 있는 예약이면 그 예약의 번호입니다. 없으면 다른 사용자의
+   *  예약이거나 서버가 배정한 일정이라 화면에서 취소하지 못합니다. */
+  bookingId?: number;
 };
 
 
@@ -102,12 +105,14 @@ export function DayDialog(props: {
   // 내 팀에 배정된 항목과, 내가 직접 등록한 항목(removeIds 가 있는 항목)입니다. 개인 이름으로 한 예약은
   // 팀이 없어 팀만 보고는 구분할 수 없습니다.
   const mine = entries.filter(
-    (entry) => entry.removeIds !== undefined
+    (entry) => entry.removeIds !== undefined || entry.bookingId !== undefined
       || (entry.team !== null && teams.some((t) => t.key === entry.team && t.mine)),
   );
 
   // 로그인한 사용자가 삭제할 수 있는 항목만 모읍니다. 다른 사용자의 예약과 서버가 배정한 항목에는 removeIds 가 없습니다.
-  const removable = entries.filter((entry) => entry.removeIds !== undefined);
+  const removable = entries.filter(
+    (entry) => entry.removeIds !== undefined || entry.bookingId !== undefined,
+  );
 
   /** 하루를 세로 띠로 표시합니다. 시각은 왼쪽에 시간 단위로만 적습니다. */
   const timeline = (list: Entry[]) => (
@@ -180,22 +185,25 @@ export function DayDialog(props: {
     </div>
   );
 
-  /** 등록한 항목 하나를 삭제합니다. 예약은 slot 마다 id 가 다르므로 id 여러 개를 한 번에 전달합니다. */
+  /** 등록한 항목 하나를 지웁니다. 예약은 번호 하나로 통째로 취소하고, 불가능 일정은 그 행의 id 로 삭제합니다. */
   const removeEntry = async (entry: Entry) => {
-    const ids = entry.removeIds;
-    if (ids === undefined || memberId === null) return;
+    if (memberId === null) return;
     const when = `${label(entry.a)}–${endLabel(entry.b)}`;
-    const booking = entry.kind === "book";
-    if (!(booking ? askCancel(`${nameOf(entry)} ${when} 예약`) : askDelete(`${when} 불가능 일정`))) {
+    const bookingId = entry.bookingId;
+    const booking = bookingId !== undefined;
+    if (booking) {
+      if (!askCancel(`${nameOf(entry)} ${when} 예약`)) return;
+    } else if (entry.removeIds !== undefined) {
+      if (!askDelete(`${when} 불가능 일정`)) return;
+    } else {
       return;
     }
     try {
-      await (booking ? cancelBooking(ids) : removeUnavailable(memberId, ids[0]));
+      await (bookingId !== undefined
+        ? cancelBooking(bookingId)
+        : removeUnavailable(memberId, entry.removeIds![0]));
     } catch (error) {
       setError(error instanceof Error ? error.message : "삭제하지 못했어요.");
-      // 실패해도 서버 값을 다시 받습니다. 예약은 slot 마다 삭제하므로 앞쪽 slot 은 이미 삭제되었을
-      // 수 있는데, 화면이 이전 id 를 그대로 가지고 있으면 다시 눌러도 이미 없는 slot 부터
-      // 삭제하려다 같은 위치에서 실패합니다.
       onSaved();
       return;
     }
@@ -211,7 +219,7 @@ export function DayDialog(props: {
       <h3>등록된 불가능 일정</h3>
       <ul className="mlist">
         {removable.map((entry) => (
-          <li className="prow" key={`${entry.kind}-${entry.removeIds?.[0] ?? entry.a}`}>
+          <li className="prow" key={`${entry.kind}-${entry.bookingId ?? entry.removeIds?.[0] ?? entry.a}`}>
             <i className={`dot ${entry.team ?? "off"}`} aria-hidden="true" />
             <span className="nm">{entry.kind === "book" ? nameOf(entry) : "불가능 일정"}</span>
             <span className="ps">{label(entry.a)}–{endLabel(entry.b)}</span>

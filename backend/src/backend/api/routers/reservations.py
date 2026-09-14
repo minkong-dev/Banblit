@@ -33,6 +33,7 @@ def _reservation_out(reservation: Reservation, room_name: str, team_name: str | 
         team=team_name,
         member_id=reservation.member_id,
         member=member_name,
+        name=reservation.name,
         start=reservation.starts_at,
         end=reservation.ends_at,
     )
@@ -75,16 +76,17 @@ def create_reservation_endpoint(
     session: Session = Depends(get_session),
 ) -> ReservationsOut:
     # 예약자는 요청 body(본문)가 아니라 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 확인한 requester 입니다. 다른 사람 이름으로 예약할 수 없습니다.
-    rows, room_name, member_name, team_name = create_reservation(
+    row, room_name, member_name, team_name = create_reservation(
         session,
         req.room_id,
         requester,
         req.team_id,
+        req.name,
         req.starts_at,
         req.ends_at,
         datetime.now(),
     )
-    return _rows_out([(row, room_name, team_name, member_name) for row in rows])
+    return _rows_out([(row, room_name, team_name, member_name)])
 
 
 @router.patch("/reservations/{reservation_id}", response_model=ReservationsOut)
@@ -94,16 +96,15 @@ def update_reservation_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> ReservationsOut:
-    # slot(1시간 단위 시간 칸)을 새로 예약하는 것과 같으므로, created_at 은 이동을 요청한 현재 시각입니다.
-    rows, room_name, member_name, team_name = update_reservation(
+    # 예약한 시각(created_at)은 처음 잡은 때 그대로 둡니다. 옮긴 것이지 새로 잡은 것이 아닙니다.
+    row, room_name, member_name, team_name = update_reservation(
         session,
         reservation_id,
         requester,
         req.starts_at,
         req.ends_at,
-        datetime.now(),
     )
-    return _rows_out([(row, room_name, team_name, member_name) for row in rows])
+    return _rows_out([(row, room_name, team_name, member_name)])
 
 
 @router.delete("/reservations/{reservation_id}", status_code=204)

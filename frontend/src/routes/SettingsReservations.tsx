@@ -49,13 +49,13 @@ export function ReservationCards() {
   });
 
   const cancel = useMutation({
-    mutationFn: (booking: Booking) => cancelBooking(booking.ids),
+    mutationFn: (booking: Booking) => cancelBooking(booking.id),
     onSettled: () => { void client.invalidateQueries({ queryKey: ["reservations"] }); },
     onSuccess: () => say("예약을 취소했어요"),
     onError: (error) => say(reason(error, "예약을 취소하지 못했어요")),
   });
 
-  // 서버 규격(Reservation)을 배정 계산이 받는 형태(ReservationSlot)로 변환합니다. 달력(Scheduler)과 같은 전처리입니다.
+  // 서버 규격(Reservation)에서 화면이 쓰는 값만 추립니다. 달력(Scheduler)과 같은 전처리입니다.
   const bookings = upcomingBookings((list.data?.rows ?? []).map((row) => ({
     id: row.id,
     room: row.room,
@@ -63,6 +63,7 @@ export function ReservationCards() {
     team: row.team,
     memberId: row.member_id,
     member: row.member,
+    name: row.name,
     start: row.start,
     end: row.end,
   })));
@@ -91,7 +92,7 @@ export function ReservationCards() {
           </thead>
           <tbody>
             {bookings.map((booking) => (
-              <tr key={booking.ids[0]}>
+              <tr key={booking.id}>
                 <td>{dayWithWeekday(booking.start.slice(0, 10))}</td>
                 <td>{hhmm(booking.start)}–{hhmm(booking.end)}</td>
                 <td>{booking.room}</td>
@@ -101,7 +102,7 @@ export function ReservationCards() {
                   <button
                     className="btn"
                     // 취소 중인 행만 비활성화합니다. 다른 행까지 비활성화하면 어느 예약이 삭제 진행 중인지 사용자가 알 수 없습니다.
-                    disabled={cancel.isPending && cancel.variables?.ids[0] === booking.ids[0]}
+                    disabled={cancel.isPending && cancel.variables?.id === booking.id}
                     aria-label={`${bookingLabel(booking)} 취소`}
                     onClick={() => { if (askCancel(bookingLabel(booking))) cancel.mutate(booking); }}
                   >

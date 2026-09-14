@@ -103,7 +103,7 @@ def test_reservation_endpoints_require_login(
     assert api_client.delete("/reservations/1").status_code == 401
 
 
-def test_a_personal_reservation_is_created_as_hourly_rows(
+def test_a_personal_reservation_is_created_as_one_row(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     owner_id, owner = account("이도현", "dohyun@example.com")
@@ -123,8 +123,80 @@ def test_a_personal_reservation_is_created_as_hourly_rows(
 
     assert response.status_code == 201
     rows = response.json()["reservations"]
-    assert [r["start"] for r in rows] == [f"{OPEN_DAY}T18:00:00", f"{OPEN_DAY}T19:00:00"]
-    assert all(r["team_id"] is None and r["member_id"] == owner_id for r in rows)
+    # 두 시간을 잡아도 행은 하나입니다. 사람이 고른 것이 구간 하나이기 때문입니다.
+    assert len(rows) == 1
+    assert rows[0]["start"] == f"{OPEN_DAY}T18:00:00"
+    assert rows[0]["end"] == f"{OPEN_DAY}T20:00:00"
+    assert rows[0]["team_id"] is None and rows[0]["member_id"] == owner_id
+
+
+def test_a_reservation_that_partly_overlaps_another_is_refused(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """앞 예약과 일부만 겹쳐도 거절해야 합니다.
+
+    예전에는 1시간 칸마다 행을 두고 (room_id, starts_at) 중복 금지로 선착순을 정했기 때문에,
+    시작 시각이 다르면서 뒷부분만 겹치는 구간은 걸러내지 못했습니다. 지금은 구간 자체가
+    겹치는지를 DB 가 봅니다.
+    """
+    _, first = account("이도현", "dohyun@example.com")
+    _, second = account("박서연", "seoyeon@example.com")
+    room = _room(db_session)
+    _open_period(db_session)
+    db_session.commit()
+
+    api_client.post(
+        "/reservations",
+        json={
+            "room_id": room.id,
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T20:00:00",
+        },
+        cookies=first,
+    )
+
+    # 19시에 시작해 21시에 끝납니다. 시작 시각은 다르지만 19~20 시가 겹칩니다.
+    response = api_client.post(
+        "/reservations",
+        json={
+            "room_id": room.id,
+            "starts_at": f"{OPEN_DAY}T19:00:00", "ends_at": f"{OPEN_DAY}T21:00:00",
+        },
+        cookies=second,
+    )
+
+    assert response.status_code == 422
+    assert "이미" in response.json()["detail"]
+
+
+def test_a_reservation_may_start_when_another_ends(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """앞 예약이 끝나는 시각에 다음 예약이 시작하는 것은 겹치는 것이 아닙니다."""
+    _, first = account("이도현", "dohyun@example.com")
+    _, second = account("박서연", "seoyeon@example.com")
+    room = _room(db_session)
+    _open_period(db_session)
+    db_session.commit()
+
+    api_client.post(
+        "/reservations",
+        json={
+            "room_id": room.id,
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
+        },
+        cookies=first,
+    )
+
+    response = api_client.post(
+        "/reservations",
+        json={
+            "room_id": room.id,
+            "starts_at": f"{OPEN_DAY}T19:00:00", "ends_at": f"{OPEN_DAY}T20:00:00",
+        },
+        cookies=second,
+    )
+
+    assert response.status_code == 201
 
 
 def test_a_reservation_belongs_to_the_cookie_owner_not_the_first_account(
@@ -478,10 +550,12 @@ def test_reservation_slot_race_at_commit_time_is_translated_not_500(
     session_a = Session(test_engine)
     session_b = Session(test_engine)
     try:
-        create_reservation(session_a, room.id, member, None, slot_start, slot_end, created_at)
+        create_reservation(
+            session_a, room.id, member, None, None, slot_start, slot_end, created_at
+        )
         with pytest.raises(ValueError, match="이미"):
             create_reservation(
-                session_b, room.id, member, None, slot_start, slot_end, created_at
+                session_b, room.id, member, None, None, slot_start, slot_end, created_at
             )
     finally:
         session_a.close()
@@ -625,8 +699,10 @@ def test_moving_a_reservation_slot_outside_room_hours_is_rejected(
 def test_a_reservation_slot_can_be_stretched_over_its_own_time(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """이동할 구간이 원래 slot(1시간 단위 시간 칸)과 겹쳐도 통과해야 합니다. 이전 slot 을 삭제하기 전에 새 slot 을
-    생성하면 자신의 예약과 충돌해서 거절됩니다."""
+    """옮길 구간이 원래 구간과 겹쳐도 통과해야 합니다.
+
+    겹침 금지 제약은 행끼리만 봅니다. 고치는 중인 행은 하나라서 자기 자신과 비교하지 않습니다.
+    """
     _, owner = account("이도현", "dohyun@example.com")
     room = _room(db_session)
     _open_period(db_session)
@@ -648,10 +724,10 @@ def test_a_reservation_slot_can_be_stretched_over_its_own_time(
     )
 
     assert response.status_code == 200
-    assert [r["start"] for r in response.json()["reservations"]] == [
-        f"{OPEN_DAY}T18:00:00",
-        f"{OPEN_DAY}T19:00:00",
-    ]
+    moved = response.json()["reservations"]
+    assert len(moved) == 1
+    assert moved[0]["start"] == f"{OPEN_DAY}T18:00:00"
+    assert moved[0]["end"] == f"{OPEN_DAY}T20:00:00"
 
 
 def test_an_everyday_focused_period_blocks_reservations_after_its_end_date(

@@ -12,6 +12,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     String,
     Text,
     Time,
@@ -379,11 +380,16 @@ class Attachment(Base):
 
 
 class Reservation(Base):
-    """예약 slot(1시간 단위 시간 칸) 하나입니다. 집중 합주기간이 아닌 날의 1시간입니다.
+    """예약 한 건입니다. 사람이 고른 구간을 쪼개지 않고 starts_at~ends_at 한 행으로 저장합니다.
 
-    Assignment 와 같은 규칙으로 합주실·시각당 하나만 존재합니다(room_id, starts_at unique 제약).
-    여러 slot 을 이어서 예약하면 이 table 에 slot 수만큼 행이 저장됩니다. 화면이 Assignment 행을
-    이어 붙이는 것과 같은 방식으로 표시합니다.
+    같은 합주실에서 시간이 겹치는 행은 DB 가 거절합니다(reservations_no_overlap). 선착순은
+    그 제약이 commit 시점에 정합니다. 예전에는 1시간 칸마다 행을 두고 (room_id, starts_at)
+    중복 금지로 같은 일을 했는데, 그러면 취소와 이동이 칸마다 따로 일어나 중간에 실패하면
+    예약이 반만 지워졌습니다.
+
+    name 은 캘린더에 표시할 이름입니다. 비어 있으면 화면이 팀 이름을, 팀도 없으면 예약자
+    이름을 대신 씁니다.
+
     team_id 가 있으면 팀 예약, 없으면 member_id 멤버의 개인 예약입니다.
     """
 
@@ -397,12 +403,17 @@ class Reservation(Base):
     member_id: Mapped[int] = mapped_column(
         ForeignKey("members.id", ondelete="CASCADE")
     )
+    name: Mapped[str | None] = mapped_column(String(60), nullable=True)
     starts_at: Mapped[datetime] = mapped_column(DateTime)
     ends_at: Mapped[datetime] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime)
 
+    # 겹침 금지 제약(EXCLUDE)은 SQLAlchemy 로 표현할 수 없어 migration 이 직접 만듭니다
+    # (migrations/versions/c8e4a1b60d93_reservation_as_one_row.py). index 는 표현할 수
+    # 있으므로 여기 적습니다. 빠뜨리면 다음 autogenerate 가 "메타데이터에 없는 index" 로
+    # 보고 지우는 migration 을 만들어 냅니다.
     __table_args__ = (
-        UniqueConstraint("room_id", "starts_at"),
+        Index("ix_reservations_room_starts_at", "room_id", "starts_at"),
         CheckConstraint("ends_at > starts_at"),
     )
 
