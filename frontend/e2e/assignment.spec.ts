@@ -74,8 +74,8 @@ test.describe("배정 다시 계산", () => {
     const recomputeButton = page.getByRole("button", { name: /다시 계산|계산하는 중/ });
     await recomputeButton.click();
     // slot 이 안 맞는다는 판정은 CP-SAT 이 탐색 없이 곧장 끝낼 때가 있어 "계산하는
-    // 중…" 이 뜨는 순간을 못 볼 수 있다("저장된 배정이…" 테스트가 그 문구는 이미 본다).
-    // 여기서는 끝난 뒤의 결과만 확실히 잡는다.
+    // 중…" 이 뜨는 순간을 못 볼 수 있다("저장된 배정이…" 테스트가 그 문구는 이미 봅니다).
+    // 여기서는 끝난 뒤의 결과만 확실히 잡습니다.
     await expect(recomputeButton).toHaveText("지금 다시 계산", { timeout: ASSIGN_WAIT_MS });
 
     await expect(page.getByText(/조율안 \d+개/)).toBeVisible();

@@ -201,7 +201,7 @@ def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
                 item.add_marker(dependency)
 
         # unit 폴더의 테스트가 실제 DB fixture를 사용하면 수집 단계에서 멈춥니다.
-        # DB가 실행 중인 동안에는 조용히 통과해버려 폴더 분리가 무너진 것을
+        # DB가 실행 중인 동안에는 오류 메시지 없이 통과해버려 폴더 분리가 무너진 것을
         # 아무도 감지하지 못합니다.
         if "unit" in parts and _DB_FIXTURES & set(getattr(item, "fixturenames", ())):
             raise pytest.UsageError(

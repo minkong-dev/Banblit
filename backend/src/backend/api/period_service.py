@@ -142,9 +142,9 @@ def _load_team_names(session: Session, team_ids: list[int]) -> dict[int, str]:
 def _load_members(
     session: Session, team_ids: list[int]
 ) -> tuple[dict[int, list[int]], dict[int, str]]:
-    # 팀별 멤버 번호 목록과, 번호에서 이름을 찾을 대응표를 함께 돌려준다.
-    # 엔진에는 번호만 가고, 이름은 응답을 만들 때만 쓴다.
-    # 사람이 앉지 않은 자리는 배정 명단에 넣지 않는다 — 안쪽 조인이 빈 자리를 거른다.
+    # 팀별 멤버 번호 목록과, 번호에서 이름을 찾을 대응표를 함께 돌려줍니다.
+    # 엔진에는 번호만 가고, 이름은 응답을 만들 때만 씁니다.
+    # 사람이 앉지 않은 자리는 배정 명단에 넣지 않습니다 — 안쪽 조인이 빈 자리를 거릅니다.
     rows = session.execute(
         select(TeamSlot.team_id, Member.id, Member.name)
         .join(Member, Member.id == TeamSlot.member_id)
@@ -162,8 +162,8 @@ def _load_members(
 def _without_member(
     member_ids_by_team: dict[int, list[int]], excluded_member_id: int
 ) -> dict[int, list[int]]:
-    # excluded_member_id 를 뺀 명단을 새로 만들어 돌려준다. 원본은 고치지 않는다.
-    # 어느 팀에도 없는 번호면 조율안이 가리킬 수 없는 사람이므로 여기서 거부한다.
+    # excluded_member_id 를 뺀 명단을 새로 만들어 돌려줍니다. 원본은 고치지 않습니다.
+    # 어느 팀에도 없는 번호면 조율안이 가리킬 수 없는 사람이므로 여기서 거부합니다.
     in_some_team = any(
         excluded_member_id in member_ids for member_ids in member_ids_by_team.values()
     )
@@ -176,15 +176,15 @@ def _without_member(
 
 
 def open_slots_in_period(session: Session, period: Period) -> list[OpenSlot]:
-    """그 기간에서 아무 팀도 쓰지 않는 한 시간 slot 을 시작 시각순으로 돌려준다.
+    """그 기간에서 아무 팀도 쓰지 않는 한 시간 slot 을 시작 시각순으로 돌려줍니다.
 
     저장된 배정에 쓰인 합주실의 운영시간을 기간의 날짜마다 slot 으로 쪼갠 뒤,
     배정이 차지한 slot 을 뺀다. 배정 계산(resolve)은 여기서 실행하지 않는다.
     합주실 운영시간이 한 시간 slot 으로 쪼개지지 않으면 ValueError를 올린다.
     """
-    # ponytail: slot 을 만들 합주실을 저장된 배정에서 되찾는다 — 배정에 넘긴 합주실
-    # 목록을 남기는 table 이 없어서다. 한 slot 도 못 받은 합주실은 남는 slot 에도 안 나온다.
-    # period_rooms table 이 생기면 여기서 그 목록을 읽는다.
+    # ponytail: slot 을 만들 합주실을 저장된 배정에서 되찾습니다 — 배정에 넘긴 합주실
+    # 목록을 남기는 table 이 없어서입니다. 한 slot 도 못 받은 합주실은 남는 slot 에도 안 나옵니다.
+    # period_rooms table 이 생기면 여기서 그 목록을 읽습니다.
     taken = session.execute(
         select(Assignment.room_id, Assignment.starts_at).where(
             Assignment.period_id == period.id
@@ -238,8 +238,8 @@ def _load_unavailable(
 
 
 def _assignment_rows(assignment: EngineAssignment) -> list[AssignmentRow]:
-    # 엔진이 돌려준 slot 을 그대로 저장할 줄로 옮긴다. 팀 번호도 방 번호도
-    # DB 의 번호 그대로라 되돌릴 것이 없다.
+    # 엔진이 돌려준 slot 을 그대로 저장할 줄로 옮깁니다. 팀 번호도 합주실 번호도
+    # DB 의 번호 그대로라 되돌릴 것이 없습니다.
     rows: list[AssignmentRow] = []
     for team_id, slots in assignment.slots_by_team.items():
         for room_slot in slots:

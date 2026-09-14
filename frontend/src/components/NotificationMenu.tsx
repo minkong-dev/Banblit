@@ -31,7 +31,7 @@ export function NotificationMenu() {
     try {
       await markNotificationsRead();
     } catch {
-      // 마크 요청이 실패해도 cache(클라이언트 임시 저장소)는 갱신하지 않습니다.
+      // 읽음 처리 요청이 실패하면 cache(클라이언트 임시 저장소)를 갱신하지 않습니다.
       // refetch(다시 조회)하면 서버의 정확한 상태를 반영합니다.
     }
     void queryClient.invalidateQueries({ queryKey: ["notifications"] });

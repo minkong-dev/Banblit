@@ -108,7 +108,7 @@ class Member(Base):
 
 
 class PermissionSet(Base):
-    """권한 묶음. 이름이 식별자라 겹칠 수 없고, permissions 는 켜진 항목 목록이다.
+    """권한 묶음. 이름이 식별자라 겹칠 수 없고, permissions 는 켜진 항목 목록입니다.
 
     description 은 이 권한이 무엇을 하는 사람에게 주는 것인지를 적는 자리다. 항목
     목록만으로는 "왜 이 묶음이 있는가"가 남지 않아, 만들 때 반드시 적게 한다.
@@ -121,15 +121,15 @@ class PermissionSet(Base):
     description: Mapped[str] = mapped_column(Text)
     permissions: Mapped[list[str]] = mapped_column(ARRAY(Text))
 
-    # <@ 는 왼쪽 배열이 오른쪽 배열에 전부 들어 있는지 보는 연산자다. Permission 에
-    # 없는 이름이 하나라도 섞이면 거절한다.
+    # <@ 는 왼쪽 배열이 오른쪽 배열에 전부 들어 있는지 보는 연산자입니다. Permission 에
+    # 없는 이름이 하나라도 섞이면 거절합니다.
     __table_args__ = (
         CheckConstraint(f"permissions <@ {_PERMISSION_ARRAY_SQL}"),
     )
 
 
 class MemberPermissionSet(Base):
-    """사람이 가진 묶음 하나. 한 사람이 묶음을 2개 이상 가질 수 있고, 실제 권한은 그 합집합이다."""
+    """사람이 가진 묶음 하나. 한 사람이 묶음을 2개 이상 가질 수 있고, 실제 권한은 그 합집합입니다."""
 
     __tablename__ = "member_permission_sets"
 
@@ -192,7 +192,7 @@ class TeamSlot(Base):
 
 
 class UnavailableTime(Base):
-    """멤버의 불가능 시간. 반복이 켜지면 repeat_until까지 매일 또는 매주 되풀이한다.
+    """멤버의 불가능 시간. 반복이 켜지면 repeat_until까지 매일 또는 매주 되풀이합니다.
 
     시각은 시간대 없는 값으로 저장한다 — 엔진의 TimeInterval 계약과 동일.
 
@@ -220,7 +220,7 @@ class UnavailableTime(Base):
 
 
 class Room(Base):
-    """합주실. 이름이 식별자라 겹칠 수 없고, 여닫는 시각은 정시여야 한다."""
+    """합주실. 이름이 식별자라 겹칠 수 없고, 여닫는 시각은 정시여야 합니다."""
 
     __tablename__ = "rooms"
 
@@ -265,7 +265,7 @@ class Period(Base):
 
 
 class AssignmentRun(Base):
-    """자동 배정이 끝난 연산 시각 하나. 같은 기간·같은 날짜·같은 시각은 한 번만 남는다.
+    """자동 배정이 끝난 연산 시각 하나. 같은 기간·같은 날짜·같은 시각은 한 번만 남습니다.
 
     slot 은 Period 의 어느 연산 시각인지다 — 'first'는 first_run_at, 'second'는
     second_run_at. ran_at 은 계산이 끝난 시각이다.
@@ -288,7 +288,7 @@ class AssignmentRun(Base):
 
 
 class Assignment(Base):
-    """확정된 배정 한 칸. 같은 방의 같은 시각에는 하나만 존재할 수 있다."""
+    """확정된 배정 한 칸. 같은 합주실의 같은 시각에는 하나만 존재할 수 있습니다."""
 
     __tablename__ = "assignments"
 
@@ -308,7 +308,7 @@ class Assignment(Base):
 
 
 class Post(Base):
-    """게시판 글. team_id 가 있으면 그 팀 게시판 글, NULL 이면 공지사항이다.
+    """게시판 글. team_id 가 있으면 그 팀 게시판 글, NULL 이면 공지사항입니다.
 
     같은 표를 두 화면이 공유하므로 화면·endpoint 도 한 벌만 두면 된다.
     """
@@ -316,9 +316,9 @@ class Post(Base):
     __tablename__ = "posts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # 색인을 붙인다 — 공지 목록(team_id IS NULL)과 팀 게시판 목록(team_id = 값) 모두
-    # 이 한 열로 거르므로, btree 색인 하나면 두 조회 다 걸린다. Postgres의 btree는
-    # NULL도 색인하므로 IS NULL 조회에도 그대로 쓰인다.
+    # 색인을 붙입니다 — 공지 목록(team_id IS NULL)과 팀 게시판 목록(team_id = 값) 모두
+    # 이 한 열로 거르므로, btree 색인 하나면 두 조회 다 걸립니다. Postgres의 btree는
+    # NULL도 색인하므로 IS NULL 조회에도 그대로 쓰입니다.
     team_id: Mapped[int | None] = mapped_column(
         ForeignKey("teams.id", ondelete="CASCADE"), nullable=True, index=True
     )
@@ -354,7 +354,7 @@ class Comment(Base):
 
 
 class Attachment(Base):
-    """글에 붙은 파일 하나. 내용은 서버 디스크에 있고 이 표에는 그 위치만 있다.
+    """글에 붙은 파일 하나. 내용은 서버 디스크에 있고 이 표에는 그 위치만 있습니다.
 
     name 은 화면에 보여줄 이름, stored_name 은 디스크에 놓인 이름이다.
     """
@@ -407,7 +407,7 @@ class Reservation(Base):
 
 
 class LoginSession(Base):
-    """로그인 세션 한 건. 토큰 원문이 아니라 해시(token_hash)만 저장한다 — DB가 새어도
+    """로그인 세션 한 건. 토큰 원문이 아니라 해시(token_hash)만 저장합니다 — DB가 새어도
     그 값으로는 로그인하지 못한다. revoked_at이 채워지거나 expires_at이 지나면 무효.
 
     클래스 이름을 LoginSession으로 둔 것은 SQLAlchemy의 Session과 겹치지 않기 위해서다.
@@ -426,7 +426,7 @@ class LoginSession(Base):
 
 
 class AssignmentBackup(Base):
-    """이전 배정 스냅샷. 재연산 때 현행(assignments)에서 이리로 옮긴다.
+    """이전 배정 스냅샷. 재연산 때 현행(assignments)에서 이리로 옮깁니다.
 
     saved_at은 백업된 시각이다 — 같은 기간의 여러 백업을 구분하고 정렬하는 기준.
     현행과 달리 여러 회차가 공존하므로 room+시각 유니크를 두지 않는다.
@@ -447,15 +447,15 @@ class AssignmentBackup(Base):
     __table_args__ = (CheckConstraint("ends_at > starts_at"),)
 
 
-# 알릴 만한 일의 종류. 문구는 여기 두지 않는다 — 표에는 종류만 남기고 사람이 읽을
-# 문장은 화면이 만든다. 문구를 고칠 때 이미 쌓인
-# 줄까지 함께 바뀌고, 표에 손댈 일도 없다.
+# 알릴 만한 일의 종류. 문구는 여기 두지 않습니다 — 표에는 종류만 남기고 사람이 읽을
+# 문장은 화면이 만듭니다. 문구를 고칠 때 이미 쌓인
+# 줄까지 함께 바뀌고, 표에 손댈 일도 없습니다.
 NotificationKind = Literal["assignment_updated"]
 NOTIFICATION_KINDS: tuple[NotificationKind, ...] = get_args(NotificationKind)
 
 
 class Notification(Base):
-    """사람 한 명에게 남은 화면 안 알림 하나. read_at 이 비어 있으면 아직 안 읽은 것이다.
+    """사람 한 명에게 남은 화면 안 알림 하나. read_at 이 비어 있으면 아직 안 읽은 것입니다.
 
     읽음을 알림마다 두는 것은 나중에 하나씩 읽는 화면이 생겨도 표가 그대로이기
     때문이다. "언제까지 읽었다" 한 값으로 두면 그때 표를 다시 만들어야 한다.

@@ -88,7 +88,7 @@ def test_a_later_account_becomes_a_member(api_client: TestClient) -> None:
 
 
 def test_signup_allows_a_duplicate_name(api_client: TestClient) -> None:
-    """이름이 같아도 학번이 다르면 다른 사람이다 — 동명이인은 흔하다."""
+    """이름이 같아도 학번이 다르면 다른 사람입니다 — 동명이인은 흔하입니다."""
     _signup(api_client)
 
     response = api_client.post(
@@ -103,7 +103,7 @@ def test_signup_refuses_the_same_person_twice(api_client: TestClient) -> None:
     """이름·학과·학번·기수가 모두 같으면 같은 사람이다(사용자 결정)."""
     _signup(api_client)
 
-    # 이메일만 다르고 나머지 네 값이 같다.
+    # 이메일만 다르고 나머지 네 값이 같습니다.
     response = api_client.post(
         "/signup", json={**SIGNUP_BODY, "email": "second@example.com"}
     )
@@ -134,7 +134,7 @@ def test_signup_rejects_a_short_password(api_client: TestClient) -> None:
 
 
 def test_signup_rejects_a_cohort_out_of_range(api_client: TestClient) -> None:
-    """기수는 숫자만 받되 오타로 들어온 큰 수는 막는다."""
+    """기수는 숫자만 받되 오타로 들어온 큰 수는 막습니다."""
     response = api_client.post("/signup", json={**SIGNUP_BODY, "cohort": 101})
 
     assert response.status_code == 422
@@ -193,7 +193,7 @@ def test_login_rejects_an_unknown_email_without_revealing_that(
 
 def test_me_returns_the_signed_in_account(api_client: TestClient) -> None:
     # TestClient(테스트용 API 클라이언트)가 cookie 저장소를 들고 있어, signup 응답의 Set-Cookie가 다음 요청에
-    # 자동으로 담긴다. 화면이 브라우저 cookie로 하는 것과 같습니다.
+    # 자동으로 담깁니다. 화면이 브라우저 cookie로 하는 것과 같습니다.
     _signup(api_client)
 
     response = api_client.get("/me")
@@ -480,7 +480,7 @@ def test_changing_my_password_rejects_a_weak_one(api_client: TestClient) -> None
 
 
 def test_signup_rejects_a_student_no_that_is_not_eight_digits(api_client: TestClient) -> None:
-    """학번은 숫자 8자리다 — 화면(validate.ts)과 서버가 같은 규칙을 본다."""
+    """학번은 숫자 8자리입니다 — 화면(validate.ts)과 서버가 같은 규칙을 봅니다."""
     for bad in ("2026001", "202600011", "2026000a", " ", "２０２６０００１"):
         response = api_client.post("/signup", json={**SIGNUP_BODY, "student_no": bad})
 

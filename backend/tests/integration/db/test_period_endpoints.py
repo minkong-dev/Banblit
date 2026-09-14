@@ -202,7 +202,7 @@ def test_assign_reports_open_slots_with_real_room_names(
     head_login: dict[str, str],
 ) -> None:
     """slot(1시간 단위 시간 칸)이 팀보다 많이 남는 시나리오—open_slots가 엔진
-    내부 식별자가 아니라 실제 방 정보로 반환되는지 확인합니다."""
+    내부 식별자가 아니라 실제 합주실 정보로 반환되는지 확인합니다."""
     period = Period(
         kind="focused",
         starts_on=date(2026, 8, 1),
@@ -236,7 +236,7 @@ def test_assign_reports_open_slots_with_real_room_names(
     assert len(open_slots) == 1  # 전체 5개 slot - 팀당 2개 slot × 2팀 = 1개 slot 남음
     room_id_by_name = {"1번방": room_1.id, "2번방": room_2.id}
     slot = open_slots[0]
-    # 엔진 내부 식별자는 "1번방 (2026-08-01)" 형태입니다—순수한 방 이름만 반환되어야 합니다.
+    # 엔진 내부 식별자는 "1번방 (2026-08-01)" 형태입니다—순수한 합주실 이름만 반환되어야 합니다.
     assert slot["room"] in room_id_by_name
     assert slot["room_id"] == room_id_by_name[slot["room"]]
 
@@ -306,7 +306,7 @@ def test_assign_reports_a_coordination_proposal_with_real_names(
 
 # 없는 팀 번호를 넣었을 때 job 이 failed 로 남는 경로는
 # test_assign_jobs.py::test_a_rejected_assignment_becomes_a_failed_job_with_the_reason
-# 가 같은 시나리오로 이미 검증한다 — 여기서 다시 두지 않는다.
+# 가 같은 시나리오로 이미 검증합니다 — 여기서 다시 두지 않습니다.
 
 
 def test_assign_on_an_open_period_is_rejected(
@@ -349,7 +349,7 @@ def test_rollback_restores_the_previous_schedule(
     poll_job: Callable[[str], dict[str, Any]],
     head_login: dict[str, str],
 ) -> None:
-    """직전 회차가 아니라 엉뚱한 회차를 복원하는 결함을 잡을 수 있어야 한다.
+    """직전 회차가 아니라 엉뚱한 회차를 복원하는 결함을 잡을 수 있어야 합니다.
 
     합주실을 하나 더 만들어 두 번째 배정에서만 함께 지정한다 — 그러면 전체
     자리 수가 달라져(4칸 → 8칸) 두 회차의 시각·방 구성이 원천적으로 달라진다.
@@ -369,22 +369,22 @@ def test_rollback_restores_the_previous_schedule(
     db_session.flush()
     db_session.commit()
 
-    # S1: 1번방만 → 팀 하나가 이틀 × 2칸 = 4칸 전부를 받는다.
-    # 매 회차 poll_job 으로 끝까지 기다린 뒤 다음 회차를 접수한다 — 세 회차의
-    # 저장 순서(saved_at)가 뒤섞이면 백업 정렬이 검증하려는 것과 달라진다.
+    # S1: 1번방만 → 팀 하나가 이틀 × 2칸 = 4칸 전부를 받습니다.
+    # 매 회차 poll_job 으로 끝까지 기다린 뒤 다음 회차를 접수합니다 — 세 회차의
+    # 저장 순서(saved_at)가 뒤섞이면 백업 정렬이 검증하려는 것과 달라집니다.
     r1 = api_client.post(
         f"/periods/{period_id}/assign",
         json={"team_ids": [team_id], "room_ids": [room_1.id]},
     )
     assert poll_job(r1.json()["job"]["id"])["result"]["saved"] is True
-    # S2: 1번방 + 2번방 → 전체 자리가 8칸으로 늘어 팀이 8칸 전부를 받는다.
-    #     방 구성 자체가 S1과 다르므로 결과도 원천적으로 다르다.
+    # S2: 1번방 + 2번방 → 전체 자리가 8칸으로 늘어 팀이 8칸 전부를 받습니다.
+    #     합주실 구성 자체가 S1과 다르므로 결과도 원천적으로 다릅니다.
     r2 = api_client.post(
         f"/periods/{period_id}/assign",
         json={"team_ids": [team_id], "room_ids": [room_1.id, room_2.id]},
     )
     assert poll_job(r2.json()["job"]["id"])["result"]["saved"] is True
-    # S3: 2번방만 → 세 번째 저장으로 백업 회차를 2개(S1, S2)로 만든다.
+    # S3: 2번방만 → 세 번째 저장으로 백업 회차를 2개(S1, S2)로 만듭니다.
     r3 = api_client.post(
         f"/periods/{period_id}/assign",
         json={"team_ids": [team_id], "room_ids": [room_2.id]},
@@ -397,7 +397,7 @@ def test_rollback_restores_the_previous_schedule(
     assert response.json() == {"rolled_back": True}
 
     rows = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
-    # 직전 회차(S2)와 정확히 같아야 한다 — 시각·방까지 구체값으로 비교한다.
+    # 직전 회차(S2)와 정확히 같아야 합니다 — 시각·방까지 구체값으로 비교합니다.
     assert rows == [
         {
             "team_id": team_id,
@@ -536,7 +536,7 @@ def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
     assert response.status_code == 422
     assert "이미" in response.json()["detail"]
 
-    # 실패한 되돌리기가 기간 B의 현행 시간표를 건드리지 않아야 한다.
+    # 실패한 되돌리기가 기간 B의 현행 시간표를 건드리지 않아야 합니다.
     b_rows = api_client.get(f"/periods/{period_b.id}/schedule").json()["rows"]
     assert len(b_rows) == 4  # 이틀 × 2칸
 
@@ -572,7 +572,7 @@ def test_assign_needs_assign_run(
     assert forbidden.status_code == 403
     assert "권한" in forbidden.json()["detail"]
 
-    # 없는 기간으로 불러 계산을 띄우지 않고 인증만 통과하는 것을 본다.
+    # 없는 기간으로 불러 계산을 띄우지 않고 인증만 통과하는 것을 봅니다.
     passed = api_client.post("/periods/999999/assign", json=body, cookies=head)
     assert passed.status_code == 422
     assert "그런 기간이 없습니다" in passed.json()["detail"]
@@ -601,7 +601,7 @@ def test_rollback_needs_rollback(
 def test_schedule_reports_the_slots_left_open_by_the_assignment(
     api_client: TestClient, db_session: Session, head_login: dict[str, str]
 ) -> None:
-    """남는 칸이 시간표와 함께 나온다 — 화면이 그 시간만 예약으로 열 수 있어야 한다."""
+    """남는 칸이 시간표와 함께 나옵니다 — 화면이 그 시간만 예약으로 열 수 있어야 합니다."""
     period_id = _period(db_session)  # 8/1 ~ 8/2
     team = Team(name="A")
     room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))  # 하루 2칸
@@ -696,7 +696,7 @@ def test_backups_list_each_round_newest_first(
 def test_backup_round_shows_the_schedule_of_that_round(
     api_client: TestClient, db_session: Session, head_login: dict[str, str]
 ) -> None:
-    """회차를 누르면 그때의 시간표가 나온다 — 다른 회차의 칸은 섞이지 않는다."""
+    """회차를 누르면 그때의 시간표가 나옵니다 — 다른 회차의 칸은 섞이지 않습니다."""
     period_id = _period(db_session)
     team = Team(name="A")
     room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
@@ -746,7 +746,7 @@ def test_backup_round_shows_the_schedule_of_that_round(
 def test_backup_round_that_never_happened_is_rejected(
     api_client: TestClient, db_session: Session, head_login: dict[str, str]
 ) -> None:
-    """없는 회차는 빈 시간표가 아니라 거절이다 — 빈 것과 없는 것은 다르다."""
+    """없는 회차는 빈 시간표가 아니라 거절입니다 — 빈 것과 없는 것은 다릅니다."""
     period_id = _period(db_session)
     db_session.commit()
 
@@ -763,8 +763,8 @@ def test_backup_round_needs_rollback(
 ) -> None:
     period_id = _period(db_session)
     db_session.commit()
-    # 맨 처음 가입한 사람이 모든 항목을 받는다. 자격이 없는 사람을 만들려면
-    # 그 앞에 한 명이 먼저 있어야 한다.
+    # 맨 처음 가입한 사람이 모든 항목을 받습니다. 자격이 없는 사람을 만들려면
+    # 그 앞에 한 명이 먼저 있어야 합니다.
     account("박서연", "head@example.com")
     _, member = account("김민수", "member@example.com")
     path = f"/periods/{period_id}/backups/2026-08-01T21:00:00"
@@ -807,7 +807,7 @@ def test_backups_need_rollback(
 
 
 def _blocked_team(db_session: Session) -> tuple[int, int]:
-    """8/1 운영시간 내내 불가능한 사람이 낀 팀을 만들고 (팀 번호, 그 사람 번호)를 돌려준다."""
+    """8/1 운영시간 내내 불가능한 사람이 낀 팀을 만들고 (팀 번호, 그 사람 번호)를 돌려줍니다."""
     team = Team(name="A")
     free = Member(name="김민수")
     blocked = Member(name="이영희")
@@ -907,7 +907,7 @@ def test_confirming_a_proposal_needs_proposal_confirm(
     assert forbidden.status_code == 403
     assert "권한" in forbidden.json()["detail"]
 
-    # 없는 기간으로 불러 계산을 띄우지 않고 인증만 통과하는 것을 본다.
+    # 없는 기간으로 불러 계산을 띄우지 않고 인증만 통과하는 것을 봅니다.
     passed = api_client.post(
         "/periods/999999/proposals/1/confirm", json=body, cookies=head
     )

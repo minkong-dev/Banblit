@@ -31,7 +31,7 @@ import type { Attachment, Post, PostComment } from "../lib/contract";
 
 
 /** focus(키보드 입력을 받는 요소 상태)를 관리합니다: 목록에서 상세 글로 이동할 때 제목으로,
- *  목록으로 돌아올 때 눌렀던 글 버튼로 옮깁니다. */
+ *  목록으로 돌아올 때 눌렀던 글 버튼으로 옮깁니다. */
 function useDetailFocus(): {
   openId: number | null;
   open: (id: number) => void;
@@ -147,13 +147,13 @@ function WriteForm(props: {
 
   const send = useMutation({
     mutationFn: async () => {
-      // 글이 먼저다 — 첨부는 붙을 글 번호를 받아야 올릴 수 있다. 앞서 만들어 둔 글이
-      // 있으면(첨부에서만 걸린 경우) 다시 만들지 않는다. 그러지 않으면 다시 누를 때
-      // 같은 글이 하나 더 생긴다.
+      // 글이 먼저입니다 — 첨부는 붙을 글 번호를 받아야 올릴 수 있습니다. 앞서 만들어 둔 글이
+      // 있으면(첨부에서만 걸린 경우) 다시 만들지 않습니다. 그러지 않으면 다시 누를 때
+      // 같은 글이 하나 더 생깁니다.
       let postId = postedId;
       if (postId === null) {
         const { post } = await getJSON<{ post: Post }>(writePath, {
-          // author_id 는 안 보낸다 — 서버가 요청에 실린 토큰으로 글쓴이를 정한다.
+          // author_id 는 안 보냅니다 — 서버가 요청에 실린 토큰으로 글쓴이를 정합니다.
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title, body }),
@@ -307,7 +307,7 @@ function CommentForm(props: { postId: number; authorId: number | null }) {
 }
 
 /** 글에 붙은 파일들을 나열합니다. 이름을 누르면 다운로드하고, 글을 삭제할 권한이 있는 사용자에게만
- *  "삭제" 버튼가 표시됩니다. attachment 는 작성자 정보를 따로 저장하지 않으므로,
+ *  "삭제" 버튼이 표시됩니다. attachment 는 작성자 정보를 따로 저장하지 않으므로,
  *  글의 작성자를 기준으로 판정합니다(서버도 같습니다). */
 function AttachmentList(props: {
   postId: number;
@@ -464,7 +464,7 @@ function EditPost(props: {
   );
 }
 
-/** 댓글 하나를 렌더합니다. 수정 권한이 있으면 수정 버튼가, 삭제 권한이 있으면 삭제 버튼가
+/** 댓글 하나를 렌더합니다. 수정 권한이 있으면 수정 버튼이, 삭제 권한이 있으면 삭제 버튼이
  *  오른쪽 끝에 표시됩니다(`lib/pipeline` 의 `boardActions` 참조). */
 function CommentRow(props: {
   comment: PostComment;
@@ -554,7 +554,7 @@ function PostDetail(props: {
   postId: number;
   /** 현재 사용자의 id. 미인증(로그인 전)이면 null이므로 글과 댓글을 작성할 수 없습니다. */
   authorId: number | null;
-  /** board_moderate 권한 여부. 다른 사용자의 글·댓글·attachment 에도 삭제 버튼가 표시됩니다. */
+  /** board_moderate 권한 여부. 다른 사용자의 글·댓글·attachment 에도 삭제 버튼이 표시됩니다. */
   canModerate: boolean;
   /** 글 삭제 후 갱신해야 하는 목록의 queryKey 입니다. */
   listKey: readonly unknown[];
@@ -643,7 +643,7 @@ export function PostBoard(props: {
   /** WriteForm 을 렌더할지 여부입니다. 공지사항은 notice_write 권한이 있는 사람만,
    *  팀 게시판은 팀에 소속한 사람만 글을 작성할 수 있습니다. */
   canWrite: boolean;
-  /** board_moderate 권한 여부. 다른 사용자의 글·댓글·attachment 에도 삭제 버튼가 표시됩니다. */
+  /** board_moderate 권한 여부. 다른 사용자의 글·댓글·attachment 에도 삭제 버튼이 표시됩니다. */
   canModerate: boolean;
   writeNote: string;
   emptyText: string;
@@ -662,7 +662,7 @@ export function PostBoard(props: {
   const list = posts.data?.posts ?? [];
   const state = loadState(posts);
   // 컨테이너 높이에 따라 한 page(페이지)에 표시할 글 개수를 계산합니다.
-  // 수직 스크롤 없이 pagination(페이지네이션) 버튼로 이동합니다.
+  // 수직 스크롤 없이 pagination(페이지네이션) 버튼으로 이동합니다.
   const [box, perPage] = useFitCount(76);
   // 글이 삭제되어 현재 page 가 범위를 벗어날 수 있으므로,
   // render 마다 유효한 page 로 clamp(제한)합니다.
@@ -694,7 +694,7 @@ export function PostBoard(props: {
             boxRef={box}
           />
 
-          {/* Pagination 과 글쓰기 버튼가 한 줄에 함께 표시됩니다. 페이지가 하나뿐이어도
+          {/* Pagination 과 글쓰기 버튼이 한 줄에 함께 표시됩니다. 페이지가 하나뿐이어도
               pagination 을 렌더합니다. 그렇지 않으면 글이 추가·삭제될 때마다
               글쓰기 버튼이 위아래로 움직여 UX 가 불안정합니다. */}
           {writing ? null : (
@@ -709,7 +709,7 @@ export function PostBoard(props: {
           </div>
           )}
 
-          {/* WriteForm 은 버튼를 눌렀을 때만 표시됩니다.
+          {/* WriteForm 은 버튼을 눌렀을 때만 표시됩니다.
               항상 펼쳐 두면 form 이 목록보다 길어져 사용자가 읽으러 올 때마다 스크롤해야 합니다. */}
           {!writing ? null : (
             <WriteForm

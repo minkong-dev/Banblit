@@ -92,7 +92,7 @@ export function daysBetween(from: string, to: string): number {
   return datesBetween(from, to).length;
 }
 
-// 스케줄러 화면이 사용하는 계산입니다. 방과 기간 사이에 순서 의존이 없어 그대로 재내보냅니다.
+// 스케줄러 화면이 사용하는 계산입니다. 합주실과 기간 사이에 순서 의존이 없어 그대로 재내보냅니다.
 // roomBounds()는 달력의 여닫는 시각을, focusedRange()는 자동 배정 띠의 날짜 범위를 반환합니다.
 export { focusedRange, roomBounds };
 
@@ -120,11 +120,11 @@ export function checkAttachments(files: { name: string; size: number }[]): strin
   return "";
 }
 
-// 팀·포지션을 두고 화면이 하는 계산. 서로 기다릴 것이 없어 그대로 다시 내보낸다.
+// 팀·포지션을 두고 화면이 하는 계산. 서로 기다릴 것이 없어 그대로 다시 내보냅니다.
 export { colorKey, memberLabel, myTeamIds, slotName };
 export { teamNameMessage as checkTeamName, slotCountsMessage as checkSlotCounts };
 
-// 게시판·공지 화면이 쓰는 계산. fileSizeLabel 은 order 의존이 없어 그대로 다시 내보낸다.
+// 게시판·공지 화면이 쓰는 계산. fileSizeLabel 은 order 의존이 없어 그대로 다시 내보냅니다.
 export { ATTACHMENT_ACCEPT, ATTACHMENT_HINT, boardActions, fileSizeLabel };
 
 
@@ -322,7 +322,7 @@ export async function fetchMe(): Promise<Me> {
 }
 
 // 표시용 쿠키 이름입니다. 실제 세션(banblit_session)은 httpOnly 속성이라 여기서 읽을 수 없습니다.
-// 이름을 적는 자리는 여기 하나다.
+// 이름을 적는 자리는 여기 하나입니다.
 const SIGNED_IN_COOKIE = "banblit_signed_in";
 
 /** 로그인 여부만 나타내는 쿠키의 존재 여부를 확인합니다. document.cookie를 읽는 것은 상태를

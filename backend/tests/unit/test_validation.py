@@ -45,12 +45,12 @@ def test_interval_rejects_mixed_timezone_awareness() -> None:
 
 
 def test_interval_rejects_timezone_aware_values() -> None:
-    # 시간대 지원은 미구현입니다. 조용히 오류 계산하는 것보다 거부합니다.
+    # 시간대 지원은 미구현입니다. 오류 메시지 없이 오류 계산하는 것보다 거부합니다.
     with pytest.raises(ValueError):
         TimeInterval(_at(18).replace(tzinfo=KST), _at(19).replace(tzinfo=KST))
 
 
-# ── 한 칸은 방 번호와 시각으로 하나뿐이어야 한다 ────────────
+# ── 한 칸은 합주실 번호와 시각으로 하나뿐이어야 한다 ────────────
 
 
 def test_rejects_the_same_room_opening_twice_over_the_same_time() -> None:
@@ -90,7 +90,7 @@ def test_rejects_duplicate_team_ids() -> None:
 
 def test_rejects_a_member_listed_twice_in_the_same_team() -> None:
     # 같은 멤버를 두 번 포함하는 것은 명단 오류입니다.
-    # 조용히 넘어가면 배정 엔진이 잘못된 조율안을 출력합니다.
+    # 오류 메시지 없이 넘어가면 배정 엔진이 잘못된 조율안을 출력합니다.
     kim = Member(id=7, unavailable=[])
     with pytest.raises(ValueError):
         assign(teams=[Team(id=10, members=[kim, kim])], rooms=[_room()], slots_per_team=1)

@@ -223,7 +223,7 @@ function RoomFields(props: {
   );
 }
 
-/** 기간 서식의 입력칸들. 집중 합주기간일 때만 계산 시각 두 칸이 더 나온다. */
+/** 기간 서식의 입력칸들. 집중 합주기간일 때만 계산 시각 두 칸이 더 나옵니다. */
 function PeriodFields(props: {
   form: Omit<Period, "id">;
   setForm: (next: Omit<Period, "id">) => void;

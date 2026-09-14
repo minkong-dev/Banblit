@@ -32,7 +32,7 @@ def test_rejects_period_that_does_not_start_on_the_grid() -> None:
 
 
 def test_rejects_period_that_does_not_end_on_the_grid() -> None:
-    # 나머지 시간을 조용히 버리지 않습니다. 1시간으로 나누어떨어지지 않으면 오류를 발생시킵니다.
+    # 나머지 시간을 오류 메시지 없이 버리지 않습니다. 1시간으로 나누어떨어지지 않으면 오류를 발생시킵니다.
     open_period = TimeInterval(
         start=datetime(2026, 7, 20, 18, 0),
         end=datetime(2026, 7, 20, 19, 10),

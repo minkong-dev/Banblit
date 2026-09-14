@@ -67,7 +67,7 @@ def _slot_out(slot: TeamSlot, member: Member | None) -> SlotOut:
 
 
 # 요청자의 신원을 사용하지 않고 로그인만 검증하는 endpoint(API의 요청 주소 단위)는, 사용하지 않는
-# 매개변수를 남기지 않도록 dependencies에 건다.
+# 매개변수를 남기지 않도록 dependencies에 겁니다.
 @router.get("/teams", response_model=TeamsOut, dependencies=[Depends(require_account)])
 def read_teams(session: Session = Depends(get_session)) -> TeamsOut:
     return TeamsOut(
@@ -221,7 +221,7 @@ def delete_slot_member(
     """
     slot = session.get(TeamSlot, slot_id)
     if slot is None or slot.team_id != team_id:
-        raise HTTPException(status_code=422, detail="그런 포지션가 없습니다")
+        raise HTTPException(status_code=422, detail="그런 포지션이 없습니다")
 
     mine = slot.member_id == requester.id
     if not mine and "member_remove" not in account_permissions(session, requester.id):

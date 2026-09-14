@@ -4,8 +4,8 @@ import { applyTheme, readSavedTheme, type Theme } from "./theme";
 
 const KEY = "banblit_theme";
 
-/** vitest는 브라우저가 아니라 Node에서 돈다 — document·localStorage·matchMedia 를
- *  기본으로 주지 않아 pipeline.test.ts 가 document 를 세우던 것과 같은 방식으로 흉내낸다. */
+/** vitest는 브라우저가 아니라 Node에서 돕니다 — document·localStorage·matchMedia 를
+ *  기본으로 주지 않아 pipeline.test.ts 가 document 를 세우던 것과 같은 방식으로 흉내냅니다. */
 function stubBrowser(options: { systemDark: boolean; saved?: string; canSave?: boolean }): {
   root: { dataset: { theme?: string } };
   store: Map<string, string>;
@@ -51,7 +51,7 @@ describe("readSavedTheme", () => {
   });
 
   test("고른 것이 있으면 화면 설정보다 그것을 따른다", () => {
-    // Arrange — 화면은 어둡지만 사람이 밝은 쪽을 골라 두었다.
+    // Arrange — 화면은 어둡지만 사람이 밝은 쪽을 골라 두었습니다.
     stubBrowser({ systemDark: true, saved: "light" });
 
     // Act & Assert
@@ -78,7 +78,7 @@ describe("applyTheme", () => {
   });
 
   test("남길 수 없는 브라우저에서도 화면에는 붙는다", () => {
-    // Arrange — 사생활 보호 모드처럼 저장 자체가 막힌 경우를 흉내낸다.
+    // Arrange — 사생활 보호 모드처럼 저장 자체가 막힌 경우를 흉내냅니다.
     const { root } = stubBrowser({ systemDark: false, canSave: false });
 
     // Act

@@ -45,7 +45,7 @@ def _occurrences(row: UnavailableTime, window_end: datetime) -> list[datetime]:
 
     limit = window_end
     if row.repeat_until is not None:
-        # 반복 종료일은 "그 날짜까지"라는 뜻이므로 그날의 끝까지 인정한다.
+        # 반복 종료일은 "그 날짜까지"라는 뜻이므로 그날의 끝까지 인정합니다.
         limit = min(limit, datetime.combine(row.repeat_until + timedelta(days=1), time()))
 
     starts: list[datetime] = []

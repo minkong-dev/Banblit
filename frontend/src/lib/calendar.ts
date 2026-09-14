@@ -6,11 +6,11 @@ const DAYS_PER_WEEK = 7;
 // 날짜만 있는 값을 Date로 생성할 때 사용하는 시각입니다. 자정으로 설정하면 여름시간제가 있는
 // 지역에서 하루가 23시간인 날에 날짜가 하루씩 밀릴 수 있습니다.
 const NOON_HOUR = 12;
-// 합주실이 하나도 없을 때 쓸 여닫는 시각 — 달력을 그릴 시간 범위가 아예 없을 수는 없다.
+// 합주실이 하나도 없을 때 쓸 여닫는 시각 — 달력을 그릴 시간 범위가 아예 없을 수는 없습니다.
 const FALLBACK_OPEN_HOUR = 10;
 const FALLBACK_CLOSE_HOUR = 22;
 
-/** 달력이 처음 여는 달. month 는 Date 와 같이 0부터 센다. */
+/** 달력이 처음 여는 달. month 는 Date 와 같이 0부터 셉니다. */
 export function currentMonth(now: Date = new Date()): { year: number; month: number } {
   return { year: now.getFullYear(), month: now.getMonth() };
 }
@@ -169,6 +169,6 @@ export function stampLabel(text: string): string {
 // Intl에 요일 이름을 물으려면 날짜가 있어야 합니다. 2024년 1월 7일이 일요일입니다.
 const A_SUNDAY = { year: 2024, month: 0, day: 7 };
 
-/** 달력 머리글의 요일 이름 일곱 — 일요일부터 토요일까지. 달력 격자도 같은 순서다. */
+/** 달력 머리글의 요일 이름 일곱 — 일요일부터 토요일까지. 달력 격자도 같은 순서입니다. */
 export const WEEKDAY_NAMES: string[] = Array.from({ length: DAYS_PER_WEEK }, (_, index) =>
   WEEKDAY.format(new Date(A_SUNDAY.year, A_SUNDAY.month, A_SUNDAY.day + index, NOON_HOUR)));

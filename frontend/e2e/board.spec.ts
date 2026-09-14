@@ -70,7 +70,7 @@ test("팀 게시판 글에 파일을 붙여 올리면 글을 열었을 때 그 �
   await expect(page.getByText("첨부파일 1개")).toBeVisible();
   await expect(page.getByRole("link", { name: fileName })).toBeVisible();
 
-  // 되돌린다 — 게시글을 지우면 붙은 파일도 디스크에서 함께 사라진다.
+  // 되돌립니다 — 게시글을 지우면 붙은 파일도 디스크에서 함께 사라집니다.
   const { teams } = (await (await request.get("/api/teams")).json()) as { teams: Team[] };
   const mine = teams.find((team) => team.name === E2E_ACCOUNT_TEAM);
   if (mine === undefined) return;
