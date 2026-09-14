@@ -12,7 +12,11 @@ sources:
   - frontend/src/styles/shell.css                # 상단바·사이드바·카드·입력칸 등 모든 화면이 함께 쓰는 스타일
   - frontend/src/lib/loading.ts                  # 목록이 불러오는 중인지·실패했는지·정상인지를 값 1개로 표현하는 타입
   - frontend/src/lib/calendar.ts                 # 모든 화면이 함께 쓰는 날짜·요일·시각 표기
-  - frontend/src/lib/account.ts          # 권한 항목 18가지의 한국어 이름과 "내가 그 항목을 가졌는가" 판단
+  - frontend/src/lib/account.ts          # 권한 항목 19가지의 한국어 이름, "내가 그 항목을 가졌는가" 판단, 프로필 카드의 역할 문구
+  - frontend/src/lib/confirm.ts          # 삭제·취소·추방 전에 1회 확인하는 문구
+  - frontend/src/routes/Settings.tsx     # 설정 화면의 합주실·기간 탭. 매일 기간은 종료일 입력을 숨깁니다
+  - frontend/src/lib/account.test.ts     # 역할 문구 시나리오
+  - frontend/src/lib/pipeline.test.ts    # 매일 기간의 저장값과 멤버 추방 호출 시나리오
   - frontend/src/components/AppShell.tsx # 사이드바 관리 구역을 권한 항목으로 표시·숨김하는 컴포넌트
   - frontend/src/lib/pipeline.ts         # lib 모듈의 호출 순서를 정하는 파일
   - frontend/src/lib/jobs.ts             # 접수한 계산이 끝날 때까지 polling 하는 함수
@@ -198,6 +202,16 @@ flowchart LR
 내 permission set을 수정하면 내 화면도 즉시 다시 렌더링됩니다. 멤버 탭에서 저장하면 permission set 목록만이 아니라 "내 계정"도 함께 다시 조회하는데, 방금 수정한 permission set이 내 permission set이면 내가 보유한 권한 항목이 이미 변경되었으므로, 이전 값을 유지하면 이미 잃은 권한의 버튼이 화면에 남기 때문입니다.
 
 기간의 배정 계산 실행 시각을 화면에서 설정할 수 있게 되면서 "화면이 필요로 하는 것" 표에서 1줄이 삭제되었습니다. 설정 화면의 기간 양식이 하루 2번의 계산 시각을 입력하고 수정하며, 그 값이 [자동 배정](../auto-assignment/README.md)이 실행되는 실제 시각이 됩니다.
+
+### 역할 문구·매일 기간·멤버 추방을 화면에 반영했습니다 (2026-09-14)
+
+| 위치 | 화면의 동작 | 규칙의 정본 |
+| --- | --- | --- |
+| 사이드바와 프로필 화면의 프로필 카드 | 이름 아래 역할 문구는 내 계정 조회가 반환한 permission set(권한 집합) 이름을 ", " 로 이어 표시합니다. permission set 이 0개이면 "일반멤버", 아직 계정을 조회하지 못했으면 빈 문자열입니다. "헤드매니저" 라는 글자를 화면이 계산하지 않습니다 | [계정과 역할](../accounts-and-roles/README.md) |
+| 설정 화면의 기간 양식 | 종류가 집중 합주기간이고 "매일" 이 켜져 있으면 종료일 입력을 숨깁니다. 저장할 때는 종료일에 시작일과 같은 값을 넣어 보냅니다. 기간 목록의 행은 "<시작일> 부터 <종료일> 까지" 대신 "<시작일> 부터 매일" 을 표시합니다 | [합주실과 기간](../practice-room-and-periods/README.md) |
+| 설정 화면의 멤버 탭 | "멤버 추방" 항목을 가진 사람에게만 멤버 명단 표에 열이 1개 추가되고, 행마다 삭제 아이콘 버튼("<이름> 추방")이 표시됩니다. 로그인한 본인의 행에는 표시하지 않습니다. 누르면 "<이름>을/를 추방할까요? 계정과 글·댓글·예약이 함께 삭제돼요." 라고 1회 확인하고, 성공하면 "<이름> 님을 추방했어요." 를 표시한 뒤 멤버 명단과 permission set 목록을 서버에서 다시 조회합니다 | [계정과 역할](../accounts-and-roles/README.md) |
+
+검증은 `frontend/src/lib/account.test.ts` 의 역할 문구 시나리오와 `frontend/src/lib/pipeline.test.ts` 의 매일 기간 저장값·멤버 추방 호출 시나리오로 실행했습니다. 화면 테스트 237개가 통과합니다.
 
 ### 3가지 기능이 서버에 연동되었습니다 (2026-09-07)
 
