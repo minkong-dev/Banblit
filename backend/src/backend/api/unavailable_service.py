@@ -8,6 +8,7 @@ from backend.api.input import (
     require_repeat_until_only_when_repeating,
     require_valid_slot_bounds,
 )
+from backend.api.settings_service import slot_minutes
 from backend.db.models import Member, UnavailableTime
 
 
@@ -47,7 +48,7 @@ def create_unavailable(
 ) -> UnavailableTime:
     """불가능 시간 하나를 생성합니다. 본인 여부, 시작시간과 종료시간의 순서, slot(1시간 단위 시간 칸) 격자, 반복 조합을 검증합니다."""
     _require_self(member_id, requester)
-    require_valid_slot_bounds(starts_at, ends_at)
+    require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_one_repeat_cycle(repeats_daily, repeats_weekly)
     require_repeat_until_only_when_repeating(repeats_daily, repeats_weekly, repeat_until)
 

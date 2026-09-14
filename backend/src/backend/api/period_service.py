@@ -20,6 +20,7 @@ from backend.db.models import (
     Team,
     UnavailableTime,
 )
+from backend.api.settings_service import slot_minutes
 from backend.db.pipeline import AssignmentRow, save_schedule
 from backend.scheduling.pipeline import Assignment as EngineAssignment
 from backend.scheduling.pipeline import (
@@ -90,12 +91,13 @@ def assign_period(
     )
 
     engine_rooms = build_engine_rooms(rooms, days)
-    slots_per_team = auto_slots_per_team(engine_rooms, len(team_ids))
+    unit = slot_minutes(session)
+    slots_per_team = auto_slots_per_team(engine_rooms, len(team_ids), unit)
     engine_teams = build_engine_teams(
         team_ids, member_ids_by_team, unavailable_by_member
     )
 
-    resolution = resolve(engine_teams, engine_rooms, slots_per_team)
+    resolution = resolve(engine_teams, engine_rooms, slots_per_team, unit)
 
     saved = False
     if resolution.assignment.feasible:
@@ -213,7 +215,7 @@ def open_slots_in_period(session: Session, period: Period) -> list[OpenSlot]:
     days = period_days(period, date.today())
     open_slots: list[OpenSlot] = []
     for engine_room in build_engine_rooms(list(rooms), days):
-        for interval in generate_slots(engine_room.open_period):
+        for interval in generate_slots(engine_room.open_period, slot_minutes(session)):
             if (engine_room.id, interval.start) in occupied:
                 continue
             open_slots.append(

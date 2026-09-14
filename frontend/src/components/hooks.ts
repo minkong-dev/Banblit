@@ -58,6 +58,17 @@ export function useTeams() {
 export function useRooms() {
   return useQuery({ queryKey: ["rooms"], queryFn: () => getJSON<{ rooms: Room[] }>("/rooms") });
 }
+/** 저장소 전체 설정입니다. 지금은 칸 하나의 크기(분) 하나뿐입니다.
+ *  아직 받지 못했으면 slotMinutes 는 60 입니다. 서버 기본값과 같은 값이라, 받는 사이에
+ *  화면이 잠깐 다른 격자를 그리는 일이 없습니다. */
+export function useSlotMinutes(): number {
+  const query = useQuery({
+    queryKey: ["settings"],
+    queryFn: () => getJSON<{ slot_minutes: number }>("/settings"),
+  });
+  return query.data?.slot_minutes ?? 60;
+}
+
 export function usePeriods() {
   return useQuery({ queryKey: ["periods"], queryFn: () => getJSON<{ periods: Period[] }>("/periods") });
 }

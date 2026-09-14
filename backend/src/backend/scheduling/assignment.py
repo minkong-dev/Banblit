@@ -8,7 +8,7 @@ SOLVER_TIME_LIMIT_SECONDS = 60.0
 
 from backend.scheduling.availability import Team, is_team_available
 from backend.scheduling.interval import TimeInterval
-from backend.scheduling.slots import generate_slots
+from backend.scheduling.slots import DEFAULT_SLOT_MINUTES, generate_slots
 
 
 @dataclass(frozen=True)
@@ -34,15 +34,15 @@ class Assignment:
     open_slots: list[RoomSlot]
 
 
-def _build_room_slots(rooms: list[Room]) -> list[RoomSlot]:
-    # rooms 의 개방 시간 구간을 generate_slots 로 1시간 slot(1시간 단위 시간 칸)으로 분할하여 하나의 목록으로 통합합니다.
+def _build_room_slots(rooms: list[Room], slot_minutes: int) -> list[RoomSlot]:
+    # rooms 의 개방 시간 구간을 generate_slots 로 slot(시간 칸)으로 분할하여 하나의 목록으로 통합합니다.
     # 같은 slot 이 중복으로 나타나면 즉시 거부합니다. slot 하나가 두 번 세어지면
     # slot 하나에는 팀 하나만이라는 제약이 두 팀을 같은 slot 에 배정하는 것을 막지 못하기 때문입니다.
     room_slots: list[RoomSlot] = []
     seen: set[RoomSlot] = set()
     for room in rooms:
         try:
-            intervals = generate_slots(room.open_period)
+            intervals = generate_slots(room.open_period, slot_minutes)
         except ValueError as error:
             # generate_slots 가 발생시킨 error 에 합주실 번호를 붙여 다시 발생시킵니다.
             raise ValueError(
@@ -90,16 +90,17 @@ def assign(
     teams: list[Team],
     rooms: list[Room],
     slots_per_team: int,
+    slot_minutes: int = DEFAULT_SLOT_MINUTES,
 ) -> Assignment:
     """각 팀에게, 그 팀이 사용 가능한 시간의 빈 합주실 slot 을 slots_per_team 개 배정합니다.
 
-    slot(1시간 단위 시간 칸) 하나에는 팀 하나만 배정됩니다. 팀 하나는 같은 시간에
+    slot_minutes 는 칸 하나의 크기(분)이고 저장소 설정이 정합니다. 칸 하나에는 팀 하나만 배정됩니다. 팀 하나는 같은 시간에
     여러 합주실을 동시에 사용할 수 없으며, 여러 팀에 속한 멤버도 같은 시간에
     한 곳에만 있을 수 있습니다. 조건을 모두 충족하는 배정안이 없을 경우
     feasible=False 를 반환합니다.
     """
     _validate(teams, slots_per_team)
-    room_slots = _build_room_slots(rooms)
+    room_slots = _build_room_slots(rooms, slot_minutes)
 
     model = cp_model.CpModel()
 

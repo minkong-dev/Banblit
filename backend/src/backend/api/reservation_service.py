@@ -9,6 +9,7 @@ from backend.api.input import (
     require_within_room_hours,
 )
 from backend.api.permission_service import account_permissions
+from backend.api.settings_service import slot_minutes
 from backend.db.models import Member, Period, Reservation, Room, Team, TeamSlot
 from backend.db.pipeline import commit_translating
 
@@ -84,7 +85,7 @@ def _planned_row(
     겹치는지는 여기서 보지 않습니다. 조회해서 확인하면 그 사이에 들어온 다른 요청을 놓치므로,
     판정을 commit 시점의 겹침 금지 제약 하나에 맡깁니다.
     """
-    require_valid_slot_bounds(starts_at, ends_at)
+    require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_same_day(starts_at, ends_at)
     room = _get_room_or_raise(session, room_id)
     require_within_room_hours(room.opens_at, room.closes_at, starts_at, ends_at)
@@ -208,7 +209,7 @@ def update_reservation(
     reservation = _get_own_reservation(session, reservation_id, requester, "옮길")
     room = _get_room_or_raise(session, reservation.room_id)
 
-    require_valid_slot_bounds(starts_at, ends_at)
+    require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_same_day(starts_at, ends_at)
     require_within_room_hours(room.opens_at, room.closes_at, starts_at, ends_at)
     _require_not_in_focused_period(session, starts_at.date())

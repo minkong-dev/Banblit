@@ -10,7 +10,7 @@ import { formError, loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { say } from "../lib/toast";
 import { checkPeriod, checkRoom, daysBetween, openingHours, periodBody } from "../lib/pipeline";
-import { useMe, usePeriods, useRooms, useTeams } from "../components/hooks";
+import { useMe, usePeriods, useRooms, useSlotMinutes, useTeams } from "../components/hooks";
 import { can } from "../lib/account";
 import { applyTheme, readSavedTheme } from "../lib/theme";
 import type { Theme } from "../lib/theme";
@@ -409,7 +409,8 @@ function RoomForm(props: {
     },
   });
 
-  const why = checkRoom(form, taken);
+  const slotMinutes = useSlotMinutes();
+  const why = checkRoom(form, taken, slotMinutes);
 
   // 같은 화면에 추가 form 과 수정 행이 함께 표시될 수 있습니다. label 이 어느 입력칸을 가리키는지
   // 모호해지지 않도록, 화면 내 식별자를 form 마다 다르게 짓습니다.

@@ -15,6 +15,7 @@ from backend.api.routers import (
     roster,
     rooms,
     schedule,
+    settings,
     unavailable,
 )
 from backend.db.pipeline import check_database
@@ -113,3 +114,4 @@ app.include_router(reservations.router)
 app.include_router(permissions.router)
 app.include_router(notifications.router)
 app.include_router(schedule.router)
+app.include_router(settings.router)

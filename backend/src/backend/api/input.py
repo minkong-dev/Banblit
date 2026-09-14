@@ -137,9 +137,14 @@ def require_ends_not_before_starts(starts_on: date, ends_on: date) -> None:
 
 # ── 구간 ─────────────────────────────────────────────────────────────────
 
-def require_valid_slot_bounds(starts_at: datetime, ends_at: datetime) -> None:
-    """TimeInterval·generate_slots이 이미 수행하는 시간대·순서·slot(1시간 단위 시간 칸) 격자 검증을 재사용합니다."""
-    generate_slots(TimeInterval(start=starts_at, end=ends_at))
+def require_valid_slot_bounds(
+    starts_at: datetime, ends_at: datetime, slot_minutes: int
+) -> None:
+    """TimeInterval·generate_slots 이 이미 수행하는 시간대·순서·격자 검증을 재사용합니다.
+
+    slot_minutes 는 저장소 설정이 정하는 칸 하나의 크기(분)입니다.
+    """
+    generate_slots(TimeInterval(start=starts_at, end=ends_at), slot_minutes)
 
 
 def require_same_day(starts_at: datetime, ends_at: datetime) -> None:

@@ -435,6 +435,16 @@ class UnavailableCreateIn(BaseModel):
     reason: str | None = Field(default=None, max_length=200)
 
 
+class SettingsOut(BaseModel):
+    # 예약과 배정이 쓰는 시간 칸의 크기(분)입니다.
+    slot_minutes: int
+
+
+class SettingsUpdateIn(BaseModel):
+    # 한 시간을 남김없이 나누는 값만 받습니다. DB 의 CHECK 와 같은 조건을 경계에서도 봅니다.
+    slot_minutes: Literal[5, 10, 12, 15, 20, 30, 60]
+
+
 class ReservationOut(BaseModel):
     id: int
     room_id: int
