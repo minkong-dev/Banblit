@@ -14,8 +14,12 @@ DATE_FORMAT = "%Y-%m-%d"
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$")
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_LENGTH = 20
-# 기수의 위 끝. 실제로 있을 수 있는 값보다 넉넉히 두되, 오타로 들어온 큰 수는 막는다.
-MAX_COHORT = 200
+# 기수의 위 끝. 1981년이 1기라 2026년은 46기다 — 반세기 남짓 여유를 두되, 오타로 들어온
+# 큰 수는 막는다. 화면(validate.ts 의 cohortMessage)도 같은 값을 본다.
+MAX_COHORT = 100
+# 학번은 숫자 8자리다. 화면(validate.ts 의 studentNoMessage)도 같은 규칙을 본다.
+# 숫자 클래스(역슬래시 d) 대신 [0-9] 를 쓴다 — 파이썬의 숫자 클래스는 전각 숫자(１２３４)까지 받는다.
+STUDENT_NO_PATTERN = re.compile(r"^[0-9]{8}$")
 
 
 # ── 문자열 ────────────────────────────────────────────────────────────────
@@ -37,6 +41,14 @@ def require_email(value: str) -> str:
     trimmed = value.strip()
     if not EMAIL_PATTERN.match(trimmed):
         raise ValueError("이메일 형식이 올바르지 않습니다")
+    return trimmed
+
+
+def require_student_no(value: str) -> str:
+    """학번. 숫자 8자리가 아니면 거절하고, 앞뒤 공백을 뗀 값을 돌려준다."""
+    trimmed = value.strip()
+    if not STUDENT_NO_PATTERN.match(trimmed):
+        raise ValueError("학번은 숫자 8자리여야 합니다")
     return trimmed
 
 

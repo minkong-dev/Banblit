@@ -81,7 +81,7 @@ def test_a_later_account_becomes_a_member(api_client: TestClient) -> None:
     _signup(api_client)
 
     response = api_client.post(
-        "/signup", json={**SIGNUP_BODY, "email": "second@example.com", "student_no": "second"}
+        "/signup", json={**SIGNUP_BODY, "email": "second@example.com", "student_no": "20260002"}
     )
 
     assert response.json()["account"]["role"] == "member"
@@ -122,7 +122,7 @@ def test_signup_rejects_a_duplicate_email(api_client: TestClient) -> None:
 
 
 def test_signup_rejects_a_malformed_email(api_client: TestClient) -> None:
-    response = api_client.post("/signup", json={**SIGNUP_BODY, "email": "not-an-email", "student_no": "not-an-email"})
+    response = api_client.post("/signup", json={**SIGNUP_BODY, "email": "not-an-email"})
 
     assert response.status_code == 422
 
@@ -135,7 +135,7 @@ def test_signup_rejects_a_short_password(api_client: TestClient) -> None:
 
 def test_signup_rejects_a_cohort_out_of_range(api_client: TestClient) -> None:
     """기수는 숫자만 받되 오타로 들어온 큰 수는 막는다."""
-    response = api_client.post("/signup", json={**SIGNUP_BODY, "cohort": 9999})
+    response = api_client.post("/signup", json={**SIGNUP_BODY, "cohort": 101})
 
     assert response.status_code == 422
 
@@ -304,7 +304,7 @@ def test_login_removes_only_the_dead_rows_of_that_account(
     first_id = first["account"]["id"]
     api_client.post("/logout")
 
-    second = _signup(api_client, email="second@example.com", student_no="second")
+    second = _signup(api_client, email="second@example.com", student_no="20260002")
     second_id = second["account"]["id"]
     _session_row(db_session, second_id).expires_at = datetime.now() - timedelta(seconds=1)
     db_session.commit()
@@ -477,3 +477,12 @@ def test_changing_my_password_rejects_a_weak_one(api_client: TestClient) -> None
     )
 
     assert response.status_code == 422
+
+
+def test_signup_rejects_a_student_no_that_is_not_eight_digits(api_client: TestClient) -> None:
+    """학번은 숫자 8자리다 — 화면(validate.ts)과 서버가 같은 규칙을 본다."""
+    for bad in ("2026001", "202600011", "2026000a", " ", "２０２６０００１"):
+        response = api_client.post("/signup", json={**SIGNUP_BODY, "student_no": bad})
+
+        assert response.status_code == 422, bad
+        assert "학번" in response.json()["detail"]

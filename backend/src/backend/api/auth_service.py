@@ -10,6 +10,7 @@ from backend.api.input import (
     require_email,
     require_non_empty,
     require_password,
+    require_student_no,
 )
 from backend.api.permission_service import grant_full_permissions
 from backend.db.models import Member
@@ -90,7 +91,7 @@ def signup(
     기수뿐이라, 가입할 때 받아 두지 않으면 나중에 채울 길이 없다."""
     clean_name = require_non_empty(name, "이름")
     clean_department = require_non_empty(department, "학과")
-    clean_student_no = require_non_empty(student_no, "학번")
+    clean_student_no = require_student_no(student_no)
     clean_email = require_email(email)
     require_password(password)
     clean_cohort = require_cohort(cohort)
