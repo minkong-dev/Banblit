@@ -32,9 +32,13 @@ server {
   # ${API_ORIGIN} 은 컨테이너가 뜰 때 채워진다. nginx 공식 이미지가 templates/ 안의
   # 파일만 그렇게 다루므로 이 파일은 그 폴더로 들어간다.
   location /api/ {
+    # set 은 rewrite 와 같은 모듈의 지시어라, 아래 rewrite 의 break 를 만나면 그 뒤의
+    # set 은 실행되지 않는다. 빈 값이 proxy_pass 로 들어가 invalid URL prefix 가 나므로
+    # 반드시 rewrite 보다 위에 둔다.
+    set $api_origin ${API_ORIGIN};
+
     # 접두사를 떼고 넘긴다 — 서버는 /periods 로 알고 있고 /api/periods 를 모른다.
     rewrite ^/api/(.*)$ /$1 break;
-    set $api_origin ${API_ORIGIN};
     proxy_pass $api_origin;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
