@@ -3,14 +3,27 @@ import { describe, expect, it } from "vitest";
 import { PERMISSION_ITEMS, can, roleLabel } from "./account";
 import type { Account } from "./contract";
 
-function accountWith(permissions: Account["permissions"]): Account {
-  return { id: 1, name: "김민수", email: "a@b.c", role: "member", permissions, cohort: 46 };
+function accountWith(
+  permissions: Account["permissions"],
+  permissionSets: string[] = [],
+): Account {
+  return {
+    id: 1,
+    name: "김민수",
+    email: "a@b.c",
+    role: "member",
+    permissions,
+    permission_sets: permissionSets,
+    cohort: 46,
+  };
 }
 
 describe("roleLabel", () => {
-  it("열여덟 가지가 전부 켜진 사람만 헤드매니저로 부른다", () => {
-    expect(roleLabel("head_manager")).toBe("헤드매니저");
-    expect(roleLabel("member")).toBe("일반멤버");
+  it("가진 permission set 의 이름을 표시하고, 없으면 일반멤버로 표시한다", () => {
+    expect(roleLabel(accountWith([], ["헤드매니저"]))).toBe("헤드매니저");
+    expect(roleLabel(accountWith([], ["헤드매니저", "운영진"]))).toBe("헤드매니저, 운영진");
+    expect(roleLabel(accountWith([]))).toBe("일반멤버");
+    expect(roleLabel(null)).toBe("");
   });
 });
 
@@ -33,10 +46,10 @@ describe("can", () => {
 });
 
 describe("PERMISSION_ITEMS", () => {
-  it("서버가 고정한 열여덟 가지를 그 순서대로 든다", () => {
+  it("서버가 고정한 항목 19개를 그 순서대로 든다", () => {
     // 생성·수정·삭제·부여를 따로 둡니다. 서버 쪽 정본은 backend/db/models.py 의
     // Permission 이고, 이 목록이 정본과 개수가 어긋나면 화면에서 켤 수 없는 항목이 생깁니다.
-    expect(PERMISSION_ITEMS).toHaveLength(18);
+    expect(PERMISSION_ITEMS).toHaveLength(19);
     expect(PERMISSION_ITEMS[0].key).toBe("room_create");
     expect(PERMISSION_ITEMS[PERMISSION_ITEMS.length - 1].key).toBe("permission_grant");
   });

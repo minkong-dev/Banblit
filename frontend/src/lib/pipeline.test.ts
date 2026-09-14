@@ -4,9 +4,12 @@ import {
   addUnavailable,
   cancelBooking,
   checkAttachments,
+  checkPeriod,
+  expelMember,
   findId,
   isSignedIn,
   logOut,
+  periodBody,
   removeUnavailable,
   requestPasswordReset,
   resetPassword,
@@ -272,6 +275,35 @@ describe("removeUnavailable", () => {
 
     const [url, init] = spy.mock.calls[0];
     expect(url).toBe("/api/members/7/unavailable/42");
+    expect(init?.method).toBe("DELETE");
+  });
+});
+
+describe("periodBody", () => {
+  it("매일이 켜진 집중 합주기간은 종료일 대신 시작일을 보내고, 종료일 검증도 통과한다", () => {
+    const form = { kind: "focused", everyday: true, starts_on: "2026-09-20", ends_on: "" };
+    expect(periodBody(form).ends_on).toBe("2026-09-20");
+    expect(checkPeriod(form)).toBe("");
+  });
+
+  it("매일이 꺼져 있으면 입력한 종료일을 그대로 보낸다", () => {
+    const form = { kind: "focused", everyday: false, starts_on: "2026-09-20", ends_on: "2026-09-27" };
+    expect(periodBody(form)).toEqual(form);
+  });
+});
+
+describe("expelMember", () => {
+  it("/members/{id} 를 DELETE 로 호출한다", async () => {
+    const spy = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(null, { status: 204 }),
+    );
+    vi.stubGlobal("fetch", spy);
+
+    await expelMember(7);
+
+    const [url, init] = spy.mock.calls[0];
+    expect(url).toBe("/api/members/7");
     expect(init?.method).toBe("DELETE");
   });
 });
