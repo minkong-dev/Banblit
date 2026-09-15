@@ -119,7 +119,7 @@ describe("addUnavailable", () => {
     );
     vi.stubGlobal("fetch", spy);
 
-    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", "weekly", "시험");
+    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", "weekly", "시험", " 기말 ");
 
     const [url, init] = spy.mock.calls[0];
     expect(url).toBe("/api/members/7/unavailable");
@@ -129,6 +129,7 @@ describe("addUnavailable", () => {
       repeats_daily: false,
       repeats_weekly: true,
       reason: "시험",
+      name: "기말",
     });
   });
 
@@ -139,7 +140,7 @@ describe("addUnavailable", () => {
     );
     vi.stubGlobal("fetch", spy);
 
-    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", "daily", "");
+    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", "daily", "", "");
 
     const body = sentBody(spy.mock.calls[0][1]);
     expect(body.repeats_daily).toBe(true);
@@ -153,7 +154,7 @@ describe("addUnavailable", () => {
     );
     vi.stubGlobal("fetch", spy);
 
-    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", "none", "");
+    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", "none", "", "");
 
     const body = sentBody(spy.mock.calls[0][1]);
     expect(body.repeats_daily).toBe(false);
@@ -167,9 +168,11 @@ describe("addUnavailable", () => {
     );
     vi.stubGlobal("fetch", spy);
 
-    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", "none", "   ");
+    await addUnavailable(7, "2026-09-14T18:00:00", "2026-09-14T20:00:00", "none", "   ", "  ");
 
-    expect(sentBody(spy.mock.calls[0][1]).reason).toBeNull();
+    const body = sentBody(spy.mock.calls[0][1]);
+    expect(body.reason).toBeNull();
+    expect(body.name).toBeNull();
   });
 });
 
