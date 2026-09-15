@@ -34,6 +34,7 @@ Permission = Literal[
     "room_edit",  # 합주실 여는 시각·닫는 시각 수정
     "period_create",  # 기간 생성
     "period_edit",  # 기간 수정
+    "period_delete",  # 기간 삭제(그 기간의 배정 결과·계산 기록·이전 배정기록도 함께 삭제)
     "team_create",  # 팀 생성
     "team_edit",  # 팀 이름·포지션 구성 수정
     "team_delete",  # 팀 삭제
