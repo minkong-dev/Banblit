@@ -158,35 +158,32 @@ def test_skips_periods_that_do_not_contain_today(db_session: Session) -> None:
     assert _runs(db_session) == []
 
 
-def test_a_failing_period_does_not_stop_the_next_one(
+def test_a_failing_period_leaves_no_run_record(
     db_session: Session, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """계산이 실패한 기간은 실행 기록을 남기지 않아 다음 확인 때 다시 시도됩니다.
+
+    이전에는 두 기간 중 하나가 실패해도 다음 기간이 계속되는지 검사했습니다. 집중 합주기간끼리 날짜가
+    겹칠 수 없게 되어(migration b5e1d9a37c42) 같은 날 계산 대상인 기간이 둘일 수 없습니다.
+    """
     broken_id = _period(db_session)
-    healthy_id = _period(db_session)
     _team_with_member(db_session, "A", "김민수")
     _room(db_session, "1번방")
     # 실패한 기간은 rollback 으로 자신의 변경만 취소합니다. 실제 DB 의 기간은
     # 이미 commit 된 행이므로, 테스트도 준비한 행을 commit 해 같은 조건으로 맞춥니다.
     db_session.commit()
-    real = auto_assign.assign_period
 
-    def failing_for_the_first_period(*args: Any, **kwargs: Any) -> Any:
-        if args[1] == broken_id:
-            raise RuntimeError("계산이 터졌다")
-        return real(*args, **kwargs)
+    def failing(*args: Any, **kwargs: Any) -> Any:
+        raise RuntimeError("계산이 터졌다")
 
-    monkeypatch.setattr(auto_assign, "assign_period", failing_for_the_first_period)
+    monkeypatch.setattr(auto_assign, "assign_period", failing)
 
     results = auto_assign.run_due_assignments(db_session, _at(10))
 
-    assert [result.period_id for result in results] == [broken_id, healthy_id]
+    assert [result.period_id for result in results] == [broken_id]
     assert results[0].error is not None
-    assert results[1].error is None
-    # 실패한 기간은 실행 기록을 남기지 않아 다음 확인 때 다시 시도됩니다.
-    assert [(run.period_id, run.slot) for run in _runs(db_session)] == [
-        (healthy_id, "first")
-    ]
-    assert len(_assignments(db_session)) == 2
+    assert _runs(db_session) == []
+    assert _assignments(db_session) == []
 
 
 def test_an_everyday_period_keeps_running_after_its_end_date(db_session: Session) -> None:
