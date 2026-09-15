@@ -1,6 +1,6 @@
 // 여러 화면에서 공유하는 DOM·화면 상태 훅입니다. 서버 조회 훅은 queries.ts 에 있습니다.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
 /** 클릭으로 여는 팝업 하나입니다. 열려 있는 동안 바깥을 누르거나 Escape를 누르면 닫힙니다.
@@ -37,9 +37,10 @@ export function useDismissible(): {
   return { open, setOpen, toggle: () => setOpen((on) => !on), box };
 }
 
-/** 화면별 CSS는 body[data-page="..."] 속에 격리됩니다. data-page 속성을 설정/해제하는 곳입니다. */
+/** 화면별 CSS는 body[data-page="..."] 속에 격리됩니다. data-page 속성을 설정/해제하는 곳입니다.
+ *  AppShell 의 data-shell 과 같은 이유로 useLayoutEffect 입니다. 자식 effect 가 크기를 잴 때 속성이 비어 있지 않게 합니다. */
 export function usePage(page: string): void {
-  useEffect(() => {
+  useLayoutEffect(() => {
     document.body.dataset.page = page;
     return () => {
       delete document.body.dataset.page;

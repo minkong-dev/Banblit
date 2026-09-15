@@ -10,7 +10,7 @@ export function roleLabel(me: Account | null): string {
   return names.length === 0 ? "일반멤버" : names.join(", ");
 }
 
-/** 항목 19개와 그 한국어 이름·설명입니다. 순서는 서버가 고정한 선언 순서 그대로입니다.
+/** 항목 20개와 그 한국어 이름·설명입니다. 순서는 서버가 고정한 선언 순서 그대로입니다.
  *  설명은 권한을 켜면 무엇을 할 수 있게 되는지를 한 줄로 적습니다.
  *  예를 들어 이름만으로는 "되돌리기"가 무엇을 되돌리는지 명확하지 않기 때문입니다. */
 export const PERMISSION_ITEMS: readonly {
@@ -37,6 +37,11 @@ export const PERMISSION_ITEMS: readonly {
     key: "period_edit",
     label: "스케줄링 시간 설정",
     note: "스케줄링 엔진이 연산을 진행하는 시간을 설정할 수 있어요.",
+  },
+  {
+    key: "period_delete",
+    label: "집중합주 기간 삭제",
+    note: "집중합주 기간을 삭제할 수 있어요. 그 기간의 배정 결과와 이전 배정기록도 함께 삭제돼요.",
   },
   {
     key: "team_create",

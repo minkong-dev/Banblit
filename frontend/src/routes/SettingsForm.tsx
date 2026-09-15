@@ -6,7 +6,7 @@ import type { ReactNode, RefObject } from "react";
 
 import { stateText } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
-import { PencilIcon } from "../components/icons";
+import { PencilIcon, TrashIcon } from "../components/icons";
 
 
 /** 수정/취소로 행이 재생성될 때 초점이 유지되도록, 편집 시작 전 눌린 버튼을 기억합니다. */
@@ -93,7 +93,8 @@ export function CardState({ state, empty }: { state: LoadState; empty: string })
 }
 
 /** 목록의 한 행입니다. 보기 모드에서는 데이터를 표시하고, 편집 모드이면 form 이 대신 표시됩니다.
- *  오른쪽 끝에 연필 아이콘(수정)이 표시되며, onEdit 이 없으면 데이터만 표시합니다. 수정 권한이 없는 사용자에게 이 경우로 렌더링됩니다.
+ *  오른쪽 끝에 연필 아이콘(수정)과 휴지통 아이콘(삭제)이 표시됩니다. onEdit·onDelete 중 없는 쪽의 아이콘은 표시하지 않고,
+ *  둘 다 없으면 데이터만 표시합니다. 권한이 없는 사용자에게 이 경우로 렌더링됩니다.
  *  모든 행의 외형이 같으므로 aria-label 이 무엇을 나타내는지 설명합니다. */
 export function Row(props: {
   title: string;
@@ -102,8 +103,10 @@ export function Row(props: {
   editLabel?: string;
   buttonRef?: (el: HTMLButtonElement | null) => void;
   onEdit?: () => void;
+  deleteLabel?: string;
+  onDelete?: () => void;
 }) {
-  const { title, when, span, editLabel, buttonRef, onEdit } = props;
+  const { title, when, span, editLabel, buttonRef, onEdit, deleteLabel, onDelete } = props;
   return (
     <li>
       <div>
@@ -113,11 +116,18 @@ export function Row(props: {
           <span className="span">{span}</span>
         </div>
       </div>
-      {onEdit === undefined ? null : (
+      {onEdit === undefined && onDelete === undefined ? null : (
         <div className="acts">
-          <button className="ic" ref={buttonRef} aria-label={editLabel} onClick={onEdit}>
-            <PencilIcon />
-          </button>
+          {onEdit === undefined ? null : (
+            <button className="ic" ref={buttonRef} aria-label={editLabel} onClick={onEdit}>
+              <PencilIcon />
+            </button>
+          )}
+          {onDelete === undefined ? null : (
+            <button className="ic danger" aria-label={deleteLabel} onClick={onDelete}>
+              <TrashIcon />
+            </button>
+          )}
         </div>
       )}
     </li>

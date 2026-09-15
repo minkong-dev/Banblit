@@ -1,5 +1,5 @@
 import { useQueries } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import type { ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
@@ -57,7 +57,11 @@ export function AppShell(props: {
   const toast = useToast();
   usePage(page);
   // shell.css 가 이 속성으로 공통 layout(상단바·사이드바·탭·카드)의 스타일을 적용합니다. 계정·랜딩 화면에는 없습니다.
-  useEffect(() => {
+  // useLayoutEffect 인 이유: 화면을 옮길 때 useEffect 는 자식(PostBoard 의 useFitCount)의 effect 를 먼저 실행합니다.
+  // 그 effect 가 크기를 재는 순간 이전 화면의 cleanup 이 속성을 지운 상태라, 프로필 카드가 shell.css 없이
+  // opacity 1 로 계산되고 속성이 돌아오면서 0 으로 전환되어 열렸다 닫히는 것처럼 보였습니다.
+  // layout effect 는 cleanup 과 설정이 모두 그리기 전, 모든 useEffect 보다 먼저 끝납니다.
+  useLayoutEffect(() => {
     document.body.dataset.shell = "";
     return () => { delete document.body.dataset.shell; };
   }, []);
