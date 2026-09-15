@@ -12,6 +12,7 @@ import {
   roomBounds,
   slotCountOf,
   slotLabel,
+  dragRange,
   slotSteps,
   stampLabel,
   takenGrid,
@@ -71,6 +72,21 @@ describe("slotSteps — 설정 단위 간격의 칸 번호 목록", () => {
 
   it("10분 단위는 부동소수점 오차 없이 slotLabel 로 분이 나온다", () => {
     expect(slotLabel(slotSteps(1, 10)[5], 18)).toBe("18:50");
+  });
+});
+
+describe("dragRange — 타임라인을 드래그해 고른 구간", () => {
+  it("한 칸 안에서 누르고 떼면 그 칸 하나다", () => {
+    expect(dragRange(2.3, 2.3, 60, 12)).toEqual({ a: 2, b: 3 });
+  });
+
+  it("위로 끌어도 시작이 앞이고, 10분 단위로 내림한 뒤 끝에 한 칸을 더한다", () => {
+    // 누른 곳 1.9(18:54) → 1:50, 지금 0.25(18:15) → 0:10. 구간은 0:10 ~ 2:00 입니다.
+    expect(dragRange(1.9, 0.25, 10, 12)).toEqual({ a: 10 / 60, b: 2 });
+  });
+
+  it("타임라인 밖으로 나가면 여는 시각과 닫는 시각에서 자른다", () => {
+    expect(dragRange(-1, 99, 60, 12)).toEqual({ a: 0, b: 12 });
   });
 });
 

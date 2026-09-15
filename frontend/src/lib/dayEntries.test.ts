@@ -13,6 +13,7 @@ const weekly: Unavailable = {
   repeats_weekly: true,
   repeat_until: "2026-09-28",
   reason: null,
+  name: null,
 };
 
 const days = ["2026-09-13", "2026-09-14", "2026-09-21", "2026-09-22", "2026-09-28", "2026-10-05"];
@@ -28,6 +29,12 @@ describe("offByDay", () => {
     const byDay = offByDay([weekly], 18, days);
     expect(byDay["2026-09-14"][0].removeIds).toEqual([7]);
     expect(byDay["2026-09-21"][0].removeIds).toBeUndefined();
+  });
+
+  it("일정 이름이 표시 이름이고, 없으면 불가능 일정이다. 사유는 note 로 따로 둔다", () => {
+    const named = { ...weekly, name: "치과", reason: "정기 검진" };
+    expect(offByDay([named], 18, days)["2026-09-14"][0]).toMatchObject({ who: "치과", note: "정기 검진" });
+    expect(offByDay([weekly], 18, days)["2026-09-14"][0].who).toBe("불가능 일정");
   });
 });
 

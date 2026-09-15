@@ -102,6 +102,27 @@ def test_unavailable_time_is_created_with_on_the_hour_bounds(
     assert body["repeats_weekly"] is False
     assert body["repeat_until"] is None
     assert body["reason"] is None
+    assert body["name"] is None
+
+
+def test_unavailable_time_keeps_the_name_it_was_given(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    owner_id, owner = account("이도현", "dohyun@example.com")
+
+    response = api_client.post(
+        f"/members/{owner_id}/unavailable",
+        json={
+            "starts_at": "2026-09-14T18:00:00",
+            "ends_at": "2026-09-14T20:00:00",
+            "name": "  치과  ",
+        },
+        cookies=owner,
+    )
+
+    assert response.status_code == 201
+    # 앞뒤 공백은 제거합니다. 공백뿐이면 reason 과 같게 None 입니다.
+    assert response.json()["time"]["name"] == "치과"
 
 
 def test_unavailable_time_keeps_the_reason_it_was_given(
