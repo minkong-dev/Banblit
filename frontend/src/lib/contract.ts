@@ -47,6 +47,8 @@ export const INSTRUMENTS: Instrument[] = [
 export type Team = {
   id: number;
   name: string;
+  /** 팀 색 이름입니다. 서버 쪽 정본은 backend/src/backend/db/models.py 의 TEAM_COLORS 입니다. */
+  color: string;
   slot_count: number;
   filled_count: number;
 };

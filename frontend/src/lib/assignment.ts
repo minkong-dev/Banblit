@@ -1,6 +1,6 @@
 // 배정 화면(routes/Assignment)의 순수 계산입니다. 화면이나 서버와 상호작용하지 않습니다.
 
-import { colorKey } from "./roster";
+import { teamColorKey } from "./teamColors";
 import { mergeSessions } from "./slots";
 import type { Session } from "./slots";
 import type { AssignOut, Slot } from "./contract";
@@ -50,8 +50,12 @@ export function runResultText(result: AssignOut): string {
   return result.saved ? "선택한 배정으로 확정했어요" : "해당 배정을 선택하지 않았어요";
 }
 
-/** 팀 이름에 색을 하나씩 배정합니다. 이름 순으로 배정해야 다시 그려도 색이 바뀌지 않습니다. */
-export function colorsOf(sessions: Session[]): Map<string, string> {
+/** 배정안에 나온 팀 이름마다 팀 색 key 를 반환합니다. 색은 teams(서버의 팀 목록)에 저장된 팀 색입니다.
+ *  목록에 없는 이름(아직 받지 못했거나 삭제된 팀)은 빈 문자열이라 CSS 가 색 없는 막대로 표시합니다. */
+export function colorsOf(
+  sessions: Session[], teams: readonly { name: string; color: string }[],
+): Map<string, string> {
+  const colors = new Map(teams.map((team) => [team.name, teamColorKey(team.color)]));
   const names = [...new Set(sessions.map((session) => session.team))].sort();
-  return new Map(names.map((name, index) => [name, colorKey(index)]));
+  return new Map(names.map((name) => [name, colors.get(name) ?? ""]));
 }

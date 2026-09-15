@@ -137,7 +137,11 @@ export function Assignment() {
     return proposal ? sessionsOf(proposal.assignment.slots_by_team) : confirmed;
   }, [roundAt, roundSessions, proposal, confirmed]);
 
-  const colors = useMemo(() => colorsOf([...confirmed, ...shown]), [confirmed, shown]);
+  const teamList = teams.data?.teams;
+  const colors = useMemo(
+    () => colorsOf([...confirmed, ...shown], teamList ?? []),
+    [confirmed, shown, teamList],
+  );
 
   const tabs = [
     { key: "now", text: "현재 확정된 배정안" },

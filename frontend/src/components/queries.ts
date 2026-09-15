@@ -2,7 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { colorKey, fetchMe, getJSON, myTeamIds } from "../lib/pipeline";
+import { fetchMe, getJSON, myTeamIds } from "../lib/pipeline";
+import { teamColorKey } from "../lib/teamColors";
 import type { Account, Period, Room, Team } from "../lib/contract";
 
 /** 팀·합주실·기간 목록입니다. 여러 화면에서 같은 조회를 다시 작성하지 않습니다. queryKey 가 같아 cache 도 하나입니다. */
@@ -50,12 +51,12 @@ export function useMe(): {
 /** 프로필 카드에 표시하는 소속 팀입니다. 서버가 반환하는 배정 자리(lib/contract 의 MyTeam)와 다른 자료형입니다. */
 export type ProfileTeam = { id: number; name: string; colorKey: string };
 
-/** 내가 속한 팀을 전체 팀 목록에서 필터링하고, 목록 내 순서로 색상을 할당합니다(스케줄러와
- *  같은 규칙입니다. 전체 팀 목록에서의 순서가 곧 달력 색입니다). 여러 화면에서 프로필 카드가
- *  사용합니다. 아직 로드되지 않았거나 실패하면 빈 배열을 반환합니다. 프로필 카드는 팀 없이도 렌더링됩니다. */
+/** 내가 속한 팀을 전체 팀 목록에서 필터링하고, 팀에 저장된 색을 CSS key 로 붙입니다(스케줄러의 teamsOf 와
+ *  같은 값입니다). 여러 화면에서 프로필 카드가 사용합니다. 아직 로드되지 않았거나 실패하면 빈 배열을 반환합니다.
+ *  프로필 카드는 팀 없이도 렌더링됩니다. */
 export function useMyTeams(): ProfileTeam[] {
   const { teamIds, teams } = useMe();
   return teams
-    .map((team, index) => ({ ...team, colorKey: colorKey(index) }))
-    .filter((team) => teamIds.includes(team.id));
+    .filter((team) => teamIds.includes(team.id))
+    .map((team) => ({ ...team, colorKey: teamColorKey(team.color) }));
 }
