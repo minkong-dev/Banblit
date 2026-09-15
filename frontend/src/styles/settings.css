@@ -28,6 +28,11 @@ body[data-page="settings"] {
   /* 입력칸의 높이·테두리는 문자 입력칸의 값입니다. 체크박스에 적용하면 네모가 늘어납니다. */
   /* 체크 표시는 base.css 의 .chk 가 그립니다. 이 규칙에서는 위아래 여백만 정합니다. */
   .fields .chk { margin: 12px 0; }
+  /* 전체합주 입력 묶음은 한 줄을 전부 차지하고, 왼쪽 세이지 선이 달력의 전체합주 막대와 같은 색으로 "기간 안의 설정"임을 표시합니다. */
+  .fields .ensemble { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 2px 0 2px 14px; border-left: 3px solid var(--green); }
+  .ensemble .teamdays { flex: 1 1 100%; margin: 2px 0 0; font-size: 13px; color: var(--t2); }
+  .ensdays { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .ensdays > b { display: block; margin-bottom: 8px; font-size: 13.5px; font-weight: 700; }
 
   /* 오른쪽 칸입니다. 현재 설정으로 실제로 몇 자리가 열리는지 표시합니다 */
   .read { padding: 4px 18px 18px; display: flex; flex-direction: column; gap: 14px; }

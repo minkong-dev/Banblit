@@ -22,7 +22,23 @@ export type Period = {
   everyday: boolean;
   first_run_at: string;
   second_run_at: string;
+  /** 전체합주를 지정하지 않은 기간은 null 입니다. */
+  ensemble: Ensemble | null;
 };
+
+/** 집중 합주기간 안의 전체합주 설정입니다. 이 날짜 범위는 팀별 배정에서 제외됩니다. */
+export type Ensemble = {
+  starts_on: string;
+  ends_on: string;
+  room_id: number;
+  /** 기본 시각 "19:00" 입니다. days 에 있는 날짜는 그 행의 시각을 따릅니다. */
+  starts_at: string;
+  ends_at: string;
+  days: EnsembleDay[];
+};
+
+/** 기본 시각과 다르게 지정한 날짜 하나입니다. */
+export type EnsembleDay = { day: string; starts_at: string; ends_at: string };
 
 /** 되돌릴 수 있는 이전 시간표 배정기록 하나입니다. 배정기록을 구분하는 값은 저장 시각입니다. */
 export type Backup = {

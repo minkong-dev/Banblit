@@ -9,7 +9,7 @@ import type { DayTeam } from "../lib/roster";
 import {
   dayWithWeekday, hoursLabel, isRangeFree, monthCells, slotLabel, takenGrid, WEEKDAY_NAMES,
 } from "../lib/pipeline";
-import { entryName } from "./DayDialogParts";
+import { entryClass, entryName } from "./DayDialogParts";
 
 type ViewProps = {
   tab: DayTab;
@@ -87,7 +87,7 @@ export function MonthView({
             inner = (
               <>
                 {list.slice(0, 3).map((entry, i) => (
-                  <span className={`ev ${entry.team ? `${entry.team}` : "off"}`} key={i}>
+                  <span className={`ev ${entryClass(entry)}`} key={i}>
                     {entryName(entry, teams)}
                     <time>{label(entry.a)}</time>
                   </span>
@@ -167,7 +167,7 @@ export function WeekView({
               return (
                 <div className="wcell" key={`${key}-${hour}`}>
                   {entry === undefined ? null : (
-                    <span className={`blk ${entry.team ? `${entry.team}` : "off"}`}
+                    <span className={`blk ${entryClass(entry)}`}
                       style={{ "--offset": entry.a - Math.floor(entry.a), "--span": entry.b - entry.a } as CSSProperties}>
                       {entryName(entry, teams)}
                       {/* 합주실 이름을 함께 표시합니다. 맞닿은 두 slot 이 따로 렌더링되는 유일한 이유가

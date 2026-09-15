@@ -18,7 +18,8 @@ import type { RepeatCycle } from "../lib/pipeline";
 import { unitLabel } from "../lib/calendar";
 import { useSlotMinutes } from "../components/queries";
 import type { Room } from "../lib/contract";
-import type { DayTab, Entry } from "../lib/dayEntries";
+import type { DayTab, EnsembleOn, Entry } from "../lib/dayEntries";
+import { EnsembleDayEditor } from "./SettingsEnsemble";
 import type { DayTeam } from "../lib/roster";
 import { say } from "../lib/toast";
 import { DayPeople, DayTimeline, MyEntriesList, SlotPicker, entryName, slotLabels } from "./DayDialogParts";
@@ -29,9 +30,13 @@ function hourText(hour: number): string {
 }
 
 export function DayDialog({
-  dayKey, tab, teams, entries, openHour, closeHour, slotCount, fixed, inFocus,
+  dayKey, tab, teams, entries, openHour, closeHour, slotCount, fixed, inFocus, ensemble, canEditEnsemble,
   memberId, myName, rooms, onSaved, onClose,
 }: {
+  /** 이날이 전체합주 날짜면 그 시각입니다. 아니면 null 입니다. */
+  ensemble: EnsembleOn | null;
+  /** 날짜별 전체합주 시각을 바꿀 수 있는지입니다. 서버 권한 항목 period_edit 과 같습니다. */
+  canEditEnsemble: boolean;
   dayKey: string;
   tab: DayTab;
   teams: DayTeam[];
@@ -265,6 +270,19 @@ export function DayDialog({
     </div>
   );
 
+  // 전체합주 날짜에서 권한이 있는 사람에게만 표시합니다. 다른 사람은 타임라인의 전체합주 막대로 시각을 봅니다.
+  const ensembleEditor = ensemble === null || !canEditEnsemble ? null : (
+    <div className="ensday">
+      <p className="cap2">이날 전체합주 시각</p>
+      <EnsembleDayEditor
+        key={`${ensemble.startsAt}-${ensemble.endsAt}`}
+        day={dayKey}
+        on={ensemble}
+        room={rooms.find((item) => item.id === ensemble.roomId)}
+      />
+    </div>
+  );
+
   const hint = `${roomsLabel || "합주실"} · ${hourText(openHour)}–${hourText(closeHour)}`
     + ` · ${unitLabel(slotMinutes)} · ${inFocus ? "배정된 기간" : "배정 없음"}`;
 
@@ -278,6 +296,7 @@ export function DayDialog({
               {dayTeams.length === 0 ? null : <DayPeople people={dayPeople} error={rosterError} />}
             </>
           : <div className="blank"><b>현재 예약이 없어요</b></div>}
+        {ensembleEditor}
       </Modal>
     );
   }
@@ -296,6 +315,7 @@ export function DayDialog({
         {tab === "me"
           ? <DayTimeline list={mine} teams={teams} pick={pick} {...hours} />
           : <DayTimeline list={booked} teams={teams} pick={fixed ? undefined : pick} {...hours} />}
+        {ensembleEditor}
       </section>
       <section className="pane">
         {tab === "me" ? offForm : bookForm}

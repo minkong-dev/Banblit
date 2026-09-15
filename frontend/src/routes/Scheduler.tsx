@@ -10,8 +10,9 @@ import { focusedRanges, inRanges, loadReservationRows, loadUnavailable, roomBoun
 import { DayDialog } from "./DayDialog";
 import { MonthView, WeekView } from "./SchedulerViews";
 import {
-  assignedByDay, bookedByDay, listNote, memberCountLabel, offByDay, visibleDays,
+  assignedByDay, bookedByDay, ensembleByDay, ensembleOn, listNote, memberCountLabel, offByDay, visibleDays,
 } from "../lib/dayEntries";
+import { can } from "../lib/account";
 import type { DayTab, Entry } from "../lib/dayEntries";
 import { teamsOf } from "../lib/roster";
 import { useMe, usePeriods, useRooms, useSlotMinutes } from "../components/queries";
@@ -115,10 +116,17 @@ export function Scheduler() {
     unavailableQuery.data ?? [], open, visibleDays(cursor.year, cursor.month),
   );
   const bookEntries = bookedByDay(reservationQuery.data?.rows ?? [], teams, open, me?.id ?? null);
+  const periodList = periods.data?.periods ?? [];
+  // 전체합주는 예약 탭에서도 항목에 들어가 그 합주실의 해당 시간을 찬 칸으로 계산합니다. 서버도 그 시간의 예약을 거절합니다.
+  const ensembleEntries = ensembleByDay(
+    periodList, rooms.data?.rooms ?? [], open, visibleDays(cursor.year, cursor.month),
+  );
 
   const entriesOf = (key: string): Entry[] =>
-    [...(assigned[key] ?? []), ...(offEntries[key] ?? []), ...(bookEntries[key] ?? [])]
-      .sort((x, y) => x.a - y.a);
+    [
+      ...(assigned[key] ?? []), ...(ensembleEntries[key] ?? []),
+      ...(offEntries[key] ?? []), ...(bookEntries[key] ?? []),
+    ].sort((x, y) => x.a - y.a);
 
   // POST 가 끝난 뒤 화면이 새 값을 표시하게 합니다. 클라이언트 쪽에 따로 상태를 두지 않고
   // 서버가 가진 값을 다시 조회해 저장이 실제로 되었는지까지 함께 확인합니다.
@@ -224,6 +232,9 @@ export function Scheduler() {
             {teams.filter((team) => tab !== "me" || team.mine).map((team) => (
               <span key={team.id}><i style={{ background: `var(--${team.key})` }} />{team.name}</span>
             ))}
+            {periodList.some((period) => period.ensemble !== null)
+              ? <span><i className="ens" />전체합주</span>
+              : null}
             {tab === "me" ? <span><i style={{ background: "var(--off)" }} />나의 불가능 일정</span> : null}
           </div>
           <div id="bandSlot">
@@ -278,6 +289,8 @@ export function Scheduler() {
           slotCount={slotCount}
           fixed={range}
           inFocus={inFocus(openDay)}
+          ensemble={ensembleOn(periodList, openDay)}
+          canEditEnsemble={can(me, "period_edit")}
           memberId={me?.id ?? null}
           myName={me?.name ?? ""}
           rooms={rooms.data?.rooms ?? []}
