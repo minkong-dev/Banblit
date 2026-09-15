@@ -309,6 +309,8 @@ class Period(Base):
     first_run_at: Mapped[time] = mapped_column(Time)
     second_run_at: Mapped[time] = mapped_column(Time)
 
+    # 집중 합주기간끼리의 날짜 겹침 금지 제약(EXCLUDE)은 Reservation 의 겹침 금지 제약과 같이 migration 에만
+    # 둡니다(migrations/versions/b5e1d9a37c42_focused_period_no_overlap.py).
     __table_args__ = (
         CheckConstraint(_in_sql("kind", PERIOD_KINDS)),
         CheckConstraint("ends_on >= starts_on"),
