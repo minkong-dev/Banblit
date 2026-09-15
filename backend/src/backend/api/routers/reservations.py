@@ -96,13 +96,14 @@ def update_reservation_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> ReservationsOut:
-    # 예약한 시각(created_at)은 처음 잡은 때 그대로 둡니다. 옮긴 것이지 새로 잡은 것이 아닙니다.
+    # 응답은 새로 만들어진 행입니다. 옛 행은 취소 표시로 남고 목록에 나오지 않습니다.
     row, room_name, member_name, team_name = update_reservation(
         session,
         reservation_id,
         requester,
         req.starts_at,
         req.ends_at,
+        datetime.now(),
     )
     return _rows_out([(row, room_name, team_name, member_name)])
 
@@ -113,4 +114,4 @@ def cancel_reservation_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> None:
-    cancel_reservation(session, reservation_id, requester)
+    cancel_reservation(session, reservation_id, requester, datetime.now())
