@@ -1,4 +1,23 @@
 import { expect, test } from "@playwright/test";
+import type { Page } from "@playwright/test";
+
+import { E2E_ACCOUNT, SIGNED_OUT } from "./helpers";
+
+// 이 파일은 로그인하지 않은 사람의 화면을 확인합니다.
+// 가입 rate limit 이 1시간에 5번이고 global-setup 이 2번 쓰므로, 이 파일의 가입 요청은 3번을 넘기지 않습니다(지금 2번).
+test.use({ storageState: SIGNED_OUT });
+
+/** 가입 form 을 채웁니다. 이름·학과·학번·기수 조합이 겹치면 서버가 거절하므로 이름에 stamp 를 붙여 구분합니다. */
+async function fillSignup(page: Page, name: string, email: string): Promise<void> {
+  await page.goto("/signup");
+  await page.getByLabel("이름").fill(name);
+  await page.getByLabel("학과").fill(E2E_ACCOUNT.department);
+  await page.getByLabel("학번").fill(String(Date.now()).slice(-8));
+  await page.getByLabel("이메일").fill(email);
+  await page.getByLabel("비밀번호", { exact: true }).fill(E2E_ACCOUNT.password);
+  await page.getByLabel("비밀번호 확인").fill(E2E_ACCOUNT.password);
+  await page.getByLabel("기수").fill(String(E2E_ACCOUNT.cohort));
+}
 
 test("로그인하지 않으면 스케줄러 대신 로그인 화면으로 간다", async ({ page }) => {
   await page.goto("/scheduler");
@@ -7,46 +26,28 @@ test("로그인하지 않으면 스케줄러 대신 로그인 화면으로 간�
 });
 
 test("가입한 뒤 로그인 상태로 스케줄러까지 들어간다", async ({ page }) => {
-  const email = `e2e-signup-${Date.now()}@banblit.test`;
-
-  await page.goto("/signup");
-  await page.getByLabel("이름").fill("E2E 가입 검사");
-  await page.getByLabel("이메일").fill(email);
-  await page.getByLabel("비밀번호", { exact: true }).fill("password123");
-  await page.getByLabel("비밀번호 확인").fill("password123");
-  await page.getByRole("button", { name: "보컬" }).click();
+  const stamp = Date.now();
+  await fillSignup(page, `E2E 가입 ${stamp}`, `e2e-signup-${stamp}@banblit.test`);
   await page.getByRole("button", { name: "가입하기" }).click();
 
   await expect(page).toHaveURL(/\/scheduler$/);
 });
 
-test("가입한 이메일로 다시 가입하면 서버가 거절한다", async ({ page, request }) => {
-  const email = `e2e-dup-${Date.now()}@banblit.test`;
-  const body = { name: "먼저 가입", email, password: "password123", positions: ["보컬"] };
-  await request.post("/api/signup", { data: body });
-
-  await page.goto("/signup");
-  await page.getByLabel("이름").fill("나중 가입");
-  await page.getByLabel("이메일").fill(email);
-  await page.getByLabel("비밀번호", { exact: true }).fill("password123");
-  await page.getByLabel("비밀번호 확인").fill("password123");
-  await page.getByRole("button", { name: "기타" }).click();
+// global-setup 이 가입시킨 E2E 계정의 이메일을 그대로 씁니다. 먼저 가입하는 요청을 따로 보내지 않아 가입 rate limit 을 아낍니다.
+test("가입한 이메일로 다시 가입하면 서버가 거절한다", async ({ page }) => {
+  await fillSignup(page, `E2E 중복 ${Date.now()}`, E2E_ACCOUNT.email);
   await page.getByRole("button", { name: "가입하기" }).click();
 
   await expect(page.getByText("이미 가입된 이메일입니다")).toBeVisible();
   await expect(page).toHaveURL(/\/signup$/);
 });
 
-test("틀린 비밀번호로 로그인하면 거절 문구가 뜬다", async ({ page, request }) => {
-  const email = `e2e-login-${Date.now()}@banblit.test`;
-  await request.post("/api/signup", {
-    data: { name: "로그인 검사", email, password: "password123", positions: ["보컬"] },
-  });
-
+test("틀린 비밀번호로 로그인하면 거절 문구가 뜬다", async ({ page }) => {
   await page.goto("/login");
-  await page.getByLabel("이메일").fill(email);
-  await page.getByLabel("비밀번호").fill("wrong-password");
-  await page.getByRole("button", { name: "로그인" }).click();
+  await page.getByLabel("이메일").fill(E2E_ACCOUNT.email);
+  // "비밀번호 보기" 버튼도 label 에 걸리므로 exact 로 입력칸만 고릅니다.
+  await page.getByLabel("비밀번호", { exact: true }).fill("Wrong-Password1!");
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
 
   await expect(page.getByText("이메일 또는 비밀번호가 올바르지 않습니다")).toBeVisible();
   await expect(page).toHaveURL(/\/login$/);

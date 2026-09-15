@@ -1,6 +1,6 @@
 # COMMAND
 
-> 문서 버전: 1.12.3 draft
+> 문서 버전: 1.13.0 draft
 
 이 문서는 Banblit에서 실제로 실행하여 동작을 확인한 명령어만 담으며, 실행하지 않은 명령어는 기록하지 않습니다.
 
@@ -800,34 +800,45 @@ docker run --rm -v banblit-attachments:/dst -v /srv/banblit/backups:/src alpine 
 ### 12-1. E2E 테스트 실행하기
 
 ```
-docker compose run --rm e2e
+docker compose --profile e2e up -d --force-recreate --wait e2e-api
+docker compose --profile e2e run --rm e2e
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: `frontend/e2e/` 의 Playwright 검사를 전부 실행합니다. 사람이 브라우저에서 하는
-  작업(달력 보기, 설정 수정, 게시글 작성·댓글·파일 첨부, 배정 다시 계산, 팀 명단 보기,
-  팀 참가 신청과 승인, 알림 목록 보기)을 재현해 화면·서버·DB 가 실제로 연결되어
-  동작하는지 확인합니다.
+- **용도**: `frontend/e2e/` 의 Playwright 검사 16개를 전부 실행합니다. 로그인·가입, 배정 다시
+  계산과 조율안, 팀 게시판 권한·첨부, 공지 글·댓글, 달력·알림, 합주실 수정, 팀 명단을 브라우저로
+  재현해 화면·서버·DB 가 연결되어 동작하는지 확인합니다. dev DB 는 건드리지 않습니다.
 - **옵션**
-  - `run --rm` — 일회성 container 를 실행해 명령을 실행하고 끝나면 삭제합니다.
-  - `e2e` — `docker-compose.yml` 의 `e2e` 서비스입니다. 공식 image `mcr.microsoft.com/playwright:v1.62.1-noble`
-    를 사용해 브라우저를 따로 내려받지 않습니다. container 안에서 `npm install` 로 `frontend/package.json`
-    의 `@playwright/test`(버전을 image tag 와 똑같이 `1.62.1` 로 고정했습니다)를 설치한 뒤
-    `npx playwright test` 를 실행합니다.
-  - `depends_on: web` 이 지정되어 있어 `web` 서비스가 자동으로 함께 실행됩니다. 다만 `web` 이
-    응답할 수 있는 상태까지 기다리지는 않으므로(→ 주의점), 미리 `10-1` 로 실행해
-    두고 화면이 실제로 열리는 것을 확인한 뒤 이 명령을 실행하는 편이 안전합니다.
+  - `--profile e2e` — `docker-compose.override.yml` 에서 `profiles: ["e2e"]` 가 붙은 `e2e-api`·`e2e`
+    서비스를 켭니다. 생략하면 두 서비스를 찾지 못합니다. 그래서 `docker compose up` 에는 뜨지 않습니다.
+  - 첫 줄 `up -d --force-recreate --wait e2e-api`
+    - `up -d` — 서비스를 백그라운드로 실행합니다.
+    - `--force-recreate` — 이미 떠 있어도 container 를 새로 만듭니다. `e2e-api` 는 뜰 때마다
+      `backend/scripts/reset_e2e_db.py` 로 `banblit_e2e` DB 를 비우고 `alembic upgrade head` 를
+      적용하므로 이 옵션이 곧 DB 초기화입니다. 생략하면 떠 있는 container 를 그대로 두어 이전 실행의 데이터가 남습니다.
+    - `--wait` — healthcheck(`/health` 가 200)가 통과할 때까지 기다린 뒤 끝납니다. 생략하면 서버가 뜨기 전에 둘째 줄이 시작될 수 있습니다.
+  - 둘째 줄 `run --rm e2e` — 일회성 container 로 `npm install && npx playwright test` 를 실행하고
+    끝나면 삭제합니다. 공식 image `mcr.microsoft.com/playwright:v1.62.1-noble` 를 사용해 브라우저를
+    따로 내려받지 않습니다. `depends_on` 이 `e2e-api` 의 healthy 를 기다립니다.
+- **동작 순서**
+  1. `e2e-api`(dev image)가 `banblit_e2e` DB 를 비우고 migration 을 적용한 뒤 서버를 띄웁니다.
+     DB 이름이 `_e2e` 로 끝나지 않으면 비우지 않고 멈춥니다.
+  2. `e2e` 안에서 Playwright 가 Vite 개발 서버(`npm run dev`)를 띄웁니다(`frontend/playwright.config.ts`
+     의 `webServer`). `/api` 요청은 `API_ORIGIN=http://e2e-api:8000` 으로 넘어갑니다. `web` 서비스는 쓰지 않습니다.
+  3. `frontend/e2e/global-setup.ts` 가 계정 2개·합주실·팀 2개·집중 합주기간 2개(오늘은 배정 저장,
+     내일은 조율안이 나오도록 불가능 시간 등록)를 만들고, 첫 가입자라 전체 권한을 받은 E2E 계정의
+     로그인 cookie 를 `frontend/playwright/.auth/e2e-account.json` 에 저장합니다. 모든 검사가 이 로그인 상태로 시작합니다.
 - **주의점**
-  - **`web` 을 막 실행했거나 막 재시작했다면 먼저 준비될 때까지 기다려야 합니다.**
-    container 안에서 매번 `npm install` 을 다시 실행하기 때문에(`docker-compose.yml`
-    의 `web.command`), 실행한 지 얼마 안 됐으면 5173 번이 아직 응답하지 않습니다.
-    이 상태에서 `e2e` 를 실행하면 모든 검사가 `ECONNREFUSED` 로 한꺼번에 실패합니다.
-    `10-1-1` 의 확인 명령으로 200 이 출력되는 것을 확인한 뒤 실행합니다.
+  - **실행할 때마다 첫 줄부터 실행합니다.** 둘째 줄만 다시 실행하면 global-setup 이
+    `POST /api/signup 가 422 로 실패했습니다: {"detail":"이미 가입된 이메일입니다"}` 로 멈춥니다(2026-09-15 확인).
+    전체 권한은 첫 가입자만 받으므로 DB 가 비어 있어야 합니다.
+  - 가입 rate limit 이 발신 IP 마다 1시간에 5번입니다. 한 번 실행에 global-setup 이 2번, `account.spec.ts`
+    가 2번 씁니다. 서버 메모리에서 세므로 첫 줄로 `e2e-api` 를 다시 만들면 초기화됩니다.
   - **image 가 큽니다(브라우저 3종 포함, 처음 내려받으면 1GB 가 넘습니다).** 처음 1번만
     느리고, 두 번째부터는 로컬 image 캐시를 그대로 사용합니다.
   - **`@playwright/test` 버전과 image tag 버전이 다르면 안 됩니다.** image 안의
     브라우저가 tag 버전에 맞춰 미리 설치되어 있기 때문입니다. `frontend/package.json` 의
-    devDependency 버전을 올릴 때는 `docker-compose.yml` 의 `e2e.image` tag 도
+    devDependency 버전을 올릴 때는 `docker-compose.override.yml` 의 `e2e.image` tag 도
     같은 숫자로 함께 수정합니다.
   - 패키지는 `web` 과 따로 `banblit-e2e-modules` 라는 이름 있는 volume 에 저장합니다.
     image 의 기반 OS(Ubuntu)가 `web`(Alpine)과 달라, 네이티브 바이너리가 섞이는 문제를
@@ -835,26 +846,23 @@ docker compose run --rm e2e
   - 계산 시간이 필요한 검사(`frontend/e2e/assignment.spec.ts`)는 배정 다시 계산이
     끝날 때까지 기다립니다. 2026-09-04 실측으로 1초 안팎이라 20초면 충분하지만,
     container 부하가 크면 늘어날 수 있습니다.
-  - 검사 중 `frontend/e2e/notices.spec.ts` 가 공지에 게시글 1개를 추가합니다. 삭제하는
-    절차가 없어 실행할 때마다(제목에 실행 시각을 추가해 구분은 되지만) 계속 누적됩니다.
-  - 계정도 마찬가지로 누적됩니다. `account.spec.ts` 와 `teams.spec.ts` 가 가입을
-    확인하려고 매번 새 계정을 생성합니다. 다만 이제는 탈퇴 endpoint(`DELETE /me`)가 있어
-    검사 끝에 삭제할 수 있습니다. 팀 명단은 검사 끝에 원래대로 복원하므로 다음 실행이 같은
-    값을 읽습니다.
-  - **이 검사는 지금 실패합니다.** seed 스크립트가 생성하던 `e2e@banblit.test` 계정이
-    삭제됐습니다. 수정하기 전에는 통과하지 않습니다.
+  - 검사가 올린 첨부파일은 `e2e-api` container 안 `/tmp/banblit-e2e-attachments` 에 저장되어
+    container 를 다시 만들면 사라집니다.
 
 ### 12-2. 특정 테스트 파일만 실행하기
 
 ```
-docker compose run --rm e2e npx playwright test e2e/assignment.spec.ts
+docker compose --profile e2e up -d --force-recreate --wait e2e-api
+docker compose --profile e2e run --rm e2e npx playwright test e2e/assignment.spec.ts
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
 - **용도**: 파일 1개만 선택해 실행합니다. `12-1` 은 매번 전체를 실행해 느릴 때 이 명령을 사용합니다.
 - **옵션**
+  - 첫 줄은 `12-1` 과 같습니다. 파일 1개만 실행할 때도 global-setup 이 먼저 돌므로 매번 필요합니다.
   - `npx playwright test <경로>` — `e2e` 서비스의 기본 명령(`npm install && npx playwright test`)
     대신 뒤에 적은 명령을 그대로 실행합니다. 경로는 `frontend/` 기준 상대경로입니다.
+    `npm install` 을 건너뛰므로 `banblit-e2e-modules` volume 에 패키지가 이미 있어야 합니다(12-1 을 한 번 실행한 뒤).
 
 ### 12-3. 화면 쪽에서 E2E 테스트만 따로 린트·타입 검사하기
 

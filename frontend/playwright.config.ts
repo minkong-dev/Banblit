@@ -1,13 +1,16 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// docker-compose.yml 의 e2e 서비스가 E2E_BASE_URL 을 http://web:5173 로 준다.
-// 컨테이너 사이는 서비스 이름으로 닿는다 — localhost 가 아니다. 기본값은 이 config
-// 를 컨테이너 밖에서 불러 읽기만 할 때(타입 검사 등)를 위한 자리이며, 브라우저는
-// 호스트에 깔지 않으므로 실제로 이 기본값으로 검사가 도는 일은 없다.
-const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:5173";
+import { E2E_STATE_PATH } from "./e2e/helpers";
+
+// 화면은 e2e 컨테이너 안에서 webServer 가 띄우는 Vite 개발 서버입니다. 같은 컨테이너라 localhost 로 닿습니다.
+const baseURL = "http://localhost:5173";
+// 컨테이너 안에서 매번 npm install 뒤에 뜨므로 첫 응답까지 오래 걸릴 수 있습니다.
+const DEV_SERVER_WAIT_MS = 120_000;
 
 export default defineConfig({
   testDir: "./e2e",
+  // 계정·팀·합주실·기간을 만들고 로그인 상태를 E2E_STATE_PATH 에 저장합니다.
+  globalSetup: "./e2e/global-setup.ts",
   timeout: 30_000,
   // 배정 계산을 기다리는 검사는 각자 test.setTimeout 으로 따로 늘린다(assignment.spec.ts).
   fullyParallel: false,
@@ -18,7 +21,14 @@ export default defineConfig({
   reporter: "list",
   use: {
     baseURL,
+    storageState: E2E_STATE_PATH,
     trace: "retain-on-failure",
+  },
+  webServer: {
+    command: "npm run dev",
+    url: baseURL,
+    reuseExistingServer: false,
+    timeout: DEV_SERVER_WAIT_MS,
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 });
