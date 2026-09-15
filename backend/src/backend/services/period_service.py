@@ -84,6 +84,8 @@ def assign_period(
         member_ids_by_team = _without_member(member_ids_by_team, excluded_member_id)
 
     days = period_days(period, saved_at.date())
+    if not days:
+        raise ValueError("전체합주 날짜뿐이라 팀별로 배정할 날짜가 없습니다")
     window_start = datetime.combine(days[0], time())
     window_end = datetime.combine(days[-1], time.max)
     unavailable_by_member = _load_unavailable(
@@ -122,11 +124,14 @@ def period_days(period: Period, on: date) -> list[date]:
     """배정을 계산할 날짜 목록을 반환합니다.
 
     everyday 가 켜진 기간은 종료일이 없으므로(사용자 결정 2026-09-11) 계산을 실행한 날 on 하루만 반환합니다.
-    그 외에는 시작일부터 종료일까지 전부 반환합니다.
+    그 외에는 시작일부터 종료일까지 전부 반환합니다. 전체합주 날짜는 팀별 배정 대상이 아니므로 제외합니다
+    (patch_note 8번). 전부 전체합주 날짜면 빈 목록입니다.
     """
-    if period.everyday:
-        return [on]
-    return dates_in_period(period.starts_on, period.ends_on)
+    days = [on] if period.everyday else dates_in_period(period.starts_on, period.ends_on)
+    first, last = period.ensemble_starts_on, period.ensemble_ends_on
+    if first is None or last is None:
+        return days
+    return [day for day in days if not first <= day <= last]
 
 
 def _load_rooms(session: Session, room_ids: list[int]) -> list[Room]:
