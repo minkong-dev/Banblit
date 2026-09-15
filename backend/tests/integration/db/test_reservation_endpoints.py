@@ -6,7 +6,7 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 from backend.services.reservation_service import create_reservation
-from backend.db.models import Member, Period, Room, Team, TeamSlot
+from backend.db.models import Member, Period, Reservation, Room, Team, TeamSlot
 from conftest import AccountFactory, seat
 
 OPEN_DAY = "2026-09-14"
@@ -728,6 +728,90 @@ def test_a_reservation_slot_can_be_stretched_over_its_own_time(
     assert len(moved) == 1
     assert moved[0]["start"] == f"{OPEN_DAY}T18:00:00"
     assert moved[0]["end"] == f"{OPEN_DAY}T20:00:00"
+
+
+def test_moving_a_reservation_keeps_the_old_row_as_cancelled(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """이동은 옛 행을 취소 표시(cancelled_at)로 남기고 새 행을 만듭니다. 옮긴 이력이 DB 에 남습니다.
+
+    새 행은 처음 잡은 시각(created_at)을 그대로 갖습니다. 옮긴 것이지 새로 잡은 것이 아닙니다.
+    """
+    _, owner = account("이도현", "dohyun@example.com")
+    room = _room(db_session)
+    _open_period(db_session)
+    db_session.commit()
+
+    created = api_client.post(
+        "/reservations",
+        json={
+            "room_id": room.id,
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
+        },
+        cookies=owner,
+    ).json()["reservations"][0]
+
+    moved = api_client.patch(
+        f"/reservations/{created['id']}",
+        json={"starts_at": f"{OPEN_DAY}T19:00:00", "ends_at": f"{OPEN_DAY}T20:00:00"},
+        cookies=owner,
+    ).json()["reservations"][0]
+
+    assert moved["id"] != created["id"]
+    rows = db_session.scalars(select(Reservation).order_by(Reservation.id)).all()
+    assert [(row.starts_at.hour, row.cancelled_at is None) for row in rows] == [(18, False), (19, True)]
+    assert rows[1].created_at == rows[0].created_at
+
+
+def test_cancelling_keeps_the_row_marked_cancelled_and_frees_the_time(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """취소도 행을 지우지 않고 취소 표시만 합니다. 겹침 금지 제약은 취소된 행을 보지 않으므로 그 시간을
+    다른 사용자가 다시 예약할 수 있습니다."""
+    _, owner = account("이도현", "dohyun@example.com")
+    _, someone_else = account("박서연", "seoyeon@example.com")
+    room = _room(db_session)
+    _open_period(db_session)
+    db_session.commit()
+    body = {
+        "room_id": room.id,
+        "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
+    }
+    created = api_client.post("/reservations", json=body, cookies=owner).json()["reservations"][0]
+
+    assert api_client.delete(f"/reservations/{created['id']}", cookies=owner).status_code == 204
+
+    row = db_session.get(Reservation, created["id"])
+    assert row is not None and row.cancelled_at is not None
+    assert api_client.post("/reservations", json=body, cookies=someone_else).status_code == 201
+
+
+def test_a_cancelled_reservation_cannot_be_moved_or_cancelled_again(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, owner = account("이도현", "dohyun@example.com")
+    room = _room(db_session)
+    _open_period(db_session)
+    db_session.commit()
+    created = api_client.post(
+        "/reservations",
+        json={
+            "room_id": room.id,
+            "starts_at": f"{OPEN_DAY}T18:00:00", "ends_at": f"{OPEN_DAY}T19:00:00",
+        },
+        cookies=owner,
+    ).json()["reservations"][0]
+    api_client.delete(f"/reservations/{created['id']}", cookies=owner)
+
+    moved = api_client.patch(
+        f"/reservations/{created['id']}",
+        json={"starts_at": f"{OPEN_DAY}T19:00:00", "ends_at": f"{OPEN_DAY}T20:00:00"},
+        cookies=owner,
+    )
+    cancelled = api_client.delete(f"/reservations/{created['id']}", cookies=owner)
+
+    assert moved.status_code == 422 and "그런 예약" in moved.json()["detail"]
+    assert cancelled.status_code == 422 and "그런 예약" in cancelled.json()["detail"]
 
 
 def test_an_everyday_focused_period_blocks_reservations_after_its_end_date(
