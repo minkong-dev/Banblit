@@ -15,6 +15,8 @@ import {
   takenGrid,
 } from "../lib/pipeline";
 import type { RepeatCycle } from "../lib/pipeline";
+import { unitLabel } from "../lib/calendar";
+import { useSlotMinutes } from "../components/queries";
 import type { Room } from "../lib/contract";
 import type { DayTab, Entry } from "../lib/dayEntries";
 import type { DayTeam } from "../lib/roster";
@@ -64,6 +66,8 @@ export function DayDialog({
   // 시각 두 시간 칸입니다. 기본은 그날 여는 칸부터 닫는 칸까지 전부입니다.
   const [off, setOff] = useState<SlotRange>({ a: 0, b: slotCount });
   const [book, setBook] = useState<SlotRange>({ a: 0, b: slotCount });
+  // 시각 선택지의 간격과 머리글의 단위 문구는 저장소 설정(slot_minutes)을 따릅니다.
+  const slotMinutes = useSlotMinutes();
 
   // 아직 아무것도 선택하지 않았으면 목록의 첫 합주실입니다. dialog(화면 위에 뜨는 대화 상자)를 열자마자 합주실 하나는 선택되어 있어야 합니다.
   const room = rooms.find((item) => item.id === roomId) ?? rooms[0] ?? null;
@@ -158,7 +162,8 @@ export function DayDialog({
     // 선착순이므로 이미 예약된 slot 이 하나라도 있으면 먼저 거절해 서버를 호출하지 않습니다.
     // 두 사람이 동시에 시도해 이 검증을 둘 다 통과해도, 최종 판정은 서버(unique
     // 제약)가 하므로 아래 catch 에서 서버가 반환한 사유를 그대로 표시합니다.
-    for (let i = a; i < b; i += 1) {
+    // a·b 는 설정 단위의 소수일 수 있으므로 걸친 1시간 칸 전부를 봅니다.
+    for (let i = Math.floor(a); i < Math.ceil(b); i += 1) {
       if (grid[i]) { setError(`${label(i)}은 이미 예약되어있어요. 다른 시간을 선택해주세요.`); return; }
     }
     if (memberId === null || room === null) {
@@ -197,7 +202,7 @@ export function DayDialog({
           : <div className="blank"><b>등록된 일정이 없어요</b><p>불가능 일정을 등록해주세요.</p></div>}
         <MyEntriesList entries={removable} teams={teams} onRemove={(entry) => { void removeEntry(entry); }} {...hours} />
         <p className="cap2">불가능 일정</p>
-        <SlotPicker prefix="off" range={off} onChange={setOff} grid={grid} lock={false} {...hours} />
+        <SlotPicker prefix="off" range={off} onChange={setOff} grid={grid} lock={false} slotMinutes={slotMinutes} {...hours} />
         <label className="offwhy" htmlFor="offReason">
           사유
           <input
@@ -251,7 +256,7 @@ export function DayDialog({
         {fixed ? null : (
           <>
             <p className="cap2">예약할 시간을 선택해주세요</p>
-            <SlotPicker prefix="book" range={book} onChange={setBook} grid={grid} lock {...hours} />
+            <SlotPicker prefix="book" range={book} onChange={setBook} grid={grid} lock slotMinutes={slotMinutes} {...hours} />
           </>
         )}
         <p className="cap2">예약자를 지정해주세요</p>
@@ -269,7 +274,7 @@ export function DayDialog({
     );
 
   const hint = `${roomsLabel || "합주실"} · ${hourText(openHour)}–${hourText(closeHour)}`
-    + ` · 1시간 단위 · ${inFocus ? "배정된 기간" : "배정 없음"}`;
+    + ` · ${unitLabel(slotMinutes)} · ${inFocus ? "배정된 기간" : "배정 없음"}`;
 
   // 조회 전용 탭(all)에는 아래 버튼 줄을 전달하지 않습니다. Modal 이 줄 자체를 렌더하지 않습니다.
   const foot = tab === "all" ? undefined : (

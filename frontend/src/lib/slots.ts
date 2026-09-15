@@ -57,13 +57,18 @@ export function hhmm(iso: string): string {
   return iso.slice(11, 16);
 }
 
+const MINUTES_PER_HOUR = 60;
+
 export function slotIndex(iso: string, openHour: number): number {
-  // 여는 시각을 index 0으로 설정하고 한 시간마다 하나씩 증가하는 slot 번호를 반환합니다.
-  return Number(iso.slice(11, 13)) - openHour;
+  // 여는 시각을 0 으로 두고 한 시간을 1 로 세는 칸 번호를 반환합니다. 정각이 아니면 분을 한 시간의
+  // 비율로 더한 소수입니다(여는 시각 18 기준 18:10 → 0.1667). 격자 줄은 정수 자리에만 긋고 막대는 소수 자리에 그립니다.
+  const hour = Number(iso.slice(11, 13));
+  const minute = Number(iso.slice(14, 16));
+  return hour - openHour + minute / MINUTES_PER_HOUR;
 }
 
 export function isoAt(dayKey: string, index: number, openHour: number): string {
-  // slotIndex()의 역함수입니다. 날짜와 slot 번호를 서버가 수신하는 ISO 문자열로 병합합니다.
+  // slotIndex()의 역함수입니다. 날짜와 칸 번호를 서버가 수신하는 ISO 문자열로 병합합니다. 소수 칸 번호는 분이 됩니다.
   return `${dayKey}T${slotLabel(index, openHour)}:00`;
 }
 

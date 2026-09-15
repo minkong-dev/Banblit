@@ -3,6 +3,7 @@
 import type { CSSProperties } from "react";
 
 import { TrashIcon } from "../components/icons";
+import { slotSteps } from "../lib/calendar";
 import { slotLabel } from "../lib/pipeline";
 import type { Entry } from "../lib/dayEntries";
 import type { DayTeam } from "../lib/roster";
@@ -55,15 +56,18 @@ export function DayTimeline({ list, teams, openHour, closeHour, slotCount }: Hou
   );
 }
 
-/** 시작 시각과 종료 시각을 선택하는 입력입니다. lock 이면 이미 예약된 slot 은 선택할 수 없게 차단합니다. */
-export function SlotPicker({ prefix, range, onChange, grid, lock, openHour, closeHour, slotCount }: HoursProps & {
+/** 시작 시각과 종료 시각을 선택하는 입력입니다. 선택지는 설정의 slotMinutes 간격이고, lock 이면 이미 예약된
+ *  1시간 칸에 속한 시각은 선택할 수 없게 차단합니다. */
+export function SlotPicker({ prefix, range, onChange, grid, lock, slotMinutes, openHour, closeHour, slotCount }: HoursProps & {
   prefix: string;
   range: SlotRange;
   onChange: (next: SlotRange) => void;
   grid: boolean[];
   lock: boolean;
+  slotMinutes: number;
 }) {
   const { label, endLabel } = slotLabels(openHour, closeHour, slotCount);
+  const steps = slotSteps(slotCount, slotMinutes);
   return (
     <div className="pick">
       <div className="fld">
@@ -73,9 +77,9 @@ export function SlotPicker({ prefix, range, onChange, grid, lock, openHour, clos
           value={range.a}
           onChange={(event) => onChange({ ...range, a: Number(event.target.value) })}
         >
-          {Array.from({ length: slotCount }, (_, i) => i).map((slot) => (
-            <option value={slot} key={slot} disabled={lock && grid[slot]}>
-              {label(slot)}{lock && grid[slot] ? " (찼어요)" : ""}
+          {steps.slice(0, -1).map((slot) => (
+            <option value={slot} key={slot} disabled={lock && grid[Math.floor(slot)]}>
+              {label(slot)}{lock && grid[Math.floor(slot)] ? " (찼어요)" : ""}
             </option>
           ))}
         </select>
@@ -87,7 +91,7 @@ export function SlotPicker({ prefix, range, onChange, grid, lock, openHour, clos
           value={range.b}
           onChange={(event) => onChange({ ...range, b: Number(event.target.value) })}
         >
-          {Array.from({ length: slotCount }, (_, i) => i + 1).map((slot) => (
+          {steps.slice(1).map((slot) => (
             <option value={slot} key={slot}>{endLabel(slot)}</option>
           ))}
         </select>

@@ -27,10 +27,27 @@ export function monthCells(year: number, month: number): (number | null)[] {
   return [...cells, ...Array<null>(trailing).fill(null)];
 }
 
+const MINUTES_PER_HOUR = 60;
+
 export function slotLabel(index: number, openHour: number): string {
-  // 여는 시각을 0번으로 둔 칸 번호를 "18:00"으로 표시합니다.
-  const hour = openHour + index;
-  return `${String(hour).padStart(2, "0")}:00`;
+  // 여는 시각을 0번으로 둔 칸 번호를 "18:00"으로 표시합니다. 소수 칸 번호는 분으로 바꿔 "18:10"이 됩니다.
+  // 1/6 같은 값은 부동소수점 오차가 있어 분 단위로 반올림한 뒤 시·분으로 나눕니다.
+  const minutes = Math.round((openHour + index) * MINUTES_PER_HOUR);
+  const hour = Math.floor(minutes / MINUTES_PER_HOUR);
+  const minute = minutes % MINUTES_PER_HOUR;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+/** 여는 시각(0)부터 닫는 시각(slotCount)까지 slotMinutes 간격의 칸 번호 목록입니다. 시작 선택지는 마지막 값을,
+ *  종료 선택지는 첫 값을 뺀 나머지입니다. 분을 정수로 센 뒤 나누므로 10분 같은 값도 slotLabel 로 오차 없이 돌아갑니다. */
+export function slotSteps(slotCount: number, slotMinutes: number): number[] {
+  const count = Math.round((slotCount * MINUTES_PER_HOUR) / slotMinutes);
+  return Array.from({ length: count + 1 }, (_, i) => (i * slotMinutes) / MINUTES_PER_HOUR);
+}
+
+/** 설정의 칸 크기를 머리글에 적는 문구입니다. 60분이면 "1시간 단위", 아니면 "N분 단위"입니다. */
+export function unitLabel(slotMinutes: number): string {
+  return slotMinutes === MINUTES_PER_HOUR ? "1시간 단위" : `${slotMinutes}분 단위`;
 }
 
 /** 여는 시각부터 닫는 시각까지 필요한 칸 수입니다. 칸 하나가 한 시간이므로 시각 차이가
@@ -46,9 +63,11 @@ export function hoursLabel(slots: number): string {
 
 export function takenGrid(spans: { a: number; b: number }[], slotCount: number): boolean[] {
   // spans가 차지한 칸을 true로 표시한 배열을 반환합니다. 겹쳐 들어와도 한 번만 계산합니다.
+  // 소수 구간(18:10~19:30 → 0.167~1.5)은 일부라도 걸친 칸을 전부 찬 것으로 표시합니다. 칸 단위 선착순이라
+  // 10분이 걸친 칸에도 한 시간짜리 예약은 들어갈 수 없기 때문입니다.
   const grid = Array<boolean>(slotCount).fill(false);
   for (const span of spans) {
-    for (let i = Math.max(0, span.a); i < Math.min(slotCount, span.b); i += 1) {
+    for (let i = Math.max(0, Math.floor(span.a)); i < Math.min(slotCount, Math.ceil(span.b)); i += 1) {
       grid[i] = true;
     }
   }
@@ -56,8 +75,8 @@ export function takenGrid(spans: { a: number; b: number }[], slotCount: number):
 }
 
 export function isRangeFree(grid: boolean[], from: number, to: number): boolean {
-  // from부터 to 직전까지 찬 칸이 없으면 true를 반환합니다.
-  return grid.slice(from, to).every((taken) => !taken);
+  // from부터 to 직전까지 찬 칸이 없으면 true를 반환합니다. 소수 범위는 걸친 칸 전부를 봅니다.
+  return grid.slice(Math.floor(from), Math.ceil(to)).every((taken) => !taken);
 }
 
 export function roomBounds(rooms: { opens_at: string; closes_at: string }[]): {

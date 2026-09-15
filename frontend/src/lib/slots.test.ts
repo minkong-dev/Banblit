@@ -97,6 +97,11 @@ describe("slotIndex — 여는 시각을 0번으로 둔 한 시간짜리 칸 번
   it("여는 시각이 바뀌면 번호도 함께 밀린다", () => {
     expect(slotIndex("2026-09-14T18:00:00", 10)).toBe(8);
   });
+
+  it("정각이 아니면 분을 한 시간의 비율로 더한 소수를 반환한다", () => {
+    expect(slotIndex("2026-09-14T18:10:00", 18)).toBeCloseTo(1 / 6, 5);
+    expect(slotIndex("2026-09-14T19:30:00", 18)).toBe(1.5);
+  });
 });
 
 describe("isoAt — slotIndex 의 반대 방향", () => {
@@ -107,6 +112,11 @@ describe("isoAt — slotIndex 의 반대 방향", () => {
   it("slotIndex 로 되돌리면 원래 칸 번호가 나온다", () => {
     const iso = isoAt("2026-09-14", 5, 18);
     expect(slotIndex(iso, 18)).toBe(5);
+  });
+
+  it("소수 칸 번호는 분으로 바뀐다", () => {
+    expect(isoAt("2026-09-14", 1.5, 18)).toBe("2026-09-14T19:30:00");
+    expect(slotIndex(isoAt("2026-09-14", 1 / 6, 18), 18)).toBeCloseTo(1 / 6, 5);
   });
 });
 
