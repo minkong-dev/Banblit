@@ -16,7 +16,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from backend.services.notification_service import notify_assignment_updated
-from backend.services.period_service import assign_period
+from backend.services.period_service import assign_period, period_days
 from backend.db.models import AssignmentRun, Period, Room, Team
 from backend.db.pipeline import get_session_factory
 
@@ -90,8 +90,10 @@ def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
 
     results: list[AutoRun] = []
     for period in periods:
+        # 배정할 날짜가 전체합주 날짜뿐이면 assign_period 가 거절하므로 실행하지 않습니다.
+        # 실행하면 실패는 기록되지 않아 확인할 때마다 다시 실패합니다.
         slots = due_slots(period, now, ran_by_period.get(period.id, set()))
-        if not slots:
+        if not slots or not period_days(period, today):
             continue
         results.append(_run_one(session, period.id, now, slots, team_ids, room_ids))
     return results

@@ -10,7 +10,7 @@ from backend.services.input import (
 )
 from backend.services.permission_service import account_permissions
 from backend.services.settings_service import slot_minutes
-from backend.db.models import Member, Period, Reservation, Room, Team, TeamSlot
+from backend.db.models import EnsembleDay, Member, Period, Reservation, Room, Team, TeamSlot
 from backend.db.pipeline import commit_translating
 
 # 선착순은 겹침 금지 제약이 commit 시점에 정합니다. 먼저 commit 한 요청이 그 구간을 가져갑니다.
@@ -47,7 +47,9 @@ def _get_team_or_raise(session: Session, team_id: int) -> Team:
     return team
 
 
-def _require_not_in_focused_period(session: Session, day: date) -> None:
+def _require_not_in_focused_period(
+    session: Session, room_id: int, starts_at: datetime, ends_at: datetime
+) -> None:
     """집중 합주기간이 아닐 경우 예약을 허용합니다.
 
     차단하는 기간은 집중 합주기간뿐입니다. 그 기간만 자동 배정이 모든 slot 을 팀에 나누어 배정합니다.
@@ -57,16 +59,32 @@ def _require_not_in_focused_period(session: Session, day: date) -> None:
 
     "매일"(everyday) 이 켜진 집중 합주기간은 종료일이 없습니다(사용자 결정 2026-09-11). 시작일이
     지난 모든 날에 자동 배정이 실행되므로, 저장된 종료일 뒤의 날짜도 차단합니다.
+
+    전체합주 날짜는 팀별 배정이 없어 예약을 허용하고, 전체합주에 지정한 합주실의 전체합주 시각과
+    겹치는 구간만 거절합니다(patch_note 8번). 시각은 날짜별 지정(ensemble_days)이 기본 시각보다 우선합니다.
+    집중 합주기간끼리는 겹칠 수 없으므로(periods_focused_no_overlap) 그날의 기간은 하나뿐입니다.
     """
-    covered = session.execute(
-        select(Period.id).where(
+    day = starts_at.date()
+    period = session.scalars(
+        select(Period).where(
             Period.kind == "focused",
             Period.starts_on <= day,
             or_(Period.everyday.is_(True), Period.ends_on >= day),
         )
     ).first()
-    if covered is not None:
+    if period is None:
+        return
+    first, last = period.ensemble_starts_on, period.ensemble_ends_on
+    if first is None or last is None or not first <= day <= last:
         raise ValueError("집중 합주기간이라 예약할 수 없습니다")
+    if room_id != period.ensemble_room_id:
+        return
+    own = session.scalars(
+        select(EnsembleDay).where(EnsembleDay.period_id == period.id, EnsembleDay.day == day)
+    ).first()
+    start, end = (own.starts_at, own.ends_at) if own else (period.ensemble_starts_at, period.ensemble_ends_at)
+    if start is not None and end is not None and starts_at.time() < end and start < ends_at.time():
+        raise ValueError("전체합주 시간이라 예약할 수 없습니다. 다른 시간이나 합주실을 선택해 주세요")
 
 
 def _planned_row(
@@ -93,7 +111,7 @@ def _planned_row(
     if team_id is not None:
         team = _get_team_or_raise(session, team_id)
         _require_team_member(session, team_id, requester.id)
-    _require_not_in_focused_period(session, starts_at.date())
+    _require_not_in_focused_period(session, room_id, starts_at, ends_at)
 
     row = Reservation(
         room_id=room_id,
@@ -219,7 +237,7 @@ def update_reservation(
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_same_day(starts_at, ends_at)
     require_within_room_hours(room.opens_at, room.closes_at, starts_at, ends_at)
-    _require_not_in_focused_period(session, starts_at.date())
+    _require_not_in_focused_period(session, old.room_id, starts_at, ends_at)
 
     old.cancelled_at = moved_at
     # 옛 행의 취소 표시를 먼저 DB 에 보냅니다. 새 행의 INSERT 가 먼저 나가면 겹침 금지 제약이 아직
