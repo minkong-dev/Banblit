@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account
-from backend.api.input import parse_calendar_date
-from backend.api.reservation_service import (
+from backend.services.input import parse_calendar_date
+from backend.services.reservation_service import (
     ReservationRow,
     cancel_reservation,
     create_reservation,

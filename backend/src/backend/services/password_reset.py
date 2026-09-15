@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
-from backend.api.input import require_password
-from backend.api.auth_service import hash_password
-from backend.api.auth_session import hash_token, revoke_member_sessions
-from backend.api.mailer import send_mail
+from backend.services.input import require_password
+from backend.services.auth_service import hash_password
+from backend.services.auth_session import hash_token, revoke_member_sessions
+from backend.services.mailer import send_mail
 from backend.db.models import Member, PasswordResetToken
 
 # session 유효 기간(SESSION_TTL, 7일)보다 짧게 설정합니다. 이 token 하나만으로 계정을 탈취할 수 있고,

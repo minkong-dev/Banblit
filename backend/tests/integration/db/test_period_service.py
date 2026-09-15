@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api.period_service import assign_period, open_slots_in_period
+from backend.services.period_service import assign_period, open_slots_in_period
 from backend.scheduling.slots import DEFAULT_SLOT_MINUTES
 from backend.db.models import (
     Assignment,

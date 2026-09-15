@@ -3,8 +3,8 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from backend.api.input import require_non_empty
-from backend.api.permission_service import account_permissions
+from backend.services.input import require_non_empty
+from backend.services.permission_service import account_permissions
 from backend.db.models import Comment, Member, Post, Team, TeamSlot
 
 PostRow = tuple[Post, str, int]

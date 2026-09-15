@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api.password_reset import RESEND_INTERVAL, RESET_TTL, issue_reset_token
+from backend.services.password_reset import RESEND_INTERVAL, RESET_TTL, issue_reset_token
 from backend.db.models import PasswordResetToken
 from conftest import AccountFactory
 
@@ -154,7 +154,7 @@ def test_find_id_mails_the_registered_address_only_when_the_pair_matches(
     account(*HEAD)
     account(*OTHER)
 
-    with caplog.at_level(logging.INFO, logger="backend.api.mailer"):
+    with caplog.at_level(logging.INFO, logger="backend.services.mailer"):
         api_client.post("/find-id", json={"name": HEAD[0], "email": HEAD[1]})
         api_client.post("/find-id", json={"name": OTHER[0], "email": HEAD[1]})
 

@@ -8,7 +8,7 @@ from backend.api.schemas import (
     UnavailableOut,
     UnavailableTimesOut,
 )
-from backend.api.unavailable_service import (
+from backend.services.unavailable_service import (
     create_unavailable,
     delete_unavailable,
     list_unavailable,

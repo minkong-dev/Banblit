@@ -1,4 +1,4 @@
-"""api/input.py 의 입력 검증 테스트입니다. 빈 문자열·시각·날짜·구간 모든 입력 유형에 같은 검증 규칙이 적용됩니다."""
+"""services/input.py 의 입력 검증 테스트입니다. 빈 문자열·시각·날짜·구간 모든 입력 유형에 같은 검증 규칙이 적용됩니다."""
 
 from datetime import date, datetime
 from datetime import date, time
@@ -6,7 +6,7 @@ from datetime import datetime, time
 from datetime import time
 import pytest
 
-from backend.api.input import (
+from backend.services.input import (
     format_calendar_date,
     format_clock,
     format_created_at,

@@ -4,8 +4,8 @@ from datetime import datetime
 from fastapi import Cookie, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from backend.api.auth_session import SESSION_COOKIE, resolve_session
-from backend.api.permission_service import account_permissions
+from backend.services.auth_session import SESSION_COOKIE, resolve_session
+from backend.services.permission_service import account_permissions
 from backend.db.models import Member, Permission
 from backend.db.pipeline import get_session
 

@@ -5,14 +5,14 @@ import secrets
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api.input import (
+from backend.services.input import (
     require_cohort,
     require_email,
     require_non_empty,
     require_password,
     require_student_no,
 )
-from backend.api.permission_service import grant_full_permissions
+from backend.services.permission_service import grant_full_permissions
 from backend.db.models import Member
 from backend.db.pipeline import commit_translating
 

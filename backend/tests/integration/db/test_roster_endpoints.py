@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
-from backend.api.roster_service import ROSTER_MESSAGES
+from backend.services.roster_service import ROSTER_MESSAGES
 from backend.db.pipeline import commit_translating
 from backend.db.models import Member, Team, TeamSlot
 

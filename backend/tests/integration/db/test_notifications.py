@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.jobs import auto_assign
-from backend.api.period_service import assign_period
+from backend.services.period_service import assign_period
 from backend.db.models import Notification, Period, Room, Team, TeamSlot
 
 # account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 이 파일의 첫 호출이 헤드매니저입니다.
