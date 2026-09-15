@@ -120,6 +120,22 @@ class RoomUpdateIn(BaseModel):
     closes_at: str | None = None
 
 
+class EnsembleDayOut(BaseModel):
+    day: str
+    starts_at: str
+    ends_at: str
+
+
+class EnsembleOut(BaseModel):
+    starts_on: str
+    ends_on: str
+    room_id: int
+    # 기본 시각입니다. days 에 있는 날짜는 그 행의 시각을 따릅니다.
+    starts_at: str
+    ends_at: str
+    days: list[EnsembleDayOut]
+
+
 class PeriodOut(BaseModel):
     id: int
     kind: str
@@ -128,6 +144,21 @@ class PeriodOut(BaseModel):
     everyday: bool
     first_run_at: str
     second_run_at: str
+    # 전체합주를 지정하지 않은 기간은 null 입니다.
+    ensemble: EnsembleOut | None
+
+
+class EnsembleIn(BaseModel):
+    starts_on: str
+    ends_on: str
+    room_id: int
+    starts_at: str
+    ends_at: str
+
+
+class EnsembleDayIn(BaseModel):
+    starts_at: str
+    ends_at: str
 
 
 class PeriodsOut(BaseModel):
