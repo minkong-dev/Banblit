@@ -50,7 +50,7 @@ describe("readSavedTheme", () => {
     expect(readSavedTheme()).toBe("light");
   });
 
-  test("고른 것이 있으면 화면 설정보다 그것을 따른다", () => {
+  test("사용자가 고른 테마가 있으면 운영체제 설정보다 그 테마를 따른다", () => {
     // Arrange: 운영체제 설정은 어두운 화면이지만 사용자가 밝은 화면을 선택해 두었습니다.
     stubBrowser({ systemDark: true, saved: "light" });
 

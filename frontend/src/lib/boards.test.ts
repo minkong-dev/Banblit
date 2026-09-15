@@ -111,7 +111,7 @@ describe("boardActions — 글·댓글 하나에 무엇을 할 수 있는가", (
     expect(boardActions(7, 8, false)).toEqual({ canEdit: false, canDelete: false });
   });
 
-  it("타 멤버 글 수정 및 삭제 권한자는 남의 것을 지울 수 있지만 고치지는 않는다", () => {
+  it("타 멤버 글 수정 및 삭제 권한자는 남의 것을 삭제할 수 있지만 수정하지는 않는다", () => {
     expect(boardActions(7, 8, true)).toEqual({ canEdit: false, canDelete: true });
   });
 
