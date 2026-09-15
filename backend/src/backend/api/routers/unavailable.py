@@ -29,6 +29,7 @@ def _unavailable_out(row: UnavailableTime) -> UnavailableOut:
         repeats_weekly=row.repeats_weekly,
         repeat_until=row.repeat_until,
         reason=row.reason,
+        name=row.name,
     )
 
 
@@ -63,6 +64,7 @@ def create_unavailable_endpoint(
         req.repeats_weekly,
         req.repeat_until,
         req.reason,
+        req.name,
     )
     return UnavailableEnvelopeOut(time=_unavailable_out(row))
 

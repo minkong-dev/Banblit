@@ -226,6 +226,7 @@ class UnavailableTime(Base):
     이미 repeats_weekly 로 저장된 행이 있기 때문입니다.
 
     reason 은 사용자가 입력하는 사유입니다. 엔진은 사용하지 않고 화면에만 표시합니다. null 을 허용합니다.
+    name 은 캘린더에 표시할 이름입니다. 비어 있으면 화면이 "불가능 일정"으로 표시합니다.
     """
 
     __tablename__ = "unavailable_times"
@@ -240,6 +241,7 @@ class UnavailableTime(Base):
     repeats_weekly: Mapped[bool] = mapped_column(Boolean, default=False)
     repeat_until: Mapped[date | None] = mapped_column(Date, nullable=True)
     reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    name: Mapped[str | None] = mapped_column(String(60), nullable=True)
 
     __table_args__ = (CheckConstraint("ends_at > starts_at"),)
 

@@ -45,6 +45,7 @@ def create_unavailable(
     repeats_weekly: bool,
     repeat_until: date | None,
     reason: str | None,
+    name: str | None,
 ) -> UnavailableTime:
     """불가능 시간 하나를 생성합니다. 본인 여부, 시작시간과 종료시간의 순서, slot(1시간 단위 시간 칸) 격자, 반복 조합을 검증합니다."""
     _require_self(member_id, requester)
@@ -61,6 +62,7 @@ def create_unavailable(
         repeat_until=repeat_until,
         # 공백만 입력한 것은 미입력과 같게 처리합니다. 화면에 빈 줄을 표시하지 않기 위함입니다.
         reason=(reason or "").strip() or None,
+        name=(name or "").strip() or None,
     )
     session.add(row)
     session.commit()
