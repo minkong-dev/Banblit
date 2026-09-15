@@ -33,7 +33,7 @@ export function memberLabel(name: string, cohort: number | null): string {
   return cohort === null ? name : `${name} (${cohort}기)`;
 }
 
-export type TeamRow = { team_id: number; team: string };
+type TeamRow = { team_id: number; team: string };
 
 // 달력과 목록에 사용되는 팀 색은 4가지를 순환합니다. CSS 변수 --c1~--c4 와 대응합니다.
 const TEAM_COLORS = 4;
@@ -62,11 +62,12 @@ export function teamsOf(
     if (!seen.has(row.team_id)) seen.set(row.team_id, row.team);
   }
   const mine = new Set(myTeamIds);
+  const position = new Map(allTeams.map((team, index) => [team.id, index]));
   return [...seen.entries()]
     .sort((a, b) => a[0] - b[0])
     .map(([id, name], index) => {
-      const at = allTeams.findIndex((team) => team.id === id);
-      return { id, name, key: colorKey(at === -1 ? index : at), mine: mine.has(id) };
+      const at = position.get(id);
+      return { id, name, key: colorKey(at === undefined ? index : at), mine: mine.has(id) };
     });
 }
 

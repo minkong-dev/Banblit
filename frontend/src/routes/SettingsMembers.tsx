@@ -20,9 +20,10 @@ import { getJSON, reason } from "../lib/api";
 import { say } from "../lib/toast";
 import { PERMISSION_ITEMS, can } from "../lib/account";
 import { askDelete, askExpel } from "../lib/confirm";
-import { useMe } from "../components/hooks";
+import { useMe } from "../components/queries";
 import { expelMember } from "../lib/pipeline";
 import type { MemberRow, Permission, PermissionSet } from "../lib/contract";
+import { SectionHead } from "./SettingsForm";
 
 const SETS_KEY = ["permission-sets"];
 const MEMBERS_KEY = ["member-roster"];
@@ -275,9 +276,7 @@ function SetRail() {
 
   return (
     <Card>
-      <div className="sethead">
-        <b>권한</b>
-        <span>부여할 권한을 설정해 커스텀 권한을 만들 수 있어요</span>
+      <SectionHead title="권한" desc="부여할 권한을 설정해 커스텀 권한을 만들 수 있어요">
         <span className="railnav">
           <button className="ic" aria-label="이전 권한" onClick={() => slide(-1)}>
             <ChevronLeftIcon />
@@ -286,7 +285,7 @@ function SetRail() {
             <ChevronRightIcon />
           </button>
         </span>
-      </div>
+      </SectionHead>
 
       <ul className="tiles" ref={track}>
         {list.map((set) => (
@@ -370,9 +369,7 @@ function MemberRoster(props: {
 
   return (
     <Card>
-      <div className="sethead">
-        <b>멤버</b>
-        <span>가입한 멤버의 목록이에요</span>
+      <SectionHead title="멤버" desc="가입한 멤버의 목록이에요">
         <select
           className="railfilter"
           aria-label="권한별 필터링"
@@ -384,7 +381,7 @@ function MemberRoster(props: {
             <option key={name} value={name}>{name}</option>
           ))}
         </select>
-      </div>
+      </SectionHead>
 
       <div className="roster">
         <table>

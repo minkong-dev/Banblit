@@ -9,11 +9,30 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Card } from "../components/AppShell";
-import { useMe } from "../components/hooks";
+import { useMe } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
 import { say } from "../lib/toast";
 import type { Account } from "../lib/contract";
+import { SectionHead } from "./SettingsForm";
 
+
+/** 카드 아래 줄의 실행 버튼입니다. 요청 중이면 비활성화하고 busyLabel 을 표시합니다. 카드 3개가 같은 부품을 사용합니다. */
+function FootButton({ label, busyLabel, pending, disabled = false, danger = false, onClick }: {
+  label: string;
+  busyLabel: string;
+  pending: boolean;
+  disabled?: boolean;
+  danger?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <div className="listfoot">
+      <button className={danger ? "new danger" : "new"} disabled={disabled || pending} onClick={onClick}>
+        {pending ? busyLabel : label}
+      </button>
+    </div>
+  );
+}
 
 /** 자신의 이름과 기수입니다. */
 function MyProfile({ me }: { me: Account }) {
@@ -40,10 +59,7 @@ function MyProfile({ me }: { me: Account }) {
 
   return (
     <Card>
-      <div className="sethead">
-        <b>내 정보</b>
-        <span>가입한 이메일을 제외한 정보를 수정할 수 있어요</span>
-      </div>
+      <SectionHead title="내 정보" desc="가입한 이메일을 제외한 정보를 수정할 수 있어요" />
       <div className="fields">
         <label className="wide" htmlFor="myName">
           이름
@@ -60,20 +76,17 @@ function MyProfile({ me }: { me: Account }) {
           />
         </label>
       </div>
-      <div className="listfoot">
-        <button
-          className="new"
-          disabled={save.isPending}
-          onClick={() => {
-            // 상세한 검증은 서버가 합니다. 화면은 빈 값만 먼저 차단합니다.
-            const why = name.trim() === "" ? "이름을 입력해 주세요." : "";
-            setBad(why);
-            if (why === "") save.mutate();
-          }}
-        >
-          {save.isPending ? "저장하는 중…" : "저장"}
-        </button>
-      </div>
+      <FootButton
+        label="저장"
+        busyLabel="저장하는 중…"
+        pending={save.isPending}
+        onClick={() => {
+          // 상세한 검증은 서버가 합니다. 화면은 빈 값만 먼저 차단합니다.
+          const why = name.trim() === "" ? "이름을 입력해 주세요." : "";
+          setBad(why);
+          if (why === "") save.mutate();
+        }}
+      />
       {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
     </Card>
   );
@@ -104,10 +117,7 @@ function MyPassword() {
 
   return (
     <Card>
-      <div className="sethead">
-        <b>비밀번호</b>
-        <span>비밀번호를 변경 할 수 있어요</span>
-      </div>
+      <SectionHead title="비밀번호" desc="비밀번호를 변경 할 수 있어요" />
       <div className="fields">
         <label className="wide" htmlFor="pwNow">
           현재 비밀번호
@@ -140,21 +150,18 @@ function MyPassword() {
           />
         </label>
       </div>
-      <div className="listfoot">
-        <button
-          className="new"
-          disabled={save.isPending}
-          onClick={() => {
-            // 길이 등의 규칙은 서버가 검증합니다. 두 번 입력한 값이 일치하지 않는 경우만
-            // 화면에서 먼저 감지합니다. 서버는 새 비밀번호 하나만 받으므로 일치 여부를 확인할 수 없기 때문입니다.
-            const why = next === again ? "" : "비밀번호가 일치하지 않아요.";
-            setBad(why);
-            if (why === "") save.mutate();
-          }}
-        >
-          {save.isPending ? "변경사항 저장 중…" : "비밀번호 변경"}
-        </button>
-      </div>
+      <FootButton
+        label="비밀번호 변경"
+        busyLabel="변경사항 저장 중…"
+        pending={save.isPending}
+        onClick={() => {
+          // 길이 등의 규칙은 서버가 검증합니다. 두 번 입력한 값이 일치하지 않는 경우만
+          // 화면에서 먼저 감지합니다. 서버는 새 비밀번호 하나만 받으므로 일치 여부를 확인할 수 없기 때문입니다.
+          const why = next === again ? "" : "비밀번호가 일치하지 않아요.";
+          setBad(why);
+          if (why === "") save.mutate();
+        }}
+      />
       {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
     </Card>
   );
@@ -174,10 +181,7 @@ function Leave({ me }: { me: Account }) {
 
   return (
     <Card>
-      <div className="sethead">
-        <b>회원 탈퇴</b>
-        <span>계정과 함께 작성한 글·댓글·예약이 모두 삭제되고, 이 작업은 되돌릴 수 없어요</span>
-      </div>
+      <SectionHead title="회원 탈퇴" desc="계정과 함께 작성한 글·댓글·예약이 모두 삭제되고, 이 작업은 되돌릴 수 없어요" />
       <div className="fields">
         <label className="wide" htmlFor="leaveName">
           확인을 위해 이름을 정확히 적어주세요
@@ -189,15 +193,14 @@ function Leave({ me }: { me: Account }) {
           />
         </label>
       </div>
-      <div className="listfoot">
-        <button
-          className="new danger"
-          disabled={!matched || leave.isPending}
-          onClick={() => leave.mutate()}
-        >
-          {leave.isPending ? "회원 탈퇴 중…" : "탈퇴하기"}
-        </button>
-      </div>
+      <FootButton
+        label="탈퇴하기"
+        busyLabel="회원 탈퇴 중…"
+        pending={leave.isPending}
+        disabled={!matched}
+        danger
+        onClick={() => leave.mutate()}
+      />
     </Card>
   );
 }

@@ -1,5 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
@@ -9,32 +8,19 @@ import { getJSON } from "../lib/api";
 import { currentMonth } from "../lib/calendar";
 import { focusedRange, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
-import type { Entry } from "./DayDialog";
+import { MonthView, WeekView } from "./SchedulerViews";
+import {
+  assignedByDay, bookedByDay, listNote, memberCountLabel, offByDay, visibleDays,
+} from "../lib/dayEntries";
+import type { DayTab, Entry } from "../lib/dayEntries";
 import { teamsOf } from "../lib/roster";
-import type { DayTeam } from "../lib/roster";
-import { useMe, usePeriods, useRooms } from "../components/hooks";
+import { useMe, usePeriods, useRooms } from "../components/queries";
 import "../styles/scheduler.css";
-import type { Post, Reservation, ScheduleRow, Team, Unavailable } from "../lib/contract";
-import { dayLabel, dayOf, dayWithWeekday, hoursLabel, isRangeFree, mergeSessions, monthCells, slotCountOf, slotIndex, slotLabel, stampLabel, takenGrid, WEEKDAY_NAMES, weekKeys } from "../lib/pipeline";
-import type { Session } from "../lib/pipeline";
+import type { Post, ScheduleRow } from "../lib/contract";
+import { dayLabel, slotCountOf, slotLabel, stampLabel, weekKeys } from "../lib/pipeline";
 
 // 오른쪽 공지 칸에 표시할 최대 줄 수입니다. 전체 목록은 공지 화면(routes/Notices)이 표시합니다.
 const RECENT_NOTICES = 3;
-
-/** 오른쪽 목록이 아직 표시할 수 없는 상태면 그 사유를 한 줄로 반환합니다. 빈 문자열이면 목록을 표시합니다. */
-function listNote(
-  isPending: boolean,
-  error: unknown,
-  count: number,
-  emptyText: string,
-  failText: string,
-): string {
-  if (isPending) return "불러오는 중…";
-  if (error !== null) return error instanceof Error ? error.message : failText;
-  return count === 0 ? emptyText : "";
-}
-
-
 
 /** 여러 기간의 시간표를 한 번에 받아, 실패한 기간은 사유만 모아 둡니다. */
 async function loadRows(periodIds: number[]): Promise<{ rows: ScheduleRow[]; failures: string[] }> {
@@ -51,152 +37,17 @@ async function loadRows(periodIds: number[]): Promise<{ rows: ScheduleRow[]; fai
   return { rows, failures };
 }
 
-const TABS = [
+const TABS: readonly { key: DayTab; text: string }[] = [
   { key: "me", text: "내 일정" },
   { key: "book", text: "예약" },
   { key: "all", text: "전체 일정" },
-] as const;
-
-type TabKey = (typeof TABS)[number]["key"];
-
-/** 팀 하나의 자리를 "3/5명"으로 표시합니다. 목록에 없는 팀이면 빈 문자열을 반환합니다. */
-function memberCountLabel(allTeams: Team[], teamId: number): string {
-  const found = allTeams.find((team) => team.id === teamId);
-  // 자리 수와 배정된 수를 함께 표시합니다. 빈 자리 수가 인원 수만큼 중요합니다.
-  return found === undefined ? "" : `${found.filled_count}/${found.slot_count}명`;
-}
-
-/** 그날 화면에 표시할 항목만 선택합니다. 내 일정 탭은 내 팀의 배정과 내 불가능 시간, 전체 일정 탭은 배정·예약 전부입니다. */
-function visible(entries: Entry[], tab: TabKey, teams: DayTeam[]): Entry[] {
-  const mine = new Set(teams.filter((team) => team.mine).map((team) => team.key));
-  return tab === "me"
-    ? entries.filter((entry) => entry.kind === "off" || (entry.team !== null && mine.has(entry.team)))
-    : entries.filter((entry) => entry.kind !== "off");
-}
-
-type DayEntries = Record<string, Entry[]>;
-
-/** 확정된 시간표를 합주 한 번씩으로 합친 뒤 날짜별로 담습니다. 서버는 slot(1시간 단위 시간 칸)으로 주므로 맞닿은 slot 을 먼저 연결해야
- *  사용자가 보는 합주 한 번이 됩니다. */
-function assignedByDay(rows: ScheduleRow[], teams: DayTeam[], openHour: number): DayEntries {
-  const sessions: Session[] = rows.map((row) => ({
-    team: row.team, room: row.room, start: row.start, end: row.end,
-  }));
-  const byDay: DayEntries = {};
-  for (const session of mergeSessions(sessions)) {
-    const team = teams.find((item) => item.name === session.team);
-    (byDay[dayOf(session.start)] ??= []).push({
-      kind: "assign",
-      team: team?.key ?? null,
-      room: session.room,
-      a: slotIndex(session.start, openHour),
-      b: slotIndex(session.end, openHour),
-    });
-  }
-  return byDay;
-}
-
-/** 로그인한 사용자가 불가능한 시간을 날짜별로 담습니다. 서버에 저장된 값을 그대로 옮깁니다.
- *  조회하는 값이 로그인한 사용자의 일정뿐이라 전부 삭제할 수 있습니다. */
-function offByDay(times: Unavailable[], openHour: number, days: string[]): DayEntries {
-  const byDay: DayEntries = {};
-  for (const item of times) {
-    // 반복은 서버가 배정을 계산할 때 전개하지만(api/period_input.py expand_unavailable),
-    // 달력은 저장된 행 하나만 받습니다. 표시 중인 날짜 위에 같은 규칙으로 다시 전개합니다.
-    // 전개하지 않으면 매주 반복으로 등록한 일정이 첫날에만 표시되어 등록되지 않은 것처럼 보입니다.
-    for (const day of repeatDays(item, days)) {
-      (byDay[day] ??= []).push({
-        kind: "off",
-        team: null,
-        who: item.reason ?? "직접 등록",
-        a: slotIndex(item.starts_at, openHour),
-        b: slotIndex(item.ends_at, openHour),
-        // 반복으로 전개한 항목은 저장된 행이 아니므로 삭제할 수 없습니다. 원본 날짜에만 id 를 포함합니다.
-        removeIds: day === dayOf(item.starts_at) ? [item.id] : undefined,
-      });
-    }
-  }
-  return byDay;
-}
-
-/** 이 불가능 일정이 적용되는 날짜들입니다. 반복이 아니면 시작 날짜 하나뿐입니다. */
-function repeatDays(item: Unavailable, days: string[]): string[] {
-  const first = dayOf(item.starts_at);
-  if (!item.repeats_daily && !item.repeats_weekly) return [first];
-
-  const step = item.repeats_daily ? 1 : 7;
-  const last = item.repeat_until;
-  return days.filter((day) => {
-    if (day < first) return false;
-    if (last !== null && day > last) return false;
-    return daysBetween(first, day) % step === 0;
-  });
-}
-
-function daysBetween(from: string, to: string): number {
-  const ms = Date.parse(`${to}T00:00:00`) - Date.parse(`${from}T00:00:00`);
-  return Math.round(ms / 86_400_000);
-}
-
-/** 현재 보고 있는 달에 표시할 수 있는 날짜 전부입니다. 앞뒤로 한 주씩 더 포함하는 것은 주 보기가
- *  달의 경계를 넘을 수 있어서입니다. 반복을 전개할 때만 사용하므로 범위가 넓어도 문제없습니다. */
-function visibleDays(year: number, month: number): string[] {
-  const first = new Date(year, month, 1 - DAYS_PER_WEEK);
-  const last = new Date(year, month + 1, DAYS_PER_WEEK);
-  const days: string[] = [];
-  for (const at = first; at <= last; at.setDate(at.getDate() + 1)) {
-    days.push(
-      `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`,
-    );
-  }
-  return days;
-}
-
-const DAYS_PER_WEEK = 7;
-
-/** 예약을 날짜별로 담습니다. 서버가 구간 한 행으로 주므로 잇는 계산이 없습니다.
- *  team_id 로 실제 팀을 찾습니다. 이름 비교보다 정확합니다. 동명이인 규칙과 같은 이유로
- *  사람도 팀도 번호로 구분합니다.
- *  로그인한 사용자가 예약한 건에만 삭제할 id 를 포함해, 다른 사용자의 예약에는 취소 버튼이 표시되지 않게 합니다. */
-// 주 보기는 합주실이 여는 시간만이 아니라 하루를 통째로 표시합니다. 합주실마다 여는 시각이 달라도
-// 같은 줄에 같은 시각이 오고, 합주실을 바꿔도 줄이 밀리지 않습니다. 대신 줄이 많아 늘 스크롤이
-// 생기므로, 주 보기로 들어올 때 합주가 있는 구간으로 자동 스크롤합니다(weekBox 의 useEffect).
-const WEEK_FIRST_HOUR = 1;
-const WEEK_LAST_HOUR = 23;
-const WEEK_HOURS = Array.from(
-  { length: WEEK_LAST_HOUR - WEEK_FIRST_HOUR + 1 },
-  (_, i) => WEEK_FIRST_HOUR + i,
-);
-
-function hourLabel(hour: number): string {
-  return `${String(hour).padStart(2, "0")}:00`;
-}
-
-function bookedByDay(
-  rows: Reservation[], teams: DayTeam[], openHour: number, myMemberId: number | null,
-): DayEntries {
-  const byDay: DayEntries = {};
-  for (const booking of rows) {
-    const team = teams.find((item) => item.id === booking.team_id);
-    (byDay[dayOf(booking.start)] ??= []).push({
-      kind: "book",
-      team: team?.key ?? null,
-      room: booking.room,
-      // 예약자가 붙인 이름이 있으면 그것을, 없으면 팀 이름을, 팀도 없으면 예약자 이름을 씁니다.
-      who: booking.name ?? booking.team ?? booking.member,
-      a: slotIndex(booking.start, openHour),
-      b: slotIndex(booking.end, openHour),
-      bookingId: booking.member_id === myMemberId ? booking.id : undefined,
-    });
-  }
-  return byDay;
-}
+];
 
 export function Scheduler() {
   const { me, teamIds, teams: allTeams } = useMe();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<TabKey>("me");
+  const [tab, setTab] = useState<DayTab>("me");
   const [week, setWeek] = useState(false);
   const [cursor, setCursor] = useState(currentMonth);
   const [weekShift, setWeekShift] = useState(0);
@@ -237,7 +88,7 @@ export function Scheduler() {
     queryFn: () => loadReservationRows(roomIds, rangeFrom, rangeTo),
     enabled: rooms.data !== undefined,
   });
-  // 공지 화면(routes/Notices 의 PostBoard)이 사용하는 queryKey 와 endpoint 를 그대로 사용합니다. 두 화면이
+  // 공지 화면(routes/Notices 의 PostBoard)이 사용하는 queryKey 와 endpoint(API의 요청 주소 단위)를 그대로 사용합니다. 두 화면이
   // 같은 목록을 공유하므로, 공지를 작성하고 돌아오면 이 화면도 함께 갱신됩니다.
   const notices = useQuery({
     queryKey: ["board", "/notices"],
@@ -249,8 +100,7 @@ export function Scheduler() {
     "아직 등록된 공지가 없습니다", "공지를 못 불러왔습니다",
   );
 
-  // query.data 가 없을 때만 매번 새 빈 배열이 생깁니다. 그동안은 아래 useMemo 들이
-  // 다시 실행되는데, 빈 배열을 다루는 가벼운 계산이라 useMemo 로 감쌀 필요가 없습니다.
+  // query.data 가 없을 때만 매번 새 빈 배열이 생깁니다. 빈 배열을 다루는 가벼운 계산이라 useMemo 로 감쌀 필요가 없습니다.
   const rows = query.data?.rows ?? [];
 
   const teams = teamsOf(rows, teamIds, allTeams);
@@ -276,151 +126,14 @@ export function Scheduler() {
   };
 
   const inFocus = (key: string) => focus !== null && key >= focus.from && key <= focus.to;
-  const gridOf = (key: string) =>
-    takenGrid(entriesOf(key).filter((entry) => entry.kind !== "off"), slotCount);
-
   const label = (index: number) => slotLabel(index, open);
   const endLabel = (index: number) => (index >= slotCount ? `${close}:00` : label(index));
-
-  const cells = monthCells(cursor.year, cursor.month);
-  const ymd = (day: number) =>
-    `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-
-  const monthView = (
-    <>
-      <div className="dow">
-        {WEEKDAY_NAMES.map((name) => <span key={name}>{name}</span>)}
-      </div>
-      <div className="grid">
-        {cells.map((day, index) => {
-          if (day === null) return <div className="cell void" key={`void-${index}`} />;
-
-          const key = ymd(day);
-          const weekday = index % 7;
-          const marks = [weekday === 0 ? "sun" : ""].filter(Boolean);
-          let blocked = false;
-          let inner = null;
-
-          if (tab === "book") {
-            if (inFocus(key)) {
-              blocked = true;
-              inner = <div className="avail auto"><span className="big">자동 배정</span></div>;
-            } else if (from !== null && to !== null) {
-              const free = isRangeFree(gridOf(key), from, to);
-              blocked = !free;
-              inner = (
-                <div className="avail">
-                  {free
-                    ? <span className="yes">예약 가능</span>
-                    : <span className="no">해당시간 마감</span>}
-                </div>
-              );
-            } else {
-              const grid = gridOf(key);
-              const left = grid.filter((taken) => !taken).length;
-              blocked = left === 0;
-              inner = (
-                <div className={left === 0 ? "avail none" : "avail"}>
-                  <span className="big">
-                    {left === 0 ? "예약 마감" : <>{hoursLabel(left)}<small>예약 가능</small></>}
-                  </span>
-                  <span className="meter" aria-hidden="true">
-                    {grid.map((taken, i) => <i className={taken ? "on" : ""} key={i} />)}
-                  </span>
-                </div>
-              );
-            }
-            if (!blocked) marks.push("pickable");
-          } else {
-            const list = visible(entriesOf(key), tab, teams);
-            inner = (
-              <>
-                {list.slice(0, 3).map((entry, i) => (
-                  <span className={`ev ${entry.team ? `${entry.team}` : "off"}`} key={i}>
-                    {entry.kind === "off"
-                      ? "불가능 일정"
-                      : teams.find((team) => team.key === entry.team)?.name ?? "개인"}
-                    <time>{label(entry.a)}</time>
-                  </span>
-                ))}
-                {list.length > 3 ? <span className="plus">+{list.length - 3}</span> : null}
-              </>
-            );
-          }
-
-          return (
-            <button
-              key={key}
-              className={["cell", ...marks].join(" ")}
-              disabled={blocked}
-              aria-label={dayWithWeekday(key)}
-              onClick={() => setOpenDay(key)}
-            >
-              <span className="n">{day}</span>
-              {inner}
-            </button>
-          );
-        })}
-      </div>
-    </>
-  );
+  const range = from !== null && to !== null ? { from, to } : null;
 
   // weekKeys 가 일요일부터 7일치 날짜를 반환하므로, 배열의 index 가 곧 요일입니다.
   const weekLabel = weekDayKeys[0].slice(5, 7) === weekDayKeys[6].slice(5, 7)
     ? `${dayLabel(weekDayKeys[0])} – ${Number(weekDayKeys[6].slice(8, 10))}일`
     : `${dayLabel(weekDayKeys[0])} – ${dayLabel(weekDayKeys[6])}`;
-
-  // 하루 23줄 중 합주는 합주실이 여는 시간의 줄에만 있습니다. 주 보기로 들어올 때마다 그 줄이
-  // 맨 위에 오게 스크롤합니다. 스크롤하지 않으면 항상 01:00 부터 보게 되어 매번 사용자가 스크롤해야 합니다.
-  // 줄 높이는 CSS 가 정하므로 계산하지 않고 실제로 렌더링된 위치를 측정합니다.
-  const weekBox = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!week) return;
-    const box = weekBox.current;
-    const row = box?.querySelector<HTMLElement>(`[data-hour="${open}"]`);
-    if (!box || !row) return;
-    box.scrollTop += row.getBoundingClientRect().top - box.getBoundingClientRect().top;
-  }, [week, weekShift, open, tab, cursor.year, cursor.month]);
-
-  const weekView = (
-    <div className="weekscroll" ref={weekBox}>
-      <div className="weekgrid">
-        <div className="wh" />
-        {weekDayKeys.map((key, index) => (
-          <div className={index === 0 ? "wh sun" : "wh"} key={key}>
-            {WEEKDAY_NAMES[index]}<b>{Number(key.slice(8, 10))}</b>
-          </div>
-        ))}
-        {WEEK_HOURS.map((hour) => (
-          <Fragment key={hour}>
-            <div className="wt" data-hour={hour}>{hourLabel(hour)}</div>
-            {weekDayKeys.map((key) => {
-              const entry = visible(entriesOf(key), tab, teams)
-                .find((item) => item.a + open === hour);
-              return (
-                <div className="wcell" key={`${key}-${hour}`}>
-                  {entry === undefined ? null : (
-                    <span className={`blk ${entry.team ? `${entry.team}` : "off"}`}
-                      style={{ "--span": entry.b - entry.a } as CSSProperties}>
-                      {entry.kind === "off"
-                        ? "불가능 일정"
-                        : teams.find((team) => team.key === entry.team)?.name ?? "개인"}
-                      {/* 합주실 이름을 함께 표시합니다. 맞닿은 두 slot 이 따로 렌더링되는 유일한 이유가
-                          합주실이 다른 것인데, 합주실을 표시하지 않으면 왜 나뉘었는지 알 수 없습니다. */}
-                      <small>
-                        {label(entry.a)}–{endLabel(entry.b)}
-                        {entry.room === undefined ? "" : ` · ${entry.room}`}
-                      </small>
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </Fragment>
-        ))}
-      </div>
-    </div>
-  );
 
   const myTeams = teams.filter((team) => team.mine);
   // 달력 위 화살표 하나가 두 가지를 이동합니다. 달 보기에서는 달을, 주 보기에서는 주를 이동합니다.
@@ -435,11 +148,10 @@ export function Scheduler() {
     setWeekShift(0);
   };
 
+  const viewProps = { tab, teams, entriesOf, openHour: open, slotCount };
+
   return (
-    <AppShell
-      page="scheduler"
-      current="schedule"
-    >
+    <AppShell page="scheduler" current="schedule">
       <Tabs label="레이아웃" items={TABS} selected={tab} onSelect={setTab} />
 
       {/* 합주실·기간·시간표 중 하나라도 실패하면 성공한 것만 표시하고 첫 실패 사유를
@@ -492,14 +204,18 @@ export function Scheduler() {
             </div>
             <button className="clear" onClick={() => { setFrom(null); setTo(null); }}>시간 선택 취소</button>
             <span className="state">
-              {from === null || to === null
+              {range === null
                 ? "지정한 시간에 예약이 가능한 날짜만 표시해요"
-                : `${label(from)}–${endLabel(to)} 해당 시간으로 예약할 날짜를 눌러주세요`}
+                : `${label(range.from)}–${endLabel(range.to)} 해당 시간으로 예약할 날짜를 눌러주세요`}
             </span>
           </div>
         ) : null}
 
-        <div className="calbody" id="body">{week ? weekView : monthView}</div>
+        <div className="calbody" id="body">
+          {week
+            ? <WeekView dayKeys={weekDayKeys} closeHour={close} {...viewProps} />
+            : <MonthView year={cursor.year} month={cursor.month} range={range} inFocus={inFocus} onOpen={setOpenDay} {...viewProps} />}
+        </div>
 
         <div className="cardfoot">
           <div className="legend">
@@ -558,7 +274,7 @@ export function Scheduler() {
           openHour={open}
           closeHour={close}
           slotCount={slotCount}
-          fixed={from !== null && to !== null ? { from, to } : null}
+          fixed={range}
           inFocus={inFocus(openDay)}
           memberId={me?.id ?? null}
           myName={me?.name ?? ""}

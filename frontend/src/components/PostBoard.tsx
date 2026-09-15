@@ -153,7 +153,7 @@ function WriteForm(props: {
       let postId = postedId;
       if (postId === null) {
         const { post } = await getJSON<{ post: Post }>(writePath, {
-          // author_id 는 보내지 않습니다. 서버가 요청의 인증 cookie 로 작성자를 정합니다.
+          // author_id 는 보내지 않습니다. 서버가 요청의 인증 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 작성자를 정합니다.
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title, body }),

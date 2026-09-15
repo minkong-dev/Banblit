@@ -4,7 +4,7 @@ import { AppShell, Tabs } from "../components/AppShell";
 import { PostBoard } from "../components/PostBoard";
 import { can } from "../lib/account";
 import { reason } from "../lib/api";
-import { useMe, useMyTeams, useTeams } from "../components/hooks";
+import { useMe, useMyTeams, useTeams } from "../components/queries";
 
 import "../styles/board.css";
 

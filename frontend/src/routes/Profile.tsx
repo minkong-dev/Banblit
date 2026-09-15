@@ -2,7 +2,7 @@ import { useQueries } from "@tanstack/react-query";
 
 import { AppShell, Card } from "../components/AppShell";
 import { getJSON, reason } from "../lib/api";
-import { useMe } from "../components/hooks";
+import { useMe } from "../components/queries";
 import "../styles/profile.css";
 import type { Account, Member } from "../lib/contract";
 import { roleLabel } from "../lib/account";

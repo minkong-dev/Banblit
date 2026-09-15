@@ -8,7 +8,7 @@
 import { useEffect, useId, useRef } from "react";
 import { CloseIcon } from "./icons";
 
-export function Modal(props: {
+export function Modal({ title, hint, foot, children, onClose }: {
   title: string;
   /** 제목 아래 설명 한 줄입니다. 없으면 렌더하지 않습니다. */
   hint?: string;
@@ -27,20 +27,20 @@ export function Modal(props: {
   }, []);
 
   return (
-    <dialog ref={dialog} aria-labelledby={titleId} onClose={props.onClose}>
+    <dialog ref={dialog} aria-labelledby={titleId} onClose={onClose}>
       <div className="mhead">
         <div>
-          <h2 id={titleId}>{props.title}</h2>
-          {props.hint === undefined ? null : <p>{props.hint}</p>}
+          <h2 id={titleId}>{title}</h2>
+          {hint === undefined ? null : <p>{hint}</p>}
         </div>
         <button aria-label="닫기" onClick={() => dialog.current?.close()}>
           <CloseIcon />
         </button>
       </div>
 
-      <div className="mbody">{props.children}</div>
+      <div className="mbody">{children}</div>
 
-      {props.foot === undefined ? null : <div className="mfoot">{props.foot}</div>}
+      {foot === undefined ? null : <div className="mfoot">{foot}</div>}
     </dialog>
   );
 }

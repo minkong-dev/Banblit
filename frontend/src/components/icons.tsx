@@ -17,10 +17,6 @@ function Stroke({ width, children, className }: {
   );
 }
 
-export function MenuIcon(props: IconProps) {
-  return <Stroke width={2} {...props}><path d="M4 7h16M4 12h16M4 17h16" /></Stroke>;
-}
-
 /** 랜딩 페이지 전용 아이콘입니다. 다른 화면의 아이콘과 다른 컴포넌트입니다. */
 export function WideMenuIcon(props: IconProps) {
   return <Stroke width={1.6} {...props}><path d="M3 7h18M3 12h18M3 17h18" /></Stroke>;

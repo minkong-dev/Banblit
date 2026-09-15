@@ -6,7 +6,7 @@ import { uniqueNameMessage } from "./validate";
 
 // 칸 하나의 크기는 저장소 설정이 정합니다(GET /settings 의 slot_minutes). 이 파일은 서버와
 // 상호작용하지 않으므로 값을 인자로 받습니다. 부르는 쪽이 설정에서 읽어 넘깁니다.
-// 서버 쪽 정본은 backend/src/backend/api/settings_service.py 입니다.
+// 서버 쪽 정본은 backend/src/backend/services/settings_service.py 입니다.
 const DEFAULT_SLOT_MINUTES = 60;
 const MINUTES_PER_HOUR = 60;
 
@@ -31,10 +31,12 @@ export function openHoursMessage(
   // opens·closes를 받아, 격자에 맞지 않거나 순서가 뒤집혔으면 그 메시지를 반환합니다.
   if (!opens) return "여는 시각을 입력해 주세요.";
   if (!closes) return "닫는 시각을 입력해 주세요.";
+  return gridMessage(minutesOf(opens), minutesOf(closes), slotMinutes);
+}
 
+/** 자정부터의 분으로 바꾼 from·to 가 격자에 맞고 순서가 맞으면 빈 문자열, 아니면 오류 메시지를 반환합니다. */
+function gridMessage(from: number | null, to: number | null, slotMinutes: number): string {
   const unit = unitText(slotMinutes);
-  const from = minutesOf(opens);
-  const to = minutesOf(closes);
   if (from === null || !onGrid(from, slotMinutes)) return `개방 시간은 ${unit} 기준으로 지정해주세요.`;
   if (to === null || !onGrid(to, slotMinutes)) return `마감 시간은 ${unit} 기준으로 지정해주세요.`;
   if (to <= from) return "마감 시간은 개방 시간보다 빠를 수 없어요.";
@@ -57,10 +59,9 @@ export function slotsBetween(
   opens: string, closes: string, slotMinutes: number = DEFAULT_SLOT_MINUTES,
 ): number {
   // 여는 시각부터 닫는 시각까지 들어가는 자리의 개수입니다. 유효하지 않으면 0입니다.
-  if (openHoursMessage(opens, closes, slotMinutes) !== "") return 0;
   const from = minutesOf(opens);
   const to = minutesOf(closes);
-  if (from === null || to === null) return 0;
+  if (from === null || to === null || gridMessage(from, to, slotMinutes) !== "") return 0;
   return (to - from) / slotMinutes;
 }
 

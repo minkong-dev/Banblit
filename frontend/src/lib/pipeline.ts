@@ -27,7 +27,6 @@ import {
 } from "./settings";
 import { awaitJob } from "./jobs";
 import type { Job } from "./jobs";
-import type { Capacity } from "./settings";
 import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_HINT,
@@ -47,8 +46,8 @@ import {
   teamNameMessage,
 } from "./roster";
 
-export type RoomForm = { name: string; opens_at: string; closes_at: string };
-export type PeriodForm = { starts_on: string; ends_on: string };
+type RoomForm = { name: string; opens_at: string; closes_at: string };
+type PeriodForm = { starts_on: string; ends_on: string };
 
 export function checkRoom(form: RoomForm, taken: string[], slotMinutes: number): string {
   // 이름을 먼저 검증합니다. 이름이 비었거나 겹치면 시각이 유효해도 저장할 수 없고,
@@ -83,7 +82,6 @@ export function openingHours(input: Opening): {
   total: string;
   perTeam: string;
   leftover: string;
-  raw: Capacity;
 } {
   // capacity()로 slot(1시간 단위 시간 칸)의 개수를 먼저 계산하고, 그 개수를 hoursLabel()로 시간 문자열로 변환합니다.
   // 순서가 반대일 수 없습니다. 화면은 slot 개수를 그대로 표시하지 않습니다.
@@ -93,7 +91,6 @@ export function openingHours(input: Opening): {
     total: hoursLabel(raw.total),
     perTeam: hoursLabel(raw.perTeam),
     leftover: hoursLabel(raw.leftover),
-    raw,
   };
 }
 
@@ -106,7 +103,7 @@ export function daysBetween(from: string, to: string): number {
 // roomBounds()는 달력의 여닫는 시각을, focusedRange()는 자동 배정 띠의 날짜 범위를 반환합니다.
 export { focusedRange, roomBounds };
 
-export type PostForm = { title: string; body: string };
+type PostForm = { title: string; body: string };
 
 export { commentMessage as checkComment };
 
@@ -195,26 +192,30 @@ export async function addUnavailable(
   return body.time;
 }
 
-/** 여러 개의 합주실에서 예약을 한 번에 조회하고, 실패한 합주실은 오류 메시지만 수집합니다. loadRows(Scheduler)와 같은 구조입니다. */
+/** roomIds 의 합주실 전부에서 예약을 조회하고, 실패한 합주실은 오류 메시지만 수집합니다. loadRows(Scheduler)와 같은 구조입니다.
+ *  요청은 동시에 보냅니다. 앞 요청의 응답을 기다리면 합주실 수만큼 왕복시간이 누적됩니다. */
 export async function loadReservationRows(
   roomIds: number[], from: string, to: string,
 ): Promise<{ rows: Reservation[]; failures: string[] }> {
+  const settled = await Promise.allSettled(
+    roomIds.map((roomId) =>
+      getJSON<{ reservations: Reservation[] }>(`/rooms/${roomId}/reservations?from=${from}&to=${to}`),
+    ),
+  );
   const rows: Reservation[] = [];
   const failures: string[] = [];
-  for (const roomId of roomIds) {
-    try {
-      const body = await getJSON<{ reservations: Reservation[] }>(
-        `/rooms/${roomId}/reservations?from=${from}&to=${to}`,
-      );
-      rows.push(...body.reservations);
-    } catch (error) {
-      failures.push(`합주실 ${roomId}: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
+  settled.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      rows.push(...result.value.reservations);
+      return;
     }
-  }
+    const why = result.reason instanceof Error ? result.reason.message : "알 수 없는 오류";
+    failures.push(`합주실 ${roomIds[index]}: ${why}`);
+  });
   return { rows, failures };
 }
 
-export type ReservationForm = {
+type ReservationForm = {
   room_id: number;
   team_id: number | null;
   starts_at: string;
@@ -244,8 +245,10 @@ export async function addReservation(form: ReservationForm): Promise<Reservation
   return body.reservations;
 }
 
-// 아래는 화면이 직접 사용하는 함수입니다. 순서 의존이 없어 그대로 export 하지만, 화면이
-// 기능 파일을 직접 참조하지 않도록 호출 지점을 이 파일 하나로 모읍니다.
+// 아래는 서버 호출과 짝을 이루는 계산 함수의 재출력입니다. 순서 의존이 없어 그대로 export 합니다.
+// 이 파일이 모으는 것은 서버 호출을 조합하는 함수와 그 짝뿐입니다. 서버와 무관한 기능 파일
+// (lib/api 의 getJSON·reason, calendar, roster, runs, toast, confirm, loading, paging, theme)은
+// 화면이 직접 참조합니다.
 export {
   dayOf,
   hhmm,
