@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from backend.services.input import require_non_empty
 from backend.db.models import (
     INSTRUMENTS,
+    TEAM_COLORS,
     Instrument,
     Member,
     MemberPermissionSet,
@@ -16,6 +17,13 @@ from backend.db.pipeline import commit_translating
 # 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 바꾸는 단계별 기록)이 정한 이름입니다.
 ROSTER_MESSAGES = {
     "teams_name_key": "이미 있는 팀 이름입니다",
+    # 고른 색이 겹친 경우와, 색을 고르지 않은 요청 둘이 동시에 같은 남은 색을 받은 경우 모두 이 제약에 걸립니다.
+    "teams_color_key": "다른 팀이 쓰는 색입니다. 다시 시도하거나 다른 색을 골라 주세요",
+    # 색을 고르지 않았는데 남은 색이 없을 때 트리거가 붙이는 이름입니다(migration c3f7b2e84d19).
+    "teams_color_exhausted": (
+        f"팀 색 {len(TEAM_COLORS)}개가 모두 쓰이고 있어 팀을 더 만들 수 없습니다. "
+        "쓰지 않는 팀을 삭제한 뒤 만들어 주세요"
+    ),
     "team_slots_team_id_member_id_key": "이미 그 팀의 다른 포지션에 있는 사람입니다",
     "team_slots_team_id_instrument_ordinal_key": "이미 있는 포지션입니다",
 }
@@ -166,16 +174,34 @@ def _get_slot_or_raise(session: Session, team_id: int, slot_id: int) -> TeamSlot
     return slot
 
 
-def create_team(session: Session, name: str, counts: dict[str, int]) -> Team:
+def _require_known_color(color: str) -> str:
+    """color 가 TEAM_COLORS 중 하나이면 그대로 반환하고, 아니면 ValueError 를 발생시킵니다."""
+    if color not in TEAM_COLORS:
+        raise ValueError("알 수 없는 팀 색입니다")
+    return color
+
+
+def create_team(
+    session: Session, name: str, counts: dict[str, int], color: str | None = None
+) -> Team:
     """팀을 생성하면서 포지션 자리를 함께 생성합니다.
 
     포지션을 나중에 따로 생성하지 않는 것은, 포지션 없는 팀이 잠깐이라도 저장되면 그 팀이
     배정 계산에서 "멤버가 없는 팀"으로 취급되기 때문입니다. 팀과 포지션은 한 번에 저장됩니다.
+
+    color 가 None 이면 색을 넣지 않고 INSERT 해 DB 트리거가 남은 첫 색을 채우게 합니다. 남은 색이 없으면
+    트리거가 teams_color_exhausted 로, 다른 팀이 쓰는 색을 고르면 unique 제약(teams_color_key)이 거절하고,
+    두 거절 모두 ROSTER_MESSAGES 가 문장으로 바꿉니다. 저장 전에 남은 색을 세지 않는 것은, 동시에 들어온
+    두 요청이 둘 다 통과하기 때문입니다.
     """
     clean_name = require_non_empty(name, "팀 이름")
     checked = require_slot_counts(counts)
+    if color is not None:
+        _require_known_color(color)
 
     team = Team(name=clean_name)
+    if color is not None:
+        team.color = color
     session.add(team)
     # 포지션을 생성하려면 팀의 id가 먼저 필요하므로 flush합니다 — 이름 중복은 이 지점에서 감지됩니다.
     commit_translating(session, ROSTER_MESSAGES, session.flush)
@@ -188,10 +214,15 @@ def create_team(session: Session, name: str, counts: dict[str, int]) -> Team:
     return team
 
 
-def update_team(session: Session, team_id: int, name: str) -> Team:
-    """팀 이름을 수정합니다. 포지션 구성을 변경하는 것은 포지션 관련 endpoint가 담당합니다."""
+def update_team(session: Session, team_id: int, name: str, color: str | None = None) -> Team:
+    """팀 이름과 팀 색을 수정합니다. color 가 None 이면 색은 그대로 둡니다. 포지션 구성은 포지션 관련 endpoint가 담당합니다."""
     team = _get_team_or_raise(session, team_id)
-    team.name = require_non_empty(name, "팀 이름")
+    clean_name = require_non_empty(name, "팀 이름")
+    # 검증을 전부 통과한 뒤에 대입합니다. 대입이 앞서면 색 검증이 실패해도 이름 변경이 session 에 남습니다.
+    checked_color = None if color is None else _require_known_color(color)
+    team.name = clean_name
+    if checked_color is not None:
+        team.color = checked_color
     commit_translating(session, ROSTER_MESSAGES)
     return team
 

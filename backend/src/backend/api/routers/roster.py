@@ -41,7 +41,11 @@ router = APIRouter()
 
 def _team_out(team: Team, slot_count: int, filled_count: int) -> TeamOut:
     return TeamOut(
-        id=team.id, name=team.name, slot_count=slot_count, filled_count=filled_count
+        id=team.id,
+        name=team.name,
+        color=team.color,
+        slot_count=slot_count,
+        filled_count=filled_count,
     )
 
 
@@ -149,7 +153,7 @@ def search_member_list(
 def create_team(
     req: TeamCreateIn, session: Session = Depends(get_session)
 ) -> TeamEnvelopeOut:
-    team = create_team_row(session, req.name, req.slots)
+    team = create_team_row(session, req.name, req.slots, req.color)
     # 방금 생성된 포지션은 전부 비어 있으므로, 조회하지 않고 배정된 멤버 수를 0 으로 반환합니다.
     slot_count = sum(count for count in req.slots.values() if count > 0)
     return TeamEnvelopeOut(team=_team_out(team, slot_count, 0))
@@ -163,7 +167,7 @@ def create_team(
 def patch_team(
     team_id: int, req: TeamUpdateIn, session: Session = Depends(get_session)
 ) -> TeamEnvelopeOut:
-    team = update_team_row(session, team_id, req.name)
+    team = update_team_row(session, team_id, req.name, req.color)
     rows = list_slots(session, team_id)
     filled = sum(1 for _, member in rows if member is not None)
     return TeamEnvelopeOut(team=_team_out(team, len(rows), filled))

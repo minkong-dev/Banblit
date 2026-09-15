@@ -11,6 +11,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
+    FetchedValue,
     ForeignKey,
     Index,
     String,
@@ -57,6 +58,19 @@ PERMISSIONS: tuple[Permission, ...] = get_args(Permission)
 # CHECK 제약 문구는 위 목록에서 그대로 생성합니다. 목록과 제약이 분리되지 않도록 합니다.
 _PERMISSION_ARRAY_SQL = "ARRAY[{}]::text[]".format(
     ", ".join(f"'{name}'" for name in PERMISSIONS)
+)
+
+# 팀 색입니다. @radix-ui/colors 의 이름 25개 중 바로 옆 색과 거의 같은 5개(ruby, violet, bronze, cyan, grass)를
+# 뺀 20개입니다(사용자 결정 2026-09-15). 순서가 곧 자동 배정 순서입니다. 화면 쪽 짝은 frontend/src/lib/teamColors.ts 입니다.
+TeamColor = Literal[
+    "tomato", "red", "crimson", "pink", "plum", "purple", "iris", "indigo", "blue", "sky",
+    "teal", "jade", "green", "mint", "lime", "yellow", "amber", "orange", "gold", "brown",
+]
+
+TEAM_COLORS: tuple[TeamColor, ...] = get_args(TeamColor)
+
+_TEAM_COLOR_ARRAY_SQL = "ARRAY[{}]::text[]".format(
+    ", ".join(f"'{name}'" for name in TEAM_COLORS)
 )
 
 # 기간의 종류입니다. 집중 합주기간(focused)만 자동 배정이 실행됩니다.
@@ -175,12 +189,21 @@ class Team(Base):
 
     팀이 어떤 포지션을 몇 자리 갖는지는 team_slots 가 저장합니다. 팀을 생성할 때
     포지션마다 자리 수를 정하면 그만큼 자리가 생성되고, 그 자리에 멤버를 배정합니다.
+
+    color 는 TEAM_COLORS 중 하나이고 다른 팀과 겹칠 수 없습니다. 값을 주지 않고 INSERT 하면 DB 트리거
+    (teams_pick_color)가 다른 팀이 쓰지 않는 첫 색을 채웁니다(migration c3f7b2e84d19). FetchedValue 는
+    그 값을 DB 가 정한다고 ORM 에 알려, INSERT 뒤 채워진 색을 다시 읽게 합니다.
     """
 
     __tablename__ = "teams"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(Text, unique=True)
+    color: Mapped[str] = mapped_column(Text, unique=True, server_default=FetchedValue())
+
+    __table_args__ = (
+        CheckConstraint(f"color = ANY ({_TEAM_COLOR_ARRAY_SQL})", name="teams_color_valid"),
+    )
 
 
 class TeamSlot(Base):
