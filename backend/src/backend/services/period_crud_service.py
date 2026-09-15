@@ -8,6 +8,14 @@ from backend.services.input import (
     require_valid_kind,
 )
 from backend.db.models import Period
+from backend.db.pipeline import commit_translating
+
+# 위반될 수 있는 제약과 그때 표시할 문장입니다. 제약 이름은 migration b5e1d9a37c42 가 정했습니다.
+PERIOD_MESSAGES = {
+    "periods_focused_no_overlap": (
+        "다른 집중 합주기간과 날짜가 겹칩니다. \"매일\" 기간은 종료일 없이 계속되는 것으로 봅니다"
+    ),
+}
 
 
 def list_periods(session: Session) -> list[Period]:
@@ -40,7 +48,7 @@ def create_period(
         second_run_at=parse_clock(second_run_at, "2차 연산 시각"),
     )
     session.add(period)
-    session.commit()
+    commit_translating(session, PERIOD_MESSAGES)
     return period
 
 
@@ -99,7 +107,7 @@ def update_period(
     for field, value in changes.items():
         setattr(period, field, value)
 
-    session.commit()
+    commit_translating(session, PERIOD_MESSAGES)
     return period
 
 
