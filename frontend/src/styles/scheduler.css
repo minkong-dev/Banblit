@@ -147,12 +147,13 @@ body[data-page="scheduler"] {
      -50px 로 배치되어 있어 잘립니다. 시작 방향으로 넘친 내용은 스크롤이 생기지 않습니다. */
   .tlscroll { max-height: 42vh; overflow-y: auto; }
   /* 한 칸의 세로 길이입니다. 주 보기와 같은 이유로 이 규칙 하나만 정합니다. */
-  .tl { --slot-h: 3.4rem; position: relative; padding-left: 50px; border-bottom: 1px solid var(--line); }
+  /* --gutter 는 왼쪽 시각 글씨 칸의 폭입니다. 막대는 이 칸을 덮지 않고 그 오른쪽부터 시작합니다. */
+  .tl { --slot-h: 3.4rem; --gutter: 50px; position: relative; padding-left: var(--gutter); border-bottom: 1px solid var(--line); }
   /* 막대가 시각 격자보다 나중에 오므로 그냥 두면 지나가는 시각 줄을 덮습니다. 줄을 위로
      올려 막대 위에 그립니다. .hr 에는 배경이 없어 1px 줄만 막대 위에 얹히고 글씨는 그대로 보입니다. */
   .tl .hr { position: relative; z-index: 1; height: var(--slot-h); border-top: 1px solid var(--line); }
-  .tl .hr::before { content: attr(data-h); position: absolute; left: -50px; top: -9px; width: 42px; text-align: right; font-size: 12px; color: var(--t3); }
-  .tl .evb { position: absolute; z-index: 0; left: 0; right: 0; top: calc(var(--from, 0) * var(--slot-h));
+  .tl .hr::before { content: attr(data-h); position: absolute; left: calc(var(--gutter) * -1); top: -9px; width: 42px; text-align: right; font-size: 12px; color: var(--t3); }
+  .tl .evb { position: absolute; z-index: 0; left: var(--gutter); right: 0; top: calc(var(--from, 0) * var(--slot-h));
     height: calc(var(--span, 1) * var(--slot-h) - 3px);
     border-radius: 11px; padding: 7px 12px; font-size: 13px; font-weight: 700; line-height: 1.35; overflow: hidden; }
   .tl .evb small { display: block; font-weight: 400; font-size: 11.5px; opacity: .85; }
@@ -161,6 +162,40 @@ body[data-page="scheduler"] {
   .evb.c3 { background: var(--c3-tint); color: var(--c3); }
   .evb.c4 { background: var(--c4-tint); color: var(--c4); }
   .evb.off { background: var(--off-tint); color: var(--t3); }
+  /* 드래그로 고르는 띠입니다. 글자 선택과 브라우저 스크롤 제스처를 끄지 않으면 드래그가 그쪽으로 새어 나갑니다. */
+  .tl.pickable { cursor: crosshair; user-select: none; touch-action: none; }
+  /* 고른 구간입니다. 다른 막대와 같은 층(z-index 0)에 두어 시각 글씨(.hr::before, z-index 1)를 가리지 않습니다. DOM 순서가 마지막이라 다른 막대 위에 그려집니다. */
+  .tl .evb.sel { pointer-events: none; background: var(--brand-tint); color: var(--brand); border: 1.5px dashed var(--brand); }
+
+  /* ===== 3단 카드. 왼쪽 타임라인, 가운데 등록 폼, 오른쪽 내 일정 목록. 열 배치는 shell.css 의 dialog.panes 가 정합니다 =====
+     높이는 grid 가 dialog 높이(92vh)로 맞추고, 안쪽 내용(.tlscroll·.col·.people)만 스크롤합니다. 제목 줄과 버튼 줄은 스크롤되지 않습니다. */
+  .pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 22px 0 24px; background: var(--card); border-radius: 22px; box-shadow: var(--shadow-up); overflow: hidden; }
+  /* 좌우 여백은 카드가 아니라 스크롤 영역 안쪽에 둡니다. 세로 스크롤 영역은 가로로 넘친 것도 잘라내므로,
+     여백이 바깥에 있으면 입력칸의 포커스 테두리(outline)가 양옆에서 잘립니다. .mbody 와 같은 구조입니다. */
+  .pane .mhead { padding: 0 24px 14px; }
+  .pane .mfoot { padding: 14px 24px 0; margin-top: auto; }
+  .pane .tlscroll, .pane .col, .pane .people { flex: 1; min-height: 0; overflow-y: auto; padding-left: 24px; padding-right: 24px; }
+  /* 위 여백은 첫 시각 글씨(.hr::before, top -9px)가 잘리지 않을 만큼입니다. */
+  .pane .tlscroll { max-height: none; padding-top: 10px; }
+  .pane .people { margin-top: 0; }
+  /* 가운데 폼과 오른쪽 목록의 머리글은 같은 크기입니다. .people h3 의 작은 회색 규칙보다 우선합니다. */
+  .pane .col h3, .pane .people > h3 { margin: 0 0 14px; font-size: 16.5px; font-weight: 700; color: var(--t1); letter-spacing: -.02em; }
+  .pane .col h3 { margin-bottom: 0; }
+  /* 세로 간격은 768px 높이 화면에서 폼이 스크롤 없이 들어가는 값입니다. 폼이 카드보다 길면 스크롤 경계가 입력칸을 가로질러 잘린 것처럼 보입니다. */
+  .pane .sub { margin: 5px 0 10px; font-size: 13px; color: var(--t2); line-height: 1.55; }
+  .pane .cap2 { margin: 12px 0 6px; }
+  .pane .msg { margin-top: 8px; }
+  .dayline { display: block; font-size: 18px; font-weight: 700; letter-spacing: -.02em; }
+  .fld3 { display: block; margin-top: 12px; font-size: 13px; color: var(--t3); }
+  .fld3 > input, .fld3 > select, .fld3 > textarea { display: block; width: 100%; min-height: 52px; margin-top: 7px; padding: 13px 15px; background: var(--card-2); border: none; border-radius: 13px; font: inherit; font-size: 15px; color: var(--t1); }
+  .fld3 > select { font-weight: 500; cursor: pointer; }
+  .fld3 > textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
+  .fld3 > :focus-visible, .pick select:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .people .none { margin: 0; font-size: 13.5px; color: var(--t3); line-height: 1.6; }
+  /* 1열로 쌓이면 카드는 내용만큼만 차지합니다. 타임라인만 상한을 둡니다. */
+  @media (max-width: 960px) {
+    .pane .tlscroll { max-height: 42vh; }
+  }
 
   .people { margin-top: 22px; }
   .people h3 { margin: 0 0 10px; font-size: 13px; color: var(--t3); font-weight: 500; }
@@ -189,18 +224,13 @@ body[data-page="scheduler"] {
   .pick .fld { flex: 1; }
   .pick label { display: block; font-size: 13px; color: var(--t3); margin-bottom: 7px; }
   .pick select { width: 100%; min-height: 52px; padding: 13px 15px; background: var(--card-2); border: none; border-radius: 13px; font-size: 15.5px; font-weight: 500; cursor: pointer; }
-  .offwhy { display: block; margin-top: 14px; font-size: 13px; color: var(--t3); }
-  .offwhy input { width: 100%; min-height: 52px; margin-top: 7px; padding: 13px 15px; background: var(--card-2); border: none; border-radius: 13px; font-size: 15px; color: var(--t1); }
-  /* 반복 선택지입니다. 왼쪽에 체크 표시, 오른쪽에 문장. 하나만 켜집니다. */
-  .reps { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
-  .rep { display: flex; align-items: center; gap: 11px; width: 100%; padding: 12px 15px; min-height: 50px; border-radius: 13px; background: var(--card-2); color: var(--t2); font-size: 14.5px; font-weight: 500; text-align: left; cursor: pointer; transition: background-color .15s ease, color .15s ease; }
-  .rep.on { background: var(--brand); color: var(--brand-on); font-weight: 700; }
-  /* 끈 상태도 아이콘 자리를 유지합니다. 켤 때 글자가 밀리지 않습니다. */
-  .repmark { width: 21px; height: 21px; flex: none; opacity: .3; transition: opacity .15s ease; }
-  .rep.on .repmark { opacity: 1; }
-  .who2 { display: flex; gap: 9px; flex-wrap: wrap; }
-  .who2 button { padding: 11px 17px; min-height: 46px; border-radius: 12px; background: var(--card-2); color: var(--t2); font-size: 14.5px; font-weight: 500; transition: background-color .15s ease, color .15s ease; }
-  .who2 button[aria-pressed="true"] { background: var(--brand); color: var(--brand-on); font-weight: 700; }
+  /* 드롭다운 화살표를 직접 그립니다. 브라우저 기본 화살표는 오른쪽 끝에 붙고 크기·색을 맞출 수 없습니다.
+     background 단축 속성(.pick select, .fld3 > select)보다 뒤에 두어야 background-image 가 남습니다. */
+  .pick select, .fld3 > select {
+    appearance: none; padding-right: 44px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239AA3AD' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 16px center; background-size: 18px;
+  }
   .msg { margin: 13px 0 0; font-size: 14px; color: var(--red); font-weight: 500; min-height: 21px; }
   .tip { margin: 18px 0 0; padding: 15px 17px; background: var(--card-2); border-radius: 13px; font-size: 13px; color: var(--t2); line-height: 1.65; }
 

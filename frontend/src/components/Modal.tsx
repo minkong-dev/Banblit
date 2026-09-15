@@ -8,12 +8,15 @@
 import { useEffect, useId, useRef } from "react";
 import { CloseIcon } from "./icons";
 
-export function Modal({ title, hint, foot, children, onClose }: {
+export function Modal({ title, hint, foot, panes, children, onClose }: {
   title: string;
   /** 제목 아래 설명 한 줄입니다. 없으면 렌더하지 않습니다. */
   hint?: string;
   /** 아래 버튼 줄. 없으면 줄 전체를 렌더하지 않습니다(읽기 전용 modal 이 그렇습니다). */
   foot?: React.ReactNode;
+  /** true 면 dialog 는 투명한 grid 틀만 되고 제목 줄·본문·버튼 줄을 렌더하지 않습니다. children 이 카드(.pane)마다
+   *  제목과 버튼을 직접 배치합니다(하루 dialog 의 3단). 배치는 shell.css 의 dialog.panes 가 정합니다. */
+  panes?: boolean;
   children: React.ReactNode;
   onClose: () => void;
 }) {
@@ -25,6 +28,14 @@ export function Modal({ title, hint, foot, children, onClose }: {
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
+
+  if (panes) {
+    return (
+      <dialog ref={dialog} className="panes" aria-label={title} onClose={onClose}>
+        {children}
+      </dialog>
+    );
+  }
 
   return (
     <dialog ref={dialog} aria-labelledby={titleId} onClose={onClose}>

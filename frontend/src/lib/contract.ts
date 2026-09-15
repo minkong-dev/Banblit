@@ -199,6 +199,8 @@ export type Unavailable = {
   repeat_until: string | null;
   /** 사람이 기록한 사유입니다. 기록하지 않으면 null입니다. */
   reason: string | null;
+  /** 캘린더에 표시할 이름입니다. 비어 있으면 화면이 "불가능 일정"으로 표시합니다. */
+  name: string | null;
 };
 
 export type Reservation = {
