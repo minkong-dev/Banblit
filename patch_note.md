@@ -182,7 +182,9 @@ Teal, Jade, Green, Mint, Lime, Yellow, Amber, Orange, Gold, Brown
 - MUI X Scheduler — 얻는 것이 없어 도입하지 않음
 - 화면 컴포넌트 테스트 — 나중에
 
-## 아직 결정되지 않은 것
+## 추가로 결정한 것 (사용자 결정 2026-09-15)
 
-- 마지막 full set 검사의 동시 요청 race(`permission_service._require_another_full_set` 에
-  `with_for_update` 없음) — 보완할지
+- **마지막 full set 검사의 동시 요청 race 를 보완함.** `permission_service._require_another_full_set` 이
+  검사하는 행을 `with_for_update` 로 잠가, 두 요청이 동시에 마지막 full set 을 없애지 못하게 함
+- **배정 계산 job 한 번의 최대 실행 시간은 5분.** 넘으면 job 을 실패로 끝냄
+- **7번 `og:image` 는 임시 이미지로 먼저 진행.** 정식 이미지는 나중에 교체

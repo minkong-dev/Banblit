@@ -7,6 +7,9 @@ sources:
   - backend/src/backend/services/input.py              # 개방 시각·폐쇄 시각·이름·기간 날짜를 비롯한 모든 입력의 경계 검증
   - backend/src/backend/services/room_service.py       # 합주실 조회·생성·수정
   - backend/src/backend/services/period_crud_service.py # 기간 조회·생성·수정·삭제
+  - backend/src/backend/services/ensemble_service.py # 집중 합주기간의 전체합주 설정·날짜별 시각 저장
+  - backend/migrations/versions/d9a4c6e1f207_period_ensemble.py # 전체합주 열·CHECK 제약·ensemble_days table
+  - backend/tests/integration/db/test_period_ensemble_endpoints.py # 전체합주 설정 저장·거절 시나리오
   - backend/src/backend/api/routers/rooms.py      # 합주실 endpoint마다 권한을 확인하는 파일
   - backend/src/backend/api/routers/periods.py    # 기간 endpoint마다 권한을 확인하는 파일
   - backend/src/backend/services/reservation_service.py # 예약 생성·취소 권한 확인
@@ -24,7 +27,7 @@ sources:
   - frontend/src/lib/settings.ts                  # 같은 규칙을 화면에서 먼저 검증하는 코드
 ---
 
-> 문서 버전: 3.0.3 draft
+> 문서 버전: 3.1.0 draft
 
 ```
 합주실마다 운영 시간을 따로 지정 ─ slot 단위는 1시간 고정
@@ -121,6 +124,17 @@ slot 길이는 서버의 `SLOT_MINUTES` 상수 1개로만 정의합니다. 변�
 
 **집중 합주기간끼리는 날짜가 하루라도 겹치면 등록·수정을 거절합니다(patch_note 8번).** 전체합주 옵션이 날짜마다 어느 기간에 속하는지 정해야 하므로 한 날짜는 집중 합주기간 하나에만 속합니다. DB 제약 `periods_focused_no_overlap`(migration `b5e1d9a37c42`)이 양 끝 날짜를 포함한 범위로 검사하고, "매일" 기간은 종료일이 없는 것으로 봅니다. 서버는 이 위반을 422 "다른 집중 합주기간과 날짜가 겹칩니다" 로 응답합니다. 상시 개방 기간은 검사하지 않습니다. 이미 겹치는 집중 합주기간이 저장된 DB 에서는 migration 이 실패하며, 어느 기간을 남길지는 사람이 정해야 해서 자동으로 삭제하지 않습니다. 생성 겹침·"매일" 기간의 무기한 겹침·수정 겹침 422 와 상시 개방 기간 허용 201 은 같은 테스트 파일이 확인합니다.
 
+**집중 합주기간에 전체합주를 지정할 수 있습니다(patch_note 8번 B단계, 저장만).** 기간 하나에 날짜 범위 하나·합주실 하나·기본 시작/끝 시각을 저장하고(`periods.ensemble_*` 다섯 열, 함께 채우거나 함께 비움), 날짜마다 시각을 다르게 지정하면 `ensemble_days` 에 그 날짜 한 행을 둡니다.
+
+| 요청 | 동작 |
+| --- | --- |
+| `PUT /periods/{id}/ensemble` | 지정·변경. 새 날짜 범위 밖이 된 날짜별 시각은 삭제합니다 |
+| `DELETE /periods/{id}/ensemble` | 해제. 날짜별 시각도 삭제합니다 |
+| `PUT /periods/{id}/ensemble/days/{YYYY-MM-DD}` | 날짜 하나의 시각 지정. 이미 있으면 덮어씁니다 |
+| `DELETE /periods/{id}/ensemble/days/{YYYY-MM-DD}` | 날짜 하나를 기본 시각으로 되돌립니다 |
+
+날짜 범위는 기간 안이어야 하고, "매일" 기간은 범위 시작일만 기간 시작일 이후면 됩니다. 이 조건과 "집중 합주기간만" 조건은 DB CHECK(`periods_ensemble_within_period`·`periods_ensemble_focused_only`)가 검사합니다. 기간 수정(PATCH)으로 날짜를 줄여도 같은 제약이 422 로 거절하게 하려고 서비스가 아니라 DB 에 두었습니다. 시각이 합주실 운영 시간 안인지와 점유 단위 격자 위인지는 `ensemble_service.py` 가 검사합니다. 배정·예약이 전체합주 날짜를 다르게 처리하는 동작(C단계)과 화면(D단계)은 아직 없습니다.
+
 ### 권한을 가진 사용자만 입력한다는 규칙을 서버가 검증합니다
 
 이전에는 "권한을 가진 사용자만 입력한다"는 규칙을 화면에서만 검증했으므로, 로그인하지 않은 사용자가 서버를 직접 호출하여 합주실을 생성하거나 운영 시간을 변경할 수 있었습니다. 서버가 로그인 session을 직접 관리하면서 이제 각 endpoint(API의 요청 주소 단위)는 권한을 먼저 검증합니다.
@@ -131,6 +145,7 @@ slot 길이는 서버의 `SLOT_MINUTES` 상수 1개로만 정의합니다. 변�
 | 합주실 수정(이름, 개방 시각, 폐쇄 시각) | "합주실 정보 수정"을 가진 사용자만 |
 | 기간 생성 | "집중합주 기간 추가"를 가진 사용자만 |
 | 기간 수정(종류, 날짜, 배정 계산 시각) | "스케줄링 시간 설정"을 가진 사용자만 |
+| 전체합주 지정·해제·날짜별 시각 지정 | "스케줄링 시간 설정"을 가진 사용자만 |
 | 기간 삭제(그 기간의 배정 결과·계산 기록·이전 배정기록 포함) | "집중합주 기간 삭제"를 가진 사용자만 |
 | 합주실 목록·기간 목록 조회 | 로그인한 사용자 전체 |
 | 합주실의 예약 현황 조회 | 로그인한 사용자 전체 |
