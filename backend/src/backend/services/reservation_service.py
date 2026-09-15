@@ -145,6 +145,7 @@ def list_reservations(
         .join(Member, Member.id == Reservation.member_id)
         .outerjoin(Team, Team.id == Reservation.team_id)
         .where(Reservation.room_id == room_id)
+        .where(Reservation.cancelled_at.is_(None))
         .where(Reservation.starts_at >= range_start)
         .where(Reservation.starts_at <= range_end)
         .order_by(Reservation.starts_at)
@@ -160,7 +161,7 @@ def _get_own_reservation(
 ) -> Reservation:
     """reservation_id 의 예약을 찾아, 그 예약을 한 멤버가 requester 일 때만 반환합니다.
 
-    없는 예약은 ValueError, 다른 사용자의 예약은 PermissionError 로 구분하여 발생시킵니다. 호출자가
+    없는 예약과 취소된 예약은 ValueError, 다른 사용자의 예약은 PermissionError 로 구분하여 발생시킵니다. 호출자가
     "잘못된 요청"(422)과 "권한 없음"(403)을 다른 HTTP 상태 코드로 반환합니다. verb 는 오류 메시지에
     들어가는 동작 이름입니다("취소할", "옮길").
 
@@ -169,7 +170,9 @@ def _get_own_reservation(
     성공으로 commit 됩니다. 옮기지 못한 예약을 옮겼다고 응답하게 됩니다.
     """
     reservation = session.scalars(
-        select(Reservation).where(Reservation.id == reservation_id).with_for_update()
+        select(Reservation)
+        .where(Reservation.id == reservation_id, Reservation.cancelled_at.is_(None))
+        .with_for_update()
     ).first()
     if reservation is None:
         raise ValueError("그런 예약이 없습니다")
@@ -182,12 +185,15 @@ def _get_own_reservation(
     return reservation
 
 
-def cancel_reservation(session: Session, reservation_id: int, requester: Member) -> None:
-    """예약 한 건을 취소합니다. 예약한 멤버 본인 또는 reservation_manage 권한을 가진 멤버만 삭제할 수 있습니다.
+def cancel_reservation(
+    session: Session, reservation_id: int, requester: Member, cancelled_at: datetime
+) -> None:
+    """예약 한 건을 취소합니다. 예약한 멤버 본인 또는 reservation_manage 권한을 가진 멤버만 취소할 수 있습니다.
 
-    예약이 행 하나이므로 요청도 한 번이고, 일부만 취소된 예약이 남지 않습니다.
+    행을 지우지 않고 cancelled_at 만 기록합니다. 취소된 행은 조회·이동·취소 대상에서 빠지고 겹침 금지
+    제약도 보지 않으므로, 그 시간은 다시 예약할 수 있습니다.
     """
-    session.delete(_get_own_reservation(session, reservation_id, requester, "취소할"))
+    _get_own_reservation(session, reservation_id, requester, "취소할").cancelled_at = cancelled_at
     session.commit()
 
 
@@ -197,28 +203,41 @@ def update_reservation(
     requester: Member,
     starts_at: datetime,
     ends_at: datetime,
+    moved_at: datetime,
 ) -> tuple[Reservation, str, str, str | None]:
-    """예약 한 건을 다른 구간으로 옮깁니다. 합주실·팀·이름은 그대로 두고 시각만 바꿉니다.
+    """예약 한 건을 다른 구간으로 옮깁니다. 합주실·팀·이름·처음 잡은 시각(created_at)은 그대로 둡니다.
 
-    행 하나의 값만 고치므로 삭제와 추가로 나눌 일이 없습니다. 옮길 자리가 이미 차 있으면
-    commit 이 겹침 금지 제약에 걸리고, rollback 이 원래 시각을 되돌려 예약을 잃지 않습니다.
+    옛 행을 취소 표시(cancelled_at=moved_at)로 두고 새 행을 만들어, 옮긴 이력이 DB 에 남습니다.
+    둘은 한 transaction 입니다. 옮길 자리가 이미 차 있으면 commit 이 겹침 금지 제약에 걸리고,
+    rollback 이 옛 행의 취소 표시까지 되돌려 예약을 잃지 않습니다.
 
-    자기 자신과는 겹쳐도 됩니다. 제약은 행끼리만 보고 고치는 중인 행은 한 행이라 자기와
-    비교하지 않습니다. 그래서 1시간 뒤로 30분만 미는 것처럼 원래 구간과 겹치는 이동이 됩니다.
+    원래 구간과 겹치는 이동도 됩니다. 제약이 취소된 행을 보지 않으므로 옛 행은 비교 대상이 아닙니다.
     """
-    reservation = _get_own_reservation(session, reservation_id, requester, "옮길")
-    room = _get_room_or_raise(session, reservation.room_id)
+    old = _get_own_reservation(session, reservation_id, requester, "옮길")
+    room = _get_room_or_raise(session, old.room_id)
 
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_same_day(starts_at, ends_at)
     require_within_room_hours(room.opens_at, room.closes_at, starts_at, ends_at)
     _require_not_in_focused_period(session, starts_at.date())
 
-    reservation.starts_at = starts_at
-    reservation.ends_at = ends_at
+    old.cancelled_at = moved_at
+    # 옛 행의 취소 표시를 먼저 DB 에 보냅니다. 새 행의 INSERT 가 먼저 나가면 겹침 금지 제약이 아직
+    # 취소되지 않은 옛 행과 비교해, 원래 구간과 겹치는 이동을 거절합니다.
+    session.flush()
+    moved = Reservation(
+        room_id=old.room_id,
+        team_id=old.team_id,
+        member_id=old.member_id,
+        name=old.name,
+        starts_at=starts_at,
+        ends_at=ends_at,
+        created_at=old.created_at,
+    )
+    session.add(moved)
     commit_translating(session, RESERVATION_MESSAGES)
 
     team = None
-    if reservation.team_id is not None:
-        team = session.get(Team, reservation.team_id)
-    return reservation, room.name, requester.name, team.name if team is not None else None
+    if moved.team_id is not None:
+        team = session.get(Team, moved.team_id)
+    return moved, room.name, requester.name, team.name if team is not None else None

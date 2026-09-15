@@ -414,6 +414,9 @@ class Reservation(Base):
     이름을 대신 씁니다.
 
     team_id 가 있으면 팀 예약, 없으면 member_id 멤버의 개인 예약입니다.
+
+    cancelled_at 이 있으면 취소된 예약입니다. 취소해도 행을 지우지 않고, 이동하면 옛 행을 취소 표시로
+    두고 새 행을 만듭니다. 겹침 금지 제약은 취소된 행을 보지 않습니다(migration f4c2a9d17b63).
     """
 
     __tablename__ = "reservations"
@@ -430,9 +433,10 @@ class Reservation(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime)
     ends_at: Mapped[datetime] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # 겹침 금지 제약(EXCLUDE)은 SQLAlchemy 로 표현할 수 없어 migration 이 직접 만듭니다
-    # (migrations/versions/c8e4a1b60d93_reservation_as_one_row.py). index 는 표현할 수
+    # (migrations/versions/f4c2a9d17b63_reservation_cancelled_at.py). index 는 표현할 수
     # 있으므로 여기 적습니다. 빠뜨리면 다음 autogenerate 가 "메타데이터에 없는 index" 로
     # 보고 지우는 migration 을 만들어 냅니다.
     __table_args__ = (
