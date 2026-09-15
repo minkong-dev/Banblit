@@ -12,7 +12,7 @@ sources:
   - frontend/src/styles/shell.css                # 상단바·사이드바·카드·입력칸 등 모든 화면이 함께 쓰는 스타일
   - frontend/src/lib/loading.ts                  # 목록이 불러오는 중인지·실패했는지·정상인지를 값 1개로 표현하는 타입
   - frontend/src/lib/calendar.ts                 # 모든 화면이 함께 쓰는 날짜·요일·시각 표기
-  - frontend/src/lib/account.ts          # 권한 항목 19가지의 한국어 이름, "내가 그 항목을 가졌는가" 판단, 프로필 카드의 역할 문구
+  - frontend/src/lib/account.ts          # 권한 항목 20가지의 한국어 이름, "내가 그 항목을 가졌는가" 판단, 프로필 카드의 역할 문구
   - frontend/src/lib/confirm.ts          # 삭제·취소·추방 전에 1회 확인하는 문구
   - frontend/src/routes/Settings.tsx     # 설정 화면의 합주실·기간 탭. 매일 기간은 종료일 입력을 숨깁니다
   - frontend/src/lib/account.test.ts     # 역할 문구 시나리오
@@ -161,7 +161,7 @@ flowchart LR
 ```
 이전:   헤드매니저인가 ──▶ 관리 버튼 전부 표시 / 전부 숨김
 현재:   합주실 항목 보유 ──▶ 합주실 수정 버튼
-        기간 항목 보유   ──▶ 기간 수정 버튼
+        기간 항목 보유   ──▶ 기간 수정·삭제 버튼
         권한 관리 항목 보유 ──▶ 멤버 탭
         …각 위치에서 자신의 항목을 확인합니다
 ```

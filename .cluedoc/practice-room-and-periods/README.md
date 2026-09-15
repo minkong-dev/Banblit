@@ -6,7 +6,7 @@ sources:
   - backend/src/backend/db/models.py              # Room·Period table
   - backend/src/backend/services/input.py              # 개방 시각·폐쇄 시각·이름·기간 날짜를 비롯한 모든 입력의 경계 검증
   - backend/src/backend/services/room_service.py       # 합주실 조회·생성·수정
-  - backend/src/backend/services/period_crud_service.py # 기간 조회·생성·수정
+  - backend/src/backend/services/period_crud_service.py # 기간 조회·생성·수정·삭제
   - backend/src/backend/api/routers/rooms.py      # 합주실 endpoint마다 권한을 확인하는 파일
   - backend/src/backend/api/routers/periods.py    # 기간 endpoint마다 권한을 확인하는 파일
   - backend/src/backend/services/reservation_service.py # 예약 생성·취소 권한 확인
@@ -115,7 +115,9 @@ slot 길이는 서버의 `SLOT_MINUTES` 상수 1개로만 정의합니다. 변�
 
 이름 중복은 데이터베이스가 마지막에 감지합니다. 2명의 사용자가 동시에 같은 이름을 입력할 경우, 각자 입력 시점에는 같은 이름이 아직 없었으므로 화면과 서버 검증을 모두 통과할 수 있습니다. 서버는 데이터베이스가 거절한 중복을 받아서 사용자가 읽을 오류 메시지로 반환합니다.
 
-개방 시간과 폐쇄 시간, 기간 날짜는 수정할 수 있지만 삭제는 미구현입니다. 삭제하면 이미 생성된 배정과 예약이 함께 삭제되므로, 삭제된 배정과 예약을 어떻게 처리할지 정한 후 삭제 기능을 추가합니다.
+합주실의 개방 시간과 폐쇄 시간은 수정할 수 있지만 합주실 삭제는 미구현입니다.
+
+기간은 삭제할 수 있습니다(patch_note 13번). 기간을 삭제하면 그 기간의 배정 결과(`assignments`)·계산 기록(`assignment_runs`)·이전 배정기록(`assignment_backups`)이 외래 키 `ondelete=CASCADE` 로 함께 삭제됩니다. 예약은 기간과 연결되어 있지 않아 남습니다. 되돌릴 수 없는 삭제라 수정과 다른 권한 항목("집중합주 기간 삭제")으로 두었고, 설정 화면은 삭제 전에 "그 기간과 그 배정 결과를 삭제할까요?" 로 한 번 묻습니다. 삭제 204·없는 번호 422·로그인 없음 401·항목 없음 403 은 `backend/tests/integration/db/test_period_crud_endpoints.py` 가 확인합니다.
 
 ### 권한을 가진 사용자만 입력한다는 규칙을 서버가 검증합니다
 
@@ -127,6 +129,7 @@ slot 길이는 서버의 `SLOT_MINUTES` 상수 1개로만 정의합니다. 변�
 | 합주실 수정(이름, 개방 시각, 폐쇄 시각) | "합주실 정보 수정"을 가진 사용자만 |
 | 기간 생성 | "집중합주 기간 추가"를 가진 사용자만 |
 | 기간 수정(종류, 날짜, 배정 계산 시각) | "스케줄링 시간 설정"을 가진 사용자만 |
+| 기간 삭제(그 기간의 배정 결과·계산 기록·이전 배정기록 포함) | "집중합주 기간 삭제"를 가진 사용자만 |
 | 합주실 목록·기간 목록 조회 | 로그인한 사용자 전체 |
 | 합주실의 예약 현황 조회 | 로그인한 사용자 전체 |
 | slot 예약 | 로그인한 사용자 전체. 예약자는 언제나 본인입니다 |
