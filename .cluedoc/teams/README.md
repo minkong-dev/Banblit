@@ -1,7 +1,7 @@
 ---
 title: 팀과 포지션
 sources:
-  - backend/src/backend/db/models.py           # Team·TeamSlot table 과 포지션 목록
+  - backend/src/backend/db/models.py           # Team·TeamSlot table, 포지션 목록, 팀 색 20가지(TEAM_COLORS)
   - backend/src/backend/services/roster_service.py  # 팀과 포지션을 조회·저장하는 파일
   - backend/src/backend/api/routers/roster.py  # endpoint마다 요청한 사용자와 그 권한을 확인하는 파일
   - backend/src/backend/api/auth_dependency.py # 요청을 보낸 사용자를 확인하는 파일
@@ -9,7 +9,9 @@ sources:
   - backend/migrations/versions/b2d94f7a1c05_team_slots_and_cohort.py # 소속을 포지션으로 옮긴 마이그레이션
   - backend/tests/integration/db/test_roster_endpoints.py # 팀·포지션 endpoint의 권한 갈림
   - backend/tests/integration/db/test_member_expel_endpoints.py # 추방으로 계정이 삭제되면 포지션이 비워지는지의 시나리오
-  - frontend/src/routes/Teams.tsx              # 팀 목록·포지션 구성·명단 화면
+  - backend/migrations/versions/c3f7b2e84d19_team_color.py # 팀 색 열·겹침 금지·빈 색을 채우는 트리거를 추가한 마이그레이션
+  - frontend/src/routes/Teams.tsx              # 팀 목록·포지션 구성·명단 화면. 팀 생성·수정 창의 팀 색 고르기
+  - frontend/src/lib/teamColors.ts             # 팀 색 20가지와 @radix-ui/colors 값으로 만든 CSS 변수
   - frontend/src/components/MemberSearch.tsx   # 포지션에 추가할 사람을 검색하는 입력칸
   - frontend/src/routes/Profile.tsx            # 내가 맡은 포지션을 표시하는 화면
 ---
@@ -124,6 +126,22 @@ erDiagram
 **팀을 만들 때 "만든 사람"을 요청에 담아 보내지 않습니다.** 만든 사람은 인증 cookie의 소유자이므로 요청에 담긴 값은 신뢰할 수 없습니다.
 
 **어떻게 확인했나.** 팀·포지션 endpoint를 확인하는 테스트가 로그인하지 않은 요청과 권한이 없는 요청을 서로 다른 응답으로 구분하는지 확인합니다. 구성을 수정할 때 배정된 사람이 유지되는지, 줄일 때 번호가 큰 쪽부터 삭제되는지, 1명이 같은 팀의 2개 포지션을 맡으려 하면 거절되는지, 팀을 삭제하면 포지션이 함께 삭제되는지도 같은 파일이 확인합니다. 서버 테스트 468개와 화면 테스트 202개가 모두 통과합니다.
+
+### 팀 색은 팀에 저장합니다 (2026-09-15)
+
+예전에는 화면이 전체 팀 목록에서의 위치로 4색을 돌려썼습니다. 팀이 5개면 1번 팀과 색이 같아지고, 앞 팀을 삭제하면 뒤 팀 색이 한 칸씩 밀렸습니다. 지금은 팀마다 색 1개를 저장하고, 달력·배정 화면·프로필 카드가 그 값을 씁니다(patch_note 10번, 사용자 결정).
+
+| 항목 | 규칙 |
+| --- | --- |
+| 고를 수 있는 색 | `@radix-ui/colors` 의 25색 중 바로 옆 색과 거의 같은 5색(ruby, violet, bronze, cyan, grass)을 뺀 20색입니다. 서버 정본은 `backend/src/backend/db/models.py` 의 `TEAM_COLORS`, 화면 짝은 `frontend/src/lib/teamColors.ts` 입니다 |
+| 겹침 | 다른 팀이 쓰는 색은 저장소가 거절합니다(unique 제약 `teams_color_key`). 팀 생성·수정 창은 그 색을 흐리게 하고 사선을 그어 고를 수 없게 합니다 |
+| 고르지 않았을 때 | 저장소 트리거(`teams_pick_color`)가 목록 순서에서 다른 팀이 쓰지 않는 첫 색을 채웁니다 |
+| 20색이 모두 쓰일 때 | 트리거가 `teams_color_exhausted` 로 거절하고, 서버가 "팀 색 20개가 모두 쓰이고 있어 팀을 더 만들 수 없습니다" 로 응답합니다. 따라서 팀은 최대 20개입니다 |
+| 화면 색 | 막대 배경은 4단계, 글자는 11단계입니다. 밝은 화면·어두운 화면 값을 `light-dark()` 한 쌍으로 넣습니다. 불가능 일정의 회색(`--off`)은 그대로입니다 |
+
+색을 고르는 일을 앱 코드가 아니라 저장소 트리거에 둔 이유는, 팀을 INSERT 하는 곳이 서비스 외에도 스크립트와 테스트까지 31곳이라 전부 색을 알게 할 수 없어서입니다. 저장 전에 남은 색을 세지 않는 이유는 동시에 들어온 두 요청이 둘 다 통과하기 때문입니다. 판정은 저장소가 1번만 합니다.
+
+`backend/tests/integration/db/test_roster_endpoints.py` 가 고른 색 저장, 고르지 않으면 첫 빈 색, 겹치는 색 422, 모르는 색 422, 20색 소진 422, 색 수정을 확인하고, `frontend/src/lib/teamColors.test.ts` 가 20색 순서와 Radix 값으로 만든 CSS 를 확인합니다.
 
 ## Conclusion
 
