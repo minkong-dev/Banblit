@@ -64,6 +64,16 @@ body[data-page="scheduler"] {
   /* 팀 색은 .team-<색> class 가 --tc·--tc-tint 로 줍니다(lib/teamColors.ts). 색이 없는 팀은 불가능 일정과 같은 회색입니다. */
   .ev { background: var(--tc-tint, var(--off-tint)); color: var(--tc, var(--t3)); }
   .ev.off { background: var(--off-tint); color: var(--t3); }
+  /* 전체합주는 한 팀이 아니라 전원의 일정입니다. 팀 20색과 겹치지 않는 지정 보조색(세이지)에 빗금을 겹쳐,
+     색 이름을 몰라도 팀 막대와 구분됩니다. 달 보기·주 보기·하루 타임라인이 같은 규칙을 씁니다. */
+  :is(.ev, .blk, .evb).ens {
+    background: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--green) 14%, transparent) 5px 10px), var(--green-tint);
+    color: var(--green);
+  }
+  .legend i.ens { background: var(--green); }
+  /* 하루 dialog 의 날짜별 전체합주 시각 입력입니다. 왼쪽 카드에서는 타임라인 아래에 구분선으로 붙습니다. */
+  .ensday { margin-top: 16px; }
+  .pane .ensday { margin: 0; padding: 14px 24px 0; border-top: 1px solid var(--line); }
   .plus { font-size: 11.5px; color: var(--t3); padding-left: 4px; }
 
   .avail { margin-top: auto; display: flex; flex-direction: column; gap: 6px; }

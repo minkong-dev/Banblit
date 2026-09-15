@@ -10,7 +10,11 @@ import { askDelete } from "../lib/confirm";
 import { formError, loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { say } from "../lib/toast";
-import { checkPeriod, checkRoom, daysBetween, openingHours, periodBody } from "../lib/pipeline";
+import {
+  checkEnsemble, checkPeriod, checkRoom, dayLabel, daysBetween, openingHours, periodBody, savePeriod,
+} from "../lib/pipeline";
+import type { PeriodBody } from "../lib/pipeline";
+import { EnsembleDays, EnsembleFields, ensembleBody, ensembleDraft } from "./SettingsEnsemble";
 import { useMe, usePeriods, useRooms, useSlotMinutes, useTeams } from "../components/queries";
 import { can } from "../lib/account";
 import { applyTheme, readSavedTheme } from "../lib/theme";
@@ -46,8 +50,8 @@ const TABS = [
 ];
 
 const BLANK_ROOM = { name: "", opens_at: "18:00", closes_at: "23:00" };
-const BLANK_PERIOD = {
-  kind: "focused" as const,
+const BLANK_PERIOD: PeriodBody = {
+  kind: "focused",
   starts_on: "",
   ends_on: "",
   everyday: false,
@@ -57,11 +61,21 @@ const BLANK_PERIOD = {
 
 const KIND_TEXT = { open: "상시 개방", focused: "집중 합주" };
 
-/** 목록 줄 오른쪽에 붙는 한 줄입니다. 집중 합주기간(스케줄링을 자동으로 진행할 기간)일 때만 계산 시각 두 개가 더 붙습니다. */
+/** 기간 form 이 수정하는 값만 추립니다. 목록에서 받은 기간에는 id·ensemble 이 함께 있어 그대로 보내면 요청 본문에 섞입니다. */
+function periodFields(period: Period): PeriodBody {
+  const { kind, starts_on, ends_on, everyday, first_run_at, second_run_at } = period;
+  return { kind, starts_on, ends_on, everyday, first_run_at, second_run_at };
+}
+
+/** 목록 줄 오른쪽에 붙는 한 줄입니다. 집중 합주기간(스케줄링을 자동으로 진행할 기간)일 때만 계산 시각 두 개가 더 붙고,
+ *  전체합주를 지정했으면 그 날짜 범위가 붙습니다. */
 function periodSpan(period: Period): string {
   const days = ` · ${daysBetween(period.starts_on, period.ends_on)}일`;
   if (period.kind !== "focused") return days;
-  return `${days} · 계산 ${period.first_run_at} · ${period.second_run_at}`;
+  const ensemble = period.ensemble === null
+    ? ""
+    : ` · 전체합주 ${dayLabel(period.ensemble.starts_on)}–${dayLabel(period.ensemble.ends_on)}`;
+  return `${days} · 계산 ${period.first_run_at} · ${period.second_run_at}${ensemble}`;
 }
 
 /** 화면 밝기를 선택하는 카드입니다. 선택한 값은 브라우저에 저장되어 다음에 열 때도 유지됩니다. */
@@ -144,6 +158,7 @@ export function Settings() {
         ) : shown === "periods" ? (
           <PeriodCard
             periods={periodList}
+            rooms={roomList}
             state={loadState(periods)}
             canEdit={can(me, "period_edit")}
             canCreate={can(me, "period_create")}
@@ -226,8 +241,8 @@ function RoomFields(props: {
 
 /** 기간 form 의 입력칸입니다. 집중 합주기간일 때만 계산 시각 입력칸 2개가 더 표시됩니다. */
 function PeriodFields(props: {
-  form: Omit<Period, "id">;
-  setForm: (next: Omit<Period, "id">) => void;
+  form: PeriodBody;
+  setForm: (next: PeriodBody) => void;
   at: (field: string) => string;
   bad: string;
   whyId: string;
@@ -433,10 +448,10 @@ function RoomForm(props: {
 }
 
 function PeriodCard(props: {
-  periods: Period[]; state: LoadState; canEdit: boolean; canCreate: boolean; canDelete: boolean;
+  periods: Period[]; rooms: Room[]; state: LoadState; canEdit: boolean; canCreate: boolean; canDelete: boolean;
   onSaved: () => void; onDeleted: () => void;
 }) {
-  const { periods, state, canEdit, canCreate, canDelete, onSaved, onDeleted } = props;
+  const { periods, rooms, state, canEdit, canCreate, canDelete, onSaved, onDeleted } = props;
   const { editing, open, close, register } = useRowFocus();
   const [making, setMaking] = useState(false);
   // 기간을 삭제하면 서버가 그 기간의 배정 결과·계산 기록·이전 배정기록을 함께 삭제합니다(외래 키 CASCADE).
@@ -458,9 +473,8 @@ function PeriodCard(props: {
             canEdit && editing === period.id ? (
               <li className="editing" key={period.id}>
                 <PeriodForm
-                  start={period}
-                  path={`/periods/${period.id}`}
-                  method="PATCH"
+                  before={period}
+                  rooms={rooms}
                   submit="저장"
                   onCancel={close}
                   onDone={() => {
@@ -508,9 +522,8 @@ function PeriodCard(props: {
         <Modal title="새 집중합주 기간" hint="집중합주 기간을 설정해요"
           onClose={() => setMaking(false)}>
           <PeriodForm
-            start={BLANK_PERIOD}
-            path="/periods"
-            method="POST"
+            before={null}
+            rooms={rooms}
             submit="기간 추가"
             onCancel={() => setMaking(false)}
             onDone={() => { setMaking(false); onSaved(); }}
@@ -521,49 +534,63 @@ function PeriodCard(props: {
   );
 }
 
+/** 기간 form 입니다. before 가 null 이면 새 기간을 만들고, 아니면 그 기간을 수정합니다.
+ *  집중 합주기간이면 전체합주 입력칸이 함께 표시되고, 저장은 savePeriod 가 기간·전체합주 요청을 순서대로 보냅니다.
+ *  날짜별 전체합주 시각은 저장된 전체합주가 있을 때만 form 아래에 별도 form 으로 표시합니다. form 안에 두면 그 버튼이 기간 form 을 제출합니다. */
 function PeriodForm(props: {
-  start: Omit<Period, "id">;
-  path: string;
-  method: "POST" | "PATCH";
+  before: Period | null;
+  rooms: Room[];
   submit: string;
   onCancel?: () => void;
   onDone: () => void;
 }) {
-  const { start, path, method, submit, onCancel, onDone } = props;
-  const [form, setForm, touched, reset] = useForm(start);
+  const { before, rooms, submit, onCancel, onDone } = props;
+  const [form, setForm, touched, reset] = useForm(before === null ? BLANK_PERIOD : periodFields(before));
+  const [draft, setDraft, draftTouched, resetDraft] = useForm(ensembleDraft(before, rooms));
   const first = useFirstField<HTMLSelectElement>(onCancel !== undefined);
+  const slotMinutes = useSlotMinutes();
 
+  const withEnsemble = form.kind === "focused" && draft.on;
   const send = useMutation({
-    mutationFn: () =>
-      getJSON<{ period: Period }>(path, {
-        method,
-        body: JSON.stringify(periodBody(form)),
-      }),
+    mutationFn: () => savePeriod(before, form, withEnsemble ? ensembleBody(draft) : null),
     onSuccess: () => {
-      if (method === "POST") reset();
+      if (before === null) {
+        reset();
+        resetDraft();
+      }
       onDone();
     },
   });
 
-  const why = checkPeriod(form);
+  const room = rooms.find((item) => item.id === draft.room_id);
+  const why = checkPeriod(form)
+    || (withEnsemble ? checkEnsemble(draft, periodBody(form), room, slotMinutes) : "");
 
-  const at = (field: string): string => `${path}-${field}`;
+  const at = (field: string): string => `${before === null ? "/periods" : `/periods/${before.id}`}-${field}`;
   const whyId = at("why");
-  const bad = formError(touched, why, send.error);
+  const bad = formError(touched || draftTouched, why, send.error);
+  const savedRoom = rooms.find((item) => item.id === before?.ensemble?.room_id);
 
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (why === "") send.mutate();
-      }}
-    >
-      <div className="fields">
-        <PeriodFields form={form} setForm={setForm} at={at} bad={bad} whyId={whyId} first={first} />
-        <FormTail submit={submit} pending={send.isPending} blocked={why !== ""}
-            bad={bad} whyId={whyId} onCancel={onCancel} />
-      </div>
-    </form>
+    <>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (why === "") send.mutate();
+        }}
+      >
+        <div className="fields">
+          <PeriodFields form={form} setForm={setForm} at={at} bad={bad} whyId={whyId} first={first} />
+          {form.kind === "focused" ? (
+            <EnsembleFields draft={draft} setDraft={setDraft} period={periodBody(form)} rooms={rooms}
+              at={at} bad={bad} whyId={whyId} />
+          ) : null}
+          <FormTail submit={submit} pending={send.isPending} blocked={why !== ""}
+              bad={bad} whyId={whyId} onCancel={onCancel} />
+        </div>
+      </form>
+      {before === null || before.ensemble === null ? null : <EnsembleDays period={before} room={savedRoom} />}
+    </>
   );
 }
 

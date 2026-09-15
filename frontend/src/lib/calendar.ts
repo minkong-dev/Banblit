@@ -115,15 +115,33 @@ export function roomBounds(rooms: { opens_at: string; closes_at: string }[]): {
 /** 양 끝 날짜를 포함하는 "YYYY-MM-DD" 범위입니다. to 가 null 이면 끝이 없습니다. */
 export type DayRange = { from: string; to: string | null };
 
-/** 집중 합주기간 전부의 날짜 범위를 시작일 순서로 반환합니다. 서버가 집중 합주기간끼리의 겹침을
- *  거절하므로 범위끼리 겹치지 않습니다. "매일" 기간은 종료일이 없어 to 가 null 입니다. */
+/** 집중 합주기간 전부의 팀별 배정 날짜 범위를 시작일 순서로 반환합니다. 서버가 집중 합주기간끼리의 겹침을
+ *  거절하므로 범위끼리 겹치지 않습니다. "매일" 기간은 종료일이 없어 to 가 null 입니다.
+ *  전체합주 날짜 범위는 팀별 배정에서 제외되므로, 전체합주가 기간 중간에 있으면 범위가 앞뒤 두 개로 나뉩니다. */
 export function focusedRanges(
-  periods: { kind: string; starts_on: string; ends_on: string; everyday: boolean }[],
+  periods: {
+    kind: string; starts_on: string; ends_on: string; everyday: boolean;
+    ensemble?: { starts_on: string; ends_on: string } | null;
+  }[],
 ): DayRange[] {
   return periods
     .filter((period) => period.kind === "focused")
-    .map((period) => ({ from: period.starts_on, to: period.everyday ? null : period.ends_on }))
+    .flatMap((period): DayRange[] => {
+      const to = period.everyday ? null : period.ends_on;
+      if (!period.ensemble) return [{ from: period.starts_on, to }];
+      const before = { from: period.starts_on, to: shiftDay(period.ensemble.starts_on, -1) };
+      const after = { from: shiftDay(period.ensemble.ends_on, 1), to };
+      // 전체합주가 기간 끝에 붙으면 그쪽 범위는 시작일이 종료일보다 늦어 제외됩니다.
+      return [before, after].filter((range) => range.to === null || range.from <= range.to);
+    })
     .sort((a, b) => a.from.localeCompare(b.from));
+}
+
+/** "YYYY-MM-DD" 에 days 일을 더한 날짜입니다. 정오에서 계산합니다(NOON_HOUR). */
+function shiftDay(key: string, days: number): string {
+  const date = new Date(`${key}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return dayKey(date);
 }
 
 /** key 가 ranges 중 하나에 속하면 true 입니다. */

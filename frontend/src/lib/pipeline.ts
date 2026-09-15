@@ -1,7 +1,9 @@
 // lib 모듈의 시퀀스 파일입니다. 어느 검증을 어느 순서로 호출할지 이 파일에서 정합니다.
 
 import { getJSON, sendFile } from "./api";
-import type { Account, Me, Member, Notification, Reservation, Unavailable } from "./contract";
+import type {
+  Account, Ensemble, Me, Member, Notification, Period, Reservation, Unavailable,
+} from "./contract";
 import {
   dayKey,
   datesBetween,
@@ -69,6 +71,63 @@ export function periodBody<T extends PeriodForm & { kind?: string; everyday?: bo
   return form;
 }
 
+export type SaveStep = "period" | "ensemble" | "clearEnsemble";
+
+/** 기간 저장(POST·PATCH)과 전체합주 저장(PUT·DELETE)의 요청 순서입니다. 서버는 전체합주 날짜 범위가
+ *  기간 안인지를 요청마다 DB CHECK 로 검사하므로, 매 요청 직후의 저장 상태가 그 조건을 지키는 순서로 보냅니다.
+ *  before 는 저장된 기간이고, 새 기간이면 null 입니다. ensemble 이 null 이면 전체합주를 해제합니다. */
+export function ensembleSaveOrder(
+  before: (PeriodForm & { everyday: boolean; ensemble: PeriodForm | null }) | null,
+  ensemble: PeriodForm | null,
+): SaveStep[] {
+  if (before === null) return ensemble === null ? ["period"] : ["period", "ensemble"];
+  if (ensemble === null) return before.ensemble === null ? ["period"] : ["clearEnsemble", "period"];
+  // ponytail: 새 전체합주가 저장된 기간 밖이고 옛 전체합주도 새 기간 밖이면 어느 순서든 첫 요청이 거절됩니다.
+  // 서버 사유를 그대로 표시합니다. 막으려면 기간과 전체합주를 한 transaction 으로 받는 endpoint 가 필요합니다.
+  const inside = ensemble.starts_on >= before.starts_on
+    && (before.everyday || ensemble.ends_on <= before.ends_on);
+  return inside ? ["ensemble", "period"] : ["period", "ensemble"];
+}
+
+export type PeriodBody = Omit<Period, "id" | "ensemble">;
+export type EnsembleBody = Omit<Ensemble, "days">;
+
+/** 기간과 전체합주를 ensembleSaveOrder 순서로 저장합니다. 요청 사이에 실패하면 앞 요청은 저장된 채로 남고,
+ *  서버 사유를 담은 오류를 그대로 던집니다. */
+export async function savePeriod(
+  before: Period | null, period: PeriodBody, ensemble: EnsembleBody | null,
+): Promise<void> {
+  let id = before?.id;
+  for (const step of ensembleSaveOrder(before, ensemble)) {
+    if (step === "period") {
+      const saved = await getJSON<{ period: Period }>(before === null ? "/periods" : `/periods/${before.id}`, {
+        method: before === null ? "POST" : "PATCH",
+        body: JSON.stringify(periodBody(period)),
+      });
+      id = saved.period.id;
+    } else if (step === "clearEnsemble") {
+      await getJSON(`/periods/${id}/ensemble`, { method: "DELETE" });
+    } else {
+      await getJSON(`/periods/${id}/ensemble`, { method: "PUT", body: JSON.stringify(ensemble) });
+    }
+  }
+}
+
+/** 전체합주 날짜 하나의 시각을 지정합니다. 이미 지정한 날짜면 서버가 덮어씁니다. */
+export async function saveEnsembleDay(
+  periodId: number, day: string, startsAt: string, endsAt: string,
+): Promise<void> {
+  await getJSON(`/periods/${periodId}/ensemble/days/${day}`, {
+    method: "PUT",
+    body: JSON.stringify({ starts_at: startsAt, ends_at: endsAt }),
+  });
+}
+
+/** 날짜 하나의 지정 시각을 삭제해 기본 시각으로 되돌립니다. */
+export async function clearEnsembleDay(periodId: number, day: string): Promise<void> {
+  await getJSON(`/periods/${periodId}/ensemble/days/${day}`, { method: "DELETE" });
+}
+
 export function checkPeriod(form: PeriodForm): string {
   // 기간은 시작일과 종료일 2개를 검증합니다. 종류와 계산 시각은 선택 옵션이라 검증할 항목이 없습니다.
   const body = periodBody(form);
@@ -106,6 +165,7 @@ export { focusedRanges, inRanges, roomBounds };
 type PostForm = { title: string; body: string };
 
 export { commentMessage as checkComment };
+export { ensembleMessage as checkEnsemble, ensembleTimeMessage as checkEnsembleTime } from "./settings";
 
 export function checkPost(form: PostForm): string {
   // 제목을 먼저 검증합니다. 오류 메시지를 한 번에 하나만 표시하므로 먼저 수정할 것을 앞에 둡니다.

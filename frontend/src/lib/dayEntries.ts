@@ -3,13 +3,14 @@
 import { dayOf, mergeSessions, slotIndex } from "./slots";
 import type { Session } from "./slots";
 import type { DayTeam } from "./roster";
-import type { Reservation, ScheduleRow, Team, Unavailable } from "./contract";
+import type { Period, Reservation, Room, ScheduleRow, Team, Unavailable } from "./contract";
 
 const DAYS_PER_WEEK = 7;
 
-/** 하루에 표시하는 항목 하나입니다. 배정은 서버가 계산한 항목이고, 예약과 불가능 일정은 사용자가 등록한 항목입니다. */
+/** 하루에 표시하는 항목 하나입니다. 배정은 서버가 계산한 항목, 전체합주는 기간 설정에서 온 항목이고,
+ *  예약과 불가능 일정은 사용자가 등록한 항목입니다. */
 export type Entry = {
-  kind: "assign" | "book" | "off";
+  kind: "assign" | "book" | "off" | "ensemble";
   team: string | null;
   room?: string;
   who?: string;
@@ -30,12 +31,56 @@ export type DayEntries = Record<string, Entry[]>;
 /** 달력 화면의 탭입니다. 내 일정, 예약, 전체 일정 순서입니다. */
 export type DayTab = "me" | "book" | "all";
 
-/** 그날 화면에 표시할 항목만 선택합니다. 내 일정 탭은 내 팀의 배정과 내 불가능 시간, 전체 일정 탭은 배정·예약 전부입니다. */
+/** 그날 화면에 표시할 항목만 선택합니다. 내 일정 탭은 내 팀의 배정·전체합주·내 불가능 시간,
+ *  전체 일정 탭은 배정·전체합주·예약 전부입니다. 전체합주는 모든 멤버의 일정이라 두 탭 모두에 있습니다. */
 export function visible(entries: Entry[], tab: DayTab, teams: DayTeam[]): Entry[] {
   const mine = new Set(teams.filter((team) => team.mine).map((team) => team.key));
   return tab === "me"
-    ? entries.filter((entry) => entry.kind === "off" || (entry.team !== null && mine.has(entry.team)))
+    ? entries.filter((entry) => entry.kind === "off" || entry.kind === "ensemble"
+      || (entry.team !== null && mine.has(entry.team)))
     : entries.filter((entry) => entry.kind !== "off");
+}
+
+/** 그날의 전체합주입니다. custom 이 true 면 날짜별로 지정한 시각이고, false 면 기본 시각입니다. */
+export type EnsembleOn = {
+  periodId: number; roomId: number; startsAt: string; endsAt: string; custom: boolean;
+};
+
+/** day 가 어느 기간의 전체합주 날짜 범위에 속하면 그 시각을, 아니면 null 을 반환합니다.
+ *  서버가 집중 합주기간끼리의 겹침을 거절하므로 속하는 기간은 하나뿐입니다. */
+export function ensembleOn(periods: Period[], day: string): EnsembleOn | null {
+  const period = periods.find((item) =>
+    item.ensemble !== null && day >= item.ensemble.starts_on && day <= item.ensemble.ends_on);
+  if (period?.ensemble == null) return null;
+  const { ensemble } = period;
+  const own = ensemble.days.find((item) => item.day === day);
+  return {
+    periodId: period.id,
+    roomId: ensemble.room_id,
+    startsAt: own?.starts_at ?? ensemble.starts_at,
+    endsAt: own?.ends_at ?? ensemble.ends_at,
+    custom: own !== undefined,
+  };
+}
+
+/** days 중 전체합주 날짜마다 항목 하나를 담습니다. 서버는 기간마다 날짜 범위 하나만 주므로 표시 중인 날짜 위에 전개합니다. */
+export function ensembleByDay(
+  periods: Period[], rooms: Room[], openHour: number, days: string[],
+): DayEntries {
+  const byDay: DayEntries = {};
+  for (const day of days) {
+    const on = ensembleOn(periods, day);
+    if (on === null) continue;
+    byDay[day] = [{
+      kind: "ensemble",
+      team: null,
+      room: rooms.find((room) => room.id === on.roomId)?.name,
+      who: "전체합주",
+      a: slotIndex(`${day}T${on.startsAt}`, openHour),
+      b: slotIndex(`${day}T${on.endsAt}`, openHour),
+    }];
+  }
+  return byDay;
 }
 
 /** 확정된 시간표를 합주 한 번씩으로 합친 뒤 날짜별로 담습니다. 서버는 slot(1시간 단위 시간 칸)으로 주므로 맞닿은 slot 을 먼저 연결해야
