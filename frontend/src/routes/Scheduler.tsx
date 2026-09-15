@@ -6,7 +6,7 @@ import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from "../components/icons";
 import { getJSON } from "../lib/api";
 import { currentMonth, slotSteps } from "../lib/calendar";
-import { focusedRange, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
+import { focusedRanges, inRanges, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
 import { MonthView, WeekView } from "./SchedulerViews";
 import {
@@ -105,7 +105,7 @@ export function Scheduler() {
 
   const teams = teamsOf(rows, teamIds, allTeams);
   const { open, close } = roomBounds(rooms.data?.rooms ?? []);
-  const focus = focusedRange(periods.data?.periods ?? []);
+  const focus = focusedRanges(periods.data?.periods ?? []);
   const slotCount = slotCountOf(open, close);
   // 예약 탭의 시작·끝 선택지는 저장소 설정(slot_minutes) 간격입니다.
   const steps = slotSteps(slotCount, useSlotMinutes());
@@ -127,7 +127,7 @@ export function Scheduler() {
     void queryClient.invalidateQueries({ queryKey: ["reservations"] });
   };
 
-  const inFocus = (key: string) => focus !== null && key >= focus.from && key <= focus.to;
+  const inFocus = (key: string) => inRanges(focus, key);
   const label = (index: number) => slotLabel(index, open);
   const endLabel = (index: number) => (index >= slotCount ? `${close}:00` : label(index));
   const range = from !== null && to !== null ? { from, to } : null;
@@ -227,8 +227,8 @@ export function Scheduler() {
             {tab === "me" ? <span><i style={{ background: "var(--off)" }} />나의 불가능 일정</span> : null}
           </div>
           <div id="bandSlot">
-            {focus === null ? null : (
-              <span className="band"><ClockIcon />현재 집중합주 기간 <b>{focus.from} ~ {focus.to}</b> · 자동 스케줄링</span>
+            {focus.length === 0 ? null : (
+              <span className="band"><ClockIcon />집중합주 기간 <b>{focus.map((range) => `${range.from} ~ ${range.to ?? "매일"}`).join(", ")}</b> · 자동 스케줄링</span>
             )}
           </div>
         </div>

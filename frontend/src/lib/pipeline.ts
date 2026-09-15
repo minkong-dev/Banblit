@@ -7,8 +7,9 @@ import {
   datesBetween,
   dayLabel,
   dayWithWeekday,
-  focusedRange,
+  focusedRanges,
   hoursLabel,
+  inRanges,
   isRangeFree,
   monthCells,
   roomBounds,
@@ -99,8 +100,8 @@ export function daysBetween(from: string, to: string): number {
 }
 
 // 스케줄러 화면이 사용하는 계산입니다. 합주실과 기간 사이에 순서 의존이 없어 그대로 export 합니다.
-// roomBounds()는 달력의 여닫는 시각을, focusedRange()는 자동 배정 띠의 날짜 범위를 반환합니다.
-export { focusedRange, roomBounds };
+// roomBounds()는 달력의 여닫는 시각을, focusedRanges()는 자동 배정 띠의 날짜 범위 전부를 반환합니다.
+export { focusedRanges, inRanges, roomBounds };
 
 type PostForm = { title: string; body: string };
 
