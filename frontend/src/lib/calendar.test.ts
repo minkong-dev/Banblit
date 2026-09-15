@@ -5,8 +5,9 @@ import {
   datesBetween,
   dayLabel,
   dayWithWeekday,
-  focusedRange,
+  focusedRanges,
   hoursLabel,
+  inRanges,
   isRangeFree,
   monthCells,
   roomBounds,
@@ -170,17 +171,35 @@ describe("roomBounds — 합주실 여닫는 시각으로 달력의 앞뒤를 �
   });
 });
 
-describe("focusedRange — 집중 합주기간의 날짜 범위", () => {
-  it("여럿이면 시작일이 가장 이른 것을 고른다", () => {
-    expect(focusedRange([
-      { kind: "focused", starts_on: "2026-09-21", ends_on: "2026-09-27" },
-      { kind: "focused", starts_on: "2026-09-14", ends_on: "2026-09-20" },
-      { kind: "open", starts_on: "2026-01-01", ends_on: "2026-12-31" },
-    ])).toEqual({ from: "2026-09-14", to: "2026-09-20" });
+describe("focusedRanges — 집중 합주기간의 날짜 범위", () => {
+  it("집중기간 전부를 시작일 순서로 반환하고 상시 개방은 제외한다", () => {
+    expect(focusedRanges([
+      { kind: "focused", starts_on: "2026-09-21", ends_on: "2026-09-27", everyday: false },
+      { kind: "focused", starts_on: "2026-09-14", ends_on: "2026-09-20", everyday: false },
+      { kind: "open", starts_on: "2026-01-01", ends_on: "2026-12-31", everyday: false },
+    ])).toEqual([
+      { from: "2026-09-14", to: "2026-09-20" },
+      { from: "2026-09-21", to: "2026-09-27" },
+    ]);
   });
 
-  it("집중기간이 없으면 null", () => {
-    expect(focusedRange([{ kind: "open", starts_on: "2026-01-01", ends_on: "2026-12-31" }])).toBeNull();
+  it("매일 기간은 종료일이 없어 to 가 null 이다", () => {
+    expect(focusedRanges([
+      { kind: "focused", starts_on: "2026-09-14", ends_on: "2026-09-14", everyday: true },
+    ])).toEqual([{ from: "2026-09-14", to: null }]);
+  });
+});
+
+describe("inRanges", () => {
+  const ranges = [{ from: "2026-09-14", to: "2026-09-20" }, { from: "2026-10-01", to: null }];
+
+  it("어느 범위든 양 끝 날짜를 포함해 속하면 true", () => {
+    expect(inRanges(ranges, "2026-09-20")).toBe(true);
+    expect(inRanges(ranges, "2027-05-05")).toBe(true);
+  });
+
+  it("범위 사이의 날짜는 false", () => {
+    expect(inRanges(ranges, "2026-09-25")).toBe(false);
   });
 });
 

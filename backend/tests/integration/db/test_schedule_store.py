@@ -209,10 +209,11 @@ def test_two_periods_do_not_interfere(db_session: Session) -> None:
     """한 기간의 저장·오래된 백업 삭제·rollback 은 다른 기간의 현행·백업을 변경하지 않습니다."""
     period1_id, team1_id, room1_id = _scaffold(db_session)
 
+    # 집중 합주기간끼리 날짜가 겹칠 수 없어(migration b5e1d9a37c42) period1(8/1~8/14) 뒤에 둡니다.
     period2 = Period(
         kind="focused",
-        starts_on=date(2026, 8, 1),
-        ends_on=date(2026, 8, 14),
+        starts_on=date(2026, 8, 15),
+        ends_on=date(2026, 8, 28),
         everyday=False,
         first_run_at=time(9, 0),
         second_run_at=time(21, 0),

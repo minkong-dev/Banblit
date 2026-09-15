@@ -270,11 +270,12 @@ def test_team_without_members_is_rejected(db_session: Session) -> None:
 def test_overlapping_period_room_conflict_is_rejected_not_500(
     db_session: Session,
 ) -> None:
-    """날짜가 겹치는 두 기간이 같은 합주실·같은 시각을 사용하면 (room_id, starts_at) unique
-    제약을 위반합니다. 사용자가 만들 수 있는 상황이므로 500 이 아니라 422(ValueError)로
-    거부되어야 하고, 첫 번째 기간의 현행 시간표는 그대로 남아 있어야 합니다."""
+    """배정을 저장한 기간 A 의 날짜를 변경하면 A 의 배정은 옛 날짜에 남습니다. 비워진 날짜에 만든
+    기간 B 가 같은 합주실·같은 시각을 사용하면 저장 제약을 위반합니다. 사용자가 만들 수 있는 상황이므로
+    500 이 아니라 422(ValueError)로 거부되어야 하고, 첫 번째 기간의 현행 시간표는 그대로 남아 있어야 합니다.
+
+    집중 합주기간끼리는 날짜가 겹칠 수 없으므로(migration b5e1d9a37c42) 날짜 변경으로 재현합니다."""
     period_a = _period(db_session)
-    period_b = _period(db_session)
     team_a = _team_with_member(db_session, "A", "김민수")
     team_b = _team_with_member(db_session, "B", "이영희")
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
@@ -283,6 +284,12 @@ def test_overlapping_period_room_conflict_is_rejected_not_500(
         db_session, period_a, [team_a], [room_id], saved_at=SAVED_AT
     )
     assert first.saved is True
+
+    moved = db_session.get(Period, period_a)
+    assert moved is not None
+    moved.starts_on, moved.ends_on = date(2026, 9, 1), date(2026, 9, 1)
+    db_session.flush()
+    period_b = _period(db_session)
 
     with pytest.raises(ValueError, match="이미"):
         assign_period(db_session, period_b, [team_b], [room_id], saved_at=SAVED_AT)

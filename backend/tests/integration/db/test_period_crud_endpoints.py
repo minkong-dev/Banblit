@@ -299,6 +299,78 @@ def test_period_delete_also_removes_its_assignment_runs(
     assert db_session.scalars(select(AssignmentRun)).all() == []
 
 
+def _focused_body(starts_on: str, ends_on: str, everyday: bool = False) -> dict[str, object]:
+    return {
+        "kind": "focused",
+        "starts_on": starts_on,
+        "ends_on": ends_on,
+        "everyday": everyday,
+        "first_run_at": "09:00",
+        "second_run_at": "21:00",
+    }
+
+
+def test_focused_period_overlapping_another_focused_period_is_rejected(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """집중 합주기간끼리는 하루라도 겹치면 등록을 거절합니다(patch_note 8번). 종료일 당일도 겹침입니다."""
+    _, head = account(*HEAD)
+    _period(db_session, date(2026, 9, 1), date(2026, 9, 10), kind="focused")
+    db_session.commit()
+
+    response = api_client.post(
+        "/periods", json=_focused_body("2026-09-10", "2026-09-20"), cookies=head
+    )
+
+    assert response.status_code == 422
+    assert "겹" in response.json()["detail"]
+
+
+def test_everyday_focused_period_overlaps_every_later_focused_period(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """"매일" 기간은 종료일이 없으므로(사용자 결정 2026-09-11) 저장된 종료일 뒤의 기간과도 겹칩니다."""
+    _, head = account(*HEAD)
+    created = api_client.post(
+        "/periods", json=_focused_body("2026-09-01", "2026-09-01", everyday=True), cookies=head
+    )
+    assert created.status_code == 201
+
+    response = api_client.post(
+        "/periods", json=_focused_body("2027-01-01", "2027-01-05"), cookies=head
+    )
+
+    assert response.status_code == 422
+
+
+def test_focused_period_patched_into_an_overlap_is_rejected(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+    _period(db_session, date(2026, 9, 1), date(2026, 9, 10), kind="focused")
+    later = _period(db_session, date(2026, 9, 20), date(2026, 9, 30), kind="focused")
+    db_session.commit()
+
+    response = api_client.patch(
+        f"/periods/{later.id}", json={"starts_on": "2026-09-05"}, cookies=head
+    )
+
+    assert response.status_code == 422
+    assert "겹" in response.json()["detail"]
+
+
+def test_open_period_may_overlap_a_focused_period(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+    _period(db_session, date(2026, 9, 1), date(2026, 9, 30), kind="focused")
+    db_session.commit()
+
+    response = api_client.post("/periods", json=_NEW_PERIOD, cookies=head)
+
+    assert response.status_code == 201
+
+
 _NEW_PERIOD = {
     "kind": "open",
     "starts_on": "2026-09-14",

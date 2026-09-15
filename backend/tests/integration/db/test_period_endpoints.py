@@ -490,20 +490,11 @@ def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
     재현 순서:
     1) 기간 A 를 1번방으로 배정합니다. 현행 = 1번방
     2) 기간 A 를 2번방으로 다시 배정합니다. 백업 = 1번방, 현행 = 2번방(1번방 자리가 빕니다)
-    3) 기간 B 를 1번방으로 배정합니다. 충돌 없이 성공합니다.
-    4) 기간 A 를 되돌립니다. 1번방 백업을 복원하려다 기간 B 와 충돌합니다.
+    3) 기간 A 의 날짜를 변경하고, 비워진 8/1~8/2 에 기간 B 를 만들어 1번방으로 배정합니다. 충돌 없이 성공합니다.
+       집중 합주기간끼리는 날짜가 겹칠 수 없어(migration b5e1d9a37c42) 날짜 변경으로 재현합니다.
+    4) 기간 A 를 되돌립니다. 옛 날짜의 1번방 백업을 복원하려다 기간 B 와 충돌합니다.
     """
     period_a = _period(db_session)  # 8/1 ~ 8/2
-    period_b = Period(
-        kind="focused",
-        starts_on=date(2026, 8, 1),
-        ends_on=date(2026, 8, 2),
-        everyday=False,
-        first_run_at=time(9, 0),
-        second_run_at=time(21, 0),
-    )
-    db_session.add(period_b)
-    db_session.flush()
 
     team_a = _team_with_member(db_session, "A", "김민수")
     team_b = _team_with_member(db_session, "B", "이영희")
@@ -524,6 +515,21 @@ def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
         json={"team_ids": [team_a], "room_ids": [room_2.id]},
     )
     assert poll_job(r2.json()["job"]["id"])["result"]["saved"] is True
+
+    moved = db_session.get(Period, period_a)
+    assert moved is not None
+    moved.starts_on, moved.ends_on = date(2026, 9, 1), date(2026, 9, 2)
+    db_session.flush()
+    period_b = Period(
+        kind="focused",
+        starts_on=date(2026, 8, 1),
+        ends_on=date(2026, 8, 2),
+        everyday=False,
+        first_run_at=time(9, 0),
+        second_run_at=time(21, 0),
+    )
+    db_session.add(period_b)
+    db_session.commit()
 
     r3 = api_client.post(
         f"/periods/{period_b.id}/assign",
