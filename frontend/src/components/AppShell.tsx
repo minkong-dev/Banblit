@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
 import { NotificationMenu } from "./NotificationMenu";
-import { useDismissible, useMe, useMyTeams, usePage } from "./hooks";
+import { useDismissible, usePage } from "./hooks";
+import { useMe, useMyTeams } from "./queries";
 import { useToast } from "../lib/toast";
 import { can, roleLabel } from "../lib/account";
 import { getJSON, logOut } from "../lib/pipeline";
@@ -145,7 +146,7 @@ export function ProfileMenu() {
     })),
   });
 
-  // 서버 호출이 실패해도 로그인 화면으로 이동합니다. 표시용 cookie 가 남아 있어도
+  // 서버 호출이 실패해도 로그인 화면으로 이동합니다. 표시용 cookie(브라우저가 저장해 요청마다 함께 보내는 값)가 남아 있어도
   // 다음 요청은 401 로 거절되므로 현재 화면을 유지할 이유가 없습니다.
   async function handleLogOut(): Promise<void> {
     setOpen(false);

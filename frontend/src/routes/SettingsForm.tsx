@@ -77,6 +77,17 @@ export function Cell(props: { label: string; htmlFor: string; wide?: boolean; ch
   );
 }
 
+/** 카드의 제목 줄입니다. 제목, 설명, 오른쪽 부속(children — 필터·이전/다음 버튼)을 표시합니다. 카드 10개가 같은 부품을 사용합니다. */
+export function SectionHead({ title, desc, children }: { title: string; desc: string; children?: ReactNode }) {
+  return (
+    <div className="sethead">
+      <b>{title}</b>
+      <span>{desc}</span>
+      {children}
+    </div>
+  );
+}
+
 export function CardState({ state, empty }: { state: LoadState; empty: string }) {
   return <div className="empty">{stateText(state, empty)}</div>;
 }

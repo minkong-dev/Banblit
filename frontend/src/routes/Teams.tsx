@@ -6,7 +6,8 @@ import { Pager } from "../components/Pager";
 import { Modal, Stepper } from "../components/Modal";
 import { MemberSearch } from "../components/MemberSearch";
 import { PencilIcon, SearchIcon, TrashIcon } from "../components/icons";
-import { useFitCount, useMe, useTeams } from "../components/hooks";
+import { useFitCount } from "../components/hooks";
+import { useMe, useTeams } from "../components/queries";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { say } from "../lib/toast";
 import { askDelete } from "../lib/confirm";
@@ -17,6 +18,7 @@ import { checkSlotCounts, checkTeamName, memberLabel, slotName } from "../lib/pi
 import { INSTRUMENTS } from "../lib/contract";
 import { MAX_SLOTS_PER_TEAM } from "../lib/roster";
 import type { Instrument, Member, Team, TeamSlot } from "../lib/contract";
+import { SectionHead } from "./SettingsForm";
 import "../styles/teams.css";
 
 
@@ -496,10 +498,7 @@ export function Teams() {
     >
       <div className="main">
         <Card>
-          <div className="sethead">
-            <b>팀</b>
-            <span>팀을 눌러 포지션을 확인해주세요</span>
-          </div>
+          <SectionHead title="팀" desc="팀을 눌러 포지션을 확인해주세요" />
 
           {/* 데이터가 비어 있거나 로딩 중이어도 컨테이너는 그대로 유지합니다. 컨테이너 높이를 측정하여 한 페이지의 행 수를 결정하므로,
               컨테이너가 사라지면 측정할 대상이 없어집니다. */}

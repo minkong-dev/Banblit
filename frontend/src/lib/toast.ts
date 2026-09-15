@@ -28,7 +28,12 @@ export function say(message: string): void {
   emit();
 }
 
-/** 현재 표시할 문구입니다. 없으면 빈 문자열입니다. */
+/** 현재 표시할 문구를 반환합니다. 없으면 빈 문자열입니다. */
+export function readToast(): string {
+  return current;
+}
+
+/** 현재 표시할 문구입니다. 문구가 바뀌면 다시 렌더링합니다. */
 export function useToast(): string {
-  return useSyncExternalStore(subscribe, () => current, () => "");
+  return useSyncExternalStore(subscribe, readToast, () => "");
 }

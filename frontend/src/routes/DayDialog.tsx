@@ -1,9 +1,8 @@
 import { useState } from "react";
-import type { CSSProperties } from "react";
 import { useQueries } from "@tanstack/react-query";
 
 import { Modal } from "../components/Modal";
-import { CheckIcon, TrashIcon } from "../components/icons";
+import { CheckIcon } from "../components/icons";
 import { askCancel, askDelete } from "../lib/confirm";
 import {
   addReservation,
@@ -13,30 +12,15 @@ import {
   isoAt,
   loadTeamMembers,
   removeUnavailable,
-  slotLabel,
   takenGrid,
 } from "../lib/pipeline";
 import type { RepeatCycle } from "../lib/pipeline";
 import type { Room } from "../lib/contract";
-import { say } from "../lib/toast";
+import type { DayTab, Entry } from "../lib/dayEntries";
 import type { DayTeam } from "../lib/roster";
-
-/** 하루에 표시하는 항목 하나입니다. 배정은 서버가 계산한 항목이고, 예약과 불가능 일정은 사용자가 등록한 항목입니다. */
-export type Entry = {
-  kind: "assign" | "book" | "off";
-  team: string | null;
-  room?: string;
-  who?: string;
-  a: number;
-  b: number;
-  /** 로그인한 사용자가 삭제할 수 있는 불가능 일정이면, 삭제할 때 서버에 넘길 id 입니다.
-   *  없으면 반복으로 전개한 항목이라 화면에서 삭제하지 못합니다. */
-  removeIds?: number[];
-  /** 로그인한 사용자가 취소할 수 있는 예약이면 그 예약의 번호입니다. 없으면 다른 사용자의
-   *  예약이거나 서버가 배정한 일정이라 화면에서 취소하지 못합니다. */
-  bookingId?: number;
-};
-
+import { say } from "../lib/toast";
+import { DayPeople, DayTimeline, MyEntriesList, SlotPicker, entryName, slotLabels } from "./DayDialogParts";
+import type { SlotRange } from "./DayDialogParts";
 
 function hourText(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;
@@ -48,14 +32,12 @@ const REPEAT_CHOICES: readonly { key: Exclude<RepeatCycle, "none">; label: strin
   { key: "weekly", label: "매주 이 시간은 불가능해요" },
 ];
 
-function kindLabel(entry: Entry): string {
-  if (entry.kind === "assign") return "자동 배정";
-  return entry.kind === "book" ? "예약" : "불가능 일정";
-}
-
-export function DayDialog(props: {
+export function DayDialog({
+  dayKey, tab, teams, entries, openHour, closeHour, slotCount, fixed, inFocus,
+  memberId, myName, rooms, onSaved, onClose,
+}: {
   dayKey: string;
-  tab: "me" | "book" | "all";
+  tab: DayTab;
   teams: DayTeam[];
   entries: Entry[];
   openHour: number;
@@ -73,9 +55,6 @@ export function DayDialog(props: {
   onSaved: () => void;
   onClose: () => void;
 }) {
-  const { dayKey, tab, teams, entries, openHour, closeHour, slotCount, fixed, inFocus } = props;
-  const { memberId, myName, rooms, onSaved, onClose } = props;
-
   const [error, setError] = useState("");
   const [who, setWho] = useState("me");
   const [roomId, setRoomId] = useState<number | null>(null);
@@ -83,18 +62,14 @@ export function DayDialog(props: {
   const [repeat, setRepeat] = useState<RepeatCycle>("none");
   const [offReason, setOffReason] = useState("");
   // 시각 두 시간 칸입니다. 기본은 그날 여는 칸부터 닫는 칸까지 전부입니다.
-  const [off, setOff] = useState({ a: 0, b: slotCount });
-  const [book, setBook] = useState({ a: 0, b: slotCount });
+  const [off, setOff] = useState<SlotRange>({ a: 0, b: slotCount });
+  const [book, setBook] = useState<SlotRange>({ a: 0, b: slotCount });
 
-  // 아직 아무것도 선택하지 않았으면 목록의 첫 합주실입니다. dialog 를 열자마자 합주실 하나는 선택되어 있어야 합니다.
+  // 아직 아무것도 선택하지 않았으면 목록의 첫 합주실입니다. dialog(화면 위에 뜨는 대화 상자)를 열자마자 합주실 하나는 선택되어 있어야 합니다.
   const room = rooms.find((item) => item.id === roomId) ?? rooms[0] ?? null;
 
-  const label = (index: number) => slotLabel(index, openHour);
-  const endLabel = (index: number) => (index >= slotCount ? `${closeHour}:00` : label(index));
-  const nameOf = (entry: Entry) =>
-    entry.kind === "off"
-      ? entry.who ?? "불가능 일정"
-      : teams.find((team) => team.key === entry.team)?.name ?? entry.who ?? "개인";
+  const hours = { openHour, closeHour, slotCount };
+  const { label, endLabel } = slotLabels(openHour, closeHour, slotCount);
 
   const booked = entries.filter((entry) => entry.kind !== "off");
   // 선착순은 합주실마다 따로 계산합니다. 선택한 합주실에 등록된 항목만 그 시각을 차단합니다.
@@ -108,29 +83,9 @@ export function DayDialog(props: {
     (entry) => entry.removeIds !== undefined || entry.bookingId !== undefined
       || (entry.team !== null && teams.some((t) => t.key === entry.team && t.mine)),
   );
-
   // 로그인한 사용자가 삭제할 수 있는 항목만 모읍니다. 다른 사용자의 예약과 서버가 배정한 항목에는 removeIds 가 없습니다.
   const removable = entries.filter(
     (entry) => entry.removeIds !== undefined || entry.bookingId !== undefined,
-  );
-
-  /** 하루를 세로 띠로 표시합니다. 시각은 왼쪽에 시간 단위로만 적습니다. */
-  const timeline = (list: Entry[]) => (
-    <div className="tlscroll"><div className="tl">
-      {Array.from({ length: closeHour - openHour }, (_, i) => openHour + i).map((hour) => (
-        <div className="hr" data-h={`${hour}:00`} key={hour} />
-      ))}
-      {list.map((entry, index) => (
-        <span
-          className={`evb ${entry.team ? `${entry.team}` : "off"}`}
-          style={{ "--from": entry.a, "--span": entry.b - entry.a } as CSSProperties}
-          key={index}
-        >
-          {nameOf(entry)}
-          <small>{label(entry.a)}–{endLabel(entry.b)} · {kindLabel(entry)}</small>
-        </span>
-      ))}
-    </div></div>
   );
 
   const roomsLabel = [...new Set(booked.map((entry) => entry.room).filter(Boolean))].join(" · ");
@@ -148,51 +103,14 @@ export function DayDialog(props: {
     (rosters[index]?.data ?? []).map((member) => ({ team, member })));
   const rosterError = rosters.find((query) => query.isError)?.error;
 
-  /** 시작 시각과 종료 시각을 선택하는 입력입니다. 이미 예약된 slot 은 선택할 수 없게 차단합니다. */
-  const picker = (
-    prefix: string,
-    range: { a: number; b: number },
-    setRange: (next: { a: number; b: number }) => void,
-    lock: boolean,
-  ) => (
-    <div className="pick">
-      <div className="fld">
-        <label htmlFor={`${prefix}-from`}>시작</label>
-        <select
-          id={`${prefix}-from`}
-          value={range.a}
-          onChange={(event) => setRange({ ...range, a: Number(event.target.value) })}
-        >
-          {Array.from({ length: slotCount }, (_, i) => i).map((slot) => (
-            <option value={slot} key={slot} disabled={lock && grid[slot]}>
-              {label(slot)}{lock && grid[slot] ? " (찼어요)" : ""}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="fld">
-        <label htmlFor={`${prefix}-to`}>끝</label>
-        <select
-          id={`${prefix}-to`}
-          value={range.b}
-          onChange={(event) => setRange({ ...range, b: Number(event.target.value) })}
-        >
-          {Array.from({ length: slotCount }, (_, i) => i + 1).map((slot) => (
-            <option value={slot} key={slot}>{endLabel(slot)}</option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
-
-  /** 등록한 항목 하나를 지웁니다. 예약은 번호 하나로 통째로 취소하고, 불가능 일정은 그 행의 id 로 삭제합니다. */
+  /** 등록한 항목 하나를 삭제합니다. 예약은 번호 하나로 통째로 취소하고, 불가능 일정은 그 행의 id 로 삭제합니다. */
   const removeEntry = async (entry: Entry) => {
     if (memberId === null) return;
     const when = `${label(entry.a)}–${endLabel(entry.b)}`;
     const bookingId = entry.bookingId;
     const booking = bookingId !== undefined;
     if (booking) {
-      if (!askCancel(`${nameOf(entry)} ${when} 예약`)) return;
+      if (!askCancel(`${entryName(entry, teams)} ${when} 예약`)) return;
     } else if (entry.removeIds !== undefined) {
       if (!askDelete(`${when} 불가능 일정`)) return;
     } else {
@@ -211,32 +129,6 @@ export function DayDialog(props: {
     onSaved();
     say(booking ? "예약을 취소했어요" : "해당 불가능 일정을 삭제했어요");
   };
-
-  /** 타임라인 아래의 목록입니다. 로그인한 사용자가 이날 등록한 항목만 나열해 삭제할 수 있게 합니다.
-   *  막대 안에 삭제 버튼을 넣지 않는 이유는 1시간 slot 막대가 14px 이라 클릭 영역이 없기 때문입니다. */
-  const myList = removable.length === 0 ? null : (
-    <div className="people">
-      <h3>등록된 불가능 일정</h3>
-      <ul className="mlist">
-        {removable.map((entry) => (
-          <li className="prow" key={`${entry.kind}-${entry.bookingId ?? entry.removeIds?.[0] ?? entry.a}`}>
-            <i className={`dot ${entry.team ?? "off"}`} aria-hidden="true" />
-            <span className="nm">{entry.kind === "book" ? nameOf(entry) : "불가능 일정"}</span>
-            <span className="ps">{label(entry.a)}–{endLabel(entry.b)}</span>
-            <button
-              className="ic danger"
-              aria-label={entry.kind === "book"
-                ? `${nameOf(entry)} ${label(entry.a)}–${endLabel(entry.b)} 예약 취소`
-                : `${label(entry.a)}–${endLabel(entry.b)} 불가능 일정 삭제`}
-              onClick={() => { void removeEntry(entry); }}
-            >
-              <TrashIcon />
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
 
   const addOff = async () => {
     const { a, b } = off;
@@ -263,7 +155,7 @@ export function DayDialog(props: {
   const addBooking = async () => {
     const { a, b } = fixed ? { a: fixed.from, b: fixed.to } : book;
     if (b <= a) { setError("끝 시간을 시작 시간 이후로 설정해주세요."); return; }
-    // 선착순이므로 이미 예약된 slot 이 하나라도 있으면 먼저 거부해 서버를 호출하지 않습니다.
+    // 선착순이므로 이미 예약된 slot 이 하나라도 있으면 먼저 거절해 서버를 호출하지 않습니다.
     // 두 사람이 동시에 시도해 이 검증을 둘 다 통과해도, 최종 판정은 서버(unique
     // 제약)가 하므로 아래 catch 에서 서버가 반환한 사유를 그대로 표시합니다.
     for (let i = a; i < b; i += 1) {
@@ -293,41 +185,19 @@ export function DayDialog(props: {
   const body =
     tab === "all" ? (
       booked.length
-        ? <>{timeline(booked)}
-            {dayTeams.length === 0 ? null : (
-              <div className="people"><h3>참여 멤버</h3>
-                {rosterError === undefined ? (
-                  <div className="plist">
-                    {dayPeople.map(({ team, member }) => (
-                      <div className="prow" key={`${team.id}-${member.id}`}>
-                        <span
-                          className="pic"
-                          style={{ background: `var(--${team.key}-tint)`, color: `var(--${team.key})` }}
-                        >
-                          {member.name.slice(0, 2)}
-                        </span>
-                        <span className="nm">{member.name} <i>{team.name}</i></span>
-                        <span className="ps">{member.cohort === null ? "" : `${member.cohort}기`}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="msg">
-                    {rosterError instanceof Error ? rosterError.message : "멤버 리스트를 불러오지 못했어요."}
-                  </p>
-                )}
-              </div>
-            )}
+        ? <>
+            <DayTimeline list={booked} teams={teams} {...hours} />
+            {dayTeams.length === 0 ? null : <DayPeople people={dayPeople} error={rosterError} />}
           </>
         : <div className="blank"><b>현재 예약이 없어요</b></div>
     ) : tab === "me" ? (
       <>
         {mine.length
-          ? timeline(mine)
+          ? <DayTimeline list={mine} teams={teams} {...hours} />
           : <div className="blank"><b>등록된 일정이 없어요</b><p>불가능 일정을 등록해주세요.</p></div>}
-        {myList}
+        <MyEntriesList entries={removable} teams={teams} onRemove={(entry) => { void removeEntry(entry); }} {...hours} />
         <p className="cap2">불가능 일정</p>
-        {picker("off", off, setOff, false)}
+        <SlotPicker prefix="off" range={off} onChange={setOff} grid={grid} lock={false} {...hours} />
         <label className="offwhy" htmlFor="offReason">
           사유
           <input
@@ -363,7 +233,7 @@ export function DayDialog(props: {
       <>
         {fixed
           ? <div className="bigtime"><b>{label(fixed.from)} – {endLabel(fixed.to)}</b><small>해당 시간으로 예약할게요</small></div>
-          : timeline(booked)}
+          : <DayTimeline list={booked} teams={teams} {...hours} />}
         {/* 합주실을 먼저 선택합니다. 아래 시각 선택이 그 합주실의 예약된 slot 만 차단합니다. */}
         <p className="cap2">합주실을 선택해주세요</p>
         <div className="pick">
@@ -378,7 +248,12 @@ export function DayDialog(props: {
             </select>
           </div>
         </div>
-        {fixed ? null : <><p className="cap2">예약할 시간을 선택해주세요</p>{picker("book", book, setBook, true)}</>}
+        {fixed ? null : (
+          <>
+            <p className="cap2">예약할 시간을 선택해주세요</p>
+            <SlotPicker prefix="book" range={book} onChange={setBook} grid={grid} lock {...hours} />
+          </>
+        )}
         <p className="cap2">예약자를 지정해주세요</p>
         <div className="who2">
           <button aria-pressed={who === "me"} onClick={() => setWho("me")}>{myName} (나)</button>

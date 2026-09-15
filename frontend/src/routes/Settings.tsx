@@ -10,7 +10,7 @@ import { formError, loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { say } from "../lib/toast";
 import { checkPeriod, checkRoom, daysBetween, openingHours, periodBody } from "../lib/pipeline";
-import { useMe, usePeriods, useRooms, useSlotMinutes, useTeams } from "../components/hooks";
+import { useMe, usePeriods, useRooms, useSlotMinutes, useTeams } from "../components/queries";
 import { can } from "../lib/account";
 import { applyTheme, readSavedTheme } from "../lib/theme";
 import type { Theme } from "../lib/theme";
@@ -24,6 +24,7 @@ import {
   Row,
   useFirstField,
   useForm,
+  SectionHead,
   useRowFocus,
 } from "./SettingsForm";
 import "../styles/settings.css";
@@ -74,10 +75,7 @@ function ThemeCard() {
 
   return (
     <Card>
-      <div className="sethead">
-        <b>테마</b>
-        <span>현재 브라우저에서의 테마를 지정해요</span>
-      </div>
+      <SectionHead title="테마" desc="현재 브라우저에서의 테마를 지정해요" />
       <div className="display">
         <div className="pick" role="group" aria-label="화면 밝기">
           {choices.map((choice) => (
@@ -313,10 +311,7 @@ function RoomCard(props: {
 
   return (
     <Card>
-      <div className="sethead">
-        <b>합주실</b>
-        <span>개방 및 마감시간은 정각으로만 설정이 가능해요</span>
-      </div>
+      <SectionHead title="합주실" desc="개방 및 마감시간은 정각으로만 설정이 가능해요" />
 
       {state.kind !== "ready" || rooms.length === 0 ? (
         <CardState state={state} empty="아직 등록된 합주실이 없어요" />
@@ -443,12 +438,7 @@ function PeriodCard(props: {
 
   return (
     <Card>
-      <div className="sethead">
-        <b>집중합주 기간</b>
-        <span>
-          자동 스케줄링을 진행할 기간을 설정해요
-        </span>
-      </div>
+      <SectionHead title="집중합주 기간" desc="자동 스케줄링을 진행할 기간을 설정해요" />
 
       {state.kind !== "ready" || periods.length === 0 ? (
         <CardState state={state} empty="아직 등록된 집중합주 기간이 없어요." />

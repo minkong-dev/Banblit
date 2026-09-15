@@ -118,8 +118,7 @@ export function datesBetween(from: string, to: string): string[] {
 }
 
 // ===== 날짜 표시 문자열 =====
-// 달·요일 이름을 배열로 보관하지 않고 Intl 에 맡깁니다. 화면 4개가 각자 변환하던 것을
-// 이 파일의 함수 3개로 모았습니다.
+// 달·요일 이름을 배열로 보관하지 않고 Intl 에 맡깁니다.
 
 const MONTH_DAY = new Intl.DateTimeFormat("ko", { month: "long", day: "numeric" });
 const MONTH_DAY_WEEKDAY = new Intl.DateTimeFormat("ko", {

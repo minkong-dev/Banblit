@@ -8,18 +8,13 @@
 
 import { CheckIcon } from "./icons";
 
-export function CheckMark(props: {
+export function CheckMark({ id, name, checked, onChange }: {
   id?: string;
   name?: string;
   /** 값을 부모가 들고 있으면 이 둘을 함께 전달합니다. 없으면 input이 자체적으로 관리합니다. */
   checked?: boolean;
   onChange?: (checked: boolean) => void;
-  defaultChecked?: boolean;
-  disabled?: boolean;
-  /** 감싸는 label 이 없을 때만 지정합니다. 스크린 리더가 읽을 이름이 없어지지 않게 하기 위해서입니다. */
-  label?: string;
 }) {
-  const { id, name, checked, onChange, defaultChecked, disabled, label } = props;
   return (
     <span className="chk">
       <input
@@ -27,9 +22,6 @@ export function CheckMark(props: {
         name={name}
         type="checkbox"
         checked={checked}
-        defaultChecked={defaultChecked}
-        disabled={disabled}
-        aria-label={label}
         onChange={(event) => onChange?.(event.target.checked)}
       />
       <CheckIcon className="chkmark" />

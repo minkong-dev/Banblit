@@ -34,7 +34,6 @@ const ALLOWED_EXTENSIONS = new Set([
 ]);
 
 // 사용자에게 표시하는 형식 목록입니다. 위 ALLOWED_EXTENSIONS 를 전부 적으면 읽기 어려워 자주 쓰는 확장자만 적습니다.
-// 두 화면에 서로 다르게 적혀 있던 목록을 이 상수로 통일했습니다.
 const ALLOWED_TEXT = "이미지, 소리파일, 영상, 문서(md, txt, pdf, docx, ppt, pptx, hwp, xlsx, zip)";
 
 /** <input type="file"> 의 accept 에 그대로 넣는 값입니다. 허용 확장자를 정의하는 곳을 하나로 유지합니다.

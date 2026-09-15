@@ -1,6 +1,6 @@
 import { AppShell } from "../components/AppShell";
 import { PostBoard } from "../components/PostBoard";
-import { useMe } from "../components/hooks";
+import { useMe } from "../components/queries";
 
 import "../styles/board.css";
 import { can } from "../lib/account";

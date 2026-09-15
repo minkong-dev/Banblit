@@ -1,11 +1,11 @@
-// 설정 화면의 예약 구역입니다. 모든 멤버의 다가오는 예약을 한 표에서 보고, 어느 것이든 취소할 수 있습니다.
+// 설정 화면의 예약 구역입니다. 모든 멤버의 다가오는 예약을 한 표에서 보고, 어느 예약이든 취소할 수 있습니다.
 // "타 멤버 예약 수정 및 취소"(reservation_manage) 권한자에게만 이 탭이 표시됩니다.
 // 서버도 같은 권한으로 다른 멤버의 예약 취소를 받으므로 권한 검증이 일관성 있게 작동합니다(reservation_service.py _get_own_reservation).
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Card } from "../components/AppShell";
-import { useRooms } from "../components/hooks";
+import { useRooms } from "../components/queries";
 import { reason } from "../lib/api";
 import { askCancel } from "../lib/confirm";
 import {
@@ -18,9 +18,10 @@ import {
 } from "../lib/pipeline";
 import type { Booking } from "../lib/pipeline";
 import { say } from "../lib/toast";
+import { SectionHead } from "./SettingsForm";
 
-// ponytail: 현재 기준 지정한 일수 범위 내의 예약만 표시합니다. 예약 목록 endpoint가 합주실·날짜 범위 조건으로만 받으므로,
-// 합주실마다 한 번씩 순차적으로 호출합니다(loadReservationRows). 합주실 수가 증가하여 성능 저하가 발생하거나 더 먼 범위의
+// ponytail: 현재 기준 지정한 일수 범위 내의 예약만 표시합니다. 예약 목록 endpoint(API의 요청 주소 단위)가 합주실·날짜 범위 조건으로만 받으므로,
+// 합주실마다 요청을 하나씩 동시에 보냅니다(loadReservationRows). 합주실 수가 증가하여 성능 저하가 발생하거나 더 먼 범위의
 // 예약을 관리해야 하면 전체 목록 조회 endpoint를 새로 만듭니다. 그때까지는 현재 방식으로 충분합니다.
 const WINDOW_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -71,10 +72,7 @@ export function ReservationCards() {
 
   return (
     <Card>
-      <div className="sethead">
-        <b>예약</b>
-        <span>{WINDOW_DAYS}일 내에 발생한 모든 예약을 불러왔어요.</span>
-      </div>
+      <SectionHead title="예약" desc={`${WINDOW_DAYS}일 내에 발생한 모든 예약을 불러왔어요.`} />
 
       <div className="roster">
         {rooms.isError ? <p className="empty">{reason(rooms.error)}</p> : null}
