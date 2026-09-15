@@ -1,17 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-import { dateParts, findFocusedPeriods, loginForTests, weekdayKr } from "./helpers";
+import { dateParts, findFocusedPeriods, weekdayKr } from "./helpers";
 
-test.beforeEach(async ({ page, request }) => {
-  await loginForTests(page.request, request);
-});
-
-test("달력이 실제 데이터로 그려진다", async ({ page, request }) => {
-  const { withSchedule } = await findFocusedPeriods(request);
-  if (withSchedule === null) {
-    test.skip(true, "저장된 배정이 있는 집중 합주기간이 없어 건너뜀");
-    return;
-  }
+test("달력이 실제 데이터로 그려진다", async ({ page }) => {
+  // global-setup 이 오늘 날짜에 배정을 저장하므로 달력을 넘기지 않아도 그 칸이 이번 달에 있습니다.
+  const { withSchedule } = await findFocusedPeriods(page.request);
   const row = withSchedule.rows[0];
   const { year, month, day } = dateParts(row.start);
 
@@ -26,34 +19,23 @@ test("달력이 실제 데이터로 그려진다", async ({ page, request }) => 
   await expect(cell.locator("time").first()).toHaveText(/\d{1,2}:\d{2}/);
 });
 
-type Notification = { id: number; kind: string; created_at: string; read: boolean };
+type Notification = { id: number; read: boolean };
 
-// ponytail: 알림은 배정이 저장되거나 되돌리기가 완료될 때 서버가 생성합니다
-// (backend/api/routers/schedule.py, backend/jobs/auto_assign.py). 이 테스트는 알림을 새로
-// 만들지 않고, 서버가 반환한 알림과 화면이 표시하는 알림이 같은지만 확인합니다. 알림을 생성해
-// 두고 확인하려면 assignment.spec.ts 처럼 배정 계산을 실행해야 합니다.
-test("알림 칸이 목록 맨 위에 있고 서버가 준 내 알림과 같은 것을 보여준다", async ({
-  page,
-  request,
-}) => {
-  const { notifications } = (await (await request.get("/api/notifications")).json()) as {
+// 알림은 배정이 저장되거나 되돌리기가 완료될 때 서버가 그 팀 멤버에게 생성합니다
+// (backend/api/routers/schedule.py). global-setup 의 배정 저장이 E2E 계정에 알림을 남깁니다.
+test("알림 버튼이 서버가 준 내 알림을 보여주고 모두 읽음으로 바꾼다", async ({ page }) => {
+  const { notifications } = (await (await page.request.get("/api/notifications")).json()) as {
     notifications: Notification[];
   };
   const unread = notifications.filter((item) => !item.read).length;
+  expect(unread).toBeGreaterThan(0);
 
   await page.goto("/scheduler");
-  const panel = page.locator(".rail section.panel").first();
-  await expect(panel.locator(".ph")).toContainText("알림");
+  await page.getByRole("button", { name: `알림 · 안 읽음 ${unread}개` }).click();
 
-  if (notifications.length === 0) {
-    await expect(panel.getByText("새 알림이 없습니다")).toBeVisible();
-    return;
-  }
-  await expect(panel.locator("li")).toHaveCount(notifications.length);
-  if (unread === 0) return;
+  const popup = page.getByRole("dialog", { name: "알림" });
+  await expect(popup.locator("li")).toHaveCount(notifications.length);
 
-  // 알림 패널의 제목(.ph)을 클릭하면 전부 읽은 상태가 되고 '안 읽음 n' 표시가 사라집니다.
-  await expect(panel.locator(".ph")).toContainText(`안 읽음 ${unread}`);
-  await panel.locator(".ph").click();
-  await expect(panel.locator(".ph")).not.toContainText("안 읽음");
+  await popup.getByRole("button", { name: "모두 읽음으로 표시" }).click();
+  await expect(page.getByRole("button", { name: "알림", exact: true })).toBeVisible();
 });
