@@ -101,3 +101,16 @@ def update_period(
 
     session.commit()
     return period
+
+
+def delete_period(session: Session, period_id: int) -> None:
+    """period_id 의 기간을 삭제합니다. 없는 기간이면 ValueError 를 발생시킵니다.
+
+    그 기간의 배정 결과(assignments)·계산 기록(assignment_runs)·이전 배정기록(assignment_backups)은
+    외래 키 ondelete=CASCADE 로 DB 가 함께 삭제합니다. 예약은 기간과 연결되어 있지 않아 남습니다.
+    """
+    period = session.get(Period, period_id)
+    if period is None:
+        raise ValueError("그런 기간이 없습니다")
+    session.delete(period)
+    session.commit()

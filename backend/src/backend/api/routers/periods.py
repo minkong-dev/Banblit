@@ -5,7 +5,7 @@ from backend.api.auth_dependency import require_account, require_permission
 from backend.services.input import format_calendar_date
 from backend.services.input import format_clock
 from backend.services.period_crud_service import create_period as create_period_row
-from backend.services.period_crud_service import list_periods, update_period
+from backend.services.period_crud_service import delete_period, list_periods, update_period
 from backend.api.schemas import (
     PeriodCreateIn,
     PeriodEnvelopeOut,
@@ -83,3 +83,14 @@ def patch_period(
         req.second_run_at,
     )
     return PeriodEnvelopeOut(period=_period_out(period))
+
+
+@router.delete(
+    "/periods/{period_id}",
+    status_code=204,
+    dependencies=[Depends(require_permission("period_delete"))],
+)
+def delete_period_endpoint(
+    period_id: int, session: Session = Depends(get_session)
+) -> None:
+    delete_period(session, period_id)
