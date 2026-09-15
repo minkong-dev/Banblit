@@ -642,6 +642,23 @@ docker compose run --rm --no-deps web npm run build
   - **`frontend/dist/` 는 저장소에 커밋되어 있습니다.** 이 명령을 실행하면 `frontend/dist/` 안이 덮어써지므로, 커밋 전에 `git status` 로 무엇이 변경됐는지 확인합니다.
   - 이 bundle 을 실제로 제공하는 서버는 아직 없습니다. 개발 서버는 배포에 포함되지 않으므로, 배포에서는 정적 파일을 제공하는 다른 서버가 bundle 제공을 담당해야 합니다. 아직 정하지 않았습니다.
 
+### 10-5. 화면 패키지 추가하기
+
+```
+docker compose run --rm --no-deps web npm install @radix-ui/colors
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 화면 코드가 쓸 npm 패키지를 추가합니다. `frontend/package.json` 의 `dependencies` 와 `frontend/package-lock.json` 이 함께 바뀌고, 패키지 파일은 `banblit-web-modules` volume 에 설치됩니다. 2026-09-15 에 팀 색 값(`@radix-ui/colors`)을 이 명령으로 추가했습니다.
+- **옵션**
+  - `run --rm` — 일회용 container 를 실행하고 끝나면 삭제합니다.
+  - `--no-deps` — `api`·`db` 를 함께 실행하지 않습니다. 설치에는 서버가 필요 없습니다.
+  - `web` — `docker-compose.override.yml` 의 `web` 서비스(`node:24-alpine`)입니다. 호스트에 Node 가 없어도 실행됩니다.
+  - `npm install <패키지>` — 패키지를 설치하고 `package.json` 의 `dependencies` 에 추가합니다. 버전을 적지 않으면 최신 버전을 `^` 범위로 기록합니다. 테스트·빌드에만 쓰는 패키지면 `-D` 를 붙여 `devDependencies` 에 넣습니다.
+- **주의점**
+  - **새 의존성은 사용자 승인을 받은 뒤에만 추가합니다.** `CLAUDE.md` 의 파일 생성 방식(모드 1 의 5단계)이 정한 규칙입니다.
+  - 출력에 `npm warn install-scripts ... esbuild@... (postinstall: node install.js)` 가 나올 수 있습니다. 설치 스크립트 승인 경고이며, 이 경고가 나와도 패키지 설치와 `package.json` 기록은 끝난 상태입니다.
+
 ---
 
 ## 11. 배포
