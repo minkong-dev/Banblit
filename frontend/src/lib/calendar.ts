@@ -112,17 +112,23 @@ export function roomBounds(rooms: { opens_at: string; closes_at: string }[]): {
   return open < close ? { open, close } : { open: FALLBACK_OPEN_HOUR, close: FALLBACK_CLOSE_HOUR };
 }
 
-export function focusedRange(
-  periods: { kind: string; starts_on: string; ends_on: string }[],
-): { from: string; to: string } | null {
-  // 집중합주 기간 중 시작일이 가장 이른 것 하나로 달력에 띠를 표시합니다. 여러 개를
-  // 한 화면에 함께 보여줄 자리가 아직 없어서 Settings.tsx의 Readout과 같은 방식으로
-  // 하나만 사용합니다.
-  const focused = [...periods]
+/** 양 끝 날짜를 포함하는 "YYYY-MM-DD" 범위입니다. to 가 null 이면 끝이 없습니다. */
+export type DayRange = { from: string; to: string | null };
+
+/** 집중 합주기간 전부의 날짜 범위를 시작일 순서로 반환합니다. 서버가 집중 합주기간끼리의 겹침을
+ *  거절하므로 범위끼리 겹치지 않습니다. "매일" 기간은 종료일이 없어 to 가 null 입니다. */
+export function focusedRanges(
+  periods: { kind: string; starts_on: string; ends_on: string; everyday: boolean }[],
+): DayRange[] {
+  return periods
     .filter((period) => period.kind === "focused")
-    .sort((a, b) => a.starts_on.localeCompare(b.starts_on));
-  const first = focused[0];
-  return first ? { from: first.starts_on, to: first.ends_on } : null;
+    .map((period) => ({ from: period.starts_on, to: period.everyday ? null : period.ends_on }))
+    .sort((a, b) => a.from.localeCompare(b.from));
+}
+
+/** key 가 ranges 중 하나에 속하면 true 입니다. */
+export function inRanges(ranges: DayRange[], key: string): boolean {
+  return ranges.some((range) => key >= range.from && (range.to === null || key <= range.to));
 }
 
 /** Date를 "YYYY-MM-DD" 형식으로 변환합니다. 달력의 모든 queryKey(TanStack Query가 관리하는 조회 하나)는 이 형식입니다. */
