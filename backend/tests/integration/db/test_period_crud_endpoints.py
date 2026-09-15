@@ -1,10 +1,11 @@
-from datetime import date, time
+from datetime import date, datetime, time
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.db.models import Period
+from backend.db.models import AssignmentRun, Period
 from conftest import AccountFactory
 
 HEAD = ("박서연", "head@example.com")
@@ -250,6 +251,54 @@ def test_period_patch_does_not_leak_a_rejected_kind_change(
     assert saved_kind == "open"
 
 
+def test_period_is_deleted_and_leaves_the_list(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+    period = _period(db_session, date(2026, 9, 1), date(2026, 9, 10), kind="focused")
+    db_session.commit()
+
+    response = api_client.delete(f"/periods/{period.id}", cookies=head)
+
+    assert response.status_code == 204
+    listed = api_client.get("/periods", cookies=head).json()["periods"]
+    assert [p["id"] for p in listed] == []
+
+
+def test_period_delete_of_unknown_id_is_rejected(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+
+    response = api_client.delete("/periods/999999", cookies=head)
+
+    assert response.status_code == 422
+    assert "기간" in response.json()["detail"]
+
+
+def test_period_delete_also_removes_its_assignment_runs(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """기간의 계산 기록은 외래 키 CASCADE 로 함께 삭제됩니다. Period 에 ORM relationship 이 없으므로 DB 가 삭제합니다."""
+    _, head = account(*HEAD)
+    period = _period(db_session, date(2026, 9, 1), date(2026, 9, 10), kind="focused")
+    db_session.add(
+        AssignmentRun(
+            period_id=period.id,
+            run_on=date(2026, 9, 1),
+            slot="first",
+            ran_at=datetime(2026, 9, 1, 9, 0),
+        )
+    )
+    db_session.commit()
+
+    response = api_client.delete(f"/periods/{period.id}", cookies=head)
+
+    assert response.status_code == 204
+    db_session.expire_all()
+    assert db_session.scalars(select(AssignmentRun)).all() == []
+
+
 _NEW_PERIOD = {
     "kind": "open",
     "starts_on": "2026-09-14",
@@ -266,6 +315,7 @@ _NEW_PERIOD = {
         ("GET", "/periods", None),
         ("POST", "/periods", _NEW_PERIOD),
         ("PATCH", "/periods/1", {"everyday": True}),
+        ("DELETE", "/periods/1", None),
     ],
 )
 def test_period_endpoints_reject_a_request_without_a_login(
@@ -281,6 +331,7 @@ def test_period_endpoints_reject_a_request_without_a_login(
     [
         ("POST", "/periods", _NEW_PERIOD),
         ("PATCH", "/periods/1", {"everyday": True}),
+        ("DELETE", "/periods/1", None),
     ],
 )
 def test_period_writes_are_rejected_for_a_plain_member(
@@ -288,7 +339,7 @@ def test_period_writes_are_rejected_for_a_plain_member(
     account: AccountFactory,
     method: str,
     path: str,
-    body: dict[str, object],
+    body: dict[str, object] | None,
 ) -> None:
     account(*HEAD)
     _, member = account(*MEMBER)
