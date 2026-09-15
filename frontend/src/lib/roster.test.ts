@@ -109,15 +109,15 @@ describe("teamsOf — 색", () => {
     { team_id: 1, team: "청산" },
   ];
 
-  it("전체 팀 목록에서의 자리로 색을 매긴다 — 프로필 말풍선(useMyTeams)과 같은 색이 난다", () => {
-    const all = [{ id: 1 }, { id: 5 }, { id: 2 }];
+  it("팀에 저장된 색으로 key 를 정한다 — 목록 순서가 바뀌어도 색이 그대로다", () => {
+    const all = [{ id: 2, color: "blue" }, { id: 5, color: "jade" }, { id: 1, color: "tomato" }];
     expect(teamsOf(rows, [], all).map((team) => [team.id, team.key])).toEqual([
-      [1, "c1"],
-      [2, "c3"],
+      [1, "team-tomato"],
+      [2, "team-blue"],
     ]);
   });
 
-  it("목록을 아직 못 받아왔으면 시간표에 나온 순서로 색을 매긴다", () => {
-    expect(teamsOf(rows, [], []).map((team) => team.key)).toEqual(["c1", "c2"]);
+  it("목록을 아직 못 받아왔으면 색 없는 key 를 팀마다 따로 준다", () => {
+    expect(teamsOf(rows, [], []).map((team) => team.key)).toEqual(["pending-1", "pending-2"]);
   });
 });

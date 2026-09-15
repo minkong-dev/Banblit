@@ -13,7 +13,7 @@ from conftest import AccountFactory, seat
 
 
 def _team(session: Session, name: str, slots: int = 0) -> Team:
-    """팀 하나와 빈 보컬 자리를 slots개 생성합니다."""
+    """팀 하나와 빈 보컬 자리를 slots개 생성합니다. 팀 색은 DB 트리거가 비어 있는 첫 색으로 채웁니다."""
     team = Team(name=name)
     session.add(team)
     session.flush()
@@ -290,6 +290,96 @@ def test_team_name_race_at_commit_time_is_translated_not_500(
 
 
 # ── 팀 이름 수정 ───────────────────────────────────────────────────────────
+
+
+def test_team_is_created_with_the_color_it_was_given(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+
+    response = api_client.post(
+        "/teams", json={"name": "청산", "slots": {"보컬": 1}, "color": "jade"}, cookies=head
+    )
+
+    assert response.status_code == 201
+    assert response.json()["team"]["color"] == "jade"
+
+
+def test_team_without_a_color_gets_the_first_free_color(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    # 색 순서의 첫 색(tomato)을 먼저 온 팀이 가져가므로 다음 팀은 두 번째 색(red)을 받습니다.
+    _, head = account("박서연", "head@example.com")
+    _team(db_session, "먼저 온 팀")
+    db_session.commit()
+
+    response = api_client.post(
+        "/teams", json={"name": "청산", "slots": {"보컬": 1}}, cookies=head
+    )
+
+    assert response.status_code == 201
+    assert response.json()["team"]["color"] == "red"
+    listed = api_client.get("/teams", cookies=head).json()["teams"]
+    assert [team["color"] for team in listed] == ["tomato", "red"]
+
+
+def test_team_creation_rejects_a_color_another_team_uses(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    _team(db_session, "먼저 온 팀")
+    db_session.commit()
+
+    response = api_client.post(
+        "/teams", json={"name": "청산", "slots": {"보컬": 1}, "color": "tomato"}, cookies=head
+    )
+
+    assert response.status_code == 422
+    assert "다른 팀이 쓰는 색" in response.json()["detail"]
+
+
+def test_team_creation_rejects_an_unknown_color(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+
+    response = api_client.post(
+        "/teams", json={"name": "청산", "slots": {"보컬": 1}, "color": "rainbow"}, cookies=head
+    )
+
+    assert response.status_code == 422
+    assert "팀 색" in response.json()["detail"]
+
+
+def test_team_creation_is_rejected_when_every_color_is_taken(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    for index in range(20):
+        _team(db_session, f"팀 {index}")
+    db_session.commit()
+
+    response = api_client.post(
+        "/teams", json={"name": "청산", "slots": {"보컬": 1}}, cookies=head
+    )
+
+    assert response.status_code == 422
+    assert "20" in response.json()["detail"]
+
+
+def test_team_color_is_patched(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    team = _team(db_session, "청산")
+    db_session.commit()
+
+    response = api_client.patch(
+        f"/teams/{team.id}", json={"name": "청산", "color": "blue"}, cookies=head
+    )
+
+    assert response.status_code == 200
+    assert response.json()["team"]["color"] == "blue"
 
 
 def test_team_patch_requires_authentication(
