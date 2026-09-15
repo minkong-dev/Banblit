@@ -3,11 +3,72 @@ import { describe, expect, it } from "vitest";
 import {
   memberLabel,
   myTeamIds,
+  seatChanges,
+  seatKey,
+  seatsOf,
   slotCountsMessage,
   slotName,
   teamNameMessage,
   teamsOf,
+  teamsShown,
 } from "./roster";
+
+describe("teamsShown", () => {
+  it("팀 관리 권한이 있으면 전체 팀, 없으면 소속 팀만 반환한다", () => {
+    const all = [{ id: 1 }, { id: 2 }, { id: 3 }];
+
+    expect(teamsShown(all, [2], true)).toEqual(all);
+    expect(teamsShown(all, [2], false)).toEqual([{ id: 2 }]);
+  });
+});
+import type { Member, TeamSlot } from "./contract";
+
+const KIM: Member = { id: 7, name: "김민수", cohort: 46 };
+const LEE: Member = { id: 8, name: "이서연", cohort: null };
+
+function savedSlot(id: number, instrument: TeamSlot["instrument"], ordinal: number, memberId: number | null): TeamSlot {
+  return { id, team_id: 1, instrument, ordinal, member_id: memberId, member_name: null, member_cohort: null };
+}
+
+describe("seatsOf", () => {
+  it("포지션 수만큼 자리를 생성하고, 같은 포지션·번호에 선택한 멤버를 지정한다", () => {
+    const seats = seatsOf(
+      { 보컬: 0, 일렉: 2, 통기타: 0, 베이스: 0, 신디: 0, 드럼: 1 },
+      new Map([[seatKey("일렉", 2), KIM], [seatKey("드럼", 2), LEE]]),
+    );
+
+    expect(seats.map((seat) => seat.label)).toEqual(["일렉 1", "일렉 2", "드럼"]);
+    expect(seats.map((seat) => seat.member?.id ?? null)).toEqual([null, 7, null]);
+  });
+});
+
+describe("seatChanges", () => {
+  it("변경된 자리만 요청하고, 멤버를 지정하기 전에 변경된 자리를 전부 먼저 해제한다", () => {
+    const seats = seatsOf(
+      { 보컬: 1, 일렉: 1, 통기타: 0, 베이스: 1, 신디: 0, 드럼: 0 },
+      new Map([[seatKey("보컬", 1), LEE], [seatKey("일렉", 1), KIM]]),
+    );
+    const saved = [
+      savedSlot(11, "보컬", 1, 7), // 김민수 → 이서연
+      savedSlot(12, "일렉", 1, 8), // 이서연 → 김민수. 먼저 해제하지 않으면 한 팀 두 자리 제약으로 거절됩니다
+      savedSlot(13, "베이스", 1, 9), // 멤버 → 빈 자리
+    ];
+
+    expect(seatChanges(seats, saved)).toEqual({
+      clear: [11, 12, 13],
+      assign: [{ slotId: 11, memberId: 8 }, { slotId: 12, memberId: 7 }],
+    });
+  });
+
+  it("그대로인 자리는 요청하지 않는다", () => {
+    const seats = seatsOf(
+      { 보컬: 1, 일렉: 0, 통기타: 0, 베이스: 0, 신디: 0, 드럼: 0 },
+      new Map([[seatKey("보컬", 1), KIM]]),
+    );
+
+    expect(seatChanges(seats, [savedSlot(11, "보컬", 1, 7)])).toEqual({ clear: [], assign: [] });
+  });
+});
 
 describe("teamNameMessage", () => {
   it("이미 있는 이름은 받지 않는다", () => {
