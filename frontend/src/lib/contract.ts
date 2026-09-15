@@ -78,12 +78,13 @@ export type MyTeam = {
 /** /me 응답 전체입니다. 현재 로그인한 계정과 그 계정이 배정된 자리 목록입니다. */
 export type Me = { account: Account; teams: MyTeam[] };
 
-/** 할 수 있는 일 18가지입니다. 서버 쪽 정본입니다: backend/src/backend/db/models.py의 Permission */
+/** 할 수 있는 일 20가지입니다. 서버 쪽 정본입니다: backend/src/backend/db/models.py의 Permission */
 export type Permission =
   | "room_create"
   | "room_edit"
   | "period_create"
   | "period_edit"
+  | "period_delete"
   | "team_create"
   | "team_edit"
   | "team_delete"
@@ -104,7 +105,7 @@ export type Account = {
   id: number;
   name: string;
   email: string;
-  /** 저장된 값이 아니라 permissions 에서 계산한 값입니다. 18가지가 모두 켜져 있으면 head_manager 입니다. */
+  /** 저장된 값이 아니라 permissions 에서 계산한 값입니다. 20가지가 모두 켜져 있으면 head_manager 입니다. */
   role: "head_manager" | "member";
   permissions: Permission[];
   /** 가진 permission set(권한 집합)의 이름입니다. 화면은 "헤드매니저" 고정 문구 대신 이 이름을 역할로 표시합니다. */

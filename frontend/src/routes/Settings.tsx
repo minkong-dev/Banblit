@@ -5,7 +5,8 @@ import type { RefObject } from "react";
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
 import { CheckMark } from "../components/CheckMark";
 import { Modal } from "../components/Modal";
-import { getJSON } from "../lib/api";
+import { getJSON, reason } from "../lib/api";
+import { askDelete } from "../lib/confirm";
 import { formError, loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { say } from "../lib/toast";
@@ -38,7 +39,7 @@ type Tab = "rooms" | "periods" | "members" | "reservations" | "account";
 // needs가 없는 탭은 로그인한 모든 사람이 볼 수 있습니다.
 const TABS = [
   { key: "rooms" as const, text: "합주실", needs: ["room_create", "room_edit"] as const },
-  { key: "periods" as const, text: "기간", needs: ["period_create", "period_edit"] as const },
+  { key: "periods" as const, text: "기간", needs: ["period_create", "period_edit", "period_delete"] as const },
   { key: "members" as const, text: "멤버", needs: ["permission_manage", "permission_grant"] as const },
   { key: "reservations" as const, text: "예약", needs: ["reservation_manage"] as const },
   { key: "account" as const, text: "계정", needs: null },
@@ -146,7 +147,9 @@ export function Settings() {
             state={loadState(periods)}
             canEdit={can(me, "period_edit")}
             canCreate={can(me, "period_create")}
+            canDelete={can(me, "period_delete")}
             onSaved={saved("periods", "집중 합주기간을 등록했어요.")}
+            onDeleted={saved("periods", "집중 합주기간을 삭제했어요.")}
           />
         ) : shown === "members" ? (
           <MemberCards />
@@ -430,11 +433,18 @@ function RoomForm(props: {
 }
 
 function PeriodCard(props: {
-  periods: Period[]; state: LoadState; canEdit: boolean; canCreate: boolean; onSaved: () => void;
+  periods: Period[]; state: LoadState; canEdit: boolean; canCreate: boolean; canDelete: boolean;
+  onSaved: () => void; onDeleted: () => void;
 }) {
-  const { periods, state, canEdit, canCreate, onSaved } = props;
+  const { periods, state, canEdit, canCreate, canDelete, onSaved, onDeleted } = props;
   const { editing, open, close, register } = useRowFocus();
   const [making, setMaking] = useState(false);
+  // 기간을 삭제하면 서버가 그 기간의 배정 결과·계산 기록·이전 배정기록을 함께 삭제합니다(외래 키 CASCADE).
+  const drop = useMutation({
+    mutationFn: (id: number) => getJSON(`/periods/${id}`, { method: "DELETE" }),
+    onSuccess: onDeleted,
+    onError: (error) => say(reason(error)),
+  });
 
   return (
     <Card>
@@ -474,6 +484,14 @@ function PeriodCard(props: {
                 editLabel={canEdit ? `${period.starts_on} 부터의 기간을 수정` : undefined}
                 buttonRef={canEdit ? register(period.id) : undefined}
                 onEdit={canEdit ? () => open(period.id) : undefined}
+                deleteLabel={canDelete ? `${period.starts_on} 부터의 기간을 삭제` : undefined}
+                // 삭제 요청이 진행 중이면 다시 누른 것을 무시합니다. 연속으로 누르면 같은 DELETE 가 여러 번 전송됩니다.
+                onDelete={canDelete
+                  ? () => {
+                    if (drop.isPending) return;
+                    if (askDelete(`${period.starts_on} 부터의 집중합주 기간과 그 배정 결과`)) drop.mutate(period.id);
+                  }
+                  : undefined}
               />
             ),
           )}
