@@ -6,7 +6,7 @@ sources:
   - backend/tests/integration/db/test_schedule_store.py        # 저장·백업·오래된 배정기록 삭제·롤백 시나리오
 ---
 
-> 문서 버전: 1.1.2 draft
+> 문서 버전: 1.1.4 draft
 
 ```
    재연산(다시 짜기)                          롤백(되돌리기)
@@ -20,7 +20,7 @@ sources:
   │ 현행 시간표    │◀────────────────────── │ 현행 시간표    │
   │ (한 벌만)      │      나머지 배정기록 삭제    │ (직전 상태)    │
   └───────────────┘                        └───────────────┘
-        백업: 저장시각으로 구분·정렬되는 여러 배정기록
+        백업: 저장시각으로 구분·정렬되는 최근 2개 배정기록
 ```
 
 ## Abstract
@@ -69,7 +69,7 @@ sources:
 
 ### 이 규칙은 저장 방식까지만 책임집니다
 
-"저장된 데이터로 시간표를 계산해 이 저장을 호출하는" endpoint(API의 요청 주소 단위)는 [기간 자동 배정](../../scheduling-api/period-assignment/README.md)의 배정 endpoint와 롤백 endpoint입니다. 배정 endpoint는 계산이 성공한 결과를 이 저장 규칙을 통해 저장하고, 롤백 endpoint는 헤드매니저의 되돌리기 요청을 이 롤백 규칙으로 그대로 처리합니다.
+"저장된 데이터로 시간표를 계산해 이 저장을 호출하는" endpoint(API의 요청 주소 단위)는 [기간 자동 배정](../../scheduling-api/period-assignment/README.md)의 배정 endpoint와 롤백 endpoint입니다. 배정 endpoint는 계산이 성공한 결과를 이 저장 규칙을 통해 저장하고, 롤백 endpoint는 되돌리기 항목을 가진 사람의 되돌리기 요청을 이 롤백 규칙으로 그대로 처리합니다.
 
 ### TDD로 검증했습니다
 

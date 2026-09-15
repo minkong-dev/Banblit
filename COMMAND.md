@@ -1,6 +1,6 @@
 # COMMAND
 
-> 문서 버전: 1.12.1 draft
+> 문서 버전: 1.12.3 draft
 
 이 문서는 Banblit에서 실제로 실행하여 동작을 확인한 명령어만 담으며, 실행하지 않은 명령어는 기록하지 않습니다.
 
@@ -310,7 +310,7 @@ docker compose exec api ls -l /var/lib/banblit/attachments
   - `-o <파일>` — 내려받은 내용을 지정한 파일에 저장합니다. 생략하면 이진 파일이 터미널에 그대로 출력됩니다.
 - **주의점**
   - **작성자 본인만 첨부하고 삭제할 수 있습니다.** 다른 계정의 cookie 로 1행을 전송하면 403 을 반환합니다. 팀 게시판 게시글이면 내려받기도 그 팀 소속 멤버만 할 수 있습니다.
-  - **허용 목록에 없는 확장자는 422 로 거절됩니다.** 목록은 `backend/src/backend/api/attachment_service.py` 의 `ALLOWED_EXTENSIONS` 1곳에만 있습니다.
+  - **허용 목록에 없는 확장자는 422 로 거절됩니다.** 목록은 `backend/src/backend/services/attachment_service.py` 의 `ALLOWED_EXTENSIONS` 1곳에만 있습니다.
   - **Git Bash 에서 `;filename=` 에 한글을 적으면 이름이 깨져 저장됩니다.** 터미널이 UTF-8 로 전송하지 않기 때문입니다. 서버 문제가 아닙니다. 브라우저와 검사(`tests/integration/db/test_attachment_endpoints.py`)에서는 한글 이름이 그대로 저장됩니다.
   - **개발 구성에는 앞단 서버(nginx)가 없습니다.** 크기 상한(`client_max_body_size 300m`)은 배포 구성에서만 적용되므로, 개발에서 300MB 를 초과해 전송하면 그대로 통과합니다. 배포 구성으로 확인하려면 `11-1` 로 실행한 서버에서 확인합니다.
   - 저장 폴더는 `banblit-attachments` volume 입니다. `docker compose down` 으로 정지해도 유지되고, `down -v` 로만 삭제됩니다.
@@ -653,15 +653,14 @@ docker compose run --rm --no-deps web npm run build
 배포에만 있는 서비스가 2개입니다. 앞단 `caddy` 와 정기 백업 `backup` 입니다. 개발 override 가
 이 2개에 profile 을 지정해 두어 개발에서는 실행되지 않습니다.
 
-```
-        배포 (-f docker-compose.yml)        개발 (그냥 docker compose)
-        caddy   ← 443 을 받는 유일한 문      —
-        web     ← 127.0.0.1 로만 열림        web  ← vite, 5173
-        api                                  api
-        db                                   db
-        auto-assign                          auto-assign (꺼짐)
-        backup                               —
-```
+| 서비스 | 배포 (`-f docker-compose.yml`) | 개발 (그냥 `docker compose`) |
+|---|---|---|
+| caddy | 실행. 443 을 받는 유일한 문 | 실행하지 않음 |
+| web | 실행. 127.0.0.1 로만 열림 | 실행. vite, 5173 |
+| api | 실행 | 실행 |
+| db | 실행 | 실행 |
+| auto-assign | 실행 | 실행(꺼짐) |
+| backup | 실행 | 실행하지 않음 |
 
 ### 11-1. 서버에 처음 배포하기
 
@@ -716,7 +715,7 @@ docker compose -f docker-compose.yml run --rm api alembic upgrade head
   - **마이그레이션이 서비스 교체보다 먼저입니다.** 새 코드가 먼저 실행되면 아직 없는 열을 읽어
     500 이 발생합니다(개발에서 실제로 발생했습니다. 오류는 `column members.department does not exist`
     였습니다). 스크립트가 이 순서를 고정합니다.
-  - **백업이 마이그레이션 앞에 있습니다.** `backup` 서비스는 6시간마다 뜨므로 그것만 믿으면
+  - **백업이 마이그레이션 앞에 있습니다.** `backup` 서비스만 믿으면
     되돌릴 지점이 최대 6시간 어긋납니다. `BACKUP_DIR` 에 `pre-migrate-<시각>.sql.gz` 로 남고,
     백업에 실패하면 마이그레이션을 실행하지 않고 멈춥니다.
   - 마이그레이션만 따로 실행할 때(`./banblit.sh migrate`)도 같은 백업이 먼저 실행됩니다.
@@ -725,7 +724,7 @@ docker compose -f docker-compose.yml run --rm api alembic upgrade head
   - 리눅스에서는 `--deploy` 를 적지 않아도 배포용으로 돕니다. 윈도우에서 배포용을 돌리려면
     `--deploy` 를 붙여야 합니다.
   - **아직 서버에서 실행해 확인하지 않았습니다.** 처음 실행할 때 각 단계가 기대대로 도는지
-    확인하고, 어긋나는 것이 있으면 이 절을 고치십시오.
+    확인하고, 차이가 있으면 이 절을 수정하십시오.
 
 ### 11-3. 앞단이 인증서를 받았는지 확인하기
 

@@ -2,9 +2,9 @@
 title: 게시판과 공지
 sources:
   - backend/src/backend/db/models.py            # Post·Comment·Attachment table
-  - backend/src/backend/api/input.py            # 제목·본문을 비롯한 모든 입력의 경계 검증
-  - backend/src/backend/api/board_service.py    # 글·댓글 읽기와 쓰기, 소속·권한 확인
-  - backend/src/backend/api/attachment_service.py  # 파일을 디스크에 저장·조회·삭제하는 위치, 허용 확장자 목록
+  - backend/src/backend/services/input.py            # 제목·본문을 비롯한 모든 입력의 경계 검증
+  - backend/src/backend/services/board_service.py    # 글·댓글 읽기와 쓰기, 소속·권한 확인
+  - backend/src/backend/services/attachment_service.py  # 파일을 디스크에 저장·조회·삭제하는 위치, 허용 확장자 목록
   - backend/src/backend/api/routers/boards.py   # endpoint마다 요청한 사람을 확인하는 위치, 업로드·다운로드·삭제
   - backend/migrations/versions/d5c1a83b7e02_attachments.py  # 첨부 table
   - backend/tests/integration/db/test_attachment_endpoints.py  # 업로드·다운로드·삭제의 권한과 거절 시나리오
@@ -15,7 +15,7 @@ sources:
   - docker-compose.yml                          # 파일이 저장되는 위치와 그 위치를 지정하는 환경변수
 ---
 
-> 문서 버전: 2.2.3 draft
+> 문서 버전: 2.2.5 draft
 
 ```mermaid
 flowchart TD
@@ -96,9 +96,9 @@ flowchart TD
 ```mermaid
 flowchart TD
     A[작성자가 파일을 선택합니다] --> B{화면이 먼저 검증합니다<br/>크기 · 확장자}
-    B -->|거부| X1[선택 위치에서 사유를 표시합니다]
-    B -->|통과| C{배포의 앞단이 큰 요청을 거부합니다}
-    C -->|거부| X2[서버에 도달하기 전에 거절]
+    B -->|거절| X1[선택 위치에서 사유를 표시합니다]
+    B -->|통과| C{배포의 앞단이 큰 요청을 거절합니다}
+    C -->|거절| X2[서버에 도달하기 전에 거절]
     C -->|통과| D{서버가 다시 검증합니다<br/>허용 목록에 있는 종류인가}
     D -->|아니다| X3[거절]
     D -->|그렇다| E[서버가 생성한 이름으로 디스크에 저장합니다<br/>보낸 이름은 표시용 값으로만 저장합니다]
@@ -144,7 +144,7 @@ flowchart TD
 
 ### 글을 작성한 사람은 삭제할 수 없습니다
 
-사람을 삭제하면 그 사람의 소속과 불가능 시간은 함께 삭제되지만, 글과 댓글은 함께 삭제되지 않고 그 사람의 삭제를 거부합니다.
+사람을 삭제하면 그 사람의 소속과 불가능 시간은 함께 삭제되지만, 글과 댓글은 함께 삭제되지 않고 그 사람의 삭제를 거절합니다.
 
 게시판은 오간 이야기가 남아 있어야 뜻이 있습니다. 1명이 탈퇴했다고 대화의 절반이 삭제되면 남은 사람들이 읽던 맥락이 끊기므로, 사람을 삭제하려면 그 사람의 글을 먼저 어떻게 처리할지 정해야 합니다.
 

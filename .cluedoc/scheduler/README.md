@@ -1,11 +1,15 @@
 ---
 title: 스케줄러
 sources:
-  - frontend/src/routes/Scheduler.tsx    # 이 설계를 서버 응답으로 표시하는 화면
+  - frontend/src/routes/Scheduler.tsx    # 이 설계를 서버 응답으로 표시하는 화면. 조회와 상태를 가짐
+  - frontend/src/routes/SchedulerViews.tsx  # 달 보기·주 보기 부품
   - frontend/src/routes/DayDialog.tsx    # 날짜를 눌렀을 때 열리는 확인 모달
+  - frontend/src/routes/DayDialogParts.tsx  # 모달의 타임라인·시각 선택·내 일정 목록·참여 멤버 부품
+  - frontend/src/lib/dayEntries.ts       # 서버 자료를 하루 항목(Entry)으로 바꾸는 계산. 반복 전개 포함
+  - frontend/src/lib/dayEntries.test.ts  # 반복 전개와 탭별 표시 항목 계산의 테스트
   - frontend/src/lib/calendar.ts         # 달력 칸과 남은 시간, 합주실 개방·폐쇄 시각과 집중 합주기간 범위, 날짜·요일 표기
   - frontend/src/components/Modal.tsx    # 날짜 모달과 다른 화면이 함께 쓰는 Modal 컴포넌트
-  - frontend/src/components/hooks.ts     # 내 계정과 내가 속한 팀을 조회하는 hook
+  - frontend/src/components/queries.ts   # 내 계정과 내가 속한 팀을 조회하는 hook
   - frontend/src/lib/pipeline.ts         # 예약·불가능 일정·알림을 서버와 주고받는 순서
   - frontend/src/lib/slots.ts            # 연속한 slot을 합주 1회로 합치는 계산
   - frontend/src/lib/notifications.ts    # 알림 종류를 문장으로 변환하는 함수, 안 읽은 개수 계산
@@ -13,7 +17,7 @@ sources:
   - frontend/src/components/AppShell.tsx # 오른쪽 목록 카드의 머리글과 카드를 여는 컴포넌트
 ---
 
-> 문서 버전: 1.6.1 draft
+> 문서 버전: 1.6.4 draft
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -23,12 +27,12 @@ sources:
 │ (상시)      │ ┌───────────────────────────────┐ ┌────────────────────┐   │
 │            │ │  ‹ 2026년 9월 ›      [월│주]   │ │ 알림      안 읽음 2 │   │
 │ 시간표      │ ├───────────────────────────────┤ ├────────────────────┤   │
-│ 공지사항    │ │  일  월  화  수  목  금  토    │ │ (새 소식 몇 줄)     │   │
+│ 공지사항    │ │  일  월  화  수  목  금  토    │ │ (알림 1줄에 1개씩)  │   │
 │ 팀 찾기     │ │                                │ └────────────────────┘   │
 │ 팀 게시판   │ │        (한 달이 통째로)         │ ┌────────────────────┐   │
 │ ─────────  │ │                                │ │ 공지사항        →  │   │
 │ 배정 결과   │ │                                │ ├────────────────────┤   │
-│ 합주실 설정 │ │                                │ │ (최근 글 몇 개)     │   │
+│ 합주실 설정 │ │                                │ │ (최근 글 3개)       │   │
 │            │ │                                │ └────────────────────┘   │
 │            │ │                                │ ┌────────────────────┐   │
 │            │ │                                │ │ 내 팀           →  │   │

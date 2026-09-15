@@ -4,27 +4,27 @@ sources:
   - backend/src/backend/scheduling/slots.py       # 운영 시간을 1시간 slot으로 분할합니다. slot 길이(SLOT_MINUTES)를 정의하는 파일
   - backend/src/backend/scheduling/assignment.py  # 합주실(이름 + 운영 시간) 정의
   - backend/src/backend/db/models.py              # Room·Period table
-  - backend/src/backend/api/input.py              # 개방 시각·폐쇄 시각·이름·기간 날짜를 비롯한 모든 입력의 경계 검증
-  - backend/src/backend/api/room_service.py       # 합주실 조회·생성·수정
-  - backend/src/backend/api/period_crud_service.py # 기간 조회·생성·수정
+  - backend/src/backend/services/input.py              # 개방 시각·폐쇄 시각·이름·기간 날짜를 비롯한 모든 입력의 경계 검증
+  - backend/src/backend/services/room_service.py       # 합주실 조회·생성·수정
+  - backend/src/backend/services/period_crud_service.py # 기간 조회·생성·수정
   - backend/src/backend/api/routers/rooms.py      # 합주실 endpoint마다 권한을 확인하는 파일
   - backend/src/backend/api/routers/periods.py    # 기간 endpoint마다 권한을 확인하는 파일
-  - backend/src/backend/api/reservation_service.py # 예약 생성·취소 권한 확인
+  - backend/src/backend/services/reservation_service.py # 예약 생성·취소 권한 확인
   - backend/src/backend/api/routers/reservations.py # 예약 endpoint마다 요청한 사용자를 확인하는 파일
-  - backend/src/backend/api/unavailable_service.py # 불가능 일정을 본인만 조회·추가·삭제하게 하는 확인
+  - backend/src/backend/services/unavailable_service.py # 불가능 일정을 본인만 조회·추가·삭제하게 하는 확인
   - backend/src/backend/api/routers/unavailable.py # 불가능 일정 endpoint의 본인 확인
   - backend/src/backend/api/auth_dependency.py    # 요청을 보낸 사용자를 확인하는 파일
   - backend/tests/integration/db/                 # 합주실·기간·예약·불가능 일정 endpoint의 권한 분기를 확인하는 테스트
   - frontend/src/routes/Settings.tsx              # 합주실·기간 권한 항목을 가진 사용자가 합주실·기간 값을 입력하는 화면. 매일 기간은 종료일 입력을 숨깁니다
   - frontend/src/lib/pipeline.ts                  # 매일 기간을 저장할 때 ends_on 에 starts_on 을 넣어 보내는 periodBody
   - frontend/src/lib/pipeline.test.ts             # periodBody 시나리오
-  - backend/src/backend/api/period_service.py     # 매일 기간은 계산을 실행한 날 하루만 배정하는 period_days
+  - backend/src/backend/services/period_service.py     # 매일 기간은 계산을 실행한 날 하루만 배정하는 period_days
   - backend/tests/integration/db/test_reservation_endpoints.py # 매일 기간이 저장된 종료일 뒤에도 예약을 거절하는 시나리오
   - backend/migrations/versions/d4a71c96e2b8_hourly_slots.py # slot을 30분에서 1시간으로 변경한 마이그레이션
   - frontend/src/lib/settings.ts                  # 같은 규칙을 화면에서 먼저 검증하는 코드
 ---
 
-> 문서 버전: 3.0.1 draft
+> 문서 버전: 3.0.3 draft
 
 ```
 합주실마다 운영 시간을 따로 지정 ─ slot 단위는 1시간 고정
@@ -81,7 +81,7 @@ slot 길이는 서버의 `SLOT_MINUTES` 상수 1개로만 정의합니다. 변�
 
 **예약 가능한 날은 "집중 합주기간이 지정되지 않은 날"입니다(사용자 결정).** 예약을 허용하려고 별도 기간을 등록할 필요가 없습니다. 서버는 예약 요청을 받으면 해당 날짜가 집중 합주기간에 포함되는지만 확인하고, 포함되지 않으면 수락합니다.
 
-집중 합주기간에는 모든 팀이 정확히 같은 개수의 slot을 할당받습니다. 예를 들어 저녁 6시간이 2주간 개방되고 팀이 6개면, 각 팀은 1시간 slot 14개를 배분받습니다. 팀 1개라도 할당량을 채우지 못하면 전체 배정이 실패로 처리되어 헤드매니저가 조율안을 결정합니다.
+집중 합주기간에는 모든 팀이 정확히 같은 개수의 slot을 할당받습니다. 예를 들어 저녁 6시간이 2주간 개방되고 팀이 6개면, 각 팀은 1시간 slot 14개를 배분받습니다. 팀 1개라도 할당량을 채우지 못하면 전체 배정이 실패로 처리되어 조율안 확정 항목을 가진 사람이 조율안을 결정합니다.
 
 **"매일" 옵션은 종료일이 없는 집중 합주기간입니다(사용자 결정 2026-09-11).** 항상 자동 배정을 원하는 조직이 집중 합주기간에 활성화합니다. 이 옵션이 활성화된 기간은 시작일 이후의 모든 날에 다음과 같이 동작합니다.
 
