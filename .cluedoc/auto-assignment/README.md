@@ -16,7 +16,7 @@ sources:
   - backend/tests/integration/db/test_notifications.py           # 누구에게 저장되고 누구에게 저장되지 않는지의 시나리오
   - docker-compose.yml                               # 배포에서 auto-assign 서비스를 시작하는 위치
   - docker-compose.override.yml                      # 개발에서 그 서비스를 비활성화하는 위치
-  - backend/src/backend/services/period_service.py         # 매일 기간은 실행한 날 하루만 배정하는 period_days
+  - backend/src/backend/services/period_service.py         # 매일 기간은 실행한 날 하루만 배정하고 전체합주 날짜를 제외하는 period_days
   - backend/tests/integration/db/test_auto_assign.py       # 언제 실행되고 언제 실행되지 않는지, 매일 기간이 저장된 종료일 뒤에도 실행되는지의 시나리오
   - backend/tests/integration/db/test_period_endpoints.py  # 배정·되돌리기·조회의 권한 시나리오
   - backend/tests/integration/db/test_assign_jobs.py       # 계산 결과를 조회하는 endpoint의 권한 시나리오
