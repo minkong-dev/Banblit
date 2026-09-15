@@ -13,11 +13,12 @@ import { say } from "../lib/toast";
 import { askDelete } from "../lib/confirm";
 import { getJSON, reason } from "../lib/api";
 import { loadState, stateText } from "../lib/loading";
-import { can } from "../lib/account";
+import { can, canManageTeams, teamNavLabel } from "../lib/account";
 import { checkSlotCounts, checkTeamName, memberLabel, slotName } from "../lib/pipeline";
 import { INSTRUMENTS } from "../lib/contract";
 import { TEAM_COLORS, teamColorKey } from "../lib/teamColors";
-import { MAX_SLOTS_PER_TEAM } from "../lib/roster";
+import { MAX_SLOTS_PER_TEAM, seatChanges, seatKey, seatsOf, teamsShown } from "../lib/roster";
+import type { Seat } from "../lib/roster";
 import type { Instrument, Member, Team, TeamSlot } from "../lib/contract";
 import { SectionHead } from "./SettingsForm";
 import "../styles/teams.css";
@@ -27,10 +28,9 @@ type Counts = Record<string, number>;
 
 const NO_SLOTS: Counts = Object.fromEntries(INSTRUMENTS.map((name) => [name, 0]));
 
-/** 서버에서 받은 포지션 목록을 포지션별 자리 수로 집계합니다. 아직 받지 못했으면 null입니다. */
-function countsFromSlots(data: { slots: TeamSlot[] } | undefined): Counts | null {
-  if (data === undefined) return null;
-  return data.slots.reduce(
+/** 서버에서 받은 포지션 목록을 포지션별 자리 수로 집계합니다. */
+function countsOf(slots: TeamSlot[]): Counts {
+  return slots.reduce(
     (acc, slot) => ({ ...acc, [slot.instrument]: acc[slot.instrument] + 1 }),
     NO_SLOTS,
   );
@@ -86,15 +86,15 @@ function TeamRow(props: {
   );
 }
 
-/** 팀 색 고르기입니다. 다른 팀이 쓰는 색(taken)은 고를 수 없게 막습니다.
- *  value 가 null 이면 아무것도 고르지 않은 상태이고, 그대로 저장하면 서버가 남은 색 중 첫 색을 줍니다. */
+/** 팀 색 선택 입력입니다. 다른 팀이 쓰는 색(taken)은 선택할 수 없게 비활성화합니다.
+ *  value 가 null 이면 선택하지 않은 상태이고, 그대로 저장하면 서버가 남은 색 중 첫 색을 지정합니다. */
 function ColorPick(props: { value: string | null; taken: string[]; onChange: (next: string) => void }) {
   const { value, taken, onChange } = props;
-  // radio 묶음 이름입니다. 고르기가 2개 이상 동시에 렌더링되어도 서로 다른 묶음이 되도록 인스턴스마다 다른 값을 씁니다.
+  // radio 묶음 이름입니다. 색 선택 입력이 2개 이상 동시에 렌더링되어도 서로 다른 묶음이 되도록 인스턴스마다 다른 값을 씁니다.
   const group = useId();
   return (
     <fieldset className="swatches">
-      <legend>팀 색{value === null ? " · 고르지 않으면 남은 색 중 하나를 드려요" : ""}</legend>
+      <legend>팀 색{value === null ? " · 선택하지 않으면 남은 색 중 하나가 지정돼요" : ""}</legend>
       {TEAM_COLORS.map((color) => {
         const used = taken.includes(color);
         return (
@@ -112,113 +112,6 @@ function ColorPick(props: { value: string | null; taken: string[]; onChange: (ne
         );
       })}
     </fieldset>
-  );
-}
-
-/** 팀 이름과 포지션 구성을 함께 수정합니다.
- *
- *  포지션 구성은 저장할 때 통째로 다시 계산됩니다. 이미 멤버가 배정된 (포지션, 번호) 포지션은 그대로 유지되므로,
- *  드럼을 1개에서 2개로 늘려도 기존에 드럼을 담당하던 멤버는 포지션을 잃지 않습니다.
- *  포지션 수를 줄이면 번호가 큰 포지션부터 삭제되며, 그 포지션에 있던 멤버는 팀에서 제거됩니다. */
-function EditTeam(props: {
-  team: Team;
-  taken: string[];
-  /** 다른 팀이 쓰는 색입니다. 이 팀의 지금 색은 포함하지 않습니다. */
-  takenColors: string[];
-  onDone: (message: string) => void;
-  onClose: () => void;
-}) {
-  const { team, taken, takenColors, onDone, onClose } = props;
-  const client = useQueryClient();
-  const [name, setName] = useState(team.name);
-  const [color, setColor] = useState(team.color);
-  const [counts, setCounts] = useState<Counts | null>(null);
-  const [bad, setBad] = useState("");
-
-  // 현재 포지션 구성을 서버에서 받아 그대로 표시합니다. 화면에서 값을 임의로 생성하지 않습니다.
-  const slots = useQuery({
-    queryKey: ["slots", team.id],
-    queryFn: () => getJSON<{ slots: TeamSlot[] }>(`/teams/${team.id}/slots`),
-  });
-
-  // 사용자가 아직 수정하지 않았으면 서버 구성을 그대로 표시합니다. state로 복사하지 않습니다.
-  // 복사하면 "받았지만 아직 적용 전" 상태가 생기기 때문입니다.
-  const shownCounts = counts ?? countsFromSlots(slots.data);
-
-  const total = Object.values(shownCounts ?? NO_SLOTS).reduce((sum, count) => sum + count, 0);
-
-  const save = useMutation({
-    mutationFn: async () => {
-      if (name.trim() !== team.name || color !== team.color) {
-        await getJSON(`/teams/${team.id}`, {
-          method: "PATCH",
-          body: JSON.stringify({ name: name.trim(), color }),
-        });
-      }
-      await getJSON(`/teams/${team.id}/slots`, {
-        method: "PUT",
-        body: JSON.stringify({ slots: shownCounts }),
-      });
-    },
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["teams"] });
-      void client.invalidateQueries({ queryKey: ["slots", team.id] });
-      onDone(`${name.trim()} 수정을 완료했어요.`);
-    },
-    onError: (error) => setBad(reason(error)),
-  });
-
-  return (
-    <Modal title="팀 수정" hint="팀 정보를 수정할 수 있어요" onClose={onClose}
-      foot={
-        <>
-          <button className="ghost" onClick={onClose}>취소</button>
-          <button
-            className="primary"
-            disabled={save.isPending || shownCounts === null}
-            onClick={() => {
-              const why = checkTeamName(name, taken) || checkSlotCounts(shownCounts ?? NO_SLOTS);
-              setBad(why);
-              if (why === "") save.mutate();
-            }}
-          >
-            {save.isPending ? "저장하는 중…" : "저장"}
-          </button>
-        </>
-      }
-    >
-      <div className="fields">
-        <label className="wide" htmlFor="teamRename">
-          팀 이름
-          <input
-            id="teamRename"
-            autoFocus
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-      </div>
-      <ColorPick value={color} taken={takenColors} onChange={setColor} />
-
-      {shownCounts === null ? (
-        <p className="empty">불러오는 중…</p>
-      ) : (
-        <>
-          {INSTRUMENTS.map((instrument) => (
-            <Stepper
-              key={instrument}
-              label={instrument}
-              value={shownCounts[instrument] ?? 0}
-              min={0}
-              max={(shownCounts[instrument] ?? 0) + Math.max(0, MAX_SLOTS_PER_TEAM - total)}
-              onChange={(next) => setCounts({ ...shownCounts, [instrument]: next })}
-            />
-          ))}
-          <p className="note">포지션 {total}개</p>
-        </>
-      )}
-      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
-    </Modal>
   );
 }
 
@@ -315,189 +208,232 @@ function Lineup(props: {
   );
 }
 
-/** 생성 중인 포지션 하나입니다. 아직 저장 전이므로 ID가 없으며, 포지션과 번호로만 식별됩니다. */
-type Draft = { instrument: Instrument; ordinal: number; label: string; member: Member | null };
+/** 팀 창에 처음 입력할 값입니다. 새 팀은 BLANK_TEAM, 수정은 서버에서 받은 팀과 자리(startOf)입니다. */
+type TeamStart = { name: string; color: string | null; counts: Counts; members: ReadonlyMap<string, Member> };
 
-/** 지정한 개수만큼 포지션을 전개합니다. 같은 포지션이 1자리뿐이면 번호를 제거하고 "드럼" 으로만 표시합니다. */
-function spread(counts: Counts): Draft[] {
-  return INSTRUMENTS.flatMap((instrument) => {
-    const count = counts[instrument] ?? 0;
-    return Array.from({ length: count }, (_unused, index) => ({
-      instrument,
-      ordinal: index + 1,
-      label: slotName(instrument, index + 1, count),
-      member: null,
-    }));
-  });
+const BLANK_TEAM: TeamStart = { name: "", color: null, counts: NO_SLOTS, members: new Map() };
+
+function startOf(team: Team, slots: TeamSlot[]): TeamStart {
+  const members = new Map(
+    slots.flatMap((slot): [string, Member][] =>
+      slot.member_id === null
+        ? []
+        : [[seatKey(slot.instrument, slot.ordinal), { id: slot.member_id, name: slot.member_name ?? "", cohort: slot.member_cohort }]],
+    ),
+  );
+  return { name: team.name, color: team.color, counts: countsOf(slots), members };
 }
 
-/** 팀을 생성합니다. 두 단계의 프로세스입니다. 먼저 포지션마다 필요한 인원 수를 지정하고, 그 다음 각 포지션에 멤버를 배정합니다.
- *
- *  저장은 마지막에 한 번에 일어납니다. 서버는 팀과 포지션을 함께 생성하고(POST /teams), 멤버는
- *  각 포지션별로 따로 배정하므로(PUT .../slots/{id}), 팀 생성 후 포지션 목록을 받아 포지션·번호로
- *  대응시켜 채웁니다. 포지션 순서를 가정하지 않는 이유는, 서버가 정렬 방식을 바꿔도 동작하게 하기 위함입니다. */
-function NewTeam(props: {
-  taken: string[];
-  /** 다른 팀이 쓰는 색입니다. */
-  takenColors: string[];
-  onDone: (message: string) => void;
-  onClose: () => void;
-}) {
-  const { taken, takenColors, onDone, onClose } = props;
-  const client = useQueryClient();
-  const [name, setName] = useState("");
-  // null 이면 고르지 않은 상태입니다. 그대로 보내면 서버가 남은 색 중 첫 색을 줍니다.
-  const [color, setColor] = useState<string | null>(null);
-  const [counts, setCounts] = useState<Counts>(NO_SLOTS);
-  const [drafts, setDrafts] = useState<Draft[] | null>(null);
-  const [seeking, setSeeking] = useState<number | null>(null);
-  const [bad, setBad] = useState("");
-
-  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
-
-  const create = useMutation({
-    mutationFn: async (seats: Draft[]) => {
-      const made = await getJSON<{ team: Team }>("/teams", {
-        method: "POST",
-        body: JSON.stringify({ name: name.trim(), slots: counts, color }),
-      });
-      const teamId = made.team.id;
-      const saved = await getJSON<{ slots: TeamSlot[] }>(`/teams/${teamId}/slots`);
-      for (const seat of seats) {
-        if (seat.member === null) continue;
-        const slot = saved.slots.find(
-          (row) => row.instrument === seat.instrument && row.ordinal === seat.ordinal,
-        );
-        if (slot === undefined) continue;
-        await getJSON(`/teams/${teamId}/slots/${slot.id}`, {
-          method: "PUT",
-          body: JSON.stringify({ member_id: seat.member.id }),
-        });
-      }
-      return made.team;
-    },
-    onSuccess: (team) => {
-      void client.invalidateQueries({ queryKey: ["teams"] });
-      onDone(`${team.name} 팀 생성을 완료했어요.`);
-    },
-    onError: (error) => setBad(reason(error)),
-  });
-
-  // 1단계: 포지션마다 필요한 인원 수를 지정합니다.
-  if (drafts === null) {
-    return (
-      <Modal title="새 팀" hint="포지션별 인원 수를 지정해주세요" onClose={onClose}
-        foot={
-          <>
-            <button className="ghost" onClick={onClose}>취소</button>
-            <button
-              className="primary"
-              onClick={() => {
-                const why = checkTeamName(name, taken) || checkSlotCounts(counts);
-                setBad(why);
-                if (why === "") setDrafts(spread(counts));
-              }}
-            >
-              구성 확정
-            </button>
-          </>
-        }
-      >
-        <div className="fields">
-          <label className="wide" htmlFor="teamName">
-            팀 이름
-            <input
-              id="teamName"
-              value={name}
-              placeholder="곡 이름"
-              onChange={(event) => setName(event.target.value)}
-            />
-          </label>
-        </div>
-        <ColorPick value={color} taken={takenColors} onChange={setColor} />
-
-        {INSTRUMENTS.map((instrument) => (
-          <Stepper
-            key={instrument}
-            label={instrument}
-            value={counts[instrument] ?? 0}
-            min={0}
-            max={(counts[instrument] ?? 0) + Math.max(0, MAX_SLOTS_PER_TEAM - total)}
-            onChange={(next) => setCounts((now) => ({ ...now, [instrument]: next }))}
-          />
-        ))}
-
-        <p className="note">포지션 {total}개</p>
-        {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
-      </Modal>
-    );
+/** 팀 이름·색·포지션 수를 저장하고 저장된 팀을 반환합니다. team 이 null 이면 POST, 아니면 PATCH·PUT 입니다.
+ *  수정할 때 포지션 수를 감소시키면 서버가 번호가 큰 자리부터 삭제하고 그 자리의 멤버도 팀에서 제외합니다. */
+async function writeTeam(team: Team | null, name: string, color: string | null, counts: Counts): Promise<Team> {
+  if (team === null) {
+    const made = await getJSON<{ team: Team }>("/teams", {
+      method: "POST",
+      body: JSON.stringify({ name, slots: counts, color }),
+    });
+    return made.team;
   }
+  if (name !== team.name || color !== team.color) {
+    await getJSON(`/teams/${team.id}`, { method: "PATCH", body: JSON.stringify({ name, color }) });
+  }
+  await getJSON(`/teams/${team.id}/slots`, { method: "PUT", body: JSON.stringify({ slots: counts }) });
+  return { ...team, name, color: color ?? team.color };
+}
 
-  // 2단계: 각 포지션에 멤버를 배정합니다. 빈 채로 둔 포지션은 배정되지 않은 상태로 생성됩니다.
+/** 저장된 자리를 seats 와 같게 변경합니다. 요청 순서(해제 → 지정)는 seatChanges 가 결정합니다. */
+async function writeSeats(teamId: number, seats: Seat[]): Promise<void> {
+  const saved = await getJSON<{ slots: TeamSlot[] }>(`/teams/${teamId}/slots`);
+  const { clear, assign } = seatChanges(seats, saved.slots);
+  for (const slotId of clear) {
+    await getJSON(`/teams/${teamId}/slots/${slotId}`, { method: "DELETE" });
+  }
+  for (const { slotId, memberId } of assign) {
+    await getJSON(`/teams/${teamId}/slots/${slotId}`, { method: "PUT", body: JSON.stringify({ member_id: memberId }) });
+  }
+}
+
+/** 팀 창의 이름·색·포지션 인원 입력입니다. */
+function TeamFields(props: {
+  name: string;
+  color: string | null;
+  counts: Counts;
+  takenColors: string[];
+  onName: (next: string) => void;
+  onColor: (next: string) => void;
+  onCounts: (next: Counts) => void;
+}) {
+  const { name, color, counts, takenColors, onName, onColor, onCounts } = props;
+  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
   return (
-    <Modal title={name.trim()} hint="버튼을 눌러 지정할 멤버를 검색해요" onClose={onClose}
-      foot={
-        <>
-          <button className="ghost" onClick={() => setDrafts(null)}>이전</button>
-          <button
-            className="primary"
-            disabled={create.isPending}
-            onClick={() => create.mutate(drafts)}
-          >
-            {create.isPending ? "만드는 중…" : "팀 생성"}
-          </button>
-        </>
-      }
-    >
+    <>
+      <div className="fields">
+        <label className="wide">
+          팀 이름
+          <input autoFocus value={name} placeholder="곡 이름" onChange={(event) => onName(event.target.value)} />
+        </label>
+      </div>
+      <ColorPick value={color} taken={takenColors} onChange={onColor} />
+
+      <p className="cap2">포지션 {total}개</p>
+      {INSTRUMENTS.map((instrument) => (
+        <Stepper
+          key={instrument}
+          label={instrument}
+          value={counts[instrument] ?? 0}
+          min={0}
+          max={(counts[instrument] ?? 0) + Math.max(0, MAX_SLOTS_PER_TEAM - total)}
+          onChange={(next) => onCounts({ ...counts, [instrument]: next })}
+        />
+      ))}
+    </>
+  );
+}
+
+/** 팀 창의 자리 목록과 멤버 검색 창입니다. 멤버 지정·삭제는 화면 값만 변경하고, 서버에는 저장 버튼을 누를 때 전송합니다. */
+function SeatRows(props: {
+  seats: Seat[];
+  canAdd: boolean;
+  canRemove: boolean;
+  onPick: (seat: Seat, member: Member) => void;
+  onRemove: (seat: Seat) => void;
+}) {
+  const { seats, canAdd, canRemove, onPick, onRemove } = props;
+  const [seeking, setSeeking] = useState<Seat | null>(null);
+  if (seats.length === 0) return <p className="empty">포지션 인원을 설정하면 자리가 추가돼요</p>;
+  return (
+    <>
       <ul className="lineup">
-        {drafts.map((draft, index) => (
-          <li className={draft.member === null ? "seat open" : "seat"} key={draft.label}>
-            <span className="part">{draft.label}</span>
-            {draft.member === null ? (
+        {seats.map((seat) => (
+          <li className={seat.member === null ? "seat open" : "seat"} key={seatKey(seat.instrument, seat.ordinal)}>
+            <span className="part">{seat.label}</span>
+            {seat.member === null ? (
               <span className="who none">멤버가 지정되지 않았어요</span>
             ) : (
-              <span className="who">{memberLabel(draft.member.name, draft.member.cohort)}</span>
+              <span className="who">{memberLabel(seat.member.name, seat.member.cohort)}</span>
             )}
             <span className="acts">
-              <button
-                className="ic"
-                aria-label={`${draft.label} 지정할 멤버 찾기`}
-                onClick={() => setSeeking(index)}
-              >
-                <SearchIcon />
-              </button>
-              {draft.member === null ? null : (
-                <button
-                  className="btn"
-                  onClick={() =>
-                    setDrafts((now) =>
-                      (now ?? []).map((row, at) => (at === index ? { ...row, member: null } : row)),
-                    )
-                  }
-                >
-                  삭제
+              {!canAdd ? null : (
+                <button className="ic" type="button" aria-label={`${seat.label} 지정할 멤버 찾기`} onClick={() => setSeeking(seat)}>
+                  <SearchIcon />
                 </button>
+              )}
+              {seat.member === null || !canRemove ? null : (
+                <button className="btn" type="button" onClick={() => onRemove(seat)}>삭제</button>
               )}
             </span>
           </li>
         ))}
       </ul>
-      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
-
       {seeking === null ? null : (
-        <Modal title="멤버 검색" hint={drafts[seeking]?.label} onClose={() => setSeeking(null)}>
+        <Modal title="멤버 검색" hint={seeking.label} onClose={() => setSeeking(null)}>
           <MemberSearch
-            onPick={(member) => {
-              setDrafts((now) =>
-                (now ?? []).map((row, at) => (at === seeking ? { ...row, member } : row)),
-              );
-              setSeeking(null);
-            }}
+            exclude={seats.flatMap((seat) => (seat.member === null ? [] : [seat.member.id]))}
+            onPick={(member) => { onPick(seeking, member); setSeeking(null); }}
           />
         </Modal>
       )}
+    </>
+  );
+}
+
+type TeamFormProps = {
+  /** null 이면 새 팀입니다. */
+  team: Team | null;
+  start: TeamStart;
+  /** 다른 팀의 이름입니다. */
+  taken: string[];
+  /** 다른 팀이 쓰는 색입니다. 이 팀의 현재 색은 포함하지 않습니다. */
+  takenColors: string[];
+  canAdd: boolean;
+  canRemove: boolean;
+  /** 있으면 아래 버튼 줄에 팀 삭제 버튼이 표시됩니다. 목록의 삭제 아이콘과 같은 동작입니다. */
+  onDelete?: () => void;
+  onDone: (message: string) => void;
+  onClose: () => void;
+};
+
+/** 팀 이름·색·포지션 인원·멤버를 한 창에서 설정합니다. 새 팀과 팀 수정이 같은 창을 사용합니다.
+ *  저장 버튼을 누르면 팀을 저장한 뒤 서버의 자리 목록을 조회하고, 포지션·번호로 대응시켜 멤버를 지정합니다. */
+function TeamForm(props: TeamFormProps) {
+  const { team, start, taken, takenColors, canAdd, canRemove, onDelete, onDone, onClose } = props;
+  const client = useQueryClient();
+  const [name, setName] = useState(start.name);
+  const [color, setColor] = useState(start.color);
+  const [counts, setCounts] = useState(start.counts);
+  const [members, setMembers] = useState(start.members);
+  // 새 팀 저장 후 멤버 지정이 실패했을 때 생성된 팀입니다. 재시도하면 POST 대신 이 팀에 수정 요청을 전송해 팀이 중복 생성되지 않습니다.
+  // 목록을 다시 조회하면 taken 에 이 팀의 이름·색이 포함되므로 검증과 색 선택에서 제외합니다.
+  const [created, setCreated] = useState<Team | null>(null);
+  const [bad, setBad] = useState("");
+
+  const seats = seatsOf(counts, members);
+  const isNew = team === null;
+  const idle = isNew ? "팀 생성" : "저장";
+
+  const save = useMutation({
+    mutationFn: async () => {
+      const saved = await writeTeam(team ?? created, name.trim(), color, counts);
+      if (isNew) setCreated(saved);
+      // 멤버 지정·삭제 권한이 둘 다 없으면 seats 가 서버 값과 같으므로 자리 목록을 조회하지 않습니다.
+      if (canAdd || canRemove) await writeSeats(saved.id, seats);
+    },
+    onSuccess: () => onDone(isNew ? `${name.trim()} 팀 생성을 완료했어요.` : `${name.trim()} 수정을 완료했어요.`),
+    onError: (error) => setBad(reason(error)),
+    onSettled: () => {
+      for (const key of ["teams", "slots", "members", "me"]) void client.invalidateQueries({ queryKey: [key] });
+    },
+  });
+
+  const submit = (): void => {
+    const why = checkTeamName(name, taken.filter((one) => one !== created?.name)) || checkSlotCounts(counts);
+    setBad(why);
+    if (why === "") save.mutate();
+  };
+  const keyOf = (seat: Seat): string => seatKey(seat.instrument, seat.ordinal);
+
+  return (
+    <Modal title={isNew ? "새 팀" : "팀 수정"} hint="이름·색·포지션·멤버를 설정한 뒤 한 번에 저장해요" onClose={onClose}
+      foot={
+        <>
+          {onDelete === undefined ? null : <button className="ghost drop" onClick={onDelete}>팀 삭제</button>}
+          <button className="ghost" onClick={onClose}>취소</button>
+          <button className="primary" disabled={save.isPending} onClick={submit}>{save.isPending ? "저장하는 중…" : idle}</button>
+        </>
+      }
+    >
+      <TeamFields
+        name={name} color={color} counts={counts}
+        takenColors={takenColors.filter((one) => one !== created?.color)}
+        onName={setName} onColor={setColor} onCounts={setCounts}
+      />
+      <p className="cap2">멤버</p>
+      <SeatRows
+        seats={seats} canAdd={canAdd} canRemove={canRemove}
+        onPick={(seat, member) => setMembers((now) => new Map(now).set(keyOf(seat), member))}
+        onRemove={(seat) => setMembers((now) => new Map([...now].filter(([key]) => key !== keyOf(seat))))}
+      />
+      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
     </Modal>
   );
+}
+
+/** 팀 수정 창입니다. 서버의 자리 목록을 조회한 뒤에 TeamForm 을 엽니다. 조회 전에 열면 빈 포지션으로 시작해 저장 시 자리가 삭제됩니다. */
+function EditTeam(props: Omit<TeamFormProps, "team" | "start"> & { team: Team }) {
+  const { team, onClose } = props;
+  const slots = useQuery({
+    queryKey: ["slots", team.id],
+    queryFn: () => getJSON<{ slots: TeamSlot[] }>(`/teams/${team.id}/slots`),
+  });
+
+  if (slots.isPending || slots.isError) {
+    return (
+      <Modal title="팀 수정" onClose={onClose}>
+        <p className="empty">{slots.isError ? reason(slots.error) : "불러오는 중…"}</p>
+      </Modal>
+    );
+  }
+  return <TeamForm {...props} start={startOf(team, slots.data.slots)} />;
 }
 
 export function Teams() {
@@ -511,8 +447,9 @@ export function Teams() {
   const drop = useMutation({
     mutationFn: (team: Team) => getJSON<null>(`/teams/${team.id}`, { method: "DELETE" }),
     onSuccess: (_body, team) => {
-      // 삭제된 팀의 포지션 구성이 열려 있으면 함께 닫습니다.
+      // 삭제된 팀의 포지션 구성이나 수정 창이 열려 있으면 함께 닫습니다.
       setOpenId((now) => (now === team.id ? null : now));
+      setRenaming((now) => (now?.id === team.id ? null : now));
       void client.invalidateQueries({ queryKey: ["teams"] });
       say(`${team.name} 팀을 삭제했어요.`);
     },
@@ -520,10 +457,14 @@ export function Teams() {
   });
 
   const teams = useTeams();
-  const list = teams.data?.teams ?? [];
+  const allTeams = teams.data?.teams ?? [];
+  const manages = canManageTeams(me);
+  // 팀 관리 권한이 없으면 메뉴 이름이 "내 팀"이므로 소속 팀만 표시합니다. 이름·색 중복 검증은 전체 팀(allTeams)으로 합니다.
+  const list = teamsShown(allTeams, teamIds, manages);
   const canCreate = can(me, "team_create");
   const canRename = can(me, "team_edit");
   const canDrop = can(me, "team_delete");
+  const askDrop = (team: Team): void => { if (askDelete(team.name)) drop.mutate(team); };
   const state = loadState(teams);
   // 목록을 렌더링할 수 없는 경우입니다. 아직 데이터를 받지 못했거나, 오류가 발생했거나, 데이터가 비어 있을 때입니다.
   const noList = state.kind !== "ready" || list.length === 0;
@@ -533,6 +474,7 @@ export function Teams() {
   const pages = pageCount(list.length, perPage);
   const shownPage = clampPage(page, pages);
   const opened = list.find((team) => team.id === openId) ?? null;
+  const others = (team: Team | null): Team[] => allTeams.filter((one) => one.id !== team?.id);
 
   return (
     <AppShell
@@ -541,13 +483,13 @@ export function Teams() {
     >
       <div className="main">
         <Card>
-          <SectionHead title="팀" desc="팀을 눌러 포지션을 확인해주세요" />
+          <SectionHead title={teamNavLabel(me)} desc="팀을 눌러 포지션을 확인해주세요" />
 
           {/* 데이터가 비어 있거나 로딩 중이어도 컨테이너는 그대로 유지합니다. 컨테이너 높이를 측정하여 한 페이지의 행 수를 결정하므로,
               컨테이너가 사라지면 측정할 대상이 없어집니다. */}
           <ul className="rows" ref={box}>
             {noList ? (
-              <li className="empty">{stateText(state, "아직 생성된 팀이 없어요.")}</li>
+              <li className="empty">{stateText(state, manages ? "아직 생성된 팀이 없어요." : "소속된 팀이 없어요.")}</li>
             ) : (
               pageSlice(list, shownPage, perPage).map((team) => (
                 <li key={team.id}>
@@ -557,7 +499,7 @@ export function Teams() {
                     mine={teamIds.includes(team.id)}
                     onOpen={() => setOpenId(team.id)}
                     onRename={canRename ? () => setRenaming(team) : undefined}
-                    onDelete={!canDrop ? undefined : () => { if (askDelete(team.name)) drop.mutate(team); }}
+                    onDelete={canDrop ? () => askDrop(team) : undefined}
                   />
                 </li>
               ))
@@ -575,10 +517,15 @@ export function Teams() {
         </Card>
       </div>
 
+      {/* 새 팀은 팀 생성 권한만으로 멤버까지 지정합니다(권한 설명 "새 팀을 추가하고 인원을 배정할 수 있어요"). */}
       {!making ? null : (
-        <NewTeam
-          taken={list.map((team) => team.name)}
-          takenColors={list.map((team) => team.color)}
+        <TeamForm
+          team={null}
+          start={BLANK_TEAM}
+          taken={allTeams.map((team) => team.name)}
+          takenColors={allTeams.map((team) => team.color)}
+          canAdd
+          canRemove
           onClose={() => setMaking(false)}
           onDone={(text) => { setMaking(false); say(text); }}
         />
@@ -587,8 +534,11 @@ export function Teams() {
       {renaming === null ? null : (
         <EditTeam
           team={renaming}
-          taken={list.filter((team) => team.id !== renaming.id).map((team) => team.name)}
-          takenColors={list.filter((team) => team.id !== renaming.id).map((team) => team.color)}
+          taken={others(renaming).map((team) => team.name)}
+          takenColors={others(renaming).map((team) => team.color)}
+          canAdd={can(me, "member_add")}
+          canRemove={can(me, "member_remove")}
+          onDelete={canDrop ? () => askDrop(renaming) : undefined}
           onClose={() => setRenaming(null)}
           onDone={(text) => { setRenaming(null); say(text); }}
         />

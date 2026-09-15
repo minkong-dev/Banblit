@@ -13,6 +13,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   PencilIcon,
+  PersonIcon,
   PlusIcon,
   TrashIcon,
 } from "../components/icons";
@@ -145,13 +146,17 @@ function SetForm(props: {
   );
 }
 
+/** 권한 카드의 두 창입니다. holders 는 권한을 가진 멤버 목록과 회수, add 는 멤버 검색과 부여입니다. */
+type GrantMode = "holders" | "add";
+
 /** 멤버에게 permission set 을 부여하거나 회수합니다. */
 function GrantModal(props: {
   set: PermissionSet;
+  mode: GrantMode;
   onClose: () => void;
   onDone: (text: string) => void;
 }) {
-  const { set, onClose, onDone } = props;
+  const { set, mode, onClose, onDone } = props;
   const client = useQueryClient();
 
   const refresh = (): void => {
@@ -176,6 +181,17 @@ function GrantModal(props: {
 
   const busy = grant.isPending || revoke.isPending;
 
+  if (mode === "add") {
+    return (
+      <Modal title={set.name} hint="권한을 부여할 멤버를 검색해요" onClose={onClose}>
+        <MemberSearch
+          exclude={set.members.map((person) => person.id)}
+          onPick={(one) => grant.mutate(one.id)}
+        />
+      </Modal>
+    );
+  }
+
   return (
     <Modal title={set.name} hint="해당 권한을 가진 멤버" onClose={onClose}>
       <ul className="lineup">
@@ -199,12 +215,6 @@ function GrantModal(props: {
           ))
         )}
       </ul>
-
-      <p className="cap2">멤버 추가</p>
-      <MemberSearch
-        exclude={set.members.map((person) => person.id)}
-        onPick={(one) => grant.mutate(one.id)}
-      />
     </Modal>
   );
 }
@@ -212,11 +222,12 @@ function GrantModal(props: {
 /** permission set 카드 한 장입니다. 정사각형 카드이며 이름, 멤버 수, 설명이 포함됩니다. */
 function SetTile(props: {
   set: PermissionSet;
+  onHolders: () => void;
   onGrant: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const { set, onGrant, onEdit, onDelete } = props;
+  const { set, onHolders, onGrant, onEdit, onDelete } = props;
   return (
     <li className="tile">
       <div className="tilehead">
@@ -225,6 +236,9 @@ function SetTile(props: {
       </div>
       <p className="tilenote">{set.description || "권한 설명을 작성해주세요"}</p>
       <div className="tileacts">
+        <button className="ic" aria-label={`${set.name} 권한을 가진 멤버 보기`} onClick={onHolders}>
+          <PersonIcon />
+        </button>
         <button className="ic" aria-label={`${set.name} 멤버 추가`} onClick={onGrant}>
           <PlusIcon />
         </button>
@@ -245,7 +259,7 @@ function SetRail() {
   const track = useRef<HTMLUListElement | null>(null);
   const [making, setMaking] = useState(false);
   const [editing, setEditing] = useState<PermissionSet | null>(null);
-  const [granting, setGranting] = useState<PermissionSet | null>(null);
+  const [granting, setGranting] = useState<{ set: PermissionSet; mode: GrantMode } | null>(null);
 
   const sets = useQuery({
     queryKey: SETS_KEY,
@@ -292,7 +306,8 @@ function SetRail() {
           <SetTile
             key={set.id}
             set={set}
-            onGrant={() => setGranting(set)}
+            onHolders={() => setGranting({ set, mode: "holders" })}
+            onGrant={() => setGranting({ set, mode: "add" })}
             onEdit={() => setEditing(set)}
             onDelete={() => { if (askDelete(set.name)) drop.mutate(set); }}
           />
@@ -330,7 +345,8 @@ function SetRail() {
       )}
       {granting === null ? null : (
         <GrantModal
-          set={list.find((one) => one.id === granting.id) ?? granting}
+          set={list.find((one) => one.id === granting.set.id) ?? granting.set}
+          mode={granting.mode}
           onClose={() => setGranting(null)}
           onDone={saved}
         />

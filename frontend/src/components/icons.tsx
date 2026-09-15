@@ -64,6 +64,16 @@ export function PlusIcon(props: IconProps) {
   return <Stroke width={2.2} {...props}><path d="M12 5v14M5 12h14" /></Stroke>;
 }
 
+/** 사람 아이콘입니다. 권한 카드에서 그 권한을 가진 멤버 목록을 엽니다. */
+export function PersonIcon(props: IconProps) {
+  return (
+    <Stroke width={2} {...props}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-3.6 3.6-6 8-6s8 2.4 8 6" />
+    </Stroke>
+  );
+}
+
 export function PencilIcon(props: IconProps) {
   return (
     <Stroke width={2} {...props}>

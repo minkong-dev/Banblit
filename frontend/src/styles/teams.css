@@ -23,4 +23,7 @@ body[data-page="teams"] {
   .teamrow2 b { font-size: 15px; font-weight: 700; }
   .mine { font-size: 11.5px; font-weight: 700; color: var(--brand-on); background: var(--brand); padding: 3px 9px; border-radius: 999px; }
   .cnt { font-size: 13px; color: var(--t3); white-space: nowrap; }
+
+  /* 팀 창 아래 버튼 줄에서 팀 삭제 버튼은 취소·저장 버튼과 분리해 왼쪽 끝에 배치합니다. 저장 버튼 옆에 배치하면 오조작이 발생합니다. */
+  .mfoot .drop { margin-right: auto; color: var(--red); }
 }

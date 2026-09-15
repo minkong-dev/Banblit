@@ -126,3 +126,13 @@ export const PERMISSION_ITEMS: readonly {
 export function can(me: Account | null, item: Permission): boolean {
   return me?.permissions?.includes(item) ?? false;
 }
+
+/** 팀 생성·수정·삭제 권한 중 하나라도 있으면 true 를 반환합니다. 사이드바 팀 메뉴 이름과 팀 목록 범위가 이 값을 따릅니다. */
+export function canManageTeams(me: Account | null): boolean {
+  return (["team_create", "team_edit", "team_delete"] as const).some((item) => can(me, item));
+}
+
+/** 사이드바의 팀 메뉴 이름입니다. canManageTeams 가 true 이면 "팀 관리", false 이면 "내 팀"입니다. */
+export function teamNavLabel(me: Account | null): string {
+  return canManageTeams(me) ? "팀 관리" : "내 팀";
+}

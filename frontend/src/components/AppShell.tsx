@@ -7,7 +7,7 @@ import { NotificationMenu } from "./NotificationMenu";
 import { useDismissible, usePage } from "./hooks";
 import { useMe, useMyTeams } from "./queries";
 import { useToast } from "../lib/toast";
-import { can, roleLabel } from "../lib/account";
+import { can, roleLabel, teamNavLabel } from "../lib/account";
 import { getJSON, logOut } from "../lib/pipeline";
 import type { Member, Permission } from "../lib/contract";
 import "../styles/shell.css";
@@ -69,6 +69,8 @@ export function AppShell(props: {
 
   // 가진 권한으로 필터링합니다. 계정을 아직 받지 못했으면 아무것도 표시되지 않습니다.
   const managerNav = MANAGER_NAV.filter((item) => item.needs.some((need) => can(me, need)));
+  // 팀 메뉴 이름만 권한에 따라 "팀 관리"·"내 팀"으로 바뀝니다. 주소와 key 는 같습니다.
+  const nav = NAV.map((item) => (item.key === "find-team" ? { ...item, label: teamNavLabel(me) } : item));
 
   return (
     <>
@@ -83,7 +85,7 @@ export function AppShell(props: {
       <div className="shell">
         <aside className="side" aria-label="메뉴">
           <div className="inner">
-            <NavList items={NAV} current={current} />
+            <NavList items={nav} current={current} />
             {managerNav.length === 0 ? null : (
               <>
                 <div className="sep" />
