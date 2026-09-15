@@ -21,8 +21,9 @@ sources:
   - frontend/src/routes/Settings.tsx              # 합주실·기간 권한 항목을 가진 사용자가 합주실·기간 값을 입력하는 화면. 매일 기간은 종료일 입력을 숨깁니다
   - frontend/src/lib/pipeline.ts                  # 매일 기간을 저장할 때 ends_on 에 starts_on 을 넣어 보내는 periodBody
   - frontend/src/lib/pipeline.test.ts             # periodBody 시나리오
-  - backend/src/backend/services/period_service.py     # 매일 기간은 계산을 실행한 날 하루만 배정하는 period_days
-  - backend/tests/integration/db/test_reservation_endpoints.py # 매일 기간이 저장된 종료일 뒤에도 예약을 거절하는 시나리오
+  - backend/src/backend/services/period_service.py     # 매일 기간은 계산을 실행한 날 하루만 배정하고 전체합주 날짜를 제외하는 period_days
+  - backend/src/backend/services/reservation_service.py # 집중 합주기간 예약 거절, 전체합주 날짜는 전체합주 시간만 거절
+  - backend/tests/integration/db/test_reservation_endpoints.py # 매일 기간의 종료일 뒤 예약 거절, 전체합주 날짜의 예약 허용·거절 시나리오
   - backend/migrations/versions/d4a71c96e2b8_hourly_slots.py # slot을 30분에서 1시간으로 변경한 마이그레이션
   - frontend/src/lib/settings.ts                  # 같은 규칙을 화면에서 먼저 검증하는 코드
 ---
@@ -124,7 +125,7 @@ slot 길이는 서버의 `SLOT_MINUTES` 상수 1개로만 정의합니다. 변�
 
 **집중 합주기간끼리는 날짜가 하루라도 겹치면 등록·수정을 거절합니다(patch_note 8번).** 전체합주 옵션이 날짜마다 어느 기간에 속하는지 정해야 하므로 한 날짜는 집중 합주기간 하나에만 속합니다. DB 제약 `periods_focused_no_overlap`(migration `b5e1d9a37c42`)이 양 끝 날짜를 포함한 범위로 검사하고, "매일" 기간은 종료일이 없는 것으로 봅니다. 서버는 이 위반을 422 "다른 집중 합주기간과 날짜가 겹칩니다" 로 응답합니다. 상시 개방 기간은 검사하지 않습니다. 이미 겹치는 집중 합주기간이 저장된 DB 에서는 migration 이 실패하며, 어느 기간을 남길지는 사람이 정해야 해서 자동으로 삭제하지 않습니다. 생성 겹침·"매일" 기간의 무기한 겹침·수정 겹침 422 와 상시 개방 기간 허용 201 은 같은 테스트 파일이 확인합니다.
 
-**집중 합주기간에 전체합주를 지정할 수 있습니다(patch_note 8번 B단계, 저장만).** 기간 하나에 날짜 범위 하나·합주실 하나·기본 시작/끝 시각을 저장하고(`periods.ensemble_*` 다섯 열, 함께 채우거나 함께 비움), 날짜마다 시각을 다르게 지정하면 `ensemble_days` 에 그 날짜 한 행을 둡니다.
+**집중 합주기간에 전체합주를 지정할 수 있습니다(patch_note 8번 B단계).** 기간 하나에 날짜 범위 하나·합주실 하나·기본 시작/끝 시각을 저장하고(`periods.ensemble_*` 다섯 열, 함께 채우거나 함께 비움), 날짜마다 시각을 다르게 지정하면 `ensemble_days` 에 그 날짜 한 행을 둡니다.
 
 | 요청 | 동작 |
 | --- | --- |
@@ -133,7 +134,17 @@ slot 길이는 서버의 `SLOT_MINUTES` 상수 1개로만 정의합니다. 변�
 | `PUT /periods/{id}/ensemble/days/{YYYY-MM-DD}` | 날짜 하나의 시각 지정. 이미 있으면 덮어씁니다 |
 | `DELETE /periods/{id}/ensemble/days/{YYYY-MM-DD}` | 날짜 하나를 기본 시각으로 되돌립니다 |
 
-날짜 범위는 기간 안이어야 하고, "매일" 기간은 범위 시작일만 기간 시작일 이후면 됩니다. 이 조건과 "집중 합주기간만" 조건은 DB CHECK(`periods_ensemble_within_period`·`periods_ensemble_focused_only`)가 검사합니다. 기간 수정(PATCH)으로 날짜를 줄여도 같은 제약이 422 로 거절하게 하려고 서비스가 아니라 DB 에 두었습니다. 시각이 합주실 운영 시간 안인지와 점유 단위 격자 위인지는 `ensemble_service.py` 가 검사합니다. 배정·예약이 전체합주 날짜를 다르게 처리하는 동작(C단계)과 화면(D단계)은 아직 없습니다.
+날짜 범위는 기간 안이어야 하고, "매일" 기간은 범위 시작일만 기간 시작일 이후면 됩니다. 이 조건과 "집중 합주기간만" 조건은 DB CHECK(`periods_ensemble_within_period`·`periods_ensemble_focused_only`)가 검사합니다. 기간 수정(PATCH)으로 날짜를 줄여도 같은 제약이 422 로 거절하게 하려고 서비스가 아니라 DB 에 두었습니다. 시각이 합주실 운영 시간 안인지와 점유 단위 격자 위인지는 `ensemble_service.py` 가 검사합니다. 화면(D단계)은 아직 없습니다.
+
+**전체합주 날짜는 팀별 배정에서 제외하고, 예약은 전체합주 시간만 거절합니다(patch_note 8번 C단계).** 한 날짜는 팀별·전체 중 한쪽에만 속합니다.
+
+| 대상 | 전체합주 날짜의 동작 | 코드 |
+| --- | --- | --- |
+| 배정 계산 | 계산할 날짜에서 제외합니다. 남는 날짜가 없으면 계산 job 이 "팀별로 배정할 날짜가 없습니다" 로 실패합니다 | `period_service.py` 의 `period_days`·`assign_period` |
+| 자동 배정 | "매일" 기간은 오늘 하루만 계산하므로, 오늘이 전체합주 날짜면 실행하지 않고 실행 기록도 남기지 않습니다 | `jobs/auto_assign.py` 의 `run_due_assignments` |
+| 예약 생성·이동 | 선착순으로 받습니다. 전체합주에 지정한 합주실에서 그날의 전체합주 시각(날짜별 지정이 있으면 그 시각, 없으면 기본 시각)과 겹치는 구간만 422 "전체합주 시간이라 예약할 수 없습니다" 로 거절합니다 | `reservation_service.py` 의 `_require_not_in_focused_period` |
+
+집중 합주기간의 나머지 날짜는 이전과 같이 예약을 거절합니다. 전체합주를 지정하기 전에 이미 있던 예약은 다시 검사하지 않습니다. 시나리오는 `test_period_service.py`(전체합주 날짜 제외)·`test_auto_assign.py`(매일 기간 미실행)·`test_reservation_endpoints.py`(다른 합주실·다른 시각 허용, 날짜별 시각 우선, 이동 거절)가 확인합니다.
 
 ### 권한을 가진 사용자만 입력한다는 규칙을 서버가 검증합니다
 
