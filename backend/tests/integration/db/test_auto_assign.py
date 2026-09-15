@@ -104,6 +104,24 @@ def test_does_not_run_before_the_time(db_session: Session) -> None:
     assert _runs(db_session) == []
 
 
+def test_an_everyday_period_does_not_run_on_an_ensemble_day(db_session: Session) -> None:
+    """"매일" 기간은 오늘 하루만 배정합니다. 오늘이 전체합주 날짜면 배정할 날이 없어 실행하지 않습니다."""
+    period_id = _period(db_session, starts_on=TODAY - timedelta(days=3))
+    _team_with_member(db_session, "A", "김민수")
+    room_id = _room(db_session, "1번방")
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    period.everyday = True
+    period.ensemble_starts_on = period.ensemble_ends_on = TODAY
+    period.ensemble_room_id = room_id
+    period.ensemble_starts_at, period.ensemble_ends_at = time(18, 0), time(20, 0)
+    db_session.commit()
+
+    assert auto_assign.run_due_assignments(db_session, _at(10)) == []
+    assert _assignments(db_session) == []
+    assert _runs(db_session) == []
+
+
 def test_does_not_run_a_slot_that_already_ran(db_session: Session) -> None:
     period_id = _period(db_session)
     _team_with_member(db_session, "A", "김민수")

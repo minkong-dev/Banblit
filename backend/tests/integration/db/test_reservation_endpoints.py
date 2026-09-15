@@ -6,7 +6,7 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 from backend.services.reservation_service import create_reservation
-from backend.db.models import Member, Period, Reservation, Room, Team, TeamSlot
+from backend.db.models import EnsembleDay, Member, Period, Reservation, Room, Team, TeamSlot
 from conftest import AccountFactory, seat
 
 OPEN_DAY = "2026-09-14"
@@ -836,3 +836,79 @@ def test_an_everyday_focused_period_blocks_reservations_after_its_end_date(
 
     assert response.status_code == 422
     assert "집중 합주기간" in response.json()["detail"]
+
+
+def _with_ensemble(session: Session, room: Room) -> Period:
+    # 집중 합주기간 9/21~9/27 중 9/26~9/27 을 전체합주 날짜로, 기본 시각을 18~20시로 지정합니다.
+    period = _focused_period(session)
+    period.ensemble_starts_on, period.ensemble_ends_on = date(2026, 9, 26), date(2026, 9, 27)
+    period.ensemble_room_id = room.id
+    period.ensemble_starts_at, period.ensemble_ends_at = time(18, 0), time(20, 0)
+    session.flush()
+    return period
+
+
+def _reserve(
+    api_client: TestClient, cookies: dict[str, str], room: Room, day: str, start: int, end: int
+) -> dict:
+    response = api_client.post(
+        "/reservations",
+        json={
+            "room_id": room.id,
+            "starts_at": f"{day}T{start}:00:00",
+            "ends_at": f"{day}T{end}:00:00",
+        },
+        cookies=cookies,
+    )
+    return {"status": response.status_code, "body": response.json()}
+
+
+def test_an_ensemble_day_takes_reservations_outside_the_ensemble_room_and_time(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """전체합주 날짜의 전체합주 외 시간은 선착순 예약입니다. 전체합주는 지정한 합주실 1개만 점유합니다."""
+    _, owner = account("이도현", "dohyun@example.com")
+    ensemble_room = _room(db_session)
+    other_room = _room(db_session, "2번방")
+    _with_ensemble(db_session, ensemble_room)
+    db_session.commit()
+
+    assert _reserve(api_client, owner, other_room, "2026-09-26", 18, 19)["status"] == 201
+    assert _reserve(api_client, owner, ensemble_room, "2026-09-26", 20, 21)["status"] == 201
+    overlapping = _reserve(api_client, owner, ensemble_room, "2026-09-26", 19, 20)
+    assert overlapping["status"] == 422
+    assert "전체합주" in overlapping["body"]["detail"]
+
+
+def test_an_ensemble_day_with_its_own_time_blocks_that_time_instead_of_the_default(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, owner = account("이도현", "dohyun@example.com")
+    room = _room(db_session)
+    period = _with_ensemble(db_session, room)
+    db_session.add(
+        EnsembleDay(period_id=period.id, day=date(2026, 9, 27), starts_at=time(20, 0), ends_at=time(22, 0))
+    )
+    db_session.commit()
+
+    assert _reserve(api_client, owner, room, "2026-09-27", 18, 19)["status"] == 201
+    assert _reserve(api_client, owner, room, "2026-09-27", 21, 22)["status"] == 422
+
+
+def test_a_reservation_cannot_be_moved_into_the_ensemble_time(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, owner = account("이도현", "dohyun@example.com")
+    room = _room(db_session)
+    _with_ensemble(db_session, room)
+    db_session.commit()
+    created = _reserve(api_client, owner, room, "2026-09-26", 20, 21)["body"]["reservations"][0]
+
+    moved = api_client.patch(
+        f"/reservations/{created['id']}",
+        json={"starts_at": "2026-09-26T19:00:00", "ends_at": "2026-09-26T20:00:00"},
+        cookies=owner,
+    )
+
+    assert moved.status_code == 422
+    assert "전체합주" in moved.json()["detail"]
