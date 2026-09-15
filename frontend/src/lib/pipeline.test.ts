@@ -5,6 +5,7 @@ import {
   cancelBooking,
   checkAttachments,
   checkPeriod,
+  ensembleSaveOrder,
   expelMember,
   findId,
   isSignedIn,
@@ -38,6 +39,42 @@ describe("loadReservationRows", () => {
 
     // Assert
     expect(spy).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("ensembleSaveOrder — 기간 저장과 전체합주 저장의 요청 순서", () => {
+  const before = {
+    starts_on: "2026-09-01",
+    ends_on: "2026-09-20",
+    everyday: false,
+    ensemble: { starts_on: "2026-09-11", ends_on: "2026-09-13" },
+  };
+
+  it("새 기간은 기간을 먼저 만들어야 전체합주를 지정할 번호가 생긴다", () => {
+    expect(ensembleSaveOrder(null, { starts_on: "2026-09-01", ends_on: "2026-09-02" }))
+      .toEqual(["period", "ensemble"]);
+    expect(ensembleSaveOrder(null, null)).toEqual(["period"]);
+  });
+
+  it("해제는 기간 수정보다 먼저 보낸다. 줄인 기간 밖에 옛 전체합주가 남아 거절되지 않게 한다", () => {
+    expect(ensembleSaveOrder(before, null)).toEqual(["clearEnsemble", "period"]);
+    expect(ensembleSaveOrder({ ...before, ensemble: null }, null)).toEqual(["period"]);
+  });
+
+  it("새 전체합주 범위가 저장된 기간 안이면 전체합주를 먼저 보낸다", () => {
+    expect(ensembleSaveOrder(before, { starts_on: "2026-09-01", ends_on: "2026-09-03" }))
+      .toEqual(["ensemble", "period"]);
+  });
+
+  it("새 전체합주 범위가 저장된 기간 밖이면 기간을 먼저 늘린다", () => {
+    expect(ensembleSaveOrder(before, { starts_on: "2026-09-20", ends_on: "2026-09-25" }))
+      .toEqual(["period", "ensemble"]);
+  });
+
+  it("저장된 기간이 매일이면 시작일 이후의 범위는 전부 기간 안이다", () => {
+    const everyday = { ...before, ends_on: "2026-09-01", everyday: true };
+    expect(ensembleSaveOrder(everyday, { starts_on: "2026-12-01", ends_on: "2026-12-02" }))
+      .toEqual(["ensemble", "period"]);
   });
 });
 

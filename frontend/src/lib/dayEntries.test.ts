@@ -1,8 +1,55 @@
 import { describe, expect, it } from "vitest";
 
-import { offByDay, repeatDays, visible } from "./dayEntries";
+import { ensembleByDay, ensembleOn, offByDay, repeatDays, visible } from "./dayEntries";
 import type { Entry } from "./dayEntries";
-import type { Unavailable } from "./contract";
+import type { Period, Unavailable } from "./contract";
+
+const withEnsemble: Period = {
+  id: 3,
+  kind: "focused",
+  starts_on: "2026-09-01",
+  ends_on: "2026-09-20",
+  everyday: false,
+  first_run_at: "09:00",
+  second_run_at: "21:00",
+  ensemble: {
+    starts_on: "2026-09-11",
+    ends_on: "2026-09-13",
+    room_id: 1,
+    starts_at: "19:00",
+    ends_at: "22:00",
+    days: [{ day: "2026-09-12", starts_at: "18:00", ends_at: "20:30" }],
+  },
+};
+
+describe("ensembleOn", () => {
+  it("범위 안의 날짜는 기본 시각을 돌려준다", () => {
+    expect(ensembleOn([withEnsemble], "2026-09-11")).toEqual({
+      periodId: 3, roomId: 1, startsAt: "19:00", endsAt: "22:00", custom: false,
+    });
+  });
+
+  it("날짜별로 지정한 시각이 기본 시각보다 우선한다", () => {
+    expect(ensembleOn([withEnsemble], "2026-09-12")).toEqual({
+      periodId: 3, roomId: 1, startsAt: "18:00", endsAt: "20:30", custom: true,
+    });
+  });
+
+  it("범위 밖이거나 전체합주가 없는 기간이면 null 이다", () => {
+    expect(ensembleOn([withEnsemble], "2026-09-14")).toBeNull();
+    expect(ensembleOn([{ ...withEnsemble, ensemble: null }], "2026-09-11")).toBeNull();
+  });
+});
+
+describe("ensembleByDay", () => {
+  it("전체합주 날짜에 합주실 이름과 시각을 담은 항목 하나를 둔다", () => {
+    const rooms = [{ id: 1, name: "합주실 A", opens_at: "18:00", closes_at: "23:00" }];
+    const byDay = ensembleByDay([withEnsemble], rooms, 18, ["2026-09-12", "2026-09-14"]);
+    expect(byDay).toEqual({
+      "2026-09-12": [{ kind: "ensemble", team: null, room: "합주실 A", who: "전체합주", a: 0, b: 2.5 }],
+    });
+  });
+});
 
 const weekly: Unavailable = {
   id: 7,
@@ -55,5 +102,11 @@ describe("visible", () => {
 
   it("전체 일정 탭은 불가능 일정을 제외한다", () => {
     expect(visible(entries, "all", teams)).toHaveLength(2);
+  });
+
+  it("전체합주는 모든 멤버의 일정이라 내 일정 탭과 전체 일정 탭 둘 다 반환한다", () => {
+    const withOne: Entry[] = [...entries, { kind: "ensemble", team: null, a: 3, b: 4 }];
+    expect(visible(withOne, "me", teams).map((entry) => entry.kind)).toContain("ensemble");
+    expect(visible(withOne, "all", teams).map((entry) => entry.kind)).toContain("ensemble");
   });
 });
