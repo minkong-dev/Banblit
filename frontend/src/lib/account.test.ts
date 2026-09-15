@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PERMISSION_ITEMS, can, roleLabel } from "./account";
+import { PERMISSION_ITEMS, can, roleLabel, teamNavLabel } from "./account";
 import type { Account } from "./contract";
 
 function accountWith(
@@ -17,6 +17,14 @@ function accountWith(
     cohort: 46,
   };
 }
+
+describe("teamNavLabel", () => {
+  it("팀 생성·수정·삭제 중 하나라도 있으면 팀 관리, 없으면 내 팀으로 표시한다", () => {
+    expect(teamNavLabel(accountWith(["team_edit"]))).toBe("팀 관리");
+    expect(teamNavLabel(accountWith(["member_add"]))).toBe("내 팀");
+    expect(teamNavLabel(null)).toBe("내 팀");
+  });
+});
 
 describe("roleLabel", () => {
   it("가진 permission set 의 이름을 표시하고, 없으면 일반멤버로 표시한다", () => {
