@@ -297,6 +297,9 @@ class Period(Base):
     """기간입니다. kind 가 open 이면 선착순 예약 기간, focused 면 자동 배정 대상인 집중 합주기간입니다.
 
     everyday 는 집중 합주기간의 "매일" 옵션입니다. first_run_at 과 second_run_at 은 하루 2회 계산하는 시각입니다.
+
+    ensemble_* 다섯 열은 전체합주 설정입니다(patch_note 8번). 날짜 범위·합주실·기본 시작/끝 시각을 함께 채우거나
+    함께 비웁니다. 비어 있으면 전체합주가 없는 기간입니다. 날짜마다 다른 시각은 ensemble_days 가 저장합니다.
     """
 
     __tablename__ = "periods"
@@ -308,12 +311,53 @@ class Period(Base):
     everyday: Mapped[bool] = mapped_column(Boolean, default=False)
     first_run_at: Mapped[time] = mapped_column(Time)
     second_run_at: Mapped[time] = mapped_column(Time)
+    ensemble_starts_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    ensemble_ends_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    ensemble_room_id: Mapped[int | None] = mapped_column(ForeignKey("rooms.id"), nullable=True)
+    ensemble_starts_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    ensemble_ends_at: Mapped[time | None] = mapped_column(Time, nullable=True)
 
     # 집중 합주기간끼리의 날짜 겹침 금지 제약(EXCLUDE)은 Reservation 의 겹침 금지 제약과 같이 migration 에만
     # 둡니다(migrations/versions/b5e1d9a37c42_focused_period_no_overlap.py).
+    # ensemble 제약은 migration d9a4c6e1f207 과 같은 이름·조건입니다. 위반 문장을 이 이름으로 찾습니다.
     __table_args__ = (
         CheckConstraint(_in_sql("kind", PERIOD_KINDS)),
         CheckConstraint("ends_on >= starts_on"),
+        CheckConstraint(
+            "num_nulls(ensemble_starts_on, ensemble_ends_on, ensemble_room_id,"
+            " ensemble_starts_at, ensemble_ends_at) IN (0, 5)",
+            name="periods_ensemble_all_or_none",
+        ),
+        CheckConstraint(
+            "ensemble_starts_on IS NULL OR kind = 'focused'",
+            name="periods_ensemble_focused_only",
+        ),
+        CheckConstraint(
+            "ensemble_starts_on IS NULL OR (ensemble_starts_on >= starts_on"
+            " AND ensemble_ends_on >= ensemble_starts_on AND (everyday OR ensemble_ends_on <= ends_on))",
+            name="periods_ensemble_within_period",
+        ),
+        CheckConstraint(
+            "ensemble_ends_at > ensemble_starts_at", name="periods_ensemble_times_order"
+        ),
+    )
+
+
+class EnsembleDay(Base):
+    """전체합주 날짜 하나의 시각입니다. 기간의 기본 시각(Period.ensemble_starts_at·ensemble_ends_at)과 다르게
+    지정한 날짜만 행이 있습니다. 날짜가 전체합주 날짜 범위 안인지는 다른 table 의 값이라 서비스가 검사합니다."""
+
+    __tablename__ = "ensemble_days"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    period_id: Mapped[int] = mapped_column(ForeignKey("periods.id", ondelete="CASCADE"))
+    day: Mapped[date] = mapped_column(Date)
+    starts_at: Mapped[time] = mapped_column(Time)
+    ends_at: Mapped[time] = mapped_column(Time)
+
+    __table_args__ = (
+        UniqueConstraint("period_id", "day"),
+        CheckConstraint("ends_at > starts_at"),
     )
 
 

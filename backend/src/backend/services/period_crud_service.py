@@ -10,11 +10,14 @@ from backend.services.input import (
 from backend.db.models import Period
 from backend.db.pipeline import commit_translating
 
-# 위반될 수 있는 제약과 그때 표시할 문장입니다. 제약 이름은 migration b5e1d9a37c42 가 정했습니다.
+# 위반될 수 있는 제약과 그때 표시할 문장입니다. 제약 이름은 migration b5e1d9a37c42·d9a4c6e1f207 이 정했습니다.
+# 전체합주 설정(services/ensemble_service.py)도 이 문장을 씁니다.
 PERIOD_MESSAGES = {
     "periods_focused_no_overlap": (
         "다른 집중 합주기간과 날짜가 겹칩니다. \"매일\" 기간은 종료일 없이 계속되는 것으로 봅니다"
     ),
+    "periods_ensemble_within_period": "전체합주 날짜는 집중 합주기간 안이어야 합니다",
+    "periods_ensemble_focused_only": "전체합주는 집중 합주기간에만 지정할 수 있습니다",
 }
 
 
