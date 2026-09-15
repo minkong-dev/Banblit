@@ -1,6 +1,63 @@
 import { describe, expect, it } from "vitest";
 
-import { capacity, dateRangeMessage, openHoursMessage, roomNameMessage, slotsBetween } from "./settings";
+import {
+  capacity,
+  dateRangeMessage,
+  ensembleMessage,
+  openHoursMessage,
+  roomNameMessage,
+  slotsBetween,
+} from "./settings";
+
+describe("ensembleMessage", () => {
+  const period = { starts_on: "2026-09-01", ends_on: "2026-09-20", everyday: false };
+  const room = { opens_at: "18:00", closes_at: "23:00" };
+  const form = { starts_on: "2026-09-11", ends_on: "2026-09-13", starts_at: "19:00", ends_at: "22:00" };
+
+  it("기간 안의 날짜와 운영 시간 안의 정각이면 통과한다", () => {
+    expect(ensembleMessage(form, period, room, 60)).toBe("");
+  });
+
+  it("날짜가 비어 있거나 뒤집히면 날짜 범위 문구를 돌려준다", () => {
+    expect(ensembleMessage({ ...form, starts_on: "" }, period, room, 60)).toBe("시작일을 지정해주세요.");
+    expect(ensembleMessage({ ...form, ends_on: "2026-09-10" }, period, room, 60))
+      .toBe("종료일은 시작일보다 빠를 수 없어요.");
+  });
+
+  it("집중합주 기간 밖의 날짜는 받지 않는다", () => {
+    expect(ensembleMessage({ ...form, ends_on: "2026-09-21" }, period, room, 60))
+      .toBe("전체합주 날짜는 집중합주 기간 안이어야 해요.");
+  });
+
+  it("매일 기간은 시작일만 기간 시작일 이후면 된다", () => {
+    const everyday = { ...period, ends_on: "2026-09-01", everyday: true };
+    expect(ensembleMessage({ ...form, ends_on: "2027-01-01" }, everyday, room, 60)).toBe("");
+    expect(ensembleMessage({ ...form, starts_on: "2026-08-31" }, everyday, room, 60))
+      .toBe("전체합주 날짜는 집중합주 기간 안이어야 해요.");
+  });
+
+  it("합주실을 선택하지 않으면 받지 않는다", () => {
+    expect(ensembleMessage(form, period, undefined, 60)).toBe("합주실을 선택해주세요.");
+  });
+
+  it("점유 단위 격자 밖의 시각은 받지 않는다", () => {
+    expect(ensembleMessage({ ...form, starts_at: "19:30" }, period, room, 60))
+      .toBe("전체합주 시각은 정각 기준으로 지정해주세요.");
+    expect(ensembleMessage({ ...form, starts_at: "19:30" }, period, room, 30)).toBe("");
+  });
+
+  it("끝 시각이 시작 시각보다 늦어야 한다", () => {
+    expect(ensembleMessage({ ...form, starts_at: "21:00", ends_at: "20:00" }, period, room, 60))
+      .toBe("끝 시각은 시작 시각보다 늦어야 해요.");
+  });
+
+  it("합주실 운영 시간 밖의 시각은 받지 않는다", () => {
+    expect(ensembleMessage({ ...form, starts_at: "17:00" }, period, room, 60))
+      .toBe("전체합주 시각은 합주실 운영 시간 안이어야 해요.");
+    expect(ensembleMessage({ ...form, ends_at: "23:30" }, period, room, 30))
+      .toBe("전체합주 시각은 합주실 운영 시간 안이어야 해요.");
+  });
+});
 
 describe("openHoursMessage", () => {
   it("정시에서만 열고 닫는다", () => {

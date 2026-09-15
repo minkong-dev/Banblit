@@ -188,6 +188,48 @@ describe("focusedRanges — 집중 합주기간의 날짜 범위", () => {
       { kind: "focused", starts_on: "2026-09-14", ends_on: "2026-09-14", everyday: true },
     ])).toEqual([{ from: "2026-09-14", to: null }]);
   });
+
+  it("전체합주 날짜 범위는 팀별 배정에서 제외되어 범위가 앞뒤로 나뉜다", () => {
+    expect(focusedRanges([
+      {
+        kind: "focused", starts_on: "2026-09-01", ends_on: "2026-09-20", everyday: false,
+        ensemble: { starts_on: "2026-09-11", ends_on: "2026-09-13" },
+      },
+    ])).toEqual([
+      { from: "2026-09-01", to: "2026-09-10" },
+      { from: "2026-09-14", to: "2026-09-20" },
+    ]);
+  });
+
+  it("전체합주가 기간의 앞 끝에 붙으면 뒤쪽 범위 하나만 남는다", () => {
+    expect(focusedRanges([
+      {
+        kind: "focused", starts_on: "2026-09-01", ends_on: "2026-09-20", everyday: false,
+        ensemble: { starts_on: "2026-09-01", ends_on: "2026-09-03" },
+      },
+    ])).toEqual([{ from: "2026-09-04", to: "2026-09-20" }]);
+  });
+
+  it("전체합주가 기간 전체를 덮으면 범위가 없다", () => {
+    expect(focusedRanges([
+      {
+        kind: "focused", starts_on: "2026-09-01", ends_on: "2026-09-03", everyday: false,
+        ensemble: { starts_on: "2026-09-01", ends_on: "2026-09-03" },
+      },
+    ])).toEqual([]);
+  });
+
+  it("매일 기간은 전체합주 뒤쪽 범위가 끝없이 이어진다. 월말을 넘겨 날짜를 센다", () => {
+    expect(focusedRanges([
+      {
+        kind: "focused", starts_on: "2026-09-01", ends_on: "2026-09-01", everyday: true,
+        ensemble: { starts_on: "2026-09-29", ends_on: "2026-09-30" },
+      },
+    ])).toEqual([
+      { from: "2026-09-01", to: "2026-09-28" },
+      { from: "2026-10-01", to: null },
+    ]);
+  });
 });
 
 describe("inRanges", () => {
