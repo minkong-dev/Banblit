@@ -8,6 +8,7 @@ import {
   expelMember,
   findId,
   isSignedIn,
+  loadReservationRows,
   logOut,
   periodBody,
   removeUnavailable,
@@ -24,6 +25,20 @@ function stubCookie(value: string): void {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("loadReservationRows", () => {
+  it("합주실 3개의 요청을 앞 요청의 응답을 기다리지 않고 동시에 보낸다", () => {
+    // Arrange: 응답이 오지 않는 fetch. 순차 호출이면 1번째 요청에서 멈춰 호출 횟수가 1 입니다.
+    const spy = vi.fn(() => new Promise<Response>(() => undefined));
+    vi.stubGlobal("fetch", spy);
+
+    // Act
+    void loadReservationRows([1, 2, 3], "2026-09-14", "2026-09-20");
+
+    // Assert
+    expect(spy).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe("isSignedIn", () => {
