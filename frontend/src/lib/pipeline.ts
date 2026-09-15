@@ -175,6 +175,7 @@ export async function addUnavailable(
   endsAt: string,
   repeat: RepeatCycle,
   reason: string,
+  name: string,
 ): Promise<Unavailable> {
   // repeat_until은 전송하지 않습니다. 서버는 반복이 비활성화되어 있으면 repeat_until을 수신할 때 거절하고, 활성화되어 있으면 기간의 끝까지로 자동 설정합니다.
   // ponytail: 반복 종료일을 사용자가 직접 입력하는 UI 는 없습니다. 필요해지면 화면에 날짜
@@ -187,6 +188,7 @@ export async function addUnavailable(
       repeats_daily: repeat === "daily",
       repeats_weekly: repeat === "weekly",
       reason: reason.trim() === "" ? null : reason.trim(),
+      name: name.trim() === "" ? null : name.trim(),
     }),
   });
   return body.time;

@@ -191,6 +191,17 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
 
 /* ===== 모달 ===== */
 dialog { width: min(560px, calc(100vw - 40px)); max-height: 92vh; padding: 0; border: none; border-radius: 22px; background: var(--card); color: var(--t1); box-shadow: var(--shadow-up); overflow: hidden; }
+/* 카드 여러 장으로 보이는 dialog(하루 dialog 의 내 일정·예약 탭)입니다. 배경·그림자·모서리는 카드(.pane)가 갖고,
+   dialog 는 카드를 3열로 세우는 투명한 grid 틀입니다. 높이를 고정해 내용이 적은 카드도 같은 높이로 늘립니다(사용자 결정).
+   넘치는 내용은 카드 안쪽만 스크롤합니다. */
+dialog.panes { width: min(1320px, calc(100vw - 40px)); height: 92vh; max-height: none; background: transparent; box-shadow: none; overflow: visible; }
+/* 카드 3장의 폭은 같습니다(사용자 결정). */
+dialog.panes[open] { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 1.8vw, 24px); align-items: stretch; }
+/* 1열로 쌓이면 카드는 내용만큼만 차지하고 dialog 가 스크롤합니다. */
+@media (max-width: 960px) {
+  dialog.panes { height: auto; max-height: 92vh; overflow-y: auto; }
+  dialog.panes[open] { grid-template-columns: 1fr; }
+}
 /* 열렸을 때만 flex 로 배치합니다. dialog 자체에 display 를 지정하면 닫혀 있어도 표시됩니다.
    브라우저가 dialog:not([open]) 에 display:none 을 적용하는 방식이라 그 규칙을 덮어쓰기 때문입니다.
    제목과 버튼 줄이 자기 높이를 갖고 본문이 남는 높이를 전부 사용합니다. */

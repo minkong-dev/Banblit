@@ -45,6 +45,22 @@ export function slotSteps(slotCount: number, slotMinutes: number): number[] {
   return Array.from({ length: count + 1 }, (_, i) => (i * slotMinutes) / MINUTES_PER_HOUR);
 }
 
+/** 타임라인을 드래그해 고른 구간입니다. pressed 는 누른 위치, current 는 지금 위치이고 둘 다 소수 칸 번호입니다.
+ *  각 위치를 slotMinutes 간격으로 내림한 뒤 늦은 쪽에 한 칸을 더해, 누른 칸 자체가 구간에 들어갑니다.
+ *  결과는 0~slotCount 로 자릅니다. 분을 정수로 세어 slotSteps 와 같은 값이 나오므로 select 의 value 와 일치합니다. */
+export function dragRange(
+  pressed: number, current: number, slotMinutes: number, slotCount: number,
+): { a: number; b: number } {
+  const last = slotCount * MINUTES_PER_HOUR - slotMinutes;
+  const snap = (index: number) => {
+    const minutes = Math.min(Math.max(index, 0) * MINUTES_PER_HOUR, last);
+    return Math.floor(minutes / slotMinutes) * slotMinutes;
+  };
+  const first = Math.min(snap(pressed), snap(current));
+  const end = Math.max(snap(pressed), snap(current)) + slotMinutes;
+  return { a: first / MINUTES_PER_HOUR, b: end / MINUTES_PER_HOUR };
+}
+
 /** 설정의 칸 크기를 머리글에 적는 문구입니다. 60분이면 "1시간 단위", 아니면 "N분 단위"입니다. */
 export function unitLabel(slotMinutes: number): string {
   return slotMinutes === MINUTES_PER_HOUR ? "1시간 단위" : `${slotMinutes}분 단위`;

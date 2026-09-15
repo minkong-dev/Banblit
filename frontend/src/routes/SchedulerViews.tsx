@@ -9,6 +9,7 @@ import type { DayTeam } from "../lib/roster";
 import {
   dayWithWeekday, hoursLabel, isRangeFree, monthCells, slotLabel, takenGrid, WEEKDAY_NAMES,
 } from "../lib/pipeline";
+import { entryName } from "./DayDialogParts";
 
 type ViewProps = {
   tab: DayTab;
@@ -87,9 +88,7 @@ export function MonthView({
               <>
                 {list.slice(0, 3).map((entry, i) => (
                   <span className={`ev ${entry.team ? `${entry.team}` : "off"}`} key={i}>
-                    {entry.kind === "off"
-                      ? "불가능 일정"
-                      : teams.find((team) => team.key === entry.team)?.name ?? "개인"}
+                    {entryName(entry, teams)}
                     <time>{label(entry.a)}</time>
                   </span>
                 ))}
@@ -170,9 +169,7 @@ export function WeekView({
                   {entry === undefined ? null : (
                     <span className={`blk ${entry.team ? `${entry.team}` : "off"}`}
                       style={{ "--offset": entry.a - Math.floor(entry.a), "--span": entry.b - entry.a } as CSSProperties}>
-                      {entry.kind === "off"
-                        ? "불가능 일정"
-                        : teams.find((team) => team.key === entry.team)?.name ?? "개인"}
+                      {entryName(entry, teams)}
                       {/* 합주실 이름을 함께 표시합니다. 맞닿은 두 slot 이 따로 렌더링되는 유일한 이유가
                           합주실이 다른 것인데, 합주실을 표시하지 않으면 왜 나뉘었는지 알 수 없습니다. */}
                       <small>

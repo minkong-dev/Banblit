@@ -13,6 +13,8 @@ export type Entry = {
   team: string | null;
   room?: string;
   who?: string;
+  /** 불가능 일정에 적은 사유입니다. 이름(who)과 따로 표시합니다. */
+  note?: string;
   a: number;
   b: number;
   /** 로그인한 사용자가 삭제할 수 있는 불가능 일정이면, 삭제할 때 서버에 넘길 id 입니다.
@@ -68,7 +70,8 @@ export function offByDay(times: Unavailable[], openHour: number, days: string[])
       (byDay[day] ??= []).push({
         kind: "off",
         team: null,
-        who: item.reason ?? "직접 등록",
+        who: item.name ?? "불가능 일정",
+        note: item.reason ?? undefined,
         a: slotIndex(item.starts_at, openHour),
         b: slotIndex(item.ends_at, openHour),
         // 반복으로 전개한 항목은 저장된 행이 아니므로 삭제할 수 없습니다. 원본 날짜에만 id 를 포함합니다.
