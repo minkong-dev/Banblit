@@ -25,10 +25,8 @@ body[data-page="admin"] {
 
   .ses { border-radius: 9px; padding: 6px 9px; font-size: 12.5px; font-weight: 700; line-height: 1.35; }
   .ses small { display: block; font-weight: 400; font-size: 11.5px; opacity: .85; }
-  .ses.c1 { background: var(--c1-tint); color: var(--c1); }
-  .ses.c2 { background: var(--c2-tint); color: var(--c2); }
-  .ses.c3 { background: var(--c3-tint); color: var(--c3); }
-  .ses.c4 { background: var(--c4-tint); color: var(--c4); }
+  /* 팀 색은 .team-<색> class 가 --tc·--tc-tint 로 줍니다(lib/teamColors.ts). */
+  .ses { background: var(--tc-tint, var(--off-tint)); color: var(--tc, var(--t3)); }
   .ses .out { display: block; font-weight: 700; font-size: 11.5px; color: var(--amber); text-decoration: none; margin-top: 3px; }
 
   /* 캘린더 아래 설명 */

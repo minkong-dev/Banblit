@@ -62,7 +62,7 @@ export function AssignmentCalendar({ days, shown, colors }: {
                 <div className={date.getDay() === 0 ? "day sunday" : "day"} key={key}>
                   <span className="n">{date.getDate()}</span>
                   {items.map((session, index) => (
-                    <div className={`ses ${colors.get(session.team) ?? "c1"}`} key={index}>
+                    <div className={`ses ${colors.get(session.team) ?? ""}`} key={index}>
                       {session.team}
                       <small>{hhmm(session.start)}–{hhmm(session.end)}</small>
                       <span className="out">{session.room}</span>

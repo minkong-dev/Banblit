@@ -63,11 +63,7 @@ body { margin: 0; }
   --green-tint: light-dark(var(--sage-soft), var(--sage-soft-dark));
   --amber: light-dark(#E8890C, #FFB84D); --amber-tint: light-dark(#FFF4E0, #33270D);
   --red: light-dark(#F04452, #FF6B75); --red-tint: light-dark(#FDECEE, #331A1D);
-  /* 달력의 팀 색 4개 */
-  --c1: light-dark(var(--coral-chip-ink), var(--coral-lite)); --c1-tint: light-dark(var(--coral-chip), var(--coral-chip-dark));
-  --c2: light-dark(#43679B, #8FB3E0); --c2-tint: light-dark(#E5EDF7, #17222F);
-  --c3: light-dark(#715599, #B49BE0); --c3-tint: light-dark(#EDE8F7, #241E33);
-  --c4: light-dark(#8A6516, #D9B85C); --c4-tint: light-dark(#F6EED9, #332B12);
+  /* 팀 색은 팀에 저장된 20색입니다. lib/teamColors.ts 가 --team-<색> 변수를 첫 렌더링 전에 넣습니다(main.tsx). */
   --off: light-dark(#ADB5BD, #5E6870); --off-tint: light-dark(#EEF0F3, #22262B);
   --shadow: 0 1px 2px light-dark(rgba(0,23,51,.04), rgba(0,0,0,.4)), 0 8px 24px light-dark(rgba(0,23,51,.07), rgba(0,0,0,.35));
   --shadow-up: 0 12px 48px light-dark(rgba(0,23,51,.18), rgba(0,0,0,.6));

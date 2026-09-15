@@ -2,6 +2,7 @@
 // 검증 함수는 값이 유효하면 빈 문자열을, 아니면 사람이 읽을 수 있는 사유를 반환합니다.
 
 import type { Instrument, MyTeam } from "./contract";
+import { teamColorKey } from "./teamColors";
 import { uniqueNameMessage } from "./validate";
 
 /** 배정 계산이 팀당 10명까지만 받습니다. 그보다 많은 자리는 생성해도 사용할 수 없습니다. */
@@ -35,15 +36,6 @@ export function memberLabel(name: string, cohort: number | null): string {
 
 type TeamRow = { team_id: number; team: string };
 
-// 달력과 목록에 사용되는 팀 색은 4가지를 순환합니다. CSS 변수 --c1~--c4 와 대응합니다.
-const TEAM_COLORS = 4;
-
-/** 목록에서 index(목록에서의 위치 번호) 번째 팀에 줄 색 이름입니다. 목록 안 순서가 곧 색이므로,
- *  같은 목록을 다시 표시하면 같은 색이 나옵니다. */
-export function colorKey(index: number): string {
-  return `c${(index % TEAM_COLORS) + 1}`;
-}
-
 /** 달력에 표시되는 팀입니다. 서버 규격(lib/contract 의 Team)이 아니라 확정된 일정에서
  *  생성하여 사용합니다. 색(key)과 내 팀인지(mine)를 함께 포함합니다. */
 export type DayTeam = { id: number; name: string; key: string; mine: boolean };
@@ -51,23 +43,25 @@ export type DayTeam = { id: number; name: string; key: string; mine: boolean };
 export function teamsOf(
   rows: TeamRow[],
   myTeamIds: number[],
-  allTeams: readonly { id: number }[],
+  allTeams: readonly { id: number; color: string }[],
 ): DayTeam[] {
-  // 확정된 일정에 나온 팀을 번호 순서대로 수집합니다. 색은 전체 팀 목록(allTeams)에서의
-  // 위치로 매깁니다. 이는 프로필 카드(components/hooks useMyTeams)와 같은 규칙이므로 같은 팀이
-  // 두 곳에서 다른 색으로 표시되지 않습니다. 목록을 아직 받지 못했으면 일정 순서로 임시 색을 정합니다.
-  // mine 은 목록에서의 위치가 아니라 myTeamIds(로그인한 계정이 실제로 배정된 자리)로 결정합니다.
+  // 확정된 일정에 나온 팀을 번호 순서대로 수집합니다. 색은 전체 팀 목록(allTeams)에 저장된 팀 색입니다.
+  // 프로필 카드(components/queries useMyTeams)도 같은 값을 쓰므로 같은 팀이 두 곳에서 다른 색으로 표시되지 않습니다.
+  // 목록을 아직 받지 못한 팀은 색 없는 key(pending-<번호>)를 받습니다. 팀마다 다른 값이어야, key 로 팀을 찾는
+  // 비교(DayDialog 의 entry.team === team.key)가 두 팀을 같은 팀으로 보지 않습니다.
+  // mine 은 myTeamIds(로그인한 계정이 실제로 배정된 자리)로 결정합니다.
   const seen = new Map<number, string>();
   for (const row of rows) {
     if (!seen.has(row.team_id)) seen.set(row.team_id, row.team);
   }
   const mine = new Set(myTeamIds);
-  const position = new Map(allTeams.map((team, index) => [team.id, index]));
+  const colors = new Map(allTeams.map((team) => [team.id, team.color]));
   return [...seen.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([id, name], index) => {
-      const at = position.get(id);
-      return { id, name, key: colorKey(at === undefined ? index : at), mine: mine.has(id) };
+    .map(([id, name]) => {
+      const color = colors.get(id);
+      const key = color === undefined ? `pending-${id}` : teamColorKey(color);
+      return { id, name, key, mine: mine.has(id) };
     });
 }
 

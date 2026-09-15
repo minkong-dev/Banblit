@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 
 import { AppShell, Card } from "../components/AppShell";
 import { Pager } from "../components/Pager";
@@ -16,6 +16,7 @@ import { loadState, stateText } from "../lib/loading";
 import { can } from "../lib/account";
 import { checkSlotCounts, checkTeamName, memberLabel, slotName } from "../lib/pipeline";
 import { INSTRUMENTS } from "../lib/contract";
+import { TEAM_COLORS, teamColorKey } from "../lib/teamColors";
 import { MAX_SLOTS_PER_TEAM } from "../lib/roster";
 import type { Instrument, Member, Team, TeamSlot } from "../lib/contract";
 import { SectionHead } from "./SettingsForm";
@@ -85,6 +86,35 @@ function TeamRow(props: {
   );
 }
 
+/** 팀 색 고르기입니다. 다른 팀이 쓰는 색(taken)은 고를 수 없게 막습니다.
+ *  value 가 null 이면 아무것도 고르지 않은 상태이고, 그대로 저장하면 서버가 남은 색 중 첫 색을 줍니다. */
+function ColorPick(props: { value: string | null; taken: string[]; onChange: (next: string) => void }) {
+  const { value, taken, onChange } = props;
+  // radio 묶음 이름입니다. 고르기가 2개 이상 동시에 렌더링되어도 서로 다른 묶음이 되도록 인스턴스마다 다른 값을 씁니다.
+  const group = useId();
+  return (
+    <fieldset className="swatches">
+      <legend>팀 색{value === null ? " · 고르지 않으면 남은 색 중 하나를 드려요" : ""}</legend>
+      {TEAM_COLORS.map((color) => {
+        const used = taken.includes(color);
+        return (
+          <label key={color} className={`swatch ${teamColorKey(color)}`} title={used ? `${color} · 다른 팀이 쓰는 색` : color}>
+            <input
+              type="radio"
+              name={group}
+              value={color}
+              checked={value === color}
+              disabled={used}
+              aria-label={used ? `${color}, 다른 팀이 쓰는 색` : color}
+              onChange={() => onChange(color)}
+            />
+          </label>
+        );
+      })}
+    </fieldset>
+  );
+}
+
 /** 팀 이름과 포지션 구성을 함께 수정합니다.
  *
  *  포지션 구성은 저장할 때 통째로 다시 계산됩니다. 이미 멤버가 배정된 (포지션, 번호) 포지션은 그대로 유지되므로,
@@ -93,12 +123,15 @@ function TeamRow(props: {
 function EditTeam(props: {
   team: Team;
   taken: string[];
+  /** 다른 팀이 쓰는 색입니다. 이 팀의 지금 색은 포함하지 않습니다. */
+  takenColors: string[];
   onDone: (message: string) => void;
   onClose: () => void;
 }) {
-  const { team, taken, onDone, onClose } = props;
+  const { team, taken, takenColors, onDone, onClose } = props;
   const client = useQueryClient();
   const [name, setName] = useState(team.name);
+  const [color, setColor] = useState(team.color);
   const [counts, setCounts] = useState<Counts | null>(null);
   const [bad, setBad] = useState("");
 
@@ -116,10 +149,10 @@ function EditTeam(props: {
 
   const save = useMutation({
     mutationFn: async () => {
-      if (name.trim() !== team.name) {
+      if (name.trim() !== team.name || color !== team.color) {
         await getJSON(`/teams/${team.id}`, {
           method: "PATCH",
-          body: JSON.stringify({ name: name.trim() }),
+          body: JSON.stringify({ name: name.trim(), color }),
         });
       }
       await getJSON(`/teams/${team.id}/slots`, {
@@ -165,6 +198,7 @@ function EditTeam(props: {
           />
         </label>
       </div>
+      <ColorPick value={color} taken={takenColors} onChange={setColor} />
 
       {shownCounts === null ? (
         <p className="empty">불러오는 중…</p>
@@ -302,10 +336,18 @@ function spread(counts: Counts): Draft[] {
  *  저장은 마지막에 한 번에 일어납니다. 서버는 팀과 포지션을 함께 생성하고(POST /teams), 멤버는
  *  각 포지션별로 따로 배정하므로(PUT .../slots/{id}), 팀 생성 후 포지션 목록을 받아 포지션·번호로
  *  대응시켜 채웁니다. 포지션 순서를 가정하지 않는 이유는, 서버가 정렬 방식을 바꿔도 동작하게 하기 위함입니다. */
-function NewTeam(props: { taken: string[]; onDone: (message: string) => void; onClose: () => void }) {
-  const { taken, onDone, onClose } = props;
+function NewTeam(props: {
+  taken: string[];
+  /** 다른 팀이 쓰는 색입니다. */
+  takenColors: string[];
+  onDone: (message: string) => void;
+  onClose: () => void;
+}) {
+  const { taken, takenColors, onDone, onClose } = props;
   const client = useQueryClient();
   const [name, setName] = useState("");
+  // null 이면 고르지 않은 상태입니다. 그대로 보내면 서버가 남은 색 중 첫 색을 줍니다.
+  const [color, setColor] = useState<string | null>(null);
   const [counts, setCounts] = useState<Counts>(NO_SLOTS);
   const [drafts, setDrafts] = useState<Draft[] | null>(null);
   const [seeking, setSeeking] = useState<number | null>(null);
@@ -317,7 +359,7 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
     mutationFn: async (seats: Draft[]) => {
       const made = await getJSON<{ team: Team }>("/teams", {
         method: "POST",
-        body: JSON.stringify({ name: name.trim(), slots: counts }),
+        body: JSON.stringify({ name: name.trim(), slots: counts, color }),
       });
       const teamId = made.team.id;
       const saved = await getJSON<{ slots: TeamSlot[] }>(`/teams/${teamId}/slots`);
@@ -372,6 +414,7 @@ function NewTeam(props: { taken: string[]; onDone: (message: string) => void; on
             />
           </label>
         </div>
+        <ColorPick value={color} taken={takenColors} onChange={setColor} />
 
         {INSTRUMENTS.map((instrument) => (
           <Stepper
@@ -535,6 +578,7 @@ export function Teams() {
       {!making ? null : (
         <NewTeam
           taken={list.map((team) => team.name)}
+          takenColors={list.map((team) => team.color)}
           onClose={() => setMaking(false)}
           onDone={(text) => { setMaking(false); say(text); }}
         />
@@ -544,6 +588,7 @@ export function Teams() {
         <EditTeam
           team={renaming}
           taken={list.filter((team) => team.id !== renaming.id).map((team) => team.name)}
+          takenColors={list.filter((team) => team.id !== renaming.id).map((team) => team.color)}
           onClose={() => setRenaming(null)}
           onDone={(text) => { setRenaming(null); say(text); }}
         />

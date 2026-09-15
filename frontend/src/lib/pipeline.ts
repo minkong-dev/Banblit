@@ -38,7 +38,6 @@ import {
   titleMessage,
 } from "./boards";
 import {
-  colorKey,
   memberLabel,
   myTeamIds,
   slotCountsMessage,
@@ -128,7 +127,7 @@ export function checkAttachments(files: { name: string; size: number }[]): strin
 }
 
 // 팀·포지션에 대해 화면이 하는 계산입니다. 순서 의존이 없어 그대로 export 합니다.
-export { colorKey, memberLabel, myTeamIds, slotName };
+export { memberLabel, myTeamIds, slotName };
 export { teamNameMessage as checkTeamName, slotCountsMessage as checkSlotCounts };
 
 // 게시판·공지 화면이 사용하는 계산입니다. fileSizeLabel 은 순서 의존이 없어 그대로 export 합니다.

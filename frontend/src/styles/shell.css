@@ -310,3 +310,18 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 
 /* modal 안의 작은 소제목입니다. 목록과 그 아래 입력칸을 구분합니다. */
 .mbody .cap2 { margin: 18px 0 8px; font-size: 13px; font-weight: 700; color: var(--t2); }
+
+/* ===== 팀 색 고르기 =====
+   팀 생성·수정 modal 안에서만 사용하므로 이 파일에 둡니다. 원 하나가 radio 하나입니다. 브라우저 radio 를 투명하게
+   원 전체에 덮어, 키보드 이동(방향키)과 스크린 리더 읽기는 브라우저가 처리합니다. 색은 .team-<색> class 의 --tc 입니다. */
+.swatches { border: none; margin: 16px 0 6px; padding: 0; display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 10px 8px; }
+.swatches legend { padding: 0; margin-bottom: 10px; font-size: 12.5px; color: var(--t3); }
+.swatch { position: relative; justify-self: center; width: min(100%, 30px); aspect-ratio: 1; border-radius: 50%; background: var(--tc); cursor: pointer; transition: transform .12s ease; }
+.swatch input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: inherit; }
+.swatch:hover { transform: scale(1.08); }
+/* 고른 색은 바탕색 틈을 둔 바깥 고리로 표시합니다. 색만 바꾸면 비슷한 색끼리 구분되지 않습니다. */
+.swatch:has(input:checked) { box-shadow: 0 0 0 3px var(--card), 0 0 0 5px var(--t1); }
+.swatch:has(input:focus-visible) { outline: 2px solid var(--brand); outline-offset: 5px; }
+/* 다른 팀이 쓰는 색입니다. 흐리게 두고 사선을 그어, 색 대비만으로 구분하지 않게 합니다. */
+.swatch:has(input:disabled) { opacity: .28; cursor: not-allowed; transform: none; background-image: linear-gradient(135deg, transparent 45%, var(--card) 45% 55%, transparent 55%); }
+@media (prefers-reduced-motion: reduce) { .swatch { transition: none; } }
