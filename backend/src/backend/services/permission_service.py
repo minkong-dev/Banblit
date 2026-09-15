@@ -18,14 +18,14 @@ SET_MESSAGES = {"permission_sets_name_key": "이미 있는 권한 묶음 이름�
 # 계정이 0개인 DB 에 처음 가입한 사람이 받는 permission set 의 이름입니다. migration 이
 # 추가하는 permission set 도 같은 이름을 사용합니다(migrations/versions/b7f1a92c4d31_permission_sets.py).
 FULL_SET_NAME = "헤드매니저"
-FULL_SET_NOTE = "모든 권한을 가진 멤버입니다"
+FULL_SET_NOTE = "최고 권한 관리자"
 
 
 def _clean_permissions(names: list[str]) -> list[str]:
     """알 수 없는 이름을 거부하고, 중복을 제거한 뒤 선언 순서로 정렬하여 반환합니다."""
     unknown = [name for name in names if name not in PERMISSIONS]
     if unknown:
-        raise ValueError("알 수 없는 권한 항목이 있습니다")
+        raise ValueError("오류로 인해 해당 권한은 사용할 수 없어요.")
     chosen = set(names)
     return [name for name in PERMISSIONS if name in chosen]
 
@@ -33,7 +33,7 @@ def _clean_permissions(names: list[str]) -> list[str]:
 def _get_set_or_raise(session: Session, set_id: int) -> PermissionSet:
     permission_set = session.get(PermissionSet, set_id)
     if permission_set is None:
-        raise ValueError("그런 권한 묶음이 없습니다")
+        raise ValueError("해당 권한이 존재하지 않아요.")
     return permission_set
 
 
@@ -181,7 +181,7 @@ def _find_grant(
 def grant_permission_set(session: Session, member_id: int, set_id: int) -> None:
     """member_id에게 set_id permission set을 부여합니다. 이미 가지고 있으면 그대로 둡니다."""
     if session.get(Member, member_id) is None:
-        raise ValueError("그런 사람이 없습니다")
+        raise ValueError("해당 멤버가 존재하지 않아요.")
     _get_set_or_raise(session, set_id)
 
     if _find_grant(session, member_id, set_id) is not None:
@@ -196,7 +196,7 @@ def revoke_permission_set(session: Session, member_id: int, set_id: int) -> None
     """member_id에게서 set_id permission set을 철회합니다. 가지고 있지 않으면 거부합니다."""
     grant = _find_grant(session, member_id, set_id)
     if grant is None:
-        raise ValueError("그 권한 묶음을 가지고 있지 않습니다")
+        raise ValueError("해당 권한을 가지고 있지 않아요.")
     session.delete(grant)
     session.commit()
 
