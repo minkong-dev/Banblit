@@ -565,3 +565,22 @@ def test_an_everyday_period_assigns_only_the_day_of_the_run(db_session: Session)
     assert result.saved is True
     rows = db_session.scalars(select(Assignment)).all()
     assert {row.starts_at.date() for row in rows} == {date(2026, 8, 5)}
+
+
+def test_ensemble_days_are_left_out_of_team_assignment(db_session: Session) -> None:
+    """전체합주 날짜는 팀별 배정에서 제외합니다. 한 날짜는 팀별·전체 중 한쪽에만 속합니다."""
+    period_id = _period(db_session, days=2)  # 8/1 ~ 8/2
+    team_id = _team_with_member(db_session, "A", "김민수")
+    room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    period.ensemble_starts_on = period.ensemble_ends_on = date(2026, 8, 2)
+    period.ensemble_room_id = room_id
+    period.ensemble_starts_at, period.ensemble_ends_at = time(18, 0), time(20, 0)
+    db_session.commit()
+
+    result = assign_period(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
+
+    assert result.saved is True
+    rows = db_session.scalars(select(Assignment)).all()
+    assert {row.starts_at.date() for row in rows} == {date(2026, 8, 1)}
