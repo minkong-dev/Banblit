@@ -25,10 +25,12 @@ sources:
   - backend/src/backend/services/reservation_service.py # 집중 합주기간 예약 거절, 전체합주 날짜는 전체합주 시간만 거절
   - backend/tests/integration/db/test_reservation_endpoints.py # 매일 기간의 종료일 뒤 예약 거절, 전체합주 날짜의 예약 허용·거절 시나리오
   - backend/migrations/versions/d4a71c96e2b8_hourly_slots.py # slot을 30분에서 1시간으로 변경한 마이그레이션
-  - frontend/src/lib/settings.ts                  # 같은 규칙을 화면에서 먼저 검증하는 코드
+  - frontend/src/lib/settings.ts                  # 같은 규칙을 화면에서 먼저 검증하는 코드. 전체합주 검증(ensembleMessage) 포함
+  - frontend/src/routes/SettingsEnsemble.tsx      # 기간 form 의 전체합주 입력칸과 날짜별 시각 편집기
+  - frontend/e2e/settings.spec.ts                 # 전체합주 지정·날짜별 시각 저장을 브라우저로 확인하는 검사
 ---
 
-> 문서 버전: 3.1.0 draft
+> 문서 버전: 3.2.0 draft
 
 ```
 합주실마다 운영 시간을 따로 지정 ─ slot 단위는 1시간 고정
@@ -134,7 +136,7 @@ slot 길이는 서버의 `SLOT_MINUTES` 상수 1개로만 정의합니다. 변�
 | `PUT /periods/{id}/ensemble/days/{YYYY-MM-DD}` | 날짜 하나의 시각 지정. 이미 있으면 덮어씁니다 |
 | `DELETE /periods/{id}/ensemble/days/{YYYY-MM-DD}` | 날짜 하나를 기본 시각으로 되돌립니다 |
 
-날짜 범위는 기간 안이어야 하고, "매일" 기간은 범위 시작일만 기간 시작일 이후면 됩니다. 이 조건과 "집중 합주기간만" 조건은 DB CHECK(`periods_ensemble_within_period`·`periods_ensemble_focused_only`)가 검사합니다. 기간 수정(PATCH)으로 날짜를 줄여도 같은 제약이 422 로 거절하게 하려고 서비스가 아니라 DB 에 두었습니다. 시각이 합주실 운영 시간 안인지와 점유 단위 격자 위인지는 `ensemble_service.py` 가 검사합니다. 화면(D단계)은 아직 없습니다.
+날짜 범위는 기간 안이어야 하고, "매일" 기간은 범위 시작일만 기간 시작일 이후면 됩니다. 이 조건과 "집중 합주기간만" 조건은 DB CHECK(`periods_ensemble_within_period`·`periods_ensemble_focused_only`)가 검사합니다. 기간 수정(PATCH)으로 날짜를 줄여도 같은 제약이 422 로 거절하게 하려고 서비스가 아니라 DB 에 두었습니다. 시각이 합주실 운영 시간 안인지와 점유 단위 격자 위인지는 `ensemble_service.py` 가 검사합니다.
 
 **전체합주 날짜는 팀별 배정에서 제외하고, 예약은 전체합주 시간만 거절합니다(patch_note 8번 C단계).** 한 날짜는 팀별·전체 중 한쪽에만 속합니다.
 
@@ -145,6 +147,15 @@ slot 길이는 서버의 `SLOT_MINUTES` 상수 1개로만 정의합니다. 변�
 | 예약 생성·이동 | 선착순으로 받습니다. 전체합주에 지정한 합주실에서 그날의 전체합주 시각(날짜별 지정이 있으면 그 시각, 없으면 기본 시각)과 겹치는 구간만 422 "전체합주 시간이라 예약할 수 없습니다" 로 거절합니다 | `reservation_service.py` 의 `_require_not_in_focused_period` |
 
 집중 합주기간의 나머지 날짜는 이전과 같이 예약을 거절합니다. 전체합주를 지정하기 전에 이미 있던 예약은 다시 검사하지 않습니다. 시나리오는 `test_period_service.py`(전체합주 날짜 제외)·`test_auto_assign.py`(매일 기간 미실행)·`test_reservation_endpoints.py`(다른 합주실·다른 시각 허용, 날짜별 시각 우선, 이동 거절)가 확인합니다.
+
+**설정 화면의 기간 form 에서 전체합주를 지정합니다(patch_note 8번 D단계).** 집중 합주기간이면 "전체 합주기간 지정" 체크박스가 표시되고, 체크하면 전체합주 시작일·종료일·합주실·시작/끝 시각을 받습니다. 팀별합주 날짜는 입력받지 않고 "기간 − 전체합주 범위" 계산 결과를 한 줄로 표시합니다(사용자 결정 2026-09-15). "매일" 기간은 팀별 날짜가 끝없이 이어져 이 줄을 표시하지 않습니다. 목록 줄에는 "전체합주 <시작일>–<종료일>" 이 붙고, 편집 행 아래에 날짜를 선택해 그 날짜의 시각을 저장하거나 기본 시각으로 되돌리는 구역이 있습니다.
+
+| 누가 | 무엇을 | 코드 |
+| --- | --- | --- |
+| 화면 검증 | 날짜 범위가 기간 안인지("매일" 기간은 시작일만), 합주실 선택, 점유 단위 격자, 시각 순서, 합주실 운영 시간 | `lib/settings.ts` 의 `ensembleMessage`·`ensembleTimeMessage` |
+| 저장 순서 | 새 기간은 기간 → 전체합주. 해제는 전체합주 해제 → 기간 수정. 새 전체합주가 저장된 기간 안이면 전체합주 → 기간, 밖이면 기간 → 전체합주 | `lib/pipeline.ts` 의 `ensembleSaveOrder`·`savePeriod` |
+
+요청 순서를 정하는 이유는 서버가 요청마다 "전체합주 날짜 범위가 기간 안" CHECK 를 검사하기 때문입니다. 순서가 틀리면 기간을 줄이는 PATCH 가 옛 전체합주 때문에 422 로 거절됩니다. 새 전체합주가 저장된 기간 밖이고 옛 전체합주도 새 기간 밖인 경우는 어느 순서든 첫 요청이 거절되어 서버 사유를 표시합니다. 두 요청은 한 transaction 이 아니라 둘째 요청이 실패하면 첫 요청은 저장된 채로 남습니다. 순서 규칙은 `pipeline.test.ts`, 검증 문구는 `settings.test.ts`, 생성·날짜별 시각 저장·삭제의 브라우저 흐름은 `e2e/settings.spec.ts` 가 확인합니다(`COMMAND.md` 12-1).
 
 ### 권한을 가진 사용자만 입력한다는 규칙을 서버가 검증합니다
 
