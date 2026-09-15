@@ -161,13 +161,15 @@ export function WeekView({
           <Fragment key={hour}>
             <div className="wt" data-hour={hour}>{hourLabel(hour)}</div>
             {dayKeys.map((key) => {
+              // 막대는 시작 시각이 속한 시간 줄에 두고, 줄 안에서는 --offset(0~1) 만큼 내려 그립니다.
+              // 18:10 시작이면 18시 줄에 1/6 만큼 내려간 자리입니다.
               const entry = visible(entriesOf(key), tab, teams)
-                .find((item) => item.a + openHour === hour);
+                .find((item) => Math.floor(item.a) + openHour === hour);
               return (
                 <div className="wcell" key={`${key}-${hour}`}>
                   {entry === undefined ? null : (
                     <span className={`blk ${entry.team ? `${entry.team}` : "off"}`}
-                      style={{ "--span": entry.b - entry.a } as CSSProperties}>
+                      style={{ "--offset": entry.a - Math.floor(entry.a), "--span": entry.b - entry.a } as CSSProperties}>
                       {entry.kind === "off"
                         ? "불가능 일정"
                         : teams.find((team) => team.key === entry.team)?.name ?? "개인"}

@@ -12,8 +12,10 @@ import {
   roomBounds,
   slotCountOf,
   slotLabel,
+  slotSteps,
   stampLabel,
   takenGrid,
+  unitLabel,
   WEEKDAY_NAMES,
 } from "./calendar";
 
@@ -50,6 +52,33 @@ describe("slotLabel — 칸 번호를 시각으로", () => {
   it("한 자리 시각에도 0을 붙인다", () => {
     expect(slotLabel(0, 9)).toBe("09:00");
   });
+
+  it("소수 칸 번호는 분까지 표시한다", () => {
+    expect(slotLabel(1.5, 18)).toBe("19:30");
+    expect(slotLabel(1 / 6, 18)).toBe("18:10");
+  });
+});
+
+describe("slotSteps — 설정 단위 간격의 칸 번호 목록", () => {
+  it("30분 단위면 0.5 간격으로 닫는 시각까지 나열한다", () => {
+    expect(slotSteps(2, 30)).toEqual([0, 0.5, 1, 1.5, 2]);
+  });
+
+  it("60분 단위면 정수만 나열한다", () => {
+    expect(slotSteps(12, 60)).toHaveLength(13);
+    expect(slotSteps(12, 60)[12]).toBe(12);
+  });
+
+  it("10분 단위는 부동소수점 오차 없이 slotLabel 로 분이 나온다", () => {
+    expect(slotLabel(slotSteps(1, 10)[5], 18)).toBe("18:50");
+  });
+});
+
+describe("unitLabel — 설정 단위를 머리글 문구로", () => {
+  it("60분이면 1시간 단위, 그 외는 분 단위로 적는다", () => {
+    expect(unitLabel(60)).toBe("1시간 단위");
+    expect(unitLabel(10)).toBe("10분 단위");
+  });
 });
 
 describe("hoursLabel — 칸 개수를 사람이 읽는 시간으로", () => {
@@ -74,6 +103,10 @@ describe("takenGrid / isRangeFree — 그날 어디가 찼는지", () => {
 
   it("아무것도 없으면 전부 비어 있다", () => {
     expect(takenGrid([], 3)).toEqual([false, false, false]);
+  });
+
+  it("소수 구간은 일부라도 걸친 칸을 전부 찬 것으로 표시한다", () => {
+    expect(takenGrid([{ a: 1 / 6, b: 1.5 }], 3)).toEqual([true, true, false]);
   });
 
   it("고른 구간에 찬 칸이 하나라도 있으면 막는다", () => {

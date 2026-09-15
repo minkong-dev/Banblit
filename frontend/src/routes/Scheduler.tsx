@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from "../components/icons";
 import { getJSON } from "../lib/api";
-import { currentMonth } from "../lib/calendar";
+import { currentMonth, slotSteps } from "../lib/calendar";
 import { focusedRange, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
 import { MonthView, WeekView } from "./SchedulerViews";
@@ -14,7 +14,7 @@ import {
 } from "../lib/dayEntries";
 import type { DayTab, Entry } from "../lib/dayEntries";
 import { teamsOf } from "../lib/roster";
-import { useMe, usePeriods, useRooms } from "../components/queries";
+import { useMe, usePeriods, useRooms, useSlotMinutes } from "../components/queries";
 import "../styles/scheduler.css";
 import type { Post, ScheduleRow } from "../lib/contract";
 import { dayLabel, slotCountOf, slotLabel, stampLabel, weekKeys } from "../lib/pipeline";
@@ -107,6 +107,8 @@ export function Scheduler() {
   const { open, close } = roomBounds(rooms.data?.rooms ?? []);
   const focus = focusedRange(periods.data?.periods ?? []);
   const slotCount = slotCountOf(open, close);
+  // 예약 탭의 시작·끝 선택지는 저장소 설정(slot_minutes) 간격입니다.
+  const steps = slotSteps(slotCount, useSlotMinutes());
 
   const assigned = assignedByDay(rows, teams, open);
   const offEntries = offByDay(
@@ -187,7 +189,7 @@ export function Scheduler() {
               <select id="tFrom" value={from ?? ""}
                 onChange={(event) => setFrom(event.target.value === "" ? null : Number(event.target.value))}>
                 <option value="">선택 안 함</option>
-                {Array.from({ length: slotCount }, (_, i) => i).map((slot) => (
+                {steps.slice(0, -1).map((slot) => (
                   <option value={slot} key={slot}>{label(slot)}</option>
                 ))}
               </select>
@@ -197,7 +199,7 @@ export function Scheduler() {
               <select id="tTo" value={to ?? ""}
                 onChange={(event) => setTo(event.target.value === "" ? null : Number(event.target.value))}>
                 <option value="">선택 안 함</option>
-                {Array.from({ length: slotCount }, (_, i) => i + 1).map((slot) => (
+                {steps.slice(1).map((slot) => (
                   <option value={slot} key={slot}>{endLabel(slot)}</option>
                 ))}
               </select>
