@@ -415,6 +415,7 @@ class UnavailableOut(BaseModel):
     repeats_weekly: bool
     repeat_until: date | None
     reason: str | None
+    name: str | None
 
 
 class UnavailableTimesOut(BaseModel):
@@ -433,6 +434,8 @@ class UnavailableCreateIn(BaseModel):
     repeat_until: date | None = None
     # 사유는 사용자가 입력하는 한 줄 문장입니다. 입력하지 않아도 등록됩니다.
     reason: str | None = Field(default=None, max_length=200)
+    # 캘린더에 표시할 이름입니다. 길이 상한은 예약 이름(ReservationCreateIn.name)과 같습니다.
+    name: str | None = Field(default=None, max_length=60)
 
 
 class SettingsOut(BaseModel):
