@@ -10,7 +10,7 @@ import secrets
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api.auth_service import hash_password, login
+from backend.services.auth_service import hash_password, login
 from backend.db.models import Member
 
 

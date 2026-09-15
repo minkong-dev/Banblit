@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from backend.api.mailer import send_mail
+from backend.services.mailer import send_mail
 
 TO = "seoyeon@example.com"
 SUBJECT = "[Banblit] 비밀번호 재설정"
@@ -14,7 +14,7 @@ def _send_without_smtp(
 ) -> str:
     monkeypatch.delenv("SMTP_HOST", raising=False)
     monkeypatch.setenv("MAIL_LOG_BODY", log_body)
-    with caplog.at_level(logging.INFO, logger="backend.api.mailer"):
+    with caplog.at_level(logging.INFO, logger="backend.services.mailer"):
         send_mail(TO, SUBJECT, BODY)
     return caplog.text
 

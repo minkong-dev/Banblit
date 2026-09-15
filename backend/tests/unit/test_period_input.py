@@ -2,7 +2,7 @@ from datetime import date, datetime, time
 
 import pytest
 
-from backend.api.period_input import (
+from backend.services.period_input import (
     auto_slots_per_team,
     build_engine_rooms,
     build_engine_teams,

@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account, require_permission
-from backend.api.input import format_clock
-from backend.api.room_service import create_room as create_room_row
-from backend.api.room_service import list_rooms, update_room
+from backend.services.input import format_clock
+from backend.services.room_service import create_room as create_room_row
+from backend.services.room_service import list_rooms, update_room
 from backend.api.schemas import RoomCreateIn, RoomEnvelopeOut, RoomOut, RoomsOut, RoomUpdateIn
 from backend.db.models import Room
 from backend.db.pipeline import get_session

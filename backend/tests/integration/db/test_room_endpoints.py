@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
-from backend.api.room_service import ROOM_MESSAGES
+from backend.services.room_service import ROOM_MESSAGES
 from backend.db.pipeline import commit_translating
 from backend.db.models import Room
 from conftest import AccountFactory

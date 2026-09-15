@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 
 from ortools.sat.python import cp_model
@@ -65,8 +65,8 @@ def _validate(teams: list[Team], slots_per_team: int) -> None:
     if slots_per_team < 0:
         raise ValueError("팀당 배정 개수는 음수일 수 없습니다")
 
-    team_ids = [team.id for team in teams]
-    duplicated_teams = {team_id for team_id in team_ids if team_ids.count(team_id) > 1}
+    team_counts = Counter(team.id for team in teams)
+    duplicated_teams = {team_id for team_id, count in team_counts.items() if count > 1}
     if duplicated_teams:
         raise ValueError(
             f"팀 번호가 겹칩니다: {', '.join(str(i) for i in sorted(duplicated_teams))}"
@@ -75,9 +75,9 @@ def _validate(teams: list[Team], slots_per_team: int) -> None:
     for team in teams:
         if not team.members:
             raise ValueError(f"{team.id}번 팀에 멤버가 없습니다")
-        member_ids = [member.id for member in team.members]
+        member_counts = Counter(member.id for member in team.members)
         duplicated_members = {
-            member_id for member_id in member_ids if member_ids.count(member_id) > 1
+            member_id for member_id, count in member_counts.items() if count > 1
         }
         if duplicated_members:
             raise ValueError(
@@ -104,19 +104,22 @@ def assign(
 
     model = cp_model.CpModel()
 
+    # 팀이 쓸 수 없는 slot 에는 변수를 만들지 않습니다. 변수를 만든 뒤 0 으로 고정하는 것보다
+    # model 의 변수·제약 수가 줄어 solve 시간이 짧아집니다.
     chosen: dict[tuple[int, int], cp_model.IntVar] = {}
     for team in teams:
+        own: list[cp_model.IntVar] = []
         for index, room_slot in enumerate(room_slots):
+            if not is_team_available(team, room_slot.interval):
+                continue
             var = model.new_bool_var(f"chosen_{team.id}_{index}")
             chosen[(team.id, index)] = var
-            if not is_team_available(team, room_slot.interval):
-                model.add(var == 0)
-        model.add(
-            sum(chosen[(team.id, i)] for i, _ in enumerate(room_slots)) == slots_per_team
-        )
+            own.append(var)
+        model.add(cp_model.LinearExpr.sum(own) == slots_per_team)
 
     for index, _ in enumerate(room_slots):
-        model.add(sum(chosen[(team.id, index)] for team in teams) <= 1)
+        in_slot = [chosen[(team.id, index)] for team in teams if (team.id, index) in chosen]
+        _at_most_one(model, in_slot)
 
     indices_by_interval: dict[TimeInterval, list[int]] = defaultdict(list)
     for index, room_slot in enumerate(room_slots):
@@ -126,7 +129,7 @@ def assign(
         if len(indices) < 2:
             continue
         for team in teams:
-            model.add(sum(chosen[(team.id, i)] for i in indices) <= 1)
+            _at_most_one(model, [chosen[(team.id, i)] for i in indices if (team.id, i) in chosen])
 
     teams_by_member: dict[int, list[int]] = defaultdict(list)
     for team in teams:
@@ -136,9 +139,13 @@ def assign(
         if len(team_ids) < 2:
             continue
         for indices in indices_by_interval.values():
-            model.add(
-                sum(chosen[(team_id, i)] for team_id in team_ids for i in indices) <= 1
-            )
+            shared = [
+                chosen[(team_id, i)]
+                for team_id in team_ids
+                for i in indices
+                if (team_id, i) in chosen
+            ]
+            _at_most_one(model, shared)
 
     solver = cp_model.CpSolver()
     # 시간 제한이 없으면 풀리지 않는 입력 하나가 worker 를 무한정 점유하게 됩니다.
@@ -155,7 +162,7 @@ def assign(
         picked = [
             index
             for index, _ in enumerate(room_slots)
-            if solver.value(chosen[(team.id, index)]) == 1
+            if (team.id, index) in chosen and solver.value(chosen[(team.id, index)]) == 1
         ]
         taken.update(picked)
         slots_by_team[team.id] = [room_slots[index] for index in picked]
@@ -166,3 +173,9 @@ def assign(
         if index not in taken
     ]
     return Assignment(feasible=True, slots_by_team=slots_by_team, open_slots=open_slots)
+
+
+def _at_most_one(model: cp_model.CpModel, variables: list[cp_model.IntVar]) -> None:
+    # 변수가 1개 이하이면 "합이 1 이하" 제약은 항상 충족되므로 추가하지 않습니다.
+    if len(variables) >= 2:
+        model.add(sum(variables) <= 1)

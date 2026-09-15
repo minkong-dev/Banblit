@@ -3,7 +3,7 @@ from typing import NamedTuple
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api.input import require_non_empty
+from backend.services.input import require_non_empty
 from backend.db.models import (
     PERMISSIONS,
     Member,

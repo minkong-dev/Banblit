@@ -1,5 +1,5 @@
 # 이 파일은 공유 선언입니다. table(데이터베이스의 행과 열로 이루어진 데이터 구조)·
-# 필드 정의만 담고, api와 db 양쪽이 그대로 참조합니다.
+# 필드 정의만 담고, api·services·jobs 와 db 가 그대로 참조합니다.
 # 계산·판단이 필요하면 이 파일이 아니라 호출하는 쪽에 둡니다.
 
 from datetime import date, datetime, time
@@ -21,6 +21,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+# scheduling 의 진입점(pipeline.py)이 아니라 slots.py 를 직접 참조합니다. 진입점을 거치면 이 파일을
+# import 하는 migration 까지 OR-Tools 를 로드하게 됩니다. DEFAULT_SLOT_MINUTES 는 계산 없는 상수라 공유 선언입니다.
 from backend.scheduling.slots import DEFAULT_SLOT_MINUTES
 
 # 권한 항목입니다. 생성·수정·삭제·조회를 따로 두어, permission set(권한 집합)을 만드는 사람이
@@ -220,7 +222,7 @@ class UnavailableTime(Base):
     시각은 tzinfo(시간대 정보)가 없는 값으로 저장합니다. 엔진의 TimeInterval 과 같은 규칙입니다.
 
     반복은 repeats_daily 와 repeats_weekly 두 열로 저장합니다. 둘 다 켜는 것은 의미가 없으므로
-    경계에서 거부합니다(api/input.py 의 require_one_repeat_cycle). 하나의 열로 합치지 않는 이유는
+    경계에서 거부합니다(services/input.py 의 require_one_repeat_cycle). 하나의 열로 합치지 않는 이유는
     이미 repeats_weekly 로 저장된 행이 있기 때문입니다.
 
     reason 은 사용자가 입력하는 사유입니다. 엔진은 사용하지 않고 화면에만 표시합니다. null 을 허용합니다.
@@ -404,9 +406,7 @@ class Reservation(Base):
     """예약 한 건입니다. 사람이 고른 구간을 쪼개지 않고 starts_at~ends_at 한 행으로 저장합니다.
 
     같은 합주실에서 시간이 겹치는 행은 DB 가 거절합니다(reservations_no_overlap). 선착순은
-    그 제약이 commit 시점에 정합니다. 예전에는 1시간 칸마다 행을 두고 (room_id, starts_at)
-    중복 금지로 같은 일을 했는데, 그러면 취소와 이동이 칸마다 따로 일어나 중간에 실패하면
-    예약이 반만 지워졌습니다.
+    그 제약이 commit 시점에 정합니다.
 
     name 은 캘린더에 표시할 이름입니다. 비어 있으면 화면이 팀 이름을, 팀도 없으면 예약자
     이름을 대신 씁니다.

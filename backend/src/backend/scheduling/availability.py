@@ -31,7 +31,5 @@ def is_member_available(member: Member, slot: TimeInterval) -> bool:
 
 
 def is_team_available(team: Team, slot: TimeInterval) -> bool:
-    """팀의 모든 멤버가 그 slot(1시간 단위 시간 칸)에 사용 가능할 때만
-    팀이 사용 가능합니다.
-    """
+    """팀의 모든 멤버가 그 slot(1시간 단위 시간 칸)에 사용 가능할 경우 True를 반환합니다."""
     return all(is_member_available(member, slot) for member in team.members)

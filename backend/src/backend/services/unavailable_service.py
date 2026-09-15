@@ -3,12 +3,12 @@ from datetime import date, datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api.input import (
+from backend.services.input import (
     require_one_repeat_cycle,
     require_repeat_until_only_when_repeating,
     require_valid_slot_bounds,
 )
-from backend.api.settings_service import slot_minutes
+from backend.services.settings_service import slot_minutes
 from backend.db.models import Member, UnavailableTime
 
 

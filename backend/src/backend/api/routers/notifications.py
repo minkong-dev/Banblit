@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account
-from backend.api.input import format_created_at
-from backend.api.notification_service import list_notifications, mark_all_read
+from backend.services.input import format_created_at
+from backend.services.notification_service import list_notifications, mark_all_read
 from backend.api.schemas import NotificationOut, NotificationsOut
 from backend.db.models import Member, Notification
 from backend.db.pipeline import get_session

@@ -2,20 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account, require_permission
-from backend.api.permission_service import account_permissions
-from backend.api.roster_service import assign_slot as assign_slot_row
-from backend.api.roster_service import clear_slot as clear_slot_row
-from backend.api.roster_service import create_team as create_team_row
-from backend.api.roster_service import delete_team as delete_team_row
-from backend.api.roster_service import expel_member as expel_member_row
-from backend.api.roster_service import replace_slots as replace_slots_rows
-from backend.api.roster_service import (
+from backend.services.permission_service import account_permissions
+from backend.services.roster_service import assign_slot as assign_slot_row
+from backend.services.roster_service import clear_slot as clear_slot_row
+from backend.services.roster_service import create_team as create_team_row
+from backend.services.roster_service import delete_team as delete_team_row
+from backend.services.roster_service import expel_member as expel_member_row
+from backend.services.roster_service import replace_slots as replace_slots_rows
+from backend.services.roster_service import (
     list_members,
     list_slots,
     list_teams,
     search_members,
 )
-from backend.api.roster_service import update_team as update_team_row
+from backend.services.roster_service import update_team as update_team_row
 from backend.api.schemas import (
     MemberOut,
     MemberRowOut,

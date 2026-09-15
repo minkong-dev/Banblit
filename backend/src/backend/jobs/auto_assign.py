@@ -15,8 +15,8 @@ from typing import Literal
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from backend.api.notification_service import notify_assignment_updated
-from backend.api.period_service import assign_period
+from backend.services.notification_service import notify_assignment_updated
+from backend.services.period_service import assign_period
 from backend.db.models import AssignmentRun, Period, Room, Team
 from backend.db.pipeline import get_session_factory
 

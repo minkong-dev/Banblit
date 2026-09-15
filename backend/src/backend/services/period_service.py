@@ -4,7 +4,7 @@ from datetime import date, datetime, time
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api.period_input import (
+from backend.services.period_input import (
     auto_slots_per_team,
     build_engine_rooms,
     build_engine_teams,
@@ -20,7 +20,7 @@ from backend.db.models import (
     Team,
     UnavailableTime,
 )
-from backend.api.settings_service import slot_minutes
+from backend.services.settings_service import slot_minutes
 from backend.db.pipeline import AssignmentRow, save_schedule
 from backend.scheduling.pipeline import Assignment as EngineAssignment
 from backend.scheduling.pipeline import (

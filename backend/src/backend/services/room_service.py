@@ -3,7 +3,7 @@ from datetime import time
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.api.input import (
+from backend.services.input import (
     parse_clock,
     require_closes_after_opens,
     require_on_the_hour,

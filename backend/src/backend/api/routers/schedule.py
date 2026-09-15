@@ -8,13 +8,13 @@ from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account, require_permission
 from backend.api.job_runner import Job, JobRunner, max_concurrent_jobs_from_env
-from backend.api.notification_service import notify_assignment_updated
-from backend.api.period_service import (
+from backend.services.notification_service import notify_assignment_updated
+from backend.services.period_service import (
     PeriodAssignResult,
     assign_period,
     open_slots_in_period,
 )
-from backend.api.schedule_service import (
+from backend.services.schedule_service import (
     ScheduleRow,
     get_period_or_raise,
     list_backup_round,
@@ -56,7 +56,7 @@ job_runner: JobRunner[PeriodAssignResult] = JobRunner(
 
 
 def _period(period_id: int, session: Session = Depends(get_session)) -> Period:
-    # 기간 존재 여부는 5개 endpoint(API의 요청 주소 단위)가 동일하게 검증합니다. 없으면 ValueError 를 발생시켜 422 로 응답합니다.
+    # 기간 존재 여부는 6개 endpoint(API의 요청 주소 단위)가 동일하게 검증합니다. 없으면 ValueError 를 발생시켜 422 로 응답합니다.
     return get_period_or_raise(session, period_id)
 
 
@@ -94,12 +94,13 @@ def _assignment_out(assignment: EngineAssignment, result: PeriodAssignResult) ->
             end=room_slot.interval.end,
         )
 
+    slots_by_team: dict[str, list[RoomSlotOut]] = {}
+    for team_id, slots in assignment.slots_by_team.items():
+        slots_by_team[result.team_names[team_id]] = [to_slot(slot) for slot in slots]
+
     return AssignmentOut(
         feasible=assignment.feasible,
-        slots_by_team={
-            result.team_names[team_id]: [to_slot(slot) for slot in slots]
-            for team_id, slots in assignment.slots_by_team.items()
-        },
+        slots_by_team=slots_by_team,
         open_slots=[to_slot(slot) for slot in assignment.open_slots],
     )
 

@@ -1,7 +1,7 @@
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from backend.api.input import require_non_empty
+from backend.services.input import require_non_empty
 from backend.db.models import (
     INSTRUMENTS,
     Instrument,
@@ -218,9 +218,9 @@ def replace_slots(session: Session, team_id: int, counts: dict[str, int]) -> Non
     ).all()
     have = {(row.instrument, row.ordinal) for row in rows}
 
-    for row in rows:
-        if (row.instrument, row.ordinal) not in keep:
-            session.delete(row)
+    stale_ids = [row.id for row in rows if (row.instrument, row.ordinal) not in keep]
+    if stale_ids:
+        session.execute(delete(TeamSlot).where(TeamSlot.id.in_(stale_ids)))
     session.add_all(
         TeamSlot(team_id=team_id, instrument=instrument, ordinal=ordinal)
         for instrument, ordinal in sorted(keep - have)

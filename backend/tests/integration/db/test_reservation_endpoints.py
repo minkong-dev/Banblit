@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
-from backend.api.reservation_service import create_reservation
+from backend.services.reservation_service import create_reservation
 from backend.db.models import Member, Period, Room, Team, TeamSlot
 from conftest import AccountFactory, seat
 

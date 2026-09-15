@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, File, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from backend.api.attachment_service import (
+from backend.services.attachment_service import (
     attachment_for_download,
     attachments_of_post,
     delete_attachment,
@@ -13,8 +13,8 @@ from backend.api.attachment_service import (
     save_attachment,
 )
 from backend.api.auth_dependency import require_account, require_permission
-from backend.api.input import format_created_at
-from backend.api.board_service import (
+from backend.services.input import format_created_at
+from backend.services.board_service import (
     PostRow,
     create_comment,
     create_notice,

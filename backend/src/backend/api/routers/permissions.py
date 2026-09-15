@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_permission
-from backend.api.permission_service import (
+from backend.services.permission_service import (
     SetMember,
     create_permission_set,
     delete_permission_set,

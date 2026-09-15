@@ -3,13 +3,13 @@ from datetime import date, datetime, time
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from backend.api.input import (
+from backend.services.input import (
     require_same_day,
     require_valid_slot_bounds,
     require_within_room_hours,
 )
-from backend.api.permission_service import account_permissions
-from backend.api.settings_service import slot_minutes
+from backend.services.permission_service import account_permissions
+from backend.services.settings_service import slot_minutes
 from backend.db.models import Member, Period, Reservation, Room, Team, TeamSlot
 from backend.db.pipeline import commit_translating
 
