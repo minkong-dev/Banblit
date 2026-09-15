@@ -3,16 +3,16 @@ title: 스케줄링 API
 sources:
   - backend/src/backend/api/app.py       # FastAPI 앱을 생성하고 라우터를 등록하는 파일, 오류를 응답으로 변환하는 전역 처리
   - backend/src/backend/api/routers/schedule.py # 시간표·배정·백업 endpoint
-  - backend/src/backend/api/input.py     # 모든 endpoint 가 함께 쓰는 입력 경계 검증
+  - backend/src/backend/services/input.py     # 모든 endpoint 가 함께 쓰는 입력 경계 검증
   - backend/src/backend/db/commit.py     # 저장 중 데이터베이스 제약에 위반되었을 때 사용자가 읽을 사유로 변환하는 파일
   - backend/src/backend/api/routers/     # 합주실·기간·팀·예약·게시판·계정·권한·알림 endpoint
   - backend/src/backend/api/schemas.py   # 요청·응답의 형태
   - backend/src/backend/api/auth_dependency.py  # 요청한 사용자와 권한 항목 보유 여부를 확인하는 파일
-  - backend/src/backend/api/notification_service.py  # 시간표를 변경한 endpoint가 알림을 생성하는 파일
+  - backend/src/backend/services/notification_service.py  # 시간표를 변경한 endpoint가 알림을 생성하는 파일
   - backend/src/backend/db/health.py     # 상태 확인 endpoint가 조회하는 대상
 ---
 
-> 문서 버전: 2.0.1 draft
+> 문서 버전: 2.0.2 draft
 
 ```mermaid
 flowchart TD

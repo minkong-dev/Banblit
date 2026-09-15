@@ -2,10 +2,10 @@
 title: 계정과 역할
 sources:
   - backend/src/backend/api/routers/auth.py      # 가입·로그인·로그아웃·내 계정 endpoint와 cookie를 응답에 추가하는 위치
-  - backend/src/backend/api/auth_session.py      # session을 생성·검증·종료하는 위치
-  - backend/src/backend/api/auth_service.py      # 가입·로그인 판정과 비밀번호 보관 형식
+  - backend/src/backend/services/auth_session.py      # session을 생성·검증·종료하는 위치
+  - backend/src/backend/services/auth_service.py      # 가입·로그인 판정과 비밀번호 보관 형식
   - backend/src/backend/api/auth_dependency.py   # 요청을 보낸 사람이 누구인지 확인하고, 해당 endpoint가 요구하는 항목이 활성화되었는지 판정하는 단일 위치
-  - backend/src/backend/api/permission_service.py # permission set 생성·수정·삭제·부여·회수와 합집합 계산
+  - backend/src/backend/services/permission_service.py # permission set 생성·수정·삭제·부여·회수와 합집합 계산
   - backend/src/backend/api/routers/permissions.py # permission set을 다루는 6개 endpoint
   - backend/migrations/versions/b7f1a92c4d31_permission_sets.py # permission set table 추가와 역할 열 삭제 마이그레이션
   - backend/tests/integration/db/test_permission_endpoints.py   # 합집합·첫 가입자·자기 권한 회수·마지막 full set 보호·/me 의 permission set 이름 시나리오
@@ -14,9 +14,9 @@ sources:
   - frontend/src/routes/SettingsAccount.tsx       # 설정 화면의 계정 탭. 내 정보·비밀번호·탈퇴
   - frontend/src/lib/account.ts                   # 항목 19가지의 한국어 이름, 내가 가졌는지 판단, 프로필 카드의 역할 문구(permission set 이름)
   - frontend/src/lib/account.test.ts              # 역할 문구가 permission set 이름을 표시하는지의 시나리오
-  - backend/src/backend/api/input.py             # 서버가 다시 검증하는 이름·이메일·비밀번호를 비롯한 모든 입력 규칙
-  - backend/src/backend/api/password_reset.py    # 재설정 token 발급·사용 처리와 아이디 안내
-  - backend/src/backend/api/mailer.py            # 메일 1통을 보내는 위치, 설정이 없을 때의 처리
+  - backend/src/backend/services/input.py             # 서버가 다시 검증하는 이름·이메일·비밀번호를 비롯한 모든 입력 규칙
+  - backend/src/backend/services/password_reset.py    # 재설정 token 발급·사용 처리와 아이디 안내
+  - backend/src/backend/services/mailer.py            # 메일 1통을 보내는 위치, 설정이 없을 때의 처리
   - docker-compose.override.yml                  # 개발에서만 메일 본문을 log에 저장하도록 활성화하는 위치
   - backend/migrations/versions/a3f8c50d1b64_password_reset_tokens.py  # 재설정 token table
   - backend/tests/integration/db/test_password_reset_endpoints.py  # 1회 사용·만료·같은 응답·session 종료 시나리오
@@ -24,11 +24,11 @@ sources:
   - backend/src/backend/api/routers/rooms.py     # 합주실 endpoint의 로그인·항목 구분
   - backend/src/backend/api/routers/periods.py   # 기간 endpoint의 로그인·항목 구분
   - backend/src/backend/api/routers/roster.py    # 팀·명단 endpoint의 로그인·항목 구분, 멤버 추방 endpoint
-  - backend/src/backend/api/roster_service.py    # 팀에서 삭제할 수 있는 사람 판정, 멤버 추방(계정 삭제)
+  - backend/src/backend/services/roster_service.py    # 팀에서 삭제할 수 있는 사람 판정, 멤버 추방(계정 삭제)
   - backend/tests/integration/db/test_member_expel_endpoints.py # 멤버 추방의 403·204·자기 자신·없는 번호 시나리오
   - backend/migrations/versions/e5b7c2a94d18_member_expel_permission.py # 항목 "멤버 추방"을 추가해 18개를 19개로 만든 마이그레이션
-  - backend/src/backend/api/unavailable_service.py  # 불가능 시간은 본인만이라는 판정
-  - backend/src/backend/api/reservation_service.py  # 예약에 적은 팀의 소속인지 확인
+  - backend/src/backend/services/unavailable_service.py  # 불가능 시간은 본인만이라는 판정
+  - backend/src/backend/services/reservation_service.py  # 예약에 적은 팀의 소속인지 확인
   - backend/tests/integration/db/                # endpoint마다 401·403 구분을 확인하는 테스트
   - backend/src/backend/db/models.py             # 계정 table과 session table
   - backend/migrations/versions/a1c7e5f3b9d2_accounts_and_roles.py  # 계정·포지션 table
@@ -45,7 +45,7 @@ sources:
   - docker-compose.override.yml      # 개발용 cookie 설정
 ---
 
-> 문서 버전: 3.0.2 draft
+> 문서 버전: 3.0.5 draft
 
 ```mermaid
 flowchart TD
@@ -64,7 +64,7 @@ flowchart TD
 
 계정과 권한은 사람이 Banblit에 들어오는 입구이자, 각자가 수행할 수 있는 작업을 결정하는 바탕입니다. 가입은 이메일과 비밀번호로 진행합니다. 로그인 후 상태는 **서버가 직접 보관**하며, 브라우저에는 그 상태를 가리키는 값만 cookie(브라우저가 저장하고 같은 서버로 보내는 요청마다 자동으로 첨부하는 값)로 전달합니다.
 
-권한은 **정해진 권한 항목 19개를 활성화하고 비활성화하는 것**으로 결정됩니다. 활성화한 항목들을 이름과 함께 묶은 것이 permission set(권한 집합)입니다. 한 사람은 permission set을 여러 개 가질 수 있으며, 실제로 수행할 수 있는 작업은 가진 permission set들의 합집합입니다. 헤드매니저는 따로 있는 값이 아니라 **19개가 모두 활성화된 상태**를 부르는 이름이고, 따라서 권한을 물려주는 작업은 곧 "모두 활성화하는 작업"이 됩니다.
+권한은 **정해진 권한 항목 19개를 활성화하고 비활성화하는 것**으로 결정됩니다. 활성화한 항목들을 이름과 함께 묶은 것이 permission set(권한 집합)입니다. 한 사람은 permission set을 1개 이상 가질 수 있으며, 실제로 수행할 수 있는 작업은 가진 permission set들의 합집합입니다. 헤드매니저는 따로 있는 값이 아니라 **19개가 모두 활성화된 상태**를 부르는 이름이고, 따라서 권한을 물려주는 작업은 곧 "모두 활성화하는 작업"이 됩니다.
 
 **이 구조가 현재 동작하는 구조입니다.** 이전에 있던 헤드매니저·일반멤버 2계층 역할은 제거했습니다. 계정에 붙어 있던 역할 열 자체가 삭제되었고, 서버는 요청마다 그 사람이 가진 permission set들을 합쳐 해당 endpoint가 요구하는 항목이 활성화되어 있는지만 확인합니다.
 
@@ -137,7 +137,7 @@ cookie만 삭제하는 방식과는 다릅니다. cookie를 삭제하면 그 브
 
 비밀번호 원문은 어디에도 저장하지 않습니다. 계정마다 다른 salt(비밀번호에 섞는 계정별 무작위 값)를 섞어, 메모리를 많이 쓰도록 설계된 hash 계산을 거친 결과만 저장합니다. 같은 비밀번호를 쓰는 2명의 저장값도 서로 다릅니다. 저장값에서 원문을 복원하는 작업은 그 계산을 처음부터 다시 실행하는 작업과 같습니다.
 
-여기에 1가지가 추가되었습니다. **그 값을 생성할 때 쓴 계산 강도를 값 옆에 함께 저장합니다.**
+이 저장 방식에 1가지가 추가되었습니다. **그 값을 생성할 때 쓴 계산 강도를 값 옆에 함께 저장합니다.**
 
 ```
 예전:  섞은 값 $ 계산 결과
@@ -159,7 +159,7 @@ cookie만 삭제하는 방식과는 다릅니다. cookie를 삭제하면 그 브
   이메일                          이름
   비밀번호                        이메일
   로그인 상태 유지 · 비밀번호 찾기   비밀번호 + 확인
-  [ 로그인 ]                      맡는 포지션 (여러 개 선택)
+  [ 로그인 ]                      맡는 포지션 (1개 이상 선택)
   ── 또는 ──                     [ 가입하기 ]
   구글로 계속하기
   카카오로 계속하기
@@ -175,7 +175,7 @@ cookie만 삭제하는 방식과는 다릅니다. cookie를 삭제하면 그 브
 
 ### 같은 사람인지는 4개 값으로 구분합니다 (2026-09-08)
 
-동명이인이 있습니다. 이름 1개로는 2명이 구분되지 않아, **이름·학과·학번·기수 4가지가 모두 같으면 같은 사람**으로 판정합니다. 그 조합이 중복되는 가입은 저장소가 거부합니다.
+동명이인이 있습니다. 이름 1개로는 2명이 구분되지 않아, **이름·학과·학번·기수 4가지가 모두 같으면 같은 사람**으로 판정합니다. 그 조합이 중복되는 가입은 저장소가 거절합니다.
 
 ```
 이름     학과        학번        기수
@@ -265,14 +265,14 @@ flowchart TD
 
 **그 이메일로 가입한 계정이 있는지 없는지 알려주지 않습니다.** 있든 없든 같은 응답을 반환합니다. 구분해서 응답하면 그 이메일이 가입되어 있는지를 알려주게 되고, 그 정보만으로도 가입자 명단이 유출되기 때문입니다.
 
-여기에는 유출 경로가 1개 더 있습니다. **응답에 걸리는 시간**입니다. 계정이 있을 때만 메일을 보내는데, 발송을 끝까지 기다린 뒤 응답하면 계정이 있는 요청만 몇 초 느려집니다. 문구가 같아도 걸린 시간이 다르면 구분할 수 있습니다. 그래서 **발송을 background task(응답을 반환한 뒤 별도로 실행되는 작업)로 넘기고 즉시 응답합니다.**
+이 응답에는 유출 경로가 1개 더 있습니다. **응답에 걸리는 시간**입니다. 계정이 있을 때만 메일을 보내는데, 발송을 끝까지 기다린 뒤 응답하면 계정이 있는 요청만 몇 초 느려집니다. 문구가 같아도 걸린 시간이 다르면 구분할 수 있습니다. 그래서 **발송을 background task(응답을 반환한 뒤 별도로 실행되는 작업)로 넘기고 즉시 응답합니다.**
 
 ```
 계정이 없다  ──▶  곧바로 같은 문구
 계정이 있다  ──▶  곧바로 같은 문구  (메일은 그 뒤에 따로 나간다)
 ```
 
-**아이디 찾기는 이름과 이메일이 함께 맞을 때만** 그 주소로 안내 메일을 보냅니다. 화면에 아이디를 표시하지 않는 이유는 2가지입니다. 아이디가 곧 이메일이라 표시할 값이 없고, 일부를 가려서 표시해도 도메인과 앞 글자가 유출됩니다. 이름 1개만으로 찾게 두지 않는 이유는 동아리에 동명이인이 있어서입니다. 이름만으로 조회하면 다른 사용자의 이메일을 알아낼 수 있습니다. 메일함 주인만 볼 수 있는 메일로 보내면 아무 정보도 유출되지 않습니다.
+**아이디 찾기는 이름과 이메일이 함께 맞을 때만** 그 주소로 안내 메일을 보냅니다. 화면에 아이디를 표시하지 않는 이유는 2가지입니다. 아이디가 곧 이메일이라 표시할 값이 없고, 도메인과 앞 글자만 남기고 나머지를 가려서 표시해도 그 도메인과 앞 글자가 유출됩니다. 이름 1개만으로 찾게 두지 않는 이유는 동아리에 동명이인이 있어서입니다. 이름만으로 조회하면 다른 사용자의 이메일을 알아낼 수 있습니다. 메일함 주인만 볼 수 있는 메일로 보내면 아무 정보도 유출되지 않습니다.
 
 **메일 설정이 없으면 실제로 보내지 않습니다.** 개발과 배포가 다르게 동작합니다.
 
@@ -338,7 +338,7 @@ flowchart TD
 
 **permission set.** 이름 1개, 설명 1줄, 활성화된 항목 목록을 담은 단위입니다. "회장", "공연팀장" 같은 permission set을 만들어 둡니다. 설정 화면의 멤버 탭에서 새 permission set을 추가하고, 활성화할 항목을 선택해 이름과 설명을 입력해 저장하면 permission set 1개가 생성됩니다.
 
-**설명은 반드시 입력해야 합니다.** 항목 목록만 저장하면 "이 permission set이 왜 있는가"가 사라집니다. 항목을 1개씩 읽어 의도를 추론하는 작업과, 1줄로 적힌 의도를 읽는 작업은 다른 작업입니다. 그래서 이름과 마찬가지로 빈 설명은 거부합니다.
+**설명은 반드시 입력해야 합니다.** 항목 목록만 저장하면 "이 permission set이 왜 있는가"가 사라집니다. 항목을 1개씩 읽어 의도를 추론하는 작업과, 1줄로 적힌 의도를 읽는 작업은 다른 작업입니다. 그래서 이름과 마찬가지로 빈 설명은 거절합니다.
 
 **한 사람은 permission set을 1개 이상 가질 수 있고, 실제로 할 수 있는 일은 가진 permission set들의 합집합입니다.** 가진 permission set 중 1개에서라도 활성화되어 있으면 할 수 있고, 어느 permission set에서도 활성화되어 있지 않으면 할 수 없습니다. permission set끼리 서로 제한하지 않으므로 우선순위를 따로 정할 필요가 없습니다.
 
@@ -427,7 +427,7 @@ flowchart LR
 
 **permission set을 삭제하면 그 permission set을 가졌던 사람과의 연결도 함께 삭제됩니다.** 삭제한 permission set을 계속 가리키는 행이 남으면, 존재하지 않는 permission set 때문에 권한을 계산할 수 없게 됩니다.
 
-**저장할 수 있는 항목 이름은 DB가 다시 검증합니다.** 정의되지 않은 이름이 포함된 요청은 endpoint에서 거절하고, 그 요청이 endpoint를 통과해도 DB의 제약이 1회 더 거부합니다. 활성화는 되는데 아무 endpoint도 검증하지 않는 항목이 데이터로 생기는 상황을 2겹으로 막습니다.
+**저장할 수 있는 항목 이름은 DB가 다시 검증합니다.** 정의되지 않은 이름이 포함된 요청은 endpoint에서 거절하고, 그 요청이 endpoint를 통과해도 DB의 제약이 1회 더 거절합니다. 활성화는 되는데 아무 endpoint도 검증하지 않는 항목이 데이터로 생기는 상황을 2겹으로 막습니다.
 
 **어떻게 확인했나.** 첫 가입자만 19개를 전부 받고 그다음 가입자는 0개를 받는지, permission set 2개를 가진 사람의 권한이 그 합집합이 되는지, 항목 1개가 없으면 그 endpoint가 거절하는지, permission set을 회수하거나 삭제하면 권한이 함께 회수되는지, "권한 변경"을 가진 사람이 자기 permission set을 수정하고 스스로 회수할 수 있는지, 그 항목이 없으면 자기 permission set도 변경하지 못하는지, 이름이 중복되거나 정의되지 않은 항목 이름이 포함된 요청이 거절되는지, 모두 활성화된 마지막 permission set 의 삭제와 항목 비활성화가 거절되고 이름 수정은 허용되는지, 모두 활성화된 permission set 이 2개가 되면 1개를 삭제할 수 있는지, 내 계정 조회가 가진 permission set 의 이름을 반환하는지를 `backend/tests/integration/db/test_permission_endpoints.py` 에 담았습니다. 화면이 그 이름을 역할 문구로 변환하는 규칙은 `frontend/src/lib/account.test.ts` 가 확인합니다. 이전 마이그레이션은 별도로, 헤드매니저였던 계정이 모두 활성화된 permission set으로 이전되는지와 되돌렸을 때 역할이 복원되는지를 확인했습니다.
 

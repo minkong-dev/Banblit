@@ -1,12 +1,12 @@
 ---
 title: 기간 자동 배정 (DB 연결)
 sources:
-  - backend/src/backend/api/period_input.py     # 기간 펼치기, 합주실 × 날짜 펼치기, 팀당 slot 산정, 팀·사람 변환
-  - backend/src/backend/api/period_service.py   # 읽기·조립·계산·저장의 순서와 거부 조건
+  - backend/src/backend/services/period_input.py     # 기간 펼치기, 합주실 × 날짜 펼치기, 팀당 slot 산정, 팀·사람 변환
+  - backend/src/backend/services/period_service.py   # 읽기·조립·계산·저장의 순서와 거부 조건
   - backend/src/backend/api/routers/schedule.py # 배정·조회·되돌리기 3개 endpoint
-  - backend/src/backend/api/schedule_service.py # 시간표를 조회하여 화면이 사용하는 형태로 변환하는 파일
+  - backend/src/backend/services/schedule_service.py # 시간표를 조회하여 화면이 사용하는 형태로 변환하는 파일
   - backend/src/backend/api/auth_dependency.py  # endpoint가 호출하는 로그인·권한 항목 확인 파일
-  - backend/src/backend/api/notification_service.py  # 시간표가 변경된 뒤 알림을 생성하는 대상
+  - backend/src/backend/services/notification_service.py  # 시간표가 변경된 뒤 알림을 생성하는 대상
   - backend/tests/integration/db/test_notifications.py  # 다시 계산·되돌리기에도 알림이 생성되는지의 시나리오
   - backend/src/backend/db/pipeline.py          # endpoint가 사용하는 요청 단위 DB session
   - backend/tests/unit/test_period_input.py          # 기간 펼치기·slot 산정·팀 변환 시나리오
@@ -16,7 +16,7 @@ sources:
   - backend/tests/unit/test_db_engine.py             # 접속 재사용·미설정 시 실패 시나리오
 ---
 
-> 문서 버전: 2.0.1 draft
+> 문서 버전: 2.0.2 draft
 
 ```mermaid
 flowchart TD
