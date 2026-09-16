@@ -9,7 +9,7 @@ test("공지에 글을 쓰고 댓글을 달 수 있다", async ({ page }) => {
   const comment = "종단 검사가 남긴 댓글입니다.";
 
   await page.goto("/notices");
-  await page.getByRole("button", { name: "글쓰기" }).click();
+  await page.getByRole("link", { name: "글쓰기" }).click();
   await page.getByLabel("제목").fill(title);
   await page.getByLabel("내용").fill("종단 검사가 남긴 글입니다.");
   await page.getByRole("button", { name: "글쓰기" }).click();
@@ -40,7 +40,7 @@ test("공지를 블라인드하면 목록에서 사라지고 설정에서 되돌
   page.on("dialog", (dialog) => { void dialog.accept(); });
 
   await page.goto("/notices");
-  await page.getByRole("button", { name: "글쓰기" }).click();
+  await page.getByRole("link", { name: "글쓰기" }).click();
   await page.getByLabel("제목").fill(title);
   await page.getByLabel("내용").fill("가려질 글입니다.");
   await page.getByRole("button", { name: "글쓰기" }).click();
