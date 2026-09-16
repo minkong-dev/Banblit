@@ -74,9 +74,9 @@ export function attachmentMessage(name: string, size: number): string {
 
 // ===== 글과 댓글에 무엇을 할 수 있는가 =====
 
-/** 수정은 작성자만, 삭제는 작성자이거나 \"타 멤버 글 수정 및 삭제\"(board_moderate) 권한자입니다.
- *  서버(board_service.py require_post_author)는 권한자에게 수정도 허용하지만, 화면은 삭제
- *  버튼만 표시합니다(사용자 결정 2026-09-11). 로그인 계정을 아직 조회하지 못했으면(meId null) 아무것도 할 수 없습니다. */
+/** 수정은 작성자만, 삭제는 작성자이거나 \"타 멤버 글 삭제 및 블라인드\"(board_moderate) 권한자입니다.
+ *  서버도 같은 규칙입니다 — 권한자도 남의 글 내용은 고치지 못합니다(board_service.py 의 update_post).
+ *  로그인 계정을 아직 조회하지 못했으면(meId null) 아무것도 할 수 없습니다. */
 export function boardActions(
   authorId: number,
   meId: number | null,

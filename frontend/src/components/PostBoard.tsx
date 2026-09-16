@@ -23,7 +23,7 @@ import { Card } from "./AppShell";
 import { Pager } from "./Pager";
 import { useFitCount } from "./hooks";
 import { Modal } from "./Modal";
-import { PencilIcon, TrashIcon } from "./icons";
+import { EyeOffIcon, PencilIcon, TrashIcon } from "./icons";
 import { askDelete } from "../lib/confirm";
 import type { Attachment, Post, PostComment } from "../lib/contract";
 
@@ -362,6 +362,47 @@ function AttachmentList(props: {
   );
 }
 
+/** board_moderate 권한자에게만 표시되는 블라인드 버튼입니다. 글을 지우지 않고 목록·상세에서 가립니다.
+ *  가린 글은 작성자 본인에게도 보이지 않고, 설정 화면의 블라인드 탭에서만 보이며 거기서 되돌립니다. */
+function BlindPost(props: {
+  postId: number;
+  listKey: readonly unknown[];
+  onDone: () => void;
+}) {
+  const { postId, listKey, onDone } = props;
+  const client = useQueryClient();
+
+  const blind = useMutation({
+    mutationFn: () => getJSON(`/posts/${postId}/blind`, { method: "PUT" }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: listKey });
+      void client.invalidateQueries({ queryKey: ["blinded-posts"] });
+      say("글을 블라인드했어요.");
+      // 가린 글의 상세 화면은 더 이상 조회되지 않으므로 목록으로 돌아갑니다.
+      onDone();
+    },
+  });
+
+  return (
+    <>
+      <button
+        className="ic"
+        type="button"
+        aria-label="글 블라인드"
+        disabled={blind.isPending}
+        onClick={() => {
+          if (window.confirm("해당 글을 가릴까요? 작성자 본인도 볼 수 없게 되고, 설정의 블라인드 탭에서 되돌릴 수 있어요.")) {
+            blind.mutate();
+          }
+        }}
+      >
+        <EyeOffIcon />
+      </button>
+      {blind.error ? <p className="why" role="alert">{reason(blind.error)}</p> : null}
+    </>
+  );
+}
+
 /** 글 작성자에게만 표시되는 삭제 버튼입니다. 서버도 작성자만 삭제를 허용합니다.
  *  삭제하면 붙어 있던 attachment 들도 서버 디스크에서 함께 제거됩니다.
  *  취소할 수 없으므로 확인 dialog 를 한 번 표시합니다. */
@@ -583,13 +624,14 @@ function PostDetail(props: {
     <div className="thread">
       <div className="threadtop">
         <button className="back" onClick={onBack}>‹ 목록으로</button>
-        {!canEdit && !canDelete ? null : (
+        {!canEdit && !canDelete && !canModerate ? null : (
           <span className="acts">
             {!canEdit ? null : (
               <button className="ic" aria-label="글 수정" onClick={() => setEditing(true)}>
                 <PencilIcon />
               </button>
             )}
+            {!canModerate ? null : <BlindPost postId={post.id} listKey={listKey} onDone={onBack} />}
             {!canDelete ? null : <RemovePost postId={post.id} listKey={listKey} onDone={onBack} />}
           </span>
         )}
