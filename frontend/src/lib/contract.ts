@@ -183,6 +183,8 @@ export type Post = {
   author: string;
   created_at: string;
   comment_count: number;
+  /** 가린 사람의 이름입니다. 가려지지 않은 글은 언제나 null 이라, 값이 차는 곳은 격리 목록뿐입니다. */
+  blinded_by: string | null;
 };
 
 export type PostComment = {

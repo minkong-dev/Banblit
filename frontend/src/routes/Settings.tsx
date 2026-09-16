@@ -21,6 +21,7 @@ import { applyTheme, readSavedTheme } from "../lib/theme";
 import type { Theme } from "../lib/theme";
 import { MemberCards } from "./SettingsMembers";
 import { ReservationCards } from "./SettingsReservations";
+import { BlindedCards } from "./SettingsBlinded";
 import { AccountCards } from "./SettingsAccount";
 import {
   Cell,
@@ -36,7 +37,7 @@ import "../styles/settings.css";
 import type { Period, Room, Team } from "../lib/contract";
 
 
-type Tab = "rooms" | "periods" | "members" | "reservations" | "account";
+type Tab = "rooms" | "periods" | "members" | "reservations" | "blinded" | "account";
 
 // 탭마다 필요한 권한 항목이 다릅니다. 가진 권한의 탭만 표시되므로, 관리 권한이 없는 사람에게는 계정 탭 하나만 남습니다.
 // 내 정보·비밀번호·화면 밝기·탈퇴는 전부 자기 계정에 대한 설정이라 한 탭에 둡니다.
@@ -46,6 +47,7 @@ const TABS = [
   { key: "periods" as const, text: "기간", needs: ["period_create", "period_edit", "period_delete"] as const },
   { key: "members" as const, text: "멤버", needs: ["permission_manage", "permission_grant"] as const },
   { key: "reservations" as const, text: "예약", needs: ["reservation_manage"] as const },
+  { key: "blinded" as const, text: "블라인드", needs: ["board_moderate"] as const },
   { key: "account" as const, text: "계정", needs: null },
 ];
 
@@ -170,12 +172,14 @@ export function Settings() {
           <MemberCards />
         ) : shown === "reservations" ? (
           <ReservationCards />
+        ) : shown === "blinded" ? (
+          <BlindedCards />
         ) : (
           <AccountCards theme={<ThemeCard />} />
         )}
       </div>
 
-      {shown === "members" || shown === "reservations" || shown === "account" ? null : (
+      {shown === "members" || shown === "reservations" || shown === "blinded" || shown === "account" ? null : (
         <div className="rail">
           <Readout
             rooms={roomList}

@@ -80,8 +80,8 @@ export const PERMISSION_ITEMS: readonly {
   },
   {
     key: "board_moderate",
-    label: "타 멤버 글 수정 및 삭제",
-    note: "본인의 글은 기본적으로 수정 및 삭제가 가능하고, 이 권한이 있다면 타 멤버의 글도 수정 및 삭제가 가능해요.",
+    label: "타 멤버 글 삭제 및 블라인드",
+    note: "본인의 글은 기본적으로 수정 및 삭제가 가능하고, 이 권한이 있다면 타 멤버의 글을 삭제하거나 블라인드할 수 있어요. 타 멤버의 글 내용은 이 권한으로도 수정할 수 없어요.",
   },
   {
     key: "reservation_manage",
