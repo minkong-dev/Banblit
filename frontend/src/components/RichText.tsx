@@ -11,6 +11,7 @@ import { FontFamily } from "@tiptap/extension-font-family";
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 
+import { Dropdown } from "./Dropdown";
 import { sanitizeBody } from "../lib/richText";
 
 /** 고를 수 있는 글꼴입니다. 값은 CSS 의 font-family 에 그대로 들어갑니다.
@@ -81,18 +82,17 @@ export function RichText({ id, label, value, onChange, disabled = false, invalid
         <Mark editor={editor} name="bold" label="굵게"><b>가</b></Mark>
         <Mark editor={editor} name="italic" label="기울임"><i>가</i></Mark>
         <Mark editor={editor} name="strike" label="취소줄"><s>가</s></Mark>
-        <select
-          aria-label="글꼴"
+        <Dropdown
+          ariaLabel="글꼴"
+          className="rtfont"
           value={String(editor.getAttributes("textStyle").fontFamily ?? "")}
+          choices={FONTS.map((font) => ({ value: font.value, label: font.label }))}
           disabled={disabled}
-          onChange={(event) => {
-            const font = event.target.value;
+          onChange={(font) => {
             if (font === "") editor.chain().focus().unsetFontFamily().run();
             else editor.chain().focus().setFontFamily(font).run();
           }}
-        >
-          {FONTS.map((font) => <option value={font.value} key={font.label}>{font.label}</option>)}
-        </select>
+        />
         <button type="button" disabled={disabled} onClick={() => askLink(editor)}>링크</button>
         <button type="button" disabled={disabled} onClick={() => askImage(editor)}>그림</button>
       </div>
