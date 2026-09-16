@@ -61,13 +61,19 @@ def _require_another_full_set(session: Session, set_id: int) -> None:
 
     기준은 개인이 아니라 permission set 입니다(사용자 결정 2026-09-11). 모든 항목을 가진 permission set 이
     0개가 되면 권한을 부여할 사람이 없어지므로, 마지막 1개는 삭제와 항목 비활성화를 거부합니다.
+
+    모든 항목을 가진 행을 전부 잠급니다(with_for_update). 잠그지 않으면 2개가 남은 상태에서 두 요청이
+    각각 하나씩 동시에 삭제할 때 둘 다 "다른 하나가 있다" 로 통과해 0개가 됩니다. 뒤에 온 요청은
+    앞의 요청이 commit 할 때까지 기다렸다가 다시 세므로 마지막 1개에서 거부됩니다. 검사 대상인
+    set_id 도 full set 이라 함께 잠기고, id 오름차순으로 잠가 두 요청이 서로를 기다리지 않게 합니다.
     """
-    another = session.scalars(
+    full_ids = session.scalars(
         select(PermissionSet.id)
-        .where(PermissionSet.id != set_id)
         .where(PermissionSet.permissions.contains(list(PERMISSIONS)))
-        .limit(1)
-    ).first()
+        .order_by(PermissionSet.id)
+        .with_for_update()
+    ).all()
+    another = next((full_id for full_id in full_ids if full_id != set_id), None)
     if another is None:
         raise ValueError("모든 권한을 가진 마지막 permission set 은 삭제하거나 항목을 끌 수 없습니다")
 

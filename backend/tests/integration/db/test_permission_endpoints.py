@@ -1,6 +1,11 @@
-from fastapi.testclient import TestClient
+import threading
 
-from backend.db.models import PERMISSIONS
+from fastapi.testclient import TestClient
+from sqlalchemy import Engine, select
+from sqlalchemy.orm import Session
+
+from backend.db.models import PERMISSIONS, PermissionSet
+from backend.services.permission_service import delete_permission_set
 from conftest import AccountFactory
 
 
@@ -312,3 +317,56 @@ def test_me_lists_the_names_of_my_permission_sets(
 
     assert head_names == ["헤드매니저"]
     assert member_names == ["방담당"]
+
+
+def test_two_concurrent_deletes_keep_one_full_set(
+    test_engine: Engine, db_session: Session
+) -> None:
+    """모든 항목을 가진 permission set 이 2개일 때 두 요청이 각각 하나씩 동시에 삭제해도 1개는 남아야 합니다.
+
+    잠그지 않으면 두 요청이 같은 순간에 "다른 full set 이 있다" 를 확인하고 둘 다 통과해
+    full set 이 0개가 됩니다. 그러면 권한을 부여할 사람이 없어져 되돌릴 수 없습니다.
+    순서를 강제하지 않아야 재현되므로 barrier 로 두 스레드를 같은 순간에 출발시킵니다.
+    db_session 은 준비와 확인에만 사용합니다.
+    """
+    # migration 이 넣어 둔 "헤드매니저" 가 이미 full set 이라, 남은 개수를 세려면 먼저 비웁니다.
+    for existing in db_session.scalars(select(PermissionSet)).all():
+        db_session.delete(existing)
+    sets = [
+        PermissionSet(name=name, description="모든 권한", permissions=list(PERMISSIONS))
+        for name in ("운영진", "부운영진")
+    ]
+    db_session.add_all(sets)
+    db_session.commit()
+    set_ids = [row.id for row in sets]
+
+    start = threading.Barrier(len(set_ids))
+    # 스레드 안에서 발생한 예외는 메인 스레드로 전파되지 않습니다. 모아 두지 않으면 잠금 대기 중
+    # 발생한 DB 오류가 기록에만 남고, 남은 개수만 보고 통과·실패를 판정하게 됩니다.
+    raised: list[Exception] = []
+
+    def remove(set_id: int) -> None:
+        with Session(test_engine) as session:
+            start.wait()
+            try:
+                delete_permission_set(session, set_id)
+            except Exception as error:
+                raised.append(error)
+
+    threads = [threading.Thread(target=remove, args=(set_id,)) for set_id in set_ids]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+        # 서로를 기다리면 join 은 조용히 시간만 보내고 끝납니다. 그대로 두면 잠긴 행을 쥔 스레드가
+        # 남아 뒤따르는 테스트까지 멈춥니다.
+        assert not thread.is_alive(), "삭제 스레드가 제한 시간 안에 끝나지 않았습니다"
+
+    assert [type(error) for error in raised] == [ValueError]
+
+    remaining = db_session.scalars(
+        select(PermissionSet.id).where(
+            PermissionSet.permissions.contains(list(PERMISSIONS))
+        )
+    ).all()
+    assert len(remaining) == 1
