@@ -1,5 +1,8 @@
 from datetime import datetime
 
+import pytest
+
+from backend.scheduling import resolution
 from backend.scheduling.assignment import Room
 from backend.scheduling.availability import Member, Team
 from backend.scheduling.interval import TimeInterval
@@ -56,3 +59,17 @@ def test_no_proposals_when_no_single_exclusion_can_help() -> None:
 
     assert result.assignment.feasible is False
     assert result.proposals == []
+
+
+def test_fails_when_the_proposal_search_exceeds_the_time_limit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # 배정이 불가능하면 멤버 1명씩 제외한 계산을 멤버 수만큼 반복하므로 시간이 멤버 수에 비례합니다.
+    # 상한을 넘기면 지금까지의 조율안을 버리고 실패로 끝냅니다.
+    monkeypatch.setattr(resolution, "RESOLUTION_TIME_LIMIT_SECONDS", 0.0)
+    blocker = Member(id=1, unavailable=[TimeInterval(_at(18), _at(19))])
+    free = Member(id=2, unavailable=[])
+    team = Team(id=10, members=[blocker, free])
+
+    with pytest.raises(ValueError, match="중단했습니다"):
+        resolve(teams=[team], rooms=[_one_slot_room()], slots_per_team=1)
