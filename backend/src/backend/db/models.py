@@ -386,7 +386,10 @@ class AssignmentRun(Base):
 
 
 class Assignment(Base):
-    """확정된 배정 slot(1시간 단위 시간 칸) 하나입니다. 같은 합주실의 같은 시각에는 하나만 존재할 수 있습니다."""
+    """확정된 배정 한 구간입니다. 같은 팀이 같은 합주실에서 이어 쓰는 칸은 쪼개지 않고 한 행으로 저장합니다.
+
+    같은 합주실에서 시간이 겹치는 행은 DB 가 거절합니다(assignments_no_overlap). 예약과 같은 방식입니다.
+    """
 
     __tablename__ = "assignments"
 
@@ -399,8 +402,11 @@ class Assignment(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime)
     ends_at: Mapped[datetime] = mapped_column(DateTime)
 
+    # 겹침 금지 제약(EXCLUDE)은 SQLAlchemy 로 표현할 수 없어 migration 이 직접 만듭니다
+    # (migrations/versions/a1f7c30e9b52_assignment_as_one_row.py). index 는 표현할 수 있으므로
+    # 여기 적습니다. 빠뜨리면 다음 autogenerate 가 지우는 migration 을 만들어 냅니다.
     __table_args__ = (
-        UniqueConstraint("room_id", "starts_at"),
+        Index("ix_assignments_room_starts_at", "room_id", "starts_at"),
         CheckConstraint("ends_at > starts_at"),
     )
 
@@ -549,8 +555,10 @@ class LoginSession(Base):
 class AssignmentBackup(Base):
     """이전 배정의 백업입니다. 다시 계산할 때 현행 table(assignments)의 행을 이 table 로 옮깁니다.
 
+    현행과 같은 구간 한 행입니다.
+
     saved_at 은 백업된 시각입니다. 같은 기간의 여러 백업 배정기록을 구분하고 정렬하는 기준입니다.
-    현행 table 과 달리 여러 배정기록이 공존하므로 (room_id, starts_at) unique 제약을 두지 않습니다.
+    현행 table 과 달리 여러 배정기록이 공존하므로 겹침 금지 제약을 두지 않습니다.
     """
 
     __tablename__ = "assignment_backups"

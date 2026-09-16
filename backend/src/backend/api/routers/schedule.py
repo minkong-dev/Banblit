@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from backend.api.auth_dependency import require_account, require_permission
 from backend.api.job_runner import Job, JobRunner, max_concurrent_jobs_from_env
 from backend.services.notification_service import notify_assignment_updated
+from backend.services.settings_service import slot_minutes
 from backend.services.period_service import (
     PeriodAssignResult,
     assign_period,
@@ -218,7 +219,8 @@ def read_period_backups(
     return BackupsOut(
         backups=[
             BackupOut(saved_at=round_["saved_at"], slot_count=round_["slot_count"])
-            for round_ in list_backup_rounds(session, period.id)
+            # 칸 수는 구간 길이를 칸 크기로 나눈 값입니다. 칸 크기는 저장소 설정이 정합니다.
+            for round_ in list_backup_rounds(session, period.id, slot_minutes(session))
         ]
     )
 

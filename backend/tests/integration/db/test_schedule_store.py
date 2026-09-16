@@ -306,11 +306,83 @@ def test_backup_rounds_are_listed_newest_first_with_their_slot_counts(
         saved_at=datetime(2026, 8, 3, 21, 0),
     )
 
-    rounds = list_backup_rounds(db_session, period_id)
+    rounds = list_backup_rounds(db_session, period_id, slot_minutes=60)
 
     assert rounds == [
         {"saved_at": datetime(2026, 8, 3, 21, 0), "slot_count": 2},
         {"saved_at": datetime(2026, 8, 2, 21, 0), "slot_count": 1},
+    ]
+
+
+def test_consecutive_slots_become_one_row(db_session: Session) -> None:
+    """같은 팀이 같은 합주실에서 이어 쓰는 칸은 구간 한 행으로 저장합니다.
+
+    칸마다 한 행이면 점유 단위가 5분일 때 하루에 수백 행이 쌓이고, 화면이 다시 이어 붙여야 합니다.
+    """
+    period_id, team_id, room_id = _scaffold(db_session)
+
+    save_schedule(
+        db_session,
+        period_id,
+        [_row(team_id, room_id, 19), _row(team_id, room_id, 20), _row(team_id, room_id, 21)],
+        saved_at=datetime(2026, 8, 1, 21, 0),
+    )
+    db_session.commit()
+
+    current = db_session.scalars(
+        select(Assignment).where(Assignment.period_id == period_id)
+    ).all()
+    assert [(a.starts_at, a.ends_at) for a in current] == [
+        (datetime(2026, 8, 1, 19, 0), datetime(2026, 8, 1, 22, 0))
+    ]
+
+
+def test_a_gap_between_slots_keeps_two_rows(db_session: Session) -> None:
+    """떨어진 칸은 잇지 않습니다. 이으면 배정받지 않은 시간까지 점유한 것이 됩니다."""
+    period_id, team_id, room_id = _scaffold(db_session)
+
+    save_schedule(
+        db_session,
+        period_id,
+        [_row(team_id, room_id, 19), _row(team_id, room_id, 21)],
+        saved_at=datetime(2026, 8, 1, 21, 0),
+    )
+    db_session.commit()
+
+    current = db_session.scalars(
+        select(Assignment)
+        .where(Assignment.period_id == period_id)
+        .order_by(Assignment.starts_at)
+    ).all()
+    assert [(a.starts_at, a.ends_at) for a in current] == [
+        (datetime(2026, 8, 1, 19, 0), datetime(2026, 8, 1, 20, 0)),
+        (datetime(2026, 8, 1, 21, 0), datetime(2026, 8, 1, 22, 0)),
+    ]
+
+
+def test_different_teams_are_not_joined(db_session: Session) -> None:
+    """이어진 칸이라도 팀이 다르면 각각의 행입니다."""
+    period_id, team_id, room_id = _scaffold(db_session)
+    other = Team(name="B")
+    db_session.add(other)
+    db_session.flush()
+
+    save_schedule(
+        db_session,
+        period_id,
+        [_row(team_id, room_id, 19), _row(other.id, room_id, 20)],
+        saved_at=datetime(2026, 8, 1, 21, 0),
+    )
+    db_session.commit()
+
+    current = db_session.scalars(
+        select(Assignment)
+        .where(Assignment.period_id == period_id)
+        .order_by(Assignment.starts_at)
+    ).all()
+    assert [(a.team_id, a.starts_at, a.ends_at) for a in current] == [
+        (team_id, datetime(2026, 8, 1, 19, 0), datetime(2026, 8, 1, 20, 0)),
+        (other.id, datetime(2026, 8, 1, 20, 0), datetime(2026, 8, 1, 21, 0)),
     ]
 
 
@@ -323,4 +395,4 @@ def test_backup_rounds_are_empty_before_any_reassignment(db_session: Session) ->
         saved_at=datetime(2026, 8, 1, 21, 0),
     )
 
-    assert list_backup_rounds(db_session, period_id) == []
+    assert list_backup_rounds(db_session, period_id, slot_minutes=60) == []

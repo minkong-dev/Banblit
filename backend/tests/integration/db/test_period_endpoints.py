@@ -192,7 +192,8 @@ def test_assign_saves_the_schedule_and_reports_it(
     assert all(slot["room_id"] == room.id for slot in slots)
 
     saved = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
-    assert len(saved) == 4
+    # 계산 결과는 칸 4개지만 저장은 구간 한 행씩이라, 이어진 2칸이 합쳐져 하루 한 행씩 2행입니다.
+    assert len(saved) == 2
 
 
 def test_assign_reports_open_slots_with_real_room_names(
@@ -398,6 +399,7 @@ def test_rollback_restores_the_previous_schedule(
 
     rows = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
     # 직전 배정기록(S2)과 정확히 같아야 합니다. 시각·합주실까지 실제 값으로 비교합니다.
+    # 합주실마다 이어진 2칸이 구간 한 행이라, 8칸이 하루 2행씩 4행으로 저장됩니다.
     assert rows == [
         {
             "team_id": team_id,
@@ -405,14 +407,6 @@ def test_rollback_restores_the_previous_schedule(
             "room_id": room_1.id,
             "room": "1번방",
             "start": "2026-08-01T18:00:00",
-            "end": "2026-08-01T19:00:00",
-        },
-        {
-            "team_id": team_id,
-            "team": "A",
-            "room_id": room_1.id,
-            "room": "1번방",
-            "start": "2026-08-01T19:00:00",
             "end": "2026-08-01T20:00:00",
         },
         {
@@ -421,14 +415,6 @@ def test_rollback_restores_the_previous_schedule(
             "room_id": room_2.id,
             "room": "2번방",
             "start": "2026-08-01T20:00:00",
-            "end": "2026-08-01T21:00:00",
-        },
-        {
-            "team_id": team_id,
-            "team": "A",
-            "room_id": room_2.id,
-            "room": "2번방",
-            "start": "2026-08-01T21:00:00",
             "end": "2026-08-01T22:00:00",
         },
         {
@@ -437,14 +423,6 @@ def test_rollback_restores_the_previous_schedule(
             "room_id": room_1.id,
             "room": "1번방",
             "start": "2026-08-02T18:00:00",
-            "end": "2026-08-02T19:00:00",
-        },
-        {
-            "team_id": team_id,
-            "team": "A",
-            "room_id": room_1.id,
-            "room": "1번방",
-            "start": "2026-08-02T19:00:00",
             "end": "2026-08-02T20:00:00",
         },
         {
@@ -453,14 +431,6 @@ def test_rollback_restores_the_previous_schedule(
             "room_id": room_2.id,
             "room": "2번방",
             "start": "2026-08-02T20:00:00",
-            "end": "2026-08-02T21:00:00",
-        },
-        {
-            "team_id": team_id,
-            "team": "A",
-            "room_id": room_2.id,
-            "room": "2번방",
-            "start": "2026-08-02T21:00:00",
             "end": "2026-08-02T22:00:00",
         },
     ]
@@ -544,7 +514,7 @@ def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
 
     # 실패한 되돌리기가 기간 B 의 현행 시간표를 변경하지 않아야 합니다.
     b_rows = api_client.get(f"/periods/{period_b.id}/schedule").json()["rows"]
-    assert len(b_rows) == 4  # 이틀 × 2칸
+    assert len(b_rows) == 2  # 이틀 × 2칸이 하루 한 구간씩 2행
 
 
 def test_schedule_without_login_is_rejected(
@@ -867,7 +837,7 @@ def test_confirming_a_proposal_saves_the_schedule_without_that_member(
     assert job["result"]["saved"] is True
     assert job["result"]["assignment"]["feasible"] is True
     saved = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
-    assert len(saved) == 4  # 이틀 × 2칸을 팀 하나가 가져간다
+    assert len(saved) == 2  # 이틀 × 2칸을 팀 하나가 가져가고, 하루치 2칸이 구간 한 행이 된다
 
 
 def test_confirming_someone_outside_the_roster_fails_the_job(

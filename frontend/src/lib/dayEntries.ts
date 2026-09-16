@@ -83,8 +83,10 @@ export function ensembleByDay(
   return byDay;
 }
 
-/** 확정된 시간표를 합주 한 번씩으로 합친 뒤 날짜별로 담습니다. 서버는 slot(1시간 단위 시간 칸)으로 주므로 맞닿은 slot 을 먼저 연결해야
- *  사용자가 보는 합주 한 번이 됩니다. */
+/** 확정된 시간표를 합주 한 번씩으로 합친 뒤 날짜별로 담습니다.
+ *  서버는 이어진 칸을 구간 한 행으로 저장하지만(backend/db/schedule_store.py 의 merge_runs),
+ *  그 변경 전에 저장된 백업 배정기록은 칸마다 한 행으로 남아 있어 여기서 한 번 더 연결합니다.
+ *  이미 합쳐진 행을 다시 연결해도 결과는 같습니다. */
 export function assignedByDay(rows: ScheduleRow[], teams: DayTeam[], openHour: number): DayEntries {
   const sessions: Session[] = rows.map((row) => ({
     team: row.team, room: row.room, start: row.start, end: row.end,
