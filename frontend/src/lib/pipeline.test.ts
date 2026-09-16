@@ -14,6 +14,7 @@ import {
   periodBody,
   removeUnavailable,
   requestPasswordReset,
+  saveSlotMinutes,
   resetPassword,
   weekKeys,
 } from "./pipeline";
@@ -336,6 +337,27 @@ describe("periodBody", () => {
   it("매일이 꺼져 있으면 입력한 종료일을 그대로 보낸다", () => {
     const form = { kind: "focused", everyday: false, starts_on: "2026-09-20", ends_on: "2026-09-27" };
     expect(periodBody(form)).toEqual(form);
+  });
+});
+
+describe("saveSlotMinutes", () => {
+  it("/settings 를 PATCH 로 호출하고 고른 값을 보낸다", async () => {
+    const spy = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) =>
+        new Response(JSON.stringify({ slot_minutes: 30 }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    vi.stubGlobal("fetch", spy);
+
+    const saved = await saveSlotMinutes(30);
+
+    const [url, init] = spy.mock.calls[0];
+    expect(url).toBe("/api/settings");
+    expect(init?.method).toBe("PATCH");
+    expect(JSON.parse(String(init?.body))).toEqual({ slot_minutes: 30 });
+    expect(saved).toBe(30);
   });
 });
 
