@@ -43,11 +43,10 @@ export function Board() {
               title={current.name}
               hint="해당 팀에 소속된 멤버만 볼 수 있어요"
               listPath={`/teams/${current.id}/posts`}
-              writePath={`/teams/${current.id}/posts`}
+              newPath={`/board/${current.id}/new`}
               authorId={me?.id ?? null}
               canWrite
               canModerate={can(me, "board_moderate")}
-              writeNote={`${current.name} 팀에 소속된 멤버만 쓸 수 있어요.`}
               emptyText="아직 등록된 글이 없어요"
             />
           </div>

@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 
+import { Link } from "react-router-dom";
+
 import { RichText, RichTextView } from "./RichText";
 import { apiUrl, reason } from "../lib/api";
 import { formError, loadState, stateText } from "../lib/loading";
@@ -101,16 +103,21 @@ function PostList(props: {
   );
 }
 
-function WriteForm(props: {
+/** 글 하나를 쓰는 form 입니다. 목록 화면이 아니라 작성 페이지(routes/PostWrite)가 사용합니다.
+ *  목록 아래에 이어붙이지 않습니다 — 목록과 작성은 하는 일이 다르고, 붙이면 작성 화면을 주소로
+ *  가리킬 수 없습니다(사용자 결정 2026-09-16). */
+export function WriteForm(props: {
   writePath: string;
   /** 현재 사용자의 id. 미인증(로그인 전)이면 null이므로 글을 작성할 수 없습니다. */
   authorId: number | null;
   writeNote: string;
   queryKey: unknown[];
-  /** 글 작성을 완료하면 WriteForm 을 닫습니다. 다음 단계는 목록으로 돌아가는 것입니다. */
+  /** 글 작성을 완료했을 때 호출합니다. 작성 페이지는 목록으로 돌아갑니다. */
   onDone: () => void;
+  /** 쓰지 않고 나갈 때 호출합니다. */
+  onCancel: () => void;
 }) {
-  const { writePath, authorId, writeNote, queryKey, onDone } = props;
+  const { writePath, authorId, writeNote, queryKey, onDone, onCancel } = props;
   const client = useQueryClient();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -196,7 +203,7 @@ function WriteForm(props: {
         if (why === "") send.mutate();
       }}
     >
-      <p className="note">{writeNote}</p>
+      {writeNote === "" ? null : <p className="note">{writeNote}</p>}
       <div className="fields">
         <label className="wide" htmlFor="postTitle">
           제목
@@ -252,6 +259,7 @@ function WriteForm(props: {
         </div>
       )}
       <div className="acts">
+        <button className="btn" type="button" onClick={onCancel}>취소</button>
         <button className="btn go" type="submit" disabled={send.isPending || authorId === null}>
           {send.isPending ? "업로드 중…" : postedId === null ? "글쓰기" : "첨부파일 재업로드"}
         </button>
@@ -702,23 +710,22 @@ export function PostBoard(props: {
   title: string;
   hint: string;
   listPath: string;
-  writePath: string;
+  /** 글쓰기 버튼이 여는 작성 페이지의 주소입니다. */
+  newPath: string;
   /** 현재 사용자의 id. 미인증(로그인 전)이면 null이므로 글과 댓글을 작성할 수 없습니다. */
   authorId: number | null;
-  /** WriteForm 을 렌더할지 여부입니다. 공지사항은 notice_write 권한이 있는 사람만,
+  /** 글쓰기 버튼을 표시할지 여부입니다. 공지사항은 notice_write 권한이 있는 사람만,
    *  팀 게시판은 팀에 소속한 사람만 글을 작성할 수 있습니다. */
   canWrite: boolean;
   /** board_moderate 권한 여부. 다른 사용자의 글·댓글·attachment 에도 삭제 버튼이 표시됩니다. */
   canModerate: boolean;
-  writeNote: string;
   emptyText: string;
 }) {
-  const { title, hint, listPath, writePath, authorId, canWrite, canModerate, writeNote, emptyText } = props;
+  const { title, hint, listPath, newPath, authorId, canWrite, canModerate, emptyText } = props;
   const queryKey = ["board", listPath];
   const focus = useDetailFocus();
   const client = useQueryClient();
   const [page, setPage] = useState(1);
-  const [writing, setWriting] = useState(false);
 
   const posts = useQuery({
     queryKey,
@@ -762,29 +769,16 @@ export function PostBoard(props: {
           {/* Pagination 과 글쓰기 버튼이 한 줄에 함께 표시됩니다. 페이지가 하나뿐이어도
               pagination 을 렌더합니다. 그렇지 않으면 글이 추가·삭제될 때마다
               글쓰기 버튼이 위아래로 움직여 UX 가 불안정합니다. */}
-          {writing ? null : (
           <div className="listfoot">
-          {state.kind !== "ready" || list.length === 0 ? null : (
-            <Pager page={shownPage} pages={pages} onPage={setPage} />
-          )}
+            {state.kind !== "ready" || list.length === 0 ? null : (
+              <Pager page={shownPage} pages={pages} onPage={setPage} />
+            )}
 
-          {!canWrite ? null : (
-            <button className="new" onClick={() => setWriting(true)}>글쓰기</button>
-          )}
+            {/* 작성은 이 목록이 아니라 자기 주소를 가진 화면이 맡습니다(routes/PostWrite). */}
+            {!canWrite ? null : (
+              <Link className="new" to={newPath}>글쓰기</Link>
+            )}
           </div>
-          )}
-
-          {/* WriteForm 은 버튼을 눌렀을 때만 표시됩니다.
-              항상 펼쳐 두면 form 이 목록보다 길어져 사용자가 읽으러 올 때마다 스크롤해야 합니다. */}
-          {!writing ? null : (
-            <WriteForm
-              writePath={writePath}
-              authorId={authorId}
-              writeNote={writeNote}
-              queryKey={queryKey}
-              onDone={() => setWriting(false)}
-            />
-          )}
         </>
       ) : (
         <PostDetail

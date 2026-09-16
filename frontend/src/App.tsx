@@ -13,6 +13,7 @@ import { Assignment } from "./routes/Assignment";
 import { Board } from "./routes/Board";
 import { Landing } from "./routes/Landing";
 import { Notices } from "./routes/Notices";
+import { BoardWrite, NoticeWrite } from "./routes/PostWrite";
 import { Profile } from "./routes/Profile";
 import { Scheduler } from "./routes/Scheduler";
 import { Settings } from "./routes/Settings";
@@ -46,7 +47,9 @@ export function App() {
       <Route path="/admin" element={<RequireAuth><Assignment /></RequireAuth>} />
       <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
       <Route path="/notices" element={<RequireAuth><Notices /></RequireAuth>} />
+      <Route path="/notices/new" element={<RequireAuth><NoticeWrite /></RequireAuth>} />
       <Route path="/board" element={<RequireAuth><Board /></RequireAuth>} />
+      <Route path="/board/:teamId/new" element={<RequireAuth><BoardWrite /></RequireAuth>} />
       <Route path="/teams" element={<RequireAuth><Teams /></RequireAuth>} />
       <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
     </Routes>
