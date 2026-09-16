@@ -40,8 +40,9 @@ class ScheduleRowOut(BaseModel):
 
 
 class ScheduleOut(BaseModel):
-    # open_slots는 어느 팀도 사용하지 않는 1시간 slot(1시간 단위 시간 칸)입니다. 화면은
-    # open_slots의 시간만 예약용으로 개방합니다.
+    # open_slots 는 어느 팀도 배정받지 않은 slot(1시간 단위 시간 칸)입니다. 예약 대상이 아닙니다 —
+    # 이 slot 은 집중 합주기간 안에 있고, 그 기간의 예약은 services/reservation_service.py 가 전부
+    # 거절합니다. 어느 자리가 비었는지를 알리는 값이며 지금은 화면이 사용하지 않습니다.
     rows: list[ScheduleRowOut]
     open_slots: list[RoomSlotOut]
 
