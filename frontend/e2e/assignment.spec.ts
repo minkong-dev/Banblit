@@ -23,9 +23,12 @@ test.describe("배정 다시 계산", () => {
     const originalRows = withSchedule.rows;
 
     await page.goto("/admin");
+    // 기간 고르기는 기본 select 가 아니라 직접 그린 드롭다운입니다(components/Dropdown.tsx).
+    // 버튼을 눌러 목록을 연 뒤 그 선택지를 누릅니다.
+    await page.getByRole("button", { name: "기간 선택" }).click();
     await page
-      .getByLabel("기간 선택")
-      .selectOption({ label: `${withSchedule.starts_on} – ${withSchedule.ends_on}` });
+      .getByRole("option", { name: `${withSchedule.starts_on} – ${withSchedule.ends_on}` })
+      .click();
     await expect(page.getByRole("heading", { name: "확정된 배정안이에요" })).toBeVisible();
 
     const runButton = page.getByRole("button", { name: /^스케줄링/ });
@@ -51,9 +54,12 @@ test.describe("배정 다시 계산", () => {
     const { withoutSchedule } = await findFocusedPeriods(page.request);
 
     await page.goto("/admin");
+    // 기간 고르기는 기본 select 가 아니라 직접 그린 드롭다운입니다(components/Dropdown.tsx).
+    // 버튼을 눌러 목록을 연 뒤 그 선택지를 누릅니다.
+    await page.getByRole("button", { name: "기간 선택" }).click();
     await page
-      .getByLabel("기간 선택")
-      .selectOption({ label: `${withoutSchedule.starts_on} – ${withoutSchedule.ends_on}` });
+      .getByRole("option", { name: `${withoutSchedule.starts_on} – ${withoutSchedule.ends_on}` })
+      .click();
     await expect(page.getByRole("heading", { name: "현재 확정된 배정안이 없어요" })).toBeVisible();
 
     // 배정 불가능 판정은 CP-SAT 이 탐색 없이 즉시 끝낼 때가 있어 "진행 중" 문구를 놓칠 수 있습니다.

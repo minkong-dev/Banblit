@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import type { CSSProperties, PointerEvent } from "react";
 
+import { Dropdown } from "../components/Dropdown";
 import { TrashIcon } from "../components/icons";
 import { acceptsDrag, dragRange, slotSteps } from "../lib/calendar";
 import { slotLabel } from "../lib/pipeline";
@@ -134,29 +135,25 @@ export function SlotPicker({ prefix, range, onChange, grid, lock, slotMinutes, o
     <div className="pick">
       <div className="fld">
         <label htmlFor={`${prefix}-from`}>시작</label>
-        <select
+        <Dropdown
           id={`${prefix}-from`}
           value={range.a}
-          onChange={(event) => onChange({ ...range, a: Number(event.target.value) })}
-        >
-          {steps.slice(0, -1).map((slot) => (
-            <option value={slot} key={slot} disabled={lock && grid[Math.floor(slot)]}>
-              {label(slot)}{lock && grid[Math.floor(slot)] ? " (찼어요)" : ""}
-            </option>
-          ))}
-        </select>
+          choices={steps.slice(0, -1).map((slot) => ({
+            value: slot,
+            label: `${label(slot)}${lock && grid[Math.floor(slot)] ? " (찼어요)" : ""}`,
+            disabled: lock && grid[Math.floor(slot)],
+          }))}
+          onChange={(next) => onChange({ ...range, a: next })}
+        />
       </div>
       <div className="fld">
         <label htmlFor={`${prefix}-to`}>끝</label>
-        <select
+        <Dropdown
           id={`${prefix}-to`}
           value={range.b}
-          onChange={(event) => onChange({ ...range, b: Number(event.target.value) })}
-        >
-          {steps.slice(1).map((slot) => (
-            <option value={slot} key={slot}>{endLabel(slot)}</option>
-          ))}
-        </select>
+          choices={steps.slice(1).map((slot) => ({ value: slot, label: endLabel(slot) }))}
+          onChange={(next) => onChange({ ...range, b: next })}
+        />
       </div>
     </div>
   );

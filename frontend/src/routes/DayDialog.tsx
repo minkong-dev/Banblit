@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 
 import { Modal } from "../components/Modal";
+import { Dropdown } from "../components/Dropdown";
 import { CloseIcon } from "../components/icons";
 import { askCancel, askDelete } from "../lib/confirm";
 import {
@@ -206,11 +207,16 @@ export function DayDialog({
       <SlotPicker prefix="off" range={picked} onChange={setRange} grid={grid} lock={false} slotMinutes={slotMinutes} {...hours} />
       <label className="fld3" htmlFor="offRepeat">
         반복
-        <select id="offRepeat" value={repeat} onChange={(event) => setRepeat(event.target.value as RepeatCycle)}>
-          <option value="none">반복 없음</option>
-          <option value="daily">매일</option>
-          <option value="weekly">매주 {dayName.split(" ").at(-1)}마다</option>
-        </select>
+        <Dropdown
+          id="offRepeat"
+          value={repeat}
+          choices={[
+            { value: "none" as RepeatCycle, label: "반복 없음" },
+            { value: "daily" as RepeatCycle, label: "매일" },
+            { value: "weekly" as RepeatCycle, label: `매주 ${dayName.split(" ").at(-1)}마다` },
+          ]}
+          onChange={setRepeat}
+        />
       </label>
       <label className="fld3" htmlFor="offName">
         일정 이름
@@ -245,9 +251,12 @@ export function DayDialog({
       {/* 합주실을 먼저 선택합니다. 아래 시각 선택이 그 합주실의 예약된 slot 만 차단합니다. */}
       <label className="fld3" htmlFor="broom">
         합주실
-        <select id="broom" value={room?.id ?? ""} onChange={(event) => setRoomId(Number(event.target.value))}>
-          {rooms.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}
-        </select>
+        <Dropdown
+          id="broom"
+          value={room?.id ?? 0}
+          choices={rooms.map((item) => ({ value: item.id, label: item.name }))}
+          onChange={setRoomId}
+        />
       </label>
       {fixed
         ? <div className="bigtime"><b>{label(fixed.from)} – {endLabel(fixed.to)}</b><small>해당 시간으로 예약할게요</small></div>
@@ -258,12 +267,15 @@ export function DayDialog({
       {/* 일정 이름은 팀 이름입니다. 팀을 고르지 않으면 예약자 이름으로 표시됩니다(사용자 결정 2026-09-15). */}
       <label className="fld3" htmlFor="bookWho">
         일정 이름
-        <select id="bookWho" value={who} onChange={(event) => setWho(event.target.value)}>
-          <option value="me">{myName} (나)</option>
-          {teams.filter((team) => team.mine).map((team) => (
-            <option value={team.key} key={team.id}>{team.name}</option>
-          ))}
-        </select>
+        <Dropdown
+          id="bookWho"
+          value={who}
+          choices={[
+            { value: "me", label: `${myName} (나)` },
+            ...teams.filter((team) => team.mine).map((team) => ({ value: team.key, label: team.name })),
+          ]}
+          onChange={setWho}
+        />
       </label>
       <p className="msg">{error}</p>
       {fixed ? <p className="tip">예약 후에는 마이캘린더에서 취소 및 변경이 가능해요.</p> : null}

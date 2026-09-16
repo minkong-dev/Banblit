@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { AppShell, Card, Tabs } from "../components/AppShell";
+import { Dropdown } from "../components/Dropdown";
 import { getJSON, reason } from "../lib/api";
 import { say } from "../lib/toast";
 import { runAssignment } from "../lib/pipeline";
@@ -199,15 +200,16 @@ export function Assignment() {
             <span>
               {days.length ? `${days[0]} – ${days[days.length - 1]}` : "일정이 없어요"}
               {" · 기간 "}
-              <select value={activePeriodId ?? ""} aria-label="기간 선택"
-                onChange={(event) => { setPeriodId(Number(event.target.value)); setView(NOW); }}>
-                {/* id 가 아니라 날짜 범위로 표시합니다. 화면에서 기간을 번호로 표시하지 않습니다. */}
-                {focusedPeriods.map((period) => (
-                  <option value={period.id} key={period.id}>
-                    {period.starts_on} – {period.ends_on}
-                  </option>
-                ))}
-              </select>
+              {/* id 가 아니라 날짜 범위로 표시합니다. 화면에서 기간을 번호로 표시하지 않습니다. */}
+              <Dropdown
+                ariaLabel="기간 선택"
+                value={activePeriodId ?? 0}
+                choices={focusedPeriods.map((period) => ({
+                  value: period.id,
+                  label: `${period.starts_on} – ${period.ends_on}`,
+                }))}
+                onChange={(next) => { setPeriodId(next); setView(NOW); }}
+              />
             </span>
             <div className="keys">
               {[...colors.entries()].map(([name, tone]) => (

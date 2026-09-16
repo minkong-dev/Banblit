@@ -325,3 +325,32 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 /* 다른 팀이 쓰는 색입니다. 흐리게 두고 사선을 그어, 색 대비만으로 구분하지 않게 합니다. */
 .swatch:has(input:disabled) { opacity: .28; cursor: not-allowed; transform: none; background-image: linear-gradient(135deg, transparent 45%, var(--card) 45% 55%, transparent 55%); }
 @media (prefers-reduced-motion: reduce) { .swatch { transition: none; } }
+
+/* ===== 드롭다운 =====
+   components/Dropdown.tsx 가 기본 select 를 대신합니다. 크기·테두리·반지름은 .fields 의
+   입력칸과 같은 값이라, 같은 줄에 나란히 두어도 높이가 어긋나지 않습니다. */
+.dd { position: relative; display: flex; }
+.ddbtn {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; min-height: 44px; padding: 10px 12px;
+  border: 1px solid var(--line-2); border-radius: 10px;
+  background: var(--card); color: var(--t1); font: inherit; letter-spacing: inherit; text-align: left;
+}
+.ddbtn:disabled { color: var(--t3); background: var(--card-2); cursor: not-allowed; }
+/* 값이 없을 때의 안내 문구입니다. 고른 값과 같은 굵기로 두면 고른 것처럼 보입니다. */
+.ddempty { color: var(--t3); }
+.ddmark { width: 18px; height: 18px; flex: none; color: var(--t3); transition: transform .12s; }
+.ddbtn[aria-expanded="true"] .ddmark { transform: rotate(180deg); }
+
+.ddlist {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 30;
+  min-width: 100%; max-height: 260px; overflow-y: auto;
+  margin: 0; padding: 4px; list-style: none;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--card); box-shadow: var(--shadow);
+}
+.ddlist li { padding: 9px 10px; border-radius: 7px; font-size: 14px; color: var(--t1); white-space: nowrap; cursor: pointer; }
+/* 키보드 커서와 마우스 위치를 같은 표시로 둡니다. 둘을 다르게 두면 어디가 고를 자리인지 둘이 됩니다. */
+.ddlist li.ddat { background: var(--card-2); }
+.ddlist li[aria-selected="true"] { background: var(--brand-tint); color: var(--brand-press); font-weight: 700; }
+.ddlist li.ddoff { color: var(--t3); background: none; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { .ddmark { transition: none; } }
