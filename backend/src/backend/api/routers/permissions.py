@@ -19,7 +19,7 @@ from backend.api.schemas import (
     PermissionSetOut,
     PermissionSetsOut,
 )
-from backend.db.models import PermissionSet
+from backend.db.models import Member, PermissionSet
 from backend.db.pipeline import get_session
 
 router = APIRouter()
@@ -96,12 +96,13 @@ def grant_set(
     grant_permission_set(session, member_id, set_id)
 
 
-@router.delete(
-    "/members/{member_id}/permission-sets/{set_id}",
-    status_code=204,
-    dependencies=[_grant_only],
-)
+# 회수는 누가 요청했는지가 필요합니다(자기 것을 회수하는 경우와 남의 것을 회수하는 경우의 검사가 다릅니다).
+# 그래서 dependencies 목록 대신 매개변수로 받습니다. 검사하는 항목은 다른 endpoint 와 같습니다.
+@router.delete("/members/{member_id}/permission-sets/{set_id}", status_code=204)
 def revoke_set(
-    member_id: int, set_id: int, session: Session = Depends(get_session)
+    member_id: int,
+    set_id: int,
+    requester: Member = Depends(require_permission("permission_grant")),
+    session: Session = Depends(get_session),
 ) -> None:
-    revoke_permission_set(session, member_id, set_id)
+    revoke_permission_set(session, member_id, set_id, requester.id)

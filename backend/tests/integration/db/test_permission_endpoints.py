@@ -303,6 +303,48 @@ def test_a_second_full_set_frees_the_first(
     assert response.status_code == 204
 
 
+def test_revoking_someone_elses_last_full_set_is_rejected(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """모든 항목을 가진 permission set 의 유일한 보유자에게서 남이 그것을 회수하는 요청을 거절합니다.
+
+    permission_grant 항목만 가진 사람이 마지막 보유자에게서 회수하면 권한을 부여할 사람이
+    0명이 되고 되돌릴 방법이 없습니다. 자기 자신에게서 permission set 을 회수하는 요청은 허용합니다
+    (사용자 결정 2026-09-11, test_permission_grant_holder_drops_their_own_set).
+    """
+    head_id, head = account("헤드", "head@example.com")
+    other_id, other = account("권한담당", "grant@example.com")
+    full_id = _set_ids(api_client, head)["헤드매니저"]
+    grant_set = _make_set(api_client, head, "권한담당", ["permission_grant"])
+    api_client.post(f"/members/{other_id}/permission-sets/{grant_set}", cookies=head)
+
+    response = api_client.delete(
+        f"/members/{head_id}/permission-sets/{full_id}", cookies=other
+    )
+
+    assert response.status_code == 422
+    assert _my_permissions(api_client, head) == list(PERMISSIONS)
+
+
+def test_revoking_a_full_set_is_allowed_while_another_holder_remains(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """보유자가 2명이면 1명에게서 회수할 수 있습니다. 권한 이전의 4단계가 이 경로입니다."""
+    _, head = account("헤드", "head@example.com")
+    second_id, _ = account("다음", "second@example.com")
+    full_id = _set_ids(api_client, head)["헤드매니저"]
+    granted = api_client.post(
+        f"/members/{second_id}/permission-sets/{full_id}", cookies=head
+    )
+    assert granted.status_code == 201, granted.text
+
+    response = api_client.delete(
+        f"/members/{second_id}/permission-sets/{full_id}", cookies=head
+    )
+
+    assert response.status_code == 204
+
+
 def test_me_lists_the_names_of_my_permission_sets(
     api_client: TestClient, account: AccountFactory
 ) -> None:

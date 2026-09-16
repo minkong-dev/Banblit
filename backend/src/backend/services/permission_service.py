@@ -1,6 +1,6 @@
 from typing import NamedTuple
 
-from sqlalchemy import select
+from sqlalchemy import Select, select
 from sqlalchemy.orm import Session
 
 from backend.services.input import require_non_empty
@@ -56,6 +56,14 @@ def _is_full(permissions: list[str]) -> bool:
     return set(PERMISSIONS) <= set(permissions)
 
 
+def _full_set_ids() -> Select[tuple[int]]:
+    """모든 항목이 활성화된 permission set 의 번호를 고르는 질의입니다. 실행하지 않고 질의만 반환하므로
+    호출자가 order_by·with_for_update·limit 을 덧붙입니다. 판정 기준이 PERMISSIONS 한 곳에만 남습니다."""
+    return select(PermissionSet.id).where(
+        PermissionSet.permissions.contains(list(PERMISSIONS))
+    )
+
+
 def _require_another_full_set(session: Session, set_id: int) -> None:
     """set_id 외에 모든 항목이 활성화된 permission set 이 없으면 ValueError 를 발생시킵니다.
 
@@ -68,14 +76,44 @@ def _require_another_full_set(session: Session, set_id: int) -> None:
     set_id 도 full set 이라 함께 잠기고, id 오름차순으로 잠가 두 요청이 서로를 기다리지 않게 합니다.
     """
     full_ids = session.scalars(
-        select(PermissionSet.id)
-        .where(PermissionSet.permissions.contains(list(PERMISSIONS)))
-        .order_by(PermissionSet.id)
-        .with_for_update()
+        _full_set_ids().order_by(PermissionSet.id).with_for_update()
     ).all()
     another = next((full_id for full_id in full_ids if full_id != set_id), None)
     if another is None:
         raise ValueError("모든 권한을 가진 마지막 permission set 은 삭제하거나 항목을 끌 수 없습니다")
+
+
+def require_another_full_set_holder(
+    session: Session, member_id: int, set_id: int | None = None
+) -> None:
+    """member_id 가 모든 항목을 가진 permission set 의 유일한 보유자이면 ValueError 를 발생시킵니다.
+
+    set_id 를 주면 그 permission set 하나만 잃는 경우로 셉니다(권한 회수). member_id 가 다른 full set 을
+    또 가지고 있으면 통과합니다. 주지 않으면 보유를 전부 잃는 경우로 셉니다(추방).
+
+    _require_another_full_set 은 permission set 이 남는지만 확인합니다. 추방과 회수는 permission set 을
+    남기고 가진 사람만 0명으로 만들 수 있어 검사가 따로 필요합니다.
+
+    보유 행(member_permission_sets)을 계정 번호 오름차순으로 잠급니다. 마지막 보유자가 2명 남은 상태에서
+    두 요청이 각각 1명씩 동시에 처리하면 둘 다 "다른 1명이 있다" 로 통과해 0명이 됩니다. 잠그는 table 이
+    _require_another_full_set(permission_sets)과 달라 두 검사는 서로 경합하지 않습니다.
+    """
+    rows = session.execute(
+        select(MemberPermissionSet.member_id, MemberPermissionSet.permission_set_id)
+        .where(MemberPermissionSet.permission_set_id.in_(_full_set_ids()))
+        .order_by(MemberPermissionSet.member_id)
+        .with_for_update()
+    ).all()
+    remaining = [
+        holder
+        for holder, held in rows
+        if holder != member_id or (set_id is not None and held != set_id)
+    ]
+    if not remaining:
+        raise ValueError(
+            "모든 권한을 가진 permission set 의 마지막 보유자입니다. "
+            "다른 사람에게 먼저 부여해 주세요"
+        )
 
 
 def account_permissions(session: Session, member_id: int) -> list[str]:
@@ -198,11 +236,22 @@ def grant_permission_set(session: Session, member_id: int, set_id: int) -> None:
     session.commit()
 
 
-def revoke_permission_set(session: Session, member_id: int, set_id: int) -> None:
-    """member_id에게서 set_id permission set을 철회합니다. 가지고 있지 않으면 거부합니다."""
+def revoke_permission_set(
+    session: Session, member_id: int, set_id: int, requester_id: int
+) -> None:
+    """member_id에게서 set_id permission set을 철회합니다. 가지고 있지 않으면 거부합니다.
+
+    남의 것을 회수할 때만 모든 항목을 가진 permission set 의 마지막 보유자인지 확인합니다.
+    permission_grant 항목만 가진 사람이 마지막 보유자에게서 회수하면 권한을 부여할 사람이 0명이 됩니다.
+    자기 자신에게서 permission set 을 회수하는 요청(member_id 와 requester_id 가 같은 요청)은
+    본인의 결정이라 확인하지 않습니다(사용자 결정 2026-09-11). 권한 이전의
+    마지막 단계가 그 경로이고, 그 시점에는 다음 사람이 이미 받았으므로 보유자가 0명이 되지 않습니다.
+    """
     grant = _find_grant(session, member_id, set_id)
     if grant is None:
         raise ValueError("해당 권한을 가지고 있지 않아요.")
+    if member_id != requester_id:
+        require_another_full_set_holder(session, member_id, set_id)
     session.delete(grant)
     session.commit()
 
@@ -212,12 +261,10 @@ def grant_full_permissions(session: Session, member_id: int) -> None:
 
     commit 은 호출자가 수행합니다. 가입은 계정과 권한을 한 번에 commit 합니다.
     """
-    full = session.scalars(
-        select(PermissionSet)
-        .where(PermissionSet.permissions.contains(list(PERMISSIONS)))
-        .order_by(PermissionSet.id)
-        .limit(1)
+    full_id = session.scalars(
+        _full_set_ids().order_by(PermissionSet.id).limit(1)
     ).first()
+    full = None if full_id is None else session.get(PermissionSet, full_id)
     if full is None:
         full = PermissionSet(
             name=FULL_SET_NAME,

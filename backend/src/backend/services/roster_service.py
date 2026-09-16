@@ -2,6 +2,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from backend.services.input import require_non_empty
+from backend.services.permission_service import require_another_full_set_holder
 from backend.db.models import (
     INSTRUMENTS,
     TEAM_COLORS,
@@ -130,12 +131,16 @@ def expel_member(session: Session, member_id: int, requester: Member) -> None:
     탈퇴(routers/auth.py 의 leave)와 같은 삭제 규칙을 따릅니다. 글·댓글·예약·session 은 함께 삭제되고,
     포지션은 member_id 만 None 이 됩니다(db/models.py 의 ondelete). 자기 자신은 추방할 수 없습니다.
     자기 계정은 탈퇴로만 삭제해야 마지막 헤드매니저가 실수로 사라지지 않습니다.
+
+    모든 항목을 가진 permission set 의 마지막 보유자도 거절합니다. member_expel 만 가진 사람이
+    그 보유자를 추방하면 권한을 부여할 사람이 0명이 됩니다.
     """
     if member_id == requester.id:
         raise ValueError("자기 자신은 추방할 수 없습니다")
     member = session.get(Member, member_id)
     if member is None:
         raise ValueError("그런 사람이 없습니다")
+    require_another_full_set_holder(session, member_id)
     session.delete(member)
     session.commit()
 
