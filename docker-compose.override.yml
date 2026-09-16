@@ -49,6 +49,9 @@ services:
       - banblit-web-modules:/app/node_modules
     environment:
       API_ORIGIN: http://api:8000
+      # 배포는 build arg 로 받지만(docker-compose.yml), 개발은 Vite 개발 서버가 그대로 돌아
+      # 여기서 주지 않으면 index.html 에 %VITE_APP_ORIGIN% 글자가 그대로 남는다.
+      VITE_APP_ORIGIN: http://localhost:5173
     restart: "no"
 
   # 개발 작업용 — 검사와 마이그레이션을 여기서 돌린다.
@@ -117,6 +120,8 @@ services:
     environment:
       # Vite 개발 서버가 /api 요청을 넘길 곳입니다(frontend/vite.config.ts).
       API_ORIGIN: http://e2e-api:8000
+      # 링크 미리보기 태그의 절대 주소입니다. 검사는 이 값이 교체되었는지만 확인합니다.
+      VITE_APP_ORIGIN: http://localhost:5173
     depends_on:
       e2e-api:
         condition: service_healthy
