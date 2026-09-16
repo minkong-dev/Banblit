@@ -68,6 +68,10 @@ services:
     build:
       context: ./frontend
       target: prod
+      args:
+        # 링크 미리보기 태그에 박히는 절대 주소다(frontend/index.html). .env 의 APP_ORIGIN 을
+        # 그대로 쓴다 — 사용자가 실제로 접속하는 주소와 미리보기 주소가 갈라지지 않게 한다.
+        VITE_APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
     image: banblit-frontend:prod
     environment:
       API_ORIGIN: http://api:8000

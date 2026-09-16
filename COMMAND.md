@@ -642,6 +642,24 @@ docker compose run --rm --no-deps web npm run build
   - **`frontend/dist/` 는 저장소에 커밋되어 있습니다.** 이 명령을 실행하면 `frontend/dist/` 안이 덮어써지므로, 커밋 전에 `git status` 로 무엇이 변경됐는지 확인합니다.
   - 이 bundle 을 실제로 제공하는 서버는 아직 없습니다. 개발 서버는 배포에 포함되지 않으므로, 배포에서는 정적 파일을 제공하는 다른 서버가 bundle 제공을 담당해야 합니다. 아직 정하지 않았습니다.
 
+### 10-4-1. 배포용 화면 image 를 만들고 링크 미리보기 주소를 확인하기
+
+```
+docker compose -f docker-compose.yml build web
+docker run --rm --entrypoint sh banblit-frontend:prod -c "grep -o 'property=\"og:[a-z_]*\" content=\"[^\"]*\"' /usr/share/nginx/html/index.html"
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 배포용 화면 image(`banblit-frontend:prod`)를 만들고, 그 안의 `index.html` 에 링크 미리보기 태그(`og:*`)가 실제 주소로 채워졌는지 확인합니다. 주소는 묶는 시점에 박히므로, image 를 만든 뒤가 아니면 확인할 수 없습니다.
+- **옵션**
+  - `-f docker-compose.yml` — 배포용 설정만 사용합니다. 이것을 빠뜨리면 `docker-compose.override.yml` 이 `web` 의 `build` 를 지워 둔 탓에 `No services to build` 만 출력하고 끝납니다.
+  - `--entrypoint sh` — nginx 를 실행하지 않고 셸로 들어갑니다. 이 image 의 기본 실행 명령이 nginx 라 붙이지 않으면 서버가 뜹니다.
+  - `grep -o` — 맞은 부분만 출력합니다. `index.html` 은 한 줄이 길어 줄 단위로 출력하면 읽기 어렵습니다.
+- **주의점**
+  - 출력의 주소가 `http://localhost:8080` 이면 `.env` 의 `APP_ORIGIN` 이 비어 있는 것입니다. 배포 서버에서는 반드시 채웁니다. 비워 두면 카카오톡·페이스북 미리보기 이미지가 보이지 않습니다.
+  - 출력에 `%VITE_APP_ORIGIN%` 글자가 그대로 남아 있으면 `frontend/Dockerfile` 의 `ARG`·`ENV` 가 `npm run build` 뒤로 밀린 것입니다.
+  - 2026-09-16 에 이 명령으로 `og:url`·`og:image` 가 `http://localhost:8080` 으로 채워지는 것을 확인했습니다(이 PC 의 `.env` 에 `APP_ORIGIN` 이 비어 있어 기본값이 사용됐습니다).
+
 ### 10-5. 화면 패키지 추가하기
 
 ```

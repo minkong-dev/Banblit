@@ -4,6 +4,26 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>BANBLIT</title>
+    <meta
+      name="description"
+      content="사용할 수 없는 시간만 등록하면 팀별 합주 시간을 자동으로 배정하는 합주 일정 관리 서비스입니다."
+    />
+
+    <!-- 링크를 붙여넣었을 때 보이는 제목·설명·이미지입니다. 크롤러는 JavaScript 를 실행하지 않고
+         이 파일만 읽으므로, 화면 코드가 아니라 여기에 적어야 합니다.
+         %VITE_APP_ORIGIN% 는 묶을 때 실제 주소로 교체됩니다(frontend/Dockerfile 의 build arg).
+         og:image 는 절대 주소여야 합니다 — 상대 주소는 카카오톡·페이스북이 받지 못합니다. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="BANBLIT" />
+    <meta property="og:title" content="BANBLIT" />
+    <meta
+      property="og:description"
+      content="사용할 수 없는 시간만 등록하면 팀별 합주 시간을 자동으로 배정하는 합주 일정 관리 서비스입니다."
+    />
+    <meta property="og:url" content="%VITE_APP_ORIGIN%" />
+    <!-- 임시 이미지입니다. 전용 미리보기 이미지를 만들면 교체합니다. -->
+    <meta property="og:image" content="%VITE_APP_ORIGIN%/images/in_six_strings.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
   </head>
   <body>
     <div id="root"></div>

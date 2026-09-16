@@ -7,6 +7,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# 링크 미리보기 태그(index.html 의 og:url·og:image)에 박히는 절대 주소다. 상대 주소로 두면
+# 카카오톡·페이스북이 이미지를 받지 못한다. 묶을 때 정해지므로 환경변수가 아니라 build arg 다.
+ARG VITE_APP_ORIGIN
+ENV VITE_APP_ORIGIN=${VITE_APP_ORIGIN}
 RUN npm run build
 
 FROM nginx:1.27-alpine AS prod

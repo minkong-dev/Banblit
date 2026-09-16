@@ -52,3 +52,17 @@ test("틀린 비밀번호로 로그인하면 거절 문구가 뜬다", async ({ 
   await expect(page.getByText("이메일 또는 비밀번호가 올바르지 않습니다")).toBeVisible();
   await expect(page).toHaveURL(/\/login$/);
 });
+
+// 크롤러는 JavaScript 를 실행하지 않고 index.html 만 읽습니다. 링크를 붙여넣었을 때 보이는
+// 제목·설명·이미지는 화면 코드가 아니라 이 파일의 meta 태그에서 나옵니다.
+test("링크 미리보기 태그가 첫 화면에 들어 있다", async ({ page }) => {
+  await page.goto("/");
+
+  // og:image 는 절대 주소여야 합니다. 상대 주소를 넣으면 카카오톡·페이스북이 이미지를 받지 못합니다.
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+    "content",
+    /^https?:\/\/[^%]+\.(jpg|png)$/,
+  );
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", /\S/);
+  await expect(page.locator('meta[property="og:description"]')).toHaveAttribute("content", /\S/);
+});
