@@ -11,16 +11,42 @@ BACKUP_KEEP = 2  # 남길 백업 배정기록 수입니다. 하루 2회 계산�
 
 
 class AssignmentRow(TypedDict):
-    """저장할 배정 slot(1시간 단위 시간 칸) 하나입니다. 항목 이름은 이 class 에만 정의합니다.
+    """저장할 배정 구간 하나입니다. 항목 이름은 이 class 에만 정의합니다.
 
     두 곳에 정의하면 한쪽 이름을 변경해도 Python 이 검사하지 못합니다.
     실제 table 의 열은 backend/db/models.py 의 Assignment 가 정의합니다.
+
+    배정 계산은 칸 하나씩 넘기고, save_schedule 이 이어진 칸을 한 구간으로 합쳐 저장합니다.
     """
 
     team_id: int
     room_id: int
     starts_at: datetime
     ends_at: datetime
+
+
+def merge_runs(rows: list[AssignmentRow]) -> list[AssignmentRow]:
+    """같은 팀이 같은 합주실에서 이어 쓰는 칸을 한 구간으로 합쳐 반환합니다.
+
+    앞 칸의 ends_at 과 뒤 칸의 starts_at 이 같으면 이어진 것입니다. 사이가 떨어져 있으면
+    합치지 않습니다. 합치면 배정받지 않은 시간까지 점유한 것이 됩니다.
+    입력을 수정하지 않고 새 목록을 반환합니다.
+    """
+    merged: list[AssignmentRow] = []
+    for row in sorted(rows, key=lambda one: (one["team_id"], one["room_id"], one["starts_at"])):
+        last = merged[-1] if merged else None
+        joins = (
+            last is not None
+            and last["team_id"] == row["team_id"]
+            and last["room_id"] == row["room_id"]
+            and last["ends_at"] == row["starts_at"]
+        )
+        if joins and last is not None:
+            merged[-1] = {**last, "ends_at": row["ends_at"]}
+        else:
+            merged.append(dict(row))  # type: ignore[arg-type]
+    return merged
+
 
 class ScheduleConflict(ValueError):
     """이미 배정된 합주실·시각에 저장하려 했을 때 발생합니다.
@@ -32,7 +58,7 @@ class ScheduleConflict(ValueError):
 # 위반될 수 있는 제약과 그때 사용자에게 표시할 문장입니다. "다른 배정기록이 같은 합주실·시간을 사용하는 경우"와
 # "같은 배정기록을 동시에 두 번 저장하는 경우"가 같은 제약에 위반되어 문장이 둘을 모두 포함합니다.
 SCHEDULE_MESSAGES = {
-    "assignments_room_id_starts_at_key": (
+    "assignments_no_overlap": (
         "다른 기간이거나 같은 기간의 동시 실행이 이미 같은 합주실의 같은 시간을 "
         "쓰고 있습니다. 기간이 겹치지 않게 하거나 합주실을 나누십시오"
     ),
@@ -56,7 +82,8 @@ def save_schedule(
         # 복사되어 백업이 완전히 비게 됩니다.
         _archive_current(session, period_id, saved_at)
         session.execute(delete(Assignment).where(Assignment.period_id == period_id))
-        for row in rows:
+        # 이어진 칸을 합친 뒤에 저장합니다. 겹침 금지 제약은 합친 구간을 기준으로 판정합니다.
+        for row in merge_runs(rows):
             session.add(Assignment(period_id=period_id, **row))
         # _prune_backups 는 새로운 배정기록이 추가된 후에 계산해야 배정기록 개수가 정확합니다.
         _prune_backups(session, period_id)
@@ -99,7 +126,11 @@ def _prune_backups(session: Session, period_id: int) -> None:
 
 
 class BackupRound(TypedDict):
-    """백업 배정기록 하나입니다. saved_at 이 배정기록을 식별하는 값이고, slot_count 는 그 배정기록의 slot(1시간 단위 시간 칸) 개수입니다.
+    """백업 배정기록 하나입니다. saved_at 이 배정기록을 식별하는 값이고, slot_count 는 그 배정기록이
+    차지한 칸 수입니다.
+
+    행 수가 아니라 칸 수입니다. 행 하나가 이어진 칸 여러 개를 담으므로(merge_runs), 행을 세면
+    같은 배정이 점유 단위에 따라 다른 수로 보입니다.
 
     assignment_backups table 에는 배정기록 번호 열이 없습니다. 한 번의 저장에서
     보관된 행들이 같은 saved_at 값을 가집니다.
@@ -109,17 +140,27 @@ class BackupRound(TypedDict):
     slot_count: int
 
 
-def list_backup_rounds(session: Session, period_id: int) -> list[BackupRound]:
-    """그 기간의 백업 배정기록을 최신순으로 반환합니다. 사용자가 되돌릴 배정기록을 선택하는 목록입니다."""
+def list_backup_rounds(
+    session: Session, period_id: int, slot_minutes: int
+) -> list[BackupRound]:
+    """그 기간의 백업 배정기록을 최신순으로 반환합니다. 사용자가 되돌릴 배정기록을 선택하는 목록입니다.
+
+    slot_minutes 는 칸 하나의 크기(분)이고 저장소 설정이 정합니다. 구간의 길이를 그 값으로 나눠
+    칸 수를 셉니다. 저장 이후 설정이 변경되었으면 지금 설정 기준의 칸 수가 됩니다.
+    """
+    # extract(epoch from interval) 은 구간의 길이를 초로 반환합니다. 분으로 바꾼 뒤 칸 크기로 나눕니다.
+    minutes = func.sum(
+        func.extract("epoch", AssignmentBackup.ends_at - AssignmentBackup.starts_at)
+    ) / 60
     rows = session.execute(
-        select(AssignmentBackup.saved_at, func.count())
+        select(AssignmentBackup.saved_at, minutes)
         .where(AssignmentBackup.period_id == period_id)
         .group_by(AssignmentBackup.saved_at)
         .order_by(AssignmentBackup.saved_at.desc())
     ).all()
     return [
-        BackupRound(saved_at=saved_at, slot_count=slot_count)
-        for saved_at, slot_count in rows
+        BackupRound(saved_at=saved_at, slot_count=round(total / slot_minutes))
+        for saved_at, total in rows
     ]
 
 

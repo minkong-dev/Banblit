@@ -88,7 +88,7 @@ def test_runs_the_slot_whose_time_has_passed(db_session: Session) -> None:
     assert [result.period_id for result in results] == [period_id]
     assert results[0].error is None
     assert results[0].saved is True
-    assert len(_assignments(db_session)) == 2
+    assert len(_assignments(db_session)) == 1  # 2칸이 이어져 구간 한 행입니다
     assert [(run.period_id, run.run_on, run.slot) for run in _runs(db_session)] == [
         (period_id, TODAY, "first")
     ]

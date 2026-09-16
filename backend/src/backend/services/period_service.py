@@ -194,34 +194,42 @@ def _without_member(
 
 
 def open_slots_in_period(session: Session, period: Period) -> list[OpenSlot]:
-    """그 기간에서 어떤 팀도 배정받지 않은 slot 을 시작 시각순으로 반환합니다.
+    """그 기간에서 어떤 팀도 배정받지 않은 칸을 시작 시각순으로 반환합니다.
 
-    저장된 배정에 사용된 합주실의 운영시간을 기간의 날짜마다 slot 으로 분할한 뒤,
-    배정이 차지한 slot 을 제외합니다. 배정 계산(resolve)은 이 함수에서 실행하지 않습니다.
-    합주실 운영시간이 1시간 slot 으로 분할되지 않으면 ValueError 를 발생시킵니다.
+    저장된 배정에 사용된 합주실의 운영시간을 기간의 날짜마다 칸으로 분할한 뒤, 배정 구간과
+    겹치는 칸을 제외합니다. 배정은 구간 한 행으로 저장되므로(db/models.py 의 Assignment) 시작
+    시각이 같은지가 아니라 구간이 겹치는지로 판정합니다. 배정 계산(resolve)은 이 함수에서
+    실행하지 않습니다. 합주실 운영시간이 칸으로 분할되지 않으면 ValueError 를 발생시킵니다.
     """
     # ponytail: slot 을 만들 합주실을 저장된 Assignment 행에서 조회합니다. 배정에 입력한 합주실
     # 목록을 저장하는 table 이 없기 때문입니다. 그래서 slot 을 하나도 배정받지 못한 합주실은 이 결과에도
     # 포함되지 않습니다. period_rooms table 이 생기면 이 함수에서 그 목록을 읽습니다.
     taken = session.execute(
-        select(Assignment.room_id, Assignment.starts_at).where(
+        select(Assignment.room_id, Assignment.starts_at, Assignment.ends_at).where(
             Assignment.period_id == period.id
         )
     ).all()
     if not taken:
         return []
 
-    occupied = {(room_id, starts_at) for room_id, starts_at in taken}
+    # ponytail: 칸마다 그 합주실의 배정 구간을 전부 훑습니다(칸 수 × 구간 수). 합주실 하나의
+    # 기간 전체가 대상이라 지금 규모에서는 문제가 없습니다. 느려지면 구간을 시작 시각순으로
+    # 정렬해 이분 탐색으로 바꿉니다.
+    occupied: dict[int, list[tuple[datetime, datetime]]] = {}
+    for room_id, starts_at, ends_at in taken:
+        occupied.setdefault(room_id, []).append((starts_at, ends_at))
     rooms = session.scalars(
-        select(Room).where(Room.id.in_({room_id for room_id, _ in taken}))
+        select(Room).where(Room.id.in_(occupied.keys()))
     ).all()
     room_names = {room.id: room.name for room in rooms}
 
     days = period_days(period, date.today())
     open_slots: list[OpenSlot] = []
     for engine_room in build_engine_rooms(list(rooms), days):
+        ranges = occupied.get(engine_room.id, [])
         for interval in generate_slots(engine_room.open_period, slot_minutes(session)):
-            if (engine_room.id, interval.start) in occupied:
+            # 반열린 구간이라 앞 배정이 끝나는 시각에 시작하는 칸은 비어 있습니다.
+            if any(start < interval.end and interval.start < end for start, end in ranges):
                 continue
             open_slots.append(
                 OpenSlot(

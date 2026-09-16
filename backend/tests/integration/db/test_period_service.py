@@ -69,7 +69,8 @@ def test_successful_assignment_is_saved_as_the_current_schedule(
     saved = db_session.scalars(
         select(Assignment).where(Assignment.period_id == period_id)
     ).all()
-    assert len(saved) == 2  # 팀 하나가 전체 2개 slot을 배정받습니다.
+    # 팀 하나가 전체 2칸을 배정받고, 이어진 칸이라 구간 한 행으로 저장됩니다.
+    assert len(saved) == 1
     assert {row.room_id for row in saved} == {room_id}
     assert {row.team_id for row in saved} == {team_id}
 
@@ -94,8 +95,9 @@ def test_successful_assignment_round_trips_rooms_teams_and_times(
         select(Assignment).where(Assignment.period_id == period_id)
     ).all()
 
-    # 하루 4개 slot(합주실 2개 × 2개 slot) × 2일 = 8개 slot, 팀 2개가 4개 slot씩 배정받습니다.
-    assert len(saved) == 8
+    # 하루 4칸(합주실 2개 × 2칸) × 2일 = 8칸, 팀 2개가 4칸씩 배정받습니다. 합주실 하나에서
+    # 이어진 2칸이 구간 한 행이 되므로 행은 4개입니다(합주실 2개 × 2일).
+    assert len(saved) == 4
 
     operating_hours = {
         room_1: (time(18, 0), time(20, 0)),
@@ -109,10 +111,13 @@ def test_successful_assignment_round_trips_rooms_teams_and_times(
         dates_seen.add(row.starts_at.date())
     assert dates_seen == {date(2026, 8, 1), date(2026, 8, 2)}
 
-    team_counts: dict[int, int] = {}
+    # 행 수가 아니라 점유한 시간을 셉니다. 이어진 칸이 구간 한 행으로 합쳐지므로 행 수는 팀이
+    # 배정받은 칸 수와 다릅니다. 두 팀이 각각 4칸(=4시간)을 가져갑니다.
+    team_hours: dict[int, float] = {}
     for row in saved:
-        team_counts[row.team_id] = team_counts.get(row.team_id, 0) + 1
-    assert team_counts == {team_a: 4, team_b: 4}
+        hours = (row.ends_at - row.starts_at).total_seconds() / 3600
+        team_hours[row.team_id] = team_hours.get(row.team_id, 0) + hours
+    assert team_hours == {team_a: 4, team_b: 4}
 
 
 def test_failed_assignment_saves_nothing_and_names_who_to_exclude(
@@ -190,7 +195,7 @@ def test_reassignment_archives_the_previous_schedule(db_session: Session) -> Non
     )
 
     backups = db_session.scalars(select(AssignmentBackup)).all()
-    assert len(backups) == 2  # 첫 배정기록의 2칸이 백업으로 옮겨졌다
+    assert len(backups) == 1  # 첫 배정기록의 2칸이 구간 한 행으로 백업에 옮겨졌다
     assert {b.saved_at for b in backups} == {datetime(2026, 8, 1, 21, 0)}
 
 
@@ -297,7 +302,7 @@ def test_overlapping_period_room_conflict_is_rejected_not_500(
     remaining = db_session.scalars(
         select(Assignment).where(Assignment.period_id == period_a)
     ).all()
-    assert len(remaining) == 2  # 첫 번째 기간의 현행 시간표가 그대로 남아 있다
+    assert len(remaining) == 1  # 첫 번째 기간의 현행 시간표(2칸이 이어진 구간 한 행)가 그대로 남아 있다
     assert db_session.scalars(
         select(Assignment).where(Assignment.period_id == period_b)
     ).all() == []
@@ -493,7 +498,7 @@ def test_excluding_the_proposed_member_makes_the_assignment_savable(
     saved = db_session.scalars(
         select(Assignment).where(Assignment.period_id == period_id)
     ).all()
-    assert len(saved) == 2  # 팀 하나가 전체 2칸을 가져간다
+    assert len(saved) == 1  # 팀 하나가 전체 2칸을 이어 가져가 구간 한 행이 된다
 
 
 def test_excluding_someone_outside_the_roster_is_rejected(
