@@ -14,10 +14,13 @@
   "dependencies": {
     "@radix-ui/colors": "^3.0.0",
     "@tanstack/react-query": "^5.62.0",
+    "@tiptap/extension-audio": "^3.31.3",
+    "@tiptap/extension-file-handler": "^3.31.3",
     "@tiptap/extension-font-family": "^3.31.3",
     "@tiptap/extension-image": "^3.31.3",
     "@tiptap/extension-link": "^3.31.3",
     "@tiptap/extension-text-style": "^3.31.3",
+    "@tiptap/extension-youtube": "^3.31.3",
     "@tiptap/react": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
     "dompurify": "^3.4.15",
