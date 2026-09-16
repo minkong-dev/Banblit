@@ -91,6 +91,9 @@ services:
       TZ: ${TZ:-Asia/Seoul}
       # dev 서버의 첨부파일 volume 과 섞지 않습니다. 컨테이너를 다시 만들면 함께 사라집니다.
       ATTACHMENT_DIR: /tmp/banblit-e2e-attachments
+      # 검사가 전체 권한 계정을 만들 때 사용하는 값입니다. 검사 전용 DB(banblit_e2e)에만
+      # 적용되므로 .env 의 값과 무관하고, 같은 값이 frontend/e2e/helpers.ts 에 있습니다.
+      ADMIN_SIGNUP_CODE: e2e-admin-code-0123456789abcdef
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 2s

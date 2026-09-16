@@ -1,5 +1,6 @@
 // 검사 전체를 시작하기 전에 한 번 실행합니다. e2e-api 가 뜰 때 DB 를 비우므로
-// (backend/scripts/reset_e2e_db.py) 여기서 가입하는 계정이 첫 가입자가 되어 전체 권한을 받습니다.
+// (backend/scripts/reset_e2e_db.py) 여기가 저장소의 첫 가입입니다. 첫 계정은 관리자코드를 넣어
+// 전체 권한을 받습니다 — 첫 가입자에게 자동으로 주던 규칙은 없앴습니다(사용자 결정 2026-09-16).
 //
 // 만드는 데이터:
 // - 계정 2개(전체 권한인 E2E 계정, 권한 없는 E2E 멤버)
@@ -13,7 +14,7 @@ import { request } from "@playwright/test";
 import type { APIRequestContext, FullConfig } from "@playwright/test";
 
 import {
-  E2E_ACCOUNT, E2E_MEMBER, E2E_OTHER_TEAM, E2E_ROOM, E2E_STATE_PATH, E2E_TEAM, dayFromToday,
+  E2E_ACCOUNT, E2E_ADMIN_CODE, E2E_MEMBER, E2E_OTHER_TEAM, E2E_ROOM, E2E_STATE_PATH, E2E_TEAM, dayFromToday,
 } from "./helpers";
 
 const JOB_POLL_MS = 500;
@@ -76,8 +77,10 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   const baseURL = config.projects[0].use.baseURL;
   const context = await request.newContext({ baseURL });
   try {
-    // 이미 가입된 계정이면 DB 가 비어 있지 않은 것입니다. 첫 가입자만 전체 권한을 받으므로 여기서 멈춥니다.
-    const { account } = await call<{ account: { id: number } }>(context, "POST", "/api/signup", E2E_ACCOUNT)
+    // 이미 가입된 계정이면 DB 가 비어 있지 않은 것입니다. 여기서 멈춥니다.
+    const { account } = await call<{ account: { id: number } }>(
+      context, "POST", "/api/signup", { ...E2E_ACCOUNT, admin_code: E2E_ADMIN_CODE },
+    )
       .catch((error: unknown) => {
         throw new Error(`${String(error)}\nDB 가 비어 있어야 합니다. COMMAND.md 12-1 의 첫 줄로 e2e-api 를 다시 만든 뒤 실행하세요.`);
       });
