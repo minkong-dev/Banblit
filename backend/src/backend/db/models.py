@@ -441,11 +441,26 @@ class Post(Base):
         ForeignKey("members.id", ondelete="SET NULL"), nullable=True
     )
 
+    # 값이 없으면 아직 쓰는 중인 초안입니다. 작성 페이지를 열 때 먼저 만들고, 발행할 때 이 값을 채웁니다.
+    # 본문에 파일을 넣으려면 글 번호가 있어야 하는데 첨부 업로드가 POST /posts/{id}/attachments 라,
+    # 글을 먼저 만들지 않으면 쓰는 중에 파일을 올릴 수 없습니다(사용자 결정 2026-09-16).
+    published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     __table_args__ = (
-        CheckConstraint("length(trim(title)) > 0"),
-        CheckConstraint("length(trim(body)) > 0"),
-        # 목록 조회는 전부 blinded_at IS NULL 을 붙입니다. 부분 index 라 가려지지 않은 행만 담습니다.
-        Index("ix_posts_visible", "team_id", postgresql_where=text("blinded_at IS NULL")),
+        # 초안은 제목과 본문이 비어 있습니다. 발행한 글만 내용을 요구합니다.
+        CheckConstraint(
+            "published_at IS NULL OR length(trim(title)) > 0", name="posts_published_title"
+        ),
+        CheckConstraint(
+            "published_at IS NULL OR length(trim(body)) > 0", name="posts_published_body"
+        ),
+        # 목록 조회는 전부 blinded_at IS NULL 과 published_at IS NOT NULL 을 붙입니다.
+        # 부분 index 라 목록에 나오는 행만 담습니다.
+        Index(
+            "ix_posts_visible",
+            "team_id",
+            postgresql_where=text("blinded_at IS NULL AND published_at IS NOT NULL"),
+        ),
     )
 
 

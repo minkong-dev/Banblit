@@ -8,7 +8,7 @@ assign_period 를 직접 호출하므로 서버가 실행 중이 아니어도 �
 import logging
 import os
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from time import sleep
 from typing import Literal
 
@@ -16,6 +16,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from backend.services.notification_service import notify_assignment_updated
+from backend.services.board_service import sweep_stale_drafts
 from backend.services.period_service import assign_period, period_days
 from backend.db.models import AssignmentRun, Period, Room, Team
 from backend.db.pipeline import get_session_factory
@@ -58,6 +59,11 @@ def due_slots(
         if datetime.combine(today, run_at) <= now:
             due.append(slot)
     return tuple(due)
+
+
+# 쓰다 만 초안을 남겨 두는 기간입니다. 화면은 나갈 때 지우지만 탭을 닫거나 연결이 끊기면
+# 그 요청이 가지 않습니다. 이 기간이 지난 초안은 아래 main 의 반복이 지웁니다.
+DRAFT_LIFETIME = timedelta(days=1)
 
 
 def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
@@ -198,6 +204,11 @@ def main() -> None:
             with open_session() as session:
                 for result in run_due_assignments(session, datetime.now()):
                     logger.info("자동 배정: %s", result)
+                # 배정 확인에 얹습니다. 주기적으로 도는 것이 이 하나뿐이라 서비스를 더 만들지 않습니다.
+                # 지우는 대상은 쓰다 만 글입니다 — 목록에 나오지 않아 아무도 모른 채 쌓입니다.
+                removed = sweep_stale_drafts(session, datetime.now() - DRAFT_LIFETIME)
+                if removed > 0:
+                    logger.info("버려진 초안 %d개를 삭제했습니다", removed)
         except Exception:  # noqa: BLE001 - DB 가 일시적으로 끊겨도 다음 확인 때 다시 시도
             logger.exception("자동 배정 확인이 실패했습니다")
         sleep(interval)

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from backend.db.models import Comment, Member, Post, Team, TeamSlot
 
 # account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 이 파일의 첫 호출이 헤드매니저입니다.
+from backend.services.board_service import sweep_stale_drafts
 from conftest import AccountFactory, seat
 
 
@@ -439,6 +440,8 @@ def test_post_title_blank_after_trim_is_rejected_at_the_database_level(
             body="내용",
             author_id=author.id,
             created_at=datetime.now(),
+            # 제약은 발행된 글에만 걸립니다. 초안(published_at 이 비어 있음)은 제목·본문이 빕니다.
+            published_at=datetime.now(),
         )
     )
     with pytest.raises(IntegrityError):
@@ -458,6 +461,8 @@ def test_post_body_blank_after_trim_is_rejected_at_the_database_level(
             body="   ",
             author_id=author.id,
             created_at=datetime.now(),
+            # 제약은 발행된 글에만 걸립니다. 초안(published_at 이 비어 있음)은 제목·본문이 빕니다.
+            published_at=datetime.now(),
         )
     )
     with pytest.raises(IntegrityError):
@@ -767,3 +772,78 @@ def test_a_moderator_still_deletes_someone_elses_post(
     response = api_client.delete(f"/posts/{post_id}", cookies=head)
 
     assert response.status_code == 204
+
+
+# ===== 초안 =====
+# 작성 페이지를 열면 글이 먼저 만들어집니다. 본문에 파일을 넣으려면 글 번호가 있어야 하고,
+# 첨부 업로드가 POST /posts/{id}/attachments 이기 때문입니다(사용자 결정 2026-09-16).
+
+
+def test_a_draft_is_created_empty_and_hidden_from_the_list(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """초안은 제목·본문이 비어 있고 목록에 나오지 않습니다."""
+    _, head = account("헤드", "head@example.com")
+
+    made = api_client.post("/notices/drafts", cookies=head)
+
+    assert made.status_code == 201, made.text
+    assert made.json()["post"]["id"] > 0
+    assert api_client.get("/notices", cookies=head).json()["posts"] == []
+
+
+def test_publishing_a_draft_puts_it_in_the_list(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account("헤드", "head@example.com")
+    draft_id = api_client.post("/notices/drafts", cookies=head).json()["post"]["id"]
+
+    published = api_client.post(
+        f"/posts/{draft_id}/publish",
+        json={"title": "공지", "body": "<p>본문</p>"},
+        cookies=head,
+    )
+
+    assert published.status_code == 200, published.text
+    titles = [row["title"] for row in api_client.get("/notices", cookies=head).json()["posts"]]
+    assert titles == ["공지"]
+
+
+def test_another_member_cannot_read_my_draft(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """초안은 쓰는 사람만 봅니다. 남이 번호를 맞혀도 열리지 않습니다."""
+    _, head = account("헤드", "head@example.com")
+    _, other = account("멤버", "member@example.com")
+    draft_id = api_client.post("/notices/drafts", cookies=head).json()["post"]["id"]
+
+    assert api_client.get(f"/posts/{draft_id}", cookies=other).status_code == 403
+    assert api_client.get(f"/posts/{draft_id}", cookies=head).status_code == 200
+
+
+def test_writing_a_notice_draft_needs_the_permission(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    account("헤드", "head@example.com")
+    _, plain = account("일반", "plain@example.com")
+
+    assert api_client.post("/notices/drafts", cookies=plain).status_code == 403
+
+
+def test_stale_drafts_are_swept_but_fresh_ones_stay(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """하루 지난 초안만 지웁니다. 화면이 나갈 때 지우지 못한 행을 주기적으로 치웁니다."""
+    _, head = account("헤드", "head@example.com")
+    old_id = api_client.post("/notices/drafts", cookies=head).json()["post"]["id"]
+    fresh_id = api_client.post("/notices/drafts", cookies=head).json()["post"]["id"]
+    old = db_session.get(Post, old_id)
+    assert old is not None
+    old.created_at = datetime.now() - timedelta(days=2)
+    db_session.commit()
+
+    removed = sweep_stale_drafts(db_session, datetime.now() - timedelta(days=1))
+
+    assert removed == 1
+    assert db_session.get(Post, old_id) is None
+    assert db_session.get(Post, fresh_id) is not None

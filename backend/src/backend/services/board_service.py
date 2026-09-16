@@ -39,6 +39,9 @@ def require_post_readable(session: Session, post_id: int, requester: Member) -> 
     if post is None or post.blinded_at is not None:
         # 가려진 글과 없는 글을 같은 문장으로 거절합니다. 문장을 나누면 글이 있다는 사실이 드러납니다.
         raise ValueError("그런 글이 없습니다")
+    if post.published_at is None and post.author_id != requester.id:
+        # 아직 쓰는 중인 초안입니다. 쓰는 사람만 봅니다.
+        raise PermissionError("그런 글이 없습니다")
     if post.team_id is not None:
         _require_team_member(session, post.team_id, requester.id)
     return post
@@ -91,7 +94,7 @@ def _posts_with_author_and_count(session: Session, team_id: int | None) -> list[
     rows = session.execute(
         select(Post, Member.name)
         .join(Member, Member.id == Post.author_id)
-        .where(condition, Post.blinded_at.is_(None))
+        .where(condition, Post.blinded_at.is_(None), Post.published_at.is_not(None))
         .order_by(Post.created_at.desc(), Post.id.desc())
     ).all()
     counts = _comment_counts(session, [post.id for post, _ in rows])
@@ -160,10 +163,73 @@ def create_notice(
         body=clean_body,
         author_id=requester.id,
         created_at=created_at,
+        # 이 함수는 제목과 본문을 이미 받았으므로 만드는 즉시 발행합니다. 초안으로 시작하는 경로는
+        # create_draft 이고, 그쪽은 작성 페이지가 씁니다.
+        published_at=created_at,
     )
     session.add(post)
     session.commit()
     return post, requester.name
+
+
+def create_draft(
+    session: Session, team_id: int | None, requester: Member, created_at: datetime
+) -> Post:
+    """제목과 본문이 빈 글을 만들어 반환합니다. 작성 페이지를 열 때 호출합니다.
+
+    team_id 가 None 이면 공지사항 초안입니다. 팀 초안이면 requester 가 그 팀 소속이어야 합니다.
+    공지 초안의 notice_write 확인은 endpoint 가 합니다(routers/boards.py).
+
+    published_at 이 비어 있어 목록에도 남의 상세 조회에도 나오지 않습니다. 쓰지 않고 나가면
+    화면이 DELETE /posts/{id} 로 지우고, 그러지 못한 행은 하루 뒤 sweep_stale_drafts 가 지웁니다.
+    """
+    if team_id is not None:
+        _require_team_exists(session, team_id)
+        _require_team_member(session, team_id, requester.id)
+    post = Post(
+        team_id=team_id,
+        title="",
+        body="",
+        author_id=requester.id,
+        created_at=created_at,
+        published_at=None,
+    )
+    session.add(post)
+    session.commit()
+    return post
+
+
+def publish_post(
+    session: Session, post_id: int, title: str, body: str, requester: Member, published_at: datetime
+) -> tuple[Post, str]:
+    """초안에 제목과 본문을 채워 발행합니다. 발행한 시점부터 목록에 나옵니다.
+
+    자기 초안만 발행합니다. 이미 발행된 글에는 이 요청을 받지 않습니다 — 수정은 update_post 입니다.
+    """
+    post = session.get(Post, post_id)
+    if post is None or post.author_id != requester.id or post.published_at is not None:
+        raise ValueError("그런 초안이 없습니다")
+    post.title = require_non_empty(title, "제목")
+    post.body = require_non_empty(body, "내용")
+    post.published_at = published_at
+    session.commit()
+    return post, requester.name
+
+
+def sweep_stale_drafts(session: Session, older_than: datetime) -> int:
+    """older_than 이전에 만들어진 초안을 지우고 지운 개수를 반환합니다.
+
+    화면은 쓰지 않고 나갈 때 초안을 지우지만, 탭을 닫거나 연결이 끊기면 그 요청이 가지 않습니다.
+    남은 행은 목록에 나오지 않아 아무도 모른 채 쌓이므로 주기적으로 지웁니다
+    (jobs/auto_assign.py 가 확인할 때마다 함께 호출합니다).
+    """
+    stale = session.scalars(
+        select(Post).where(Post.published_at.is_(None), Post.created_at < older_than)
+    ).all()
+    for post in stale:
+        session.delete(post)
+    session.commit()
+    return len(stale)
 
 
 def list_team_posts(session: Session, team_id: int, requester: Member) -> list[PostRow]:
@@ -192,6 +258,7 @@ def create_team_post(
         body=clean_body,
         author_id=requester.id,
         created_at=created_at,
+        published_at=created_at,
     )
     session.add(post)
     session.commit()
