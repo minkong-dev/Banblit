@@ -107,7 +107,8 @@ function PostList(props: {
  *  목록 아래에 이어붙이지 않습니다 — 목록과 작성은 하는 일이 다르고, 붙이면 작성 화면을 주소로
  *  가리킬 수 없습니다(사용자 결정 2026-09-16). */
 export function WriteForm(props: {
-  writePath: string;
+  /** 초안을 만드는 주소입니다. 이 화면이 열릴 때 한 번 호출해 글 번호를 받습니다. */
+  draftPath: string;
   /** 현재 사용자의 id. 미인증(로그인 전)이면 null이므로 글을 작성할 수 없습니다. */
   authorId: number | null;
   writeNote: string;
@@ -117,16 +118,18 @@ export function WriteForm(props: {
   /** 쓰지 않고 나갈 때 호출합니다. */
   onCancel: () => void;
 }) {
-  const { writePath, authorId, writeNote, queryKey, onDone, onCancel } = props;
+  const { draftPath, authorId, writeNote, queryKey, onDone, onCancel } = props;
   const client = useQueryClient();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   // 파일 업로드 진행 상황을 표시합니다. 비어 있으면 업로드 중이 아닙니다.
   const [stage, setStage] = useState("");
-  // 글은 생성되었지만 attachment(첨부 파일) 업로드에서 실패했을 때의 글 id 입니다.
-  // null 이면 글을 아직 생성하지 않았습니다.
-  const [postedId, setPostedId] = useState<number | null>(null);
+  // 이 화면이 열릴 때 만든 초안의 글 번호입니다. null 이면 아직 받지 못한 상태입니다.
+  // 첨부는 이 번호로 올립니다 — 글이 있어야 올릴 수 있습니다.
+  const [draftId, setDraftId] = useState<number | null>(null);
+  // 발행을 마쳤는지입니다. 마쳤으면 이 화면을 떠날 때 초안을 지우지 않습니다.
+  const published = useRef(false);
   const [touched, setTouched] = useState(false);
   // 선택한 파일은 브라우저가 관리하므로 코드에서 값을 설정할 수 없습니다.
   // 업로드 완료 후 입력 칸을 초기화하려면 DOM 요소에 직접 접근해야 합니다.
@@ -153,38 +156,44 @@ export function WriteForm(props: {
     }
   };
 
+  // 화면이 열리면 빈 글을 먼저 만듭니다. 그래야 쓰는 중에 첨부를 올릴 수 있습니다.
+  // 떠날 때 발행하지 않았으면 그 빈 글을 지웁니다. 탭을 닫거나 연결이 끊겨 이 요청이 가지 못하면
+  // 하루 뒤 서버가 지웁니다(jobs/auto_assign.py 의 sweep_stale_drafts).
+  const starting = useRef(false);
+  useEffect(() => {
+    if (starting.current) return;
+    starting.current = true;
+    let made: number | null = null;
+    void getJSON<{ post: Post }>(draftPath, { method: "POST" })
+      .then(({ post }) => { made = post.id; setDraftId(post.id); })
+      .catch((error: unknown) => say(reason(error)));
+    return () => {
+      if (made !== null && !published.current) {
+        void getJSON(`/posts/${made}`, { method: "DELETE" }).catch(() => undefined);
+      }
+    };
+  }, [draftPath]);
+
   const send = useMutation({
     mutationFn: async () => {
-      // 글을 먼저 생성합니다. 첨부는 글 번호를 받아야 업로드할 수 있습니다. 앞서 생성한 글이
-      // 있으면(첨부 업로드에서만 실패한 경우) 다시 생성하지 않습니다. 다시 생성하면 재시도할 때
-      // 같은 글이 하나 더 생깁니다.
-      let postId = postedId;
-      if (postId === null) {
-        const { post } = await getJSON<{ post: Post }>(writePath, {
-          // author_id 는 보내지 않습니다. 서버가 요청의 인증 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 작성자를 정합니다.
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title, body }),
-        });
-        postId = post.id;
-        setPostedId(postId);
-      }
-      await uploadAll(postId);
+      if (draftId === null) throw new Error("글을 준비하는 중이에요. 잠시 후 다시 눌러주세요.");
+      // 첨부를 먼저 올리고 발행합니다. 순서를 뒤집으면 첨부가 실패했을 때 첨부 없는 글이 공개됩니다.
+      await uploadAll(draftId);
+      await getJSON(`/posts/${draftId}/publish`, {
+        // author_id 는 보내지 않습니다. 서버가 요청의 인증 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 작성자를 정합니다.
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, body }),
+      });
+      published.current = true;
     },
     onSuccess: () => {
       const said = files.length === 0 ? "글을 업로드 했어요." : "글과 첨부파일을 업로드 했어요.";
-      setTitle("");
-      setBody("");
-      setFiles([]);
-      setPostedId(null);
-      if (picker.current !== null) picker.current.value = "";
-      setTouched(false);
       say(said);
       onDone();
     },
     onSettled: () => {
-      // attachment 업로드에 실패해도 글은 이미 생성되었습니다.
-      // 성공·실패 여부와 무관하게 목록을 refetch(다시 조회)합니다.
+      // 첨부 업로드나 발행 중 어디서 실패해도 목록을 다시 조회합니다.
       setStage("");
       void client.invalidateQueries({ queryKey });
     },
@@ -212,7 +221,7 @@ export function WriteForm(props: {
             value={title}
             // 업로드 중 또는 글은 생성되었으나 attachment 업로드에서 실패했을 때 비활성화합니다.
             // 이미 제출된 값이므로 이 form 에서 수정해도 반영되지 않습니다.
-            disabled={send.isPending || postedId !== null}
+            disabled={send.isPending}
             aria-invalid={bad !== ""}
             aria-describedby={bad === "" ? undefined : "postWhy"}
             onChange={(event) => { setTouched(true); setTitle(event.target.value); }}
@@ -224,7 +233,7 @@ export function WriteForm(props: {
             id="postBody"
             label="내용"
             value={body}
-            disabled={send.isPending || postedId !== null}
+            disabled={send.isPending}
             invalid={bad !== ""}
             describedBy={bad === "" ? undefined : "postWhy"}
             onChange={(next) => { setTouched(true); setBody(next); }}
@@ -260,8 +269,9 @@ export function WriteForm(props: {
       )}
       <div className="acts">
         <button className="btn" type="button" onClick={onCancel}>취소</button>
-        <button className="btn go" type="submit" disabled={send.isPending || authorId === null}>
-          {send.isPending ? "업로드 중…" : postedId === null ? "글쓰기" : "첨부파일 재업로드"}
+        <button className="btn go" type="submit"
+          disabled={send.isPending || authorId === null || draftId === null}>
+          {send.isPending ? "업로드 중…" : "글쓰기"}
         </button>
       </div>
       {stage === "" ? null : <p className="note" role="status">{stage}</p>}
