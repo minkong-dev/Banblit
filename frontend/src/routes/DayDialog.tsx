@@ -314,7 +314,7 @@ export function DayDialog({
         </div>
         {tab === "me"
           ? <DayTimeline list={mine} teams={teams} pick={pick} {...hours} />
-          : <DayTimeline list={booked} teams={teams} pick={fixed ? undefined : pick} {...hours} />}
+          : <DayTimeline list={booked} teams={teams} pick={fixed ? undefined : { ...pick, grid }} {...hours} />}
         {ensembleEditor}
       </section>
       <section className="pane">

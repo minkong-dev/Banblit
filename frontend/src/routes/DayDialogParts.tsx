@@ -4,7 +4,7 @@ import { useRef } from "react";
 import type { CSSProperties, PointerEvent } from "react";
 
 import { TrashIcon } from "../components/icons";
-import { dragRange, slotSteps } from "../lib/calendar";
+import { acceptsDrag, dragRange, slotSteps } from "../lib/calendar";
 import { slotLabel } from "../lib/pipeline";
 import type { Entry } from "../lib/dayEntries";
 import type { DayTeam } from "../lib/roster";
@@ -39,11 +39,19 @@ function kindLabel(entry: Entry): string {
 
 type HoursProps = { openHour: number; closeHour: number; slotCount: number };
 
-/** 드래그로 구간을 고르게 할 때 넘기는 값입니다. 없으면 타임라인은 보기 전용입니다. range 가 null 이면 아직 고르지 않은 상태입니다. */
+/** 찬 칸이 걸치지 않는 구간만 pick 에 넘깁니다. 걸치면 아무것도 하지 않아 직전 구간이 남습니다. */
+function apply(pick: DragPick, next: SlotRange): void {
+  if (acceptsDrag(pick.grid, next)) pick.onChange(next);
+}
+
+/** 드래그로 구간을 고르게 할 때 넘기는 값입니다. 없으면 타임라인은 보기 전용입니다. range 가 null 이면 아직 고르지 않은 상태입니다.
+ *  grid 는 이미 찬 1시간 칸입니다. 넘기면 찬 칸이 걸치는 구간을 반영하지 않아 드래그가 그 앞에서 멈춥니다.
+ *  불가능 일정은 겹쳐도 되므로 넘기지 않습니다. */
 export type DragPick = {
   range: SlotRange | null;
   slotMinutes: number;
   onChange: (next: SlotRange) => void;
+  grid?: boolean[];
 };
 
 /** 하루를 세로 띠로 표시합니다. 시각은 왼쪽에 시간 단위로만 적습니다.
@@ -68,11 +76,11 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
     // 포인터가 띠 밖으로 나가도 move·up 이 이 요소로 계속 옵니다.
     event.currentTarget.setPointerCapture(event.pointerId);
     pressed.current = slotAt(event);
-    pick.onChange(dragRange(pressed.current, pressed.current, pick.slotMinutes, slotCount));
+    apply(pick, dragRange(pressed.current, pressed.current, pick.slotMinutes, slotCount));
   };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (pick === undefined || pressed.current === null) return;
-    pick.onChange(dragRange(pressed.current, slotAt(event), pick.slotMinutes, slotCount));
+    apply(pick, dragRange(pressed.current, slotAt(event), pick.slotMinutes, slotCount));
   };
   const onPointerEnd = () => { pressed.current = null; };
 
