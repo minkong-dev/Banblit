@@ -10,10 +10,13 @@ const ASSIGN_WAIT_MS = 20_000;
 test.describe("배정 다시 계산", () => {
   test("기간 선택은 번호가 아니라 날짜 범위로 나온다", async ({ page }) => {
     await page.goto("/admin");
-    const select = page.getByLabel("기간 선택");
+    // 기간 고르기는 기본 select 가 아니라 직접 그린 드롭다운입니다(components/Dropdown.tsx).
+    // 목록은 버튼을 눌러야 그려지므로 먼저 엽니다.
+    await page.getByRole("button", { name: "기간 선택" }).click();
+    const options = page.getByRole("option");
     // 기간 목록이 도착하기 전에는 선택지가 비어 있습니다. 첫 항목이 표시될 때까지 기다립니다.
-    await expect(select.locator("option").first()).toBeAttached();
-    for (const text of await select.locator("option").allTextContents()) {
+    await expect(options.first()).toBeAttached();
+    for (const text of await options.allTextContents()) {
       expect(text).toMatch(/^\d{4}-\d{2}-\d{2} – \d{4}-\d{2}-\d{2}$/);
     }
   });
