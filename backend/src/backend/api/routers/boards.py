@@ -17,6 +17,7 @@ from backend.services.input import format_created_at
 from backend.services.board_service import (
     PostRow,
     create_comment,
+    create_draft,
     create_notice,
     create_team_post,
     delete_comment,
@@ -24,6 +25,7 @@ from backend.services.board_service import (
     list_blinded_posts,
     list_notices,
     list_team_posts,
+    publish_post,
     require_post_author,
     set_post_blinded,
     update_comment,
@@ -116,6 +118,44 @@ def create_notice_post(
 
 # 블라인드는 글을 지우지 않고 목록·상세에서 가립니다. 작성자 본인에게도 보이지 않습니다.
 # 아래 세 endpoint 는 board_moderate 를 가진 사람만 호출합니다.
+# 작성 페이지를 열 때 호출합니다. 빈 글을 먼저 만들어야 본문에 파일을 넣을 수 있습니다
+# (첨부 업로드가 POST /posts/{id}/attachments 라 글 번호가 필요합니다).
+@router.post("/notices/drafts", response_model=PostEnvelopeOut, status_code=201)
+def start_notice_draft(
+    requester: Member = Depends(require_permission("notice_write")),
+    session: Session = Depends(get_session),
+) -> PostEnvelopeOut:
+    post = create_draft(session, None, requester, datetime.now())
+    return PostEnvelopeOut(post=_post_out(post, requester.name, 0, None))
+
+
+@router.post(
+    "/teams/{team_id}/posts/drafts", response_model=PostEnvelopeOut, status_code=201
+)
+def start_team_post_draft(
+    team_id: int,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> PostEnvelopeOut:
+    # ValueError 와 PermissionError 는 app.py 의 전역 처리기가 422·403 으로 변환합니다.
+    post = create_draft(session, team_id, requester, datetime.now())
+    return PostEnvelopeOut(post=_post_out(post, requester.name, 0, None))
+
+
+# 초안에 제목과 본문을 채워 발행합니다. 이 시점부터 목록에 나옵니다.
+@router.post("/posts/{post_id}/publish", response_model=PostEnvelopeOut)
+def publish(
+    post_id: int,
+    req: PostCreateIn,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> PostEnvelopeOut:
+    post, author = publish_post(
+        session, post_id, req.title, req.body, requester, datetime.now()
+    )
+    return PostEnvelopeOut(post=_post_out(post, author, 0, None))
+
+
 @router.get("/blinded-posts", response_model=PostsOut)
 def read_blinded_posts(
     _: Member = Depends(require_permission("board_moderate")),
