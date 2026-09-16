@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { hasContent, sanitizeBody, textOf } from "./richText";
+import { embedKind, hasContent, sanitizeBody, textOf } from "./richText";
 
 describe("sanitizeBody — 남이 쓴 본문에서 허용하지 않은 태그와 속성을 제거한다", () => {
   it("서식 태그는 남긴다", () => {
@@ -38,6 +38,49 @@ describe("sanitizeBody — 남이 쓴 본문에서 허용하지 않은 태그와
   });
 });
 
+describe("sanitizeBody — iframe 은 허용한 주소만 남긴다", () => {
+  it("유튜브 임베드 주소는 남긴다", () => {
+    const kept = sanitizeBody('<iframe src="https://www.youtube.com/embed/abc123"></iframe>');
+
+    expect(kept).toContain("youtube.com/embed/abc123");
+  });
+
+  it("첨부 파일 주소(같은 서버)는 남긴다", () => {
+    expect(sanitizeBody('<iframe src="/api/attachments/7"></iframe>')).toContain("iframe");
+  });
+
+  it("남의 주소는 태그째 지운다", () => {
+    expect(sanitizeBody('<iframe src="https://evil.example.com/page"></iframe>')).toBe("");
+  });
+
+  it("주소가 없는 iframe 도 지운다", () => {
+    expect(sanitizeBody("<iframe></iframe>")).toBe("");
+  });
+
+  it("여러 번 불러도 판정이 그대로다", () => {
+    const bad = '<iframe src="https://evil.example.com/page"></iframe>';
+    sanitizeBody(bad);
+    sanitizeBody(bad);
+
+    expect(sanitizeBody(bad)).toBe("");
+  });
+});
+
+describe("sanitizeBody — 편집기가 만드는 나머지 태그", () => {
+  it("구분선과 4단계 제목을 남긴다", () => {
+    const kept = sanitizeBody("<hr><h4>소제목</h4>");
+
+    expect(kept).toContain("<hr>");
+    expect(kept).toContain("<h4>소제목</h4>");
+  });
+
+  it("소리 재생기를 남긴다", () => {
+    const kept = sanitizeBody('<audio controls src="/api/attachments/3"></audio>');
+
+    expect(kept).toContain("controls");
+  });
+});
+
 describe("hasContent — 편집기가 내놓은 빈 본문을 걸러낸다", () => {
   it("빈 문단만 있으면 내용이 없다", () => {
     expect(hasContent("<p></p>")).toBe(false);
@@ -67,5 +110,27 @@ describe("textOf — 글자 수를 셀 때 쓰는 평문", () => {
 
   it("문자 참조를 원래 글자로 되돌린다", () => {
     expect(textOf("<p>&lt;태그&gt; &amp; 그리고</p>").trim()).toBe("<태그> & 그리고");
+  });
+});
+
+describe("embedKind — 떨군 파일을 본문의 무엇으로 넣을지", () => {
+  it("그림은 미리보기로 넣는다", () => {
+    expect(embedKind("악보.png")).toBe("image");
+    expect(embedKind("사진.JPG")).toBe("image");
+  });
+
+  it("소리는 재생기로 넣는다", () => {
+    expect(embedKind("데모.mp3")).toBe("audio");
+    expect(embedKind("합주.m4a")).toBe("audio");
+  });
+
+  it("PDF 는 뷰어로 넣는다", () => {
+    expect(embedKind("악보.pdf")).toBe("pdf");
+  });
+
+  it("브라우저가 못 여는 형식은 본문에 넣지 않는다", () => {
+    expect(embedKind("자료.zip")).toBe("file");
+    expect(embedKind("사진.heic")).toBe("file");
+    expect(embedKind("이름없음")).toBe("file");
   });
 });

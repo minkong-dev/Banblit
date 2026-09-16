@@ -232,6 +232,7 @@ export function WriteForm(props: {
           <RichText
             id="postBody"
             label="내용"
+            postId={draftId}
             value={body}
             disabled={send.isPending}
             invalid={bad !== ""}
@@ -317,6 +318,7 @@ function CommentForm(props: { postId: number; authorId: number | null }) {
       <RichText
         id="commentBody"
         label="댓글 쓰기"
+        postId={postId}
         value={body}
         invalid={bad !== ""}
         describedBy={bad === "" ? undefined : "commentWhy"}
@@ -539,7 +541,7 @@ function EditPost(props: {
         </label>
         <label className="wide" htmlFor="editBody">
           내용
-          <RichText id="editBody" label="내용" value={body} onChange={setBody} />
+          <RichText id="editBody" label="내용" postId={post.id} value={body} onChange={setBody} />
         </label>
       </div>
       {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
@@ -622,7 +624,7 @@ function CommentRow(props: {
           <div className="fields">
             <label className="wide" htmlFor="editComment">
               댓글
-              <RichText id="editComment" label="댓글" value={body} onChange={setBody} />
+              <RichText id="editComment" label="댓글" postId={comment.post_id ?? null} value={body} onChange={setBody} />
             </label>
           </div>
           {bad === "" ? null : <p className="why" role="alert">{bad}</p>}

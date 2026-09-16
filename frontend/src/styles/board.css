@@ -80,3 +80,13 @@ body[data-page="board"] {
 .rtview a { color: var(--brand-press); text-decoration: underline; }
 .rtview blockquote { margin: 0 0 10px; padding-left: 12px; border-left: 3px solid var(--line-2); color: var(--t2); }
 .rtview pre, .rtbody pre { padding: 10px; border-radius: 8px; background: var(--card-2); overflow-x: auto; }
+
+/* 본문에 넣은 소리·PDF·영상입니다. 편집기와 읽기 화면이 같은 모양을 씁니다. */
+.rtbody audio, .rtview audio { width: 100%; margin: 6px 0; }
+.rtpdf { width: 100%; height: 480px; margin: 6px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--card-2); }
+.rtbody iframe, .rtview iframe { max-width: 100%; border: 0; border-radius: 8px; }
+.rtbody div[data-youtube-video] iframe, .rtview div[data-youtube-video] iframe { aspect-ratio: 16 / 9; width: 100%; height: auto; }
+/* 도구 막대의 파일 넣기입니다. 파일 선택 창은 OS 것을 그대로 쓰고 여는 자리만 맞춥니다. */
+.rttools .rtpick { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 10px; border-radius: 7px; color: var(--t2); font-size: 13px; cursor: pointer; }
+.rttools .rtpick:hover { background: var(--card); color: var(--t1); }
+.rttools .rtpick input { position: absolute; width: 1px; height: 1px; opacity: 0; }
