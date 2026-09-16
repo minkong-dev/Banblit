@@ -95,6 +95,13 @@ export function isRangeFree(grid: boolean[], from: number, to: number): boolean 
   return grid.slice(Math.floor(from), Math.ceil(to)).every((taken) => !taken);
 }
 
+/** 드래그로 고른 구간을 반영할지 판단합니다. grid 가 없으면 항상 반영하고(불가능 일정은 겹쳐도 됩니다),
+ *  있으면 찬 칸이 하나도 걸치지 않을 때만 반영합니다. 반영하지 않으면 직전 구간이 그대로 남아
+ *  선택이 찬 칸 앞에서 멈춥니다. 등록 시점에만 거절하면 사용자가 드래그를 마친 뒤에야 막힌 것을 압니다. */
+export function acceptsDrag(grid: boolean[] | undefined, range: { a: number; b: number }): boolean {
+  return grid === undefined || isRangeFree(grid, range.a, range.b);
+}
+
 export function roomBounds(rooms: { opens_at: string; closes_at: string }[]): {
   open: number;
   close: number;

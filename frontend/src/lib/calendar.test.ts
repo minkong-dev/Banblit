@@ -9,6 +9,7 @@ import {
   hoursLabel,
   inRanges,
   isRangeFree,
+  acceptsDrag,
   monthCells,
   roomBounds,
   slotCountOf,
@@ -133,6 +134,26 @@ describe("takenGrid / isRangeFree — 그날 어디가 찼는지", () => {
     expect(isRangeFree(grid, 4, 6)).toBe(true);
     expect(isRangeFree(grid, 1, 3)).toBe(false);
     expect(isRangeFree(grid, 2, 4)).toBe(false);
+  });
+});
+
+describe("acceptsDrag — 드래그가 찬 칸을 넘지 못한다", () => {
+  const grid = takenGrid([{ a: 2, b: 4 }], 6);
+
+  it("grid 가 없으면 어떤 구간이든 반영한다", () => {
+    expect(acceptsDrag(undefined, dragRange(2.5, 3.5, 60, 6))).toBe(true);
+  });
+
+  it("빈 칸만 걸치면 반영한다", () => {
+    expect(acceptsDrag(grid, dragRange(0.2, 1.8, 60, 6))).toBe(true);
+  });
+
+  it("찬 칸을 지나가면 반영하지 않아 선택이 그 앞에서 멈춘다", () => {
+    expect(acceptsDrag(grid, dragRange(1.2, 4.8, 60, 6))).toBe(false);
+  });
+
+  it("찬 칸에서 시작해도 반영하지 않는다", () => {
+    expect(acceptsDrag(grid, dragRange(2.5, 2.5, 60, 6))).toBe(false);
   });
 });
 
