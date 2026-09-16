@@ -21,9 +21,11 @@ from backend.services.board_service import (
     create_team_post,
     delete_comment,
     get_post_with_comments,
+    list_blinded_posts,
     list_notices,
     list_team_posts,
     require_post_author,
+    set_post_blinded,
     update_comment,
     update_post,
 )
@@ -46,7 +48,9 @@ from backend.db.pipeline import get_session
 router = APIRouter()
 
 
-def _post_out(post: Post, author: str, comment_count: int) -> PostOut:
+def _post_out(
+    post: Post, author: str, comment_count: int, blinded_by: str | None = None
+) -> PostOut:
     return PostOut(
         id=post.id,
         team_id=post.team_id,
@@ -56,6 +60,7 @@ def _post_out(post: Post, author: str, comment_count: int) -> PostOut:
         author=author,
         created_at=format_created_at(post.created_at),
         comment_count=comment_count,
+        blinded_by=blinded_by,
     )
 
 
@@ -82,7 +87,12 @@ def _attachment_out(attachment: Attachment) -> AttachmentOut:
 
 
 def _posts_out(rows: list[PostRow]) -> PostsOut:
-    return PostsOut(posts=[_post_out(post, author, count) for post, author, count in rows])
+    return PostsOut(
+        posts=[
+            _post_out(post, author, count, blinded_by)
+            for post, author, count, blinded_by in rows
+        ]
+    )
 
 
 # 공지의 "전체 공개"는 팀을 구분하지 않는다는 뜻이지 로그인하지 않은 방문자에게 공개한다는 뜻이 아닙니다.
@@ -102,6 +112,34 @@ def create_notice_post(
 ) -> PostEnvelopeOut:
     post, author = create_notice(session, req.title, req.body, requester, datetime.now())
     return PostEnvelopeOut(post=_post_out(post, author, 0))
+
+
+# 블라인드는 글을 지우지 않고 목록·상세에서 가립니다. 작성자 본인에게도 보이지 않습니다.
+# 아래 세 endpoint 는 board_moderate 를 가진 사람만 호출합니다.
+@router.get("/blinded-posts", response_model=PostsOut)
+def read_blinded_posts(
+    _: Member = Depends(require_permission("board_moderate")),
+    session: Session = Depends(get_session),
+) -> PostsOut:
+    return _posts_out(list_blinded_posts(session))
+
+
+@router.put("/posts/{post_id}/blind", status_code=204)
+def blind_post(
+    post_id: int,
+    requester: Member = Depends(require_permission("board_moderate")),
+    session: Session = Depends(get_session),
+) -> None:
+    set_post_blinded(session, post_id, datetime.now(), requester)
+
+
+@router.delete("/posts/{post_id}/blind", status_code=204)
+def unblind_post(
+    post_id: int,
+    requester: Member = Depends(require_permission("board_moderate")),
+    session: Session = Depends(get_session),
+) -> None:
+    set_post_blinded(session, post_id, None, requester)
 
 
 @router.get("/teams/{team_id}/posts", response_model=PostsOut)

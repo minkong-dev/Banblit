@@ -256,3 +256,32 @@ def test_traversal_filename_never_escapes_the_storage_root(
     assert written[0].parent == storage_dir
     assert "passwd" not in written[0].name
     assert not (storage_dir.parent / "etc").exists()
+
+
+def test_a_moderator_cannot_attach_to_someone_elses_post(
+    api_client: TestClient, account: AccountFactory, storage_dir: Path
+) -> None:
+    """업로드는 그 글의 작성자만 합니다. board_moderate 는 남의 글에 파일을 붙이는 권한이 아닙니다.
+
+    이 권한자는 팀 소속을 확인하지 않으므로, 막지 않으면 어느 팀의 어느 글에도 파일을 붙일 수 있습니다.
+    """
+    _, head = account("박서연", "head@example.com")
+    member_id, member = account("김도윤", "other@example.com")
+    team_id = _make_team(api_client, head, "밴드")
+    _seat(api_client, head, team_id, member_id)
+    post_id = int(
+        api_client.post(
+            f"/teams/{team_id}/posts",
+            json={"title": "글", "body": "본문"},
+            cookies=member,
+        ).json()["post"]["id"]
+    )
+
+    response = api_client.post(
+        f"/posts/{post_id}/attachments",
+        files={"file": ("남의글.txt", b"nope", "text/plain")},
+        cookies=head,
+    )
+
+    assert response.status_code == 403
+    assert _stored_files(storage_dir) == []

@@ -18,6 +18,7 @@ from sqlalchemy import (
     Text,
     Time,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
@@ -43,7 +44,7 @@ Permission = Literal[
     "member_remove",  # 팀 포지션에서 다른 멤버 제외
     "member_expel",  # 멤버 추방(계정 삭제)
     "notice_write",  # 공지 작성
-    "board_moderate",  # 다른 사용자의 글·댓글 수정·삭제
+    "board_moderate",  # 다른 사용자의 글·댓글 삭제와 글 블라인드(수정은 작성자만 가능)
     "reservation_manage",  # 다른 사용자의 예약 수정·취소
     "assign_run",  # 배정 계산 실행
     "assign_read",  # 계산 결과·조율안 조회
@@ -425,10 +426,20 @@ class Post(Base):
         ForeignKey("members.id", ondelete="CASCADE")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime)
+    # 값이 있으면 그 시각에 가려진 글입니다. 가려진 글은 목록과 상세에서 빠지고 작성자 본인도 볼 수
+    # 없습니다. board_moderate 를 가진 사람이 격리 목록에서만 봅니다.
+    blinded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # 가린 사람입니다. 그 계정이 삭제되면 이 값만 비웁니다 — author_id 처럼 CASCADE 로 두면
+    # 관리자 계정 하나를 지울 때 그 사람이 가린 글이 전부 삭제됩니다.
+    blinded_by_id: Mapped[int | None] = mapped_column(
+        ForeignKey("members.id", ondelete="SET NULL"), nullable=True
+    )
 
     __table_args__ = (
         CheckConstraint("length(trim(title)) > 0"),
         CheckConstraint("length(trim(body)) > 0"),
+        # 목록 조회는 전부 blinded_at IS NULL 을 붙입니다. 부분 index 라 가려지지 않은 행만 담습니다.
+        Index("ix_posts_visible", "team_id", postgresql_where=text("blinded_at IS NULL")),
     )
 
 
