@@ -990,7 +990,7 @@ docker compose rm -sf auto-assign
 
 ## 14. 관리 스크립트
 
-`banblit.sh` 1개가 아래 13개 절의 명령을 순서대로 묶어 실행합니다. 개별 `docker compose`
+`banblit.sh` 1개가 위 13개 절(1~13장)의 명령을 순서대로 묶어 실행합니다. 개별 `docker compose`
 명령의 뜻과 주의점은 이 문서의 해당 절이 정본이고, 이 장은 묶음이 무엇을 어떤 순서로
 호출하는지를 적습니다.
 

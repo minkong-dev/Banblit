@@ -10,6 +10,7 @@ sources:
   - backend/migrations/versions/b7f1a92c4d31_permission_sets.py # permission set table 추가와 역할 열 삭제 마이그레이션
   - backend/tests/integration/db/test_permission_endpoints.py   # 합집합·첫 가입자·자기 권한 회수·마지막 full set 보호·/me 의 permission set 이름 시나리오
   - backend/tests/integration/db/test_permission_migration.py   # 역할 열이 permission set으로 옮겨지고 되돌아가는지의 시나리오
+  - backend/tests/integration/db/test_member_expel_endpoints.py # 추방 권한 검증·계정 삭제·마지막 full set 보유자 보호 시나리오
   - frontend/src/routes/SettingsMembers.tsx       # 설정 화면의 멤버 탭. permission set 목록과 멤버 명단
   - frontend/src/routes/SettingsAccount.tsx       # 설정 화면의 계정 탭. 내 정보·비밀번호·탈퇴
   - frontend/src/lib/account.ts                   # 항목 20가지의 한국어 이름, 내가 가졌는지 판단, 프로필 카드의 역할 문구(permission set 이름)
@@ -222,14 +223,17 @@ cookie만 삭제하는 방식과는 다릅니다. cookie를 삭제하면 그 브
 | --- | --- |
 | "멤버 추방" 항목이 없는 사람의 요청 | 자격 없음(403) |
 | 자기 자신을 추방하는 요청 | 거절(422). 자기 계정은 탈퇴로만 삭제합니다 |
+| 20개가 모두 활성화된 permission set 의 마지막 보유자를 추방하는 요청 | 거절(422). 권한을 부여할 사람이 0명이 됩니다 |
 | 존재하지 않는 번호를 추방하는 요청 | 거절(422) |
 | 그 밖의 요청 | 삭제 후 본문 없이 성공(204) |
 
 자기 자신을 추방할 수 없게 한 이유는, 탈퇴는 자기 이름을 직접 입력해야 실행되는 반면 추방은 확인 1회로 실행되기 때문입니다. 마지막 헤드매니저가 확인 1회로 자기 계정을 삭제하는 일을 막습니다.
 
+마지막 보유자를 거절하는 이유는 자기 자신 거절만으로는 부족하기 때문입니다. "멤버 추방" 항목만 가진 사람이 남의 계정을 지우는 경로가 남아 있어, 그 대상이 마지막 보유자이면 권한을 부여할 사람이 0명이 됩니다. 검사 위치는 `permission_service.require_another_full_set_holder` 이고, 보유 행을 계정 번호 오름차순으로 잠가 두 추방 요청이 같은 순간에 각각 1명씩 지우는 경우도 막습니다.
+
 화면은 멤버 명단 표의 행마다 삭제 아이콘 버튼을 표시하고, 로그인한 본인의 행에는 표시하지 않습니다. 버튼을 누르면 "<이름>을/를 추방할까요? 계정과 글·댓글·예약이 함께 삭제돼요." 라고 1회 확인하고, 삭제가 끝나면 멤버 명단과 permission set 목록을 서버에서 다시 조회합니다.
 
-**어떻게 확인했나.** 항목이 없는 사람의 요청이 403 으로 거절되는지, 삭제 후 계정이 사라지고 그 사람이 맡던 포지션이 비워지며 그 사람의 session 으로 보낸 요청이 401 이 되는지, 자기 자신과 존재하지 않는 번호가 422 로 거절되는지를 `backend/tests/integration/db/test_member_expel_endpoints.py` 에 담았습니다. 화면의 호출은 `frontend/src/lib/pipeline.test.ts` 가 확인합니다.
+**어떻게 확인했나.** 항목이 없는 사람의 요청이 403 으로 거절되는지, 삭제 후 계정이 사라지고 그 사람이 맡던 포지션이 비워지며 그 사람의 session 으로 보낸 요청이 401 이 되는지, 자기 자신과 존재하지 않는 번호가 422 로 거절되는지, 20개를 모두 가진 permission set 의 마지막 보유자가 422 로 거절되고 보유자가 2명이면 1명이 추방되는지를 `backend/tests/integration/db/test_member_expel_endpoints.py` 에 담았습니다. 남이 마지막 보유자에게서 회수하는 요청이 422 로 거절되고 보유자가 2명이면 1명에게서 회수되는지는 `backend/tests/integration/db/test_permission_endpoints.py` 가 확인합니다. 화면의 호출은 `frontend/src/lib/pipeline.test.ts` 가 확인합니다.
 
 ### 잊은 비밀번호와 아이디는 메일로 복구합니다 (2026-09-07)
 
@@ -399,6 +403,12 @@ flowchart LR
 ①과 ②, ③과 ④ 사이에는 **2명이 동시에 헤드매니저인 시점**이 있습니다. 이 시점은 피할 대상이 아니라 필요한 상태입니다. 이전하는 쪽이 먼저 회수하면 아무도 권한을 부여할 수 없는 상태가 되어 조직 전체가 권한을 변경할 수 없게 됩니다.
 
 **모든 항목이 활성화된 마지막 permission set 은 삭제하거나 항목을 비활성화할 수 없습니다(사용자 결정 2026-09-11).** 기준은 사람이 아니라 permission set 입니다. 20개가 모두 활성화된 permission set 이 DB 에 1개뿐일 경우, 그 permission set 의 삭제 요청과 항목을 1개라도 비활성화하는 수정 요청을 거절(422)합니다. 이름과 설명만 수정하는 요청은 허용합니다. 20개가 모두 활성화된 permission set 이 2개 이상이면 그중 1개를 삭제하거나 항목을 비활성화할 수 있습니다. 사람에게서 permission set 을 회수하는 동작은 이 규칙과 무관하게 허용되므로, 위 ②와 ④는 그대로 실행됩니다.
+
+**추방과 "남의 권한 회수" 는 별도의 검사를 1개 더 수행합니다.** 위 규칙은 permission set 이 남는지만 확인합니다. 추방은 계정을 삭제하므로 permission set 은 남고 가진 사람만 0명이 될 수 있습니다. 그래서 20개가 모두 활성화된 permission set 의 보유자가 1명뿐일 경우 그 사람의 추방 요청을 거절(422)합니다(`services/roster_service.py` 의 `expel_member` 가 `permission_service.require_another_full_set_holder` 를 호출). 보유자가 2명 이상이면 1명은 추방됩니다. 이 검사가 없으면 "멤버 추방" 항목만 가진 사람이 마지막 보유자를 추방해 권한을 부여할 사람이 0명이 되고, 되돌릴 방법이 없습니다.
+
+**같은 검사를 권한 회수에도 적용합니다. 단 남의 것을 회수할 때만입니다**(`permission_service.revoke_permission_set`). "권한 부여" 항목만 가진 사람이 마지막 보유자에게서 회수하는 경로가 추방과 같은 결과를 만듭니다. 자기 자신에게서 permission set 을 회수하는 요청(`member_id` 와 요청한 사람이 같은 요청)은 확인하지 않습니다 — 본인의 결정이고, 위 ④가 그 경로이며 그 시점에는 다음 사람이 이미 받았으므로 보유자가 0명이 되지 않습니다.
+
+**탈퇴(`DELETE /me`)에는 이 검사를 두지 않았습니다.** 같은 이유입니다 — 본인의 결정이고, 계정이 전부 사라진 DB 에는 다음 가입자가 다시 첫 가입자가 되어 모든 항목을 받습니다(`auth_service.signup`). 남이 시키는 경로(추방·남의 권한 회수)만 막습니다.
 
 **이 검사는 조회한 행을 잠근 상태에서 수행합니다.** 모두 활성화된 permission set 이 2개 남은 상태에서 두 요청이 각각 1개씩 같은 순간에 삭제하면, 잠그지 않을 경우 두 요청이 모두 "다른 1개가 있다" 로 통과해 0개가 됩니다. 0개가 되면 권한을 부여할 수 있는 사람이 사라지고 되돌릴 방법이 없습니다. 그래서 검사할 때 모두 활성화된 행 전체를 번호 오름차순으로 잠그고, 뒤에 도착한 요청은 앞의 요청이 끝날 때까지 기다렸다가 다시 셉니다. 기다린 요청은 남은 1개를 보고 거절(422)됩니다. 번호 순서로 잠그는 이유는 두 요청이 서로를 기다리는 상태를 만들지 않기 위해서입니다.
 
