@@ -7,6 +7,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { useEffect, useRef, useState } from "react";
 
 import { Card } from "../components/AppShell";
+import { Dropdown } from "../components/Dropdown";
 import { Modal } from "../components/Modal";
 import { MemberSearch } from "../components/MemberSearch";
 import {
@@ -386,17 +387,13 @@ function MemberRoster(props: {
   return (
     <Card>
       <SectionHead title="멤버" desc="가입한 멤버의 목록이에요">
-        <select
+        <Dropdown
           className="railfilter"
-          aria-label="권한별 필터링"
+          ariaLabel="권한별 필터링"
           value={filter}
-          onChange={(event) => setFilter(event.target.value)}
-        >
-          <option value="">전체</option>
-          {sets.map((name) => (
-            <option key={name} value={name}>{name}</option>
-          ))}
-        </select>
+          choices={[{ value: "", label: "전체" }, ...sets.map((name) => ({ value: name, label: name }))]}
+          onChange={setFilter}
+        />
       </SectionHead>
 
       <div className="roster">

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
+import { Dropdown } from "../components/Dropdown";
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from "../components/icons";
 import { getJSON } from "../lib/api";
 import { currentMonth, slotSteps } from "../lib/calendar";
@@ -194,23 +195,27 @@ export function Scheduler() {
           <div className="timebar">
             <div className="fld">
               <label htmlFor="tFrom">시작시간</label>
-              <select id="tFrom" value={from ?? ""}
-                onChange={(event) => setFrom(event.target.value === "" ? null : Number(event.target.value))}>
-                <option value="">선택 안 함</option>
-                {steps.slice(0, -1).map((slot) => (
-                  <option value={slot} key={slot}>{label(slot)}</option>
-                ))}
-              </select>
+              <Dropdown
+                id="tFrom"
+                value={from ?? ""}
+                choices={[
+                  { value: "" as const, label: "선택 안 함" },
+                  ...steps.slice(0, -1).map((slot) => ({ value: slot, label: label(slot) })),
+                ]}
+                onChange={(next) => setFrom(next === "" ? null : next)}
+              />
             </div>
             <div className="fld">
               <label htmlFor="tTo">끝 시간</label>
-              <select id="tTo" value={to ?? ""}
-                onChange={(event) => setTo(event.target.value === "" ? null : Number(event.target.value))}>
-                <option value="">선택 안 함</option>
-                {steps.slice(1).map((slot) => (
-                  <option value={slot} key={slot}>{endLabel(slot)}</option>
-                ))}
-              </select>
+              <Dropdown
+                id="tTo"
+                value={to ?? ""}
+                choices={[
+                  { value: "" as const, label: "선택 안 함" },
+                  ...steps.slice(1).map((slot) => ({ value: slot, label: endLabel(slot) })),
+                ]}
+                onChange={(next) => setTo(next === "" ? null : next)}
+              />
             </div>
             <button className="clear" onClick={() => { setFrom(null); setTo(null); }}>시간 선택 취소</button>
             <span className="state">

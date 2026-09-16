@@ -4,6 +4,7 @@ import type { RefObject } from "react";
 
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
 import { CheckMark } from "../components/CheckMark";
+import { Dropdown } from "../components/Dropdown";
 import { Modal } from "../components/Modal";
 import { getJSON, reason } from "../lib/api";
 import { askDelete } from "../lib/confirm";
@@ -218,18 +219,18 @@ function SlotUnitCard({ canEdit, onSaved }: { canEdit: boolean; onSaved: () => v
       <SectionHead title="점유 단위" desc="변경해도 등록된 예약과 배정은 그대로 남아요" />
       <div className="fields">
         <Cell label="단위" htmlFor="slotUnit">
-          <select
+          <Dropdown
             id="slotUnit"
             value={slotMinutes}
             disabled={!canEdit || save.isPending}
-            aria-invalid={why !== ""}
-            aria-describedby={why === "" ? undefined : "slotUnitWhy"}
-            onChange={(event) => save.mutate(Number(event.target.value))}
-          >
-            {SLOT_MINUTE_CHOICES.map((minutes) => (
-              <option value={minutes} key={minutes}>{slotMinutesLabel(minutes)}</option>
-            ))}
-          </select>
+            invalid={why !== ""}
+            describedBy={why === "" ? undefined : "slotUnitWhy"}
+            choices={SLOT_MINUTE_CHOICES.map((minutes) => ({
+              value: minutes as number,
+              label: slotMinutesLabel(minutes),
+            }))}
+            onChange={(next) => save.mutate(next)}
+          />
         </Cell>
         {why === "" ? null : <p className="why" id="slotUnitWhy" role="alert">{why}</p>}
       </div>
@@ -293,25 +294,24 @@ function PeriodFields(props: {
   at: (field: string) => string;
   bad: string;
   whyId: string;
-  first: RefObject<HTMLSelectElement | null>;
+  first: RefObject<HTMLButtonElement | null>;
 }) {
   const { form, setForm, at, bad, whyId, first } = props;
   return (
     <>
       <Cell label="분류" htmlFor={at("kind")}>
-        <select
-          ref={first}
+        <Dropdown
+          buttonRef={first}
           id={at("kind")}
-          aria-invalid={bad !== ""}
-          aria-describedby={bad === "" ? undefined : whyId}
+          invalid={bad !== ""}
+          describedBy={bad === "" ? undefined : whyId}
           value={form.kind}
-          onChange={(event) =>
-            setForm({ ...form, kind: event.target.value as Period["kind"] })
-          }
-        >
-          <option value="focused">집중 합주</option>
-          <option value="open">상시 개방</option>
-        </select>
+          choices={[
+            { value: "focused" as Period["kind"], label: "집중 합주" },
+            { value: "open" as Period["kind"], label: "상시 개방" },
+          ]}
+          onChange={(next) => setForm({ ...form, kind: next })}
+        />
       </Cell>
       <Cell label="시작일" htmlFor={at("starts")}>
         <input
@@ -594,7 +594,7 @@ function PeriodForm(props: {
   const { before, rooms, submit, onCancel, onDone } = props;
   const [form, setForm, touched, reset] = useForm(before === null ? BLANK_PERIOD : periodFields(before));
   const [draft, setDraft, draftTouched, resetDraft] = useForm(ensembleDraft(before, rooms));
-  const first = useFirstField<HTMLSelectElement>(onCancel !== undefined);
+  const first = useFirstField<HTMLButtonElement>(onCancel !== undefined);
   const slotMinutes = useSlotMinutes();
 
   const withEnsemble = form.kind === "focused" && draft.on;

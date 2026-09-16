@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { CheckMark } from "../components/CheckMark";
+import { Dropdown } from "../components/Dropdown";
 import { useSlotMinutes } from "../components/queries";
 import type { Period, Room } from "../lib/contract";
 import { ensembleOn } from "../lib/dayEntries";
@@ -112,16 +113,17 @@ export function EnsembleFields(props: {
             />
           </Cell>
           <Cell label="합주실" htmlFor={at("ens-room")}>
-            <select
+            <Dropdown
               id={at("ens-room")}
               value={draft.room_id ?? ""}
-              {...invalid}
-              onChange={(event) =>
-                setDraft({ ...draft, room_id: event.target.value === "" ? null : Number(event.target.value) })}
-            >
-              <option value="">선택</option>
-              {rooms.map((room) => <option value={room.id} key={room.id}>{room.name}</option>)}
-            </select>
+              invalid={bad !== ""}
+              describedBy={bad === "" ? undefined : whyId}
+              choices={[
+                { value: "" as const, label: "선택" },
+                ...rooms.map((room) => ({ value: room.id, label: room.name })),
+              ]}
+              onChange={(next) => setDraft({ ...draft, room_id: next === "" ? null : next })}
+            />
           </Cell>
           <Cell label="시작 시각" htmlFor={at("ens-from")}>
             <input
@@ -247,16 +249,16 @@ export function EnsembleDays({ period, room }: { period: Period; room: Room | un
         room={room}
         picker={
           <Cell label="날짜" htmlFor={pickerId}>
-            <select id={pickerId} value={day} onChange={(event) => setDay(event.target.value)}>
-              {datesBetween(period.ensemble.starts_on, period.ensemble.ends_on).map((key) => {
+            <Dropdown
+              id={pickerId}
+              value={day}
+              choices={datesBetween(period.ensemble.starts_on, period.ensemble.ends_on).map((key) => {
                 const own = days.find((item) => item.day === key);
-                return (
-                  <option value={key} key={key}>
-                    {dayLabel(key)}{own === undefined ? "" : ` (${own.starts_at}–${own.ends_at})`}
-                  </option>
-                );
+                const when = own === undefined ? "" : ` (${own.starts_at}–${own.ends_at})`;
+                return { value: key, label: `${dayLabel(key)}${when}` };
               })}
-            </select>
+              onChange={setDay}
+            />
           </Cell>
         }
       />
