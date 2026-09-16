@@ -2,11 +2,12 @@ from httpx import Response
 from datetime import datetime, timedelta
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.db.models import LoginSession, Member, Post
+from backend.db.models import PERMISSIONS, LoginSession, Member, Post
 
 SIGNUP_BODY = {
     "department": "실용음악과",
@@ -71,8 +72,23 @@ def test_signup_sets_an_httponly_session_cookie_and_a_readable_signed_in_cookie(
     assert "HttpOnly" not in signed_in_header
 
 
-def test_the_first_account_becomes_head_manager(api_client: TestClient) -> None:
+def test_the_first_account_is_a_plain_member_without_the_code(
+    api_client: TestClient,
+) -> None:
+    """계정이 0개인 DB 의 첫 가입자도 코드가 없으면 일반 멤버입니다(사용자 결정 2026-09-16).
+
+    예전에는 첫 가입자가 자동으로 헤드매니저였습니다. 배포 직후 개발자보다 먼저 가입한 사람이
+    모든 권한을 받는 경로라 없앴습니다.
+    """
     response = api_client.post("/signup", json=SIGNUP_BODY)
+
+    assert response.json()["account"]["role"] == "member"
+
+
+def test_the_admin_code_makes_a_head_manager(
+    api_client: TestClient, admin_code: str
+) -> None:
+    response = api_client.post("/signup", json={**SIGNUP_BODY, "admin_code": admin_code})
 
     assert response.json()["account"]["role"] == "head_manager"
 
@@ -486,3 +502,58 @@ def test_signup_rejects_a_student_no_that_is_not_eight_digits(api_client: TestCl
 
         assert response.status_code == 422, bad
         assert "학번" in response.json()["detail"]
+
+
+# ── 관리자코드 ─────────────────────────────────────────────────────────────
+
+
+def _signup_with(api_client: TestClient, **extra: object) -> Response:
+    """SIGNUP_BODY 에 항목을 더해 가입을 요청합니다. 이메일이 겹치지 않게 호출마다 바꿉니다."""
+    body = {**SIGNUP_BODY, **extra}
+    return api_client.post("/signup", json=body)
+
+
+def test_the_admin_code_grants_every_permission(
+    api_client: TestClient, admin_code: str
+) -> None:
+    """관리자코드를 넣고 가입하면 권한 20개를 전부 받습니다(사용자 결정 2026-09-16).
+
+    코드는 환경변수 ADMIN_SIGNUP_CODE 가 정합니다. 개발자가 정하고 저장소에 넣지 않습니다.
+    """
+    response = _signup_with(api_client, admin_code=admin_code)
+
+    assert response.status_code == 201, response.text
+    body = api_client.get("/me").json()["account"]
+    assert set(body["permissions"]) == set(PERMISSIONS)
+
+
+def test_signing_up_without_the_code_gets_no_permission(api_client: TestClient) -> None:
+    """코드가 없으면 첫 가입자여도 권한이 0개입니다.
+
+    예전에는 계정이 0개인 DB 의 첫 가입자가 자동으로 전부 받았습니다. 그 규칙을 없앴습니다 —
+    배포 직후 개발자보다 먼저 가입한 사람이 모든 권한을 받는 경로였습니다.
+    """
+    response = _signup_with(api_client)
+
+    assert response.status_code == 201, response.text
+    assert api_client.get("/me").json()["account"]["permissions"] == []
+
+
+def test_a_wrong_admin_code_signs_up_as_a_plain_member(
+    api_client: TestClient, admin_code: str
+) -> None:
+    """틀린 코드로 가입을 거절하지 않습니다(사용자 결정 2026-09-16). 권한 0개로 가입합니다."""
+    response = _signup_with(api_client, admin_code=f"{admin_code}-틀림")
+
+    assert response.status_code == 201, response.text
+    assert api_client.get("/me").json()["account"]["permissions"] == []
+
+
+def test_the_code_is_refused_when_the_environment_has_none(
+    api_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """환경변수가 비어 있으면 관리자 가입 경로가 닫힙니다. 빈 코드를 맞다고 보면 누구나 통과합니다."""
+    monkeypatch.delenv("ADMIN_SIGNUP_CODE", raising=False)
+
+    assert _signup_with(api_client, admin_code="아무값").status_code == 201
+    assert api_client.get("/me").json()["account"]["permissions"] == []

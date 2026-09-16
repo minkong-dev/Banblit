@@ -124,6 +124,7 @@ def signup(
         req.email,
         req.password,
         req.cohort,
+        req.admin_code,
     )
     token = create_session(session, member.id, datetime.now())
     _set_session_cookies(response, token)

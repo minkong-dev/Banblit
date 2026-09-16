@@ -4,6 +4,10 @@
 import type { APIRequestContext } from "@playwright/test";
 
 /** global-setup.ts 가 첫 가입자로 만드는 계정입니다. 첫 가입자라 전체 권한을 받고 E2E_TEAM 에 소속됩니다. */
+/** 검사용 관리자코드입니다. docker-compose.override.yml 의 e2e-api 가 같은 값을
+ *  ADMIN_SIGNUP_CODE 환경변수로 받습니다. 두 값이 다르면 global-setup 의 가입이 거절됩니다. */
+export const E2E_ADMIN_CODE = "e2e-admin-code";
+
 export const E2E_ACCOUNT = {
   name: "E2E 검사",
   department: "검사학과",

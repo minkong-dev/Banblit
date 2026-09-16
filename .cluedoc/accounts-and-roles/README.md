@@ -8,7 +8,8 @@ sources:
   - backend/src/backend/services/permission_service.py # permission set 생성·수정·삭제·부여·회수와 합집합 계산
   - backend/src/backend/api/routers/permissions.py # permission set을 다루는 6개 endpoint
   - backend/migrations/versions/b7f1a92c4d31_permission_sets.py # permission set table 추가와 역할 열 삭제 마이그레이션
-  - backend/tests/integration/db/test_permission_endpoints.py   # 합집합·첫 가입자·자기 권한 회수·마지막 full set 보호·/me 의 permission set 이름 시나리오
+  - backend/tests/integration/db/test_permission_endpoints.py   # 합집합·자기 permission set 회수·마지막 full set 보호·/me 의 permission set 이름 시나리오
+  - backend/tests/integration/db/test_auth_endpoints.py          # 관리자코드로 전체 권한을 받는지, 코드가 없거나 틀리면 0개로 가입하는지의 시나리오
   - backend/tests/integration/db/test_permission_migration.py   # 역할 열이 permission set으로 옮겨지고 되돌아가는지의 시나리오
   - backend/tests/integration/db/test_member_expel_endpoints.py # 추방 권한 검증·계정 삭제·마지막 full set 보유자 보호 시나리오
   - frontend/src/routes/SettingsMembers.tsx       # 설정 화면의 멤버 탭. permission set 목록과 멤버 명단
@@ -374,11 +375,15 @@ flowchart LR
 
 **헤드매니저는 별도로 저장된 값이 아니라 20개가 모두 활성화된 상태입니다.** 그런 permission set을 가진 사람이 헤드매니저입니다. 2명 이상이 동시에 헤드매니저일 수 있습니다. 인원을 고정하지 않는다는 기존 약속이 이 구조에서는 별도 규칙 없이 충족됩니다. 그래서 **계정에 있던 역할 열은 삭제했습니다.** 역할 열과 permission set이 둘 다 있으면 서로 다를 때 우선순위를 또 정해야 하고, 우선순위를 정하는 순간 사람이 화면에서 본 값과 서버가 검증하는 값이 달라질 여지가 생깁니다.
 
-**화면의 프로필 카드에 표시되는 역할 문구는 그 사람이 가진 permission set 의 이름입니다(사용자 결정 2026-09-11).** 내 계정을 조회하면 서버가 가진 permission set 의 이름 목록을 permission set 번호 오름차순으로 함께 반환하고, 화면은 그 이름들을 ", " 로 이어 표시합니다. permission set 이 0개이면 "일반멤버" 를 표시합니다. 첫 가입자가 자동으로 받는 permission set 의 이름이 "헤드매니저" 이므로 그 사람에게는 "헤드매니저" 가 표시되고, 그 permission set 의 이름을 수정하면 표시되는 문구도 함께 수정됩니다. 예전에는 가진 항목이 18개 전부일 때만 "헤드매니저" 를 표시하도록 화면이 계산했는데, 그 계산은 삭제했습니다.
+**화면의 프로필 카드에 표시되는 역할 문구는 그 사람이 가진 permission set 의 이름입니다(사용자 결정 2026-09-11).** 내 계정을 조회하면 서버가 가진 permission set 의 이름 목록을 permission set 번호 오름차순으로 함께 반환하고, 화면은 그 이름들을 ", " 로 이어 표시합니다. permission set 이 0개이면 "일반멤버" 를 표시합니다. 관리자코드로 가입한 사람이 받는 permission set 의 이름이 "헤드매니저" 이므로 그 사람에게는 "헤드매니저" 가 표시되고, 그 permission set 의 이름을 수정하면 표시되는 문구도 함께 수정됩니다. 예전에는 가진 항목이 18개 전부일 때만 "헤드매니저" 를 표시하도록 화면이 계산했는데, 그 계산은 삭제했습니다.
 
 **권한을 변경할 수 있는 사람은 "권한 변경" 항목을 가진 사람뿐입니다.** 그 사람은 누구의 permission set이든 부여하고 회수할 수 있습니다. 자기 permission set도 포함입니다. 그 항목이 없으면 누구의 권한도 변경하지 못하며 자기 권한도 변경하지 못합니다. 본인인지 다른 사용자인지로 구분하는 예외는 두지 않습니다. 부분 권한만 받은 사람이 자기 권한을 스스로 올리지 못하는 이유는, 그 사람에게 "권한 변경"이 비활성화되어 있기 때문이지 본인이라서가 아닙니다.
 
-**권한을 가진 사람이 0명인 상태로 시작할 수는 없습니다.** 그래서 가장 먼저 가입하는 사람이 20개가 모두 활성화된 permission set을 받습니다. 그런 permission set이 DB에 없으면 가입 시점에 1개 생성해 부여합니다. 2번째부터 가입하는 사람은 아무 permission set도 받지 않습니다. "권한 부여"를 가진 사람이 부여해야 갖습니다.
+**권한을 가진 사람이 0명인 상태로 시작할 수는 없습니다. 그래서 가입 화면에 관리자코드를 넣는 칸을 두었습니다(사용자 결정 2026-09-16).** 그 칸에 환경변수 `ADMIN_SIGNUP_CODE` 와 같은 값을 넣고 가입하면 20개가 모두 활성화된 permission set을 받습니다. 그런 permission set이 DB에 없으면 가입 시점에 1개 생성해 부여합니다. 코드를 넣지 않았거나 값이 다르면 아무 permission set도 받지 않고, "권한 부여"를 가진 사람이 부여해야 갖습니다. **틀린 값으로 가입을 거절하지는 않습니다(사용자 결정 2026-09-16)** — 일반 멤버로 가입됩니다. 환경변수가 비어 있으면 어떤 값도 통과하지 않아 관리자 가입 경로가 닫힙니다.
+
+코드 값은 개발자가 정하고 `.env` 에 둡니다. 저장소에는 넣지 않습니다(`.env.example` 2-1절). 비교는 `hmac.compare_digest` 로 하고 UTF-8 바이트로 넘깁니다. `==` 는 다른 글자를 만나면 즉시 멈춰서 응답 시간의 차이로 앞자리를 한 글자씩 맞혀 나갈 수 있고, `compare_digest` 는 ASCII 밖의 글자를 거절하기 때문입니다. 반복 시도는 가입 요청 제한(1시간 5회, 발신 주소 단위)이 막습니다.
+
+**예전에는 계정이 0개인 DB 의 첫 가입자가 자동으로 전부 받았습니다.** 배포 직후 개발자보다 먼저 가입한 사람이 모든 권한을 받는 경로라 없앴습니다.
 
 ### 권한은 이렇게 이전합니다
 
@@ -408,7 +413,7 @@ flowchart LR
 
 **같은 검사를 권한 회수에도 적용합니다. 단 남의 것을 회수할 때만입니다**(`permission_service.revoke_permission_set`). "권한 부여" 항목만 가진 사람이 마지막 보유자에게서 회수하는 경로가 추방과 같은 결과를 만듭니다. 자기 자신에게서 permission set 을 회수하는 요청(`member_id` 와 요청한 사람이 같은 요청)은 확인하지 않습니다 — 본인의 결정이고, 위 ④가 그 경로이며 그 시점에는 다음 사람이 이미 받았으므로 보유자가 0명이 되지 않습니다.
 
-**탈퇴(`DELETE /me`)에는 이 검사를 두지 않았습니다.** 같은 이유입니다 — 본인의 결정이고, 계정이 전부 사라진 DB 에는 다음 가입자가 다시 첫 가입자가 되어 모든 항목을 받습니다(`auth_service.signup`). 남이 시키는 경로(추방·남의 권한 회수)만 막습니다.
+**탈퇴(`DELETE /me`)와 자기 자신에게서 permission set 을 회수하는 요청에는 이 검사를 두지 않았습니다.** 본인의 결정이고, 되돌릴 길이 있기 때문입니다 — 관리자코드를 아는 사람이 계정을 하나 만들면 다시 전체 권한을 받고, 권한을 잃은 사람에게 permission set 을 다시 부여할 수 있습니다. 탈퇴한 본인도 같은 이메일로 재가입해 코드를 넣으면 됩니다(계정 행이 삭제되어 이메일 중복 제약이 풀립니다). 남이 시키는 경로(추방·남의 권한 회수)만 막습니다.
 
 **이 검사는 조회한 행을 잠근 상태에서 수행합니다.** 모두 활성화된 permission set 이 2개 남은 상태에서 두 요청이 각각 1개씩 같은 순간에 삭제하면, 잠그지 않을 경우 두 요청이 모두 "다른 1개가 있다" 로 통과해 0개가 됩니다. 0개가 되면 권한을 부여할 수 있는 사람이 사라지고 되돌릴 방법이 없습니다. 그래서 검사할 때 모두 활성화된 행 전체를 번호 오름차순으로 잠그고, 뒤에 도착한 요청은 앞의 요청이 끝날 때까지 기다렸다가 다시 셉니다. 기다린 요청은 남은 1개를 보고 거절(422)됩니다. 번호 순서로 잠그는 이유는 두 요청이 서로를 기다리는 상태를 만들지 않기 위해서입니다.
 
@@ -443,7 +448,7 @@ flowchart LR
 
 **저장할 수 있는 항목 이름은 DB가 다시 검증합니다.** 정의되지 않은 이름이 포함된 요청은 endpoint에서 거절하고, 그 요청이 endpoint를 통과해도 DB의 제약이 1회 더 거절합니다. 활성화는 되는데 아무 endpoint도 검증하지 않는 항목이 데이터로 생기는 상황을 2겹으로 막습니다.
 
-**어떻게 확인했나.** 첫 가입자만 20개를 전부 받고 그다음 가입자는 0개를 받는지, permission set 2개를 가진 사람의 권한이 그 합집합이 되는지, 항목 1개가 없으면 그 endpoint가 거절하는지, permission set을 회수하거나 삭제하면 권한이 함께 회수되는지, "권한 변경"을 가진 사람이 자기 permission set을 수정하고 스스로 회수할 수 있는지, 그 항목이 없으면 자기 permission set도 변경하지 못하는지, 이름이 중복되거나 정의되지 않은 항목 이름이 포함된 요청이 거절되는지, 모두 활성화된 마지막 permission set 의 삭제와 항목 비활성화가 거절되고 이름 수정은 허용되는지, 모두 활성화된 permission set 이 2개가 되면 1개를 삭제할 수 있는지, 2개를 같은 순간에 1개씩 삭제해도 1개가 남는지, 내 계정 조회가 가진 permission set 의 이름을 반환하는지를 `backend/tests/integration/db/test_permission_endpoints.py` 에 담았습니다. 화면이 그 이름을 역할 문구로 변환하는 규칙은 `frontend/src/lib/account.test.ts` 가 확인합니다. 이전 마이그레이션은 별도로, 헤드매니저였던 계정이 모두 활성화된 permission set으로 이전되는지와 되돌렸을 때 역할이 복원되는지를 확인했습니다.
+**어떻게 확인했나.** 관리자코드가 맞은 가입만 20개를 전부 받고 코드가 없거나 틀리거나 환경변수가 비어 있으면 0개로 가입하는지, permission set 2개를 가진 사람의 권한이 그 합집합이 되는지, 항목 1개가 없으면 그 endpoint가 거절하는지, permission set을 회수하거나 삭제하면 권한이 함께 회수되는지, "권한 변경"을 가진 사람이 자기 permission set을 수정하고 스스로 회수할 수 있는지, 그 항목이 없으면 자기 permission set도 변경하지 못하는지, 이름이 중복되거나 정의되지 않은 항목 이름이 포함된 요청이 거절되는지, 모두 활성화된 마지막 permission set 의 삭제와 항목 비활성화가 거절되고 이름 수정은 허용되는지, 모두 활성화된 permission set 이 2개가 되면 1개를 삭제할 수 있는지, 2개를 같은 순간에 1개씩 삭제해도 1개가 남는지, 내 계정 조회가 가진 permission set 의 이름을 반환하는지를 `backend/tests/integration/db/test_permission_endpoints.py` 에 담았습니다. 화면이 그 이름을 역할 문구로 변환하는 규칙은 `frontend/src/lib/account.test.ts` 가 확인합니다. 이전 마이그레이션은 별도로, 헤드매니저였던 계정이 모두 활성화된 permission set으로 이전되는지와 되돌렸을 때 역할이 복원되는지를 확인했습니다.
 
 ### 지금 서버가 검증하는 규칙
 

@@ -351,6 +351,10 @@ export type SignUpForm = {
   email: string;
   password: string;
   cohort: number;
+  /** 관리자코드입니다. 환경변수의 코드와 같으면 권한 항목을 모두 받습니다.
+   *  비워 두었거나 다르면 권한 0개로 가입하고 이미 권한을 가진 사람에게서 부여받습니다.
+   *  서버 쪽 정본은 backend/src/backend/services/auth_service.py 의 ADMIN_CODE_VARIABLE 입니다. */
+  admin_code?: string;
 };
 
 export async function signUp(form: SignUpForm): Promise<Account> {

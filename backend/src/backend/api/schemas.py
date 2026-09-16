@@ -427,6 +427,9 @@ class SignupIn(BaseModel):
     password: str = Field(max_length=100)
     # 기수입니다. 1981년이 1기지만 연도로 환산하지 않고 숫자를 그대로 받습니다.
     cohort: int
+    # 관리자코드입니다. 환경변수 ADMIN_SIGNUP_CODE 와 같으면 권한 항목을 모두 받습니다.
+    # 넣지 않았거나 다르면 권한 0개로 가입합니다. 틀렸다고 가입을 거절하지는 않습니다.
+    admin_code: str | None = Field(default=None, max_length=200)
 
 
 class ProfileEditIn(BaseModel):

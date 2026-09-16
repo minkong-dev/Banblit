@@ -135,6 +135,21 @@ def api_client(db_session: Session) -> Iterator[TestClient]:
 AccountFactory = Callable[[str, str], tuple[int, dict[str, str]]]
 
 
+# 테스트가 사용하는 관리자코드입니다. 실제 값은 배포마다 다르고 .env 가 정합니다.
+TEST_ADMIN_CODE = "test-admin-code"
+
+
+@pytest.fixture(autouse=True)
+def admin_code(monkeypatch: pytest.MonkeyPatch) -> str:
+    """모든 테스트에 관리자코드 환경변수를 설정하고 그 값을 반환합니다.
+
+    autouse 인 이유는 account fixture 가 첫 계정을 만들 때 이 코드를 사용하기 때문입니다.
+    환경변수를 지우는 시나리오는 테스트가 monkeypatch.delenv 로 직접 지웁니다.
+    """
+    monkeypatch.setenv("ADMIN_SIGNUP_CODE", TEST_ADMIN_CODE)
+    return TEST_ADMIN_CODE
+
+
 @pytest.fixture()
 def account(api_client: TestClient) -> AccountFactory:
     """가입을 통해 실제 계정을 생성하고, (계정 번호, 인증 cookie)를 반환합니다.
@@ -143,14 +158,18 @@ def account(api_client: TestClient) -> AccountFactory:
     클라이언트에 저장하지 않고 반환합니다. 호출마다 cookies= 매개변수로
     선택해 전달해야 나중에 생성한 계정이 앞의 계정을 덮어쓰지 않습니다.
 
-    맨 처음 가입한 사람이 헤드매니저입니다(.cluedoc/accounts-and-roles).
-    그래서 한 테스트에서 이 함수를 처음 호출한 결과가 곧 헤드매니저 계정입니다.
+    한 테스트에서 이 함수를 처음 호출한 결과가 헤드매니저 계정입니다. 첫 호출에만 관리자코드를
+    넣기 때문입니다(사용자 결정 2026-09-16). 그 뒤의 호출은 권한 0개로 가입합니다.
     """
+    made = 0
 
     def make(name: str, email: str) -> tuple[int, dict[str, str]]:
+        nonlocal made
+        made += 1
         body = api_client.post(
             "/signup",
             json={
+                **({"admin_code": TEST_ADMIN_CODE} if made == 1 else {}),
                 "name": name,
                 # 학과·학번은 사람을 구분하는 값의 일부입니다. 이메일이 계정마다 다르므로
                 # 학번도 이메일에서 생성합니다(8자리 숫자 규칙에 맞춰). 같은 이름이 2명 이상

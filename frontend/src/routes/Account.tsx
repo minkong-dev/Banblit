@@ -180,6 +180,7 @@ export function SignUp() {
       };
     },
     async (data) => {
+      const adminCode = fieldText(data, "admincode").trim();
       try {
         const account = await signUp({
           name: fieldText(data, "nm").trim(),
@@ -188,6 +189,8 @@ export function SignUp() {
           email: fieldText(data, "mail2").trim(),
           password: fieldText(data, "pw2"),
           cohort: Number(fieldText(data, "cohort")),
+          // 비워 두면 보내지 않습니다. 빈 문자열을 보내면 서버가 틀린 코드로 보고 가입을 거절합니다.
+          ...(adminCode === "" ? {} : { admin_code: adminCode }),
         });
         say(`${account.name}님, 가입이 완료되었습니다`);
         void navigate("/scheduler");
@@ -214,6 +217,11 @@ export function SignUp() {
 
       <Field name="cohort" label="기수" type="number" inputMode="numeric"
         autoComplete="off" placeholder="예: 46" error={errors.cohort} />
+
+      {/* 관리자코드는 운영을 맡은 사람만 받습니다. 넣으면 모든 권한을 가진 계정이 되고,
+          비워 두면 권한 없이 가입해 나중에 부여받습니다. */}
+      <Field name="admincode" label="관리자코드 (선택)" type="password"
+        autoComplete="off" placeholder="받으신 코드가 있을 때만 입력해주세요" error="" />
 
       <button className="go" type="submit" style={{ marginTop: 22 }} disabled={isPending}>
         {isPending ? "가입 중…" : "가입하기"}

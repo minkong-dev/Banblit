@@ -1,5 +1,6 @@
 import hashlib
 import hmac
+import os
 import secrets
 
 from sqlalchemy import select
@@ -64,14 +65,25 @@ def _needs_rehash(stored: str) -> bool:
     return (int(n_text), int(r_text), int(p_text)) != (_SCRYPT_N, _SCRYPT_R, _SCRYPT_P)
 
 
-def _is_first_account(session: Session) -> bool:
-    # 권한을 가진 사람의 수는 정해져 있지 않지만(.cluedoc/accounts-and-roles), 권한을 가진 사람이 0명이면
-    # 권한을 배정할 사람이 없습니다. 가장 먼저 가입하는 사람에게 모든 권한을 부여하면, 그다음부터는
-    # 그 사람이 다른 사람에게 권한을 배정하거나 permission set(권한 집합)을 새로 정의합니다.
-    already_signed_up = session.scalar(
-        select(Member.id).where(Member.password_hash.is_not(None))
-    )
-    return already_signed_up is None
+# 관리자코드를 담은 환경변수의 이름입니다. 값은 개발자가 정하고 .env 에 둡니다(저장소에 넣지 않습니다).
+ADMIN_CODE_VARIABLE = "ADMIN_SIGNUP_CODE"
+
+
+
+def _matches_admin_code(given: str) -> bool:
+    """가입 요청이 보낸 코드가 환경변수의 코드와 같은지 판단합니다.
+
+    환경변수가 비어 있으면 어떤 값도 통과시키지 않습니다. 비어 있는 채로 두면 코드를 빈 문자열로
+    보낸 요청이 통과해 누구나 모든 권한을 받습니다.
+
+    hmac.compare_digest 는 길이가 같은 두 값을 끝까지 비교합니다. == 는 다른 글자를 만나면 즉시
+    멈춰서, 응답 시간의 차이로 앞자리를 한 글자씩 맞혀 나갈 수 있습니다. 한글이 든 코드도 받을 수
+    있게 글자가 아니라 UTF-8 바이트로 넘깁니다 — 이 함수는 ASCII 밖의 글자를 거절합니다.
+    """
+    expected = os.environ.get(ADMIN_CODE_VARIABLE, "")
+    if expected == "":
+        return False
+    return hmac.compare_digest(given.encode(), expected.encode())
 
 
 def signup(
@@ -82,10 +94,15 @@ def signup(
     email: str,
     password: str,
     cohort: int,
+    admin_code: str | None = None,
 ) -> Member:
     """새 계정을 만듭니다. 이름 중복은 허용합니다. 이메일이 같거나 이름·학과·학번·기수가 모두 같은 계정이 있으면 거부합니다.
 
-    cohort 를 받는 이유는 동명이인 때문입니다. 화면에서 두 사람을 구분하는 유일한 값이 이름 옆의 기수이므로, 가입 시 입력받지 않으면 나중에 채울 수 없습니다."""
+    cohort 를 받는 이유는 동명이인 때문입니다. 화면에서 두 사람을 구분하는 유일한 값이 이름 옆의 기수이므로, 가입 시 입력받지 않으면 나중에 채울 수 없습니다.
+
+    admin_code 가 환경변수의 코드와 같으면 권한 항목이 모두 활성화된 permission set 을 부여합니다.
+    넣지 않았거나 다르면 권한 0개로 가입하고, 이미 권한을 가진 사람에게서 부여받습니다
+    (사용자 결정 2026-09-16). 틀린 코드로 가입을 거절하지 않습니다."""
     clean_name = require_non_empty(name, "이름")
     clean_department = require_non_empty(department, "학과")
     clean_student_no = require_student_no(student_no)
@@ -93,7 +110,6 @@ def signup(
     require_password(password)
     clean_cohort = require_cohort(cohort)
 
-    first = _is_first_account(session)
     member = Member(
         name=clean_name,
         department=clean_department,
@@ -105,9 +121,7 @@ def signup(
     session.add(member)
     # 이메일·신원 제약 위반은 아래 commit 이 아니라 이 flush 에서 감지됩니다.
     commit_translating(session, MEMBER_MESSAGES, session.flush)
-    # first 는 flush 전에 계산한 값입니다. flush 후에 _is_first_account 를 다시 호출하면 방금 추가한
-    # 계정이 포함되어 False 를 반환합니다.
-    if first:
+    if admin_code is not None and _matches_admin_code(admin_code):
         grant_full_permissions(session, member.id)
     commit_translating(session, MEMBER_MESSAGES)
     return member
