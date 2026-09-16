@@ -94,7 +94,10 @@ def save_attachment(
     저장된 파일명은 서버가 생성한 무작위 16바이트 hex 문자열 + 확장자입니다. 사용자가 입력한 파일명은 Attachment.name 열에
     표시 목적으로만 저장됩니다.
     """
-    post = require_post_author(session, post_id, requester)
+    # 업로드는 그 글의 작성자만 합니다(.cluedoc/boards). board_moderate 는 남의 글을 삭제·블라인드하는
+    # 권한이지 파일을 붙이는 권한이 아니고, 그 권한자는 팀 소속도 확인하지 않아 막지 않으면 어느 팀의
+    # 어느 글에도 붙일 수 있습니다.
+    post = require_post_author(session, post_id, requester, allow_moderator=False)
     name = _display_name(filename)
     extension = _allowed_extension(name)
 

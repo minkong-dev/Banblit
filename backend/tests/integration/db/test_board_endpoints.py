@@ -643,3 +643,127 @@ def test_the_author_can_delete_their_own_comment(
 
     assert api_client.delete(f"/comments/{comment_id}", cookies=head).status_code == 204
     assert db_session.get(Comment, comment_id) is None
+
+
+# ===== 블라인드 =====
+# 블라인드는 글을 지우지 않고 목록과 상세에서 완전히 가립니다. 댓글은 글에 딸린 것이라 함께 가려집니다.
+# 가리는 사람과 되돌리는 사람은 board_moderate 를 가진 사람뿐입니다.
+
+
+def test_a_blinded_post_disappears_for_its_own_author(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """작성자 본인도 볼 수 없습니다. 글 전체를 격리하는 것이 목적이라 예외를 두지 않습니다."""
+    _, head = account("박서연", "head@example.com")
+    post_id = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()["post"]["id"]
+
+    blinded = api_client.put(f"/posts/{post_id}/blind", cookies=head)
+
+    assert blinded.status_code == 204
+    assert api_client.get("/notices", cookies=head).json()["posts"] == []
+    assert api_client.get(f"/posts/{post_id}", cookies=head).status_code == 422
+
+
+def test_blinding_needs_the_moderate_permission(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    _, other = account("이도현", "member@example.com")
+    post_id = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()["post"]["id"]
+
+    response = api_client.put(f"/posts/{post_id}/blind", cookies=other)
+
+    assert response.status_code == 403
+    assert len(api_client.get("/notices", cookies=other).json()["posts"]) == 1
+
+
+def test_a_blinded_post_comes_back_when_the_blind_is_lifted(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    post_id = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()["post"]["id"]
+    api_client.put(f"/posts/{post_id}/blind", cookies=head)
+
+    lifted = api_client.delete(f"/posts/{post_id}/blind", cookies=head)
+
+    assert lifted.status_code == 204
+    assert [p["id"] for p in api_client.get("/notices", cookies=head).json()["posts"]] == [post_id]
+
+
+def test_only_a_moderator_reads_the_blinded_list(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """격리된 글은 이 목록에서만 보입니다. 판단에 필요한 제목·본문이 함께 반환됩니다."""
+    _, head = account("박서연", "head@example.com")
+    _, other = account("이도현", "member@example.com")
+    post_id = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()["post"]["id"]
+    api_client.put(f"/posts/{post_id}/blind", cookies=head)
+
+    mine = api_client.get("/blinded-posts", cookies=head)
+
+    assert api_client.get("/blinded-posts", cookies=other).status_code == 403
+    assert mine.status_code == 200
+    assert [(p["id"], p["title"]) for p in mine.json()["posts"]] == [(post_id, "공지")]
+
+
+def test_the_blinded_list_shows_who_blinded_each_post(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """권한자가 여럿일 때 누가 가렸는지 사후에 확인할 수 있어야 합니다. 해제하면 그 기록도 함께 비웁니다."""
+    _, head = account("박서연", "head@example.com")
+    post_id = api_client.post(
+        "/notices", json={"title": "공지", "body": "본문"}, cookies=head
+    ).json()["post"]["id"]
+
+    api_client.put(f"/posts/{post_id}/blind", cookies=head)
+    blinded = api_client.get("/blinded-posts", cookies=head).json()["posts"][0]
+    api_client.delete(f"/posts/{post_id}/blind", cookies=head)
+    back = api_client.get("/notices", cookies=head).json()["posts"][0]
+
+    assert blinded["blinded_by"] == "박서연"
+    assert back["blinded_by"] is None
+
+
+def test_a_moderator_cannot_edit_someone_elses_post(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """board_moderate 는 삭제와 블라인드까지입니다. 남의 글 내용을 고치는 것은 허용하지 않습니다."""
+    _, head = account("박서연", "head@example.com")
+    member_id, member = account("이도현", "member@example.com")
+    team = _team(db_session, "밴드")
+    _join(db_session, member_id, team)
+    db_session.commit()
+    post_id = api_client.post(
+        f"/teams/{team.id}/posts", json={"title": "글", "body": "본문"}, cookies=member
+    ).json()["post"]["id"]
+
+    response = api_client.patch(
+        f"/posts/{post_id}", json={"title": "고친 제목", "body": "본문"}, cookies=head
+    )
+
+    assert response.status_code == 403
+
+
+def test_a_moderator_still_deletes_someone_elses_post(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account("박서연", "head@example.com")
+    member_id, member = account("이도현", "member@example.com")
+    team = _team(db_session, "밴드")
+    _join(db_session, member_id, team)
+    db_session.commit()
+    post_id = api_client.post(
+        f"/teams/{team.id}/posts", json={"title": "글", "body": "본문"}, cookies=member
+    ).json()["post"]["id"]
+
+    response = api_client.delete(f"/posts/{post_id}", cookies=head)
+
+    assert response.status_code == 204

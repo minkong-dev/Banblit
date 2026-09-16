@@ -291,6 +291,8 @@ class PostOut(BaseModel):
     author: str
     created_at: str
     comment_count: int
+    # 가린 사람의 이름입니다. 가려지지 않은 글은 언제나 None 이라, 값이 차는 곳은 격리 목록뿐입니다.
+    blinded_by: str | None = None
 
 
 class PostsOut(BaseModel):
