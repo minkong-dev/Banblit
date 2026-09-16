@@ -55,3 +55,25 @@ body[data-page="board"] {
   .commentform label { font-size: 12.5px; color: var(--t3); }
   .commentform textarea { min-height: 72px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--card); color: var(--t1); font: inherit; letter-spacing: inherit; resize: vertical; }
 }
+
+/* ===== 서식 있는 본문 =====
+   components/RichText.tsx 의 편집기와 읽기 화면입니다. 편집기 테두리는 다른 입력칸과 같은 값입니다. */
+.rt { display: flex; flex-direction: column; border: 1px solid var(--line-2); border-radius: 10px; background: var(--card); overflow: hidden; }
+.rt.off { background: var(--card-2); }
+.rttools { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); background: var(--card-2); }
+.rttools button, .rttools select { min-height: 32px; padding: 4px 10px; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--t2); font: inherit; font-size: 13px; }
+.rttools button:hover:not(:disabled), .rttools select:hover:not(:disabled) { background: var(--card); color: var(--t1); }
+.rttools button[aria-pressed="true"] { background: var(--brand-tint); color: var(--brand-press); border-color: var(--brand); }
+.rttools button:disabled, .rttools select:disabled { color: var(--t3); }
+.rtbody { min-height: 160px; padding: 12px; outline: none; font-size: 14px; line-height: 1.7; }
+.rtbody:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
+.rtbody p { margin: 0 0 10px; }
+.rtbody p:last-child { margin-bottom: 0; }
+/* 본문에 넣은 그림이 칸을 넘지 않게 합니다. 넘으면 화면 전체가 가로로 밀립니다. */
+.rtbody img, .rtview img { max-width: 100%; height: auto; border-radius: 8px; }
+.rtview { font-size: 14px; line-height: 1.7; color: var(--t1); overflow-wrap: anywhere; }
+.rtview p { margin: 0 0 10px; }
+.rtview p:last-child { margin-bottom: 0; }
+.rtview a { color: var(--brand-press); text-decoration: underline; }
+.rtview blockquote { margin: 0 0 10px; padding-left: 12px; border-left: 3px solid var(--line-2); color: var(--t2); }
+.rtview pre, .rtbody pre { padding: 10px; border-radius: 8px; background: var(--card-2); overflow-x: auto; }

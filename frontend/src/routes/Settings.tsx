@@ -226,7 +226,7 @@ function SlotUnitCard({ canEdit, onSaved }: { canEdit: boolean; onSaved: () => v
             invalid={why !== ""}
             describedBy={why === "" ? undefined : "slotUnitWhy"}
             choices={SLOT_MINUTE_CHOICES.map((minutes) => ({
-              value: minutes as number,
+              value: minutes,
               label: slotMinutesLabel(minutes),
             }))}
             onChange={(next) => save.mutate(next)}
@@ -307,8 +307,8 @@ function PeriodFields(props: {
           describedBy={bad === "" ? undefined : whyId}
           value={form.kind}
           choices={[
-            { value: "focused" as Period["kind"], label: "집중 합주" },
-            { value: "open" as Period["kind"], label: "상시 개방" },
+            { value: "focused", label: "집중 합주" },
+            { value: "open", label: "상시 개방" },
           ]}
           onChange={(next) => setForm({ ...form, kind: next })}
         />
