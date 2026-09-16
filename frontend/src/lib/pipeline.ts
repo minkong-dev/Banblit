@@ -294,6 +294,17 @@ export async function removeUnavailable(memberId: number, timeId: number): Promi
   await getJSON(`/members/${memberId}/unavailable/${timeId}`, { method: "DELETE" });
 }
 
+/** 점유 단위(칸 하나의 크기, 분)를 변경합니다. room_edit 권한이 필요합니다.
+ *  이미 저장된 예약과 배정은 그대로 남습니다. 단위를 늘리면 새 격자에 맞지 않는 기존 행이 남지만,
+ *  지우면 사람들의 예약이 말없이 사라집니다(services/settings_service.py 의 set_slot_minutes). */
+export async function saveSlotMinutes(minutes: number): Promise<number> {
+  const body = await getJSON<{ slot_minutes: number }>("/settings", {
+    method: "PATCH",
+    body: JSON.stringify({ slot_minutes: minutes }),
+  });
+  return body.slot_minutes;
+}
+
 /** 멤버를 추방합니다. 서버는 계정을 삭제하므로 그 멤버의 글·댓글·예약도 함께 삭제됩니다(사용자 결정 2026-09-14). member_expel 권한이 필요합니다. */
 export async function expelMember(memberId: number): Promise<void> {
   await getJSON(`/members/${memberId}`, { method: "DELETE" });

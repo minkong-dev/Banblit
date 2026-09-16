@@ -10,6 +10,15 @@ import { uniqueNameMessage } from "./validate";
 const DEFAULT_SLOT_MINUTES = 60;
 const MINUTES_PER_HOUR = 60;
 
+/** 점유 단위로 고를 수 있는 값(분)입니다. 한 시간을 나머지 없이 나누는 값만 둡니다.
+ *  서버 정본은 backend/src/backend/api/schemas.py 의 SettingsUpdateIn 과 settings 의 CHECK 입니다. */
+export const SLOT_MINUTE_CHOICES = [5, 10, 12, 15, 20, 30, 60] as const;
+
+/** 선택지에 표시할 문구입니다. 60분은 "1시간" 이 자연스럽습니다. */
+export function slotMinutesLabel(minutes: number): string {
+  return minutes === MINUTES_PER_HOUR ? "1시간" : `${minutes}분`;
+}
+
 /** "18:30"을 자정부터의 분으로 변환합니다. 형식이 맞지 않으면 null입니다. */
 function minutesOf(hhmm: string): number | null {
   const parts = /^([01][0-9]|2[0-3]):([0-5][0-9])$/.exec(hhmm);

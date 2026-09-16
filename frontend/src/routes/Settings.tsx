@@ -12,7 +12,9 @@ import type { LoadState } from "../lib/loading";
 import { say } from "../lib/toast";
 import {
   checkEnsemble, checkPeriod, checkRoom, dayLabel, daysBetween, openingHours, periodBody, savePeriod,
+  saveSlotMinutes,
 } from "../lib/pipeline";
+import { SLOT_MINUTE_CHOICES, slotMinutesLabel } from "../lib/settings";
 import type { PeriodBody } from "../lib/pipeline";
 import { EnsembleDays, EnsembleFields, ensembleBody, ensembleDraft } from "./SettingsEnsemble";
 import { useMe, usePeriods, useRooms, useSlotMinutes, useTeams } from "../components/queries";
@@ -150,13 +152,19 @@ export function Settings() {
 
       <div className="main">
         {shown === "rooms" ? (
-          <RoomCard
-            rooms={roomList}
-            state={loadState(rooms)}
-            canEdit={can(me, "room_edit")}
-            canCreate={can(me, "room_create")}
-            onSaved={saved("rooms", "합주실 정보를 등록했어요.")}
-          />
+          <>
+            <RoomCard
+              rooms={roomList}
+              state={loadState(rooms)}
+              canEdit={can(me, "room_edit")}
+              canCreate={can(me, "room_create")}
+              onSaved={saved("rooms", "합주실 정보를 등록했어요.")}
+            />
+            <SlotUnitCard
+              canEdit={can(me, "room_edit")}
+              onSaved={saved("settings", "점유 단위를 변경했어요.")}
+            />
+          </>
         ) : shown === "periods" ? (
           <PeriodCard
             periods={periodList}
@@ -191,6 +199,41 @@ export function Settings() {
         </div>
       )}
     </AppShell>
+  );
+}
+
+/** 점유 단위(칸 하나의 크기)를 변경하는 카드입니다. 합주실 운영을 맡은 사람의 설정이라 합주실 탭에 둡니다.
+ *  권한(room_edit)이 없으면 현재 값만 표시합니다. 변경해도 이미 저장된 예약과 배정은 그대로 남습니다. */
+function SlotUnitCard({ canEdit, onSaved }: { canEdit: boolean; onSaved: () => void }) {
+  const slotMinutes = useSlotMinutes();
+  const [why, setWhy] = useState("");
+  const save = useMutation({
+    mutationFn: saveSlotMinutes,
+    onSuccess: () => { setWhy(""); onSaved(); },
+    onError: (error: unknown) => setWhy(reason(error)),
+  });
+
+  return (
+    <Card>
+      <SectionHead title="점유 단위" desc="변경해도 등록된 예약과 배정은 그대로 남아요" />
+      <div className="fields">
+        <Cell label="단위" htmlFor="slotUnit">
+          <select
+            id="slotUnit"
+            value={slotMinutes}
+            disabled={!canEdit || save.isPending}
+            aria-invalid={why !== ""}
+            aria-describedby={why === "" ? undefined : "slotUnitWhy"}
+            onChange={(event) => save.mutate(Number(event.target.value))}
+          >
+            {SLOT_MINUTE_CHOICES.map((minutes) => (
+              <option value={minutes} key={minutes}>{slotMinutesLabel(minutes)}</option>
+            ))}
+          </select>
+        </Cell>
+        {why === "" ? null : <p className="why" id="slotUnitWhy" role="alert">{why}</p>}
+      </div>
+    </Card>
   );
 }
 
