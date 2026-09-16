@@ -383,6 +383,27 @@ docker compose run --rm dev alembic revision --autogenerate -m "<제목>"
   - 자동 생성된 파일은 초안일 뿐입니다. 실행하기 전에 반드시 내용을 읽고, 기본값 데이터를 추가해야 하는 경우(예: `positions` 기본 5종)는 `upgrade()` 끝에 `op.bulk_insert`를 직접 추가해야 합니다.
   - 생성만 하고 적용은 되지 않습니다. 적용하려면 `4-2`의 `alembic upgrade head`를 이어서 실행해야 합니다.
 
+### 4-3-1. 마이그레이션을 통합한 뒤 스키마가 같은지 확인하기
+
+```
+docker compose exec -T db sh -c 'psql -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE squash_check;"'
+docker compose run --rm dev sh -c 'DATABASE_URL="${DATABASE_URL%/*}/squash_check" alembic upgrade head'
+docker compose exec -T db sh -c 'pg_dump --schema-only --no-owner --no-privileges -U "$POSTGRES_USER" squash_check' > after.sql
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: 마이그레이션 여러 개를 하나로 합친 뒤, 합치기 전과 후의 DB 구조가 같은지 확인합니다. 빈 DB 를 새로 만들어 적용하고 그 구조를 파일로 뽑아, 합치기 전 파일과 `diff` 로 비교합니다. 2026-09-16 에 36개를 1개로 통합할 때 이 방법으로 확인했습니다.
+- **옵션**
+  - `exec -T db` — 이미 실행 중인 db container 안에서 명령을 실행합니다. `-T` 는 터미널을 붙이지 않는다는 뜻으로, 출력을 파일로 보낼 때 필요합니다.
+  - `DATABASE_URL="${DATABASE_URL%/*}/squash_check"` — container 안의 기존 접속 주소에서 맨 뒤 DB 이름만 교체합니다. `${변수%/*}` 는 마지막 `/` 뒤를 잘라내는 셸 문법입니다. 이렇게 하면 비밀번호를 명령줄에 적지 않아도 됩니다.
+  - `pg_dump --schema-only` — 데이터를 빼고 구조만 출력합니다. 생략하면 행 내용까지 나와 비교할 수 없습니다.
+  - `--no-owner --no-privileges` — 소유자와 권한 부여 구문을 빼고 출력합니다. 이 둘은 DB 를 만든 계정에 따라 달라져, 빼지 않으면 구조가 같아도 차이로 표시됩니다.
+- **주의점**
+  - **비교 전에 `\restrict`·`\unrestrict` 로 시작하는 줄을 제외해야 합니다.** pg_dump 가 실행할 때마다 무작위 토큰을 넣는 줄이라 항상 다르게 나옵니다.
+  - **열 정의 순서와 배열 원소 순서는 달라도 됩니다.** 합치기 전에는 `ALTER TABLE ADD COLUMN` 으로 열이 하나씩 붙어 순서가 생겼고, 합친 뒤에는 한 번에 만들어져 순서가 다릅니다. 동작에는 영향이 없습니다. 순서까지 무시하고 비교하려면 두 파일을 `sort` 한 뒤 `diff` 합니다.
+  - **autogenerate 는 초기 데이터를 만들지 않습니다.** `settings` 한 행과 permission set 한 행이 빠져 테스트 86개가 실패한 적이 있습니다. 구조 비교만으로는 잡히지 않으므로 행 수도 함께 확인합니다.
+  - 확인이 끝나면 `DROP DATABASE squash_check` 로 정리합니다. 남겨 두면 다음 확인에서 이미 있다는 오류가 납니다.
+
 ### 4-4. DB 내용을 직접 확인하기 (psql)
 
 ```
