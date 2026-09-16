@@ -105,7 +105,11 @@ class Settings(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     # 예약과 배정이 쓰는 시간 칸의 크기입니다. 한 시간을 남김없이 나누어야 격자가 고르게
     # 떨어지므로 60 의 약수만 받습니다.
-    slot_minutes: Mapped[int] = mapped_column(default=DEFAULT_SLOT_MINUTES)
+    # server_default 는 DB 가 적용하는 기본값입니다. default 만 두면 이 프로그램을 거치지 않는
+    # INSERT(psql, migration)에서 값이 비어 NOT NULL 에 걸립니다.
+    slot_minutes: Mapped[int] = mapped_column(
+        default=DEFAULT_SLOT_MINUTES, server_default=text(str(DEFAULT_SLOT_MINUTES))
+    )
 
     __table_args__ = (
         CheckConstraint("id = 1"),
@@ -165,7 +169,7 @@ class PermissionSet(Base):
     # <@ 는 왼쪽 배열이 오른쪽 배열에 전부 들어 있는지 보는 연산자입니다. Permission 에
     # 없는 이름이 하나라도 섞이면 거절합니다.
     __table_args__ = (
-        CheckConstraint(f"permissions <@ {_PERMISSION_ARRAY_SQL}"),
+        CheckConstraint(f"permissions <@ {_PERMISSION_ARRAY_SQL}", name="permission_sets_permissions_valid"),
     )
 
 
@@ -290,7 +294,7 @@ class Room(Base):
             "date_part('minute', closes_at) = 0"
             " AND date_part('second', closes_at) = 0"
         ),
-        CheckConstraint("closes_at > opens_at"),
+        CheckConstraint("closes_at > opens_at", name="rooms_closes_after_opens"),
     )
 
 
@@ -479,7 +483,7 @@ class Comment(Base):
     )
     created_at: Mapped[datetime] = mapped_column(DateTime)
 
-    __table_args__ = (CheckConstraint("length(trim(body)) > 0"),)
+    __table_args__ = (CheckConstraint("length(trim(body)) > 0", name="comments_body_not_blank"),)
 
 
 class Attachment(Base):
