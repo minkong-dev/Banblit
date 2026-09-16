@@ -20,8 +20,9 @@ export function NoticeWrite() {
       current="notice"
       title="공지 작성"
       hint="전체에게 보입니다"
-      writePath="/notices"
+      draftPath="/notices/drafts"
       listPath="/notices"
+      listKey="/notices"
       authorId={me?.id ?? null}
       allowed={can(me, "notice_write")}
       denied="공지 작성 권한이 있는 사람만 작성이 가능해요."
@@ -41,8 +42,9 @@ export function BoardWrite() {
       current="board"
       title={team === undefined ? "글 작성" : `${team.name} 글 작성`}
       hint="해당 팀에 소속된 멤버만 볼 수 있어요"
-      writePath={`/teams/${teamId ?? ""}/posts`}
+      draftPath={`/teams/${teamId ?? ""}/posts/drafts`}
       listPath="/board"
+      listKey={`/teams/${teamId ?? ""}/posts`}
       authorId={me?.id ?? null}
       allowed={team !== undefined}
       denied="이 팀에 소속된 멤버만 쓸 수 있어요."
@@ -51,14 +53,17 @@ export function BoardWrite() {
 }
 
 /** 두 화면의 공통 뼈대입니다. 쓸 수 없는 사람에게는 사유만 표시하고 form 을 그리지 않습니다. */
-function WritePage({ current, title, hint, writePath, listPath, authorId, allowed, denied }: {
+function WritePage({ current, title, hint, draftPath, listPath, listKey, authorId, allowed, denied }: {
   /** 사이드바에서 어느 메뉴를 고른 상태로 표시할지입니다. */
   current: NavKey;
   title: string;
   hint: string;
-  writePath: string;
+  /** 초안을 만드는 주소입니다. */
+  draftPath: string;
   /** 작성을 마치거나 취소했을 때 돌아갈 목록 주소입니다. */
   listPath: string;
+  /** 목록 화면이 조회에 사용하는 주소입니다. 돌아갔을 때 방금 쓴 글이 보이게 같은 값을 씁니다. */
+  listKey: string;
   authorId: number | null;
   allowed: boolean;
   denied: string;
@@ -78,12 +83,12 @@ function WritePage({ current, title, hint, writePath, listPath, authorId, allowe
             <div className="empty">{denied}</div>
           ) : (
             <WriteForm
-              writePath={writePath}
+              draftPath={draftPath}
               authorId={authorId}
               writeNote=""
               // 목록 화면이 사용하는 queryKey 와 같아야 합니다. 다르면 돌아갔을 때
               // 방금 쓴 글이 없는 목록이 보입니다(PostBoard 의 queryKey 는 ["board", listPath]).
-              queryKey={["board", writePath]}
+              queryKey={["board", listKey]}
               onDone={toList}
               onCancel={toList}
             />
