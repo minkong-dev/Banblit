@@ -11,6 +11,11 @@ import type { Choice } from "../lib/dropdown";
 /** 고른 값과 선택지를 받아 목록을 그립니다. id 는 label 의 htmlFor 가 가리키는 버튼의 id 입니다.
  *  곁에 label 이 없는 자리에서는 id 대신 ariaLabel 로 이름을 답니다. 둘 중 하나는 있어야 합니다.
  *  value 가 선택지에 없으면 버튼에 placeholder 를 표시합니다. */
+/** 선택지 하나의 id 입니다. aria-activedescendant 가 이 값으로 커서 위치를 가리킵니다. */
+function optionId(id: string | undefined, index: number): string {
+  return `${id ?? "dd"}-opt-${index}`;
+}
+
 export function Dropdown<T extends string | number>({
   id, ariaLabel, value, choices, onChange, disabled = false, placeholder = "선택해주세요",
   invalid = false, describedBy, buttonRef, className,
@@ -33,10 +38,11 @@ export function Dropdown<T extends string | number>({
   const list = useRef<HTMLUListElement>(null);
   const picked = choices.find((choice) => choice.value === value);
 
-  // 목록을 연 순간의 커서 위치를 잡습니다. 지금 고른 값이 있으면 그 자리입니다.
-  useEffect(() => {
-    if (open) setAt(openAt(choices, value));
-  }, [open, choices, value]);
+  /** 목록을 엽니다. 여는 순간의 커서는 지금 고른 값의 자리입니다. */
+  function show(): void {
+    setAt(openAt(choices, value));
+    setOpen(true);
+  }
 
   // 커서가 목록 밖으로 나가면 그 칸이 보이도록 스크롤합니다. 목록이 길면 화면 밖에 있습니다.
   useEffect(() => {
@@ -49,14 +55,14 @@ export function Dropdown<T extends string | number>({
     setOpen(false);
   }
 
-  function onKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+  function onKeyDown(event: KeyboardEvent<HTMLButtonElement>): void {
     if (disabled) return;
     const keys = ["ArrowDown", "ArrowUp", "Enter", " "];
     if (!open) {
       // 닫힌 상태에서 이 키들은 목록을 엽니다. 기본 select 와 같은 동작입니다.
       if (keys.includes(event.key)) {
         event.preventDefault();
-        setOpen(true);
+        show();
       }
       return;
     }
@@ -83,19 +89,21 @@ export function Dropdown<T extends string | number>({
   }
 
   return (
-    <div className="dd" ref={box} onKeyDown={onKeyDown}>
+    <div className="dd" ref={box}>
       <button
         type="button"
         id={id}
         ref={buttonRef}
-        className={className === undefined ? "ddbtn" : `ddbtn ${className}`}
+        className={[("ddbtn"), className, invalid ? "bad" : ""].filter(Boolean).join(" ")}
         aria-label={ariaLabel}
         disabled={disabled}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-invalid={invalid}
         aria-describedby={describedBy}
-        onClick={() => setOpen(!open)}
+        // 목록의 커서를 버튼에 붙여 알립니다. 초점은 버튼에 그대로 있고 커서만 목록 안에서 움직입니다.
+        aria-activedescendant={open && at >= 0 ? optionId(id, at) : undefined}
+        onKeyDown={onKeyDown}
+        onClick={() => { if (open) setOpen(false); else show(); }}
       >
         <span className={picked === undefined ? "ddempty" : undefined}>
           {picked?.label ?? placeholder}
@@ -108,8 +116,12 @@ export function Dropdown<T extends string | number>({
       {!open ? null : (
         <ul className="ddlist" role="listbox" aria-label={ariaLabel} aria-labelledby={id} ref={list}>
           {choices.map((choice, index) => (
+            // 목록의 초점은 버튼에 있고 키 입력도 버튼이 받습니다(aria-activedescendant).
+            // 그래서 이 줄에는 누를 때의 처리만 두고, 키보드 처리는 두지 않습니다.
+            // eslint-disable-next-line jsx-a11y/click-events-have-key-events
             <li
               key={String(choice.value)}
+              id={optionId(id, index)}
               role="option"
               aria-selected={choice.value === value}
               aria-disabled={choice.disabled === true}

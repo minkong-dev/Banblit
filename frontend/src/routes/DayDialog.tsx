@@ -211,9 +211,9 @@ export function DayDialog({
           id="offRepeat"
           value={repeat}
           choices={[
-            { value: "none" as RepeatCycle, label: "반복 없음" },
-            { value: "daily" as RepeatCycle, label: "매일" },
-            { value: "weekly" as RepeatCycle, label: `매주 ${dayName.split(" ").at(-1)}마다` },
+            { value: "none", label: "반복 없음" },
+            { value: "daily", label: "매일" },
+            { value: "weekly", label: `매주 ${dayName.split(" ").at(-1)}마다` },
           ]}
           onChange={setRepeat}
         />

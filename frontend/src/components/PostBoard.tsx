@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 
+import { RichText, RichTextView } from "./RichText";
 import { apiUrl, reason } from "../lib/api";
 import { formError, loadState, stateText } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
@@ -212,13 +213,14 @@ function WriteForm(props: {
         </label>
         <label className="wide" htmlFor="postBody">
           내용
-          <textarea
+          <RichText
             id="postBody"
+            label="내용"
             value={body}
             disabled={send.isPending || postedId !== null}
-            aria-invalid={bad !== ""}
-            aria-describedby={bad === "" ? undefined : "postWhy"}
-            onChange={(event) => { setTouched(true); setBody(event.target.value); }}
+            invalid={bad !== ""}
+            describedBy={bad === "" ? undefined : "postWhy"}
+            onChange={(next) => { setTouched(true); setBody(next); }}
           />
         </label>
         <label className="wide" htmlFor="postFiles">
@@ -240,9 +242,14 @@ function WriteForm(props: {
         </label>
       </div>
       {files.length === 0 ? null : (
-        <p className="note">
-          {files.map((file) => `${file.name} ${fileSizeLabel(file.size)}`).join(", ")}
-        </p>
+        <div className="comments">
+          <p className="cap2">첨부파일 {files.length}개</p>
+          <ul>
+            {files.map((file) => (
+              <AttachmentRow key={file.name} name={file.name} size={file.size} />
+            ))}
+          </ul>
+        </div>
       )}
       <div className="acts">
         <button className="btn go" type="submit" disabled={send.isPending || authorId === null}>
@@ -289,12 +296,13 @@ function CommentForm(props: { postId: number; authorId: number | null }) {
       }}
     >
       <label htmlFor="commentBody">댓글 쓰기</label>
-      <textarea
+      <RichText
         id="commentBody"
+        label="댓글 쓰기"
         value={body}
-        aria-invalid={bad !== ""}
-        aria-describedby={bad === "" ? undefined : "commentWhy"}
-        onChange={(event) => { setTouched(true); setBody(event.target.value); }}
+        invalid={bad !== ""}
+        describedBy={bad === "" ? undefined : "commentWhy"}
+        onChange={(next) => { setTouched(true); setBody(next); }}
       />
       <div className="acts">
         <button className="btn go" type="submit" disabled={send.isPending || authorId === null}>
@@ -309,6 +317,24 @@ function CommentForm(props: { postId: number; authorId: number | null }) {
 /** 글에 붙은 파일들을 나열합니다. 이름을 누르면 다운로드하고, 글을 삭제할 권한이 있는 사용자에게만
  *  "삭제" 버튼이 표시됩니다. attachment 는 작성자 정보를 따로 저장하지 않으므로,
  *  글의 작성자를 기준으로 판정합니다(서버도 같습니다). */
+/** 첨부파일 목록의 한 줄입니다. 등록 전(고른 파일)과 등록 후(저장된 파일)가 같은 모양을 씁니다.
+ *  href 가 있으면 이름이 다운로드 링크가 됩니다. 등록 전에는 받을 주소가 없어 넘기지 않습니다. */
+function AttachmentRow({ name, size, href, action }: {
+  name: string;
+  size: number;
+  href?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <li className="comment">
+      {href === undefined ? <span>{name}</span> : <a href={href} download={name}>{name}</a>}
+      {" "}
+      <span className="meta">{fileSizeLabel(size)}</span>
+      {action === undefined ? null : <>{" "}{action}</>}
+    </li>
+  );
+}
+
 function AttachmentList(props: {
   postId: number;
   attachments: Attachment[];
@@ -333,28 +359,27 @@ function AttachmentList(props: {
       <p className="cap2">첨부파일 {attachments.length}개</p>
       <ul>
         {attachments.map((file) => (
-          <li key={file.id} className="comment">
-            {/* download attribute(속성)를 붙이면 브라우저가 파일을 inline(화면에 표시)하지 않고 다운로드합니다. */}
-            <a href={apiUrl(`/attachments/${file.id}`)} download={file.name}>{file.name}</a>
-            {" "}
-            <span className="meta">{fileSizeLabel(file.size)}</span>
-            {!canRemove ? null : (
-              <>
-                {" "}
-                <button
-                  className="btn"
-                  type="button"
-                  // 각 줄의 버튼 텍스트가 모두 "삭제"로 같으므로, 스크린 리더 사용자를 위해
-                  // aria-label 에 파일명을 붙여 어느 파일의 삭제 버튼인지 명확하게 합니다.
-                  aria-label={`${file.name} 삭제`}
-                  disabled={remove.isPending}
-                  onClick={() => remove.mutate(file.id)}
-                >
-                  삭제
-                </button>
-              </>
+          <AttachmentRow
+            key={file.id}
+            name={file.name}
+            size={file.size}
+            // download attribute(속성)를 붙이면 브라우저가 파일을 inline(화면에 표시)하지 않고 다운로드합니다.
+            // 이 주소는 받을 권한이 있는 사람에게만 표시합니다.
+            href={apiUrl(`/attachments/${file.id}`)}
+            action={!canRemove ? undefined : (
+              <button
+                className="btn"
+                type="button"
+                // 각 줄의 버튼 텍스트가 모두 "삭제"로 같으므로, 스크린 리더 사용자를 위해
+                // aria-label 에 파일명을 붙여 어느 파일의 삭제 버튼인지 명확하게 합니다.
+                aria-label={`${file.name} 삭제`}
+                disabled={remove.isPending}
+                onClick={() => remove.mutate(file.id)}
+              >
+                삭제
+              </button>
             )}
-          </li>
+          />
         ))}
       </ul>
       {remove.error ? <p className="why" role="alert">{reason(remove.error)}</p> : null}
@@ -460,7 +485,7 @@ function EditPost(props: {
     mutationFn: () =>
       getJSON<{ post: Post }>(`/posts/${post.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ title: title.trim(), body: body.trim() }),
+        body: JSON.stringify({ title: title.trim(), body }),
       }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: listKey });
@@ -496,8 +521,7 @@ function EditPost(props: {
         </label>
         <label className="wide" htmlFor="editBody">
           내용
-          <textarea id="editBody" value={body}
-            onChange={(event) => setBody(event.target.value)} />
+          <RichText id="editBody" label="내용" value={body} onChange={setBody} />
         </label>
       </div>
       {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
@@ -527,7 +551,7 @@ function CommentRow(props: {
     mutationFn: () =>
       getJSON<{ comment: PostComment }>(`/comments/${comment.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ body: body.trim() }),
+        body: JSON.stringify({ body }),
       }),
     onSuccess: () => { setEditing(false); refresh(); say("댓글을 수정했어요."); },
     onError: (error) => setBad(reason(error)),
@@ -542,7 +566,7 @@ function CommentRow(props: {
   return (
     <li className="comment">
       <span className="meta">{comment.author} · {stampLabel(comment.created_at)}</span>
-      <p>{comment.body}</p>
+      <RichTextView html={comment.body} />
       {!canEdit && !canDelete ? null : (
         <span className="acts">
           {!canEdit ? null : (
@@ -580,8 +604,7 @@ function CommentRow(props: {
           <div className="fields">
             <label className="wide" htmlFor="editComment">
               댓글
-              <textarea id="editComment" autoFocus value={body}
-                onChange={(event) => setBody(event.target.value)} />
+              <RichText id="editComment" label="댓글" value={body} onChange={setBody} />
             </label>
           </div>
           {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
@@ -638,7 +661,7 @@ function PostDetail(props: {
       </div>
       <h2 tabIndex={-1} ref={heading}>{post.title}</h2>
       <p className="meta">{post.author} · {stampLabel(post.created_at)}</p>
-      <p className="threadbody">{post.body}</p>
+      <div className="threadbody"><RichTextView html={post.body} /></div>
 
       <AttachmentList
         postId={post.id}

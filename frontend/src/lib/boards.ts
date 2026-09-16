@@ -1,6 +1,8 @@
 // 글과 댓글 작성의 검증과 표시입니다. 화면이나 서버와 상호작용하지 않습니다.
 // 검증 함수는 값이 유효하면 빈 문자열을, 아니면 사람이 읽을 수 있는 사유를 반환합니다.
 
+import { hasContent, textOf } from "./richText";
+
 const TITLE_MAX = 200;
 const BODY_MAX = 20000;
 const COMMENT_MAX = 2000;
@@ -10,14 +12,16 @@ export function titleMessage(title: string): string {
   return title.length > TITLE_MAX ? `제목은 ${TITLE_MAX}자 이내로 작성해주세요.` : "";
 }
 
+// 본문은 편집기가 만든 HTML 입니다. 비어 있어도 "<p></p>" 가 들어오므로 trim 으로는 걸러지지 않고,
+// 글자 수도 태그를 걷어낸 뒤에 세야 굵게 표시한 글이 먼저 상한에 걸리지 않습니다.
 export function bodyMessage(body: string): string {
-  if (!body.trim()) return "내용을 입력해주세요.";
-  return body.length > BODY_MAX ? `내용은 ${BODY_MAX}자 이내로 작성해주세요.` : "";
+  if (!hasContent(body)) return "내용을 입력해주세요.";
+  return textOf(body).length > BODY_MAX ? `내용은 ${BODY_MAX}자 이내로 작성해주세요.` : "";
 }
 
 export function commentMessage(body: string): string {
-  if (!body.trim()) return "댓글을 입력해주세요.";
-  return body.length > COMMENT_MAX ? `댓글은 ${COMMENT_MAX}자 이내로 작성해주세요.` : "";
+  if (!hasContent(body)) return "댓글을 입력해주세요.";
+  return textOf(body).length > COMMENT_MAX ? `댓글은 ${COMMENT_MAX}자 이내로 작성해주세요.` : "";
 }
 
 // ===== 첨부파일 =====
