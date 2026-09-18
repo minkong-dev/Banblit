@@ -274,7 +274,30 @@
 | dev DB 에 남아 있던 `posts_title_not_blank`·`posts_body_not_blank` | 고침 — 통합 중 발견 | 2026-09-16 |
 | permission set 의 `permission_grant` 중복 | 고침 — 통합 중 발견 | 2026-09-16 |
 | `models.py` CheckConstraint 3개에 이름 명시 | 고침 | 2026-09-16 |
-| 1장~7장 나머지 전부 | **미착수** | — |
+| 1-1 rate limit 요청자 판정 | 고침 — `TRUSTED_PROXY_COUNT`(배포 2·개발 1)로 뒤에서 N번째 값을 사용. 테스트 `tests/unit/test_rate_limit.py` | 2026-09-18 |
+| 1-2 시각의 offset 통과 | 고침 — 요청 모델 3개를 pydantic `NaiveDatetime` 으로 변경, offset 이 붙으면 422. 테스트 `tests/unit/test_schemas.py` | 2026-09-18 |
+| 1-3 블라인드 해제 후 목록 미갱신 | 고침 — `BOARD_KEY`·`boardListKey`(`lib/boards.ts`)로 queryKey 를 한 곳에서 생성. 테스트 `lib/boards.test.ts` | 2026-09-18 |
+| 1-4 점유 판정이 1시간 칸 고정 | 고침 — `takenGrid`·`isRangeFree`·`acceptsDrag` 에 `slotMinutes` 추가, `firstTaken` 신설. 테스트 `lib/calendar.test.ts` | 2026-09-18 |
+| 1-5 `capacity()` 가 60분 고정 | 고침 — 원인 기술을 정정합니다. 표시 값이 절반이 되는 것이 아니라, 60분 격자에 맞지 않는 합주실(18:30 개방)이 0칸으로 계산되고 팀당 몫이 1시간 단위로만 나뉘었습니다. 테스트 `lib/settings.test.ts`·`lib/pipeline.test.ts` | 2026-09-18 |
+| 1-6 화면 상한 60초 < 서버 상한 | 고침 — 390초(서버 300+60초에 여유 30초). 큐 대기 시간은 포함하지 않음(`jobs.ts` 의 `ponytail:` 주석). 테스트 `lib/jobs.test.ts` | 2026-09-18 |
+| 1-7 `update_profile` 의 오류 문구 | 고침 — `commit_translating` 사용. 상태 코드는 가입과 같은 422. 테스트 `tests/integration/db/test_auth_endpoints.py` | 2026-09-18 |
+| 1-8 `String(error)` | 고침 — `reason()` 사용. 1줄 변경이라 테스트는 추가하지 않음(`reason` 은 `lib/api.test.ts` 가 검증) | 2026-09-18 |
+| 1-9 합주실 0개일 때 "지연" 문구 | 고침 — `room === null` 분기를 분리. 144행은 조건이 `memberId === null`(계정 미조회)이라 그대로 둠. route 화면은 단위 테스트가 없어 테스트는 추가하지 않음 | 2026-09-18 |
+| 1-10 `finished_at` 기록 순서 | 고침 — Future 보다 먼저 기록. 테스트 `tests/unit/test_job_runner.py` | 2026-09-18 |
+| 1-11 팀 병합 기준(이름·번호) | 안 고쳐도 됨 — `teams.name`·`rooms.name` 에 UNIQUE 제약이 있어 같은 이름의 팀 2개가 생성될 수 없음. 사실과 다른 `slots.ts` 주석만 교정 | 2026-09-18 |
+| 화면 lint 11건 | 4건 고침(`pipeline.test.ts`·`Assignment.tsx` 2건·`SettingsReservations.tsx`). 남은 7건은 `autoFocus` 4건·`Landing.tsx:99` 클릭 2건·`Account.tsx:140` label 1건으로 상호작용 변경이라 승인 대기 | 2026-09-18 |
+| mypy 테스트 파일 2건 | 고침 — `Period \| None` 을 `assert` 로 좁힘 | 2026-09-18 |
+| 날짜 모달의 "내 일정" 목록이 그날 항목만 표시 | 고침 — 결함이었습니다(문서 불일치가 아님). 개발자님 지시는 "내 불가능 일정 전부를 나열"입니다. `allOffEntries`·`offWhenLabel`(`lib/dayEntries.ts`) 추가, 테스트 `lib/dayEntries.test.ts`, `.cluedoc/scheduler/README.md:160` 갱신 | 2026-09-18 |
+| 4-1 순우리말 동사 | 고침 — 지우다·고치다·바꾸다(바뀌다)·고르다·비우다·정하다를 한자어 동사로 치환. 화면 문구 포함("시각을 선택해요", "변경하는 중…" 등). "고르게"(균등하게)는 다른 뜻이라 제외 | 2026-09-18 |
+| 4-2 임의로 치환한 용어 | 고침 — "창 길이"→window 길이, "정상 확인"→health check, "떨구다"→drop, "재생기"→audio player·video player. 큐/대기열/queued 통일과 "그립니다/렌더합니다" 통일은 미착수 | 2026-09-18 |
+| 4-3 화면 오타 2건 | 고침 — "예약을 내역을", "가지고있지". 로딩 문구 7가지·어미 불일치·"블라인드/가리다"는 미착수 | 2026-09-18 |
+| 4-4 실제와 다른 주석 | 고침 — `SLOT_MINUTES`(`calendar.ts`·`.cluedoc/practice-room-and-periods`), "18가지 항목", `login_sessions`, `room_manage`, "1시간 단위 시간 칸" 13곳. `CLAUDE.md:195` 는 자동 수정 대상이 아니라 그대로. `settings_service.py:26`·`boards.py:119`·`PostBoard.tsx:337` 의 위치 어긋남은 미착수 | 2026-09-18 |
+| 4-5 의인화 표현 | 고침 — 9줄 | 2026-09-18 |
+| 4-6 `(사용자 결정 …)` | 고침 — 괄호 22곳 삭제, 문장은 유지 | 2026-09-18 |
+| 2-4 `assignments`·`assignment_backups` index | 고침 — migration `3c9d41b7e2a5` + `models.py`. 테스트 `test_migration_chain.py`. **dev DB 에는 아직 적용하지 않음**(`docker compose run --rm dev alembic upgrade head`) | 2026-09-18 |
+| 2-6 죽은 코드 | 고침 — `sideExtra`·`writeNote`·`calbody`·`.picks`·`.posbad` 삭제, `BLINDED_KEY` 를 `lib/boards.ts` 로 이동해 두 화면이 공유. `rate_limit.py` 의 `_LIMITERS`·`reset_all` 은 `tests/conftest.py` 의 테스트 격리에 필요해 그대로. 밖에서 쓰이지 않는 `export` 5개는 미착수 | 2026-09-18 |
+| `backend/Dockerfile` 의 `uv sync` 캐시 마운트 | 고침 — 3곳. `docker compose build dev` 로 확인 | 2026-09-18 |
+| 2-1·2-2·2-3·2-5, 2-4 의 목록 상한·`Scheduler` useMemo, 3장, 5장, 6장 | **미착수** | — |
 
 ## 마감 시점 상태 (2026-09-16)
 
