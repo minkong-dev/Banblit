@@ -20,7 +20,7 @@ WORKDIR /app
 
 # 잠금 파일에 적힌 버전 그대로 설치한다. 소스는 아직 넣지 않는다.
 COPY pyproject.toml uv.lock ./
-RUN uv sync --locked --no-dev --no-install-project
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --locked --no-dev --no-install-project
 
 # ─────────────────────────────────────────────────────────────
 # 2단계 · 개발용 — 테스트 도구가 포함된 층
@@ -31,7 +31,7 @@ FROM base AS dev
 
 ENV PYTHONPATH=/app/src
 
-RUN uv sync --locked --no-install-project
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --locked --no-install-project
 
 CMD ["pytest"]
 
@@ -51,7 +51,7 @@ COPY src ./src
 COPY alembic.ini ./
 COPY migrations ./migrations
 
-RUN uv sync --locked --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --locked --no-dev
 
 EXPOSE 8000
 CMD ["uvicorn", "backend.api.app:app", "--host", "0.0.0.0", "--port", "8000"]

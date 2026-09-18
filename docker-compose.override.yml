@@ -17,6 +17,8 @@ services:
       # 개발은 http라서 Secure 쿠키가 아예 안 붙는다. base(docker-compose.yml)의
       # true를 여기서 false로 덮는다.
       COOKIE_SECURE: "false"
+      # 개발에는 caddy 가 없어 api 앞의 reverse proxy 가 하나다. base 의 2를 1로 덮는다.
+      TRUSTED_PROXY_COUNT: "1"
       # SMTP 가 없을 때 메일 본문(재설정 링크)을 기록에 남긴다 — 개발에서만.
       MAIL_LOG_BODY: "true"
     restart: "no"
