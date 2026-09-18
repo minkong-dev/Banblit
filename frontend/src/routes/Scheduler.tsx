@@ -5,13 +5,13 @@ import { useNavigate } from "react-router-dom";
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
 import { Dropdown } from "../components/Dropdown";
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from "../components/icons";
-import { getJSON } from "../lib/api";
+import { getJSON, reason } from "../lib/api";
 import { currentMonth, slotSteps } from "../lib/calendar";
-import { focusedRanges, inRanges, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
+import { boardListKey, focusedRanges, inRanges, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
 import { MonthView, WeekView } from "./SchedulerViews";
 import {
-  assignedByDay, bookedByDay, ensembleByDay, ensembleOn, listNote, memberCountLabel, offByDay, visibleDays,
+  allOffEntries, assignedByDay, bookedByDay, ensembleByDay, ensembleOn, listNote, memberCountLabel, offByDay, visibleDays,
 } from "../lib/dayEntries";
 import { can } from "../lib/account";
 import type { DayTab, Entry } from "../lib/dayEntries";
@@ -57,7 +57,7 @@ export function Scheduler() {
   const [to, setTo] = useState<number | null>(null);
   const [openDay, setOpenDay] = useState<string | null>(null);
 
-  // 합주실·기간 목록은 배정 여부와 상관없이 달력의 시간·날짜 범위를 정합니다.
+  // 합주실·기간 목록은 배정 여부와 상관없이 달력의 시간·날짜 범위를 결정합니다.
   const rooms = useRooms();
   const periods = usePeriods();
   const periodIds = periods.data?.periods.map((period) => period.id) ?? [];
@@ -93,7 +93,7 @@ export function Scheduler() {
   // 공지 화면(routes/Notices 의 PostBoard)이 사용하는 queryKey 와 endpoint(API의 요청 주소 단위)를 그대로 사용합니다. 두 화면이
   // 같은 목록을 공유하므로, 공지를 작성하고 돌아오면 이 화면도 함께 갱신됩니다.
   const notices = useQuery({
-    queryKey: ["board", "/notices"],
+    queryKey: boardListKey("/notices"),
     queryFn: () => getJSON<{ posts: Post[] }>("/notices"),
   });
   const recentNotices = notices.data?.posts.slice(0, RECENT_NOTICES) ?? [];
@@ -110,7 +110,8 @@ export function Scheduler() {
   const focus = focusedRanges(periods.data?.periods ?? []);
   const slotCount = slotCountOf(open, close);
   // 예약 탭의 시작·끝 선택지는 저장소 설정(slot_minutes) 간격입니다.
-  const steps = slotSteps(slotCount, useSlotMinutes());
+  const slotMinutes = useSlotMinutes();
+  const steps = slotSteps(slotCount, slotMinutes);
 
   const assigned = assignedByDay(rows, teams, open);
   const offEntries = offByDay(
@@ -159,7 +160,7 @@ export function Scheduler() {
     setWeekShift(0);
   };
 
-  const viewProps = { tab, teams, entriesOf, openHour: open, slotCount };
+  const viewProps = { tab, teams, entriesOf, openHour: open, slotCount, slotMinutes };
 
   return (
     <AppShell page="scheduler" current="schedule">
@@ -169,7 +170,7 @@ export function Scheduler() {
           알립니다. 다시 불러오기는 셋을 한 번에 다시 조회합니다. */}
       {rooms.isError || periods.isError || query.isError ? (
         <div className="cut">
-          <p><b>스케줄을 불러오지 못했어요</b>{String(rooms.error ?? periods.error ?? query.error)}</p>
+          <p><b>스케줄을 불러오지 못했어요</b>{reason(rooms.error ?? periods.error ?? query.error)}</p>
           <button onClick={() => { void rooms.refetch(); void periods.refetch(); void query.refetch(); }}>
             다시 불러오기
           </button>
@@ -226,7 +227,7 @@ export function Scheduler() {
           </div>
         ) : null}
 
-        <div className="calbody" id="body">
+        <div id="body">
           {week
             ? <WeekView dayKeys={weekDayKeys} closeHour={close} {...viewProps} />
             : <MonthView year={cursor.year} month={cursor.month} range={range} inFocus={inFocus} onOpen={setOpenDay} {...viewProps} />}
@@ -289,6 +290,7 @@ export function Scheduler() {
           tab={tab}
           teams={teams}
           entries={entriesOf(openDay)}
+          myOff={allOffEntries(unavailableQuery.data ?? [], open)}
           openHour={open}
           closeHour={close}
           slotCount={slotCount}

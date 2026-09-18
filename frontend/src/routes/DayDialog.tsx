@@ -16,9 +16,10 @@ import {
   takenGrid,
 } from "../lib/pipeline";
 import type { RepeatCycle } from "../lib/pipeline";
-import { unitLabel } from "../lib/calendar";
+import { firstTaken, unitLabel } from "../lib/calendar";
 import { useSlotMinutes } from "../components/queries";
 import type { Room } from "../lib/contract";
+import { offWhenLabel } from "../lib/dayEntries";
 import type { DayTab, EnsembleOn, Entry } from "../lib/dayEntries";
 import { EnsembleDayEditor } from "./SettingsEnsemble";
 import type { DayTeam } from "../lib/roster";
@@ -31,21 +32,23 @@ function hourText(hour: number): string {
 }
 
 export function DayDialog({
-  dayKey, tab, teams, entries, openHour, closeHour, slotCount, fixed, inFocus, ensemble, canEditEnsemble,
+  dayKey, tab, teams, entries, myOff, openHour, closeHour, slotCount, fixed, inFocus, ensemble, canEditEnsemble,
   memberId, myName, rooms, onSaved, onClose,
 }: {
   /** 이날이 전체합주 날짜면 그 시각입니다. 아니면 null 입니다. */
   ensemble: EnsembleOn | null;
-  /** 날짜별 전체합주 시각을 바꿀 수 있는지입니다. 서버 권한 항목 period_edit 과 같습니다. */
+  /** 날짜별 전체합주 시각을 변경할 수 있는지입니다. 서버 권한 항목 period_edit 과 같습니다. */
   canEditEnsemble: boolean;
   dayKey: string;
   tab: DayTab;
   teams: DayTeam[];
   entries: Entry[];
+  /** 로그인한 사용자가 등록한 불가능 일정 전부입니다(lib/dayEntries 의 allOffEntries). 이날의 항목만이 아닙니다. */
+  myOff: Entry[];
   openHour: number;
   closeHour: number;
   slotCount: number;
-  /** 위쪽 시간 선택에서 이미 시간을 정했으면 그 시간으로 바로 예약합니다. */
+  /** 위쪽 시간 선택에서 이미 시간을 지정했으면 그 시간으로 바로 예약합니다. */
   fixed: { from: number; to: number } | null;
   inFocus: boolean;
   /** 로그인한 사용자 id입니다. 아직 받지 못했으면 null이고, 그동안은 등록·예약을 차단합니다. */
@@ -63,7 +66,7 @@ export function DayDialog({
   const [repeat, setRepeat] = useState<RepeatCycle>("none");
   const [offName, setOffName] = useState("");
   const [offReason, setOffReason] = useState("");
-  // 고른 구간입니다. 타임라인 드래그와 시작·끝 select 가 같은 값을 바꿉니다. null 이면 아직 고르지 않은 것이고, 그때는 그날 전부(picked)로 등록합니다.
+  // 선택한 구간입니다. 타임라인 드래그와 시작·끝 select 가 같은 값을 변경합니다. null 이면 아직 선택하지 않은 것이고, 그때는 그날 전부(picked)로 등록합니다.
   const [range, setRange] = useState<SlotRange | null>(null);
   // 시각 선택지의 간격과 머리글의 단위 문구는 저장소 설정(slot_minutes)을 따릅니다.
   const slotMinutes = useSlotMinutes();
@@ -82,6 +85,7 @@ export function DayDialog({
   const grid = takenGrid(
     booked.filter((entry) => room !== null && entry.room === room.name),
     slotCount,
+    slotMinutes,
   );
   // 내 팀에 배정된 항목과, 내가 직접 등록한 항목(removeIds 가 있는 항목)입니다. 개인 이름으로 한 예약은
   // 팀이 없어 팀만 보고는 구분할 수 없습니다.
@@ -89,11 +93,9 @@ export function DayDialog({
     (entry) => entry.removeIds !== undefined || entry.bookingId !== undefined
       || (entry.team !== null && teams.some((t) => t.key === entry.team && t.mine)),
   );
-  // 오른쪽 목록입니다. 내 일정 탭은 내가 등록한 불가능 일정(removeIds 가 있는 항목), 예약 탭은 내가 한 예약(bookingId 가 있는 항목)만
-  // 모읍니다. 다른 사용자의 예약과 서버가 배정한 항목에는 둘 다 없습니다.
-  const removable = entries.filter(
-    (entry) => (tab === "me" ? entry.removeIds : entry.bookingId) !== undefined,
-  );
+  // 오른쪽 목록입니다. 내 일정 탭은 이날의 항목이 아니라 내가 등록한 불가능 일정 전부(myOff)를 나열합니다.
+  // 예약 탭은 이날 내가 한 예약(bookingId 가 있는 항목)만 나열합니다. 다른 사용자의 예약과 서버가 배정한 항목에는 bookingId 가 없습니다.
+  const removable = tab === "me" ? myOff : entries.filter((entry) => entry.bookingId !== undefined);
 
   const roomsLabel = [...new Set(booked.map((entry) => entry.room).filter(Boolean))].join(" · ");
 
@@ -113,7 +115,8 @@ export function DayDialog({
   /** 등록한 항목 하나를 삭제합니다. 예약은 번호 하나로 통째로 취소하고, 불가능 일정은 그 행의 id 로 삭제합니다. */
   const removeEntry = async (entry: Entry) => {
     if (memberId === null) return;
-    const when = `${label(entry.a)}–${endLabel(entry.b)}`;
+    // 내 일정 탭의 목록은 여러 날짜의 항목을 나열하므로 확인 문구에 날짜를 함께 적습니다. 예약 항목에는 날짜가 없어 시각만 적습니다.
+    const when = `${offWhenLabel(entry)} ${label(entry.a)}–${endLabel(entry.b)}`.trim();
     const bookingId = entry.bookingId;
     const booking = bookingId !== undefined;
     if (booking) {
@@ -170,11 +173,12 @@ export function DayDialog({
     // 선착순이므로 이미 예약된 slot 이 하나라도 있으면 먼저 거절해 서버를 호출하지 않습니다.
     // 두 사람이 동시에 시도해 이 검증을 둘 다 통과해도, 최종 판정은 서버(겹침 금지
     // 제약)가 하므로 아래 catch 에서 서버가 반환한 사유를 그대로 표시합니다.
-    // a·b 는 설정 단위의 소수일 수 있으므로 걸친 1시간 칸 전부를 봅니다.
-    for (let i = Math.floor(a); i < Math.ceil(b); i += 1) {
-      if (grid[i]) { setError(`${label(i)}은 이미 예약되어있어요. 다른 시간을 선택해주세요.`); return; }
-    }
-    if (memberId === null || room === null) {
+    const taken = firstTaken(grid, a, b, slotMinutes);
+    if (taken !== null) { setError(`${label(taken)}은 이미 예약되어있어요. 다른 시간을 선택해주세요.`); return; }
+    // room 이 null 이면 합주실 목록이 비어 있습니다. 등록된 합주실이 0개이거나 목록을 조회하지 못한 경우이며,
+    // 두 경우 모두 다시 시도해도 해결되지 않으므로 "잠시 후 다시 시도" 로 안내하지 않습니다.
+    if (room === null) { setError("예약할 합주실이 없어요. 설정에 합주실이 등록되어 있는지 확인해주세요."); return; }
+    if (memberId === null) {
       setError("요청이 많아 지연되고 있어요. 잠시 후 다시 시도해 주세요.");
       return;
     }
@@ -200,7 +204,7 @@ export function DayDialog({
   const offForm = (
     <div className="col">
       <h3>불가능 일정을 추가할 수 있어요.</h3>
-      <p className="sub">타임라인을 드래그하거나 시각을 골라요.</p>
+      <p className="sub">타임라인을 드래그하거나 시각을 선택해요.</p>
       <p className="cap2">날짜</p>
       <b className="dayline">{dayName}</b>
       <p className="cap2">시간</p>
@@ -245,7 +249,7 @@ export function DayDialog({
   const bookForm = (
     <div className="col">
       <h3>합주실을 예약할 수 있어요.</h3>
-      <p className="sub">{fixed ? "위에서 고른 시간으로 예약해요." : "타임라인을 드래그하거나 시각을 골라요."}</p>
+      <p className="sub">{fixed ? "위에서 선택한 시간으로 예약해요." : "타임라인을 드래그하거나 시각을 선택해요."}</p>
       <p className="cap2">날짜</p>
       <b className="dayline">{dayName}</b>
       {/* 합주실을 먼저 선택합니다. 아래 시각 선택이 그 합주실의 예약된 slot 만 차단합니다. */}
@@ -264,7 +268,7 @@ export function DayDialog({
             <p className="cap2">시간</p>
             <SlotPicker prefix="book" range={picked} onChange={setRange} grid={grid} lock slotMinutes={slotMinutes} {...hours} />
           </>}
-      {/* 일정 이름은 팀 이름입니다. 팀을 고르지 않으면 예약자 이름으로 표시됩니다(사용자 결정 2026-09-15). */}
+      {/* 일정 이름은 팀 이름입니다. 팀을 선택하지 않으면 예약자 이름으로 표시됩니다. */}
       <label className="fld3" htmlFor="bookWho">
         일정 이름
         <Dropdown
@@ -344,7 +348,7 @@ export function DayDialog({
       <section className="pane">
         <MyEntriesList
           title={tab === "me" ? "불가능 일정 목록" : "내 예약"}
-          empty={tab === "me" ? "이날 등록한 불가능 일정이 없어요." : "이날 내가 한 예약이 없어요."}
+          empty={tab === "me" ? "등록한 불가능 일정이 없어요." : "이날 내가 한 예약이 없어요."}
           entries={removable}
           teams={teams}
           onRemove={(entry) => { void removeEntry(entry); }}

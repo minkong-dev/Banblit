@@ -5,14 +5,15 @@ import type { CSSProperties, PointerEvent } from "react";
 
 import { Dropdown } from "../components/Dropdown";
 import { TrashIcon } from "../components/icons";
-import { acceptsDrag, dragRange, slotSteps } from "../lib/calendar";
+import { acceptsDrag, cellAt, dragRange, slotSteps } from "../lib/calendar";
 import { slotLabel } from "../lib/pipeline";
+import { offWhenLabel } from "../lib/dayEntries";
 import type { Entry } from "../lib/dayEntries";
 import type { DayTeam } from "../lib/roster";
 
 export type SlotRange = { a: number; b: number };
 
-/** slot 번호를 "18:00" 으로 바꾸는 함수 2개를 반환합니다. endLabel 은 마지막 칸이면 닫는 시각을 씁니다. */
+/** slot 번호를 "18:00" 으로 변경하는 함수 2개를 반환합니다. endLabel 은 마지막 칸이면 닫는 시각을 씁니다. */
 export function slotLabels(openHour: number, closeHour: number, slotCount: number) {
   const label = (index: number) => slotLabel(index, openHour);
   const endLabel = (index: number) => (index >= slotCount ? `${closeHour}:00` : label(index));
@@ -42,11 +43,11 @@ type HoursProps = { openHour: number; closeHour: number; slotCount: number };
 
 /** 찬 칸이 걸치지 않는 구간만 pick 에 넘깁니다. 걸치면 아무것도 하지 않아 직전 구간이 남습니다. */
 function apply(pick: DragPick, next: SlotRange): void {
-  if (acceptsDrag(pick.grid, next)) pick.onChange(next);
+  if (acceptsDrag(pick.grid, next, pick.slotMinutes)) pick.onChange(next);
 }
 
-/** 드래그로 구간을 고르게 할 때 넘기는 값입니다. 없으면 타임라인은 보기 전용입니다. range 가 null 이면 아직 고르지 않은 상태입니다.
- *  grid 는 이미 찬 1시간 칸입니다. 넘기면 찬 칸이 걸치는 구간을 반영하지 않아 드래그가 그 앞에서 멈춥니다.
+/** 드래그로 구간을 고르게 할 때 넘기는 값입니다. 없으면 타임라인은 보기 전용입니다. range 가 null 이면 아직 선택하지 않은 상태입니다.
+ *  grid 는 이미 찬 칸(slotMinutes 길이)입니다. 넘기면 찬 칸이 걸치는 구간을 반영하지 않아 드래그가 그 앞에서 멈춥니다.
  *  불가능 일정은 겹쳐도 되므로 넘기지 않습니다. */
 export type DragPick = {
   range: SlotRange | null;
@@ -56,7 +57,7 @@ export type DragPick = {
 };
 
 /** 하루를 세로 띠로 표시합니다. 시각은 왼쪽에 시간 단위로만 적습니다.
- *  pick 이 있으면 누른 자리부터 끄는 자리까지를 slotMinutes 간격으로 골라 onChange 에 넘기고, 고른 구간을 점선 막대로 표시합니다. */
+ *  pick 이 있으면 누른 자리부터 끄는 자리까지를 slotMinutes 간격으로 선택해 onChange 에 넘기고, 선택한 구간을 점선 막대로 표시합니다. */
 export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount }: HoursProps & {
   list: Entry[];
   teams: DayTeam[];
@@ -66,7 +67,7 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
   // 누른 위치(소수 칸 번호)입니다. null 이면 드래그 중이 아닙니다.
   const pressed = useRef<number | null>(null);
 
-  /** 포인터의 세로 위치를 소수 칸 번호로 바꿉니다. 띠 높이가 slotCount 칸이므로 비율에 칸 수를 곱합니다. */
+  /** 포인터의 세로 위치를 소수 칸 번호로 변경합니다. 띠 높이가 slotCount 칸이므로 비율에 칸 수를 곱합니다. */
   const slotAt = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     return ((event.clientY - rect.top) / rect.height) * slotCount;
@@ -120,7 +121,7 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
 }
 
 /** 시작 시각과 종료 시각을 선택하는 입력입니다. 선택지는 설정의 slotMinutes 간격이고, lock 이면 이미 예약된
- *  1시간 칸에 속한 시각은 선택할 수 없게 차단합니다. 드래그를 못 쓰는 키보드 사용자의 입력 수단이기도 합니다. */
+ *  칸의 시작 시각은 선택할 수 없게 차단합니다. 드래그를 못 쓰는 키보드 사용자의 입력 수단이기도 합니다. */
 export function SlotPicker({ prefix, range, onChange, grid, lock, slotMinutes, openHour, closeHour, slotCount }: HoursProps & {
   prefix: string;
   range: SlotRange;
@@ -140,8 +141,8 @@ export function SlotPicker({ prefix, range, onChange, grid, lock, slotMinutes, o
           value={range.a}
           choices={steps.slice(0, -1).map((slot) => ({
             value: slot,
-            label: `${label(slot)}${lock && grid[Math.floor(slot)] ? " (찼어요)" : ""}`,
-            disabled: lock && grid[Math.floor(slot)],
+            label: `${label(slot)}${lock && grid[cellAt(slot, slotMinutes)] ? " (찼어요)" : ""}`,
+            disabled: lock && grid[cellAt(slot, slotMinutes)],
           }))}
           onChange={(next) => onChange({ ...range, a: next })}
         />
@@ -159,7 +160,8 @@ export function SlotPicker({ prefix, range, onChange, grid, lock, slotMinutes, o
   );
 }
 
-/** 로그인한 사용자가 이날 등록한 항목의 목록입니다. 줄마다 삭제 버튼이 있습니다.
+/** 로그인한 사용자가 등록한 항목의 목록입니다. 줄마다 삭제 버튼이 있습니다. 불가능 일정은 전부를 나열하므로
+ *  줄마다 날짜를 함께 적고(offWhenLabel), 예약은 이날의 항목만 나열하므로 시각만 적습니다.
  *  막대 안에 삭제 버튼을 넣지 않는 이유는 1시간 slot 막대가 14px 이라 클릭 영역이 없기 때문입니다. */
 export function MyEntriesList({ title, empty, entries, teams, onRemove, openHour, closeHour, slotCount }: HoursProps & {
   title: string;
@@ -175,20 +177,24 @@ export function MyEntriesList({ title, empty, entries, teams, onRemove, openHour
       <h3>{title}</h3>
       {entries.length === 0 ? <p className="none">{empty}</p> : (
         <ul className="mlist">
-          {entries.map((entry) => (
-            <li className="prow" key={`${entry.kind}-${entry.bookingId ?? entry.removeIds?.[0] ?? entry.a}`}>
-              <i className={`dot ${entry.team ?? "off"}`} aria-hidden="true" />
-              <span className="nm">{entryName(entry, teams)}</span>
-              <span className="ps">{label(entry.a)}–{endLabel(entry.b)}</span>
-              <button
-                className="ic danger"
-                aria-label={`${entryName(entry, teams)} ${label(entry.a)}–${endLabel(entry.b)} ${entry.kind === "book" ? "예약 취소" : "불가능 일정 삭제"}`}
-                onClick={() => onRemove(entry)}
-              >
-                <TrashIcon />
-              </button>
-            </li>
-          ))}
+          {entries.map((entry) => {
+            // 날짜가 없는 항목(예약)은 offWhenLabel 이 빈 문자열이므로 trim 으로 앞의 공백을 삭제합니다.
+            const when = `${offWhenLabel(entry)} ${label(entry.a)}–${endLabel(entry.b)}`.trim();
+            return (
+              <li className="prow" key={`${entry.kind}-${entry.bookingId ?? entry.removeIds?.[0] ?? entry.a}`}>
+                <i className={`dot ${entry.team ?? "off"}`} aria-hidden="true" />
+                <span className="nm">{entryName(entry, teams)}</span>
+                <span className="ps">{when}</span>
+                <button
+                  className="ic danger"
+                  aria-label={`${entryName(entry, teams)} ${when} ${entry.kind === "book" ? "예약 취소" : "불가능 일정 삭제"}`}
+                  onClick={() => onRemove(entry)}
+                >
+                  <TrashIcon />
+                </button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

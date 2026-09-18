@@ -251,7 +251,7 @@ export function PastRunsPanel({ periodId, canRollback, roundAt, onSelect }: {
  *  설정 화면의 기간 form 과 같은 값을 같은 endpoint(API의 요청 주소 단위)로 수정합니다. 이 칸에서는 두 시각만 따로 수정할 수 있게 둡니다. */
 export function RunTimesPanel({ period, canManage }: { period: Period | null; canManage: boolean }) {
   const queryClient = useQueryClient();
-  // 수정한 값만 이 state 에 담습니다. 기간을 바꾸면 담긴 id 가 맞지 않으므로 그때는
+  // 수정한 값만 이 state 에 담습니다. 기간을 변경하면 담긴 id 가 맞지 않으므로 그때는
   // 다시 서버 값을 사용합니다. useEffect 로 동기화하지 않고 렌더할 때마다 id 를 비교합니다.
   const [form, setForm] = useState<{ id: number; first: string; second: string } | null>(null);
 

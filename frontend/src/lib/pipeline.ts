@@ -1,4 +1,4 @@
-// lib 모듈의 시퀀스 파일입니다. 어느 검증을 어느 순서로 호출할지 이 파일에서 정합니다.
+// lib 모듈의 시퀀스 파일입니다. 어느 검증을 어느 순서로 호출할지 이 파일에서 결정합니다.
 
 import { getJSON, sendFile } from "./api";
 import type {
@@ -34,7 +34,10 @@ import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_HINT,
   attachmentMessage,
+  BLINDED_KEY,
+  BOARD_KEY,
   boardActions,
+  boardListKey,
   bodyMessage,
   commentMessage,
   fileSizeLabel,
@@ -62,7 +65,7 @@ export function checkRoom(form: RoomForm, taken: string[], slotMinutes: number):
   return openHoursMessage(form.opens_at, form.closes_at, slotMinutes);
 }
 
-/** 서버에 보낼 기간 값입니다. 매일이 켜진 집중 합주기간은 종료일이 없으므로(사용자 결정 2026-09-11)
+/** 서버에 보낼 기간 값입니다. 매일이 켜진 집중 합주기간은 종료일이 없으므로
  *  화면이 감춘 종료일 대신 시작일을 종료일로 보냅니다. 서버는 ends_on 을 필수로 받고 everyday 면 무시합니다. */
 export function periodBody<T extends PeriodForm & { kind?: string; everyday?: boolean }>(form: T): T {
   if (form.kind === "focused" && form.everyday) {
@@ -134,7 +137,7 @@ export function checkPeriod(form: PeriodForm): string {
   return dateRangeMessage(body.starts_on, body.ends_on);
 }
 
-export type Opening = { rooms: RoomForm[]; days: number; teams: number };
+export type Opening = { rooms: RoomForm[]; days: number; teams: number; slotMinutes: number };
 
 export function openingHours(input: Opening): {
   perDay: string;
@@ -142,14 +145,15 @@ export function openingHours(input: Opening): {
   perTeam: string;
   leftover: string;
 } {
-  // capacity()로 slot(1시간 단위 시간 칸)의 개수를 먼저 계산하고, 그 개수를 hoursLabel()로 시간 문자열로 변환합니다.
-  // 순서가 반대일 수 없습니다. 화면은 slot 개수를 그대로 표시하지 않습니다.
+  // capacity()로 slot(slotMinutes 길이의 시간 칸)의 개수를 먼저 계산하고, 그 개수를 시간으로 환산해 hoursLabel()로
+  // 시간 문자열로 변환합니다. 순서가 반대일 수 없습니다 — 팀당 몫은 시간이 아니라 slot 개수로 나눕니다.
   const raw = capacity(input);
+  const hours = (slots: number) => hoursLabel(slots, input.slotMinutes);
   return {
-    perDay: hoursLabel(raw.perDay),
-    total: hoursLabel(raw.total),
-    perTeam: hoursLabel(raw.perTeam),
-    leftover: hoursLabel(raw.leftover),
+    perDay: hours(raw.perDay),
+    total: hours(raw.total),
+    perTeam: hours(raw.perTeam),
+    leftover: hours(raw.leftover),
   };
 }
 
@@ -192,7 +196,7 @@ export { memberLabel, myTeamIds, slotName };
 export { teamNameMessage as checkTeamName, slotCountsMessage as checkSlotCounts };
 
 // 게시판·공지 화면이 사용하는 계산입니다. fileSizeLabel 은 순서 의존이 없어 그대로 export 합니다.
-export { ATTACHMENT_ACCEPT, ATTACHMENT_HINT, boardActions, fileSizeLabel };
+export { ATTACHMENT_ACCEPT, ATTACHMENT_HINT, BLINDED_KEY, BOARD_KEY, boardActions, boardListKey, fileSizeLabel };
 
 
 export type AssignBody = { team_ids: number[]; room_ids: number[] };
@@ -296,7 +300,7 @@ export async function removeUnavailable(memberId: number, timeId: number): Promi
 
 /** 점유 단위(칸 하나의 크기, 분)를 변경합니다. room_edit 권한이 필요합니다.
  *  이미 저장된 예약과 배정은 그대로 남습니다. 단위를 늘리면 새 격자에 맞지 않는 기존 행이 남지만,
- *  지우면 사람들의 예약이 말없이 사라집니다(services/settings_service.py 의 set_slot_minutes). */
+ *  삭제하면 사용자의 예약이 알림 없이 삭제됩니다(services/settings_service.py 의 set_slot_minutes). */
 export async function saveSlotMinutes(minutes: number): Promise<number> {
   const body = await getJSON<{ slot_minutes: number }>("/settings", {
     method: "PATCH",
@@ -305,7 +309,7 @@ export async function saveSlotMinutes(minutes: number): Promise<number> {
   return body.slot_minutes;
 }
 
-/** 멤버를 추방합니다. 서버는 계정을 삭제하므로 그 멤버의 글·댓글·예약도 함께 삭제됩니다(사용자 결정 2026-09-14). member_expel 권한이 필요합니다. */
+/** 멤버를 추방합니다. 서버는 계정을 삭제하므로 그 멤버의 글·댓글·예약도 함께 삭제됩니다. member_expel 권한이 필요합니다. */
 export async function expelMember(memberId: number): Promise<void> {
   await getJSON(`/members/${memberId}`, { method: "DELETE" });
 }
@@ -352,7 +356,7 @@ export type SignUpForm = {
   password: string;
   cohort: number;
   /** 관리자코드입니다. 환경변수의 코드와 같으면 권한 항목을 모두 받습니다.
-   *  비워 두었거나 다르면 권한 0개로 가입하고 이미 권한을 가진 사람에게서 부여받습니다.
+   *  입력하지 않았거나 다르면 권한 0개로 가입하고 이미 권한을 가진 사람에게서 부여받습니다.
    *  서버 쪽 정본은 backend/src/backend/services/auth_service.py 의 ADMIN_CODE_VARIABLE 입니다. */
   admin_code?: string;
 };
@@ -370,7 +374,7 @@ export async function signUp(form: SignUpForm): Promise<Account> {
 export async function logIn(
   email: string,
   password: string,
-  /** 로그인 상태 유지 여부입니다. false 로 설정하면 브라우저를 닫을 때 로그아웃됩니다. session 의 유효 기간은 서버가 정합니다. */
+  /** 로그인 상태 유지 여부입니다. false 로 설정하면 브라우저를 닫을 때 로그아웃됩니다. session 의 유효 기간은 서버가 결정합니다. */
   keep: boolean,
 ): Promise<Account> {
   const { account } = await getJSON<{ account: Account }>("/login", {

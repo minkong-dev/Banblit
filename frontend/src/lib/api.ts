@@ -25,7 +25,7 @@ export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
   // 나가는 요청이면 브라우저가 cookie 를 자동으로 포함합니다. 화면은 header 에 추가할 값이 없습니다.
   let res: Response;
   try {
-    // AbortSignal.timeout은 정해진 밀리초가 지나면 요청을 끊고
+    // AbortSignal.timeout은 지정된 밀리초가 지나면 요청을 끊고
     // TimeoutError라는 이름의 예외를 발생시킵니다. fetch 자체에는 시간 제한이 없습니다.
     res = await fetch(API_PREFIX + path, {
       ...init,
@@ -33,7 +33,7 @@ export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
       // 보내고 서버는 본문을 읽지 못해 422 로 거절합니다. 호출 지점마다 지정하면
       // 한 곳이 빠졌을 때 그 화면만 오류 메시지 없이 실패하므로 이 함수에서 한 번에 지정합니다.
       // 파일 업로드는 sendFile 이 별도로 처리합니다. multipart/form-data 는
-      // boundary(항목을 구분하는 경계 문자열)가 필요하므로 브라우저가 직접 정해야 합니다.
+      // boundary(항목을 구분하는 경계 문자열)가 필요하므로 브라우저가 직접 결정해야 합니다.
       headers: init?.body === undefined
         ? init?.headers
         : { "Content-Type": "application/json", ...init.headers },

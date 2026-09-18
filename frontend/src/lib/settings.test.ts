@@ -153,6 +153,15 @@ describe("capacity", () => {
     expect(got.leftover).toBe(238);
   });
 
+  it("점유 단위가 30분이면 30분 자리의 개수로 센다", () => {
+    // 18:30 은 60분 격자에 맞지 않습니다. 60분으로 세면 이 합주실이 0칸이 됩니다.
+    const halfHourRooms = [{ opens_at: "18:30", closes_at: "22:00" }];
+
+    expect(capacity({ rooms: halfHourRooms, days: 1, teams: 2, slotMinutes: 30 })).toEqual({
+      perDay: 7, total: 7, perTeam: 3, leftover: 1,
+    });
+  });
+
   it("방이 없으면 전부 0 이다", () => {
     expect(capacity({ rooms: [], days: 14, teams: 6 })).toEqual({
       perDay: 0, total: 0, perTeam: 0, leftover: 0,

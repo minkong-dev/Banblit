@@ -13,7 +13,7 @@ export function teamNameMessage(name: string, taken: string[]): string {
   return uniqueNameMessage(name, taken, "팀");
 }
 
-/** 포지션마다 정한 자리 수를 전송하기 전에 검증합니다. 서버도 같은 값을 다시 검증합니다. */
+/** 포지션마다 지정한 자리 수를 전송하기 전에 검증합니다. 서버도 같은 값을 다시 검증합니다. */
 export function slotCountsMessage(counts: Record<string, number>): string {
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
   if (total === 0) return "포지션을 한 자리 이상 추가해주세요.";

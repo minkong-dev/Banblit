@@ -19,7 +19,7 @@ import { apiUrl, reason, sendFile } from "../lib/api";
 import { embedKind, sanitizeBody } from "../lib/richText";
 import { say } from "../lib/toast";
 
-/** 고를 수 있는 글꼴입니다. 값은 CSS 의 font-family 에 그대로 들어갑니다.
+/** 선택할 수 있는 글꼴입니다. 값은 CSS 의 font-family 에 그대로 들어갑니다.
  *  빈 값은 지정하지 않은 상태이고, 그때는 화면의 기본 글꼴을 따릅니다. */
 const FONTS = [
   { value: "", label: "기본 글꼴" },
@@ -62,7 +62,7 @@ declare module "@tiptap/core" {
 
 type Editor = NonNullable<ReturnType<typeof useEditor>>;
 
-/** 본문에 넣을 수 있는 파일의 MIME(형식을 알리는 문자열)입니다. 나머지는 떨궈도 잡지 않고
+/** 본문에 넣을 수 있는 파일의 MIME(형식을 알리는 문자열)입니다. 나머지는 drop(파일을 끌어다 놓는 동작)해도 처리하지 않고
  *  브라우저 기본 동작(파일 열기)에 맡깁니다. 서버 쪽 허용 목록은 이보다 넓습니다 —
  *  넣지 못하는 형식도 첨부 파일로는 올라갑니다(lib/boards.ts 의 ALLOWED_EXTENSIONS). */
 const ACCEPTED_MIME = [
@@ -71,8 +71,8 @@ const ACCEPTED_MIME = [
   "application/pdf",
 ];
 
-/** 떨구거나 붙여넣은 파일을 글에 올리고, 받은 주소를 본문에 넣습니다.
- *  pos 가 있으면 떨군 자리에, 없으면 커서 자리에 넣습니다. 올리지 못하면 사유만 알리고
+/** drop 하거나 붙여넣은 파일을 글에 올리고, 받은 주소를 본문에 넣습니다.
+ *  pos 가 있으면 drop 한 자리에, 없으면 커서 자리에 넣습니다. 올리지 못하면 사유만 알리고
  *  본문은 건드리지 않습니다 — 주소 없는 노드를 넣으면 깨진 그림이 남습니다. */
 async function attach(
   editor: Editor, files: File[], pos: number | null, postId: number | null,
@@ -104,7 +104,7 @@ async function attach(
  *  id 는 곁에 둔 label 의 htmlFor 가 가리키는 값입니다. */
 export function RichText({ id, label, postId, value, onChange, disabled = false, invalid = false, describedBy }: {
   id: string;
-  /** 본문에 넣을 파일을 올릴 글의 번호입니다. 초안이어도 됩니다. null 이면 떨궈도 올리지 않습니다
+  /** 본문에 넣을 파일을 올릴 글의 번호입니다. 초안이어도 됩니다. null 이면 drop 해도 올리지 않습니다
    *  — 올릴 곳이 없습니다(첨부 업로드가 POST /posts/{id}/attachments 입니다). */
   postId: number | null;
   /** 편집 영역의 이름입니다. 편집기는 div 라서 곁의 label 이 for 로 가리켜도 연결되지 않습니다.
@@ -130,12 +130,12 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
       TextStyle,
       FontFamily,
       Image,
-      // 소리는 재생기(<audio controls>)로 넣습니다.
+      // 소리는 audio player(<audio controls>)로 넣습니다.
       Audio,
       Pdf,
-      // 유튜브 주소를 붙여넣으면 그 자리에서 재생기로 바뀝니다.
+      // 유튜브 주소를 붙여넣으면 그 자리에서 video player 로 변경됩니다.
       Youtube.configure({ nocookie: true, width: 640, height: 360 }),
-      // 본문에 파일을 떨구거나 붙여넣으면 잡아서 올립니다. 그리는 것은 이 확장이 하지 않고,
+      // 본문에 파일을 drop 하거나 붙여넣으면 잡아서 올립니다. 그리는 것은 이 확장이 하지 않고,
       // 아래 attach 가 형식에 따라 노드를 넣습니다.
       FileHandler.configure({
         allowedMimeTypes: ACCEPTED_MIME,
@@ -157,7 +157,7 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
     },
   });
 
-  // 바깥에서 값을 비우거나 다른 글로 바꿨을 때만 편집기에 다시 넣습니다. 조건 없이 넣으면
+  // 바깥에서 값을 초기화하거나 다른 글로 변경했을 때만 편집기에 다시 넣습니다. 조건 없이 넣으면
   // 글자를 칠 때마다 편집기를 다시 채워 커서가 맨 앞으로 돌아갑니다.
   useEffect(() => {
     if (editor !== null && value !== editor.getHTML()) editor.commands.setContent(value);
@@ -187,7 +187,7 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
           }}
         />
         <button type="button" disabled={disabled} onClick={() => askLink(editor)}>링크</button>
-        {/* 파일은 본문에 떨구거나 붙여넣어도 됩니다. 이 버튼은 그 두 방법을 모르는 사람을 위한
+        {/* 파일은 본문에 drop 하거나 붙여넣어도 됩니다. 이 버튼은 그 두 방법을 모르는 사람을 위한
             같은 동작의 입구입니다. */}
         <label className="rtpick">
           파일
@@ -229,7 +229,7 @@ function Mark({ editor, name, label, children }: {
   );
 }
 
-/** 주소를 물어 고른 글자에 링크를 겁니다. 비운 채 확인하면 링크를 해제합니다. */
+/** 주소를 물어 선택한 글자에 링크를 겁니다. 주소를 입력하지 않고 확인하면 링크를 해제합니다. */
 function askLink(editor: Editor): void {
   const now = String(editor.getAttributes("link").href ?? "");
   const url = window.prompt("링크 주소를 입력해주세요.", now);

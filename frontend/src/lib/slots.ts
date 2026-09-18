@@ -11,7 +11,7 @@ export type Session = {
 };
 
 export function mergeSessions(items: Session[]): Session[] {
-  // items 를 팀·합주실·시작시각 순으로 정렬한 후, 앞 slot(1시간 단위 시간 칸)의 종료시각과 맞닿은 slot 을 연결해 연속된 slot 의 나열을 "합주 한 번"으로 변환합니다. 입력받은 목록은 수정하지 않습니다. localeCompare() 는 같으면 0 을 반환합니다. || 연산자는 앞이 0 일 때만 다음을 비교합니다.
+  // items 를 팀·합주실·시작시각 순으로 정렬한 후, 앞 slot(점유 단위 길이의 시간 칸)의 종료시각과 맞닿은 slot 을 연결해 연속된 slot 의 나열을 "합주 한 번"으로 변환합니다. 입력받은 목록은 수정하지 않습니다. localeCompare() 는 같으면 0 을 반환합니다. || 연산자는 앞이 0 일 때만 다음을 비교합니다.
   const sorted = [...items].sort((a, b) =>
     a.team.localeCompare(b.team)
     || a.room.localeCompare(b.room)
@@ -36,7 +36,8 @@ export type Booking = {
   /** 취소와 이동은 이 번호 하나로 합니다. */
   id: number;
   room: string;
-  /** 예약한 팀의 번호입니다. 없으면 멤버가 개인으로 예약한 것입니다. 팀을 이름이 아니라 번호로 구분합니다. 동명이인처럼 같은 이름의 팀이 있을 수 있기 때문입니다. */
+  /** 예약한 팀의 번호입니다. 없으면 멤버가 개인으로 예약한 것입니다. 팀 이름은 DB 에서 중복될 수 없지만(teams.name UNIQUE)
+   *  변경될 수는 있으므로, 서버에 보내는 값은 이름이 아니라 번호입니다. */
   teamId: number | null;
   team: string | null;
   memberId: number;

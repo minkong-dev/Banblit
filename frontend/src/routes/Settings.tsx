@@ -323,7 +323,7 @@ function PeriodFields(props: {
           onChange={(event) => setForm({ ...form, starts_on: event.target.value })}
         />
       </Cell>
-      {/* 매일이 켜진 집중 합주기간은 종료일이 없습니다(사용자 결정 2026-09-11). 입력칸을 감추고 서버에는 시작일을 종료일로 보냅니다. */}
+      {/* 매일이 켜진 집중 합주기간은 종료일이 없습니다. 입력칸을 감추고 서버에는 시작일을 종료일로 보냅니다. */}
       {form.kind === "focused" && form.everyday ? null : (
         <Cell label="종료일" htmlFor={at("ends")}>
           <input
@@ -371,6 +371,7 @@ function RoomCard(props: {
   rooms: Room[]; state: LoadState; canEdit: boolean; canCreate: boolean; onSaved: () => void;
 }) {
   const { rooms, state, canEdit, canCreate, onSaved } = props;
+  const slotMinutes = useSlotMinutes();
   const { editing, open, close, register } = useRowFocus();
   const [making, setMaking] = useState(false);
 
@@ -406,7 +407,7 @@ function RoomCard(props: {
                 key={room.id}
                 title={room.name}
                 when={<><b>{room.opens_at}</b> 부터 <b>{room.closes_at}</b> 까지</>}
-                span={` · 하루 ${openingHours({ rooms: [room], days: 1, teams: 0 }).perDay}`}
+                span={` · 하루 ${openingHours({ rooms: [room], days: 1, teams: 0, slotMinutes }).perDay}`}
                 editLabel={canEdit ? `${room.name} 수정` : undefined}
                 buttonRef={canEdit ? register(room.id) : undefined}
                 onEdit={canEdit ? () => open(room.id) : undefined}
@@ -463,7 +464,7 @@ function RoomForm(props: {
         body: JSON.stringify(form),
       }),
     onSuccess: () => {
-      // 새로 생성한 뒤에는 다음 항목을 입력하도록 form 을 비웁니다. 수정 중이면 그대로 둡니다.
+      // 새로 생성한 뒤에는 다음 항목을 입력하도록 form 을 초기화합니다. 수정 중이면 그대로 둡니다.
       if (method === "POST") reset();
       onDone();
     },
@@ -659,6 +660,7 @@ function Readout(props: {
   tab: Tab;
 }) {
   const { rooms, periods, teams, teamsState, tab } = props;
+  const slotMinutes = useSlotMinutes();
 
   // 집중 합주기간이 2개 이상이면 첫 번째 기간만 계산합니다. 어느 기간인지는 아래 날짜로 표시하므로
   // 혼동하지 않습니다. 여러 개를 비교하는 기능은 선택지를 만든 뒤에 추가합니다.
@@ -668,7 +670,7 @@ function Readout(props: {
   // 팀 수는 팀 목록 endpoint(API의 요청 주소 단위)가 제공합니다. 아직 조회하지 못했으면 0 이며,
   // 이 경우 팀당 배정을 계산하지 않습니다.
   const count = teams.length;
-  const sum = openingHours({ rooms, days, teams: count });
+  const sum = openingHours({ rooms, days, teams: count, slotMinutes });
 
   return (
     <Panel title="해당 설정으로" hint={period ? `${days}일 기준` : "하루 기준"}>

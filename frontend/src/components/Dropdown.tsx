@@ -1,4 +1,4 @@
-// 선택지 하나를 고르는 드롭다운입니다. 기본 select 를 대신해 화면마다 다르던 모양을 하나로 맞춥니다.
+// 선택지 하나를 선택하는 드롭다운입니다. 기본 select 를 대신해 화면마다 다르던 모양을 하나로 맞춥니다.
 // 어느 선택지로 이동할지는 lib/dropdown.ts 가 계산하고, 이 파일은 열고 닫기·키 입력·그리기만 담당합니다.
 
 import { useEffect, useRef, useState } from "react";
@@ -8,7 +8,7 @@ import { useDismissible } from "./hooks";
 import { edgeChoice, moveChoice, openAt } from "../lib/dropdown";
 import type { Choice } from "../lib/dropdown";
 
-/** 고른 값과 선택지를 받아 목록을 그립니다. id 는 label 의 htmlFor 가 가리키는 버튼의 id 입니다.
+/** 선택한 값과 선택지를 받아 목록을 그립니다. id 는 label 의 htmlFor 가 가리키는 버튼의 id 입니다.
  *  곁에 label 이 없는 자리에서는 id 대신 ariaLabel 로 이름을 답니다. 둘 중 하나는 있어야 합니다.
  *  value 가 선택지에 없으면 버튼에 placeholder 를 표시합니다. */
 /** 선택지 하나의 id 입니다. aria-activedescendant 가 이 값으로 커서 위치를 가리킵니다. */
@@ -33,12 +33,12 @@ export function Dropdown<T extends string | number>({
   buttonRef?: RefObject<HTMLButtonElement | null>;
 }) {
   const { open, setOpen, box } = useDismissible();
-  // 키보드 커서입니다. 고른 값과 다를 수 있어 따로 둡니다. Enter 를 눌러야 고른 값이 됩니다.
+  // 키보드 커서입니다. 선택한 값과 다를 수 있어 따로 둡니다. Enter 를 눌러야 선택한 값이 됩니다.
   const [at, setAt] = useState(-1);
   const list = useRef<HTMLUListElement>(null);
   const picked = choices.find((choice) => choice.value === value);
 
-  /** 목록을 엽니다. 여는 순간의 커서는 지금 고른 값의 자리입니다. */
+  /** 목록을 엽니다. 여는 순간의 커서는 지금 선택한 값의 자리입니다. */
   function show(): void {
     setAt(openAt(choices, value));
     setOpen(true);
@@ -79,7 +79,7 @@ export function Dropdown<T extends string | number>({
     };
     if (event.key in moved) {
       event.preventDefault();
-      // 커서만 옮기고 값은 바꾸지 않습니다. 옮기는 도중의 값이 서버로 나가면 안 됩니다.
+      // 커서만 옮기고 값은 변경하지 않습니다. 옮기는 도중의 값이 서버로 나가면 안 됩니다.
       if (moved[event.key] >= 0) setAt(moved[event.key]);
     } else if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();

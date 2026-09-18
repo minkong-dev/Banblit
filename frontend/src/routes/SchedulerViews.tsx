@@ -17,15 +17,17 @@ type ViewProps = {
   entriesOf: (key: string) => Entry[];
   openHour: number;
   slotCount: number;
+  /** 설정의 점유 단위(분)입니다. 점유 판정의 칸 길이입니다. */
+  slotMinutes: number;
 };
 
 /** 달 보기입니다. 예약 탭에서는 날짜마다 남은 시간을, 다른 탭에서는 그날 항목 3개까지를 표시합니다. */
 export function MonthView({
-  year, month, range, inFocus, onOpen, tab, teams, entriesOf, openHour, slotCount,
+  year, month, range, inFocus, onOpen, tab, teams, entriesOf, openHour, slotCount, slotMinutes,
 }: ViewProps & {
   year: number;
   month: number;
-  /** 위쪽 시간 선택에서 시작·끝을 둘 다 정했으면 그 범위입니다. */
+  /** 위쪽 시간 선택에서 시작·끝을 둘 다 지정했으면 그 범위입니다. */
   range: { from: number; to: number } | null;
   inFocus: (key: string) => boolean;
   onOpen: (key: string) => void;
@@ -35,7 +37,7 @@ export function MonthView({
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   const label = (index: number) => slotLabel(index, openHour);
   const gridOf = (key: string) =>
-    takenGrid(entriesOf(key).filter((entry) => entry.kind !== "off"), slotCount);
+    takenGrid(entriesOf(key).filter((entry) => entry.kind !== "off"), slotCount, slotMinutes);
 
   return (
     <>
@@ -57,7 +59,7 @@ export function MonthView({
               blocked = true;
               inner = <div className="avail auto"><span className="big">자동 배정</span></div>;
             } else if (range !== null) {
-              const free = isRangeFree(gridOf(key), range.from, range.to);
+              const free = isRangeFree(gridOf(key), range.from, range.to, slotMinutes);
               blocked = !free;
               inner = (
                 <div className="avail">
@@ -67,13 +69,15 @@ export function MonthView({
                 </div>
               );
             } else {
-              const grid = gridOf(key);
-              const left = grid.filter((taken) => !taken).length;
+              // 남은 시간과 마감 판정은 점유 단위 칸으로 계산하고, meter 막대는 1시간 칸으로 그립니다.
+              // 막대까지 점유 단위로 그리면 5분 단위에서 날짜 하나에 막대가 144개가 됩니다.
+              const left = gridOf(key).filter((taken) => !taken).length;
+              const grid = takenGrid(entriesOf(key).filter((entry) => entry.kind !== "off"), slotCount);
               blocked = left === 0;
               inner = (
                 <div className={left === 0 ? "avail none" : "avail"}>
                   <span className="big">
-                    {left === 0 ? "예약 마감" : <>{hoursLabel(left)}<small>예약 가능</small></>}
+                    {left === 0 ? "예약 마감" : <>{hoursLabel(left, slotMinutes)}<small>예약 가능</small></>}
                   </span>
                   <span className="meter" aria-hidden="true">
                     {grid.map((taken, i) => <i className={taken ? "on" : ""} key={i} />)}
@@ -116,7 +120,7 @@ export function MonthView({
 }
 
 // 주 보기는 합주실이 여는 시간만이 아니라 하루를 통째로 표시합니다. 합주실마다 여는 시각이 달라도
-// 같은 줄에 같은 시각이 오고, 합주실을 바꿔도 줄이 밀리지 않습니다. 대신 줄이 많아 늘 스크롤이
+// 같은 줄에 같은 시각이 오고, 합주실을 변경해도 줄이 밀리지 않습니다. 대신 줄이 많아 늘 스크롤이
 // 생기므로, 주 보기로 들어올 때 합주가 있는 구간으로 자동 스크롤합니다(WeekView 의 useEffect).
 const WEEK_FIRST_HOUR = 1;
 const WEEK_LAST_HOUR = 23;
@@ -138,7 +142,7 @@ export function WeekView({
 
   // 하루 23줄 중 합주는 합주실이 여는 시간의 줄에만 있습니다. 주 보기로 들어올 때마다 그 줄이
   // 맨 위에 오게 스크롤합니다. 스크롤하지 않으면 항상 01:00 부터 보게 되어 매번 사용자가 스크롤해야 합니다.
-  // 줄 높이는 CSS 가 정하므로 계산하지 않고 실제로 렌더링된 위치를 측정합니다.
+  // 줄 높이는 CSS 가 결정하므로 계산하지 않고 실제로 렌더링된 위치를 측정합니다.
   const box = useRef<HTMLDivElement>(null);
   const firstDay = dayKeys[0];
   useEffect(() => {

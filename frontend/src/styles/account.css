@@ -129,17 +129,6 @@ body[data-page="account"] {
 
   .cap { font-size: 13px; font-weight: 500; color: var(--ink-2); margin: 22px 0 9px; }
   .cap small { color: var(--ink-3); font-weight: 400; }
-  .picks { display: flex; flex-wrap: wrap; gap: 8px; }
-  .picks button {
-    padding: 10px 16px; min-height: 44px; border-radius: 999px;
-    background: var(--paper-2); color: var(--ink-2); font-size: 14px; font-weight: 500;
-    transition: background-color .16s ease, color .16s ease;
-  }
-  .picks button:hover { background: #EDEEF0; color: var(--ink); }
-  .picks button[aria-pressed="true"] { background: var(--brand); color: var(--brand-on); font-weight: 700; }
-  .posbad { display: none; margin: 9px 0 0; font-size: 12.5px; color: var(--red); font-weight: 500; }
-  .posbad.on { display: block; }
-
   .note { margin: 20px 0 0; padding: 14px 16px; background: var(--paper-2); border-radius: 12px; font-size: 12.5px; color: var(--ink-2); line-height: 1.7; }
 
   .ok {

@@ -120,7 +120,7 @@ function Lineup(props: {
   teamId: number;
   /** 빈 포지션에 멤버를 배정할 수 있는지 여부입니다. */
   canAdd: boolean;
-  /** 멤버가 배정된 포지션을 비울 수 있는지 여부입니다. */
+  /** 멤버가 배정된 포지션의 멤버 배정을 해제할 수 있는지 여부입니다. */
   canRemove: boolean;
 }) {
   const { teamId, canAdd, canRemove } = props;

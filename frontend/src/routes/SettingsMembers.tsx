@@ -281,7 +281,7 @@ function SetRail() {
     onError: (error) => say(reason(error)),
   });
 
-  // 한 번에 카드 한 개 너비만큼 스크롤합니다. 창 너비가 바뀌어도 카드를 다시 계산하여 사용합니다.
+  // 한 번에 카드 한 개 너비만큼 스크롤합니다. 창 너비가 변경되어도 카드를 다시 계산하여 사용합니다.
   const slide = (way: 1 | -1): void => {
     const box = track.current;
     if (box === null) return;
@@ -464,7 +464,7 @@ export function MemberCards() {
 
   const { me } = useMe();
   const client = useQueryClient();
-  // 추방은 계정 삭제입니다(사용자 결정 2026-09-14). 삭제가 끝나면 명단을 서버에서 다시 조회합니다.
+  // 추방은 계정 삭제입니다. 삭제가 끝나면 명단을 서버에서 다시 조회합니다.
   const expel = useMutation({
     mutationFn: (row: MemberRow) => expelMember(row.id),
     onSuccess: (_result, row) => {

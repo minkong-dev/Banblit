@@ -8,6 +8,7 @@ import {
   focusedRanges,
   hoursLabel,
   inRanges,
+  firstTaken,
   isRangeFree,
   acceptsDrag,
   monthCells,
@@ -134,6 +135,26 @@ describe("takenGrid / isRangeFree — 그날 어디가 찼는지", () => {
     expect(isRangeFree(grid, 4, 6)).toBe(true);
     expect(isRangeFree(grid, 1, 3)).toBe(false);
     expect(isRangeFree(grid, 2, 4)).toBe(false);
+  });
+
+  it("점유 단위가 30분이면 18:00–18:30 예약이 18:30–19:00 을 막지 않는다", () => {
+    const grid = takenGrid([{ a: 0, b: 0.5 }], 2, 30);
+
+    expect(grid).toEqual([true, false, false, false]);
+    expect(isRangeFree(grid, 0.5, 1, 30)).toBe(true);
+    expect(isRangeFree(grid, 0, 0.5, 30)).toBe(false);
+    expect(acceptsDrag(grid, { a: 0.5, b: 1 }, 30)).toBe(true);
+  });
+
+  it("firstTaken 은 고른 구간에서 처음으로 찬 칸의 시작 위치를 시간 단위로 반환한다", () => {
+    const grid = takenGrid([{ a: 0.5, b: 1 }], 2, 30);
+
+    expect(firstTaken(grid, 0, 2, 30)).toBe(0.5);
+    expect(firstTaken(grid, 1, 2, 30)).toBeNull();
+  });
+
+  it("점유 단위가 10분이어도 칸 경계가 소수 오차로 밀리지 않는다", () => {
+    expect(takenGrid([{ a: 1 / 6, b: 3 / 6 }], 1, 10)).toEqual([false, true, true, false, false, false]);
   });
 });
 

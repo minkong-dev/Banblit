@@ -32,7 +32,7 @@ import {
 } from "../lib/pipeline";
 
 
-// 사진은 화면에 고정하고 오른쪽 form 만 바꿉니다. 화면 5개가 한 layout 을 공유합니다.
+// 사진은 화면에 고정하고 오른쪽 form 만 변경합니다. 화면 5개가 한 layout 을 공유합니다.
 // 주소가 5개로 나뉘어 있어 뒤로 가기와 링크 공유가 동작하고,
 // layout route이므로 화면을 오갈 때 왼쪽 사진은 다시 그려지지 않습니다.
 const HEADS: Record<string, { title: string; sub: string }> = {
@@ -98,8 +98,8 @@ function useFormAction(
     {},
   );
 
-  // <form action={dispatch}> 로 연결하지 않습니다. React 는 action 이 끝나면 form 을 비우는데,
-  // 검증에 실패해 오류 메시지만 반환한 경우에도 비워져 사용자가 처음부터 다시 입력해야 합니다.
+  // <form action={dispatch}> 로 연결하지 않습니다. React 는 action 이 끝나면 form 을 초기화하는데,
+  // 검증에 실패해 오류 메시지만 반환한 경우에도 초기화되어 사용자가 처음부터 다시 입력해야 합니다.
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     dispatch(new FormData(event.currentTarget));
@@ -189,7 +189,7 @@ export function SignUp() {
           email: fieldText(data, "mail2").trim(),
           password: fieldText(data, "pw2"),
           cohort: Number(fieldText(data, "cohort")),
-          // 비워 두면 보내지 않습니다. 빈 문자열을 보내면 서버가 틀린 코드로 보고 가입을 거절합니다.
+          // 입력하지 않으면 보내지 않습니다. 빈 문자열을 보내면 서버가 틀린 코드로 보고 가입을 거절합니다.
           ...(adminCode === "" ? {} : { admin_code: adminCode }),
         });
         say(`${account.name}님, 가입이 완료되었습니다`);
@@ -219,7 +219,7 @@ export function SignUp() {
         autoComplete="off" placeholder="예: 46" error={errors.cohort} />
 
       {/* 관리자코드는 운영을 맡은 사람만 받습니다. 넣으면 모든 권한을 가진 계정이 되고,
-          비워 두면 권한 없이 가입해 나중에 부여받습니다. */}
+          입력하지 않으면 권한 없이 가입해 나중에 부여받습니다. */}
       <Field name="admincode" label="관리자코드 (선택)" type="password"
         autoComplete="off" placeholder="받으신 코드가 있을 때만 입력해주세요" error="" />
 
@@ -343,7 +343,7 @@ export function ResetPassword() {
       <Field name="rpwAgain" label="비밀번호 확인" type="password" autoComplete="new-password"
         placeholder="비밀번호를 다시 한 번 입력해주세요." error={errors.rpwAgain} />
       <button className="go" type="submit" style={{ marginTop: 22 }} disabled={isPending}>
-        {isPending ? "바꾸는 중…" : "비밀번호 재설정"}
+        {isPending ? "변경하는 중…" : "비밀번호 재설정"}
       </button>
       <p className="foot"><Link to="/login">로그인으로 돌아가기</Link></p>
     </form>

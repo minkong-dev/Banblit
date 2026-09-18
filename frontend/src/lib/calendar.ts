@@ -1,7 +1,7 @@
 // 달력이 사용하는 계산입니다. 날짜와 칸 번호만 다루고 화면이나 서버와 상호작용하지 않습니다.
 
-// 칸 하나가 한 시간입니다(사용자 결정). 서버 쪽 정본입니다:
-// backend/src/backend/scheduling/slots.py 의 SLOT_MINUTES
+// 칸 하나의 길이는 설정의 점유 단위(slot_minutes)입니다. 설정값이 없을 때의 기본값 60분은 서버의
+// backend/src/backend/scheduling/slots.py 의 DEFAULT_SLOT_MINUTES 가 정본입니다.
 const DAYS_PER_WEEK = 7;
 // 날짜만 있는 값을 Date로 생성할 때 사용하는 시각입니다. 자정으로 설정하면 여름시간제가 있는
 // 지역에서 하루가 23시간인 날에 날짜가 하루씩 밀릴 수 있습니다.
@@ -17,7 +17,7 @@ export function currentMonth(now: Date = new Date()): { year: number; month: num
 
 export function monthCells(year: number, month: number): (number | null)[] {
   // year년 month월(0부터 시작)을 7의 배수 길이인 배열로 반환합니다.
-  // 첫날의 요일만큼 앞을 비우고, 마지막 주가 부족하면 뒤를 비워 채웁니다.
+  // 첫날의 요일만큼 앞에 null 을 넣고, 마지막 주가 부족하면 뒤에도 null 을 넣어 채웁니다.
   const leading = new Date(year, month, 1).getDay();
   const lastDay = new Date(year, month + 1, 0).getDate();
   const days = Array.from({ length: lastDay }, (_, i) => i + 1);
@@ -30,7 +30,7 @@ export function monthCells(year: number, month: number): (number | null)[] {
 const MINUTES_PER_HOUR = 60;
 
 export function slotLabel(index: number, openHour: number): string {
-  // 여는 시각을 0번으로 둔 칸 번호를 "18:00"으로 표시합니다. 소수 칸 번호는 분으로 바꿔 "18:10"이 됩니다.
+  // 여는 시각을 0번으로 둔 칸 번호를 "18:00"으로 표시합니다. 소수 칸 번호는 분으로 변경해 "18:10"이 됩니다.
   // 1/6 같은 값은 부동소수점 오차가 있어 분 단위로 반올림한 뒤 시·분으로 나눕니다.
   const minutes = Math.round((openHour + index) * MINUTES_PER_HOUR);
   const hour = Math.floor(minutes / MINUTES_PER_HOUR);
@@ -45,7 +45,7 @@ export function slotSteps(slotCount: number, slotMinutes: number): number[] {
   return Array.from({ length: count + 1 }, (_, i) => (i * slotMinutes) / MINUTES_PER_HOUR);
 }
 
-/** 타임라인을 드래그해 고른 구간입니다. pressed 는 누른 위치, current 는 지금 위치이고 둘 다 소수 칸 번호입니다.
+/** 타임라인을 드래그해 선택한 구간입니다. pressed 는 누른 위치, current 는 지금 위치이고 둘 다 소수 칸 번호입니다.
  *  각 위치를 slotMinutes 간격으로 내림한 뒤 늦은 쪽에 한 칸을 더해, 누른 칸 자체가 구간에 들어갑니다.
  *  결과는 0~slotCount 로 자릅니다. 분을 정수로 세어 slotSteps 와 같은 값이 나오므로 select 의 value 와 일치합니다. */
 export function dragRange(
@@ -72,41 +72,66 @@ export function slotCountOf(openHour: number, closeHour: number): number {
   return closeHour - openHour;
 }
 
-export function hoursLabel(slots: number): string {
-  // 칸 개수를 "3시간"으로 표시합니다. 화면에는 칸이 아니라 시간으로 표현합니다.
-  return `${slots}시간`;
+export function hoursLabel(slots: number, slotMinutes: number = MINUTES_PER_HOUR): string {
+  // slotMinutes 길이의 칸 개수를 "3시간"·"3.5시간"으로 표시합니다. 화면에는 칸이 아니라 시간으로 표현합니다.
+  // 20분 칸 7개(2.333…시간)처럼 나누어떨어지지 않으면 소수 둘째 자리까지 표시합니다.
+  return `${Math.round((slots * slotMinutes * 100) / MINUTES_PER_HOUR) / 100}시간`;
 }
 
-export function takenGrid(spans: { a: number; b: number }[], slotCount: number): boolean[] {
-  // spans가 차지한 칸을 true로 표시한 배열을 반환합니다. 겹쳐 들어와도 한 번만 계산합니다.
-  // 소수 구간(18:10~19:30 → 0.167~1.5)은 일부라도 걸친 칸을 전부 찬 것으로 표시합니다. 칸 단위 선착순이라
-  // 10분이 걸친 칸에도 한 시간짜리 예약은 들어갈 수 없기 때문입니다.
-  const grid = Array<boolean>(slotCount).fill(false);
+/** 시간 단위 위치(index, 소수 가능)가 slotMinutes 간격 grid 의 몇 번째 칸 경계인지 반환합니다.
+ *  분을 정수로 반올림한 뒤 나누므로 10분(1/6) 같은 값도 소수 오차 없이 경계에 맞습니다.
+ *  경계 사이의 값은 소수로 반환하므로 호출하는 쪽이 floor·ceil 로 걸친 칸을 결정합니다. */
+export function cellAt(index: number, slotMinutes: number = MINUTES_PER_HOUR): number {
+  return Math.round(index * MINUTES_PER_HOUR) / slotMinutes;
+}
+
+export function takenGrid(
+  spans: { a: number; b: number }[], slotCount: number, slotMinutes: number = MINUTES_PER_HOUR,
+): boolean[] {
+  // spans가 차지한 칸을 true로 표시한 배열을 반환합니다. 칸 하나의 길이는 slotMinutes 이고, 겹쳐 들어와도 한 번만 계산합니다.
+  // 칸 경계에 맞지 않는 구간(60분 칸에서 18:10~19:30)은 일부라도 걸친 칸을 전부 찬 것으로 표시합니다. 칸 단위
+  // 선착순이라 10분이 걸친 칸에도 그 칸 길이의 예약은 들어갈 수 없기 때문입니다.
+  const cells = cellAt(slotCount, slotMinutes);
+  const grid = Array<boolean>(cells).fill(false);
   for (const span of spans) {
-    for (let i = Math.max(0, Math.floor(span.a)); i < Math.min(slotCount, Math.ceil(span.b)); i += 1) {
+    const end = Math.min(cells, Math.ceil(cellAt(span.b, slotMinutes)));
+    for (let i = Math.max(0, Math.floor(cellAt(span.a, slotMinutes))); i < end; i += 1) {
       grid[i] = true;
     }
   }
   return grid;
 }
 
-export function isRangeFree(grid: boolean[], from: number, to: number): boolean {
-  // from부터 to 직전까지 찬 칸이 없으면 true를 반환합니다. 소수 범위는 걸친 칸 전부를 봅니다.
-  return grid.slice(Math.floor(from), Math.ceil(to)).every((taken) => !taken);
+/** from부터 to 직전까지에서 처음으로 찬 칸의 시작 위치(시간 단위)를 반환합니다. 찬 칸이 없으면 null 입니다.
+ *  grid 는 같은 slotMinutes 로 만든 takenGrid 의 결과입니다. 칸 경계에 맞지 않는 범위는 걸친 칸 전부를 확인합니다. */
+export function firstTaken(
+  grid: boolean[], from: number, to: number, slotMinutes: number = MINUTES_PER_HOUR,
+): number | null {
+  const start = Math.floor(cellAt(from, slotMinutes));
+  const offset = grid.slice(start, Math.ceil(cellAt(to, slotMinutes))).indexOf(true);
+  return offset === -1 ? null : ((start + offset) * slotMinutes) / MINUTES_PER_HOUR;
 }
 
-/** 드래그로 고른 구간을 반영할지 판단합니다. grid 가 없으면 항상 반영하고(불가능 일정은 겹쳐도 됩니다),
+export function isRangeFree(
+  grid: boolean[], from: number, to: number, slotMinutes: number = MINUTES_PER_HOUR,
+): boolean {
+  return firstTaken(grid, from, to, slotMinutes) === null;
+}
+
+/** 드래그로 선택한 구간을 반영할지 판단합니다. grid 가 없으면 항상 반영하고(불가능 일정은 겹쳐도 됩니다),
  *  있으면 찬 칸이 하나도 걸치지 않을 때만 반영합니다. 반영하지 않으면 직전 구간이 그대로 남아
  *  선택이 찬 칸 앞에서 멈춥니다. 등록 시점에만 거절하면 사용자가 드래그를 마친 뒤에야 막힌 것을 압니다. */
-export function acceptsDrag(grid: boolean[] | undefined, range: { a: number; b: number }): boolean {
-  return grid === undefined || isRangeFree(grid, range.a, range.b);
+export function acceptsDrag(
+  grid: boolean[] | undefined, range: { a: number; b: number }, slotMinutes: number = MINUTES_PER_HOUR,
+): boolean {
+  return grid === undefined || isRangeFree(grid, range.a, range.b, slotMinutes);
 }
 
 export function roomBounds(rooms: { opens_at: string; closes_at: string }[]): {
   open: number;
   close: number;
 } {
-  // 합주실 여닫는 시각 중 가장 이른 것과 가장 늦은 것으로 달력의 시작과 끝 시각을 정합니다.
+  // 합주실 여닫는 시각 중 가장 이른 것과 가장 늦은 것으로 달력의 시작과 끝 시각을 결정합니다.
   // 배정이 있든 없든 합주실 설정만 있으면 결정됩니다.
   if (rooms.length === 0) return { open: FALLBACK_OPEN_HOUR, close: FALLBACK_CLOSE_HOUR };
 

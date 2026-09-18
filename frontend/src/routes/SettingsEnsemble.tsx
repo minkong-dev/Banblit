@@ -68,7 +68,7 @@ function teamDaysText(period: PeriodBody, draft: EnsembleDraft): string {
 }
 
 /** 기간 form 안의 전체합주 입력칸입니다. 체크했을 때만 날짜 범위·합주실·기본 시각을 받습니다.
- *  "매일" 기간은 팀별합주 날짜가 끝없이 이어지므로 계산 결과 줄을 표시하지 않습니다(사용자 결정 2026-09-15). */
+ *  "매일" 기간은 팀별합주 날짜가 끝없이 이어지므로 계산 결과 줄을 표시하지 않습니다. */
 export function EnsembleFields(props: {
   draft: EnsembleDraft;
   setDraft: (next: EnsembleDraft) => void;

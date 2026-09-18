@@ -7,6 +7,15 @@ function job(status: Job<string>["status"], extra: Partial<Job<string>> = {}): {
   return { job: { id: "j1", status, result: null, error: null, ...extra } };
 }
 
+describe("JOB_DEADLINE_MS", () => {
+  it("서버가 배정 작업 1개에 쓰는 최대 시간보다 먼저 대기를 중단하지 않는다", () => {
+    // 서버 상한은 300초(resolution.py 의 RESOLUTION_TIME_LIMIT_SECONDS)에 마지막 solver 계산 1회
+    // 60초(assignment.py 의 SOLVER_TIME_LIMIT_SECONDS)를 더한 360초입니다. 화면이 먼저 중단하면
+    // 실패로 표시한 배정이 나중에 저장됩니다.
+    expect(JOB_DEADLINE_MS).toBeGreaterThan(360 * 1000);
+  });
+});
+
 describe("awaitJob", () => {
   const nowait = () => Promise.resolve();
 

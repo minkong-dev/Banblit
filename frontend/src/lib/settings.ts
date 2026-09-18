@@ -1,16 +1,16 @@
 // 합주실·기간 설정의 검증과 계산입니다. 화면이나 서버와 상호작용하지 않습니다.
 // 검증 함수는 값이 유효하면 빈 문자열을, 아니면 사용자가 읽을 수 있는 오류 메시지를 반환합니다.
-// 호출 순서는 pipeline.ts가 정합니다.
+// 호출 순서는 pipeline.ts가 결정합니다.
 
 import { uniqueNameMessage } from "./validate";
 
-// 칸 하나의 크기는 저장소 설정이 정합니다(GET /settings 의 slot_minutes). 이 파일은 서버와
+// 칸 하나의 크기는 저장소 설정이 결정합니다(GET /settings 의 slot_minutes). 이 파일은 서버와
 // 상호작용하지 않으므로 값을 인자로 받습니다. 부르는 쪽이 설정에서 읽어 넘깁니다.
 // 서버 쪽 정본은 backend/src/backend/services/settings_service.py 입니다.
 const DEFAULT_SLOT_MINUTES = 60;
 const MINUTES_PER_HOUR = 60;
 
-/** 점유 단위로 고를 수 있는 값(분)입니다. 한 시간을 나머지 없이 나누는 값만 둡니다.
+/** 점유 단위로 선택할 수 있는 값(분)입니다. 한 시간을 나머지 없이 나누는 값만 둡니다.
  *  서버 정본은 backend/src/backend/api/schemas.py 의 SettingsUpdateIn 과 settings 의 CHECK 입니다. */
 export const SLOT_MINUTE_CHOICES = [5, 10, 12, 15, 20, 30, 60] as const;
 
@@ -43,7 +43,7 @@ export function openHoursMessage(
   return gridMessage(minutesOf(opens), minutesOf(closes), slotMinutes);
 }
 
-/** 자정부터의 분으로 바꾼 from·to 가 격자에 맞고 순서가 맞으면 빈 문자열, 아니면 오류 메시지를 반환합니다. */
+/** 자정부터의 분으로 변경한 from·to 가 격자에 맞고 순서가 맞으면 빈 문자열, 아니면 오류 메시지를 반환합니다. */
 function gridMessage(from: number | null, to: number | null, slotMinutes: number): string {
   const unit = unitText(slotMinutes);
   if (from === null || !onGrid(from, slotMinutes)) return `개방 시간은 ${unit} 기준으로 지정해주세요.`;
@@ -111,14 +111,15 @@ export function slotsBetween(
   return (to - from) / slotMinutes;
 }
 
+/** 네 값 모두 자리의 개수입니다. 자리 하나의 길이는 capacity 에 넘긴 slotMinutes 입니다. */
 export type Capacity = {
-  /** 하루에 열리는 1시간 자리 수입니다. 합주실 전체의 합입니다. */
+  /** 하루에 열리는 자리 수입니다. 합주실 전체의 합입니다. */
   perDay: number;
-  /** 기간 전체의 1시간 자리 수입니다. */
+  /** 기간 전체의 자리 수입니다. */
   total: number;
-  /** 팀 하나가 갖는 1시간 자리 수입니다. 집중 합주기간은 모든 팀이 정확히 같은 개수를 갖습니다. */
+  /** 팀 하나가 갖는 자리 수입니다. 집중 합주기간은 모든 팀이 정확히 같은 개수를 갖습니다. */
   perTeam: number;
-  /** 팀에 고르게 나누고 남는 1시간 자리 수입니다. 예약에 사용할 수 있습니다. */
+  /** 팀에 고르게 나누고 남는 자리 수입니다. 예약에 사용할 수 있습니다. */
   leftover: number;
 };
 
@@ -126,9 +127,13 @@ export function capacity(input: {
   rooms: { opens_at: string; closes_at: string }[];
   days: number;
   teams: number;
+  /** 생략하면 60분입니다. 설정의 점유 단위(slot_minutes)를 넘깁니다. */
+  slotMinutes?: number;
 }): Capacity {
-  const { rooms, days, teams } = input;
-  const perDay = rooms.reduce((sum, room) => sum + slotsBetween(room.opens_at, room.closes_at), 0);
+  const { rooms, days, teams, slotMinutes } = input;
+  const perDay = rooms.reduce(
+    (sum, room) => sum + slotsBetween(room.opens_at, room.closes_at, slotMinutes), 0,
+  );
   const total = perDay * Math.max(0, days);
   // teams 가 0 이면 나누지 않고 total 을 그대로 leftover 에 담습니다.
   const perTeam = teams > 0 ? Math.floor(total / teams) : 0;

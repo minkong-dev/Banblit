@@ -47,18 +47,16 @@ function NavList({ items, current }: { items: readonly NavItem[]; current: NavKe
 export function AppShell(props: {
   /** 화면별 CSS 가 격리되는 이름입니다. 예: scheduler, admin. */
   page: string;
-  /** 사이드바에 없는 화면(프로필 설정)은 아무 항목도 켜지 않도록 비워 둡니다. */
+  /** 사이드바에 없는 화면(프로필 설정)은 아무 항목도 켜지 않도록 값을 넣지 않습니다. */
   current?: NavKey;
-  /** 사이드바 맨 아래에 추가할 요소입니다. */
-  sideExtra?: ReactNode;
   children: ReactNode;
 }) {
-  const { page, current, sideExtra, children } = props;
+  const { page, current, children } = props;
   const toast = useToast();
   usePage(page);
   // shell.css 가 이 속성으로 공통 layout(상단바·사이드바·탭·카드)의 스타일을 적용합니다. 계정·랜딩 화면에는 없습니다.
   // useLayoutEffect 인 이유: 화면을 옮길 때 useEffect 는 자식(PostBoard 의 useFitCount)의 effect 를 먼저 실행합니다.
-  // 그 effect 가 크기를 재는 순간 이전 화면의 cleanup 이 속성을 지운 상태라, 프로필 카드가 shell.css 없이
+  // 그 effect 가 크기를 재는 순간 이전 화면의 cleanup 이 속성을 삭제한 상태라, 프로필 카드가 shell.css 없이
   // opacity 1 로 계산되고 속성이 돌아오면서 0 으로 전환되어 열렸다 닫히는 것처럼 보였습니다.
   // layout effect 는 cleanup 과 설정이 모두 그리기 전, 모든 useEffect 보다 먼저 끝납니다.
   useLayoutEffect(() => {
@@ -69,7 +67,7 @@ export function AppShell(props: {
 
   // 가진 권한으로 필터링합니다. 계정을 아직 받지 못했으면 아무것도 표시되지 않습니다.
   const managerNav = MANAGER_NAV.filter((item) => item.needs.some((need) => can(me, need)));
-  // 팀 메뉴 이름만 권한에 따라 "팀 관리"·"내 팀"으로 바뀝니다. 주소와 key 는 같습니다.
+  // 팀 메뉴 이름만 권한에 따라 "팀 관리"·"내 팀"으로 변경됩니다. 주소와 key 는 같습니다.
   const nav = NAV.map((item) => (item.key === "find-team" ? { ...item, label: teamNavLabel(me) } : item));
 
   return (
@@ -93,7 +91,6 @@ export function AppShell(props: {
                 <NavList items={managerNav} current={current} />
               </>
             )}
-            {sideExtra}
           </div>
         </aside>
 
@@ -185,7 +182,7 @@ export function ProfileMenu() {
           return (
             <div className="tm" key={team.id}>
               <i style={{ background: `var(--${team.colorKey})` }} />{team.name}
-              {/* 명단이 아직 오지 않았으면 비워 둡니다. 없는 값을 생성하지 않습니다. */}
+              {/* 명단이 아직 오지 않았으면 아무것도 표시하지 않습니다. 없는 값을 생성하지 않습니다. */}
               <small>{mine?.cohort == null ? "" : `${mine.cohort}기`}</small>
             </div>
           );
