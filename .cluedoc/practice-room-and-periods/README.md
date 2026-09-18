@@ -1,7 +1,7 @@
 ---
 title: 합주실과 기간
 sources:
-  - backend/src/backend/scheduling/slots.py       # 운영 시간을 1시간 slot으로 분할합니다. slot 길이(SLOT_MINUTES)를 정의하는 파일
+  - backend/src/backend/scheduling/slots.py       # 운영 시간을 slot으로 분할합니다. slot 길이의 기본값(DEFAULT_SLOT_MINUTES)을 정의하는 파일
   - backend/src/backend/scheduling/assignment.py  # 합주실(이름 + 운영 시간) 정의
   - backend/src/backend/db/models.py              # Room·Period table
   - backend/src/backend/services/input.py              # 개방 시각·폐쇄 시각·이름·기간 날짜를 비롯한 모든 입력의 경계 검증
@@ -74,7 +74,7 @@ slot은 **정각에만** 시작합니다. 개방 시간도 정각이어야 하�
 
 **30분 단위에서 1시간 단위로 변경했습니다(사용자 결정).** 30분 단위 합주는 실제로 일어나지 않았으므로, 세분화했어도 항상 2개 slot이 함께 배정되었습니다. slot 크기를 절반으로 줄이면 배정 계산이 검토해야 하는 경우의 수도 함께 증가합니다.
 
-slot 길이는 서버의 `SLOT_MINUTES` 상수 1개로만 정의합니다. 변경할 경우 `SLOT_MINUTES` 만 수정합니다. 개방/폐쇄 시간 검증 규칙도 `SLOT_MINUTES` 에서 도출됩니다.
+slot 길이는 설정의 점유 단위(`settings.slot_minutes`, 5·10·12·15·20·30·60분 중 하나)입니다. 설정값을 넘기지 않은 호출의 기본값은 서버의 `DEFAULT_SLOT_MINUTES`(60분) 상수 1개로 정의합니다. 개방/폐쇄 시간 검증 규칙도 점유 단위에서 도출됩니다.
 
 합주실마다 개방 시간이 달라도 slot의 경계는 모든 합주실이 공유합니다. 1번 합주실의 19시 slot과 2번 합주실의 19시 slot은 같은 시간 구간이므로, 1명이 같은 시간에 2개 합주실에 배정되지 않도록 검증할 수 있습니다.
 
