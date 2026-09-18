@@ -117,7 +117,7 @@ def request_password_reset(session: Session, email: str, now: datetime) -> None:
     send_mail(
         member.email,
         RESET_SUBJECT,
-        f"{member.name}님, 아래 주소에서 새 비밀번호를 정해 주세요.\n\n"
+        f"{member.name}님, 아래 주소에서 새 비밀번호를 설정해 주세요.\n\n"
         f"{_reset_link(token)}\n\n"
         f"이 링크는 {int(RESET_TTL.total_seconds() // 60)}분 뒤에 만료되고 한 번만 쓸 수 "
         "있습니다. 요청한 적이 없다면 이 메일을 버리셔도 됩니다.",

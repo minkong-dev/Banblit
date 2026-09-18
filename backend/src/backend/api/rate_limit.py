@@ -1,4 +1,4 @@
-"""rate limit(같은 요청자가 정해진 시간 안에 보낼 수 있는 요청 횟수 제한)입니다.
+"""rate limit(같은 요청자가 지정된 시간 안에 보낼 수 있는 요청 횟수 제한)입니다.
 
 로그인처럼 값을 시도해 보는 endpoint(API의 요청 주소 단위)에 적용합니다. 비밀번호를 하나씩
 시도하는 것을 막지 못하면 짧은 비밀번호는 시도 횟수만 충분하면 맞힐 수 있습니다.
@@ -8,13 +8,19 @@
 외부(예: Redis)로 옮깁니다.
 """
 
+import os
 import time
 from collections import OrderedDict, deque
 from collections.abc import Callable
 
 from fastapi import HTTPException, Request
 
-# IP 주소를 바꿔 가며 요청하면 _seen 의 항목이 무한히 쌓입니다. 메모리를 고갈시키는 공격이 되므로 상한을 둡니다.
+# api 앞에 있는 reverse proxy 의 개수를 담은 환경변수의 이름입니다. 배포는 Caddy → nginx → api 이므로 2,
+# 개발은 nginx(또는 Vite) 하나이므로 기본값 1입니다(docker-compose.yml).
+_PROXY_COUNT_VARIABLE = "TRUSTED_PROXY_COUNT"
+DEFAULT_TRUSTED_PROXY_COUNT = 1
+
+# IP 주소를 변경해 가며 요청하면 _seen 의 항목이 무한히 쌓입니다. 메모리를 고갈시키는 공격이 되므로 상한을 둡니다.
 DEFAULT_MAX_CALLERS = 10_000
 
 # 생성된 RateLimiter 전부입니다. 테스트는 한 process 에서 여러 요청을 연달아 보내므로, 테스트 사이에
@@ -37,7 +43,7 @@ class RateLimiter:
         if limit < 1:
             raise ValueError("상한은 1 이상이어야 합니다")
         if window_seconds <= 0:
-            raise ValueError("창 길이는 0보다 커야 합니다")
+            raise ValueError("window 길이는 0보다 커야 합니다")
         self._limit = limit
         self._window = window_seconds
         self._max_callers = max_callers
@@ -78,18 +84,32 @@ class RateLimiter:
             self._seen.popitem(last=False)
 
 
-def caller_of(request: Request) -> str:
-    """요청 발신자를 한 문자열로 반환합니다. reverse proxy가 있으면 reverse proxy가 본 발신자를 사용합니다.
+def _trusted_proxy_count() -> int:
+    # TRUSTED_PROXY_COUNT 환경변수를 읽습니다. 숫자가 아니거나 0 이하이면 기본값을 반환합니다.
+    try:
+        count = int(os.environ.get(_PROXY_COUNT_VARIABLE, ""))
+    except ValueError:
+        return DEFAULT_TRUSTED_PROXY_COUNT
+    return count if count > 0 else DEFAULT_TRUSTED_PROXY_COUNT
 
-    reverse proxy(Caddy)는 본인이 본 발신자를 X-Forwarded-For 헤더의 맨 뒤에 추가합니다. 앞의 값은 요청 발신자가 조작할 수 있으므로
-    맨 뒤의 값만 신뢰합니다 — 이 규칙은 reverse proxy가 정확히 하나일 때 올바르므로,
-    reverse proxy를 하나 추가하면 이 함수도 함께 수정해야 합니다.
+
+def caller_of(request: Request) -> str:
+    """요청 발신자를 한 문자열로 반환합니다. reverse proxy가 있으면 맨 앞 reverse proxy가 본 발신자를 사용합니다.
+
+    reverse proxy는 각자 본인이 본 발신자를 X-Forwarded-For 헤더의 맨 뒤에 추가합니다. reverse proxy가
+    N개이면 뒤에서 N번째 값이 맨 앞 reverse proxy가 본 발신자입니다. 그보다 앞의 값은 요청 발신자가
+    조작할 수 있으므로 사용하지 않습니다. N은 TRUSTED_PROXY_COUNT 로 설정합니다.
+
+    값의 개수가 N보다 적으면 reverse proxy를 거치지 않은 요청이므로 헤더를 사용하지 않습니다.
     """
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        hops = [hop.strip() for hop in forwarded.split(",") if hop.strip()]
-        if hops:
-            return hops[-1]
+    hops = [
+        hop.strip()
+        for hop in request.headers.get("x-forwarded-for", "").split(",")
+        if hop.strip()
+    ]
+    count = _trusted_proxy_count()
+    if len(hops) >= count:
+        return hops[-count]
     return request.client.host if request.client is not None else "unknown"
 
 

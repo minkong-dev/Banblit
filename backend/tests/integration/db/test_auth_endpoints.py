@@ -448,6 +448,20 @@ def test_i_can_change_my_name_and_cohort(
     assert body["cohort"] == 47
 
 
+def test_editing_my_profile_into_someone_else_says_who_it_collides_with(
+    api_client: TestClient,
+) -> None:
+    # 학과·학번·기수가 같은 두 사람은 이름만 다릅니다. 이름을 같게 수정하면 가입 때와 같은 문구가 나와야 합니다.
+    _signup(api_client)
+    _signup(api_client, name="김민준", email="minjun@example.com")
+
+    response = api_client.patch("/me", json={"name": SIGNUP_BODY["name"], "cohort": 46})
+
+    # 가입(test_signup_refuses_the_same_person_twice)과 같은 상태 코드입니다.
+    assert response.status_code == 422
+    assert "이미 가입된 사람입니다" in response.json()["detail"]
+
+
 def test_editing_my_profile_rejects_an_empty_name(api_client: TestClient) -> None:
     _signup(api_client)
 

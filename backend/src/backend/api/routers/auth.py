@@ -42,7 +42,7 @@ from backend.db.pipeline import get_session
 
 router = APIRouter()
 
-# rate limit(같은 요청자가 정해진 시간 안에 보낼 수 있는 요청 횟수 제한)을 설정합니다. 비밀번호를
+# rate limit(같은 요청자가 지정된 시간 안에 보낼 수 있는 요청 횟수 제한)을 설정합니다. 비밀번호를
 # 하나씩 시도하는 것을 막지 못하면 짧은 비밀번호는 시도 횟수만 충분하면 맞힐 수 있습니다. 메일을
 # 전송하는 endpoint(API의 요청 주소 단위)는 상한을 더 낮게 설정합니다. 다른 사람의 주소로 메일을
 # 대량 발송하는 데 악용될 수 있기 때문입니다.
@@ -174,9 +174,9 @@ def leave(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> None:
-    """사용자를 탈퇴 처리합니다. 그 사람이 작성한 글·댓글·예약도 함께 삭제됩니다(사용자 결정).
+    """사용자를 탈퇴 처리합니다. 그 사람이 작성한 글·댓글·예약도 함께 삭제됩니다.
 
-    포지션은 삭제하지 않고 member_id 만 None 으로 비웁니다. 포지션은 팀의 구성이므로 멤버가
+    포지션은 삭제하지 않고 member_id 만 None 으로 변경합니다. 포지션은 팀의 구성이므로 멤버가
     탈퇴해도 팀의 포지션 수가 줄면 안 됩니다. 삭제 규칙은 db/models.py 의 ondelete 에 정의되어 있습니다.
     """
     session.delete(requester)

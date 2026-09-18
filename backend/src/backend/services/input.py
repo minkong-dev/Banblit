@@ -1,7 +1,7 @@
 """경계에서 입력을 검증합니다. 위반한 값은 사람이 읽을 수 있는 문장을 담은 ValueError 로 거부합니다.
 
 table(데이터베이스의 행과 열로 이루어진 데이터 구조)마다 따로 두지 않습니다. 빈 문자열, "HH:MM",
-"YYYY-MM-DD", slot(1시간 단위 시간 칸) 격자 검증은 어느 table 이든 같습니다.
+"YYYY-MM-DD", slot(점유 단위 길이의 시간 칸) 격자 검증은 어느 table 이든 같습니다.
 """
 
 import re
@@ -65,7 +65,7 @@ PASSWORD_RULES: tuple[tuple[str, str], ...] = (
 
 
 def require_password(value: str) -> None:
-    """새로 정하는 비밀번호를 검증합니다. 로그인은 이 함수를 호출하지 않습니다.
+    """새로 설정하는 비밀번호를 검증합니다. 로그인은 이 함수를 호출하지 않습니다.
     규칙을 변경하기 전에 생성된 계정이 로그인할 수 없어서는 안 되기 때문입니다."""
     if not PASSWORD_MIN_LENGTH <= len(value) <= PASSWORD_MAX_LENGTH:
         raise ValueError(
@@ -142,7 +142,7 @@ def require_valid_slot_bounds(
 ) -> None:
     """TimeInterval·generate_slots 이 이미 수행하는 시간대·순서·격자 검증을 재사용합니다.
 
-    slot_minutes 는 저장소 설정이 정하는 칸 하나의 크기(분)입니다.
+    slot_minutes 는 저장소 설정이 결정하는 칸 하나의 크기(분)입니다.
     """
     generate_slots(TimeInterval(start=starts_at, end=ends_at), slot_minutes)
 

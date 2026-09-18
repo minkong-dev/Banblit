@@ -12,7 +12,7 @@ from backend.services.input import (
 from backend.db.models import Room
 from backend.db.pipeline import commit_translating
 
-# 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 바꾸는 단계별 기록)이 정한 이름입니다.
+# 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 변경하는 단계별 기록)이 지정한 이름입니다.
 ROOM_MESSAGES = {"rooms_name_key": "이미 있는 합주실 이름입니다"}
 
 

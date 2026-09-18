@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from backend.services.board_service import require_post_author, require_post_readable
 from backend.db.models import Attachment, Member
 
-# 첨부 규칙 값입니다. 다른 파일에서 다시 정하지 않습니다.
+# 첨부 규칙 값입니다. 다른 파일에서 다시 정의하지 않습니다.
 DEFAULT_STORAGE_DIR = "/var/lib/banblit/attachments"
 MAX_NAME_CHARS = 200
 MAX_CONTENT_TYPE_CHARS = 100

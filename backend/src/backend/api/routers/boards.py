@@ -116,7 +116,7 @@ def create_notice_post(
     return PostEnvelopeOut(post=_post_out(post, author, 0))
 
 
-# 블라인드는 글을 지우지 않고 목록·상세에서 가립니다. 작성자 본인에게도 보이지 않습니다.
+# 블라인드는 글을 삭제하지 않고 목록·상세에서 가립니다. 작성자 본인에게도 보이지 않습니다.
 # 아래 세 endpoint 는 board_moderate 를 가진 사람만 호출합니다.
 # 작성 페이지를 열 때 호출합니다. 빈 글을 먼저 만들어야 본문에 파일을 넣을 수 있습니다
 # (첨부 업로드가 POST /posts/{id}/attachments 라 글 번호가 필요합니다).
@@ -339,7 +339,7 @@ def delete_post_endpoint(
     session: Session = Depends(get_session),
 ) -> None:
     post = require_post_author(session, post_id, requester)
-    # attachments table 의 행이 삭제되기 전에 디스크의 파일부터 삭제합니다. 순서를 바꾸면
+    # attachments table 의 행이 삭제되기 전에 디스크의 파일부터 삭제합니다. 순서를 변경하면
     # 어느 파일이 이 게시글의 파일이었는지 추적할 수 없게 되어, 아무도 삭제하지 못하는 파일이 남습니다.
     remove_post_files(session, post_id)
     session.delete(post)

@@ -44,7 +44,7 @@ class PeriodAssignResult:
 
 @dataclass(frozen=True)
 class OpenSlot:
-    """어떤 팀도 배정받지 않은 한 시간 slot(1시간 단위 시간 칸) 하나입니다. 합주실 번호와 이름을 함께 포함합니다."""
+    """어떤 팀도 배정받지 않은 slot(점유 단위 길이의 시간 칸) 하나입니다. 합주실 번호와 이름을 함께 포함합니다."""
 
     room_id: int
     room: str
@@ -123,7 +123,7 @@ def assign_period(
 def period_days(period: Period, on: date) -> list[date]:
     """배정을 계산할 날짜 목록을 반환합니다.
 
-    everyday 가 켜진 기간은 종료일이 없으므로(사용자 결정 2026-09-11) 계산을 실행한 날 on 하루만 반환합니다.
+    everyday 가 켜진 기간은 종료일이 없으므로 계산을 실행한 날 on 하루만 반환합니다.
     그 외에는 시작일부터 종료일까지 전부 반환합니다. 전체합주 날짜는 팀별 배정 대상이 아니므로 제외합니다
     (patch_note 8번). 전부 전체합주 날짜면 빈 목록입니다.
     """
@@ -214,7 +214,7 @@ def open_slots_in_period(session: Session, period: Period) -> list[OpenSlot]:
 
     # ponytail: 칸마다 그 합주실의 배정 구간을 전부 훑습니다(칸 수 × 구간 수). 합주실 하나의
     # 기간 전체가 대상이라 지금 규모에서는 문제가 없습니다. 느려지면 구간을 시작 시각순으로
-    # 정렬해 이분 탐색으로 바꿉니다.
+    # 정렬해 이분 탐색으로 변경합니다.
     occupied: dict[int, list[tuple[datetime, datetime]]] = {}
     for room_id, starts_at, ends_at in taken:
         occupied.setdefault(room_id, []).append((starts_at, ends_at))

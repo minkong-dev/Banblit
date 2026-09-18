@@ -39,7 +39,7 @@ FORBIDDEN_DETAIL = "권한이 없습니다"
 def require_permission(permission: Permission) -> Callable[..., Member]:
     """permission(권한)이 설정된 사용자만 통과하게 하는 검증 함수를 반환합니다.
 
-    라우터는 Depends(require_permission("room_manage")) 형식으로 반환된 함수를 추가합니다.
+    라우터는 Depends(require_permission("room_edit")) 형식으로 반환된 함수를 추가합니다.
     사용자가 가진 권한은 그 사용자에게 할당된 permission set(권한 집합) 전부의 합집합이므로,
     permission set 중 하나라도 이 permission 을 포함하면 통과합니다.
     """

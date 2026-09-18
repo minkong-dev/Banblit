@@ -54,6 +54,26 @@ def test_job_moves_from_running_to_done_with_the_result() -> None:
     assert finished.finished_at is not None
 
 
+def test_a_job_never_reads_as_done_without_a_finish_time() -> None:
+    # Future 의 done callback 은 set_result 안에서, 즉 status 가 "done" 으로 바뀐 바로 그 순간에
+    # 작업 스레드에서 실행됩니다. 그 순간의 조회 결과에 finished_at 이 있어야 합니다.
+    runner: JobRunner[str] = JobRunner(max_concurrent=1)
+    release = threading.Event()
+    seen: list[object] = []
+
+    def work() -> str:
+        release.wait(timeout=5)
+        return "done"
+
+    job = runner.submit(period_id=1, work=work)
+    runner._entries[job.id].future.add_done_callback(lambda _: seen.append(runner.get(job.id)))
+    release.set()
+
+    _wait_until(lambda: len(seen) == 1)
+    assert getattr(seen[0], "status") == "done"
+    assert getattr(seen[0], "finished_at") is not None
+
+
 def test_a_failing_job_becomes_failed_with_a_readable_message() -> None:
     runner: JobRunner[str] = JobRunner(max_concurrent=1)
 

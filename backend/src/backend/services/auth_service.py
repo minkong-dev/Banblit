@@ -65,7 +65,7 @@ def _needs_rehash(stored: str) -> bool:
     return (int(n_text), int(r_text), int(p_text)) != (_SCRYPT_N, _SCRYPT_R, _SCRYPT_P)
 
 
-# 관리자코드를 담은 환경변수의 이름입니다. 값은 개발자가 정하고 .env 에 둡니다(저장소에 넣지 않습니다).
+# 관리자코드를 담은 환경변수의 이름입니다. 값은 개발자가 결정하고 .env 에 둡니다(저장소에 넣지 않습니다).
 ADMIN_CODE_VARIABLE = "ADMIN_SIGNUP_CODE"
 
 
@@ -102,7 +102,7 @@ def signup(
 
     admin_code 가 환경변수의 코드와 같으면 권한 항목이 모두 활성화된 permission set 을 부여합니다.
     넣지 않았거나 다르면 권한 0개로 가입하고, 이미 권한을 가진 사람에게서 부여받습니다
-    (사용자 결정 2026-09-16). 틀린 코드로 가입을 거절하지 않습니다."""
+   . 틀린 코드로 가입을 거절하지 않습니다."""
     clean_name = require_non_empty(name, "이름")
     clean_department = require_non_empty(department, "학과")
     clean_student_no = require_student_no(student_no)
@@ -133,7 +133,8 @@ def update_profile(
     """로그인 사용자의 이름과 기수를 수정합니다. 이메일은 이 함수에서 수정하지 않습니다. 로그인 식별자이므로 변경하려면 새 주소의 소유권을 확인하는 별도 절차가 필요합니다."""
     member.name = require_non_empty(name, "이름")
     member.cohort = None if cohort is None else require_cohort(cohort)
-    session.commit()
+    # 이름·기수를 다른 사람과 같게 수정하면 가입 때와 같은 신원 제약을 위반합니다.
+    commit_translating(session, MEMBER_MESSAGES)
     return member
 
 

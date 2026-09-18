@@ -58,8 +58,8 @@ def require_post_author(
 
     board_moderate 권한을 가진 사람은 다른 사람의 글도 삭제할 수 있고, 그때는 팀 소속을 확인하지
     않습니다. 확인하면 그 팀에 속하지 않은 사람이 부적절한 글을 처리할 수 없어 이 권한이 팀 게시판에서는
-    쓸모가 없어집니다. 내용을 고치는 것은 이 권한으로도 할 수 없습니다(allow_moderator=False) —
-    남의 글을 고치면 누가 쓴 말인지가 흐려집니다.
+    용도가 없습니다. 내용을 수정하는 것은 이 권한으로도 할 수 없습니다(allow_moderator=False) —
+    남의 글을 수정하면 작성자가 쓴 내용과 수정한 사람이 쓴 내용을 구분할 수 없습니다.
     """
     if allow_moderator and _moderates(session, requester):
         post = session.get(Post, post_id)
@@ -129,7 +129,7 @@ def set_post_blinded(
 ) -> None:
     """글을 가리거나(blinded_at 에 시각) 되돌립니다(None). 권한 판정은 endpoint 가 합니다.
 
-    가릴 때는 requester 를 함께 남기고, 되돌릴 때는 시각과 함께 비웁니다. 권한자가 여럿일 때 사후에
+    가릴 때는 requester 를 함께 남기고, 되돌릴 때는 시각과 함께 null 로 변경합니다. 권한자가 여럿일 때 사후에
     누가 처리했는지 확인하기 위해서입니다.
 
     require_post_readable 을 거치지 않습니다. 그 함수는 가려진 글을 없는 글로 거절하므로, 거치면
@@ -181,7 +181,7 @@ def create_draft(
     공지 초안의 notice_write 확인은 endpoint 가 합니다(routers/boards.py).
 
     published_at 이 비어 있어 목록에도 남의 상세 조회에도 나오지 않습니다. 쓰지 않고 나가면
-    화면이 DELETE /posts/{id} 로 지우고, 그러지 못한 행은 하루 뒤 sweep_stale_drafts 가 지웁니다.
+    화면이 DELETE /posts/{id} 로 삭제하고, 그러지 못한 행은 하루 뒤 sweep_stale_drafts 가 삭제합니다.
     """
     if team_id is not None:
         _require_team_exists(session, team_id)
@@ -217,10 +217,10 @@ def publish_post(
 
 
 def sweep_stale_drafts(session: Session, older_than: datetime) -> int:
-    """older_than 이전에 만들어진 초안을 지우고 지운 개수를 반환합니다.
+    """older_than 이전에 만들어진 초안을 삭제하고 삭제한 개수를 반환합니다.
 
-    화면은 쓰지 않고 나갈 때 초안을 지우지만, 탭을 닫거나 연결이 끊기면 그 요청이 가지 않습니다.
-    남은 행은 목록에 나오지 않아 아무도 모른 채 쌓이므로 주기적으로 지웁니다
+    화면은 쓰지 않고 나갈 때 초안을 삭제하지만, 탭을 닫거나 연결이 끊기면 그 요청이 가지 않습니다.
+    남은 행은 목록에 표시되지 않아 삭제되지 않고 계속 누적되므로 주기적으로 삭제합니다
     (jobs/auto_assign.py 가 확인할 때마다 함께 호출합니다).
     """
     stale = session.scalars(
@@ -284,7 +284,7 @@ def get_post_with_comments(
 def update_post(
     session: Session, post_id: int, title: str, body: str, requester: Member
 ) -> tuple[Post, str]:
-    """게시글을 수정합니다. 작성자 본인만 수정할 수 있습니다. board_moderate 를 가진 사람도 남의 글은 고치지 못합니다."""
+    """게시글을 수정합니다. 작성자 본인만 수정할 수 있습니다. board_moderate 를 가진 사람도 남의 글은 수정하지 못합니다."""
     post = require_post_author(session, post_id, requester, allow_moderator=False)
     post.title = require_non_empty(title, "제목")
     post.body = require_non_empty(body, "내용")

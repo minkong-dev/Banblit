@@ -13,10 +13,10 @@ from backend.services.settings_service import slot_minutes
 from backend.db.models import EnsembleDay, Member, Period, Reservation, Room, Team, TeamSlot
 from backend.db.pipeline import commit_translating
 
-# 선착순은 겹침 금지 제약이 commit 시점에 정합니다. 먼저 commit 한 요청이 그 구간을 가져갑니다.
-# 제약 이름은 migration 이 정한 이름입니다(c8e4a1b60d93_reservation_as_one_row.py).
+# 선착순은 겹침 금지 제약이 commit 시점에 결정합니다. 먼저 commit 한 요청이 그 구간을 가져갑니다.
+# 제약 이름은 migration 이 지정한 이름입니다(c8e4a1b60d93_reservation_as_one_row.py).
 RESERVATION_MESSAGES = {
-    "reservations_no_overlap": "이미 다른 사람이 예약한 시간입니다. 다른 시간을 골라 주세요",
+    "reservations_no_overlap": "이미 다른 사람이 예약한 시간입니다. 다른 시간을 선택해 주세요",
 }
 
 ReservationRow = tuple[Reservation, str, str | None, str]
@@ -53,11 +53,11 @@ def _require_not_in_focused_period(
     """집중 합주기간이 아닐 경우 예약을 허용합니다.
 
     차단하는 기간은 집중 합주기간뿐입니다. 그 기간만 자동 배정이 모든 slot 을 팀에 나누어 배정합니다.
-    기간을 정하지 않은 날도 예약할 수 있습니다. 과거 규칙은 "상시 개방" 기간을 따로 등록해야
+    기간을 지정하지 않은 날도 예약할 수 있습니다. 과거 규칙은 "상시 개방" 기간을 따로 등록해야
     예약이 열렸지만, 등록을 잊으면 예약이 불가능하므로 기본값으로 예약을 허용하도록 규칙을
-    변경했습니다(사용자 결정).
+    변경했습니다.
 
-    "매일"(everyday) 이 켜진 집중 합주기간은 종료일이 없습니다(사용자 결정 2026-09-11). 시작일이
+    "매일"(everyday) 이 켜진 집중 합주기간은 종료일이 없습니다. 시작일이
     지난 모든 날에 자동 배정이 실행되므로, 저장된 종료일 뒤의 날짜도 차단합니다.
 
     전체합주 날짜는 팀별 배정이 없어 예약을 허용하고, 전체합주에 지정한 합주실의 전체합주 시각과
@@ -99,7 +99,7 @@ def _planned_row(
 ) -> tuple[Reservation, Room, Team | None]:
     """요청한 구간을 검증하고 예약 행 하나를 만들어, 합주실·팀과 함께 반환합니다.
 
-    행은 아직 session 에 추가하지 않습니다. 추가할 시점과 commit 범위는 호출자가 정합니다.
+    행은 아직 session 에 추가하지 않습니다. 추가할 시점과 commit 범위는 호출자가 결정합니다.
     겹치는지는 여기서 보지 않습니다. 조회해서 확인하면 그 사이에 들어온 다른 요청을 놓치므로,
     판정을 commit 시점의 겹침 금지 제약 하나에 맡깁니다.
     """
@@ -184,7 +184,7 @@ def _get_own_reservation(
     들어가는 동작 이름입니다("취소할", "옮길").
 
     행을 잠급니다(with_for_update). 잠그지 않으면 읽은 뒤 commit 하기 전에 reservation_manage
-    권한자가 같은 예약을 취소할 수 있고, 그때 UPDATE 는 없는 행에 적용되어 0행을 고치고도
+    권한자가 같은 예약을 취소할 수 있고, 그때 UPDATE 는 없는 행에 적용되어 0행을 수정하고도
     성공으로 commit 됩니다. 옮기지 못한 예약을 옮겼다고 응답하게 됩니다.
     """
     reservation = session.scalars(
@@ -208,7 +208,7 @@ def cancel_reservation(
 ) -> None:
     """예약 한 건을 취소합니다. 예약한 멤버 본인 또는 reservation_manage 권한을 가진 멤버만 취소할 수 있습니다.
 
-    행을 지우지 않고 cancelled_at 만 기록합니다. 취소된 행은 조회·이동·취소 대상에서 빠지고 겹침 금지
+    행을 삭제하지 않고 cancelled_at 만 기록합니다. 취소된 행은 조회·이동·취소 대상에서 빠지고 겹침 금지
     제약도 보지 않으므로, 그 시간은 다시 예약할 수 있습니다.
     """
     _get_own_reservation(session, reservation_id, requester, "취소할").cancelled_at = cancelled_at

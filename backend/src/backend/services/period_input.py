@@ -74,7 +74,7 @@ def build_engine_rooms(rooms: list[Room], days: list[date]) -> list[EngineRoom]:
 
     엔진은 한 합주실에 이어진 운영시간 하나만 받으므로 날짜마다 한 번씩 전달합니다.
     번호는 DB의 합주실 번호를 그대로 사용합니다 — 날짜가 다르면 시간 구간이 달라
-    같은 번호가 여러 번 나와도 slot(1시간 단위 시간 칸)끼리는 겹치지 않습니다.
+    같은 번호가 여러 번 나와도 slot(점유 단위 길이의 시간 칸)끼리는 겹치지 않습니다.
     """
     engine_rooms: list[EngineRoom] = []
     for day in days:

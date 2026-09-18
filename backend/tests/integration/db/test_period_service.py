@@ -557,7 +557,9 @@ def test_open_slots_are_empty_when_nothing_is_assigned(db_session: Session) -> N
 def test_an_everyday_period_assigns_only_the_day_of_the_run(db_session: Session) -> None:
     """everyday 기간은 종료일이 없으므로 기간 전체가 아니라 계산을 실행한 날 하루만 배정합니다."""
     period_id = _period(db_session, days=3)  # 8/1 ~ 8/3
-    db_session.get(Period, period_id).everyday = True
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    period.everyday = True
     db_session.flush()
     team_id = _team_with_member(db_session, "A", "김민수")
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))

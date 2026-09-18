@@ -62,7 +62,7 @@ _PERMISSION_ARRAY_SQL = "ARRAY[{}]::text[]".format(
 )
 
 # 팀 색입니다. @radix-ui/colors 의 이름 25개 중 바로 옆 색과 거의 같은 5개(ruby, violet, bronze, cyan, grass)를
-# 뺀 20개입니다(사용자 결정 2026-09-15). 순서가 곧 자동 배정 순서입니다. 화면 쪽 짝은 frontend/src/lib/teamColors.ts 입니다.
+# 뺀 20개입니다. 순서가 곧 자동 배정 순서입니다. 화면 쪽 짝은 frontend/src/lib/teamColors.ts 입니다.
 TeamColor = Literal[
     "tomato", "red", "crimson", "pink", "plum", "purple", "iris", "indigo", "blue", "sky",
     "teal", "jade", "green", "mint", "lime", "yellow", "amber", "orange", "gold", "brown",
@@ -123,13 +123,13 @@ class Member(Base):
 
     email 과 password_hash 는 로그인 계정 정보입니다. 명단에만 등록되고 아직 가입하지 않은
     사용자는 email 과 password_hash 가 null 입니다. 가입해야만 로그인 계정이 됩니다.
-    수행 가능한 작업은 member_permission_sets 가 참조하는 permission set(권한 집합)이 정합니다.
+    수행 가능한 작업은 member_permission_sets 가 참조하는 permission set(권한 집합)이 결정합니다.
 
     cohort 는 기수(입학 연도를 구분하는 번호)입니다. 연도로 환산하지 않고
     숫자를 그대로 저장합니다.
 
     시스템은 사용자를 id 로 식별하지만, 사용자가 다른 사용자를 구분하는 값은
-    이름, 학과, 학번, 기수 4가지입니다(사용자 결정). 그 조합에 unique 제약을 두어
+    이름, 학과, 학번, 기수 4가지입니다. 그 조합에 unique 제약을 두어
     같은 사용자가 중복으로 등록되지 않도록 합니다. 이름 하나만으로는
     동명이인을 구분할 수 없습니다.
 
@@ -193,11 +193,11 @@ class Team(Base):
     """팀입니다. 이름이 식별자이므로 중복될 수 없습니다.
 
     팀이 어떤 포지션을 몇 자리 갖는지는 team_slots 가 저장합니다. 팀을 생성할 때
-    포지션마다 자리 수를 정하면 그만큼 자리가 생성되고, 그 자리에 멤버를 배정합니다.
+    포지션마다 자리 수를 지정하면 그만큼 자리가 생성되고, 그 자리에 멤버를 배정합니다.
 
     color 는 TEAM_COLORS 중 하나이고 다른 팀과 겹칠 수 없습니다. 값을 주지 않고 INSERT 하면 DB 트리거
     (teams_pick_color)가 다른 팀이 쓰지 않는 첫 색을 채웁니다(migration c3f7b2e84d19). FetchedValue 는
-    그 값을 DB 가 정한다고 ORM 에 알려, INSERT 뒤 채워진 색을 다시 읽게 합니다.
+    그 값을 DB 가 결정한다고 ORM 에 알려, INSERT 뒤 채워진 색을 다시 읽게 합니다.
     """
 
     __tablename__ = "teams"
@@ -304,7 +304,7 @@ class Period(Base):
     everyday 는 집중 합주기간의 "매일" 옵션입니다. first_run_at 과 second_run_at 은 하루 2회 계산하는 시각입니다.
 
     ensemble_* 다섯 열은 전체합주 설정입니다(patch_note 8번). 날짜 범위·합주실·기본 시작/끝 시각을 함께 채우거나
-    함께 비웁니다. 비어 있으면 전체합주가 없는 기간입니다. 날짜마다 다른 시각은 ensemble_days 가 저장합니다.
+    함께 null 로 변경합니다. null 이면 전체합주가 없는 기간입니다. 날짜마다 다른 시각은 ensemble_days 가 저장합니다.
     """
 
     __tablename__ = "periods"
@@ -408,9 +408,11 @@ class Assignment(Base):
 
     # 겹침 금지 제약(EXCLUDE)은 SQLAlchemy 로 표현할 수 없어 migration 이 직접 만듭니다
     # (migrations/versions/a1f7c30e9b52_assignment_as_one_row.py). index 는 표현할 수 있으므로
-    # 여기 적습니다. 빠뜨리면 다음 autogenerate 가 지우는 migration 을 만들어 냅니다.
+    # 여기 적습니다. 빠뜨리면 다음 autogenerate 가 삭제하는 migration 을 만들어 냅니다.
     __table_args__ = (
         Index("ix_assignments_room_starts_at", "room_id", "starts_at"),
+        # 배정 저장·조회·삭제가 period_id 로 행을 찾습니다. PostgreSQL 은 외래 키에 index 를 자동으로 생성하지 않습니다.
+        Index("ix_assignments_period_id", "period_id"),
         CheckConstraint("ends_at > starts_at"),
     )
 
@@ -439,15 +441,15 @@ class Post(Base):
     # 값이 있으면 그 시각에 가려진 글입니다. 가려진 글은 목록과 상세에서 빠지고 작성자 본인도 볼 수
     # 없습니다. board_moderate 를 가진 사람이 격리 목록에서만 봅니다.
     blinded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    # 가린 사람입니다. 그 계정이 삭제되면 이 값만 비웁니다 — author_id 처럼 CASCADE 로 두면
-    # 관리자 계정 하나를 지울 때 그 사람이 가린 글이 전부 삭제됩니다.
+    # 가린 사람입니다. 그 계정이 삭제되면 이 값만 null 로 변경합니다 — author_id 처럼 CASCADE 로 두면
+    # 관리자 계정 하나를 삭제할 때 그 사람이 가린 글이 전부 삭제됩니다.
     blinded_by_id: Mapped[int | None] = mapped_column(
         ForeignKey("members.id", ondelete="SET NULL"), nullable=True
     )
 
     # 값이 없으면 아직 쓰는 중인 초안입니다. 작성 페이지를 열 때 먼저 만들고, 발행할 때 이 값을 채웁니다.
     # 본문에 파일을 넣으려면 글 번호가 있어야 하는데 첨부 업로드가 POST /posts/{id}/attachments 라,
-    # 글을 먼저 만들지 않으면 쓰는 중에 파일을 올릴 수 없습니다(사용자 결정 2026-09-16).
+    # 글을 먼저 만들지 않으면 쓰는 중에 파일을 올릴 수 없습니다.
     published_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     __table_args__ = (
@@ -511,17 +513,17 @@ class Attachment(Base):
 
 
 class Reservation(Base):
-    """예약 한 건입니다. 사람이 고른 구간을 쪼개지 않고 starts_at~ends_at 한 행으로 저장합니다.
+    """예약 한 건입니다. 사람이 선택한 구간을 쪼개지 않고 starts_at~ends_at 한 행으로 저장합니다.
 
     같은 합주실에서 시간이 겹치는 행은 DB 가 거절합니다(reservations_no_overlap). 선착순은
-    그 제약이 commit 시점에 정합니다.
+    그 제약이 commit 시점에 결정합니다.
 
     name 은 캘린더에 표시할 이름입니다. 비어 있으면 화면이 팀 이름을, 팀도 없으면 예약자
     이름을 대신 씁니다.
 
     team_id 가 있으면 팀 예약, 없으면 member_id 멤버의 개인 예약입니다.
 
-    cancelled_at 이 있으면 취소된 예약입니다. 취소해도 행을 지우지 않고, 이동하면 옛 행을 취소 표시로
+    cancelled_at 이 있으면 취소된 예약입니다. 취소해도 행을 삭제하지 않고, 이동하면 옛 행을 취소 표시로
     두고 새 행을 만듭니다. 겹침 금지 제약은 취소된 행을 보지 않습니다(migration f4c2a9d17b63).
     """
 
@@ -544,7 +546,7 @@ class Reservation(Base):
     # 겹침 금지 제약(EXCLUDE)은 SQLAlchemy 로 표현할 수 없어 migration 이 직접 만듭니다
     # (migrations/versions/f4c2a9d17b63_reservation_cancelled_at.py). index 는 표현할 수
     # 있으므로 여기 적습니다. 빠뜨리면 다음 autogenerate 가 "메타데이터에 없는 index" 로
-    # 보고 지우는 migration 을 만들어 냅니다.
+    # 보고 삭제하는 migration 을 만들어 냅니다.
     __table_args__ = (
         Index("ix_reservations_room_starts_at", "room_id", "starts_at"),
         CheckConstraint("ends_at > starts_at"),
@@ -592,7 +594,11 @@ class AssignmentBackup(Base):
     ends_at: Mapped[datetime] = mapped_column(DateTime)
     saved_at: Mapped[datetime] = mapped_column(DateTime)
 
-    __table_args__ = (CheckConstraint("ends_at > starts_at"),)
+    __table_args__ = (
+        # 같은 기간의 배정기록을 saved_at 으로 구분하고 정렬하므로 두 열을 묶습니다.
+        Index("ix_assignment_backups_period_id_saved_at", "period_id", "saved_at"),
+        CheckConstraint("ends_at > starts_at"),
+    )
 
 
 # 알림의 종류입니다. 문구는 이 코드에 두지 않습니다. table 에는 종류만 저장하고 사람이 읽을
