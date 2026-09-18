@@ -95,6 +95,24 @@ def test_caller_is_what_the_proxy_saw_not_what_the_client_claimed() -> None:
     assert caller_of(request) == "203.0.113.9"
 
 
+def test_caller_skips_every_trusted_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 배포 경로는 Caddy → nginx → api 입니다. nginx 가 맨 뒤에 추가하는 값은 Caddy 컨테이너 주소이므로
+    # 요청자는 뒤에서 2번째 값입니다.
+    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "2")
+    request = _request("172.18.0.6", "1.1.1.1, 203.0.113.9, 172.18.0.5")
+
+    assert caller_of(request) == "203.0.113.9"
+
+
+def test_caller_is_the_peer_when_a_trusted_proxy_was_bypassed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # 값의 개수가 reverse proxy 개수보다 적으면 헤더 전체가 요청자가 작성한 값일 수 있습니다.
+    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "2")
+
+    assert caller_of(_request("172.18.0.6", "1.1.1.1")) == "172.18.0.6"
+
+
 def test_caller_falls_back_when_there_is_no_peer() -> None:
     # TestClient처럼 client가 비어 오는 경우가 있습니다. 그때도 값 하나로 집계해야 합니다.
     assert caller_of(_request(None, None)) == "unknown"

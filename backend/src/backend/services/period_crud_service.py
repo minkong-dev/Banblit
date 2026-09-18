@@ -10,7 +10,7 @@ from backend.services.input import (
 from backend.db.models import Period
 from backend.db.pipeline import commit_translating
 
-# 위반될 수 있는 제약과 그때 표시할 문장입니다. 제약 이름은 migration b5e1d9a37c42·d9a4c6e1f207 이 정했습니다.
+# 위반될 수 있는 제약과 그때 표시할 문장입니다. 제약 이름은 migration b5e1d9a37c42·d9a4c6e1f207 이 지정했습니다.
 # 전체합주 설정(services/ensemble_service.py)도 이 문장을 씁니다.
 PERIOD_MESSAGES = {
     "periods_focused_no_overlap": (

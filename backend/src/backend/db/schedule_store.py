@@ -145,10 +145,10 @@ def list_backup_rounds(
 ) -> list[BackupRound]:
     """그 기간의 백업 배정기록을 최신순으로 반환합니다. 사용자가 되돌릴 배정기록을 선택하는 목록입니다.
 
-    slot_minutes 는 칸 하나의 크기(분)이고 저장소 설정이 정합니다. 구간의 길이를 그 값으로 나눠
+    slot_minutes 는 칸 하나의 크기(분)이고 저장소 설정이 결정합니다. 구간의 길이를 그 값으로 나눠
     칸 수를 셉니다. 저장 이후 설정이 변경되었으면 지금 설정 기준의 칸 수가 됩니다.
     """
-    # extract(epoch from interval) 은 구간의 길이를 초로 반환합니다. 분으로 바꾼 뒤 칸 크기로 나눕니다.
+    # extract(epoch from interval) 은 구간의 길이를 초로 반환합니다. 분으로 변경한 뒤 칸 크기로 나눕니다.
     minutes = func.sum(
         func.extract("epoch", AssignmentBackup.ends_at - AssignmentBackup.starts_at)
     ) / 60

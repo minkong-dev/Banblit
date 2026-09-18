@@ -1,4 +1,4 @@
-"""배정 계산을 백그라운드 스레드에서, 정해진 개수만큼만 동시에 실행합니다.
+"""배정 계산을 백그라운드 스레드에서, 지정된 개수만큼만 동시에 실행합니다.
 
 작업 기록은 프로세스 메모리에만 있습니다. 서버를 재시작하면 진행 중이던 계산과 그 기록이
 함께 사라집니다. 계산 자체가 실행 중인 스레드 안에만 있어 재시작 후 이어서 실행할 방법이 없으므로,
@@ -67,12 +67,17 @@ class JobRunner(Generic[ResultT]):
             # max_workers 를 초과하는 작업은 스레드 풀의 대기열에서 기다립니다. 실제로 실행을 시작할 때
             # started 를 True 로 기록해야 "queued" 와 "running" 이 구분됩니다.
             entry.started = True
+            # finished_at 을 Future 보다 먼저 기록합니다. 순서가 반대이면 그 사이의 조회가
+            # status="done" 인데 finished_at 이 없는 응답을 받습니다.
             try:
-                entry.future.set_result(work())
+                result = work()
             except Exception as error:  # noqa: BLE001 - 실패를 failed로 기록하고 서버는 계속 동작합니다
                 logger.exception("배정 작업이 실패했습니다 (job=%s)", job_id)
+                entry.finished_at = datetime.now()
                 entry.future.set_exception(error)
+                return
             entry.finished_at = datetime.now()
+            entry.future.set_result(result)
 
         self._executor.submit(run)
         return self._snapshot(job_id, entry)

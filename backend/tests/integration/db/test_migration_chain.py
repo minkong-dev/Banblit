@@ -61,3 +61,20 @@ def test_the_whole_chain_can_be_downgraded_to_base(
     command.upgrade(config, "head")
 
     command.downgrade(config, "base")
+
+
+def test_assignment_tables_have_an_index_on_the_period(
+    migration_db: tuple[Engine, Config]
+) -> None:
+    """배정 저장·조회·삭제는 전부 period_id 로 행을 찾습니다. PostgreSQL 은 외래 키에 index 를 자동으로 생성하지 않으므로, index 가 없으면 배정 1회마다 두 table 을 처음부터 끝까지 읽습니다."""
+    engine, config = migration_db
+    command.upgrade(config, "head")
+
+    with engine.connect() as connection:
+        names = set(
+            connection.execute(
+                text("SELECT indexname FROM pg_indexes WHERE tablename IN ('assignments', 'assignment_backups')")
+            ).scalars()
+        )
+
+    assert {"ix_assignments_period_id", "ix_assignment_backups_period_id_saved_at"} <= names

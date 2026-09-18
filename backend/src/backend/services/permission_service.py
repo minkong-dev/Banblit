@@ -12,7 +12,7 @@ from backend.db.models import (
 )
 from backend.db.pipeline import commit_translating
 
-# 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 바꾸는 단계별 기록)이 정한 이름입니다.
+# 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 변경하는 단계별 기록)이 지정한 이름입니다.
 SET_MESSAGES = {"permission_sets_name_key": "이미 있는 권한 묶음 이름입니다"}
 
 # 계정이 0개인 DB 에 처음 가입한 사람이 받는 permission set 의 이름입니다. migration 이
@@ -57,7 +57,7 @@ def _is_full(permissions: list[str]) -> bool:
 
 
 def _full_set_ids() -> Select[tuple[int]]:
-    """모든 항목이 활성화된 permission set 의 번호를 고르는 질의입니다. 실행하지 않고 질의만 반환하므로
+    """모든 항목이 활성화된 permission set 의 번호를 선택하는 질의입니다. 실행하지 않고 질의만 반환하므로
     호출자가 order_by·with_for_update·limit 을 덧붙입니다. 판정 기준이 PERMISSIONS 한 곳에만 남습니다."""
     return select(PermissionSet.id).where(
         PermissionSet.permissions.contains(list(PERMISSIONS))
@@ -67,7 +67,7 @@ def _full_set_ids() -> Select[tuple[int]]:
 def _require_another_full_set(session: Session, set_id: int) -> None:
     """set_id 외에 모든 항목이 활성화된 permission set 이 없으면 ValueError 를 발생시킵니다.
 
-    기준은 개인이 아니라 permission set 입니다(사용자 결정 2026-09-11). 모든 항목을 가진 permission set 이
+    기준은 개인이 아니라 permission set 입니다. 모든 항목을 가진 permission set 이
     0개가 되면 권한을 부여할 사람이 없어지므로, 마지막 1개는 삭제와 항목 비활성화를 거부합니다.
 
     모든 항목을 가진 행을 전부 잠급니다(with_for_update). 잠그지 않으면 2개가 남은 상태에서 두 요청이
@@ -244,7 +244,7 @@ def revoke_permission_set(
     남의 것을 회수할 때만 모든 항목을 가진 permission set 의 마지막 보유자인지 확인합니다.
     permission_grant 항목만 가진 사람이 마지막 보유자에게서 회수하면 권한을 부여할 사람이 0명이 됩니다.
     자기 자신에게서 permission set 을 회수하는 요청(member_id 와 requester_id 가 같은 요청)은
-    본인의 결정이라 확인하지 않습니다(사용자 결정 2026-09-11). 권한 이전의
+    본인의 결정이라 확인하지 않습니다. 권한 이전의
     마지막 단계가 그 경로이고, 그 시점에는 다음 사람이 이미 받았으므로 보유자가 0명이 되지 않습니다.
     """
     grant = _find_grant(session, member_id, set_id)
@@ -257,7 +257,7 @@ def revoke_permission_set(
 
 
 def grant_full_permissions(session: Session, member_id: int) -> None:
-    """member_id에게 18가지 항목이 모두 활성화된 permission set을 부여합니다. 그런 permission set이 없으면 생성합니다.
+    """member_id에게 권한 항목(Permission) 전부가 활성화된 permission set을 부여합니다. 그런 permission set이 없으면 생성합니다.
 
     commit 은 호출자가 수행합니다. 가입은 계정과 권한을 한 번에 commit 합니다.
     """

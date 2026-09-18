@@ -9,9 +9,9 @@ from backend.db.models import Assignment, Notification, TeamSlot
 def notify_assignment_updated(
     session: Session, period_id: int, created_at: datetime
 ) -> int:
-    """해당 기간에 slot(1시간 단위 시간 칸)을 배정받은 팀에 속한 모든 멤버에게 알림을 생성하고, 생성된 개수를 반환합니다.
+    """해당 기간에 slot(점유 단위 길이의 시간 칸)을 배정받은 팀에 속한 모든 멤버에게 알림을 생성하고, 생성된 개수를 반환합니다.
 
-    저장된 Assignment 행에서 팀 번호를 조회해 대상 멤버를 정합니다. 계산에 입력한 팀 목록이
+    저장된 Assignment 행에서 팀 번호를 조회해 대상 멤버를 결정합니다. 계산에 입력한 팀 목록이
     아니라 실제로 slot 을 배정받은 팀을 기준으로 합니다. 한 멤버가 여러 팀에 속한 경우에도 알림은 1개만 생성합니다.
     """
     member_ids = session.scalars(

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from backend.scheduling.interval import TimeInterval
 
-# 설정에 값이 없던 시절에 쓰던 칸 크기입니다. 지금은 settings.slot_minutes 가 정하고,
+# 설정에 값이 없던 시절에 쓰던 칸 크기입니다. 지금은 settings.slot_minutes 가 결정하고,
 # 이 값은 그 설정이 만들어질 때 넣는 기본값입니다
 # (migrations/versions/d2f7a08c5e16_slot_minutes_setting.py).
 DEFAULT_SLOT_MINUTES = 60

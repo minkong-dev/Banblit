@@ -219,7 +219,7 @@ def delete_slot_member(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> None:
-    """포지션을 비웁니다. 포지션 자체는 유지됩니다.
+    """포지션의 멤버 배정을 해제합니다. 포지션 자체는 유지됩니다.
 
     이 endpoint 는 dependencies 에서 권한을 검증하지 않습니다. 사용자가 자신을 포지션에서 제외하는 것은
     member_remove 권한이 없어도 되기 때문입니다. 로그인만 검증한 뒤 함수 안에서 본인 여부와
@@ -231,7 +231,7 @@ def delete_slot_member(
 
     mine = slot.member_id == requester.id
     if not mine and "member_remove" not in account_permissions(session, requester.id):
-        raise HTTPException(status_code=403, detail="관련된 권한을 가지고있지 않습니다")
+        raise HTTPException(status_code=403, detail="관련된 권한을 가지고 있지 않습니다")
 
     clear_slot_row(session, team_id, slot_id)
 
@@ -242,5 +242,5 @@ def expel_member(
     requester: Member = Depends(require_permission("member_expel")),
     session: Session = Depends(get_session),
 ) -> None:
-    """멤버를 추방합니다. 추방은 계정 삭제와 같습니다(사용자 결정 2026-09-14). 자기 자신은 추방할 수 없습니다."""
+    """멤버를 추방합니다. 추방은 계정 삭제와 같습니다. 자기 자신은 추방할 수 없습니다."""
     expel_member_row(session, member_id, requester)

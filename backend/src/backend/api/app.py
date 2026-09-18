@@ -93,7 +93,7 @@ def health() -> JSONResponse:
     checks = {"database": {"ok": database.ok, "detail": database.detail}}
     healthy = database.ok
     if not healthy:
-        logger.error("정상 확인 실패: %s", checks)
+        logger.error("health check 실패: %s", checks)
     return JSONResponse(
         status_code=200 if healthy else 503,
         content={"status": "ok" if healthy else "down", "checks": checks},

@@ -209,7 +209,9 @@ def test_an_everyday_period_keeps_running_after_its_end_date(db_session: Session
     period_id = _period(
         db_session, starts_on=TODAY - timedelta(days=3), ends_on=TODAY - timedelta(days=1)
     )
-    db_session.get(Period, period_id).everyday = True
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    period.everyday = True
     db_session.flush()
     _team_with_member(db_session, "A", "김민수")
     _room(db_session, "1번방")

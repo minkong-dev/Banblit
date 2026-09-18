@@ -40,11 +40,11 @@ def create_session(
 ) -> str:
     """새 session token(임시로 발급하는 인증 문자열)을 생성하여 저장하고, token 원문을 반환합니다.
 
-    쌓인 만료된 행은 새 행과 같은 commit 에서 함께 삭제합니다. 로그인·가입이 login_sessions
+    쌓인 만료된 행은 새 행과 같은 commit 에서 함께 삭제합니다. 로그인·가입이 sessions
     table 에 행을 추가하는 유일한 코드이므로, 이 함수 외에 삭제할 곳이 없습니다.
 
     ponytail: 로그인하지 않는 계정의 행은 계속 남습니다. 해당 계정 수가 문제되면
-    주기적 삭제를 추가합니다. 현재 이 저장소에는 scheduled(시간을 정해 자동으로 실행하는) 작업 기능이 없습니다.
+    주기적 삭제를 추가합니다. 현재 이 저장소에는 scheduled(시간을 지정해 자동으로 실행하는) 작업 기능이 없습니다.
     """
     _delete_dead_sessions(session, member_id, now)
     token = secrets.token_urlsafe(32)

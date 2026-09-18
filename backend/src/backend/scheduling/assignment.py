@@ -21,7 +21,7 @@ class Room:
 
 @dataclass(frozen=True)
 class RoomSlot:
-    """어느 합주실의 어느 시간 slot(1시간 단위 시간 칸)인지를 나타냅니다. room_id 와 interval 이 slot 하나를 유일하게 식별합니다."""
+    """어느 합주실의 어느 시간 slot(점유 단위 길이의 시간 칸)인지를 나타냅니다. room_id 와 interval 이 slot 하나를 유일하게 식별합니다."""
 
     room_id: int
     interval: TimeInterval
@@ -94,7 +94,7 @@ def assign(
 ) -> Assignment:
     """각 팀에게, 그 팀이 사용 가능한 시간의 빈 합주실 slot 을 slots_per_team 개 배정합니다.
 
-    slot_minutes 는 칸 하나의 크기(분)이고 저장소 설정이 정합니다. 칸 하나에는 팀 하나만 배정됩니다. 팀 하나는 같은 시간에
+    slot_minutes 는 칸 하나의 크기(분)이고 저장소 설정이 결정합니다. 칸 하나에는 팀 하나만 배정됩니다. 팀 하나는 같은 시간에
     여러 합주실을 동시에 사용할 수 없으며, 여러 팀에 속한 멤버도 같은 시간에
     한 곳에만 있을 수 있습니다. 조건을 모두 충족하는 배정안이 없을 경우
     feasible=False 를 반환합니다.

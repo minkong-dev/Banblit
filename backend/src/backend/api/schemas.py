@@ -1,13 +1,13 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, NaiveDatetime
 
 from backend.db.models import Instrument, Permission
 from backend.db.models import NotificationKind
 
 class RoomSlotOut(BaseModel):
-    # 배정의 1시간 slot(1시간 단위 시간 칸)입니다. 합주실은 DB의 번호와 이름을 함께 반환합니다.
+    # 배정의 slot(점유 단위 길이의 시간 칸)입니다. 합주실은 DB의 번호와 이름을 함께 반환합니다.
     room_id: int
     room: str
     start: datetime
@@ -40,7 +40,7 @@ class ScheduleRowOut(BaseModel):
 
 
 class ScheduleOut(BaseModel):
-    # open_slots 는 어느 팀도 배정받지 않은 slot(1시간 단위 시간 칸)입니다. 예약 대상이 아닙니다 —
+    # open_slots 는 어느 팀도 배정받지 않은 slot(점유 단위 길이의 시간 칸)입니다. 예약 대상이 아닙니다 —
     # 이 slot 은 집중 합주기간 안에 있고, 그 기간의 예약은 services/reservation_service.py 가 전부
     # 거절합니다. 어느 자리가 비었는지를 알리는 값이며 지금은 화면이 사용하지 않습니다.
     rows: list[ScheduleRowOut]
@@ -219,7 +219,7 @@ class TeamCreateIn(BaseModel):
     name: str
     # 포지션마다 자리 수입니다. 0 인 포지션은 요청에 포함해도 되고 제외해도 되며, 포지션을 생성하지 않습니다.
     slots: dict[str, int]
-    # 팀 색입니다. 고르지 않으면(None) DB 가 다른 팀이 쓰지 않는 첫 색을 줍니다.
+    # 팀 색입니다. 선택하지 않으면(None) DB 가 다른 팀이 사용하지 않는 색 중 1번째 색을 저장합니다.
     color: str | None = None
 
 
@@ -362,7 +362,7 @@ class AccountOut(BaseModel):
     # 선택하고 있어 함께 제공합니다.
     role: Literal["head_manager", "member"]
     permissions: list[Permission]
-    # 가진 permission set 의 이름입니다. 화면은 "헤드매니저" 고정 문구 대신 이 이름을 역할로 표시합니다(사용자 결정 2026-09-11).
+    # 가진 permission set 의 이름입니다. 화면은 "헤드매니저" 고정 문구 대신 이 이름을 역할로 표시합니다.
     permission_sets: list[str]
     # 기수입니다. 화면이 동명이인을 구분할 때 이름 옆에 표시합니다.
     cohort: int | None = None
@@ -370,7 +370,7 @@ class AccountOut(BaseModel):
 
 class PermissionSetIn(BaseModel):
     name: str = Field(max_length=50)
-    # 이 permission set 을 어떤 역할의 사람에게 부여하는지 설명하는 문장입니다. 비워 둘 수 없습니다(사용자 결정).
+    # 이 permission set 을 어떤 역할의 사람에게 부여하는지 설명하는 문장입니다. 빈 값을 허용하지 않습니다.
     description: str = Field(max_length=200)
     permissions: list[Permission] = Field(max_length=20)
 
@@ -470,8 +470,10 @@ class UnavailableEnvelopeOut(BaseModel):
 
 
 class UnavailableCreateIn(BaseModel):
-    starts_at: datetime
-    ends_at: datetime
+    # NaiveDatetime 은 offset(+09:00)이 붙은 값을 422로 거부합니다. datetime 으로 받으면 offset 만
+    # 삭제되어 9시간 어긋난 시각이 오류 없이 저장됩니다. 예약의 두 모델도 같은 이유로 같은 타입입니다.
+    starts_at: NaiveDatetime
+    ends_at: NaiveDatetime
     repeats_daily: bool = False
     repeats_weekly: bool = False
     repeat_until: date | None = None
@@ -514,14 +516,14 @@ class ReservationCreateIn(BaseModel):
     room_id: int
     team_id: int | None = None
     name: str | None = Field(default=None, max_length=60)
-    starts_at: datetime
-    ends_at: datetime
+    starts_at: NaiveDatetime
+    ends_at: NaiveDatetime
 
 
 class ReservationUpdateIn(BaseModel):
     # 이동할 시각만 받습니다. 합주실·팀·예약자는 원래 예약의 값을 그대로 사용합니다.
-    starts_at: datetime
-    ends_at: datetime
+    starts_at: NaiveDatetime
+    ends_at: NaiveDatetime
 
 
 class NotificationOut(BaseModel):

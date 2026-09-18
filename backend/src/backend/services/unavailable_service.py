@@ -47,7 +47,7 @@ def create_unavailable(
     reason: str | None,
     name: str | None,
 ) -> UnavailableTime:
-    """불가능 시간 하나를 생성합니다. 본인 여부, 시작시간과 종료시간의 순서, slot(1시간 단위 시간 칸) 격자, 반복 조합을 검증합니다."""
+    """불가능 시간 하나를 생성합니다. 본인 여부, 시작시간과 종료시간의 순서, slot(점유 단위 길이의 시간 칸) 격자, 반복 조합을 검증합니다."""
     _require_self(member_id, requester)
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_one_repeat_cycle(repeats_daily, repeats_weekly)

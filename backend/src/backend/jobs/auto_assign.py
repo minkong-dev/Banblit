@@ -61,8 +61,8 @@ def due_slots(
     return tuple(due)
 
 
-# 쓰다 만 초안을 남겨 두는 기간입니다. 화면은 나갈 때 지우지만 탭을 닫거나 연결이 끊기면
-# 그 요청이 가지 않습니다. 이 기간이 지난 초안은 아래 main 의 반복이 지웁니다.
+# 쓰다 만 초안을 남겨 두는 기간입니다. 화면은 나갈 때 삭제하지만 탭을 닫거나 연결이 끊기면
+# 그 요청이 가지 않습니다. 이 기간이 지난 초안은 아래 main 의 반복이 삭제합니다.
 DRAFT_LIFETIME = timedelta(days=1)
 
 
@@ -76,7 +76,7 @@ def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
     today = now.date()
     # 오늘이 기간 안에 포함되는 집중 합주기간만 처리합니다. 상시 기간(kind="open")은 선착순
     # 예약으로 동작하므로 assign_period 가 거절합니다. everyday 가 켜진 기간은 종료일이 없으므로
-    # 시작일만 지났으면 매일 처리합니다(사용자 결정 2026-09-11).
+    # 시작일만 지났으면 매일 처리합니다.
     periods = session.scalars(
         select(Period)
         .where(Period.kind == "focused")
@@ -205,7 +205,7 @@ def main() -> None:
                 for result in run_due_assignments(session, datetime.now()):
                     logger.info("자동 배정: %s", result)
                 # 배정 확인에 얹습니다. 주기적으로 도는 것이 이 하나뿐이라 서비스를 더 만들지 않습니다.
-                # 지우는 대상은 쓰다 만 글입니다 — 목록에 나오지 않아 아무도 모른 채 쌓입니다.
+                # 삭제하는 대상은 쓰다 만 글입니다 — 목록에 표시되지 않아 삭제되지 않고 계속 누적됩니다.
                 removed = sweep_stale_drafts(session, datetime.now() - DRAFT_LIFETIME)
                 if removed > 0:
                     logger.info("버려진 초안 %d개를 삭제했습니다", removed)

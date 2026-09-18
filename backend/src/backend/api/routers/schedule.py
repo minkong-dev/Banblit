@@ -74,7 +74,7 @@ def _row_out(row: ScheduleRow) -> ScheduleRowOut:
 def read_schedule(
     period: Period = Depends(_period), session: Session = Depends(get_session)
 ) -> ScheduleOut:
-    # 예약 가능한 slot(1시간 단위 시간 칸)을 스케줄과 같은 응답에 포함합니다. 화면은 open_slots 만 보고 예약 가능한
+    # 예약 가능한 slot(점유 단위 길이의 시간 칸)을 스케줄과 같은 응답에 포함합니다. 화면은 open_slots 만 보고 예약 가능한
     # 시간을 표시합니다. 따로 요청하게 두면 배정 계산을 다시 실행하는 endpoint 가 필요해집니다.
     return ScheduleOut(
         rows=[_row_out(row) for row in list_schedule(session, period.id)],
@@ -219,7 +219,7 @@ def read_period_backups(
     return BackupsOut(
         backups=[
             BackupOut(saved_at=round_["saved_at"], slot_count=round_["slot_count"])
-            # 칸 수는 구간 길이를 칸 크기로 나눈 값입니다. 칸 크기는 저장소 설정이 정합니다.
+            # 칸 수는 구간 길이를 칸 크기로 나눈 값입니다. 칸 크기는 저장소 설정이 결정합니다.
             for round_ in list_backup_rounds(session, period.id, slot_minutes(session))
         ]
     )
@@ -249,7 +249,7 @@ def rollback_period_schedule(
 ) -> RollbackOut:
     # rollback_schedule 이 되돌리기와 확정을 함께 완료합니다. 합주실·시각 충돌은 ValueError 를 발생시켜 422 로 응답합니다.
     rolled_back = rollback_schedule(session, period.id)
-    # 되돌릴 백업이 없어 아무것도 바뀌지 않은 경우(False)에는 알리지 않습니다.
+    # 되돌릴 백업이 없어 아무것도 변경되지 않은 경우(False)에는 알리지 않습니다.
     if rolled_back:
         notify_assignment_updated(session, period.id, datetime.now())
     return RollbackOut(rolled_back=rolled_back)

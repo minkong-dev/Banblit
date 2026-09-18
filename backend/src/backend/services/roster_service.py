@@ -15,12 +15,12 @@ from backend.db.models import (
 )
 from backend.db.pipeline import commit_translating
 
-# 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 바꾸는 단계별 기록)이 정한 이름입니다.
+# 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 변경하는 단계별 기록)이 지정한 이름입니다.
 ROSTER_MESSAGES = {
     "teams_name_key": "이미 있는 팀 이름입니다",
-    # 고른 색이 겹친 경우와, 색을 고르지 않은 요청 둘이 동시에 같은 남은 색을 받은 경우 모두 이 제약에 걸립니다.
-    "teams_color_key": "다른 팀이 쓰는 색입니다. 다시 시도하거나 다른 색을 골라 주세요",
-    # 색을 고르지 않았는데 남은 색이 없을 때 트리거가 붙이는 이름입니다(migration c3f7b2e84d19).
+    # 선택한 색이 겹친 경우와, 색을 선택하지 않은 요청 둘이 동시에 같은 남은 색을 받은 경우 모두 이 제약에 걸립니다.
+    "teams_color_key": "다른 팀이 쓰는 색입니다. 다시 시도하거나 다른 색을 선택해 주세요",
+    # 색을 선택하지 않았는데 남은 색이 없을 때 트리거가 붙이는 이름입니다(migration c3f7b2e84d19).
     "teams_color_exhausted": (
         f"팀 색 {len(TEAM_COLORS)}개가 모두 쓰이고 있어 팀을 더 만들 수 없습니다. "
         "쓰지 않는 팀을 삭제한 뒤 만들어 주세요"
@@ -126,7 +126,7 @@ def search_members(session: Session, query: str, limit: int = 20) -> list[Member
 
 
 def expel_member(session: Session, member_id: int, requester: Member) -> None:
-    """member_id 의 계정을 삭제합니다. 추방은 계정 삭제와 같습니다(사용자 결정 2026-09-14).
+    """member_id 의 계정을 삭제합니다. 추방은 계정 삭제와 같습니다.
 
     탈퇴(routers/auth.py 의 leave)와 같은 삭제 규칙을 따릅니다. 글·댓글·예약·session 은 함께 삭제되고,
     포지션은 member_id 만 None 이 됩니다(db/models.py 의 ondelete). 자기 자신은 추방할 수 없습니다.
@@ -158,7 +158,7 @@ def require_slot_counts(counts: dict[str, int]) -> dict[Instrument, int]:
 
     total = sum(checked.values())
     if total == 0:
-        raise ValueError("포지션을 하나 이상 골라 주세요")
+        raise ValueError("포지션을 하나 이상 선택해 주세요")
     if total > MAX_SLOTS_PER_TEAM:
         raise ValueError(f"한 팀의 포지션은 {MAX_SLOTS_PER_TEAM}개까지입니다")
     return checked
@@ -195,8 +195,8 @@ def create_team(
     배정 계산에서 "멤버가 없는 팀"으로 취급되기 때문입니다. 팀과 포지션은 한 번에 저장됩니다.
 
     color 가 None 이면 색을 넣지 않고 INSERT 해 DB 트리거가 남은 첫 색을 채우게 합니다. 남은 색이 없으면
-    트리거가 teams_color_exhausted 로, 다른 팀이 쓰는 색을 고르면 unique 제약(teams_color_key)이 거절하고,
-    두 거절 모두 ROSTER_MESSAGES 가 문장으로 바꿉니다. 저장 전에 남은 색을 세지 않는 것은, 동시에 들어온
+    트리거가 teams_color_exhausted 로, 다른 팀이 쓰는 색을 선택하면 unique 제약(teams_color_key)이 거절하고,
+    두 거절 모두 ROSTER_MESSAGES 가 문장으로 변경합니다. 저장 전에 남은 색을 세지 않는 것은, 동시에 들어온
     두 요청이 둘 다 통과하기 때문입니다.
     """
     clean_name = require_non_empty(name, "팀 이름")
@@ -286,7 +286,7 @@ def assign_slot(session: Session, team_id: int, slot_id: int, member_id: int) ->
 
 
 def clear_slot(session: Session, team_id: int, slot_id: int) -> TeamSlot:
-    """포지션을 비웁니다. 포지션 자체는 유지됩니다 — 팀 구성이 바뀐 것이 아니라 멤버 배정만 해제됩니다."""
+    """포지션의 멤버 배정을 해제합니다. 포지션 자체는 유지됩니다 — 팀 구성이 변경된 것이 아니라 멤버 배정만 해제됩니다."""
     slot = _get_slot_or_raise(session, team_id, slot_id)
     slot.member_id = None
     commit_translating(session, ROSTER_MESSAGES)
