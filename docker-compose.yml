@@ -20,6 +20,10 @@ services:
       # 로그인 세션 쿠키에 Secure를 붙인다. 배포는 https이므로 켠다 — 개발용
       # override(docker-compose.override.yml)가 이 값을 false로 덮는다.
       COOKIE_SECURE: "true"
+      # api 앞의 reverse proxy 개수. 배포는 caddy → web(nginx) → api 라서 2다. rate limit 이
+      # X-Forwarded-For 의 뒤에서 이 번째 값을 요청자로 센다(backend/src/backend/api/rate_limit.py).
+      # 값이 어긋나면 모든 사용자가 caddy 컨테이너 주소 하나로 합산된다. 개발용 override 가 1로 덮는다.
+      TRUSTED_PROXY_COUNT: "2"
       ATTACHMENT_DIR: ${ATTACHMENT_DIR:-/var/lib/banblit/attachments}
       # 메일 보내기 — 비밀번호 재설정 링크와 아이디 안내가 나가는 계정. 값은 .env 에
       # 적는다(.env.example 참고). SMTP_HOST 가 비면 실제로 보내지 않고 기록만 남으므로,
