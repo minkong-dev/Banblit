@@ -39,7 +39,7 @@ const STEPS = [
   {
     k: "STEP 2",
     title: "스케줄링 엔진을 기다려요",
-    body: "엔진은 정해진 시간에 불가능한 시간을 모아 계산해요. 완료되면 알림도 보내드릴게요.",
+    body: "엔진은 지정된 시간에 불가능한 시간을 모아 계산해요. 완료되면 알림도 보내드릴게요.",
   },
   {
     k: "STEP 3",
@@ -182,11 +182,11 @@ export function Landing() {
       <section className="sec admin" id="admin">
         <div className="wrap row">
           <p className="quote rise">
-            합주실이 늘어도,<br></br> 열고 닫는 시간이 변해도 괜찮아요.<br></br><b>설정 페이지만 조금 바꿔주세요.</b>
+            합주실이 늘어도,<br></br> 열고 닫는 시간이 변해도 괜찮아요.<br></br><b>설정 페이지만 조금 변경해주세요.</b>
           </p>
           <ul className="rise">
-            <li><b>합주실</b><span>합주실마다 운영시간을 정하고, 합주실 수가 늘어나도 괜찮아요.</span></li>
-            <li><b>기간</b><span>상시 개방과 집중 합주기간, 엔진 연산 시간을 직접 정할 수 있어요.</span></li>
+            <li><b>합주실</b><span>합주실마다 운영시간을 설정하고, 합주실 수가 늘어나도 괜찮아요.</span></li>
+            <li><b>기간</b><span>상시 개방과 집중 합주기간, 엔진 연산 시간을 직접 설정할 수 있어요.</span></li>
             <li><b>조율</b><span>최선의 수가 없다면, 선택지로 전달할게요. 더 좋은 방향으로 선택해주세요.</span></li>
           </ul>
         </div>

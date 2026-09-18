@@ -11,6 +11,7 @@ import {
   isSignedIn,
   loadReservationRows,
   logOut,
+  openingHours,
   periodBody,
   removeUnavailable,
   requestPasswordReset,
@@ -27,6 +28,16 @@ function stubCookie(value: string): void {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("openingHours", () => {
+  it("점유 단위가 30분이면 30분 자리의 개수를 시간으로 환산해 표시한다", () => {
+    const rooms = [{ name: "A", opens_at: "18:30", closes_at: "22:00" }];
+
+    expect(openingHours({ rooms, days: 1, teams: 2, slotMinutes: 30 })).toEqual({
+      perDay: "3.5시간", total: "3.5시간", perTeam: "1.5시간", leftover: "0.5시간",
+    });
+  });
 });
 
 describe("loadReservationRows", () => {
@@ -356,7 +367,7 @@ describe("saveSlotMinutes", () => {
     const [url, init] = spy.mock.calls[0];
     expect(url).toBe("/api/settings");
     expect(init?.method).toBe("PATCH");
-    expect(JSON.parse(String(init?.body))).toEqual({ slot_minutes: 30 });
+    expect(sentBody(init)).toEqual({ slot_minutes: 30 });
     expect(saved).toBe(30);
   });
 });

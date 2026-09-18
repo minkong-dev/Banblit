@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ensembleByDay, ensembleOn, offByDay, repeatDays, visible } from "./dayEntries";
+import { allOffEntries, ensembleByDay, ensembleOn, offByDay, offWhenLabel, repeatDays, visible } from "./dayEntries";
 import type { Entry } from "./dayEntries";
 import type { Period, Unavailable } from "./contract";
 
@@ -68,6 +68,36 @@ const days = ["2026-09-13", "2026-09-14", "2026-09-21", "2026-09-22", "2026-09-2
 describe("repeatDays", () => {
   it("매주 반복은 시작일부터 repeat_until 까지 7일 간격의 날짜만 반환한다", () => {
     expect(repeatDays(weekly, days)).toEqual(["2026-09-14", "2026-09-21", "2026-09-28"]);
+  });
+});
+
+describe("allOffEntries — 모달의 불가능 일정 목록", () => {
+  const once: Unavailable = {
+    ...weekly, id: 3, starts_at: "2026-09-02T19:00:00", ends_at: "2026-09-02T20:30:00",
+    repeats_weekly: false, repeat_until: null, name: "시험", reason: "중간고사",
+  };
+
+  it("어느 날짜의 모달이든 내가 등록한 불가능 일정 전부를 시작 시각 순으로 나열한다", () => {
+    const list = allOffEntries([weekly, once], 18);
+
+    expect(list.map((entry) => entry.removeIds)).toEqual([[3], [7]]);
+    expect(list.map((entry) => entry.day)).toEqual(["2026-09-02", "2026-09-14"]);
+  });
+
+  it("반복 일정은 전개하지 않고 저장된 1건을 1줄로 나열하며, 전부 삭제할 수 있다", () => {
+    const [entry] = allOffEntries([weekly], 18);
+
+    expect(entry).toEqual({
+      kind: "off", team: null, who: "불가능 일정", note: undefined,
+      a: 0, b: 2, removeIds: [7], day: "2026-09-14", repeat: "weekly",
+    });
+  });
+
+  it("줄에 적는 날짜에는 반복 주기를 함께 적는다", () => {
+    expect(offWhenLabel(allOffEntries([once], 18)[0])).toBe("9월 2일 수요일");
+    expect(offWhenLabel(allOffEntries([weekly], 18)[0])).toBe("9월 14일 월요일 · 매주");
+    expect(offWhenLabel(allOffEntries([{ ...weekly, repeats_weekly: false, repeats_daily: true }], 18)[0]))
+      .toBe("9월 14일 월요일 · 매일");
   });
 });
 

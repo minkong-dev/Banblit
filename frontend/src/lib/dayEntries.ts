@@ -1,5 +1,6 @@
 // 달력 하루에 표시할 항목(Entry)을 서버 자료에서 만드는 계산입니다. 화면이나 서버와 상호작용하지 않습니다.
 
+import { dayWithWeekday } from "./calendar";
 import { dayOf, mergeSessions, slotIndex } from "./slots";
 import type { Session } from "./slots";
 import type { DayTeam } from "./roster";
@@ -24,6 +25,10 @@ export type Entry = {
   /** 로그인한 사용자가 취소할 수 있는 예약이면 그 예약의 번호입니다. 없으면 다른 사용자의
    *  예약이거나 서버가 배정한 일정이라 화면에서 취소하지 못합니다. */
   bookingId?: number;
+  /** 항목의 날짜("2026-09-14")입니다. 여러 날짜의 항목을 한 목록에 나열하는 allOffEntries 만 값을 넣습니다. */
+  day?: string;
+  /** 반복 주기입니다. 반복하지 않는 항목에는 없습니다. allOffEntries 만 값을 넣습니다. */
+  repeat?: "daily" | "weekly";
 };
 
 export type DayEntries = Record<string, Entry[]>;
@@ -127,6 +132,35 @@ export function offByDay(times: Unavailable[], openHour: number, days: string[])
     }
   }
   return byDay;
+}
+
+/** 날짜 모달의 "불가능 일정 목록"에 나열할 항목입니다. 모달을 연 날짜와 무관하게 로그인한 사용자가 등록한
+ *  불가능 일정 전부를 시작 시각 순으로 반환합니다. 반복 일정은 전개하지 않고 저장된 1건을 1줄로 나열합니다.
+ *  전부 저장된 행이므로 모든 항목에 removeIds 가 있어 목록에서 삭제할 수 있습니다. */
+export function allOffEntries(times: Unavailable[], openHour: number): Entry[] {
+  return [...times]
+    .sort((x, y) => x.starts_at.localeCompare(y.starts_at))
+    .map((item) => ({
+      kind: "off" as const,
+      team: null,
+      who: item.name ?? "불가능 일정",
+      note: item.reason ?? undefined,
+      a: slotIndex(item.starts_at, openHour),
+      b: slotIndex(item.ends_at, openHour),
+      removeIds: [item.id],
+      day: dayOf(item.starts_at),
+      repeat: item.repeats_daily ? "daily" as const : item.repeats_weekly ? "weekly" as const : undefined,
+    }));
+}
+
+const REPEAT_TEXT = { daily: "매일", weekly: "매주" };
+
+/** allOffEntries 의 항목 1줄에 적는 날짜입니다. "9월 14일 월요일" 이고, 반복 일정이면 " · 매주" 를 덧붙입니다.
+ *  day 가 없는 항목(그날의 항목만 나열하는 목록)은 날짜를 적지 않으므로 빈 문자열입니다. */
+export function offWhenLabel(entry: Entry): string {
+  if (entry.day === undefined) return "";
+  const day = dayWithWeekday(entry.day);
+  return entry.repeat === undefined ? day : `${day} · ${REPEAT_TEXT[entry.repeat]}`;
 }
 
 /** 이 불가능 일정이 적용되는 날짜들입니다. 반복이 아니면 시작 날짜 하나뿐입니다. */

@@ -1,5 +1,5 @@
 // 설정 화면의 form 부품입니다. 합주실·기간 두 구역이 같은 부품을 사용합니다.
-// 값을 보유하지 않으며, 서버도 호출하지 않습니다. 무엇을 저장할지는 호출하는 컴포넌트가 정합니다.
+// 값을 보유하지 않으며, 서버도 호출하지 않습니다. 무엇을 저장할지는 호출하는 컴포넌트가 결정합니다.
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
@@ -18,7 +18,7 @@ export function useRowFocus(): {
 } {
   const [editing, setEditing] = useState<number | null>(null);
   const buttons = useRef(new Map<number, HTMLButtonElement>());
-  // 돌아갈 버튼 ID를 state가 아닌 ref로 보유합니다. state로 보유하면 초점 이동 후 값을 비우는 과정에서 불필요한 재생성이 발생합니다.
+  // 돌아갈 버튼 ID를 state가 아닌 ref로 보유합니다. state로 보유하면 초점 이동 후 값을 초기화하는 과정에서 불필요한 재생성이 발생합니다.
   const back = useRef<number | null>(null);
 
   // 편집 모드를 벗어나면 버튼이 재생성됩니다. 재생성 후 초점을 옮겨야 작동합니다.

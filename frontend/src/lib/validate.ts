@@ -30,13 +30,13 @@ function passwordRuleMessage(value: string): string {
   return "";
 }
 
-/** 가입에서 처음 정하는 비밀번호입니다. */
+/** 가입에서 처음 설정하는 비밀번호입니다. */
 export function signupPasswordMessage(value: string): string {
   if (!value) return "비밀번호를 입력해 주세요.";
   return passwordRuleMessage(value);
 }
 
-/** 재설정에서 다시 정하는 비밀번호입니다. */
+/** 재설정에서 다시 설정하는 비밀번호입니다. */
 export function strongPasswordMessage(value: string): string {
   if (!value) return "새 비밀번호를 입력해주세요.";
   return passwordRuleMessage(value);

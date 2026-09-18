@@ -1,13 +1,30 @@
+import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
 import {
   attachmentMessage,
+  BOARD_KEY,
   boardActions,
+  boardListKey,
   bodyMessage,
   commentMessage,
   fileSizeLabel,
   titleMessage,
 } from "./boards";
+
+describe("BOARD_KEY", () => {
+  it("BOARD_KEY 를 무효화하면 게시판 목록 query 가 전부 무효화된다", async () => {
+    // 블라인드를 해제한 글은 공지·팀 게시판 중 어느 목록으로든 돌아갈 수 있습니다.
+    const client = new QueryClient();
+    client.setQueryData(boardListKey("/notices"), { posts: [] });
+    client.setQueryData(boardListKey("/posts"), { posts: [] });
+
+    await client.invalidateQueries({ queryKey: BOARD_KEY });
+
+    expect(client.getQueryState(boardListKey("/notices"))?.isInvalidated).toBe(true);
+    expect(client.getQueryState(boardListKey("/posts"))?.isInvalidated).toBe(true);
+  });
+});
 
 describe("titleMessage", () => {
   it("비어 있으면 채워 달라고 한다", () => {

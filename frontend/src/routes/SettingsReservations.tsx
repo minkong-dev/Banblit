@@ -2,6 +2,7 @@
 // "타 멤버 예약 수정 및 취소"(reservation_manage) 권한자에게만 이 탭이 표시됩니다.
 // 서버도 같은 권한으로 다른 멤버의 예약 취소를 받으므로 권한 검증이 일관성 있게 작동합니다(reservation_service.py _get_own_reservation).
 
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Card } from "../components/AppShell";
@@ -39,8 +40,10 @@ export function ReservationCards() {
   const client = useQueryClient();
   const rooms = useRooms();
   const roomIds = (rooms.data?.rooms ?? []).map((room) => room.id);
-  const from = dayKey(new Date());
-  const to = dayKey(new Date(Date.now() + WINDOW_DAYS * DAY_MS));
+  // render 중에 현재 시각을 읽으면 render 마다 값이 달라집니다. 화면을 열 때 한 번만 읽어 고정합니다.
+  const [openedAt] = useState(() => Date.now());
+  const from = dayKey(new Date(openedAt));
+  const to = dayKey(new Date(openedAt + WINDOW_DAYS * DAY_MS));
 
   // queryKey 앞머리가 달력(Scheduler)과 같은 "reservations"이므로, 어느 쪽에서 취소하든 둘 다 데이터를 refetch합니다.
   const list = useQuery({
@@ -111,7 +114,7 @@ export function ReservationCards() {
             ))}
           </tbody>
         </table>
-        {list.isPending && rooms.data !== undefined ? <p className="empty">예약을 내역을 불러오고 있어요.</p> : null}
+        {list.isPending && rooms.data !== undefined ? <p className="empty">예약 내역을 불러오고 있어요.</p> : null}
         {list.isSuccess && bookings.length === 0 ? <p className="empty">현재 예약이 없어요</p> : null}
       </div>
     </Card>

@@ -1,5 +1,5 @@
 // 팀 색 20가지와 그 CSS 입니다. 화면이나 서버와 상호작용하지 않습니다.
-// 색 값은 @radix-ui/colors(MIT)가 정하고, 이 파일은 이름 20개와 쓸 단계만 고릅니다.
+// 색 값은 @radix-ui/colors(MIT)가 결정하고, 이 파일은 이름 20개와 쓸 단계만 선택합니다.
 
 import {
   amber, amberDark, blue, blueDark, brown, brownDark, crimson, crimsonDark, gold, goldDark,
@@ -29,18 +29,18 @@ const SCALES: Record<TeamColor, [Scale, Scale]> = {
 };
 
 // 막대 배경은 4단계입니다. 3단계는 거의 흰색이라 색이 보이지 않습니다. 글자는 11단계입니다. 11단계는
-// Radix 가 같은 색의 배경 단계 위 글자 대비를 보장하는 단계라, 어느 색을 골라도 글자가 읽힙니다(사용자 결정 2026-09-15).
+// Radix 가 같은 색의 배경 단계 위 글자 대비를 보장하는 단계라, 어느 색을 선택해도 글자가 읽힙니다.
 const TINT_STEP = 4;
 const INK_STEP = 11;
 
-/** 팀 색 이름을 CSS key 로 바꿉니다. "jade" → "team-jade". 이 key 가 class 이름이자 CSS 변수 이름입니다. */
+/** 팀 색 이름을 CSS key 로 변경합니다. "jade" → "team-jade". 이 key 가 class 이름이자 CSS 변수 이름입니다. */
 export function teamColorKey(color: string): string {
   return `team-${color}`;
 }
 
 /** 20색의 CSS 를 반환합니다. 색마다 `:root` 의 --team-<색>(글자)·--team-<색>-tint(배경) 한 쌍과,
  *  `.team-<색>` class 가 --tc·--tc-tint 로 그 값을 가리키게 하는 규칙 하나입니다. 막대·점 CSS 는 --tc 만 씁니다.
- *  값은 light-dark(밝은 값, 어두운 값) 이라 테마가 바뀌어도 다시 계산하지 않습니다. */
+ *  값은 light-dark(밝은 값, 어두운 값) 이라 테마가 변경되어도 다시 계산하지 않습니다. */
 export function teamColorCss(): string {
   return TEAM_COLORS.map((name) => {
     const [light, dark] = SCALES[name];

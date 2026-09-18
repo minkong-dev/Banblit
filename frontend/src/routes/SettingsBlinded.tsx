@@ -7,12 +7,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Card } from "../components/AppShell";
 import { reason } from "../lib/api";
-import { getJSON, stampLabel } from "../lib/pipeline";
+import { BLINDED_KEY, BOARD_KEY, getJSON, stampLabel } from "../lib/pipeline";
 import { say } from "../lib/toast";
 import { SectionHead } from "./SettingsForm";
 import type { Post } from "../lib/contract";
-
-export const BLINDED_KEY = ["blinded-posts"] as const;
 
 export function BlindedCards() {
   const client = useQueryClient();
@@ -26,10 +24,9 @@ export function BlindedCards() {
     mutationFn: (post: Post) => getJSON(`/posts/${post.id}/blind`, { method: "DELETE" }),
     onSettled: () => {
       void client.invalidateQueries({ queryKey: BLINDED_KEY });
-      // 되돌린 글이 원래 목록에 다시 나타나야 합니다. 공지와 팀 게시판 중 어느 쪽인지 여기서
-      // 가리지 않고 둘 다 다시 불러옵니다.
-      void client.invalidateQueries({ queryKey: ["notices"] });
-      void client.invalidateQueries({ queryKey: ["posts"] });
+      // 해제한 글이 원래 목록에 다시 나타나야 합니다. 공지와 팀 게시판 중 어느 쪽인지 여기서
+      // 구분하지 않고 게시판 query 전부를 다시 조회합니다.
+      void client.invalidateQueries({ queryKey: BOARD_KEY });
     },
     onSuccess: () => say("블라인드를 해제했어요."),
     onError: (error) => say(reason(error, "블라인드를 해제하지 못했어요.")),

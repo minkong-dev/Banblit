@@ -3,7 +3,7 @@
 import type { Account, Permission } from "./contract";
 
 /** 프로필 카드에 표시하는 역할 이름입니다. 가진 permission set(권한 집합)의 이름을 ", " 로 이어 표시하고,
- *  하나도 없으면 "일반멤버", 아직 계정을 받지 못했으면 빈 문자열을 반환합니다(사용자 결정 2026-09-11). */
+ *  하나도 없으면 "일반멤버", 아직 계정을 받지 못했으면 빈 문자열을 반환합니다. */
 export function roleLabel(me: Account | null): string {
   if (!me) return "";
   const names = me.permission_sets ?? [];

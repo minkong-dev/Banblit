@@ -1,5 +1,5 @@
 // 글을 쓰는 화면입니다. 공지사항과 팀 게시판이 같은 화면을 씁니다.
-// 목록 아래에 form 을 이어붙이지 않고 자기 주소를 가진 화면으로 둡니다(사용자 결정 2026-09-16) —
+// 목록 아래에 form 을 이어붙이지 않고 자기 주소를 가진 화면으로 둡니다 —
 // 목록과 작성은 하는 일이 다르고, 붙여 두면 작성 화면을 주소로 가리킬 수 없습니다.
 
 import { useNavigate, useParams } from "react-router-dom";
@@ -8,6 +8,7 @@ import { AppShell } from "../components/AppShell";
 import type { NavKey } from "../components/AppShell";
 import { WriteForm } from "../components/PostBoard";
 import { can } from "../lib/account";
+import { boardListKey } from "../lib/pipeline";
 import { useMe, useMyTeams } from "../components/queries";
 import "../styles/board.css";
 
@@ -54,7 +55,7 @@ export function BoardWrite() {
 
 /** 두 화면의 공통 뼈대입니다. 쓸 수 없는 사람에게는 사유만 표시하고 form 을 그리지 않습니다. */
 function WritePage({ current, title, hint, draftPath, listPath, listKey, authorId, allowed, denied }: {
-  /** 사이드바에서 어느 메뉴를 고른 상태로 표시할지입니다. */
+  /** 사이드바에서 어느 메뉴를 선택한 상태로 표시할지입니다. */
   current: NavKey;
   title: string;
   hint: string;
@@ -85,10 +86,9 @@ function WritePage({ current, title, hint, draftPath, listPath, listKey, authorI
             <WriteForm
               draftPath={draftPath}
               authorId={authorId}
-              writeNote=""
               // 목록 화면이 사용하는 queryKey 와 같아야 합니다. 다르면 돌아갔을 때
-              // 방금 쓴 글이 없는 목록이 보입니다(PostBoard 의 queryKey 는 ["board", listPath]).
-              queryKey={["board", listKey]}
+              // 방금 쓴 글이 없는 목록이 보입니다(PostBoard 도 boardListKey 를 사용합니다).
+              queryKey={boardListKey(listKey)}
               onDone={toList}
               onCancel={toList}
             />

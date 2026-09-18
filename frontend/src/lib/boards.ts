@@ -3,6 +3,17 @@
 
 import { hasContent, textOf } from "./richText";
 
+// 게시판 query 전부의 queryKey 맨 앞 값입니다. 이 값으로 무효화하면 목록과 글 상세가 전부 다시 조회됩니다.
+export const BOARD_KEY = ["board"] as const;
+
+// 블라인드된 글 목록의 queryKey 입니다. 글을 블라인드하는 화면(PostBoard)과 해제하는 화면(SettingsBlinded)이 같은 값을 무효화합니다.
+export const BLINDED_KEY = ["blinded-posts"] as const;
+
+// listPath("/notices"·"/posts" 등) 목록의 queryKey 입니다.
+export function boardListKey(listPath: string): string[] {
+  return [...BOARD_KEY, listPath];
+}
+
 const TITLE_MAX = 200;
 const BODY_MAX = 20000;
 const COMMENT_MAX = 2000;
@@ -79,7 +90,7 @@ export function attachmentMessage(name: string, size: number): string {
 // ===== 글과 댓글에 무엇을 할 수 있는가 =====
 
 /** 수정은 작성자만, 삭제는 작성자이거나 \"타 멤버 글 삭제 및 블라인드\"(board_moderate) 권한자입니다.
- *  서버도 같은 규칙입니다 — 권한자도 남의 글 내용은 고치지 못합니다(board_service.py 의 update_post).
+ *  서버도 같은 규칙입니다 — 권한자도 남의 글 내용은 수정하지 못합니다(board_service.py 의 update_post).
  *  로그인 계정을 아직 조회하지 못했으면(meId null) 아무것도 할 수 없습니다. */
 export function boardActions(
   authorId: number,

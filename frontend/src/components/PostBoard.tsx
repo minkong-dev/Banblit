@@ -13,7 +13,9 @@ import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import {
   ATTACHMENT_ACCEPT,
   ATTACHMENT_HINT,
+  BLINDED_KEY,
   boardActions,
+  boardListKey,
   checkAttachments,
   checkComment,
   checkPost,
@@ -105,20 +107,19 @@ function PostList(props: {
 
 /** 글 하나를 쓰는 form 입니다. 목록 화면이 아니라 작성 페이지(routes/PostWrite)가 사용합니다.
  *  목록 아래에 이어붙이지 않습니다 — 목록과 작성은 하는 일이 다르고, 붙이면 작성 화면을 주소로
- *  가리킬 수 없습니다(사용자 결정 2026-09-16). */
+ *  가리킬 수 없습니다. */
 export function WriteForm(props: {
   /** 초안을 만드는 주소입니다. 이 화면이 열릴 때 한 번 호출해 글 번호를 받습니다. */
   draftPath: string;
   /** 현재 사용자의 id. 미인증(로그인 전)이면 null이므로 글을 작성할 수 없습니다. */
   authorId: number | null;
-  writeNote: string;
   queryKey: unknown[];
   /** 글 작성을 완료했을 때 호출합니다. 작성 페이지는 목록으로 돌아갑니다. */
   onDone: () => void;
   /** 쓰지 않고 나갈 때 호출합니다. */
   onCancel: () => void;
 }) {
-  const { draftPath, authorId, writeNote, queryKey, onDone, onCancel } = props;
+  const { draftPath, authorId, queryKey, onDone, onCancel } = props;
   const client = useQueryClient();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
@@ -128,7 +129,7 @@ export function WriteForm(props: {
   // 이 화면이 열릴 때 만든 초안의 글 번호입니다. null 이면 아직 받지 못한 상태입니다.
   // 첨부는 이 번호로 올립니다 — 글이 있어야 올릴 수 있습니다.
   const [draftId, setDraftId] = useState<number | null>(null);
-  // 발행을 마쳤는지입니다. 마쳤으면 이 화면을 떠날 때 초안을 지우지 않습니다.
+  // 발행을 마쳤는지입니다. 마쳤으면 이 화면을 떠날 때 초안을 삭제하지 않습니다.
   const published = useRef(false);
   const [touched, setTouched] = useState(false);
   // 선택한 파일은 브라우저가 관리하므로 코드에서 값을 설정할 수 없습니다.
@@ -157,8 +158,8 @@ export function WriteForm(props: {
   };
 
   // 화면이 열리면 빈 글을 먼저 만듭니다. 그래야 쓰는 중에 첨부를 올릴 수 있습니다.
-  // 떠날 때 발행하지 않았으면 그 빈 글을 지웁니다. 탭을 닫거나 연결이 끊겨 이 요청이 가지 못하면
-  // 하루 뒤 서버가 지웁니다(jobs/auto_assign.py 의 sweep_stale_drafts).
+  // 떠날 때 발행하지 않았으면 그 빈 글을 삭제합니다. 탭을 닫거나 연결이 끊겨 이 요청이 가지 못하면
+  // 하루 뒤 서버가 삭제합니다(jobs/auto_assign.py 의 sweep_stale_drafts).
   const starting = useRef(false);
   useEffect(() => {
     if (starting.current) return;
@@ -180,7 +181,7 @@ export function WriteForm(props: {
       // 첨부를 먼저 올리고 발행합니다. 순서를 뒤집으면 첨부가 실패했을 때 첨부 없는 글이 공개됩니다.
       await uploadAll(draftId);
       await getJSON(`/posts/${draftId}/publish`, {
-        // author_id 는 보내지 않습니다. 서버가 요청의 인증 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 작성자를 정합니다.
+        // author_id 는 보내지 않습니다. 서버가 요청의 인증 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 작성자를 결정합니다.
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, body }),
@@ -212,7 +213,6 @@ export function WriteForm(props: {
         if (why === "") send.mutate();
       }}
     >
-      {writeNote === "" ? null : <p className="note">{writeNote}</p>}
       <div className="fields">
         <label className="wide" htmlFor="postTitle">
           제목
@@ -337,7 +337,7 @@ function CommentForm(props: { postId: number; authorId: number | null }) {
 /** 글에 붙은 파일들을 나열합니다. 이름을 누르면 다운로드하고, 글을 삭제할 권한이 있는 사용자에게만
  *  "삭제" 버튼이 표시됩니다. attachment 는 작성자 정보를 따로 저장하지 않으므로,
  *  글의 작성자를 기준으로 판정합니다(서버도 같습니다). */
-/** 첨부파일 목록의 한 줄입니다. 등록 전(고른 파일)과 등록 후(저장된 파일)가 같은 모양을 씁니다.
+/** 첨부파일 목록의 한 줄입니다. 등록 전(선택한 파일)과 등록 후(저장된 파일)가 같은 모양을 씁니다.
  *  href 가 있으면 이름이 다운로드 링크가 됩니다. 등록 전에는 받을 주소가 없어 넘기지 않습니다. */
 function AttachmentRow({ name, size, href, action }: {
   name: string;
@@ -407,7 +407,7 @@ function AttachmentList(props: {
   );
 }
 
-/** board_moderate 권한자에게만 표시되는 블라인드 버튼입니다. 글을 지우지 않고 목록·상세에서 가립니다.
+/** board_moderate 권한자에게만 표시되는 블라인드 버튼입니다. 글을 삭제하지 않고 목록·상세에서 가립니다.
  *  가린 글은 작성자 본인에게도 보이지 않고, 설정 화면의 블라인드 탭에서만 보이며 거기서 되돌립니다. */
 function BlindPost(props: {
   postId: number;
@@ -421,7 +421,7 @@ function BlindPost(props: {
     mutationFn: () => getJSON(`/posts/${postId}/blind`, { method: "PUT" }),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: listKey });
-      void client.invalidateQueries({ queryKey: ["blinded-posts"] });
+      void client.invalidateQueries({ queryKey: BLINDED_KEY });
       say("글을 블라인드했어요.");
       // 가린 글의 상세 화면은 더 이상 조회되지 않으므로 목록으로 돌아갑니다.
       onDone();
@@ -734,7 +734,7 @@ export function PostBoard(props: {
   emptyText: string;
 }) {
   const { title, hint, listPath, newPath, authorId, canWrite, canModerate, emptyText } = props;
-  const queryKey = ["board", listPath];
+  const queryKey = boardListKey(listPath);
   const focus = useDetailFocus();
   const client = useQueryClient();
   const [page, setPage] = useState(1);
