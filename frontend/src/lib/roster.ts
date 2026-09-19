@@ -117,3 +117,11 @@ export function myTeamIds(teams: MyTeam[]): number[] {
 export function teamsShown<T extends { id: number }>(teams: T[], teamIds: number[], manages: boolean): T[] {
   return manages ? teams : teams.filter((team) => teamIds.includes(team.id));
 }
+
+/** 멤버 검색 목록에 표시할 것이 없을 때의 문구입니다. 빈 검색어에는 명단 전체를 받으므로,
+ *  그때 목록이 비었다는 것은 고를 사람이 남지 않았다는 뜻이지 검색이 실패한 것이 아닙니다. */
+export function noMembersMessage(query: string): string {
+  return query === ""
+    ? "고를 수 있는 멤버가 없어요."
+    : "해당하는 사용자를 찾지 못했어요.";
+}
