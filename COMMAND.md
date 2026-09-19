@@ -866,6 +866,59 @@ docker run --rm -v banblit_banblit-attachments:/dst -v /srv/banblit/backups:/src
 
 ---
 
+### 11-6. 데이터베이스의 revision 을 저장소에서 찾지 못할 때
+
+```
+docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -tAc "select version_num from alembic_version"
+ls backend/migrations/versions
+```
+
+- **실행 경로**: 서버의 저장소 루트
+- **용도**: `banblit.sh` 가 "데이터베이스가 서 있는 revision 을 저장소에서 찾지 못했습니다" 로
+  멈췄을 때, 현재 지점과 저장소에 남은 migration 을 대조합니다.
+- **왜 생기나**
+  - alembic 은 데이터베이스에 적힌 revision 에서 출발해 head 까지의 경로를 계산합니다. 출발점의
+    파일이 없으면 경로를 계산할 수 없어 아무것도 적용하지 못합니다.
+  - 2026-09-16 에 migration 36개를 1개(`080a74e46f56`)로 합치면서 옛 파일을 전부 삭제했는데,
+    그때 배포 데이터베이스는 옛 체인 중간(`b3d9f27c0a41`)에 있었습니다. 2026-09-19 배포가 이
+    지점에서 멈췄습니다. **합치기 전에 배포 데이터베이스를 먼저 head 로 올렸다면 생기지 않습니다.**
+- **되살리는 방법 2가지**
+
+  **(가) 남길 데이터를 뽑고 스키마를 새로 만듭니다.** 데이터가 적을 때 씁니다. 실패할 지점이 적습니다.
+
+  ```
+  docker compose -f docker-compose.yml exec -T db pg_dump --data-only --no-owner -U banblit -d banblit -t members -t permission_sets -t member_permission_sets > accounts.sql
+  docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE" -c "CREATE SCHEMA public"
+  bash banblit.sh update
+  docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -v ON_ERROR_STOP=1 -c "TRUNCATE members, permission_sets, member_permission_sets RESTART IDENTITY CASCADE"
+  cat accounts.sql | docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -v ON_ERROR_STOP=1
+  ```
+
+  **뽑아낸 권한 집합에는 그 시점의 항목만 들어 있습니다.** 그 뒤에 추가된 항목을 더하지 않으면
+  "모든 항목을 가진 permission set" 판정에서 빠져, 헤드매니저가 권한을 부여하지 못합니다. 개수를
+  확인하고 모자란 항목을 더합니다.
+
+  ```
+  docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -c "select name, array_length(permissions,1) from permission_sets"
+  ```
+
+  **(나) 삭제된 migration 을 되살려 순서대로 적용합니다.** 데이터가 많을 때 씁니다.
+  `git log --diff-filter=D --name-only -- backend/migrations/versions` 로 삭제한 커밋을 찾고,
+  그 커밋의 부모에서 필요한 파일만 꺼내 `backend/migrations/versions` 에 되돌린 뒤
+  `alembic upgrade <옛 head>` 를 실행합니다. 그다음 `alembic stamp 080a74e46f56` 로 통합 지점에
+  맞추고, 되살린 파일을 다시 삭제한 뒤 `alembic upgrade head` 를 실행합니다.
+
+- **주의점**
+  - **`alembic stamp` 만 실행하지 않습니다.** 건너뛴 migration 이 하는 구조 변경이 적용되지 않은
+    채 "적용됨" 으로 기록되어, 없는 열을 읽는 서버가 됩니다. 증상은 실행 시점이 아니라 그 열을
+    쓰는 화면을 열 때 나타납니다.
+  - `banblit.sh` 는 이 상황을 감지하면 migration 을 실행하지 않고 멈춥니다(`assert_revision_known`).
+    데이터는 그대로입니다.
+  - 어느 방법이든 백업을 먼저 뜹니다. `banblit.sh up`·`migrate` 는 migration 직전에 자동으로
+    뜨지만(`backup_db`), 이 절차는 손으로 실행하므로 `11-4` 를 먼저 수행합니다.
+
+---
+
 ## 12. E2E 테스트
 
 ### 12-1. E2E 테스트 실행하기
