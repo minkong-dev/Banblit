@@ -107,6 +107,7 @@ function SetForm(props: {
           권한 이름
           <input
             id="setName"
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- 권한 편집 모달이 열릴 때 이름 입력칸으로 초점을 이동합니다. WAI-ARIA dialog 패턴이 규정하는 동작입니다.
             autoFocus
             value={form.name}
             placeholder="권한 이름"

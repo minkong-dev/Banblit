@@ -56,6 +56,7 @@ export function MemberSearch(props: {
   return (
     <div className="seek">
       <input
+        // eslint-disable-next-line jsx-a11y/no-autofocus -- 검색 컴포넌트가 열릴 때 검색어 입력칸으로 초점을 이동합니다. 페이지 최초 로드가 아닙니다.
         autoFocus
         type="search"
         value={text}

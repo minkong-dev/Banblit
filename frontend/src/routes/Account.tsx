@@ -137,6 +137,7 @@ export function SignIn() {
       <Field name="pw" label="비밀번호" type="password"
         autoComplete="current-password" placeholder="비밀번호를 입력해주세요" error={errors.pw} />
       <div className="row">
+        {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- CheckMark 컴포넌트 안에 input 이 있습니다. eslint 는 컴포넌트 내부를 확인하지 못합니다. */}
         <label className="keep"><CheckMark name="keep" /> 로그인 상태 유지</label>
         <span className="links">
           <Link to="/find-id">아이디 찾기</Link>
