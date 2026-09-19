@@ -1,0 +1,98 @@
+# push 마다 서버·화면 검사를 전부 실행합니다. 지금까지는 개발자가 직접 실행해야 했고,
+# 실행하지 않은 채 push 하면 깨진 상태가 develop 에 남았습니다.
+#
+# 모든 실행은 컨테이너 안입니다(CLAUDE.md 6장). 호스트에 파이썬·Node 를 설치하지 않고
+# docker compose 로 개발과 같은 image 를 사용합니다.
+name: checks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # .env 가 저장소에 없으므로 검사용 값을 생성합니다. 비밀값이 아니라 컨테이너 안에서만
+      # 사용하는 값이고, 배포 값과 겹치지 않도록 이름을 다르게 둡니다.
+      - name: 검사용 환경 변수 생성
+        run: |
+          cat > .env <<'ENV'
+          POSTGRES_USER=banblit
+          POSTGRES_PASSWORD=banblit-ci-password
+          POSTGRES_DB=banblit
+          TZ=Asia/Seoul
+          ENV
+
+      - name: 서버 테스트
+        run: docker compose run --rm dev pytest -q
+
+      - name: 타입 검사
+        run: docker compose run --rm --no-deps dev mypy src
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 검사용 환경 변수 생성
+        run: |
+          cat > .env <<'ENV'
+          POSTGRES_USER=banblit
+          POSTGRES_PASSWORD=banblit-ci-password
+          POSTGRES_DB=banblit
+          TZ=Asia/Seoul
+          ENV
+
+      # package.json 이 바뀌어도 volume 이 갱신되지 않는 문제가 dev 환경에 있습니다
+      # (COMMAND.md 10-5-1). CI 는 volume 이 매번 비어 있으므로 먼저 설치합니다.
+      - name: 화면 패키지 설치
+        run: docker compose run --rm --no-deps web npm ci
+
+      - name: 화면 lint
+        run: docker compose run --rm --no-deps web npm run lint
+
+      - name: 화면 lint (E2E)
+        run: docker compose run --rm --no-deps web npm run lint:e2e
+
+      - name: 화면 타입 검사
+        run: docker compose run --rm --no-deps web npm run typecheck
+
+      - name: 화면 테스트
+        run: docker compose run --rm --no-deps web npm test
+
+      - name: 화면 빌드
+        run: docker compose run --rm --no-deps web npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 검사용 환경 변수 생성
+        run: |
+          cat > .env <<'ENV'
+          POSTGRES_USER=banblit
+          POSTGRES_PASSWORD=banblit-ci-password
+          POSTGRES_DB=banblit
+          TZ=Asia/Seoul
+          ENV
+
+      - name: E2E 서버 기동
+        run: docker compose --profile e2e up -d --wait e2e-api
+
+      - name: E2E 실행
+        run: docker compose --profile e2e run --rm e2e
+
+      # 실패한 검사의 화면과 추적 파일을 남깁니다. 로그만으로는 어느 요소를 찾지 못했는지
+      # 알 수 없습니다.
+      - name: 실패 산출물 보관
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results
+          path: frontend/test-results/
+          if-no-files-found: ignore
