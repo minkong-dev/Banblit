@@ -550,7 +550,6 @@ class NotificationOut(BaseModel):
     # 알림의 종류만 포함합니다. 사람이 읽을 문장은 화면이 이 값으로 만듭니다.
     kind: NotificationKind
     created_at: str
-    read: bool
 
 
 class NotificationsOut(BaseModel):

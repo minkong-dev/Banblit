@@ -247,5 +247,4 @@ export type Notification = {
   kind: "assignment_updated";
   /** "2026-09-14T18:00:00" */
   created_at: string;
-  read: boolean;
 };
