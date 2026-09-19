@@ -152,8 +152,17 @@ flush 한 뒤 배정합니다. `test_bulk_slot_members_can_swap_two_people` 이 
 
 | 항목 | 내용 |
 |---|---|
-| 수정 대상 | `backend/src/backend/api/routers/rooms.py`, `backend/src/backend/services/room_service.py`, `backend/src/backend/services/permission_service.py`, `frontend/src/routes/Settings.tsx` |
-| 상태 | 미착수 |
+| 수정 대상 | `db/models.py`, migration `7e1a4c93d6f0`, `api/routers/rooms.py`, `api/schemas.py`, `services/room_service.py`, `lib/contract.ts`, `lib/account.ts`, `lib/confirm.ts`, `routes/Settings.tsx` |
+| 검증 방법 | `test_room_endpoints.py` 5건, `lib/confirm.test.ts` 2건, `lib/account.test.ts` |
+| 상태 | 완료 (2026-09-19) |
+
+**권한 항목 추가에 따라오는 것이 2가지 있었습니다.** `permission_sets.permissions` 의 CHECK 제약이
+허용 이름을 열거하므로 migration 이 필요하고, 그 migration 이 기존 20개를 전부 가진 set 에
+`room_delete` 를 함께 추가해야 합니다. 추가하지 않으면 그 set 이 "모든 항목을 가진 set" 판정에서
+빠져 헤드매니저가 권한을 부여하지 못하고, 마지막 full set 을 지키는 검사도 대상이 0개가 됩니다.
+
+`PermissionSetIn.permissions` 의 상한이 20으로 적혀 있어 21개를 선택한 요청이 422 로 거절됐습니다.
+`len(PERMISSIONS)` 에서 유도하도록 변경했습니다.
 
 ### 3-2. 알림 누적
 
@@ -325,5 +334,6 @@ push 마다 pytest, mypy, 화면 테스트, 화면 lint 를 실행하고 실패 
 | 백업 복원 절차 교정과 시험 | 1-2 | 2026-09-19 |
 | ErrorBoundary 와 404 화면 | 1-3 | 2026-09-19 |
 | 팀 자리 일괄 저장 endpoint | 2-2 | 2026-09-19 |
+| 합주실 삭제 (room_delete 권한, endpoint, 확인 dialog) | 3-1, 4-3 | 2026-09-19 |
 | E2E 22건 실행 (전부 통과) | — | 2026-09-19 |
 
