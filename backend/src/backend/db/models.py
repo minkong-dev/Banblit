@@ -23,9 +23,9 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-# scheduling 의 진입점(pipeline.py)이 아니라 slots.py 를 직접 참조합니다. 진입점을 거치면 이 파일을
-# import 하는 migration 까지 OR-Tools 를 로드하게 됩니다. DEFAULT_SLOT_MINUTES 는 계산 없는 상수라 공유 선언입니다.
-from backend.scheduling.slots import (
+# 칸 크기와 합주 1회 길이는 db·api·services·scheduling 이 같은 값을 참조해야 하므로 공유 규격
+# 파일에 1세트만 둡니다.
+from backend.contract import (
     DEFAULT_SESSION_MINUTES,
     DEFAULT_SLOT_MINUTES,
     MAX_SESSION_MINUTES,
@@ -131,7 +131,7 @@ class Settings(Base):
 
     __table_args__ = (
         CheckConstraint("id = 1"),
-        # 허용 값은 scheduling/slots.py 의 SLOT_MINUTE_CHOICES 가 정본입니다. 목록에서 생성해,
+        # 허용 값은 contract.py 의 SLOT_MINUTE_CHOICES 가 정본입니다. 목록에서 생성해,
         # 값을 추가할 때 이 줄을 함께 수정하지 않아도 되게 합니다.
         CheckConstraint(_slot_minutes_sql()),
         # 합주 길이는 칸의 배수이고 칸보다 짧을 수 없습니다. 두 열을 함께 보는 조건이라

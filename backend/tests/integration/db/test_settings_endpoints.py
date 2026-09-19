@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from conftest import AccountFactory
 
 from backend.db.models import Settings
-from backend.scheduling.slots import SLOT_MINUTE_CHOICES
+from backend.contract import SLOT_MINUTE_CHOICES
 from test_reservation_endpoints import OPEN_DAY, _open_period, _room
 
 
