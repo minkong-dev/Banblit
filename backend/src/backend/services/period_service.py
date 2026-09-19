@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from backend.services.period_input import (
     PracticeWindow,
-    auto_slots_per_team,
+    auto_sessions_per_team,
     build_engine_rooms,
     build_engine_teams,
     dates_in_period,
@@ -21,7 +21,7 @@ from backend.db.models import (
     Team,
     UnavailableTime,
 )
-from backend.services.settings_service import slot_minutes
+from backend.services.settings_service import session_minutes, slot_minutes
 from backend.db.pipeline import AssignmentRow, save_schedule
 from backend.scheduling.pipeline import Assignment as EngineAssignment
 from backend.scheduling.pipeline import (
@@ -95,12 +95,15 @@ def assign_period(
 
     engine_rooms = build_engine_rooms(rooms, days, practice_window(period))
     unit = slot_minutes(session)
-    slots_per_team = auto_slots_per_team(engine_rooms, len(team_ids), unit)
+    length = session_minutes(session)
+    sessions_per_team = auto_sessions_per_team(
+        engine_rooms, len(team_ids), unit, length
+    )
     engine_teams = build_engine_teams(
         team_ids, member_ids_by_team, unavailable_by_member
     )
 
-    resolution = resolve(engine_teams, engine_rooms, slots_per_team, unit)
+    resolution = resolve(engine_teams, engine_rooms, sessions_per_team, unit, length)
 
     saved = False
     if resolution.assignment.feasible:
@@ -284,17 +287,18 @@ def _load_unavailable(
 
 
 def _assignment_rows(assignment: EngineAssignment) -> list[AssignmentRow]:
-    # 엔진이 반환한 slot 을 저장할 행으로 변환합니다. 팀 번호도 합주실 번호도
-    # DB 의 번호 그대로이므로 변환할 값이 없습니다.
+    # 엔진이 반환한 session 을 저장할 행으로 변환합니다. session 1회가 행 1개이므로,
+    # 60분 session 은 칸 크기가 30분이어도 30분짜리 행 2개가 아니라 60분짜리 행 1개입니다.
+    # 팀 번호도 합주실 번호도 DB 의 번호 그대로이므로 변환할 값이 없습니다.
     rows: list[AssignmentRow] = []
-    for team_id, slots in assignment.slots_by_team.items():
-        for room_slot in slots:
+    for team_id, sessions in assignment.sessions_by_team.items():
+        for room_session in sessions:
             rows.append(
                 {
                     "team_id": team_id,
-                    "room_id": room_slot.room_id,
-                    "starts_at": room_slot.interval.start,
-                    "ends_at": room_slot.interval.end,
+                    "room_id": room_session.room_id,
+                    "starts_at": room_session.interval.start,
+                    "ends_at": room_session.interval.end,
                 }
             )
     return rows

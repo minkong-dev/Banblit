@@ -3,7 +3,7 @@
 from sqlalchemy.orm import Session
 
 from backend.db.models import Settings
-from backend.scheduling.slots import MAX_SESSION_MINUTES
+from backend.contract import MAX_SESSION_MINUTES
 
 
 def _row(session: Session) -> Settings:

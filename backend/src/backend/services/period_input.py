@@ -121,21 +121,32 @@ def build_engine_rooms(
     return engine_rooms
 
 
-def auto_slots_per_team(
-    engine_rooms: list[EngineRoom], team_count: int, slot_minutes: int
+def auto_sessions_per_team(
+    engine_rooms: list[EngineRoom],
+    team_count: int,
+    slot_minutes: int,
+    session_minutes: int,
 ) -> int:
-    """전체 slot(시간 칸)을 팀 수로 나누어 팀마다 가질 slot 개수를 반환합니다(나머지는 남는 slot)."""
+    """겹치지 않게 들어가는 session 총 횟수를 팀 수로 나누어, 팀마다 가질 session 횟수를 반환합니다.
+
+    합주실 하나가 받을 수 있는 session 횟수는 그 합주실의 칸 수를 session 1회가 차지하는 칸 수로
+    나눈 몫입니다. 나머지 칸은 session 1회를 채우지 못하므로 자동 배정 대상에서 빠지고, 선착순
+    예약이 쓸 수 있는 칸으로 남습니다.
+    """
     if team_count <= 0:
         raise ValueError("배정할 팀이 없습니다")
 
-    total = sum(
-        len(generate_slots(room.open_period, slot_minutes)) for room in engine_rooms
-    )
+    slots_per_session = session_minutes // slot_minutes
+    total = 0
+    for room in engine_rooms:
+        slots = len(generate_slots(room.open_period, slot_minutes))
+        total += slots // slots_per_session
+
     per_team = total // team_count
     if per_team == 0:
         raise ValueError(
-            f"전체 자리({total}칸)가 팀 수({team_count})보다 적어 "
-            f"팀마다 한 칸도 줄 수 없습니다"
+            f"전체 자리({total}회)가 팀 수({team_count})보다 적어 "
+            f"팀마다 한 번도 줄 수 없습니다"
         )
     return per_team
 

@@ -4,7 +4,7 @@ import pytest
 
 from backend.services.period_input import (
     PracticeWindow,
-    auto_slots_per_team,
+    auto_sessions_per_team,
     build_engine_rooms,
     build_engine_teams,
     dates_in_period,
@@ -241,29 +241,42 @@ def test_rooms_with_the_same_name_stay_separate() -> None:
     assert [r.id for r in engine_rooms] == [1, 2]
 
 
-def test_slots_per_team_is_the_whole_grid_divided_by_team_count() -> None:
+def test_sessions_per_team_is_the_whole_grid_divided_by_team_count() -> None:
     rooms = [_room(1, "1번방", time(18, 0), time(22, 0))]  # 하루 4칸
     engine_rooms = build_engine_rooms(
         rooms, [date(2026, 8, 1), date(2026, 8, 2)]
     )  # 8칸
 
-    assert auto_slots_per_team(engine_rooms, slot_minutes=60, team_count=3) == 2
+    assert auto_sessions_per_team(engine_rooms, slot_minutes=60, session_minutes=60, team_count=3) == 2
 
 
-def test_slots_per_team_is_rejected_when_no_team_can_get_a_slot() -> None:
-    rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]  # 2칸
+def test_sessions_per_team_counts_the_session_length_not_the_slot() -> None:
+    # 30분 칸으로는 8칸이지만, 60분 session 은 겹치지 않게 4회만 들어갑니다.
+    rooms = [_room(1, "1번방", time(18, 0), time(22, 0))]
     engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
 
-    with pytest.raises(ValueError, match="한 칸도"):
-        auto_slots_per_team(engine_rooms, slot_minutes=60, team_count=3)
+    assert (
+        auto_sessions_per_team(
+            engine_rooms, slot_minutes=30, session_minutes=60, team_count=2
+        )
+        == 2
+    )
 
 
-def test_slots_per_team_is_rejected_when_there_are_no_teams() -> None:
+def test_sessions_per_team_is_rejected_when_no_team_can_get_a_session() -> None:
+    rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]  # 60분 session 2회
+    engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
+
+    with pytest.raises(ValueError, match="한 번도"):
+        auto_sessions_per_team(engine_rooms, slot_minutes=60, session_minutes=60, team_count=3)
+
+
+def test_sessions_per_team_is_rejected_when_there_are_no_teams() -> None:
     rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]
     engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
 
     with pytest.raises(ValueError, match="배정할 팀이 없습니다"):
-        auto_slots_per_team(engine_rooms, slot_minutes=60, team_count=0)
+        auto_sessions_per_team(engine_rooms, slot_minutes=60, session_minutes=60, team_count=0)
 
 
 def test_two_people_with_the_same_name_stay_separate() -> None:

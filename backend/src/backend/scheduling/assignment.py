@@ -3,12 +3,9 @@ from dataclasses import dataclass
 
 from ortools.sat.python import cp_model
 
-# 계산 1회에 허용하는 시간(초)입니다. 초과하면 그때까지 찾은 배정안을 반환합니다.
-SOLVER_TIME_LIMIT_SECONDS = 60.0
-
 from backend.scheduling.availability import Team, is_team_available
 from backend.scheduling.interval import TimeInterval
-from backend.scheduling.slots import DEFAULT_SLOT_MINUTES, generate_slots
+from backend.scheduling.slots import generate_sessions, generate_slots
 
 
 @dataclass(frozen=True)
@@ -20,8 +17,12 @@ class Room:
 
 
 @dataclass(frozen=True)
-class RoomSlot:
-    """어느 합주실의 어느 시간 slot(점유 단위 길이의 시간 칸)인지를 나타냅니다. room_id 와 interval 이 slot 하나를 유일하게 식별합니다."""
+class RoomInterval:
+    """어느 합주실의 어느 시간 구간인지를 나타냅니다. room_id 와 interval 이 구간 하나를 유일하게 식별합니다.
+
+    배정 결과에서는 session(합주 1회가 이어지는 구간) 하나이고, open_slots 에서는 slot(점유 단위
+    길이의 시간 칸) 하나입니다. 두 구간의 길이는 다르지만 합주실 번호와 시간 구간이라는 구성은 같습니다.
+    """
 
     room_id: int
     interval: TimeInterval
@@ -30,16 +31,16 @@ class RoomSlot:
 @dataclass
 class Assignment:
     feasible: bool
-    slots_by_team: dict[int, list[RoomSlot]]
-    open_slots: list[RoomSlot]
+    sessions_by_team: dict[int, list[RoomInterval]]
+    open_slots: list[RoomInterval]
 
 
-def _build_room_slots(rooms: list[Room], slot_minutes: int) -> list[RoomSlot]:
+def _build_room_slots(rooms: list[Room], slot_minutes: int) -> list[RoomInterval]:
     # rooms 의 개방 시간 구간을 generate_slots 로 slot(시간 칸)으로 분할하여 하나의 목록으로 통합합니다.
     # 같은 slot 이 중복으로 나타나면 즉시 거부합니다. slot 하나가 두 번 세어지면
     # slot 하나에는 팀 하나만이라는 제약이 두 팀을 같은 slot 에 배정하는 것을 막지 못하기 때문입니다.
-    room_slots: list[RoomSlot] = []
-    seen: set[RoomSlot] = set()
+    room_slots: list[RoomInterval] = []
+    seen: set[RoomInterval] = set()
     for room in rooms:
         try:
             intervals = generate_slots(room.open_period, slot_minutes)
@@ -49,7 +50,7 @@ def _build_room_slots(rooms: list[Room], slot_minutes: int) -> list[RoomSlot]:
                 f"{room.id}번 합주실의 운영 시간이 잘못되었습니다: {error}"
             ) from error
         for interval in intervals:
-            room_slot = RoomSlot(room_id=room.id, interval=interval)
+            room_slot = RoomInterval(room_id=room.id, interval=interval)
             if room_slot in seen:
                 raise ValueError(
                     f"{room.id}번 합주실의 운영 시간이 겹칩니다: "
@@ -60,9 +61,41 @@ def _build_room_slots(rooms: list[Room], slot_minutes: int) -> list[RoomSlot]:
     return room_slots
 
 
-def _validate(teams: list[Team], slots_per_team: int) -> None:
+def _build_room_sessions(
+    rooms: list[Room], slot_minutes: int, session_minutes: int
+) -> list[RoomInterval]:
+    # rooms 의 개방 시간 구간마다 generate_sessions 로 session 후보를 만들어 하나의 목록으로 통합합니다.
+    # 같은 합주실 안에서 후보끼리 겹치므로 중복 검사는 하지 않습니다. 격자와 중복 검사는
+    # _build_room_slots 가 같은 rooms 를 대상으로 이미 수행합니다.
+    room_sessions: list[RoomInterval] = []
+    for room in rooms:
+        for interval in generate_sessions(
+            room.open_period, slot_minutes, session_minutes
+        ):
+            room_sessions.append(RoomInterval(room_id=room.id, interval=interval))
+    return room_sessions
+
+
+def _covered_slots(
+    room_sessions: list[RoomInterval], slot_minutes: int
+) -> dict[int, list[RoomInterval]]:
+    """session 후보 하나가 차지하는 slot 목록을 후보 번호별로 반환합니다.
+
+    session 은 칸의 배수 길이이고 시작이 격자 위에 있으므로, session 구간을 다시 분할하면
+    그 session 이 차지하는 칸이 나옵니다.
+    """
+    covered: dict[int, list[RoomInterval]] = {}
+    for index, room_session in enumerate(room_sessions):
+        covered[index] = [
+            RoomInterval(room_id=room_session.room_id, interval=interval)
+            for interval in generate_slots(room_session.interval, slot_minutes)
+        ]
+    return covered
+
+
+def _validate(teams: list[Team], sessions_per_team: int) -> None:
     """번호는 대상을 유일하게 식별해야 합니다. 중복되면 결과에서 대상을 구분할 수 없기 때문입니다."""
-    if slots_per_team < 0:
+    if sessions_per_team < 0:
         raise ValueError("팀당 배정 개수는 음수일 수 없습니다")
 
     team_counts = Counter(team.id for team in teams)
@@ -89,47 +122,70 @@ def _validate(teams: list[Team], slots_per_team: int) -> None:
 def assign(
     teams: list[Team],
     rooms: list[Room],
-    slots_per_team: int,
-    slot_minutes: int = DEFAULT_SLOT_MINUTES,
+    sessions_per_team: int,
+    slot_minutes: int,
+    session_minutes: int,
+    solver_time_limit_seconds: float,
 ) -> Assignment:
-    """각 팀에게, 그 팀이 사용 가능한 시간의 빈 합주실 slot 을 slots_per_team 개 배정합니다.
+    """각 팀에게, 그 팀이 사용 가능한 시간의 빈 합주실 session 을 sessions_per_team 회 배정합니다.
 
-    slot_minutes 는 칸 하나의 크기(분)이고 저장소 설정이 결정합니다. 칸 하나에는 팀 하나만 배정됩니다. 팀 하나는 같은 시간에
-    여러 합주실을 동시에 사용할 수 없으며, 여러 팀에 속한 멤버도 같은 시간에
-    한 곳에만 있을 수 있습니다. 조건을 모두 충족하는 배정안이 없을 경우
-    feasible=False 를 반환합니다.
+    session 은 session_minutes 동안 끊기지 않고 이어지는 구간 하나입니다. slot_minutes 는 칸 하나의
+    크기(분)이고 session 이 시작할 수 있는 간격입니다. 두 값 모두 저장소 설정이 결정합니다.
+
+    칸 하나에는 팀 하나만 배정됩니다. 팀 하나는 같은 시간에 여러 합주실을 동시에 사용할 수 없으며,
+    여러 팀에 속한 멤버도 같은 시간에 한 곳에만 있을 수 있습니다. 조건을 모두 충족하는 배정안이
+    없을 경우 feasible=False 를 반환합니다.
+
+    open_slots 는 어떤 session 도 차지하지 않은 칸입니다. session 이 아니라 칸 단위입니다 —
+    남은 시간이 session 1회보다 짧아도 선착순 예약은 그 칸을 쓸 수 있기 때문입니다.
     """
-    _validate(teams, slots_per_team)
+    _validate(teams, sessions_per_team)
     room_slots = _build_room_slots(rooms, slot_minutes)
+    room_sessions = _build_room_sessions(rooms, slot_minutes, session_minutes)
+    covered = _covered_slots(room_sessions, slot_minutes)
 
     model = cp_model.CpModel()
 
-    # 팀이 쓸 수 없는 slot 에는 변수를 만들지 않습니다. 변수를 만든 뒤 0 으로 고정하는 것보다
+    # 팀이 쓸 수 없는 session 에는 변수를 만들지 않습니다. 변수를 만든 뒤 0 으로 고정하는 것보다
     # model 의 변수·제약 수가 줄어 solve 시간이 짧아집니다.
     chosen: dict[tuple[int, int], cp_model.IntVar] = {}
     for team in teams:
         own: list[cp_model.IntVar] = []
-        for index, room_slot in enumerate(room_slots):
-            if not is_team_available(team, room_slot.interval):
+        for index, room_session in enumerate(room_sessions):
+            if not is_team_available(team, room_session.interval):
                 continue
             var = model.new_bool_var(f"chosen_{team.id}_{index}")
             chosen[(team.id, index)] = var
             own.append(var)
-        model.add(cp_model.LinearExpr.sum(own) == slots_per_team)
+        model.add(cp_model.LinearExpr.sum(own) == sessions_per_team)
 
-    for index, _ in enumerate(room_slots):
-        in_slot = [chosen[(team.id, index)] for team in teams if (team.id, index) in chosen]
+    # 칸 하나를 차지하는 session 후보 번호를 모읍니다. 후보끼리 겹치므로 칸 하나에 후보가 여럿입니다.
+    indices_by_slot: dict[RoomInterval, list[int]] = defaultdict(list)
+    for index, room_slots_of_session in covered.items():
+        for room_slot in room_slots_of_session:
+            indices_by_slot[room_slot].append(index)
+
+    for indices in indices_by_slot.values():
+        in_slot: list[cp_model.IntVar] = []
+        for team in teams:
+            for index in indices:
+                if (team.id, index) in chosen:
+                    in_slot.append(chosen[(team.id, index)])
         _at_most_one(model, in_slot)
 
+    # 합주실이 달라도 같은 시각이면 한 팀은 한 곳에만 있을 수 있습니다. 합주실 번호를 뺀
+    # 시간 구간으로 다시 모읍니다.
     indices_by_interval: dict[TimeInterval, list[int]] = defaultdict(list)
-    for index, room_slot in enumerate(room_slots):
-        indices_by_interval[room_slot.interval].append(index)
+    for room_slot, indices in indices_by_slot.items():
+        indices_by_interval[room_slot.interval].extend(indices)
 
     for indices in indices_by_interval.values():
-        if len(indices) < 2:
-            continue
         for team in teams:
-            _at_most_one(model, [chosen[(team.id, i)] for i in indices if (team.id, i) in chosen])
+            own_here: list[cp_model.IntVar] = []
+            for index in indices:
+                if (team.id, index) in chosen:
+                    own_here.append(chosen[(team.id, index)])
+            _at_most_one(model, own_here)
 
     teams_by_member: dict[int, list[int]] = defaultdict(list)
     for team in teams:
@@ -139,40 +195,37 @@ def assign(
         if len(team_ids) < 2:
             continue
         for indices in indices_by_interval.values():
-            shared = [
-                chosen[(team_id, i)]
-                for team_id in team_ids
-                for i in indices
-                if (team_id, i) in chosen
-            ]
+            shared: list[cp_model.IntVar] = []
+            for team_id in team_ids:
+                for index in indices:
+                    if (team_id, index) in chosen:
+                        shared.append(chosen[(team_id, index)])
             _at_most_one(model, shared)
 
     solver = cp_model.CpSolver()
-    # 시간 제한이 없으면 풀리지 않는 입력 하나가 worker 를 무한정 점유하게 됩니다.
-    # 실측 최댓값(약 22초)의 약 3배에서 중단하고, 그때까지 찾지 못했으면
+    # solver_time_limit_seconds 를 넘기면 계산을 중단합니다. 그때까지 배정안을 찾지 못했으면
     # feasible=False 로 처리합니다.
-    solver.parameters.max_time_in_seconds = SOLVER_TIME_LIMIT_SECONDS
+    solver.parameters.max_time_in_seconds = solver_time_limit_seconds
     status = solver.solve(model)
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        return Assignment(feasible=False, slots_by_team={}, open_slots=[])
+        return Assignment(feasible=False, sessions_by_team={}, open_slots=[])
 
-    slots_by_team: dict[int, list[RoomSlot]] = {}
-    taken: set[int] = set()
+    sessions_by_team: dict[int, list[RoomInterval]] = {}
+    taken: set[RoomInterval] = set()
     for team in teams:
         picked = [
             index
-            for index, _ in enumerate(room_slots)
+            for index, _ in enumerate(room_sessions)
             if (team.id, index) in chosen and solver.value(chosen[(team.id, index)]) == 1
         ]
-        taken.update(picked)
-        slots_by_team[team.id] = [room_slots[index] for index in picked]
+        for index in picked:
+            taken.update(covered[index])
+        sessions_by_team[team.id] = [room_sessions[index] for index in picked]
 
-    open_slots = [
-        room_slot
-        for index, room_slot in enumerate(room_slots)
-        if index not in taken
-    ]
-    return Assignment(feasible=True, slots_by_team=slots_by_team, open_slots=open_slots)
+    open_slots = [room_slot for room_slot in room_slots if room_slot not in taken]
+    return Assignment(
+        feasible=True, sessions_by_team=sessions_by_team, open_slots=open_slots
+    )
 
 
 def _at_most_one(model: cp_model.CpModel, variables: list[cp_model.IntVar]) -> None:
