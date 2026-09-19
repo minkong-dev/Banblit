@@ -128,17 +128,40 @@ def test_member_search_requires_authentication(api_client: TestClient) -> None:
     assert api_client.get("/members/search?q=박").status_code == 401
 
 
-def test_member_search_returns_nothing_for_an_empty_query(
+def test_member_search_returns_the_whole_roster_for_an_empty_query(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """빈 검색어를 허용하면 명단 전체를 반환하는 endpoint(API의 요청 주소 단위)가 됩니다."""
+    """검색어를 입력하기 전에 누가 있는지 보여야 합니다. 한 글자씩 넣어 찾아볼 필요가 없어야 합니다."""
     _, cookies = account("박서연", "head@example.com")
     _member(db_session, "황찬우")
+    _member(db_session, "이도현")
     db_session.commit()
 
     body = api_client.get("/members/search?q=", cookies=cookies).json()
 
-    assert body["members"] == []
+    assert sorted(member["name"] for member in body["members"]) == [
+        "박서연",
+        "이도현",
+        "황찬우",
+    ]
+
+
+def test_member_search_orders_the_whole_roster_by_name(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """스크롤로 훑어 찾는 목록이므로 이름 순서가 아니면 원하는 사람을 눈으로 찾을 수 없습니다."""
+    _, cookies = account("황찬우", "head@example.com")
+    _member(db_session, "이도현")
+    _member(db_session, "박서연")
+    db_session.commit()
+
+    body = api_client.get("/members/search?q=", cookies=cookies).json()
+
+    assert [member["name"] for member in body["members"]] == [
+        "박서연",
+        "이도현",
+        "황찬우",
+    ]
 
 
 def test_member_search_finds_by_partial_name_with_cohort(
