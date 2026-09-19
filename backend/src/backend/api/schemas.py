@@ -253,6 +253,23 @@ class SlotAssignIn(BaseModel):
     member_id: int
 
 
+class SlotMemberIn(BaseModel):
+    """자리 1개의 배정 결과입니다. member_id 가 None 이면 그 자리의 배정을 해제합니다."""
+
+    slot_id: int
+    member_id: int | None = None
+
+
+class SlotMembersIn(BaseModel):
+    """팀 화면이 저장 버튼 1번에 보내는 자리 배정 전체입니다.
+
+    자리마다 요청을 보내면 중간 요청이 실패했을 때 앞선 요청만 반영된 상태로 끝납니다.
+    이 모델로 한 번에 수신해 transaction 1개로 처리합니다.
+    """
+
+    assignments: list[SlotMemberIn]
+
+
 class MemberOut(BaseModel):
     id: int
     name: str
