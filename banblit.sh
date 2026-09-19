@@ -191,6 +191,37 @@ backup_db() {
   good "pre-migrate-$stamp.sql.gz"
 }
 
+# migration 을 적용하기 전에, 데이터베이스가 서 있는 revision 의 파일이 저장소에 있는지 확인한다.
+#
+# alembic 은 자기가 선 지점의 파일이 없으면 "Can't locate revision" 만 내고 멈춘다. 그 문구만
+# 보면 무엇을 해야 하는지 알 수 없다. 2026-09-16 에 migration 36개를 1개로 합치면서 옛 파일을
+# 삭제했는데, 그때 배포 데이터베이스가 옛 체인 중간에 있어 2026-09-19 배포가 이 지점에서 막혔다.
+#
+# 합치기 전에 배포 데이터베이스를 먼저 head 로 올렸다면 생기지 않았을 상황이다. 다음에 같은 일이
+# 생겼을 때 원인과 할 일이 바로 보이도록 여기서 먼저 검사한다.
+assert_revision_known() {
+  local service="$1"
+  if "${COMPOSE[@]}" run --rm --no-deps -T "$service" alembic current >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local current
+  current="$("${COMPOSE[@]}" exec -T db sh -c \
+    'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "select version_num from alembic_version"' \
+    2>/dev/null | tr -d '\r' | head -1)"
+
+  fail "데이터베이스가 서 있는 revision 을 저장소에서 찾지 못했습니다."
+  note "migration 을 실행하지 않았습니다. 데이터는 그대로입니다."
+  note ""
+  note "데이터베이스의 revision : ${current:-읽지 못했습니다}"
+  note "저장소의 migration     : $(ls backend/migrations/versions/*.py 2>/dev/null | wc -l) 개"
+  note ""
+  note "그 revision 의 파일이 backend/migrations/versions 에 없다는 뜻입니다. 파일이 삭제된 뒤에도"
+  note "이 데이터베이스가 옛 지점에 남아 있으면 alembic 은 어디서 어디로 가야 할지 알 수 없습니다."
+  note "복구 절차는 COMMAND.md 11-6 에 있습니다."
+  exit 1
+}
+
 wait_url() {
   local url="$1" timeout="$2" label="$3" deadline
   deadline=$(( SECONDS + timeout ))
@@ -295,6 +326,7 @@ up_dev() {
 
   step "migration 을 최신으로 맞춥니다"
   note "db 가 healthy 가 될 때까지 기다린 뒤 alembic 이 실행됩니다."
+  assert_revision_known dev
   "${COMPOSE[@]}" run --rm dev alembic upgrade head
 
   local services=(api web)
@@ -340,6 +372,7 @@ up_deploy() {
   backup_db
   # 배포용 image 안에 alembic.ini 와 migrations 가 함께 들어 있다(backend/Dockerfile).
   # --no-deps 는 이 한 번을 위해 web·caddy 까지 딸려 뜨는 것을 막는다.
+  assert_revision_known api
   "${COMPOSE[@]}" run --rm --no-deps api alembic upgrade head
 
   step "나머지를 띄웁니다"
@@ -439,9 +472,11 @@ cmd_migrate() {
     assert_deploy_env
     "${COMPOSE[@]}" up -d db
     backup_db
+    assert_revision_known api
     "${COMPOSE[@]}" run --rm --no-deps api alembic upgrade head
     "${COMPOSE[@]}" run --rm --no-deps api alembic current
   else
+    assert_revision_known dev
     "${COMPOSE[@]}" run --rm dev alembic upgrade head
     "${COMPOSE[@]}" run --rm dev alembic current
   fi
