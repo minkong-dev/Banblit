@@ -13,12 +13,17 @@ import type { LoadState } from "../lib/loading";
 import { say } from "../lib/toast";
 import {
   checkEnsemble, checkPeriod, checkRoom, dayLabel, daysBetween, openingHours, periodBody, savePeriod,
-  saveSlotMinutes,
+  saveSettings,
 } from "../lib/pipeline";
-import { SLOT_MINUTE_CHOICES, slotMinutesLabel } from "../lib/settings";
+import {
+  SLOT_MINUTE_CHOICES,
+  sessionMinuteChoices,
+  sessionMinutesLabel,
+  slotMinutesLabel,
+} from "../lib/settings";
 import type { PeriodBody } from "../lib/pipeline";
 import { EnsembleDays, EnsembleFields, ensembleBody, ensembleDraft } from "./SettingsEnsemble";
-import { useMe, usePeriods, useRooms, useSlotMinutes, useTeams } from "../components/queries";
+import { useMe, usePeriods, useRooms, useSettings, useSlotMinutes, useTeams } from "../components/queries";
 import { can } from "../lib/account";
 import { applyTheme, readSavedTheme } from "../lib/theme";
 import type { Theme } from "../lib/theme";
@@ -165,7 +170,7 @@ export function Settings() {
             />
             <SlotUnitCard
               canEdit={can(me, "room_edit")}
-              onSaved={saved("settings", "점유 단위를 변경했어요.")}
+              onSaved={saved("settings", "설정을 변경했어요.")}
             />
           </>
         ) : shown === "periods" ? (
@@ -205,16 +210,28 @@ export function Settings() {
   );
 }
 
-/** 점유 단위(칸 하나의 크기)를 변경하는 카드입니다. 합주실 운영을 맡은 사람의 설정이라 합주실 탭에 둡니다.
- *  권한(room_edit)이 없으면 현재 값만 표시합니다. 변경해도 이미 저장된 예약과 배정은 그대로 남습니다. */
+/** 점유 단위(칸 하나의 크기)와 합주 1회 길이를 변경하는 카드입니다. 합주실 운영을 맡은 사람의
+ *  설정이라 합주실 탭에 둡니다. 권한(room_edit)이 없으면 현재 값만 표시합니다.
+ *  변경해도 이미 저장된 예약과 배정은 그대로 남습니다.
+ *
+ *  두 값은 서로를 제약합니다 — 합주 길이는 칸의 배수여야 합주가 칸 중간에서 끝나지 않습니다.
+ *  칸을 키우면 저장된 합주 길이가 배수가 아니게 될 수 있어, 그때는 합주 길이를 함께 보내
+ *  한 요청으로 맞춥니다. 나눠 보내면 어느 쪽을 먼저 보내도 중간 상태가 거절됩니다. */
 function SlotUnitCard({ canEdit, onSaved }: { canEdit: boolean; onSaved: () => void }) {
-  const slotMinutes = useSlotMinutes();
+  const { slotMinutes, sessionMinutes } = useSettings();
   const [why, setWhy] = useState("");
   const save = useMutation({
-    mutationFn: saveSlotMinutes,
+    mutationFn: saveSettings,
     onSuccess: () => { setWhy(""); onSaved(); },
     onError: (error: unknown) => setWhy(reason(error)),
   });
+
+  // 칸을 바꿀 때 저장된 합주 길이가 그 배수가 아니면, 새 칸에서 고를 수 있는 가장 가까운
+  // 길이로 함께 내립니다. 사용자가 두 값의 관계를 외우지 않아도 됩니다.
+  const changeSlot = (next: number) => {
+    const fits = sessionMinutes >= next && sessionMinutes % next === 0;
+    save.mutate(fits ? { slotMinutes: next } : { slotMinutes: next, sessionMinutes: next });
+  };
 
   return (
     <Card>
@@ -231,7 +248,21 @@ function SlotUnitCard({ canEdit, onSaved }: { canEdit: boolean; onSaved: () => v
               value: minutes,
               label: slotMinutesLabel(minutes),
             }))}
-            onChange={(next) => save.mutate(next)}
+            onChange={changeSlot}
+          />
+        </Cell>
+        <Cell label="합주 1회" htmlFor="sessionLength">
+          <Dropdown
+            id="sessionLength"
+            value={sessionMinutes}
+            disabled={!canEdit || save.isPending}
+            invalid={why !== ""}
+            describedBy={why === "" ? undefined : "slotUnitWhy"}
+            choices={sessionMinuteChoices(slotMinutes).map((minutes) => ({
+              value: minutes,
+              label: sessionMinutesLabel(minutes),
+            }))}
+            onChange={(next) => save.mutate({ sessionMinutes: next })}
           />
         </Cell>
         {why === "" ? null : <p className="why" id="slotUnitWhy" role="alert">{why}</p>}

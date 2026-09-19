@@ -100,3 +100,96 @@ def test_the_database_accepts_every_slot_unit_the_api_accepts(
         db_session.execute(update(Settings).values(slot_minutes=minutes))
         db_session.flush()
     db_session.rollback()
+
+
+# ── 합주 1회 진행 시간 ──────────────────────────────────────────────────────
+
+
+def test_the_session_length_starts_at_one_hour(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """합주 1회는 보통 1시간입니다. 설정하지 않은 저장소도 그 값으로 동작해야 합니다."""
+    _, viewer = account("이도현", "dohyun@example.com")
+
+    assert api_client.get("/settings", cookies=viewer).json()["session_minutes"] == 60
+
+
+def test_the_session_length_can_be_changed_on_its_own(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """칸 크기는 그대로 두고 합주 길이만 바꿉니다. 둘은 서로 다른 값입니다."""
+    _, admin = account("이도현", "dohyun@example.com")
+
+    response = api_client.patch("/settings", json={"session_minutes": 120}, cookies=admin)
+
+    assert response.status_code == 200
+    assert response.json() == {"slot_minutes": 60, "session_minutes": 120}
+
+
+def test_a_session_shorter_than_one_slot_is_refused(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """칸 하나보다 짧은 합주는 격자 위에서 끝나지 않습니다. 30분 합주를 쓰려면 칸도 30분이어야 합니다."""
+    _, admin = account("이도현", "dohyun@example.com")
+
+    assert api_client.patch(
+        "/settings", json={"session_minutes": 30}, cookies=admin
+    ).status_code == 422
+
+
+def test_a_session_that_is_not_a_whole_number_of_slots_is_refused(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """칸의 배수가 아니면 합주가 칸 중간에서 끝나, 남은 반 칸을 아무도 쓸 수 없습니다."""
+    _, admin = account("이도현", "dohyun@example.com")
+    api_client.patch("/settings", json={"slot_minutes": 20}, cookies=admin)
+
+    assert api_client.patch(
+        "/settings", json={"session_minutes": 30}, cookies=admin
+    ).status_code == 422
+
+
+def test_both_values_change_together_when_sent_together(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """30분 합주로 내리려면 칸도 함께 내려야 합니다. 한 요청에 담으면 순서 문제가 없습니다."""
+    _, admin = account("이도현", "dohyun@example.com")
+
+    response = api_client.patch(
+        "/settings", json={"slot_minutes": 30, "session_minutes": 30}, cookies=admin
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"slot_minutes": 30, "session_minutes": 30}
+
+
+def test_a_slot_size_that_would_break_the_saved_session_length_is_refused(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """칸만 키우면 저장된 합주 길이가 배수가 아니게 됩니다. 사유를 붙여 거절합니다."""
+    _, admin = account("이도현", "dohyun@example.com")
+    api_client.patch("/settings", json={"slot_minutes": 30, "session_minutes": 90}, cookies=admin)
+
+    response = api_client.patch("/settings", json={"slot_minutes": 60}, cookies=admin)
+
+    assert response.status_code == 422
+    assert api_client.get("/settings", cookies=admin).json()["slot_minutes"] == 30
+
+
+def test_a_patch_with_no_value_is_refused(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """빈 요청을 200 으로 받으면 이름을 잘못 적은 요청이 조용히 무시됩니다."""
+    _, admin = account("이도현", "dohyun@example.com")
+
+    assert api_client.patch("/settings", json={}, cookies=admin).status_code == 422
+
+
+def test_the_database_rejects_a_session_length_that_is_not_a_whole_number_of_slots(
+    db_session: Session,
+) -> None:
+    """DB 도 API 와 같은 조건을 지킵니다. 직접 수정해도 격자에서 벗어난 값이 남지 않습니다."""
+    with pytest.raises(IntegrityError):
+        db_session.execute(update(Settings).values(slot_minutes=60, session_minutes=90))
+        db_session.flush()
+    db_session.rollback()

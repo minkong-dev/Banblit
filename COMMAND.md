@@ -355,11 +355,12 @@ docker compose run --rm dev alembic upgrade head
 ```
 docker compose run --rm dev alembic current
 docker compose run --rm dev alembic heads
+docker compose run --rm dev alembic history
 docker compose run --rm dev alembic downgrade -1
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: `alembic current`는 지금 DB에 적용된 마이그레이션 번호를 출력합니다. `alembic heads`는 DB가 아니라 `backend/migrations/versions/` 파일들을 읽어 맨 끝 번호를 출력합니다. 새 마이그레이션을 생성하기 직전에 어떤 번호 뒤에 추가할지 확인하는 용도이고, 2줄 이상 출력되면 분기가 생긴 상태입니다. `alembic downgrade -1`은 가장 최근에 적용된 마이그레이션 1개의 `downgrade()`를 실행해 그 직전 상태로 되돌립니다.
+- **용도**: `alembic current`는 지금 DB에 적용된 마이그레이션 번호를 출력합니다. `alembic heads`는 DB가 아니라 `backend/migrations/versions/` 파일들을 읽어 맨 끝 번호를 출력합니다. 새 마이그레이션을 생성하기 직전에 어떤 번호 뒤에 추가할지 확인하는 용도이고, 2줄 이상 출력되면 분기가 생긴 상태입니다. `alembic history`는 마이그레이션 전부를 최신순으로, `앞 번호 -> 뒤 번호, 설명` 한 줄씩 출력합니다. `current`가 가리키는 번호가 목록의 어디쯤인지 보여 주므로, 적용되지 않은 마이그레이션이 몇 개 남았는지 셀 때 씁니다. `alembic downgrade -1`은 가장 최근에 적용된 마이그레이션 1개의 `downgrade()`를 실행해 그 직전 상태로 되돌립니다.
 - **옵션**
   - `-1` — 되돌릴 단계 수입니다. 숫자 대신 `alembic downgrade <revision>`처럼 되돌아갈 목적지 번호를 직접 적어도 됩니다. 생략하면 오류입니다. 어디까지 되돌릴지 반드시 적어야 합니다.
 - **주의점**
