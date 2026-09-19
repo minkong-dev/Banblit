@@ -536,6 +536,7 @@ function EditPost(props: {
       <div className="fields">
         <label className="wide" htmlFor="editTitle">
           제목
+          {/* eslint-disable-next-line jsx-a11y/no-autofocus -- 글 수정 모달이 열릴 때 제목 입력칸으로 초점을 이동합니다. WAI-ARIA dialog 패턴이 규정하는 동작입니다. */}
           <input id="editTitle" autoFocus value={title}
             onChange={(event) => setTitle(event.target.value)} />
         </label>

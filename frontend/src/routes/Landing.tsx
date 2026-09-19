@@ -96,6 +96,7 @@ export function Landing() {
 
       {/* popover는 여닫기·Escape·맨 앞에 띄우기를 브라우저가 맡습니다.
           링크는 popoverTarget을 걸 수 없어서(버튼만 가능) 눌리면 여기서 닫습니다. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- 링크를 눌렀을 때 popover 를 닫습니다. 키보드는 Enter 가 click 이벤트로 변환되고 Escape 를 브라우저가 처리하므로 막히는 경로가 없습니다. */}
       <nav
         id={MENU_ID}
         popover="auto"
