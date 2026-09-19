@@ -4,6 +4,7 @@ import {
   cohortLabel,
   memberLabel,
   myTeamIds,
+  noMembersMessage,
   seatAssignments,
   seatKey,
   seatsOf,
@@ -192,5 +193,15 @@ describe("cohortLabel", () => {
 
   it("기수가 없으면 - 를 반환한다", () => {
     expect(cohortLabel(null)).toBe("-");
+  });
+});
+
+describe("noMembersMessage", () => {
+  it("빈 검색어에는 검색 실패가 아니라 고를 사람이 없다고 알린다", () => {
+    expect(noMembersMessage("")).toBe("고를 수 있는 멤버가 없어요.");
+  });
+
+  it("검색어가 있으면 검색 결과가 없다고 알린다", () => {
+    expect(noMembersMessage("박")).toBe("해당하는 사용자를 찾지 못했어요.");
   });
 });
