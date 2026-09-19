@@ -430,3 +430,130 @@ def test_periods_are_listed_for_a_plain_member(
     response = api_client.get("/periods", cookies=member)
 
     assert response.status_code == 200
+
+
+# ── 팀별합주 시간대 ────────────────────────────────────────────────────────
+#
+# 합주실 개방시각과는 다른 값입니다. 합주실이 09시에 열어도 팀별합주는 17시부터만 배정합니다.
+# 정하지 않은 기간은 그날 합주실 개방시각 전체를 씁니다.
+
+_BASE = {
+    "kind": "focused",
+    "starts_on": "2026-09-14",
+    "ends_on": "2026-09-27",
+    "everyday": False,
+    "first_run_at": "09:00",
+    "second_run_at": "21:00",
+}
+
+
+def test_a_new_period_has_no_practice_window(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """정하지 않으면 두 쌍 모두 null 입니다. 지금까지의 동작과 같습니다."""
+    _, head = account(*HEAD)
+
+    period = api_client.post("/periods", json=_BASE, cookies=head).json()["period"]
+
+    assert period["practice_window"] == {"weekday": None, "weekend": None}
+
+
+def test_a_period_is_created_with_a_practice_window(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """평일은 저녁만, 주말은 낮부터 씁니다."""
+    _, head = account(*HEAD)
+    window = {
+        "weekday": {"starts_at": "17:00", "ends_at": "23:00"},
+        "weekend": {"starts_at": "09:00", "ends_at": "23:00"},
+    }
+
+    response = api_client.post(
+        "/periods", json={**_BASE, "practice_window": window}, cookies=head
+    )
+
+    assert response.status_code == 201
+    assert response.json()["period"]["practice_window"] == window
+
+
+def test_only_the_weekday_window_can_be_set(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """주말은 합주실 개방시각 전체를 쓰고 평일만 좁힐 수 있습니다. 두 쌍은 서로 독립입니다."""
+    _, head = account(*HEAD)
+    window = {"weekday": {"starts_at": "17:00", "ends_at": "23:00"}, "weekend": None}
+
+    period = api_client.post(
+        "/periods", json={**_BASE, "practice_window": window}, cookies=head
+    ).json()["period"]
+
+    assert period["practice_window"] == window
+
+
+def test_a_practice_window_that_ends_before_it_starts_is_refused(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+    window = {"weekday": {"starts_at": "23:00", "ends_at": "17:00"}, "weekend": None}
+
+    response = api_client.post(
+        "/periods", json={**_BASE, "practice_window": window}, cookies=head
+    )
+
+    assert response.status_code == 422
+
+
+def test_the_practice_window_is_replaced_by_a_patch(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+    made = api_client.post(
+        "/periods",
+        json={**_BASE, "practice_window": {"weekday": {"starts_at": "17:00", "ends_at": "23:00"}, "weekend": None}},
+        cookies=head,
+    ).json()["period"]
+    later = {"weekday": {"starts_at": "18:00", "ends_at": "22:00"}, "weekend": None}
+
+    response = api_client.patch(
+        f"/periods/{made['id']}", json={"practice_window": later}, cookies=head
+    )
+
+    assert response.status_code == 200
+    assert response.json()["period"]["practice_window"] == later
+
+
+def test_a_patch_without_the_practice_window_keeps_it(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """다른 값만 보낸 요청이 시간대를 지우면, 화면의 다른 입력을 고칠 때마다 시간대가 사라집니다."""
+    _, head = account(*HEAD)
+    window = {"weekday": {"starts_at": "17:00", "ends_at": "23:00"}, "weekend": None}
+    made = api_client.post(
+        "/periods", json={**_BASE, "practice_window": window}, cookies=head
+    ).json()["period"]
+
+    api_client.patch(f"/periods/{made['id']}", json={"everyday": True}, cookies=head)
+
+    kept = api_client.get("/periods", cookies=head).json()["periods"][0]
+    assert kept["practice_window"] == window
+
+
+def test_the_practice_window_is_cleared_by_sending_empty_pairs(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """두 쌍을 모두 null 로 보내면 합주실 개방시각 전체로 되돌아갑니다."""
+    _, head = account(*HEAD)
+    made = api_client.post(
+        "/periods",
+        json={**_BASE, "practice_window": {"weekday": {"starts_at": "17:00", "ends_at": "23:00"}, "weekend": None}},
+        cookies=head,
+    ).json()["period"]
+
+    api_client.patch(
+        f"/periods/{made['id']}",
+        json={"practice_window": {"weekday": None, "weekend": None}},
+        cookies=head,
+    )
+
+    kept = api_client.get("/periods", cookies=head).json()["periods"][0]
+    assert kept["practice_window"] == {"weekday": None, "weekend": None}

@@ -22,8 +22,29 @@ export type Period = {
   everyday: boolean;
   first_run_at: string;
   second_run_at: string;
+  /** 팀별합주를 배정할 수 있는 하루 중의 시간대입니다. 껍데기는 언제나 있습니다. */
+  practice_window: PracticeWindow;
   /** 전체합주를 지정하지 않은 기간은 null 입니다. */
   ensemble: Ensemble | null;
+};
+
+/** 팀별합주를 배정할 수 있는 하루 중의 시간대입니다. 합주실 개방시각과는 다른 값입니다 —
+ *  합주실이 09시에 열어도 팀별합주는 17시부터만 배정할 수 있습니다. 실제 배정 구간은
+ *  이 시간대와 합주실 개방시각의 교집합입니다.
+ *
+ *  null 인 쪽은 정하지 않았다는 뜻이고, 그날은 합주실 개방시각 전체를 씁니다. 두 쌍은 서로
+ *  독립입니다 — 평일만 좁히고 주말은 열어 둘 수 있습니다. */
+export type PracticeWindow = {
+  /** 월~금입니다. */
+  weekday: ClockRange | null;
+  /** 토·일입니다. 주말은 낮에도 합주합니다. */
+  weekend: ClockRange | null;
+};
+
+export type ClockRange = {
+  /** "17:00" — 시간대를 포함하지 않습니다. */
+  starts_at: string;
+  ends_at: string;
 };
 
 /** 집중 합주기간 안의 전체합주 설정입니다. 이 날짜 범위는 팀별 배정에서 제외됩니다. */

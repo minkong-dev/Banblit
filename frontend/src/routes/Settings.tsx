@@ -12,7 +12,8 @@ import { formError, loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { say } from "../lib/toast";
 import {
-  checkEnsemble, checkPeriod, checkRoom, dayLabel, daysBetween, openingHours, periodBody, savePeriod,
+  checkEnsemble, checkPeriod, checkPracticeWindow, checkRoom, dayLabel, daysBetween, openingHours,
+  periodBody, savePeriod,
   saveSettings,
 } from "../lib/pipeline";
 import {
@@ -22,6 +23,7 @@ import {
   slotMinutesLabel,
 } from "../lib/settings";
 import type { PeriodBody } from "../lib/pipeline";
+import type { WindowPair } from "../lib/settings";
 import { EnsembleDays, EnsembleFields, ensembleBody, ensembleDraft } from "./SettingsEnsemble";
 import { useMe, usePeriods, useRooms, useSettings, useSlotMinutes, useTeams } from "../components/queries";
 import { can } from "../lib/account";
@@ -42,7 +44,7 @@ import {
   useRowFocus,
 } from "./SettingsForm";
 import "../styles/settings.css";
-import type { Period, Room, Team } from "../lib/contract";
+import type { ClockRange, Period, PracticeWindow, Room, Team } from "../lib/contract";
 
 
 type Tab = "rooms" | "periods" | "members" | "reservations" | "blinded" | "account";
@@ -60,6 +62,8 @@ const TABS = [
 ];
 
 const BLANK_ROOM = { name: "", opens_at: "18:00", closes_at: "23:00" };
+const NO_WINDOW: PracticeWindow = { weekday: null, weekend: null };
+
 const BLANK_PERIOD: PeriodBody = {
   kind: "focused",
   starts_on: "",
@@ -67,6 +71,7 @@ const BLANK_PERIOD: PeriodBody = {
   everyday: false,
   first_run_at: "09:00",
   second_run_at: "21:00",
+  practice_window: NO_WINDOW,
 };
 
 const KIND_TEXT = { open: "상시 개방", focused: "집중 합주" };
@@ -74,7 +79,18 @@ const KIND_TEXT = { open: "상시 개방", focused: "집중 합주" };
 /** 기간 form 이 수정하는 값만 추립니다. 목록에서 받은 기간에는 id·ensemble 이 함께 있어 그대로 보내면 요청 본문에 섞입니다. */
 function periodFields(period: Period): PeriodBody {
   const { kind, starts_on, ends_on, everyday, first_run_at, second_run_at } = period;
-  return { kind, starts_on, ends_on, everyday, first_run_at, second_run_at };
+  return { kind, starts_on, ends_on, everyday, first_run_at, second_run_at,
+    practice_window: period.practice_window };
+}
+
+/** 시간대 한 쌍을 입력칸 두 개로 펼칩니다. 정하지 않은 쌍은 빈 칸 두 개입니다. */
+function windowPair(pair: ClockRange | null): WindowPair {
+  return pair ?? { starts_at: "", ends_at: "" };
+}
+
+/** 입력칸 두 개를 저장할 값으로 되돌립니다. 둘 다 비어 있으면 정하지 않은 쌍입니다. */
+function windowValue(pair: WindowPair): ClockRange | null {
+  return pair.starts_at === "" && pair.ends_at === "" ? null : pair;
 }
 
 /** 목록 줄 오른쪽에 붙는 한 줄입니다. 집중 합주기간(스케줄링을 자동으로 진행할 기간)일 때만 계산 시각 두 개가 더 붙고,
@@ -394,8 +410,61 @@ function PeriodFields(props: {
               onChange={(event) => setForm({ ...form, second_run_at: event.target.value })}
             />
           </Cell>
+          {/* 합주실 개방시각과는 다른 값입니다. 합주실이 09시에 열어도 팀별합주는 17시부터만
+              배정할 수 있고, 남는 시간은 선착순 예약으로 열립니다. 비워 두면 개방시각 전체를 씁니다. */}
+          <WindowFields
+            label="평일"
+            pair={windowPair(form.practice_window.weekday)}
+            at={at}
+            field="weekday"
+            onChange={(next) => setForm({
+              ...form,
+              practice_window: { ...form.practice_window, weekday: windowValue(next) },
+            })}
+          />
+          <WindowFields
+            label="주말"
+            pair={windowPair(form.practice_window.weekend)}
+            at={at}
+            field="weekend"
+            onChange={(next) => setForm({
+              ...form,
+              practice_window: { ...form.practice_window, weekend: windowValue(next) },
+            })}
+          />
         </>
       ) : null}
+    </>
+  );
+}
+
+/** 팀별합주 시간대 한 쌍의 입력칸입니다. 두 칸을 모두 비우면 그날 합주실 개방시각 전체를 씁니다. */
+function WindowFields(props: {
+  label: string;
+  pair: WindowPair;
+  field: string;
+  at: (field: string) => string;
+  onChange: (next: WindowPair) => void;
+}) {
+  const { label, pair, field, at, onChange } = props;
+  return (
+    <>
+      <Cell label={`${label} 합주 시작`} htmlFor={at(`${field}From`)}>
+        <input
+          id={at(`${field}From`)}
+          type="time"
+          value={pair.starts_at}
+          onChange={(event) => onChange({ ...pair, starts_at: event.target.value })}
+        />
+      </Cell>
+      <Cell label={`${label} 합주 종료`} htmlFor={at(`${field}To`)}>
+        <input
+          id={at(`${field}To`)}
+          type="time"
+          value={pair.ends_at}
+          onChange={(event) => onChange({ ...pair, ends_at: event.target.value })}
+        />
+      </Cell>
     </>
   );
 }
@@ -660,6 +729,11 @@ function PeriodForm(props: {
 
   const room = rooms.find((item) => item.id === draft.room_id);
   const why = checkPeriod(form)
+    || checkPracticeWindow(
+      windowPair(form.practice_window.weekday),
+      windowPair(form.practice_window.weekend),
+      slotMinutes,
+    )
     || (withEnsemble ? checkEnsemble(draft, periodBody(form), room, slotMinutes) : "");
 
   const at = (field: string): string => `${before === null ? "/periods" : `/periods/${before.id}`}-${field}`;

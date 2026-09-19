@@ -79,6 +79,36 @@ function gridMessage(from: number | null, to: number | null, slotMinutes: number
   return "";
 }
 
+/** 팀별합주 시간대 한 쌍입니다. 화면의 입력칸 두 개를 그대로 담습니다. 둘 다 빈 문자열이면
+ *  "정하지 않음" 이고, 그날은 합주실 개방시각 전체를 씁니다. */
+export type WindowPair = { starts_at: string; ends_at: string };
+
+/** 평일·주말 시간대를 검증합니다. 서버 쪽 정본은 periods 의 CHECK(periods_practice_window_pairs·
+ *  periods_practice_window_order)와 services/period_crud_service.py 입니다.
+ *
+ *  격자를 함께 보는 이유는, 시간대가 격자에서 벗어나면 배정 구간도 벗어나 서버가 칸을 만들지
+ *  못하기 때문입니다. 저장은 되고 배정만 실패하면 원인을 찾기 어렵습니다. */
+export function practiceWindowMessage(
+  weekday: WindowPair, weekend: WindowPair, slotMinutes: number,
+): string {
+  const first = windowPairMessage(weekday, "평일", slotMinutes);
+  return first !== "" ? first : windowPairMessage(weekend, "주말", slotMinutes);
+}
+
+function windowPairMessage(pair: WindowPair, label: string, slotMinutes: number): string {
+  // 둘 다 비어 있으면 그 쌍을 정하지 않은 것입니다. 오류가 아닙니다.
+  if (pair.starts_at === "" && pair.ends_at === "") return "";
+  if (pair.starts_at === "") return `${label} 합주 시작 시각을 입력해주세요.`;
+  if (pair.ends_at === "") return `${label} 합주 종료 시각을 입력해주세요.`;
+  const from = minutesOf(pair.starts_at);
+  const to = minutesOf(pair.ends_at);
+  if (from === null || to === null || !onGrid(from, slotMinutes) || !onGrid(to, slotMinutes)) {
+    return `${label} 합주 시간은 ${unitText(slotMinutes)} 기준으로 지정해주세요.`;
+  }
+  if (to <= from) return `${label} 합주 종료 시각은 시작 시각보다 늦어야 해요.`;
+  return "";
+}
+
 export function roomNameMessage(name: string, taken: string[]): string {
   return uniqueNameMessage(name, taken, "합주실");
 }

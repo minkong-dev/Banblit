@@ -171,6 +171,9 @@ type PostForm = { title: string; body: string };
 
 export { commentMessage as checkComment };
 export { ensembleMessage as checkEnsemble, ensembleTimeMessage as checkEnsembleTime } from "./settings";
+// 팀별합주 시간대 검증입니다. 순서 의존이 없어 그대로 export 합니다.
+export { practiceWindowMessage as checkPracticeWindow } from "./settings";
+export type { WindowPair } from "./settings";
 
 export function checkPost(form: PostForm): string {
   // 제목을 먼저 검증합니다. 오류 메시지를 한 번에 하나만 표시하므로 먼저 수정할 것을 앞에 둡니다.

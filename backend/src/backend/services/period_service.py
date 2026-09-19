@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.services.period_input import (
+    PracticeWindow,
     auto_slots_per_team,
     build_engine_rooms,
     build_engine_teams,
@@ -92,7 +93,7 @@ def assign_period(
         session, list(member_names), window_start, window_end
     )
 
-    engine_rooms = build_engine_rooms(rooms, days)
+    engine_rooms = build_engine_rooms(rooms, days, practice_window(period))
     unit = slot_minutes(session)
     slots_per_team = auto_slots_per_team(engine_rooms, len(team_ids), unit)
     engine_teams = build_engine_teams(
@@ -117,6 +118,22 @@ def assign_period(
         team_names=team_names,
         room_names={room.id: room.name for room in rooms},
         member_names=member_names,
+    )
+
+
+def practice_window(period: Period) -> PracticeWindow:
+    """기간에 저장된 팀별합주 시간대입니다. 정하지 않은 쌍은 None 이고, 그날은 합주실 개방시각 전체를 씁니다.
+
+    두 열은 함께 채워지거나 함께 비어 있습니다(periods_practice_window_pairs). 한쪽만 있는 경우가
+    없으므로 시작 시각만 확인합니다.
+    """
+
+    def pair(starts: time | None, ends: time | None) -> tuple[time, time] | None:
+        return None if starts is None or ends is None else (starts, ends)
+
+    return PracticeWindow(
+        weekday=pair(period.practice_weekday_starts_at, period.practice_weekday_ends_at),
+        weekend=pair(period.practice_weekend_starts_at, period.practice_weekend_ends_at),
     )
 
 
@@ -225,6 +242,9 @@ def open_slots_in_period(session: Session, period: Period) -> list[OpenSlot]:
 
     days = period_days(period, date.today())
     open_slots: list[OpenSlot] = []
+    # 팀별합주 시간대(practice_window)를 넘기지 않습니다. 시간대 밖의 시간은 자동 배정만 하지
+    # 않을 뿐 선착순 예약은 열려 있어야 하기 때문입니다. 합주실이 10시에 열고 팀별합주가 17시부터면
+    # 10~17시는 전부 예약할 수 있는 칸입니다.
     for engine_room in build_engine_rooms(list(rooms), days):
         ranges = occupied.get(engine_room.id, [])
         for interval in generate_slots(engine_room.open_period, slot_minutes(session)):
