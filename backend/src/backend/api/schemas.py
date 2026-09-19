@@ -1,10 +1,11 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, NaiveDatetime
+from pydantic import BaseModel, Field, NaiveDatetime, model_validator
 
 from backend.db.models import PERMISSIONS, Instrument, Permission
 from backend.db.models import NotificationKind
+from backend.scheduling.slots import MAX_SESSION_MINUTES
 
 class RoomSlotOut(BaseModel):
     # 배정의 slot(점유 단위 길이의 시간 칸)입니다. 합주실은 DB의 번호와 이름을 함께 반환합니다.
@@ -503,15 +504,33 @@ class UnavailableCreateIn(BaseModel):
 
 
 class SettingsOut(BaseModel):
-    # 예약과 배정이 쓰는 시간 칸의 크기(분)입니다.
+    # 예약과 배정이 쓰는 시간 칸의 크기(분)입니다. 합주를 시작할 수 있는 간격이기도 합니다.
     slot_minutes: int
+    # 합주 1회가 이어지는 길이(분)입니다.
+    session_minutes: int
 
 
 class SettingsUpdateIn(BaseModel):
+    """바꿀 값만 담습니다. 보내지 않은 값은 그대로 둡니다.
+
+    두 값이 한 요청에 담길 수 있어야 합니다. 30분 합주로 내리려면 칸도 30분이어야 하는데,
+    요청을 나누면 어느 쪽을 먼저 보내도 중간 상태가 조건을 어겨 거절됩니다.
+    """
+
     # 한 시간을 남김없이 나누는 값만 받습니다. DB 의 CHECK 와 같은 조건을 경계에서도 봅니다.
     # 허용 값은 scheduling/slots.py 의 SLOT_MINUTE_CHOICES 가 정본입니다. Literal 은 상수만 받아
     # 목록에서 생성할 수 없으므로 값을 적고, 두 목록이 어긋나면 test_settings_endpoints.py 가 잡습니다.
-    slot_minutes: Literal[5, 10, 12, 15, 20, 30, 60]
+    slot_minutes: Literal[5, 10, 12, 15, 20, 30, 60] | None = None
+    # 칸의 배수인지는 저장된 칸 크기를 함께 봐야 알 수 있어 services/settings_service.py 가 판정합니다.
+    # 여기서는 값 하나만으로 판정할 수 있는 범위만 봅니다.
+    session_minutes: int | None = Field(default=None, ge=1, le=MAX_SESSION_MINUTES)
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> "SettingsUpdateIn":
+        # 빈 요청을 200 으로 받으면 이름을 잘못 적은 요청이 조용히 무시됩니다.
+        if self.slot_minutes is None and self.session_minutes is None:
+            raise ValueError("바꿀 값을 하나 이상 보내주세요")
+        return self
 
 
 class ReservationOut(BaseModel):

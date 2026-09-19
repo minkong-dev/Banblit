@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from backend.api.rate_limit import reset_all
 from backend.db.models import Base, Settings, TeamSlot
-from backend.scheduling.slots import DEFAULT_SLOT_MINUTES
+from backend.scheduling.slots import DEFAULT_SESSION_MINUTES, DEFAULT_SLOT_MINUTES
 
 def seat(
     session: Session, team_id: int, member_id: int, instrument: str = "보컬"
@@ -100,8 +100,13 @@ def db_session(test_engine: Engine) -> Iterator[Session]:
             if table.name == "settings":
                 continue
             connection.execute(table.delete())
+        # 두 값을 한 UPDATE 로 되돌립니다. 하나씩 되돌리면 중간 상태가 "합주 길이는 칸의 배수"
+        # 라는 CHECK 를 어겨, 값을 바꾼 테스트 다음에 정리 자체가 실패합니다.
         connection.execute(
-            update(Settings).values(slot_minutes=DEFAULT_SLOT_MINUTES)
+            update(Settings).values(
+                slot_minutes=DEFAULT_SLOT_MINUTES,
+                session_minutes=DEFAULT_SESSION_MINUTES,
+            )
         )
 
 

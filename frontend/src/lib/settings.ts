@@ -19,6 +19,33 @@ export function slotMinutesLabel(minutes: number): string {
   return minutes === MINUTES_PER_HOUR ? "1시간" : `${minutes}분`;
 }
 
+/** 합주 1회 길이의 상한(분)입니다. 서버 정본은 backend/src/backend/scheduling/slots.py 의
+ *  MAX_SESSION_MINUTES 입니다. */
+export const MAX_SESSION_MINUTES = 240;
+
+/** 합주 길이로 흔히 쓰는 값(분)입니다. 이 중 칸의 배수만 선택지가 됩니다. */
+const COMMON_SESSION_MINUTES = [30, 45, 60, 90, 120, 150, 180, 240];
+
+/** 합주 1회 길이로 고를 수 있는 값(분)을 오름차순으로 반환합니다.
+ *
+ *  칸의 배수만 남깁니다. 배수가 아니면 합주가 칸 중간에서 끝나 남은 반 칸을 아무도 쓸 수 없습니다.
+ *  배수를 전부 나열하지 않는 이유는 5분 칸에서 48개가 되어 고르기 어려워지기 때문입니다.
+ *  칸과 같은 길이는 언제나 포함합니다 — 30분만 연습하는 팀이 그 값을 씁니다. */
+export function sessionMinuteChoices(slotMinutes: number): number[] {
+  const fits = (minutes: number) =>
+    minutes >= slotMinutes && minutes <= MAX_SESSION_MINUTES && minutes % slotMinutes === 0;
+  const found = COMMON_SESSION_MINUTES.filter(fits);
+  return [...new Set([slotMinutes, ...found])].sort((a, b) => a - b);
+}
+
+/** 합주 길이를 사람이 읽는 문구로 바꿉니다. 90분은 "1시간 30분" 이 자연스럽습니다. */
+export function sessionMinutesLabel(minutes: number): string {
+  const hours = Math.floor(minutes / MINUTES_PER_HOUR);
+  const rest = minutes % MINUTES_PER_HOUR;
+  if (hours === 0) return `${rest}분`;
+  return rest === 0 ? `${hours}시간` : `${hours}시간 ${rest}분`;
+}
+
 /** "18:30"을 자정부터의 분으로 변환합니다. 형식이 맞지 않으면 null입니다. */
 function minutesOf(hhmm: string): number | null {
   const parts = /^([01][0-9]|2[0-3]):([0-5][0-9])$/.exec(hhmm);

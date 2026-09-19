@@ -13,15 +13,24 @@ export function useTeams() {
 export function useRooms() {
   return useQuery({ queryKey: ["rooms"], queryFn: () => getJSON<{ rooms: Room[] }>("/rooms") });
 }
-/** 저장소 전체 설정입니다. 지금은 칸 하나의 크기(분) 하나뿐입니다.
- *  아직 받지 못했으면 slotMinutes 는 60 입니다. 서버 기본값과 같은 값이라, 받는 사이에
+/** 저장소 전체 설정입니다. 칸 하나의 크기(slotMinutes)와 합주 1회 길이(sessionMinutes)입니다.
+ *  칸은 합주를 시작할 수 있는 간격이고, 합주 길이는 한 번 시작하면 이어지는 시간입니다.
+ *  아직 받지 못했으면 둘 다 60 입니다. 서버 기본값과 같은 값이라, 받는 사이에
  *  화면이 잠깐 다른 격자를 그리는 일이 없습니다. */
-export function useSlotMinutes(): number {
+export function useSettings(): { slotMinutes: number; sessionMinutes: number } {
   const query = useQuery({
     queryKey: ["settings"],
-    queryFn: () => getJSON<{ slot_minutes: number }>("/settings"),
+    queryFn: () => getJSON<{ slot_minutes: number; session_minutes: number }>("/settings"),
   });
-  return query.data?.slot_minutes ?? 60;
+  return {
+    slotMinutes: query.data?.slot_minutes ?? 60,
+    sessionMinutes: query.data?.session_minutes ?? 60,
+  };
+}
+
+/** 칸 하나의 크기(분)만 필요한 화면이 사용합니다. 달력을 그리는 곳이 대부분 그렇습니다. */
+export function useSlotMinutes(): number {
+  return useSettings().slotMinutes;
 }
 
 export function usePeriods() {
