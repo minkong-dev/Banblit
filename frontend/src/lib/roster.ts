@@ -51,22 +51,17 @@ export function seatsOf(counts: Record<string, number>, members: ReadonlyMap<str
   });
 }
 
-/** 서버에 저장된 자리(saved)를 seats 와 같게 만드는 요청 목록입니다.
- *  서버는 한 멤버를 한 팀의 두 자리에 배치하는 요청을 거절하므로(team_slots_team_id_member_id_key), 멤버가 변경된 자리 중
- *  멤버가 있던 자리를 전부 먼저 해제하고(clear) 그 다음 지정합니다(assign). 두 멤버의 자리를 교환해도 거절되지 않습니다. */
-export function seatChanges(
+/** 변경된 자리만 골라 서버로 보낼 최종 배정 상태를 반환합니다. member_id 가 null 인 항목은 그 자리의
+ *  배정을 해제합니다. 해제와 배정의 순서는 서버가 결정합니다 — 한 요청에서 처리하므로 화면이
+ *  순서를 정할 필요가 없습니다. */
+export function seatAssignments(
   seats: Seat[], saved: TeamSlot[],
-): { clear: number[]; assign: { slotId: number; memberId: number }[] } {
+): { slot_id: number; member_id: number | null }[] {
   const wanted = new Map(seats.map((seat) => [seatKey(seat.instrument, seat.ordinal), seat.member?.id ?? null]));
   const wantedOf = (slot: TeamSlot): number | null => wanted.get(seatKey(slot.instrument, slot.ordinal)) ?? null;
-  const changed = saved.filter((slot) => wantedOf(slot) !== slot.member_id);
-  return {
-    clear: changed.filter((slot) => slot.member_id !== null).map((slot) => slot.id),
-    assign: changed.flatMap((slot) => {
-      const memberId = wantedOf(slot);
-      return memberId === null ? [] : [{ slotId: slot.id, memberId }];
-    }),
-  };
+  return saved
+    .filter((slot) => wantedOf(slot) !== slot.member_id)
+    .map((slot) => ({ slot_id: slot.id, member_id: wantedOf(slot) }));
 }
 
 /** 사람 이름 옆에 기수를 붙입니다. 동명이인을 화면에서 구분하는 값이 기수뿐입니다. */

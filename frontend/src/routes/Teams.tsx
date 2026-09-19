@@ -17,7 +17,7 @@ import { can, canManageTeams, teamNavLabel } from "../lib/account";
 import { checkSlotCounts, checkTeamName, memberLabel, slotName } from "../lib/pipeline";
 import { INSTRUMENTS } from "../lib/contract";
 import { TEAM_COLORS, teamColorKey } from "../lib/teamColors";
-import { MAX_SLOTS_PER_TEAM, seatChanges, seatKey, seatsOf, teamsShown } from "../lib/roster";
+import { MAX_SLOTS_PER_TEAM, seatAssignments, seatKey, seatsOf, teamsShown } from "../lib/roster";
 import type { Seat } from "../lib/roster";
 import type { Instrument, Member, Team, TeamSlot } from "../lib/contract";
 import { SectionHead } from "./SettingsForm";
@@ -241,16 +241,18 @@ async function writeTeam(team: Team | null, name: string, color: string | null, 
   return { ...team, name, color: color ?? team.color };
 }
 
-/** 저장된 자리를 seats 와 같게 변경합니다. 요청 순서(해제 → 지정)는 seatChanges 가 결정합니다. */
+/** 저장된 자리를 seats 와 같게 변경합니다. 변경된 자리 전부를 요청 1번으로 보냅니다.
+ *
+ *  자리마다 요청을 보내면 중간 요청이 실패했을 때 앞선 자리만 반영된 상태로 끝납니다. 서버가
+ *  transaction 1개로 처리하므로, 실패하면 아무것도 반영되지 않습니다. */
 async function writeSeats(teamId: number, seats: Seat[]): Promise<void> {
   const saved = await getJSON<{ slots: TeamSlot[] }>(`/teams/${teamId}/slots`);
-  const { clear, assign } = seatChanges(seats, saved.slots);
-  for (const slotId of clear) {
-    await getJSON(`/teams/${teamId}/slots/${slotId}`, { method: "DELETE" });
-  }
-  for (const { slotId, memberId } of assign) {
-    await getJSON(`/teams/${teamId}/slots/${slotId}`, { method: "PUT", body: JSON.stringify({ member_id: memberId }) });
-  }
+  const assignments = seatAssignments(seats, saved.slots);
+  if (assignments.length === 0) return;
+  await getJSON(`/teams/${teamId}/slot-members`, {
+    method: "PUT",
+    body: JSON.stringify({ assignments }),
+  });
 }
 
 /** 팀 창의 이름·색·포지션 인원 입력입니다. */
@@ -270,6 +272,7 @@ function TeamFields(props: {
       <div className="fields">
         <label className="wide">
           팀 이름
+          {/* eslint-disable-next-line jsx-a11y/no-autofocus -- 팀 편집 form 이 열릴 때 이름 입력칸으로 초점을 이동합니다. */}
           <input autoFocus value={name} placeholder="곡 이름" onChange={(event) => onName(event.target.value)} />
         </label>
       </div>
