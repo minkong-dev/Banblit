@@ -286,7 +286,7 @@ def test_the_last_full_set_cannot_lose_an_item(
     )
 
     assert fewer.status_code == 422
-    assert renamed.status_code == 200
+    assert renamed.status_code == 200, renamed.json()
     assert renamed.json()["permission_set"]["name"] == "운영진"
 
 

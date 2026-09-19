@@ -67,3 +67,17 @@ def _parse_room_clock(value: str, field_label: str) -> time:
     clock = parse_clock(value, field_label)
     require_on_the_hour(clock, field_label)
     return clock
+
+
+def delete_room(session: Session, room_id: int) -> None:
+    """합주실 하나를 삭제합니다.
+
+    그 합주실을 참조하는 예약·배정 결과·이전 배정기록은 ON DELETE CASCADE 로 함께 삭제됩니다.
+    전체합주 합주실로 지정된 합주실은 settings.ensemble_room_id 가 CASCADE 가 아니라서 DB 가
+    거절하고, 그 요청은 409 로 반환됩니다.
+    """
+    room = session.get(Room, room_id)
+    if room is None:
+        raise ValueError("그런 합주실이 없습니다")
+    session.delete(room)
+    commit_translating(session, ROOM_MESSAGES)

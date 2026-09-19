@@ -2,12 +2,12 @@ from datetime import time
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
+from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 from backend.services.room_service import ROOM_MESSAGES
 from backend.db.pipeline import commit_translating
-from backend.db.models import Room
+from backend.db.models import Reservation, Room
 from conftest import AccountFactory
 
 HEAD = ("박서연", "head@example.com")
@@ -315,3 +315,82 @@ def test_rooms_are_listed_for_a_plain_member(
     response = api_client.get("/rooms", cookies=member)
 
     assert response.status_code == 200
+
+
+# ── 합주실 삭제 ─────────────────────────────────────────────────────────────
+
+
+def test_room_is_deleted(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+    room = _room(db_session, "없앨 방", time(18, 0), time(23, 0))
+    db_session.commit()
+
+    response = api_client.delete(f"/rooms/{room.id}", cookies=head)
+
+    assert response.status_code == 204
+    listed = api_client.get("/rooms", cookies=head).json()["rooms"]
+    assert [one["name"] for one in listed] == []
+
+
+def test_room_delete_of_unknown_id_is_rejected(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+
+    response = api_client.delete("/rooms/999999", cookies=head)
+
+    assert response.status_code == 422
+
+
+def test_room_delete_is_rejected_for_a_plain_member(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    account(*HEAD)
+    _, member = account(*MEMBER)
+    room = _room(db_session, "남을 방", time(18, 0), time(23, 0))
+    db_session.commit()
+
+    response = api_client.delete(f"/rooms/{room.id}", cookies=member)
+
+    assert response.status_code == 403
+
+
+def test_room_delete_requires_a_login(
+    api_client: TestClient, db_session: Session
+) -> None:
+    room = _room(db_session, "남을 방", time(18, 0), time(23, 0))
+    db_session.commit()
+
+    assert api_client.delete(f"/rooms/{room.id}").status_code == 401
+
+
+def test_deleting_a_room_removes_its_reservations(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """합주실을 삭제하면 그 합주실의 예약도 함께 삭제됩니다(ON DELETE CASCADE).
+
+    화면은 삭제 버튼에 이 내용을 확인 dialog 로 표시합니다.
+    """
+    member_id, head = account(*HEAD)
+    room = _room(db_session, "예약 있는 방", time(18, 0), time(23, 0))
+    db_session.commit()
+    made = api_client.post(
+        "/reservations",
+        json={
+            "room_id": room.id,
+            "starts_at": "2026-09-21T19:00:00",
+            "ends_at": "2026-09-21T20:00:00",
+            "member_id": member_id,
+        },
+        cookies=head,
+    )
+    assert made.status_code == 201, made.json()
+
+    assert api_client.delete(f"/rooms/{room.id}", cookies=head).status_code == 204
+
+    left = db_session.scalars(
+        select(Reservation).where(Reservation.room_id == room.id)
+    ).all()
+    assert list(left) == []

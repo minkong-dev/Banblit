@@ -26,3 +26,11 @@ export function askExpel(name: string): boolean {
 export function askCancel(name: string): boolean {
   return window.confirm(`${name}${objectParticle(name)} 취소할까요?`);
 }
+
+/** 합주실을 삭제하기 전에 묻습니다. 삭제하면 그 합주실의 예약과 배정 결과, 이전 배정기록이
+ *  ON DELETE CASCADE 로 함께 삭제되므로, 합주실 이름이 아니라 함께 사라지는 것을 문장에 적습니다. */
+export function askDeleteRoom(): boolean {
+  return window.confirm(
+    "기록이 있을경우 예약과 배정안, 이전 배정기록이 모두 삭제돼요. 정말 삭제할까요?",
+  );
+}

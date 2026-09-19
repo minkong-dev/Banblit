@@ -96,10 +96,11 @@ export type MyTeam = {
 /** /me 응답 전체입니다. 현재 로그인한 계정과 그 계정이 배정된 자리 목록입니다. */
 export type Me = { account: Account; teams: MyTeam[] };
 
-/** 할 수 있는 일 20가지입니다. 서버 쪽 정본입니다: backend/src/backend/db/models.py의 Permission */
+/** 할 수 있는 일 21가지입니다. 서버 쪽 정본입니다: backend/src/backend/db/models.py의 Permission */
 export type Permission =
   | "room_create"
   | "room_edit"
+  | "room_delete"
   | "period_create"
   | "period_edit"
   | "period_delete"
