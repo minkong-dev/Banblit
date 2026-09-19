@@ -25,7 +25,7 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 # scheduling 의 진입점(pipeline.py)이 아니라 slots.py 를 직접 참조합니다. 진입점을 거치면 이 파일을
 # import 하는 migration 까지 OR-Tools 를 로드하게 됩니다. DEFAULT_SLOT_MINUTES 는 계산 없는 상수라 공유 선언입니다.
-from backend.scheduling.slots import DEFAULT_SLOT_MINUTES
+from backend.scheduling.slots import DEFAULT_SLOT_MINUTES, SLOT_MINUTE_CHOICES
 
 # 권한 항목입니다. 생성·수정·삭제·조회를 따로 두어, permission set(권한 집합)을 만드는 사람이
 # 필요한 항목만 선택해 묶을 수 있게 합니다. 항목이 늘면 그 항목을 처리하는 서버 코드도
@@ -86,6 +86,13 @@ Instrument = Literal["보컬", "일렉", "통기타", "베이스", "신디", "�
 INSTRUMENTS: tuple[Instrument, ...] = get_args(Instrument)
 
 
+def _slot_minutes_sql() -> str:
+    """settings.slot_minutes 의 CHECK 제약 문구를 SLOT_MINUTE_CHOICES 에서 생성합니다."""
+    return "slot_minutes IN ({})".format(
+        ", ".join(str(value) for value in SLOT_MINUTE_CHOICES)
+    )
+
+
 def _in_sql(column: str, allowed: tuple[str, ...]) -> str:
     # column(데이터베이스의 열)과 허용 목록을 받아 "column IN ('a', 'b')" 형식으로 반환합니다.
     return "{} IN ({})".format(column, ", ".join(f"'{value}'" for value in allowed))
@@ -114,7 +121,9 @@ class Settings(Base):
 
     __table_args__ = (
         CheckConstraint("id = 1"),
-        CheckConstraint("slot_minutes BETWEEN 5 AND 60 AND 60 % slot_minutes = 0"),
+        # 허용 값은 scheduling/slots.py 의 SLOT_MINUTE_CHOICES 가 정본입니다. 목록에서 생성해,
+        # 값을 추가할 때 이 줄을 함께 수정하지 않아도 되게 합니다.
+        CheckConstraint(_slot_minutes_sql()),
     )
 
 

@@ -2,6 +2,7 @@ import { useQueries } from "@tanstack/react-query";
 
 import { AppShell, Card } from "../components/AppShell";
 import { getJSON, reason } from "../lib/api";
+import { cohortLabel } from "../lib/roster";
 import { useMe } from "../components/queries";
 import "../styles/profile.css";
 import type { Account, Member } from "../lib/contract";
@@ -24,7 +25,7 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
   /** 명단에서 찾은 나입니다. 기수를 표시합니다. 찾지 못했거나 기수가 없을 경우 그 사유를 표시합니다. */
   function cohortText(mine: Member | undefined): string {
     if (mine === undefined) return "멤버 리스트에서 찾지 못했어요";
-    return mine.cohort === null ? "기수 없음" : `${mine.cohort}기`;
+    return cohortLabel(mine.cohort);
   }
 
   return memberQueries.map((query, index) => {

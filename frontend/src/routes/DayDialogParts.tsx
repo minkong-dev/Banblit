@@ -9,6 +9,7 @@ import { acceptsDrag, cellAt, dragRange, slotSteps } from "../lib/calendar";
 import { slotLabel } from "../lib/pipeline";
 import { offWhenLabel } from "../lib/dayEntries";
 import type { Entry } from "../lib/dayEntries";
+import { cohortLabel } from "../lib/roster";
 import type { DayTeam } from "../lib/roster";
 
 export type SlotRange = { a: number; b: number };
@@ -219,7 +220,7 @@ export function DayPeople({ people, error }: {
                 {member.name.slice(0, 2)}
               </span>
               <span className="nm">{member.name} <i>{team.name}</i></span>
-              <span className="ps">{member.cohort === null ? "" : `${member.cohort}기`}</span>
+              <span className="ps">{cohortLabel(member.cohort)}</span>
             </div>
           ))}
         </div>

@@ -1,7 +1,13 @@
+import pytest
+from sqlalchemy import update
+from sqlalchemy.exc import IntegrityError
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from conftest import AccountFactory
+
+from backend.db.models import Settings
+from backend.scheduling.slots import SLOT_MINUTE_CHOICES
 from test_reservation_endpoints import OPEN_DAY, _open_period, _room
 
 
@@ -70,3 +76,27 @@ def test_the_new_slot_size_decides_which_reservation_times_are_allowed(
     api_client.patch("/settings", json={"slot_minutes": 10}, cookies=admin)
 
     assert api_client.post("/reservations", json=body, cookies=admin).status_code == 201
+
+
+def test_the_database_rejects_a_slot_unit_the_api_rejects(
+    db_session: Session,
+) -> None:
+    """DB 도 API 와 같은 값만 허용합니다.
+
+    6 은 60 의 약수라서 이전 CHECK 제약("60 % slot_minutes = 0")을 통과했으나 API 와 화면은
+    거절했습니다. 목록 3곳의 내용이 달라, DB 를 직접 수정하면 화면이 표시하지 못하는 값이
+    저장될 수 있었습니다.
+    """
+    with pytest.raises(IntegrityError):
+        db_session.execute(update(Settings).values(slot_minutes=6))
+        db_session.flush()
+    db_session.rollback()
+
+
+def test_the_database_accepts_every_slot_unit_the_api_accepts(
+    db_session: Session,
+) -> None:
+    for minutes in SLOT_MINUTE_CHOICES:
+        db_session.execute(update(Settings).values(slot_minutes=minutes))
+        db_session.flush()
+    db_session.rollback()

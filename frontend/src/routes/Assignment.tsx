@@ -220,7 +220,11 @@ export function Assignment() {
             </div>
           </div>
 
-          <AssignmentCalendar days={days} shown={shown} colors={colors} />
+          {/* 요일 머리글과 날짜 칸을 한 요소로 묶습니다. 휴대폰 폭에서 달력만 가로로 스크롤할 때
+              둘이 따로 스크롤되면 요일과 칸이 어긋납니다(styles/assignment.css). */}
+          <div className="cal">
+            <AssignmentCalendar days={days} shown={shown} colors={colors} />
+          </div>
 
           <div className="under">
             <AssignmentStatus
