@@ -843,3 +843,173 @@ def test_the_member_list_pages_from_the_end_of_the_last_one(
         f"/members?limit=2&after={first['members'][-1]['id']}", cookies=head
     ).json()
     assert [row["name"] for row in rest["members"]] == ["최유진"]
+
+
+# ── 자리 배정 일괄 저장 ─────────────────────────────────────────────────────
+
+
+def test_bulk_slot_members_applies_every_entry(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """자리 3개의 배정을 요청 1번으로 저장합니다."""
+    _, head = account("박서연", "head@example.com")
+    team = _team(db_session, "일괄 저장 팀", slots=3)
+    people = [_member(db_session, f"멤버{index}") for index in range(3)]
+    commit_translating(db_session, ROSTER_MESSAGES)
+    slot_ids = _slot_ids(api_client, head, team.id)
+
+    response = api_client.put(
+        f"/teams/{team.id}/slot-members",
+        json={
+            "assignments": [
+                {"slot_id": slot_id, "member_id": person.id}
+                for slot_id, person in zip(slot_ids, people)
+            ]
+        },
+        cookies=head,
+    )
+
+    assert response.status_code == 200, response.json()
+    seated = {slot["id"]: slot["member_id"] for slot in response.json()["slots"]}
+    assert seated == {slot_id: person.id for slot_id, person in zip(slot_ids, people)}
+
+
+def test_bulk_slot_members_clears_with_null(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """member_id 가 null 인 항목은 그 자리의 배정을 해제합니다."""
+    _, head = account("박서연", "head@example.com")
+    team = _team(db_session, "해제 팀", slots=2)
+    person = _member(db_session, "앉은 사람")
+    commit_translating(db_session, ROSTER_MESSAGES)
+    slot_ids = _slot_ids(api_client, head, team.id)
+    api_client.put(
+        f"/teams/{team.id}/slots/{slot_ids[0]}",
+        json={"member_id": person.id},
+        cookies=head,
+    )
+
+    response = api_client.put(
+        f"/teams/{team.id}/slot-members",
+        json={"assignments": [{"slot_id": slot_ids[0], "member_id": None}]},
+        cookies=head,
+    )
+
+    assert response.status_code == 200
+    seated = {slot["id"]: slot["member_id"] for slot in response.json()["slots"]}
+    assert seated[slot_ids[0]] is None
+
+
+def test_bulk_slot_members_applies_nothing_when_one_entry_fails(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """항목 하나가 잘못되면 앞선 항목도 반영하지 않습니다.
+
+    자리마다 요청을 보내면 중간에 실패했을 때 앞의 자리만 저장된 상태로 끝납니다. 이 endpoint 는
+    transaction 1개로 처리하므로 그 상태가 발생하지 않습니다.
+    """
+    _, head = account("박서연", "head@example.com")
+    team = _team(db_session, "부분 실패 팀", slots=2)
+    person = _member(db_session, "앉을 사람")
+    commit_translating(db_session, ROSTER_MESSAGES)
+    slot_ids = _slot_ids(api_client, head, team.id)
+
+    response = api_client.put(
+        f"/teams/{team.id}/slot-members",
+        json={
+            "assignments": [
+                {"slot_id": slot_ids[0], "member_id": person.id},
+                {"slot_id": 999_999, "member_id": person.id},
+            ]
+        },
+        cookies=head,
+    )
+
+    assert response.status_code == 422
+    after = api_client.get(f"/teams/{team.id}/slots", cookies=head).json()["slots"]
+    assert all(slot["member_id"] is None for slot in after)
+
+
+def test_bulk_slot_members_requires_member_add_to_seat_someone(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """member_add 권한이 없으면 배정 항목을 거절합니다."""
+    _, head = account("박서연", "head@example.com")
+    _, plain = account("이도윤", "plain@example.com")
+    team = _team(db_session, "권한 팀", slots=1)
+    person = _member(db_session, "앉을 사람")
+    commit_translating(db_session, ROSTER_MESSAGES)
+    slot_ids = _slot_ids(api_client, head, team.id)
+
+    response = api_client.put(
+        f"/teams/{team.id}/slot-members",
+        json={"assignments": [{"slot_id": slot_ids[0], "member_id": person.id}]},
+        cookies=plain,
+    )
+
+    assert response.status_code == 403
+
+
+def test_bulk_slot_members_lets_anyone_leave_their_own_seat(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """자신의 자리를 해제하는 항목은 member_remove 권한 없이 통과합니다.
+
+    자리마다 보내는 DELETE endpoint 와 같은 규칙입니다.
+    """
+    _, head = account("박서연", "head@example.com")
+    plain_id, plain = account("이도윤", "plain@example.com")
+    team = _team(db_session, "본인 해제 팀", slots=1)
+    commit_translating(db_session, ROSTER_MESSAGES)
+    slot_ids = _slot_ids(api_client, head, team.id)
+    api_client.put(
+        f"/teams/{team.id}/slots/{slot_ids[0]}",
+        json={"member_id": plain_id},
+        cookies=head,
+    )
+
+    response = api_client.put(
+        f"/teams/{team.id}/slot-members",
+        json={"assignments": [{"slot_id": slot_ids[0], "member_id": None}]},
+        cookies=plain,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["slots"][0]["member_id"] is None
+
+
+def test_bulk_slot_members_can_swap_two_people(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    """두 사람의 자리를 맞바꿉니다.
+
+    (team_id, member_id) unique 제약이 있어, 배정을 해제하기 전에 배정하면 두 자리에 같은 사람이
+    있는 순간이 생겨 DB 가 거절합니다. endpoint 는 해제를 전부 먼저 반영한 뒤 배정합니다.
+    """
+    _, head = account("박서연", "head@example.com")
+    team = _team(db_session, "맞바꿈 팀", slots=2)
+    first = _member(db_session, "첫 사람")
+    second = _member(db_session, "둘째 사람")
+    commit_translating(db_session, ROSTER_MESSAGES)
+    slot_ids = _slot_ids(api_client, head, team.id)
+    for slot_id, person in zip(slot_ids, [first, second]):
+        api_client.put(
+            f"/teams/{team.id}/slots/{slot_id}",
+            json={"member_id": person.id},
+            cookies=head,
+        )
+
+    response = api_client.put(
+        f"/teams/{team.id}/slot-members",
+        json={
+            "assignments": [
+                {"slot_id": slot_ids[0], "member_id": second.id},
+                {"slot_id": slot_ids[1], "member_id": first.id},
+            ]
+        },
+        cookies=head,
+    )
+
+    assert response.status_code == 200, response.json()
+    seated = {slot["id"]: slot["member_id"] for slot in response.json()["slots"]}
+    assert seated == {slot_ids[0]: second.id, slot_ids[1]: first.id}

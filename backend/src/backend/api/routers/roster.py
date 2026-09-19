@@ -8,6 +8,7 @@ from backend.services.roster_service import clear_slot as clear_slot_row
 from backend.services.roster_service import create_team as create_team_row
 from backend.services.roster_service import delete_team as delete_team_row
 from backend.services.roster_service import expel_member as expel_member_row
+from backend.services.roster_service import assign_slot_members as assign_slot_members_rows
 from backend.services.roster_service import replace_slots as replace_slots_rows
 from backend.services.roster_service import (
     list_members,
@@ -24,6 +25,7 @@ from backend.api.schemas import (
     MemberSearchOut,
     SlotAssignIn,
     SlotEnvelopeOut,
+    SlotMembersIn,
     SlotOut,
     SlotsOut,
     TeamCreateIn,
@@ -210,6 +212,35 @@ def put_slot_member(
     """포지션에 멤버를 배정합니다. 포지션 구성 변경은 team_edit 권한, 멤버 배정은 member_add 권한으로 구분합니다."""
     slot = assign_slot_row(session, team_id, slot_id, req.member_id)
     return SlotEnvelopeOut(slot=_slot_out(slot, session.get(Member, req.member_id)))
+
+
+@router.put("/teams/{team_id}/slot-members", response_model=SlotsOut)
+def put_team_slot_members(
+    team_id: int,
+    req: SlotMembersIn,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> SlotsOut:
+    """팀 화면의 저장 버튼 1번이 보내는 자리 배정 전체를 transaction 1개로 저장합니다.
+
+    자리마다 PUT 과 DELETE 를 따로 보내면 중간 요청이 실패했을 때 앞선 요청만 반영된 상태로
+    끝납니다. 이 endpoint 는 전부 반영하거나 아무것도 반영하지 않습니다.
+
+    dependencies 에서 권한을 검증하지 않습니다. 배정에는 member_add, 다른 사람의 해제에는
+    member_remove 가 필요하고 자신의 해제에는 아무 권한도 필요하지 않아, 항목마다 다르기
+    때문입니다. 자리마다 보내는 endpoint 2개와 같은 규칙입니다.
+    """
+    held = account_permissions(session, requester.id)
+    assign_slot_members_rows(
+        session,
+        team_id,
+        [(entry.slot_id, entry.member_id) for entry in req.assignments],
+        may_seat="member_add" in held,
+        may_unseat="member_remove" in held,
+        requester_id=requester.id,
+    )
+    rows = list_slots(session, team_id)
+    return SlotsOut(slots=[_slot_out(slot, member) for slot, member in rows])
 
 
 @router.delete("/teams/{team_id}/slots/{slot_id}", status_code=204)
