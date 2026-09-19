@@ -139,8 +139,8 @@ def search_member_list(
     q: str = Query(default="", max_length=100),
     session: Session = Depends(get_session),
 ) -> MemberSearchOut:
-    """포지션에 배정할 멤버를 이름으로 검색합니다. 빈 검색어에는 결과를 반환하지 않습니다.
-    전체 명단을 공개하는 endpoint 가 되면 안 되기 때문입니다."""
+    """포지션에 배정할 멤버를 이름으로 검색합니다. 빈 검색어에는 명단 전체를 이름 순으로 반환합니다.
+    화면이 목록을 펼쳐 두고 스크롤로 고를 수 있어야 하기 때문입니다."""
     return MemberSearchOut(
         members=[_member_out(member) for member in search_members(session, q)]
     )

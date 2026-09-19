@@ -106,23 +106,20 @@ def list_members(
     return [(row, held[row.id]) for row in rows]
 
 
-def search_members(session: Session, query: str, limit: int = 20) -> list[Member]:
+def search_members(session: Session, query: str, limit: int = 200) -> list[Member]:
     """이름으로 멤버를 검색합니다. 포지션에 배정할 멤버를 선택하는 검색 UI가 사용합니다.
 
-    빈 검색어에 전체 목록을 반환하지 않습니다. 명단 전체가 노출되는 endpoint 가 되면 안 됩니다.
+    빈 검색어에는 명단 전체를 반환합니다. 화면이 목록을 그대로 펼쳐 스크롤로 훑을 수 있어야
+    누가 있는지 모르는 사람을 한 글자씩 넣어 찾지 않습니다. 로그인한 계정이면 read_members
+    로 이미 명단 전체를 볼 수 있으므로, 이렇게 해도 새로 공개되는 정보는 없습니다.
+
     동명이인이 있으므로 결과에는 기수도 포함됩니다(호출자가 표시합니다).
     """
     trimmed = query.strip()
-    if not trimmed:
-        return []
-    return list(
-        session.scalars(
-            select(Member)
-            .where(Member.name.ilike(f"%{trimmed}%"))
-            .order_by(Member.name, Member.id)
-            .limit(limit)
-        ).all()
-    )
+    rows = select(Member).order_by(Member.name, Member.id).limit(limit)
+    if trimmed:
+        rows = rows.where(Member.name.ilike(f"%{trimmed}%"))
+    return list(session.scalars(rows).all())
 
 
 def expel_member(session: Session, member_id: int, requester: Member) -> None:
