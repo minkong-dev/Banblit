@@ -12,6 +12,7 @@ import {
 import { Assignment } from "./routes/Assignment";
 import { Board } from "./routes/Board";
 import { Landing } from "./routes/Landing";
+import { NotFound } from "./routes/NotFound";
 import { Notices } from "./routes/Notices";
 import { BoardWrite, NoticeWrite } from "./routes/PostWrite";
 import { Profile } from "./routes/Profile";
@@ -52,6 +53,8 @@ export function App() {
       <Route path="/board/:teamId/new" element={<RequireAuth><BoardWrite /></RequireAuth>} />
       <Route path="/teams" element={<RequireAuth><Teams /></RequireAuth>} />
       <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+      {/* 등록된 주소가 아니면 여기로 옵니다. 이 route 가 없으면 아무것도 렌더링되지 않아 빈 화면이 표시됩니다. */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
