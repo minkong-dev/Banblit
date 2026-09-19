@@ -1,21 +1,24 @@
 import os
 import re
 import secrets
-import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import BinaryIO
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from backend.services.board_service import require_post_author, require_post_readable
-from backend.db.models import Attachment, Member
+from backend.db.models import Attachment, Member, Post
 
 # 첨부 규칙 값입니다. 다른 파일에서 다시 정의하지 않습니다.
 DEFAULT_STORAGE_DIR = "/var/lib/banblit/attachments"
 MAX_NAME_CHARS = 200
 MAX_CONTENT_TYPE_CHARS = 100
+# 글 1개에 붙은 첨부 파일 크기의 합계 상한입니다. 파일 1개의 상한은 nginx 의 client_max_body_size
+# (frontend/nginx.conf.template)가 담당합니다. 이 값이 없으면 같은 글에 파일을 반복해서 붙여
+# 디스크를 채울 수 있습니다.
+MAX_POST_BYTES = 300 * 1024 * 1024
 DEFAULT_CONTENT_TYPE = "application/octet-stream"
 
 # 업로드할 수 있는 파일 확장자입니다. 이 목록에 없는 확장자는 전부 거절합니다.
@@ -65,19 +68,41 @@ def _stored_path(stored_name: str) -> Path:
     return path
 
 
-def _write_stream(stream: BinaryIO, path: Path) -> int:
+# 한 번에 읽어 디스크에 쓰는 조각의 크기입니다. 파일 전체가 메모리에 올라오지 않게 합니다.
+_CHUNK_BYTES = 64 * 1024
+
+
+def _used_bytes(session: Session, post_id: int) -> int:
+    """post_id 의 게시글에 이미 붙어 있는 첨부 파일 크기의 합계를 반환합니다. 첨부가 없으면 0 을 반환합니다."""
+    total = session.scalar(
+        select(func.coalesce(func.sum(Attachment.size), 0)).where(
+            Attachment.post_id == post_id
+        )
+    )
+    return int(total or 0)
+
+
+def _write_stream(stream: BinaryIO, path: Path, limit: int) -> int:
     """stream 을 path 에 복사하고, 쓴 바이트 수를 반환합니다.
 
-    shutil.copyfileobj 는 조각으로 나눠 복사합니다. 파일 전체가 메모리에 올라오지 않습니다.
-    복사 중 실패하면 부분적으로 쓰인 파일을 삭제하고 예외를 다시 발생시킵니다.
+    조각으로 나눠 복사하므로 파일 전체가 메모리에 올라오지 않습니다. 쓴 양이 limit 을 초과하면
+    복사를 중단하고 ValueError 를 발생시킵니다. 전부 쓴 뒤에 판정하면 거절할 파일도 디스크에
+    전부 쓰게 됩니다.
+
+    복사 중 예외가 발생하면 부분적으로 쓰인 파일을 삭제하고 예외를 다시 발생시킵니다.
     """
+    written = 0
     try:
         with path.open("wb") as target:
-            shutil.copyfileobj(stream, target)
+            while chunk := stream.read(_CHUNK_BYTES):
+                written += len(chunk)
+                if written > limit:
+                    raise ValueError("이 글의 첨부 파일 크기 합계가 상한을 초과했습니다")
+                target.write(chunk)
     except BaseException:
         path.unlink(missing_ok=True)
         raise
-    return path.stat().st_size
+    return written
 
 
 def save_attachment(
@@ -104,7 +129,12 @@ def save_attachment(
     root = storage_root()
     root.mkdir(parents=True, exist_ok=True)
     stored_name = f"{secrets.token_hex(16)}.{extension}"
-    size = _write_stream(stream, _stored_path(stored_name))
+    # 합계를 조회하기 전에 그 글의 행을 잠급니다. 잠그지 않으면 같은 글에 동시에 들어온 업로드 2건이
+    # 서로의 commit 전 합계를 읽어, 2건 모두 MAX_POST_BYTES 만큼 저장합니다. 같은 방식의 잠금을
+    # reservation_service.py 의 _owned_reservation 이 사용합니다.
+    session.scalars(select(Post).where(Post.id == post.id).with_for_update()).one()
+    remaining = MAX_POST_BYTES - _used_bytes(session, post.id)
+    size = _write_stream(stream, _stored_path(stored_name), remaining)
 
     attachment = Attachment(
         post_id=post.id,
