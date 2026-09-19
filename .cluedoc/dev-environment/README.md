@@ -5,6 +5,7 @@ sources:
   - setup.ps1
   - docker-compose.yml
   - docker-compose.override.yml
+  - .github/workflows/checks.yml
 ---
 
 > 문서 버전: 1.1.1 draft
@@ -124,6 +125,25 @@ container 목록이 표시하는 것      실제로 확인해야 하는 것
 
 전체 내용이 필요하면 저장된 파일을 확인합니다. 1개라도 실패하면 실패 상태로 종료되므로 다음 단계에 진행되지 않습니다.
 
+
+**2026-09-19 부터 push 마다 자동으로 실행됩니다**(`.github/workflows/checks.yml`). 그전까지는
+개발자가 직접 실행해야 했고, 실행하지 않고 push 하면 깨진 상태가 develop 에 남았습니다.
+
+| job | 실행 내용 |
+| --- | --- |
+| backend | pytest, mypy |
+| frontend | `npm ci`, lint, lint:e2e, typecheck, 테스트, 빌드 |
+| e2e | Playwright 22건. 실패하면 화면과 추적 파일을 산출물로 보관합니다 |
+
+job 3개를 나눈 이유는 병렬로 실행되어 전체 시간이 가장 긴 job 하나로 줄어들기 때문이고, 실패했을
+때 어느 영역인지 목록에서 바로 보이기 때문입니다.
+
+CI 도 컨테이너 안에서 실행합니다(`CLAUDE.md` 6장). 호스트에 파이썬·Node 를 설치하는 대신
+`docker compose run` 으로 개발과 같은 image 를 사용해, 로컬에서 통과한 검사가 CI 에서만
+실패하는 경우를 줄입니다. `.env` 는 저장소에 없으므로 workflow 가 검사 전용 값을 생성합니다.
+
+frontend job 은 `npm ci` 를 먼저 실행합니다. CI 는 `banblit-web-modules` volume 이 매번
+비어 있습니다(`COMMAND.md` 10-5-1).
 ### 삭제는 명시적으로만 합니다
 
 중단 명령은 기본적으로 데이터를 보존합니다. 데이터베이스와 첨부파일까지 삭제하려면 별도로 지시한 후 확인 문구를 직접 입력해야 합니다. 복구 불가능한 작업이 실수로 실행되지 않도록 2단계의 확인을 요구합니다.

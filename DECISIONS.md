@@ -179,7 +179,7 @@ flush 한 뒤 배정합니다. `test_bulk_slot_members_can_swap_two_people` 이 
 |---|---|
 | 수정 대상 | `backend/src/backend/services/notification_service.py` |
 | 검증 방법 | 읽음 처리 후 행 수가 0이 되는지 확인하는 테스트를 먼저 작성합니다 |
-| 상태 | 미착수 |
+| 상태 | 완료 (2026-09-19). 읽음 처리가 행을 삭제합니다. `read_at` 열은 migration `9b2f5d81ac34` 로 삭제했습니다 |
 
 ### 3-3. 점유 단위 6분
 
@@ -192,7 +192,7 @@ flush 한 뒤 배정합니다. `test_bulk_slot_members_can_swap_two_people` 이 
 | 항목 | 내용 |
 |---|---|
 | 수정 대상 | `backend/src/backend/db/models.py`, migration 1건 |
-| 상태 | 미착수 |
+| 상태 | 완료 (2026-09-19). migration `c4a8e70b52d9`. 허용 값 정본을 `scheduling/slots.py` 의 `SLOT_MINUTE_CHOICES` 로 두고 DB CHECK 를 거기서 생성합니다 |
 
 
 ## 4단계 — 화면 lint·표기
@@ -229,7 +229,7 @@ flush 한 뒤 배정합니다. `test_bulk_slot_members_can_swap_two_people` 이 
 | 항목 | 내용 |
 |---|---|
 | 수정 대상 | 기수를 표시하는 화면 전체 |
-| 상태 | 미착수 |
+| 상태 | 완료 (2026-09-19). `lib/roster.ts` 의 `cohortLabel` 로 표시 4곳을 통일했습니다 |
 
 ### 4-3. 합주실 삭제의 부작용 처리
 
@@ -242,7 +242,7 @@ flush 한 뒤 배정합니다. `test_bulk_slot_members_can_swap_two_people` 이 
 | 항목 | 내용 |
 |---|---|
 | 수정 대상 | `frontend/src/routes/Settings.tsx`, `frontend/src/lib/confirm.ts` |
-| 상태 | 미착수 |
+| 상태 | 완료 (2026-09-19). `lib/confirm.ts` 의 `askDeleteRoom` |
 
 
 ## 5단계 — 운영 체계
@@ -259,7 +259,7 @@ flush 한 뒤 배정합니다. `test_bulk_slot_members_can_swap_two_people` 이 
 |---|---|
 | 코드 수정 | 없습니다. 서비스 가입과 주소 등록만 필요합니다 |
 | 문서 | `.cluedoc/deployment/README.md` 에 감시 주소와 알림 수신처를 기록합니다 |
-| 상태 | 미착수 |
+| 상태 | 절차만 완료 (2026-09-19). `.cluedoc/deployment/README.md` 에 감시 주소와 주기를 기록했습니다. **서비스 등록은 개발자님이 하셔야 합니다** |
 
 ### 5-2. 자동 검사
 
@@ -271,7 +271,7 @@ push 마다 pytest, mypy, 화면 테스트, 화면 lint 를 실행하고 실패 
 |---|---|
 | 수정 대상 | `.github/workflows/` 신규 파일 |
 | 실행 방식 | 6장의 제약에 따라 컨테이너 안에서 실행합니다 |
-| 상태 | 미착수 |
+| 상태 | 완료 (2026-09-19). `.github/workflows/checks.yml`. **push 하기 전에는 실제 실행을 확인할 수 없습니다** |
 
 ### 5-3. 휴대폰 화면
 
@@ -286,7 +286,7 @@ push 마다 pytest, mypy, 화면 테스트, 화면 lint 를 실행하고 실패 
 | 항목 | 내용 |
 |---|---|
 | 수정 대상 | `frontend/src/styles/board.css`, `teams.css`, `assignment.css` |
-| 상태 | 미착수 |
+| 상태 | 완료 (2026-09-19). `shell.css` 에 860px 중단점. **실기기 확인은 남아 있습니다** |
 
 
 ## 6단계 — 구조 작업 착수 시점
@@ -335,5 +335,20 @@ push 마다 pytest, mypy, 화면 테스트, 화면 lint 를 실행하고 실패 
 | ErrorBoundary 와 404 화면 | 1-3 | 2026-09-19 |
 | 팀 자리 일괄 저장 endpoint | 2-2 | 2026-09-19 |
 | 합주실 삭제 (room_delete 권한, endpoint, 확인 dialog) | 3-1, 4-3 | 2026-09-19 |
+| 알림 읽음 시 행 삭제 | 3-2 | 2026-09-19 |
+| 점유 단위 6분을 DB 에서 제거 | 3-3 | 2026-09-19 |
+| 기수 없을 때 `-` 표시 | 4-2 | 2026-09-19 |
+| 휴대폰 화면 (860px 중단점) | 5-3 | 2026-09-19 |
+| GitHub Actions | 5-2 | 2026-09-19 |
+| 외부 감시 절차 기록 | 5-1 | 2026-09-19 |
 | E2E 22건 실행 (전부 통과) | — | 2026-09-19 |
 
+
+## 개발자님이 하셔야 하는 것
+
+| 항목 | 내용 |
+|---|---|
+| 외부 감시 서비스 등록 | UptimeRobot 같은 서비스에 `https://<도메인>/api/health` 를 5분 주기로 등록하고, 등록한 서비스 이름과 알림 수신처를 `.cluedoc/deployment/README.md` 에 적습니다 |
+| 휴대폰 실기기 확인 | 860px 중단점을 추가했으나 실기기에서 보이는 모습은 확인하지 못했습니다. 게시판·팀 편성·배정 3개 화면과 달력 가로 스크롤을 확인해 주십시오 |
+| CI 첫 실행 확인 | push 하기 전에는 workflow 가 실제로 통과하는지 확인할 수 없습니다. YAML 문법만 검증했습니다 |
+| `.env` 에 `ADMIN_SIGNUP_CODE` 입력 | 값이 비어 있으면 아무도 관리자로 가입하지 못합니다 |
