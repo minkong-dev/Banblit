@@ -34,6 +34,7 @@ from backend.scheduling.slots import DEFAULT_SLOT_MINUTES
 Permission = Literal[
     "room_create",  # 합주실 생성
     "room_edit",  # 합주실 여는 시각·닫는 시각 수정
+    "room_delete",  # 합주실 삭제(그 합주실의 예약·배정 결과·이전 배정기록도 함께 삭제)
     "period_create",  # 기간 생성
     "period_edit",  # 기간 수정
     "period_delete",  # 기간 삭제(그 기간의 배정 결과·계산 기록·이전 배정기록도 함께 삭제)

@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, NaiveDatetime
 
-from backend.db.models import Instrument, Permission
+from backend.db.models import PERMISSIONS, Instrument, Permission
 from backend.db.models import NotificationKind
 
 class RoomSlotOut(BaseModel):
@@ -389,7 +389,9 @@ class PermissionSetIn(BaseModel):
     name: str = Field(max_length=50)
     # 이 permission set 을 어떤 역할의 사람에게 부여하는지 설명하는 문장입니다. 빈 값을 허용하지 않습니다.
     description: str = Field(max_length=200)
-    permissions: list[Permission] = Field(max_length=20)
+    # 상한은 항목 수에서 유도합니다. 숫자를 적어 두면 항목을 추가할 때 이 줄을 함께 수정해야 하고,
+    # 수정하지 않으면 모든 항목을 선택한 요청이 거절됩니다.
+    permissions: list[Permission] = Field(max_length=len(PERMISSIONS))
 
 
 class PermissionSetMemberOut(BaseModel):
