@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from backend.jobs import auto_assign
 from backend.services.period_service import assign_period
-from backend.db.models import Notification, Period, Room, Team, TeamSlot
+from backend.db.models import Member, Notification, Period, Room, Team, TeamSlot
 
 # account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 이 파일의 첫 호출이 헤드매니저입니다.
 from conftest import AccountFactory
@@ -84,9 +84,7 @@ def test_auto_assign_leaves_a_notification(
 
     assert results[0].saved is True
     rows = _notifications(api_client, cookies)
-    assert [(row["kind"], row["read"]) for row in rows] == [
-        ("assignment_updated", False)
-    ]
+    assert [row["kind"] for row in rows] == ["assignment_updated"]
     # endpoint(API의 요청 주소 단위) 응답이 아니라 database(저장소)에도 그 사람 번호로 남았는지 함께 확인합니다.
     assert list(
         db_session.scalars(select(Notification.member_id))
@@ -132,20 +130,52 @@ def test_reading_needs_a_login(api_client: TestClient) -> None:
     assert api_client.post("/notifications/read").status_code == 401
 
 
-def test_marking_read_lowers_the_unread_count(
+def test_marking_read_deletes_the_notifications(
     api_client: TestClient,
     db_session: Session,
     assigned_member: tuple[int, dict[str, str]],
 ) -> None:
+    """읽음 처리는 행을 삭제합니다.
+
+    읽음 표시만 남기면 알림 행이 배정 1회마다 전원에게 1행씩 쌓이기만 하고 삭제되는 경로가
+    없습니다. 조회는 상한 없이 전 행을 반환하고 화면은 20초마다 다시 조회하므로, 운영 기간에
+    비례해 전송량이 증가합니다.
+    """
     _, cookies = assigned_member
     auto_assign.run_due_assignments(db_session, _due_time())
-    before = _notifications(api_client, cookies)
-    assert len([row for row in before if row["read"] is False]) == 1
+    assert len(_notifications(api_client, cookies)) == 1
 
     assert api_client.post("/notifications/read", cookies=cookies).status_code == 204
 
-    after = _notifications(api_client, cookies)
-    assert [row["read"] for row in after] == [True]
+    assert _notifications(api_client, cookies) == []
+    assert db_session.scalars(select(Notification)).all() == []
+
+
+def test_marking_read_leaves_other_peoples_notifications(
+    api_client: TestClient,
+    db_session: Session,
+    assigned_member: tuple[int, dict[str, str]],
+) -> None:
+    """읽음 처리는 요청자의 알림만 삭제합니다."""
+    member_id, cookies = assigned_member
+    auto_assign.run_due_assignments(db_session, _due_time())
+    stranger = Member(name="남의 계정", cohort=None)
+    db_session.add(stranger)
+    db_session.flush()
+    db_session.add(
+        Notification(
+            member_id=stranger.id,
+            kind="assignment_updated",
+            created_at=_due_time(),
+        )
+    )
+    db_session.commit()
+
+    api_client.post("/notifications/read", cookies=cookies)
+
+    left = db_session.scalars(select(Notification)).all()
+    assert [row.member_id for row in left] == [stranger.id]
+    assert member_id != stranger.id
 
 
 def test_a_person_pressing_recalculate_also_leaves_a_notification(

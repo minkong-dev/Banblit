@@ -3,23 +3,17 @@ import { describe, expect, it } from "vitest";
 import { notificationText, unreadCount } from "./notifications";
 import type { Notification } from "./contract";
 
-function row(id: number, read: boolean): Notification {
-  return { id, kind: "assignment_updated", created_at: "2026-09-14T18:00:00", read };
+function row(id: number): Notification {
+  return { id, kind: "assignment_updated", created_at: "2026-09-14T18:00:00" };
 }
 
 describe("unreadCount", () => {
-  it("안 읽은 것만 센다", () => {
-    expect(unreadCount([row(1, false), row(2, true), row(3, false)])).toBe(2);
+  // 읽음 처리가 행을 삭제하므로 목록에 남아 있는 알림은 전부 읽지 않은 알림입니다.
+  it("목록에 있는 알림을 전부 센다", () => {
+    expect(unreadCount([row(1), row(2), row(3)])).toBe(3);
   });
 
-  it("읽으면 수가 준다", () => {
-    const before = [row(1, false), row(2, false)];
-    const after = before.map((item) => ({ ...item, read: true }));
-    expect(unreadCount(before)).toBe(2);
-    expect(unreadCount(after)).toBe(0);
-  });
-
-  it("알림이 없으면 0이다", () => {
+  it("읽음 처리 후 목록이 비면 0이다", () => {
     expect(unreadCount([])).toBe(0);
   });
 });

@@ -610,10 +610,10 @@ NOTIFICATION_KINDS: tuple[NotificationKind, ...] = get_args(NotificationKind)
 
 
 class Notification(Base):
-    """멤버 1명에게 표시하는 화면 알림 하나입니다. read_at 이 null 이면 아직 읽지 않은 알림입니다.
+    """멤버 1명에게 표시하는 화면 알림 하나입니다.
 
-    읽음 여부를 알림마다 두는 이유는 나중에 알림을 하나씩 읽는 화면이 생겨도 table 을 변경할
-    필요가 없기 때문입니다. "언제까지 읽었다"는 값 하나로 두면 그때 table 을 다시 만들어야 합니다.
+    읽음 처리는 행을 삭제합니다. 읽음 표시만 남기면 삭제되는 경로가 없어 행이 쌓이기만 합니다
+    (services/notification_service.py 의 mark_all_read). 그래서 읽음 여부 열을 두지 않습니다.
     """
 
     __tablename__ = "notifications"
@@ -625,7 +625,6 @@ class Notification(Base):
     )
     kind: Mapped[NotificationKind] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime)
-    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     __table_args__ = (CheckConstraint(_in_sql("kind", NOTIFICATION_KINDS)),)
 
