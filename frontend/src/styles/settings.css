@@ -145,3 +145,12 @@ body[data-page="settings"] {
     .page:not(:has(.rail)) { grid-template-columns: minmax(0, 1fr); column-gap: 0; }
   }
 }
+
+/* 휴대폰 폭입니다. 명단 표는 열이 5개라 좁은 화면에서 글자가 세로로 깨집니다. 표만 가로로
+   스크롤하고 화면 전체는 밀리지 않게 합니다. */
+@media (max-width: 860px) {
+  body[data-page="settings"] {
+    .roster { overflow-x: auto; }
+    .roster table { min-width: 520px; }
+  }
+}

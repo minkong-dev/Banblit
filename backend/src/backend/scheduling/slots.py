@@ -7,6 +7,15 @@ from backend.scheduling.interval import TimeInterval
 # (migrations/versions/d2f7a08c5e16_slot_minutes_setting.py).
 DEFAULT_SLOT_MINUTES = 60
 
+# 점유 단위로 선택할 수 있는 값입니다. 전부 60 의 약수라 정시가 언제나 격자 위에 있습니다.
+# 6 은 60 의 약수지만 제외합니다 — 합주실을 6분 단위로 예약하는 경우가 없습니다.
+#
+# 이 목록이 정본입니다. API(api/schemas.py), DB CHECK 제약(db/models.py), 화면
+# (frontend/src/lib/settings.ts 의 SLOT_MINUTE_CHOICES)이 같은 값을 사용해야 합니다.
+# 2026-09-19 이전에는 DB 만 6 을 허용해, DB 를 직접 수정하면 화면이 표시하지 못하는 값이
+# 저장될 수 있었습니다.
+SLOT_MINUTE_CHOICES: tuple[int, ...] = (5, 10, 12, 15, 20, 30, 60)
+
 
 def _is_on_grid(moment: datetime, slot_minutes: int) -> bool:
     return (

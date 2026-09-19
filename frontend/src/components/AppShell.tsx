@@ -8,6 +8,7 @@ import { useDismissible, usePage } from "./hooks";
 import { useMe, useMyTeams } from "./queries";
 import { useToast } from "../lib/toast";
 import { can, roleLabel, teamNavLabel } from "../lib/account";
+import { cohortLabel } from "../lib/roster";
 import { getJSON, logOut } from "../lib/pipeline";
 import type { Member, Permission } from "../lib/contract";
 import "../styles/shell.css";
@@ -183,7 +184,7 @@ export function ProfileMenu() {
             <div className="tm" key={team.id}>
               <i style={{ background: `var(--${team.colorKey})` }} />{team.name}
               {/* 명단이 아직 오지 않았으면 아무것도 표시하지 않습니다. 없는 값을 생성하지 않습니다. */}
-              <small>{mine?.cohort == null ? "" : `${mine.cohort}기`}</small>
+              <small>{cohortLabel(mine?.cohort ?? null)}</small>
             </div>
           );
         })}

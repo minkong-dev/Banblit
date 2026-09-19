@@ -64,6 +64,14 @@ export function seatAssignments(
     .map((slot) => ({ slot_id: slot.id, member_id: wantedOf(slot) }));
 }
 
+/** 기수를 화면에 표시하는 문구입니다. 값이 없으면 "-" 를 반환합니다.
+ *
+ *  빈 문자열을 반환하면 값이 없는 것인지 표시가 누락된 것인지 구별되지 않고, 표 형태의 목록에서는
+ *  열 정렬도 어긋납니다. */
+export function cohortLabel(cohort: number | null): string {
+  return cohort === null ? "-" : `${cohort}기`;
+}
+
 /** 사람 이름 옆에 기수를 붙입니다. 동명이인을 화면에서 구분하는 값이 기수뿐입니다. */
 export function memberLabel(name: string, cohort: number | null): string {
   return cohort === null ? name : `${name} (${cohort}기)`;

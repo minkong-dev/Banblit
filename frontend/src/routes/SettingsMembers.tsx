@@ -20,6 +20,7 @@ import {
 } from "../components/icons";
 import { getJSON, reason } from "../lib/api";
 import { say } from "../lib/toast";
+import { cohortLabel } from "../lib/roster";
 import { PERMISSION_ITEMS, can } from "../lib/account";
 import { askDelete, askExpel } from "../lib/confirm";
 import { useMe } from "../components/queries";
@@ -417,7 +418,7 @@ function MemberRoster(props: {
                 <td>{row.name}</td>
                 <td>{row.department ?? "—"}</td>
                 <td>{row.student_no ?? "—"}</td>
-                <td>{row.cohort === null ? "—" : `${row.cohort}기`}</td>
+                <td>{cohortLabel(row.cohort)}</td>
                 <td>{row.permission_sets.join(" · ") || "—"}</td>
                 <td className="fill" />
                 {onExpel === null ? null : (

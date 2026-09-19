@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  cohortLabel,
   memberLabel,
   myTeamIds,
   seatAssignments,
@@ -183,3 +184,13 @@ describe("seatAssignments", () => {
     expect(seatAssignments(seats, [savedSlot(11, "보컬", 1, 7)])).toEqual([]);
   });
 })
+
+describe("cohortLabel", () => {
+  it("기수가 있으면 숫자와 기를 붙인다", () => {
+    expect(cohortLabel(21)).toBe("21기");
+  });
+
+  it("기수가 없으면 - 를 반환한다", () => {
+    expect(cohortLabel(null)).toBe("-");
+  });
+});

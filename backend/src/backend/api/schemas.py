@@ -509,6 +509,8 @@ class SettingsOut(BaseModel):
 
 class SettingsUpdateIn(BaseModel):
     # 한 시간을 남김없이 나누는 값만 받습니다. DB 의 CHECK 와 같은 조건을 경계에서도 봅니다.
+    # 허용 값은 scheduling/slots.py 의 SLOT_MINUTE_CHOICES 가 정본입니다. Literal 은 상수만 받아
+    # 목록에서 생성할 수 없으므로 값을 적고, 두 목록이 어긋나면 test_settings_endpoints.py 가 잡습니다.
     slot_minutes: Literal[5, 10, 12, 15, 20, 30, 60]
 
 
