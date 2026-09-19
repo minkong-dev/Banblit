@@ -1,3 +1,5 @@
+from datetime import time
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -5,7 +7,12 @@ from backend.api.auth_dependency import require_account, require_permission
 from backend.services.input import format_calendar_date
 from backend.services.input import format_clock
 from backend.services.period_crud_service import create_period as create_period_row
-from backend.services.period_crud_service import delete_period, list_periods, update_period
+from backend.services.period_crud_service import (
+    WindowIn,
+    delete_period,
+    list_periods,
+    update_period,
+)
 from backend.services.ensemble_service import (
     days_by_period,
     delete_ensemble,
@@ -14,6 +21,7 @@ from backend.services.ensemble_service import (
     set_ensemble_day,
 )
 from backend.api.schemas import (
+    ClockRangeOut,
     EnsembleDayIn,
     EnsembleDayOut,
     EnsembleIn,
@@ -23,6 +31,8 @@ from backend.api.schemas import (
     PeriodOut,
     PeriodsOut,
     PeriodUpdateIn,
+    PracticeWindowIn,
+    PracticeWindowOut,
 )
 from backend.db.models import EnsembleDay, Period
 from backend.db.pipeline import get_session
@@ -57,6 +67,29 @@ def _ensemble_out(period: Period, days: list[EnsembleDay]) -> EnsembleOut | None
     )
 
 
+def _window_out(period: Period) -> PracticeWindowOut:
+    def pair(starts: time | None, ends: time | None) -> ClockRangeOut | None:
+        # 두 열은 함께 채워지거나 함께 비어 있습니다(periods_practice_window_pairs).
+        if starts is None or ends is None:
+            return None
+        return ClockRangeOut(starts_at=format_clock(starts), ends_at=format_clock(ends))
+
+    return PracticeWindowOut(
+        weekday=pair(period.practice_weekday_starts_at, period.practice_weekday_ends_at),
+        weekend=pair(period.practice_weekend_starts_at, period.practice_weekend_ends_at),
+    )
+
+
+def _window_in(req: PracticeWindowIn | None) -> WindowIn | None:
+    # 보내지 않았으면 None 을 그대로 넘겨 저장된 시간대를 유지합니다.
+    if req is None:
+        return None
+    def pair(one: ClockRangeOut | None) -> tuple[str, str] | None:
+        return None if one is None else (one.starts_at, one.ends_at)
+
+    return WindowIn(weekday=pair(req.weekday), weekend=pair(req.weekend))
+
+
 def _period_out(period: Period, days: list[EnsembleDay]) -> PeriodOut:
     return PeriodOut(
         id=period.id,
@@ -66,6 +99,7 @@ def _period_out(period: Period, days: list[EnsembleDay]) -> PeriodOut:
         everyday=period.everyday,
         first_run_at=format_clock(period.first_run_at),
         second_run_at=format_clock(period.second_run_at),
+        practice_window=_window_out(period),
         ensemble=_ensemble_out(period, days),
     )
 
@@ -104,6 +138,7 @@ def create_period(
         req.everyday,
         req.first_run_at,
         req.second_run_at,
+        _window_in(req.practice_window),
     )
     return _envelope(session, period)
 
@@ -127,6 +162,7 @@ def patch_period(
         req.everyday,
         req.first_run_at,
         req.second_run_at,
+        _window_in(req.practice_window),
     )
     return _envelope(session, period)
 

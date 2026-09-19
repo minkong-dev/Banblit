@@ -334,6 +334,10 @@ class Period(Base):
 
     ensemble_* 다섯 열은 전체합주 설정입니다(patch_note 8번). 날짜 범위·합주실·기본 시작/끝 시각을 함께 채우거나
     함께 null 로 변경합니다. null 이면 전체합주가 없는 기간입니다. 날짜마다 다른 시각은 ensemble_days 가 저장합니다.
+
+    practice_* 네 열은 팀별합주를 배정할 수 있는 하루 중의 시간대입니다. 합주실 개방시각과는 다른
+    값입니다 — 합주실이 09시에 열어도 팀별합주는 17시부터만 배정할 수 있습니다. 평일(월~금)과
+    주말(토·일)이 각각 한 쌍이고, null 인 쪽은 그날 합주실 개방시각 전체를 씁니다.
     """
 
     __tablename__ = "periods"
@@ -350,6 +354,10 @@ class Period(Base):
     ensemble_room_id: Mapped[int | None] = mapped_column(ForeignKey("rooms.id"), nullable=True)
     ensemble_starts_at: Mapped[time | None] = mapped_column(Time, nullable=True)
     ensemble_ends_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    practice_weekday_starts_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    practice_weekday_ends_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    practice_weekend_starts_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    practice_weekend_ends_at: Mapped[time | None] = mapped_column(Time, nullable=True)
 
     # 집중 합주기간끼리의 날짜 겹침 금지 제약(EXCLUDE)은 Reservation 의 겹침 금지 제약과 같이 migration 에만
     # 둡니다(migrations/versions/b5e1d9a37c42_focused_period_no_overlap.py).
@@ -373,6 +381,18 @@ class Period(Base):
         ),
         CheckConstraint(
             "ensemble_ends_at > ensemble_starts_at", name="periods_ensemble_times_order"
+        ),
+        # 평일·주말은 각각 한 쌍입니다. 한쪽만 채우면 끝 시각 없는 시간대가 되어 배정 구간을
+        # 정할 수 없습니다. 두 쌍은 서로 독립입니다 — 평일만 정하고 주말은 개방시각 전체로 둘 수 있습니다.
+        CheckConstraint(
+            "num_nulls(practice_weekday_starts_at, practice_weekday_ends_at) IN (0, 2)"
+            " AND num_nulls(practice_weekend_starts_at, practice_weekend_ends_at) IN (0, 2)",
+            name="periods_practice_window_pairs",
+        ),
+        CheckConstraint(
+            "(practice_weekday_ends_at > practice_weekday_starts_at OR practice_weekday_starts_at IS NULL)"
+            " AND (practice_weekend_ends_at > practice_weekend_starts_at OR practice_weekend_starts_at IS NULL)",
+            name="periods_practice_window_order",
         ),
     )
 

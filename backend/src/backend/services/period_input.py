@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 
 from backend.db.models import Room, UnavailableTime
@@ -69,24 +70,53 @@ def _repeat_step(row: UnavailableTime) -> timedelta | None:
     return None
 
 
-def build_engine_rooms(rooms: list[Room], days: list[date]) -> list[EngineRoom]:
+# 토요일·일요일의 date.weekday() 값입니다. 월요일이 0 이고 일요일이 6 입니다.
+SATURDAY = 5
+
+
+@dataclass(frozen=True)
+class PracticeWindow:
+    """팀별합주를 배정할 수 있는 하루 중의 시간대입니다. 평일(월~금)과 주말(토·일)이 다를 수 있습니다.
+
+    합주실 개방시각과는 다른 값입니다. 합주실이 09시에 열어도 팀별합주는 17시부터만 배정할 수
+    있습니다. 실제 배정 구간은 이 시간대와 합주실 개방시각의 교집합입니다.
+
+    None 인 쪽은 시간대를 정하지 않았다는 뜻이고, 그날은 합주실 개방시각 전체를 씁니다.
+    """
+
+    weekday: tuple[time, time] | None
+    weekend: tuple[time, time] | None
+
+    def on(self, day: date) -> tuple[time, time] | None:
+        return self.weekend if day.weekday() >= SATURDAY else self.weekday
+
+
+def build_engine_rooms(
+    rooms: list[Room], days: list[date], window: PracticeWindow | None = None
+) -> list[EngineRoom]:
     """합주실 × 날짜를 엔진 입력 합주실 목록으로 확장합니다.
 
     엔진은 한 합주실에 이어진 운영시간 하나만 받으므로 날짜마다 한 번씩 전달합니다.
     번호는 DB의 합주실 번호를 그대로 사용합니다 — 날짜가 다르면 시간 구간이 달라
     같은 번호가 여러 번 나와도 slot(점유 단위 길이의 시간 칸)끼리는 겹치지 않습니다.
+
+    window 를 넘기면 그날의 팀별합주 시간대와 겹치는 부분만 남깁니다. 겹치는 시간이 없는
+    날은 목록에서 빠집니다 — 길이가 0 이거나 음수인 구간을 엔진에 넘기면 칸을 만들지 못하거나
+    운영 시간이 잘못되었다고 거부합니다.
     """
     engine_rooms: list[EngineRoom] = []
     for day in days:
+        limits = None if window is None else window.on(day)
         for room in rooms:
+            start = datetime.combine(day, room.opens_at)
+            end = datetime.combine(day, room.closes_at)
+            if limits is not None:
+                start = max(start, datetime.combine(day, limits[0]))
+                end = min(end, datetime.combine(day, limits[1]))
+            if start >= end:
+                continue
             engine_rooms.append(
-                EngineRoom(
-                    id=room.id,
-                    open_period=TimeInterval(
-                        start=datetime.combine(day, room.opens_at),
-                        end=datetime.combine(day, room.closes_at),
-                    ),
-                )
+                EngineRoom(id=room.id, open_period=TimeInterval(start=start, end=end))
             )
     return engine_rooms
 

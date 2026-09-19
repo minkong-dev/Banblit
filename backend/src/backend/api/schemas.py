@@ -138,6 +138,33 @@ class EnsembleOut(BaseModel):
     days: list[EnsembleDayOut]
 
 
+class ClockRangeOut(BaseModel):
+    starts_at: str
+    ends_at: str
+
+
+class PracticeWindowOut(BaseModel):
+    """팀별합주를 배정할 수 있는 하루 중의 시간대입니다. 합주실 개방시각과는 다른 값입니다.
+
+    null 인 쪽은 시간대를 정하지 않았다는 뜻이고, 그날은 합주실 개방시각 전체를 씁니다.
+    두 쌍은 서로 독립입니다 — 평일만 좁히고 주말은 열어 둘 수 있습니다.
+    """
+
+    weekday: ClockRangeOut | None
+    weekend: ClockRangeOut | None
+
+
+class PracticeWindowIn(BaseModel):
+    """시간대 전체를 한 번에 대체합니다. 두 쌍을 모두 null 로 보내면 시간대를 지웁니다.
+
+    PATCH 에서 이 값을 보내지 않으면 저장된 시간대를 그대로 둡니다. "보내지 않음"과 "지움"을
+    이렇게 구분해야, 다른 값만 고치는 요청이 시간대를 조용히 지우지 않습니다.
+    """
+
+    weekday: ClockRangeOut | None = None
+    weekend: ClockRangeOut | None = None
+
+
 class PeriodOut(BaseModel):
     id: int
     kind: str
@@ -146,6 +173,8 @@ class PeriodOut(BaseModel):
     everyday: bool
     first_run_at: str
     second_run_at: str
+    # 정하지 않은 쌍은 null 입니다. 껍데기는 언제나 있습니다 — 화면이 null 검사를 두 번 하지 않습니다.
+    practice_window: PracticeWindowOut
     # 전체합주를 지정하지 않은 기간은 null 입니다.
     ensemble: EnsembleOut | None
 
@@ -178,6 +207,8 @@ class PeriodCreateIn(BaseModel):
     everyday: bool
     first_run_at: str
     second_run_at: str
+    # 생략하면 시간대를 정하지 않은 기간이 됩니다.
+    practice_window: PracticeWindowIn | None = None
 
 
 class PeriodUpdateIn(BaseModel):
@@ -187,6 +218,8 @@ class PeriodUpdateIn(BaseModel):
     everyday: bool | None = None
     first_run_at: str | None = None
     second_run_at: str | None = None
+    # 보내지 않으면 저장된 시간대를 그대로 둡니다. 지우려면 두 쌍이 null 인 객체를 보냅니다.
+    practice_window: PracticeWindowIn | None = None
 
 
 class TeamOut(BaseModel):
