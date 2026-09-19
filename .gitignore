@@ -37,3 +37,7 @@ frontend/playwright/.auth/
 
 # banblit.ps1 check 가 남기는 전체 출력. 판정만 화면에 내고 원문은 여기 쌓인다.
 .logs/
+
+# 백업 파일. docker-compose.yml 의 BACKUP_DIR 기본값이 ./backups 라 .env 에 값이 없으면
+# 저장소 안에 생성됩니다. DB 전체와 첨부 파일이 들어 있습니다.
+backups/

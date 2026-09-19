@@ -698,6 +698,29 @@ docker compose run --rm --no-deps web npm install @radix-ui/colors
   - **새 의존성은 사용자 승인을 받은 뒤에만 추가합니다.** `CLAUDE.md` 의 파일 생성 방식(모드 1 의 5단계)이 정한 규칙입니다.
   - 출력에 `npm warn install-scripts ... esbuild@... (postinstall: node install.js)` 가 나올 수 있습니다. 설치 스크립트 승인 경고이며, 이 경고가 나와도 패키지 설치와 `package.json` 기록은 끝난 상태입니다.
 
+### 10-5-1. 패키지 목록이 바뀐 뒤 dev 의 설치본을 맞추기
+
+```
+docker compose run --rm --no-deps web npm ci
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `frontend/package.json` 이나 `frontend/package-lock.json` 이 바뀐 뒤(다른 PC 에서
+  추가한 패키지를 pull 한 경우 포함) dev 의 설치본을 lockfile 과 같게 맞춥니다.
+- **옵션**
+  - `npm ci` — `package-lock.json` 에 적힌 버전을 그대로 설치합니다. `npm install` 과 달리
+    lockfile 을 변경하지 않고, `node_modules` 를 삭제한 뒤 처음부터 설치합니다.
+- **주의점**
+  - **dev 는 패키지를 image 가 아니라 `banblit-web-modules` volume 에 보관합니다.** volume 은
+    container 를 다시 만들어도 남으므로, `package.json` 이 바뀌어도 이 명령을 실행하기 전까지
+    설치본이 갱신되지 않습니다. 배포는 `frontend/Dockerfile` 이 image 를 만들 때마다 `npm ci` 를
+    실행하므로 이 문제가 없습니다.
+  - **증상이 설치 누락처럼 보이지 않습니다.** 2026-09-19 에 `@radix-ui/colors` 가 volume 에만
+    없어, 타입이 `any` 로 해석되면서 `npm run lint` 가 `no-unsafe-assignment` 129건을
+    출력했습니다. 화면 파일 3개(`RichText.tsx`·`richText.ts`·`teamColors.ts`)의 잘못으로
+    보였으나 원인은 설치본이었습니다. lint 나 타입 검사에서 갑자기 다수의 오류가 나오면 이 명령을
+    먼저 실행해 보십시오.
+
 ---
 
 ## 11. 배포
@@ -819,8 +842,9 @@ docker compose -f docker-compose.yml exec -T db pg_dump --clean --if-exists -U b
 ### 11-5. 백업으로 복원하기
 
 ```
-gunzip -c /srv/banblit/backups/db-20260909T000000Z.sql.gz | docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit
-docker run --rm -v banblit-attachments:/dst -v /srv/banblit/backups:/src alpine sh -c "tar -xzf /src/files-20260909T000000Z.tar.gz -C /dst"
+gunzip -c /srv/banblit/backups/db-20260909T000000Z.sql.gz | docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -v ON_ERROR_STOP=1
+docker volume ls --format "{{.Name}}" | grep attachments
+docker run --rm -v banblit_banblit-attachments:/dst -v /srv/banblit/backups:/src alpine sh -c "tar -xzf /src/files-20260909T000000Z.tar.gz -C /dst"
 ```
 
 - **실행 경로**: 서버의 저장소 루트
@@ -831,6 +855,14 @@ docker run --rm -v banblit-attachments:/dst -v /srv/banblit/backups:/src alpine 
   - 복원하는 동안 `api` 를 정지해 두는 편이 안전합니다. table 이 삭제됐다 생성되는 사이에 들어온
     요청이 어떤 값을 읽을지 정해져 있지 않습니다.
   - 첨부파일 복원은 volume 에 직접 압축을 풉니다. 현재 저장된 같은 이름 파일을 덮어씁니다.
+  - **volume 이름 앞에는 프로젝트 이름이 붙습니다.** compose 파일에 `banblit-attachments` 로
+    적혀 있어도 실제 이름은 `banblit_banblit-attachments` 입니다. `docker run -v` 에 짧은 이름을
+    적으면 docker 가 그 이름의 volume 을 새로 생성하고 거기에 압축을 풉니다. 명령은 성공으로
+    끝나는데 첨부는 복원되지 않습니다. 그래서 `docker volume ls` 로 실제 이름을 먼저 확인합니다.
+  - `psql` 에 `-v ON_ERROR_STOP=1` 을 붙입니다. 붙이지 않으면 중간 구문이 실패해도 나머지를
+    계속 실행하고 종료 코드 0 으로 끝나, 절반만 복원된 상태를 성공으로 오인합니다.
+  - **2026-09-19 에 dev 환경에서 실행해 확인했습니다.** 마커 행 1개와 첨부 파일 1개를 넣고
+    백업한 뒤 둘 다 삭제하고 위 명령으로 복원해, 양쪽이 모두 돌아오는 것을 확인했습니다.
 
 ---
 
