@@ -19,7 +19,8 @@ sources:
   - backend/src/backend/api/routers/unavailable.py # 불가능 일정 endpoint의 본인 확인
   - backend/src/backend/api/auth_dependency.py    # 요청을 보낸 사용자를 확인하는 파일
   - backend/tests/integration/db/                 # 합주실·기간·예약·불가능 일정 endpoint의 권한 분기를 확인하는 테스트
-  - frontend/src/routes/Settings.tsx              # 합주실·기간 권한 항목을 가진 사용자가 합주실·기간 값을 입력하는 화면. 매일 기간은 종료일 입력을 숨깁니다
+  - frontend/src/routes/SettingsRooms.tsx         # 합주실 권한 항목을 가진 사용자가 합주실 값을 입력하는 화면
+  - frontend/src/routes/SettingsPeriods.tsx       # 기간 권한 항목을 가진 사용자가 기간 값을 입력하는 화면. 매일 기간은 종료일 입력을 숨깁니다
   - frontend/src/lib/pipeline.ts                  # 매일 기간을 저장할 때 ends_on 에 starts_on 을 넣어 보내는 periodBody
   - frontend/src/lib/pipeline.test.ts             # periodBody 시나리오
   - backend/src/backend/services/period_service.py     # 매일 기간은 계산을 실행한 날 하루만 배정하고 전체합주 날짜를 제외하는 period_days

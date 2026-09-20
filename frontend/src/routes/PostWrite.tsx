@@ -6,7 +6,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { AppShell } from "../components/AppShell";
 import type { NavKey } from "../components/AppShell";
-import { WriteForm } from "../components/PostBoard";
+import { WriteForm } from "../components/PostWriteForm";
 import { can } from "../lib/account";
 import { boardListKey } from "../lib/pipeline";
 import { useMe, useMyTeams } from "../components/queries";
