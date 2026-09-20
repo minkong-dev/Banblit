@@ -16,7 +16,9 @@ sources:
   - frontend/src/lib/calendar.ts                 # 모든 화면이 함께 쓰는 날짜·요일·시각 표기
   - frontend/src/lib/account.ts          # 권한 항목 20가지의 한국어 이름, "내가 그 항목을 가졌는가" 판단, 프로필 카드의 역할 문구
   - frontend/src/lib/confirm.ts          # 삭제·취소·추방 전에 1회 확인하는 문구
-  - frontend/src/routes/Settings.tsx     # 설정 화면의 합주실·기간 탭. 매일 기간은 종료일 입력을 숨깁니다
+  - frontend/src/routes/Settings.tsx     # 설정 화면의 진입점 — 탭을 고르고 오른쪽 계산 패널을 표시
+  - frontend/src/routes/SettingsRooms.tsx   # 설정 화면의 합주실 탭 — 목록·추가·수정·삭제
+  - frontend/src/routes/SettingsPeriods.tsx # 설정 화면의 기간 탭. 매일 기간은 종료일 입력을 숨깁니다
   - frontend/src/lib/account.test.ts     # 역할 문구 시나리오
   - frontend/src/lib/pipeline.test.ts    # 매일 기간의 저장값과 멤버 추방 호출 시나리오
   - frontend/src/components/AppShell.tsx # 사이드바 관리 구역을 권한 항목으로 표시·숨김하는 컴포넌트
@@ -24,7 +26,9 @@ sources:
   - frontend/src/lib/jobs.ts             # 접수한 계산이 끝날 때까지 polling 하는 함수
   - frontend/src/lib/notifications.ts    # 알림 종류를 문장으로 변환하는 함수
   - frontend/src/lib/boards.ts           # 첨부의 크기·확장자를 화면에서 먼저 검증하는 함수
-  - frontend/src/components/PostBoard.tsx # 글·댓글·첨부를 함께 표시하는 컴포넌트
+  - frontend/src/components/PostBoard.tsx # 글 목록과 상세를 전환하는 게시판 컴포넌트
+  - frontend/src/components/PostComments.tsx # 댓글 작성 form 과 댓글 한 줄
+  - frontend/src/components/PostActions.tsx  # 글 블라인드·삭제·수정 버튼
   - frontend/nginx.conf.template         # 배포 앞단의 요청 크기 상한
   - frontend/src/components/             # 2개 화면이 함께 쓰는 컴포넌트
   - frontend/src/lib/                    # 서버 호출과 순수 계산 (테스트가 있는 곳)

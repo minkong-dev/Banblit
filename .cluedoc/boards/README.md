@@ -10,7 +10,9 @@ sources:
   - backend/tests/integration/db/test_attachment_endpoints.py  # 업로드·다운로드·삭제의 권한과 거절 시나리오
   - frontend/src/lib/boards.ts                  # 화면이 먼저 검증하는 크기·확장자와 안내 문구
   - frontend/src/lib/boards.test.ts             # 그 검증의 테스트
-  - frontend/src/components/PostBoard.tsx       # 파일을 선택·업로드·다운로드·삭제하는 화면
+  - frontend/src/components/PostWriteForm.tsx   # 파일을 선택해 글과 함께 올리는 작성 form
+  - frontend/src/components/PostAttachments.tsx # 올라간 파일을 내려받고 삭제하는 목록
+  - frontend/src/components/PostBoard.tsx       # 글 목록과 상세를 전환하는 게시판 화면
   - frontend/src/routes/SettingsBlinded.tsx     # 가려 둔 글을 보고 되돌리는 화면
   - backend/migrations/versions/e1f8b40c9d26_post_blinded_at.py  # 가려진 시각을 저장하는 열
   - backend/migrations/versions/f2a9c7b03e51_post_blinded_by.py  # 가린 사람을 저장하는 열
