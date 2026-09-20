@@ -661,8 +661,8 @@ docker compose run --rm --no-deps web npm run build
   - `npm run build` — `frontend/package.json` 의 `build` 를 실행합니다. 내용은 `tsc -b && vite build` 입니다. 타입 검사를 먼저 통과해야 bundle 생성으로 진행합니다.
   - `--rm --no-deps` — `10-2` 와 같은 이유입니다.
 - **주의점**
-  - **`frontend/dist/` 는 저장소에 커밋되어 있습니다.** 이 명령을 실행하면 `frontend/dist/` 안이 덮어써지므로, 커밋 전에 `git status` 로 무엇이 변경됐는지 확인합니다.
-  - 이 bundle 을 실제로 제공하는 서버는 아직 없습니다. 개발 서버는 배포에 포함되지 않으므로, 배포에서는 정적 파일을 제공하는 다른 서버가 bundle 제공을 담당해야 합니다. 아직 정하지 않았습니다.
+  - **`frontend/dist/` 는 저장소가 추적하지 않습니다**(`.gitignore` 24행). 이 명령을 실행해도 `git status` 에는 아무것도 뜨지 않습니다. 배포에 나가는 bundle 은 `10-4-1` 의 image 를 만들 때 그 안에서 다시 생성하므로, 여기서 만든 `frontend/dist/` 는 로컬 확인용입니다.
+  - 배포에서 이 bundle 을 제공하는 것은 nginx 입니다(`frontend/Dockerfile` 의 `prod` 단계가 `dist` 를 `/usr/share/nginx/html` 로 복사합니다). 요청 경로는 Caddy → nginx → api 이고, `/api` 만 서버로 전달하는 규칙이 `frontend/nginx.conf.template` 에 있습니다. 개발 서버(Vite)는 배포에 포함되지 않습니다.
 
 ### 10-4-1. 배포용 화면 image 를 만들고 링크 미리보기 주소를 확인하기
 
