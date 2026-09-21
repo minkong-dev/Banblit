@@ -4,7 +4,7 @@ sources:
   - backend/src/backend/scheduling/assignment.py   # 배정 계산과 입력 검증
   - backend/src/backend/scheduling/resolution.py    # 실패 시 인원 제외 제안
   - backend/src/backend/scheduling/availability.py   # 멤버·팀 가능 여부
-  - backend/src/backend/scheduling/slots.py          # 운영시간 → 1시간 slot
+  - backend/src/backend/scheduling/slots.py          # 운영시간 → slot
   - backend/src/backend/scheduling/interval.py       # 시간 구간과 그 유효성
   - backend/src/backend/api/auth_dependency.py       # 계산 실행·결과 조회·되돌리기 endpoint의 권한 항목 확인
   - backend/src/backend/api/routers/schedule.py      # 그 4개 endpoint에 어떤 항목을 요구하는지 선언한 위치, 사람이 다시 계산하거나 되돌렸을 때 알림을 저장하는 위치
@@ -47,7 +47,7 @@ flowchart TD
 ## Related Work
 
 - [Banblit 개요](../README.md) — 전체 기능 지도
-- [합주실과 기간](../practice-room-and-periods/README.md) — 합주실별 운영 시간과 1시간 slot 규칙
+- [합주실과 기간](../practice-room-and-periods/README.md) — 합주실별 운영 시간과 slot 규칙
 - [팀과 포지션](../teams/README.md) — 배정의 대상이 되는 팀과 그 포지션 구성
 - [LLM 도우미](../llm-assistant/README.md) — 배정이 막혔을 때 조율안을 제시하는 역할
 - [계정과 역할](../accounts-and-roles/README.md) — 계산·결과 보기·확정·되돌리기를 가르는 권한 항목의 정본
@@ -62,7 +62,7 @@ flowchart TD
 
 기간마다 지정해 둔 고정 시각에 하루 2회 실행되고, 그 시각이 지나면 사람이 아무것도 하지 않아도 계산이 자동으로 진행됩니다. 어떻게 진행되는지는 아래 "사람이 버튼을 누르지 않아도 실행되는 자동 계산" 절에서 따로 다룹니다.
 
-slot(1시간 단위 시간 칸)은 합주실별로 생성됩니다. 각 합주실이 여는 시간을 1시간 단위로 분할하고 그 slot 1개가 배정의 최소 단위이며, 합주실마다 여는 시간이 달라도 slot의 경계는 모든 합주실이 공유합니다. slot의 길이는 서버의 `SLOT_MINUTES` 상수 1개로 정의되어 있어, 변경할 경우 수정할 위치가 1곳입니다.
+slot(예약과 배정이 차지하는 시간 칸)은 합주실별로 생성됩니다. 각 합주실이 여는 시간을 칸 길이로 분할하고 그 slot 1개가 배정의 최소 단위이며, 합주실마다 여는 시간이 달라도 slot의 경계는 모든 합주실이 공유합니다. 칸 하나의 길이는 설정의 `slot_minutes` 이고 5·10·12·15·20·30·60분 중 하나입니다. 설정값이 없을 때의 기본값 60분은 서버의 `DEFAULT_SLOT_MINUTES` 상수 1개로 정의되어 있어, 변경할 경우 수정할 위치가 1곳입니다.
 
 ```
                       18:00   18:30   19:00   19:30   20:00
