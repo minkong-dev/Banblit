@@ -187,7 +187,7 @@ export function Scheduler() {
       {rooms.isError || periods.isError || query.isError ? (
         <div className="cut">
           <p><b>스케줄을 불러오지 못했어요</b>{reason(rooms.error ?? periods.error ?? query.error)}</p>
-          <button onClick={() => { void rooms.refetch(); void periods.refetch(); void query.refetch(); }}>
+          <button className="btn warn" onClick={() => { void rooms.refetch(); void periods.refetch(); void query.refetch(); }}>
             다시 불러오기
           </button>
         </div>

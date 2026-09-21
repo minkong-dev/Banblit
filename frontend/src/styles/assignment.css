@@ -42,8 +42,6 @@ body[data-page="admin"] {
   .act { display: flex; gap: 10px; flex-wrap: wrap; }
   /* 이 화면의 버튼은 한 단계 큽니다. 계산·되돌리기가 화면의 주된 동작입니다. */
   .btn { min-height: 50px; padding: 14px 22px; border-radius: 12px; font-size: 15px; transition: background-color .15s ease, color .15s ease; }
-  .btn.main { background: var(--brand); color: var(--brand-on); }
-  .btn.main:hover { background: var(--brand-press); }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
 
   .note { padding: 15px 17px; background: var(--amber-tint); border-radius: 13px; font-size: 13.5px; color: var(--t2); line-height: 1.75; margin-bottom: 18px; }
