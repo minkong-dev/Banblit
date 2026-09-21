@@ -116,8 +116,6 @@ def create_notice_post(
     return PostEnvelopeOut(post=_post_out(post, author, 0))
 
 
-# 블라인드는 글을 삭제하지 않고 목록·상세에서 가립니다. 작성자 본인에게도 보이지 않습니다.
-# 아래 세 endpoint 는 board_moderate 를 가진 사람만 호출합니다.
 # 작성 페이지를 열 때 호출합니다. 빈 글을 먼저 만들어야 본문에 파일을 넣을 수 있습니다
 # (첨부 업로드가 POST /posts/{id}/attachments 라 글 번호가 필요합니다).
 @router.post("/notices/drafts", response_model=PostEnvelopeOut, status_code=201)
@@ -156,6 +154,8 @@ def publish(
     return PostEnvelopeOut(post=_post_out(post, author, 0, None))
 
 
+# 블라인드는 글을 삭제하지 않고 목록·상세에서 가립니다. 작성자 본인에게도 보이지 않습니다.
+# 아래 세 endpoint 는 board_moderate 를 가진 사람만 호출합니다.
 @router.get("/blinded-posts", response_model=PostsOut)
 def read_blinded_posts(
     _: Member = Depends(require_permission("board_moderate")),
