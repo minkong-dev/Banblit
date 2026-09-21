@@ -217,6 +217,7 @@ export function SignUp() {
         placeholder="비밀번호를 한 번 더 입력해주세요." error={errors.pw3} />
 
       <Field name="cohort" label="기수" type="number" inputMode="numeric"
+        min={1} max={100} step={1}
         autoComplete="off" placeholder="예: 46" error={errors.cohort} />
 
       {/* 관리자코드는 운영을 맡은 사람만 받습니다. 넣으면 모든 권한을 가진 계정이 되고,
