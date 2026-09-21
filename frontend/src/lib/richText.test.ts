@@ -45,6 +45,15 @@ describe("sanitizeBody — iframe 은 허용한 주소만 남긴다", () => {
     expect(kept).toContain("youtube.com/embed/abc123");
   });
 
+  it("남긴 iframe 에는 referrerpolicy 를 붙인다", () => {
+    // 배포가 문서 전체에 Referrer-Policy: same-origin 을 내리므로, 이것이 없으면 유튜브가
+    // Referer 를 받지 못해 재생 화면에 오류 153 을 표시합니다. 이 값이 붙기 전에 저장된 글도
+    // 화면에 넣는 시점에 붙습니다.
+    const kept = sanitizeBody('<iframe src="https://www.youtube-nocookie.com/embed/abc123"></iframe>');
+
+    expect(kept).toContain('referrerpolicy="strict-origin-when-cross-origin"');
+  });
+
   it("첨부 파일 주소(같은 서버)는 남긴다", () => {
     expect(sanitizeBody('<iframe src="/api/attachments/7"></iframe>')).toContain("iframe");
   });

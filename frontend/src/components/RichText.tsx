@@ -257,9 +257,16 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
       Audio,
       Pdf,
       // 유튜브 주소를 붙여넣으면 그 자리에서 video player 로 변경됩니다.
-      // origin 을 넘기지 않으면 youtube-nocookie 가 임베드를 검증하지 못해 재생 화면에
-      // "플레이어 구성 오류"(153)를 표시합니다.
-      YoutubeTyped.configure({ nocookie: true, origin: window.location.origin, width: 640, height: 360 }),
+      // referrerpolicy 를 iframe 에 직접 지정합니다. 배포는 문서 전체에 Referrer-Policy: same-origin
+      // 을 내려(deploy/Caddyfile) 다른 출처로 나가는 요청에 Referer 를 붙이지 않는데, 유튜브는
+      // Referer 가 없으면 재생 화면에 "동영상 플레이어 구성 오류"(153)를 표시합니다.
+      // 요소에 지정한 정책이 문서 정책보다 우선하므로, 이 iframe 만 출처(경로 제외)를 보냅니다.
+      YoutubeTyped.configure({
+        nocookie: true,
+        width: 640,
+        height: 360,
+        HTMLAttributes: { referrerpolicy: "strict-origin-when-cross-origin" },
+      }),
       // 본문에 파일을 drop 하거나 붙여넣으면 잡아서 올립니다. 그리는 것은 이 확장이 하지 않고,
       // 아래 attach 가 형식에 따라 노드를 넣습니다.
       FileHandler.configure({
