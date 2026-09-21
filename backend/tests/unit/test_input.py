@@ -18,8 +18,8 @@ from backend.services.input import (
     require_non_empty,
     require_on_the_hour,
     require_password,
-    require_one_repeat_cycle,
-    require_repeat_until_only_when_repeating,
+    require_repeat_end,
+    require_repeat_weekdays,
     require_same_day,
     require_valid_kind,
     require_valid_slot_bounds,
@@ -242,32 +242,43 @@ def test_rejects_timezone_aware_moments() -> None:
         )
 
 
-def test_allows_repeat_until_when_repeating_weekly() -> None:
-    require_repeat_until_only_when_repeating(False, True, date(2026, 12, 31))
+def test_allows_a_repeat_end_date_when_repeating() -> None:
+    require_repeat_end(0b0000001, None, date(2026, 12, 31))
 
 
-def test_allows_repeat_until_when_repeating_daily() -> None:
-    require_repeat_until_only_when_repeating(True, False, date(2026, 12, 31))
+def test_allows_a_repeat_count_when_repeating() -> None:
+    require_repeat_end(0b0000001, 5, None)
 
 
-def test_allows_no_repeat_until_when_not_repeating() -> None:
-    require_repeat_until_only_when_repeating(False, False, None)
+def test_allows_repeating_without_an_end() -> None:
+    require_repeat_end(0b0000001, None, None)
 
 
-def test_rejects_repeat_until_when_not_repeating() -> None:
-    with pytest.raises(ValueError, match="반복"):
-        require_repeat_until_only_when_repeating(False, False, date(2026, 12, 31))
+def test_allows_no_end_when_not_repeating() -> None:
+    require_repeat_end(None, None, None)
 
 
-def test_allows_one_repeat_cycle() -> None:
-    require_one_repeat_cycle(True, False)
-    require_one_repeat_cycle(False, True)
-    require_one_repeat_cycle(False, False)
+def test_rejects_a_repeat_end_when_not_repeating() -> None:
+    with pytest.raises(ValueError, match="반복이 아니면"):
+        require_repeat_end(None, None, date(2026, 12, 31))
 
 
-def test_rejects_daily_and_weekly_together() -> None:
-    with pytest.raises(ValueError, match="함께 켤 수 없습니다"):
-        require_one_repeat_cycle(True, True)
+def test_rejects_a_count_and_an_end_date_together() -> None:
+    # 화면도 같은 문구를 표시하고 수정하도록 유도합니다.
+    with pytest.raises(ValueError, match="동시에 설정할 수 없어요"):
+        require_repeat_end(0b0000001, 5, date(2026, 12, 31))
+
+
+def test_rejects_a_repeat_count_below_one() -> None:
+    with pytest.raises(ValueError, match="반복 횟수는"):
+        require_repeat_end(0b0000001, 0, None)
+
+
+def test_allows_every_weekday_and_rejects_values_outside_the_range() -> None:
+    assert require_repeat_weekdays(0b1111111) == 0b1111111
+    assert require_repeat_weekdays(None) is None
+    with pytest.raises(ValueError, match="반복 요일"):
+        require_repeat_weekdays(0b10000000)
 
 
 def test_require_team_name_rejects_an_empty_string() -> None:

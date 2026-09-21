@@ -507,11 +507,15 @@ class UnavailableOut(BaseModel):
     member_id: int
     starts_at: datetime
     ends_at: datetime
-    repeats_daily: bool
-    repeats_weekly: bool
+    # 반복할 요일의 집합입니다. 월요일 1, 화요일 2, 수요일 4 … 일요일 64 를 더한 값입니다.
+    # null 이면 반복하지 않고, 127 이면 매일입니다.
+    repeat_weekdays: int | None
+    # 반복 횟수입니다. 시작 회차를 포함해 셉니다. repeat_until 과 동시에 지정할 수 없습니다.
+    repeat_count: int | None
     repeat_until: date | None
     reason: str | None
     name: str | None
+
 
 
 class UnavailableTimesOut(BaseModel):
@@ -527,8 +531,10 @@ class UnavailableCreateIn(BaseModel):
     # 삭제되어 9시간 어긋난 시각이 오류 없이 저장됩니다. 예약의 두 모델도 같은 이유로 같은 타입입니다.
     starts_at: NaiveDatetime
     ends_at: NaiveDatetime
-    repeats_daily: bool = False
-    repeats_weekly: bool = False
+    # 반복할 요일의 집합입니다. 월요일 1 부터 일요일 64 까지 더한 값이고 상한은 127 입니다.
+    repeat_weekdays: int | None = Field(default=None, ge=0, le=127)
+    # 반복 횟수입니다. 1 이상이어야 하고 repeat_until 과 동시에 보내면 422 로 거부합니다.
+    repeat_count: int | None = Field(default=None, ge=1)
     repeat_until: date | None = None
     # 사유는 사용자가 입력하는 한 줄 문장입니다. 입력하지 않아도 등록됩니다.
     reason: str | None = Field(default=None, max_length=200)

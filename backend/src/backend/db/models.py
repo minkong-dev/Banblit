@@ -14,6 +14,8 @@ from sqlalchemy import (
     FetchedValue,
     ForeignKey,
     Index,
+    Integer,
+    SmallInteger,
     String,
     Text,
     Time,
@@ -275,13 +277,13 @@ class TeamSlot(Base):
 
 
 class UnavailableTime(Base):
-    """멤버의 불가능 시간입니다. 반복이 켜지면 repeat_until 까지 매일 또는 매주 반복합니다.
+    """멤버의 불가능 시간입니다. 반복이 켜지면 고른 요일마다 반복합니다.
 
     시각은 tzinfo(시간대 정보)가 없는 값으로 저장합니다. 엔진의 TimeInterval 과 같은 규칙입니다.
 
-    반복은 repeats_daily 와 repeats_weekly 두 열로 저장합니다. 둘 다 켜는 것은 의미가 없으므로
-    경계에서 거부합니다(services/input.py 의 require_one_repeat_cycle). 하나의 열로 합치지 않는 이유는
-    이미 repeats_weekly 로 저장된 행이 있기 때문입니다.
+    반복은 repeat_weekdays 하나로 저장합니다. 어느 요일에 반복할지를 담고, 매일 반복은 일곱 요일을
+    전부 고른 것과 같습니다. 끝나는 조건은 repeat_count(횟수)나 repeat_until(종료일) 중 하나이고,
+    둘 다 지정하면 경계에서 거부합니다(services/input.py 의 require_repeat_end).
 
     reason 은 사용자가 입력하는 사유입니다. 엔진은 사용하지 않고 화면에만 표시합니다. null 을 허용합니다.
     name 은 캘린더에 표시할 이름입니다. 비어 있으면 화면이 "불가능 일정"으로 표시합니다.
@@ -295,8 +297,11 @@ class UnavailableTime(Base):
     )
     starts_at: Mapped[datetime] = mapped_column(DateTime)
     ends_at: Mapped[datetime] = mapped_column(DateTime)
-    repeats_daily: Mapped[bool] = mapped_column(Boolean, default=False)
-    repeats_weekly: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 반복할 요일의 집합입니다. 월요일이 1, 화요일이 2, 수요일이 4 … 일요일이 64 이고 더해서 저장합니다.
+    # date.weekday() 와 같은 순서입니다. null 이거나 0 이면 반복하지 않습니다. 일곱 요일 전부(127)가 매일 반복입니다.
+    repeat_weekdays: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # 반복 횟수입니다. 시작 회차를 포함해 셉니다. repeat_until 과 동시에 지정할 수 없습니다(services/input.py).
+    repeat_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     repeat_until: Mapped[date | None] = mapped_column(Date, nullable=True)
     reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
     name: Mapped[str | None] = mapped_column(String(60), nullable=True)

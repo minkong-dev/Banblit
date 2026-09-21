@@ -274,7 +274,7 @@ def test_assign_reports_a_coordination_proposal_with_real_names(
             member_id=member_2.id,
             starts_at=datetime(2026, 8, 1, 18, 0),
             ends_at=datetime(2026, 8, 1, 19, 0),
-            repeats_weekly=False,
+            repeat_weekdays=None,
             repeat_until=None,
         )
     )
@@ -797,7 +797,7 @@ def _blocked_team(db_session: Session) -> tuple[int, int]:
                 member_id=blocked.id,
                 starts_at=datetime(2026, 8, 1, 18, 0),
                 ends_at=datetime(2026, 8, 1, 19, 0),
-                repeats_weekly=False,
+                repeat_weekdays=None,
                 repeat_until=None,
             ),
         ]

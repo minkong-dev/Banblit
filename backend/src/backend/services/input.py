@@ -159,14 +159,29 @@ def require_within_room_hours(
         raise ValueError("합주실 운영 시간 안에서만 예약할 수 있습니다")
 
 
-def require_one_repeat_cycle(repeats_daily: bool, repeats_weekly: bool) -> None:
-    """매일과 매주를 동시에 활성화하는 것을 금지합니다. 둘 다 비활성화하면 한 번 일정입니다."""
-    if repeats_daily and repeats_weekly:
-        raise ValueError("매일 반복과 매주 반복을 함께 켤 수 없습니다")
+# 요일 집합이 가질 수 있는 최댓값입니다. 월요일 1 부터 일요일 64 까지 일곱 개를 전부 더한 값입니다.
+ALL_WEEKDAYS = 0b1111111
+# 반복 횟수의 상한입니다. 하루 한 번씩이라도 5년을 넘기지 않게 합니다.
+MAX_REPEAT_COUNT = 365 * 5
 
 
-def require_repeat_until_only_when_repeating(
-    repeats_daily: bool, repeats_weekly: bool, repeat_until: date | None
+def require_repeat_weekdays(value: int | None) -> int | None:
+    """반복할 요일의 집합입니다. None 이거나 0 이면 반복하지 않습니다. 범위 밖이면 거부합니다."""
+    if value is None:
+        return None
+    if value < 0 or value > ALL_WEEKDAYS:
+        raise ValueError("반복 요일 값이 올바르지 않습니다")
+    return value
+
+
+def require_repeat_end(
+    repeat_weekdays: int | None, repeat_count: int | None, repeat_until: date | None
 ) -> None:
-    if not repeats_daily and not repeats_weekly and repeat_until is not None:
-        raise ValueError("반복이 아니면 반복 종료일을 넣을 수 없습니다")
+    """반복이 끝나는 조건을 검증합니다. 횟수와 종료일은 동시에 지정할 수 없습니다."""
+    repeating = bool(repeat_weekdays)
+    if not repeating and (repeat_count is not None or repeat_until is not None):
+        raise ValueError("반복이 아니면 반복 횟수와 반복 종료일을 넣을 수 없습니다")
+    if repeat_count is not None and repeat_until is not None:
+        raise ValueError("반복 횟수와 반복 종료일은 동시에 설정할 수 없어요")
+    if repeat_count is not None and (repeat_count < 1 or repeat_count > MAX_REPEAT_COUNT):
+        raise ValueError(f"반복 횟수는 1에서 {MAX_REPEAT_COUNT} 사이여야 합니다")

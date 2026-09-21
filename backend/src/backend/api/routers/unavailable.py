@@ -11,6 +11,7 @@ from backend.api.schemas import (
 from backend.services.unavailable_service import (
     create_unavailable,
     delete_unavailable,
+    update_unavailable,
     list_unavailable,
 )
 from backend.db.models import Member, UnavailableTime
@@ -25,8 +26,8 @@ def _unavailable_out(row: UnavailableTime) -> UnavailableOut:
         member_id=row.member_id,
         starts_at=row.starts_at,
         ends_at=row.ends_at,
-        repeats_daily=row.repeats_daily,
-        repeats_weekly=row.repeats_weekly,
+        repeat_weekdays=row.repeat_weekdays,
+        repeat_count=row.repeat_count,
         repeat_until=row.repeat_until,
         reason=row.reason,
         name=row.name,
@@ -60,8 +61,37 @@ def create_unavailable_endpoint(
         requester,
         req.starts_at,
         req.ends_at,
-        req.repeats_daily,
-        req.repeats_weekly,
+        req.repeat_weekdays,
+        req.repeat_count,
+        req.repeat_until,
+        req.reason,
+        req.name,
+    )
+    return UnavailableEnvelopeOut(time=_unavailable_out(row))
+
+
+# 수정은 생성과 같은 본문을 받아 전부 덮어씁니다. 일부만 받으면 반복 요일·횟수·종료일의 조합을
+# 보내지 않은 값과 함께 판정해야 해서, 어느 조합이 거부되는지 사용자가 예측할 수 없습니다.
+@router.patch(
+    "/members/{member_id}/unavailable/{time_id}",
+    response_model=UnavailableEnvelopeOut,
+)
+def update_unavailable_endpoint(
+    member_id: int,
+    time_id: int,
+    req: UnavailableCreateIn,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> UnavailableEnvelopeOut:
+    row = update_unavailable(
+        session,
+        member_id,
+        requester,
+        time_id,
+        req.starts_at,
+        req.ends_at,
+        req.repeat_weekdays,
+        req.repeat_count,
         req.repeat_until,
         req.reason,
         req.name,
