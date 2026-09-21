@@ -113,14 +113,8 @@ body[data-page="settings"] {
   .tile.add button:hover { color: var(--brand); }
 
   /* ===== 멤버 표 =====
-     명단은 카드의 높이를 전부 사용하고 그 안에서만 스크롤합니다. */
-  .roster { padding: 0 20px 18px; flex: 1; min-height: 0; overflow-y: auto; }
-  /* permission set 줄 + 명단 카드 2장이 있는 탭은 화면 전체가 스크롤되지 않습니다. 아래 카드가
-     남는 높이를 가져가고, 스크롤되는 요소는 그 안의 표뿐입니다. */
-  .main:has(.roster) { overflow: hidden; }
-  .main:has(.roster) > .card:last-child {
-    flex: 1; display: flex; flex-direction: column; min-height: 0;
-  }
+     표가 길어지면 표 구역이 아니라 화면(.main)이 통째로 스크롤합니다. */
+  .roster { padding: 0 20px 18px; }
   .roster table { width: 100%; border-collapse: collapse; }
   .roster th {
     position: sticky; top: 0; background: var(--card); z-index: 1;
