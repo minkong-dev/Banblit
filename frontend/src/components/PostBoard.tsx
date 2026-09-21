@@ -73,7 +73,7 @@ function PostList(props: {
   emptyText: string;
   onOpen: (id: number) => void;
   buttonRef: (id: number) => (el: HTMLButtonElement | null) => void;
-  boxRef: RefObject<HTMLUListElement | null>;
+  boxRef: (el: HTMLUListElement | null) => (() => void) | undefined;
 }) {
   const { posts, state, emptyText, onOpen, buttonRef, boxRef } = props;
   return (
