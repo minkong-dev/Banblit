@@ -1,6 +1,6 @@
 // 여러 화면에서 공유하는 DOM·화면 상태 훅입니다. 서버 조회 훅은 queries.ts 에 있습니다.
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
 /** 클릭으로 여는 팝업 하나입니다. 열려 있는 동안 바깥을 누르거나 Escape를 누르면 닫힙니다.
@@ -54,14 +54,19 @@ export function usePage(page: string): void {
  *  그래야 페이지네이션과 추가 버튼이 화면에서 항상 같은 위치에 있습니다.
  *
  *  줄 높이는 첫 줄을 실제로 측정해서 사용합니다. 글자 크기나 여백을 수정하면 값이 자동으로 반영됩니다.
- *  아직 줄이 없으면 fallback 높이를 사용합니다. 창 크기가 변경되면 다시 측정합니다. */
-export function useFitCount(fallbackRowHeight: number): [RefObject<HTMLUListElement | null>, number] {
-  const box = useRef<HTMLUListElement | null>(null);
+ *  아직 줄이 없으면 fallback 높이를 사용합니다. 창 크기가 변경되면 다시 측정합니다.
+ *
+ *  ref 는 ref object 가 아니라 ref callback 입니다. 목록 상자는 상세 글을 열 때 DOM 에서 제거되고
+ *  목록으로 돌아올 때 새 요소로 다시 생성됩니다. effect 로 감시하면 처음 상자만 계속 붙들고 있어,
+ *  제거된 상자의 높이 0 이 count 를 1 로 만들고 새 상자는 측정되지 않습니다. ref callback 은
+ *  요소가 바뀔 때마다 React 가 이전 것을 정리하고 다시 호출하므로 새 상자를 측정합니다. */
+export function useFitCount(
+  fallbackRowHeight: number,
+): [(target: HTMLUListElement | null) => (() => void) | undefined, number] {
   const [count, setCount] = useState(1);
 
-  useEffect(() => {
-    const target = box.current;
-    if (target === null) return;
+  const attach = useCallback((target: HTMLUListElement | null): (() => void) | undefined => {
+    if (target === null) return undefined;
 
     const measure = (): void => {
       const row = target.querySelector("li");
@@ -75,5 +80,5 @@ export function useFitCount(fallbackRowHeight: number): [RefObject<HTMLUListElem
     return () => watch.disconnect();
   }, [fallbackRowHeight]);
 
-  return [box, count];
+  return [attach, count];
 }
