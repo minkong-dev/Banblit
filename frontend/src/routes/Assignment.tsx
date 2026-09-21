@@ -169,7 +169,7 @@ export function Assignment() {
   const actions = !canRun && !canRollback ? null : (
     <div className="act">
       {!canRun ? null : (
-        <button className="btn main" disabled={recompute.isPending || activePeriodId === null}
+        <button className="btn go" disabled={recompute.isPending || activePeriodId === null}
           onClick={() => recompute.mutate({ team_ids: teamIds, room_ids: roomIds })}>
           {recompute.isPending ? "스케줄링 진행 중…" : "스케줄링"}
         </button>

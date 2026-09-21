@@ -119,7 +119,7 @@ export function AssignmentStatus({
   if (roundAt !== null) {
     return (
       <>
-        <h2>{stampLabel(roundAt)}에 밀려난 시간표입니다</h2>
+        <h2>{stampLabel(roundAt)} 현 배정안 업데이트 직전 배정기록이에요</h2>
         <p className="sub">
           {roundPending
             ? LOADING_TEXT
@@ -138,7 +138,7 @@ export function AssignmentStatus({
     const who = proposal.excluded_member;
     return (
       <>
-        <h2>{who.name} 멤버를 제외하면 될 것 같아요.</h2>
+        <h2>{who.name} 멤버를 제외하고 진행하는건 어떨까요?</h2>
         <p className="sub">
           해당 인원의 불가능 시간으로 인해 이상적인 배정안을 찾지 못했어요.
         </p>
@@ -149,7 +149,7 @@ export function AssignmentStatus({
         </div>
         <div className="act">
           {!canConfirm ? null : (
-            <button className="btn main" disabled={confirmPending} onClick={() => onConfirm(who.id)}>
+            <button className="btn go" disabled={confirmPending} onClick={() => onConfirm(who.id)}>
               {confirmPending ? "배정안 확정 중…" : "해당 배정안으로 확정"}
             </button>
           )}
@@ -186,11 +186,11 @@ export function AssignmentStatus({
     <>
       <h2>확정된 배정안이에요</h2>
       <p className="sub">
-        합주 {shown.length}번이고, 총 {hours.toFixed(1)}시간이에요.
+        총 {shown.length}회 합주이고, 도합 {hours.toFixed(1)}시간이에요.
       </p>
       {counts}
       {!canRun ? null : (
-        <div className="note">다시 스케줄링하면 현재 배정안은 기록 후 새 배정안으로 변경되어요.</div>
+        <div className="note">다시 스케줄링하면 현재 배정안은 기록 후 새 배정안으로 변경돼요.</div>
       )}
       {actions}
     </>
