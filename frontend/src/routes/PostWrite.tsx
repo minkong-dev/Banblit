@@ -20,13 +20,13 @@ export function NoticeWrite() {
     <WritePage
       current="notice"
       title="공지 작성"
-      hint="전체에게 보입니다"
+      hint="멤버 전체에게 공개돼요"
       draftPath="/notices/drafts"
       listPath="/notices"
       listKey="/notices"
       authorId={me?.id ?? null}
       allowed={can(me, "notice_write")}
-      denied="공지 작성 권한이 있는 사람만 작성이 가능해요."
+      denied="공지 작성 권한이 있는 멤버만 작성이 가능해요."
     />
   );
 }
