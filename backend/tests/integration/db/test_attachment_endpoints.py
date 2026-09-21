@@ -111,17 +111,43 @@ def test_disallowed_extension_is_rejected(
     assert _stored_files(storage_dir) == []
 
 
-def test_only_the_author_can_attach_to_a_post(
+def test_a_reader_can_attach_to_someone_elses_notice(
     api_client: TestClient, account: AccountFactory, storage_dir: Path
 ) -> None:
+    # 댓글에 넣은 사진은 그 글의 attachment 로 올라갑니다. 글쓴이만 올릴 수 있으면
+    # 댓글은 쓸 수 있는데 사진은 넣을 수 없습니다. 댓글 작성과 같은 규칙을 적용합니다.
     _, head = account("박서연", "head@example.com")
     _, other = account("김도윤", "other@example.com")
     post_id = _notice(api_client, head)
 
     response = api_client.post(
         f"/posts/{post_id}/attachments",
-        files={"file": ("남의글.txt", b"nope", "text/plain")},
+        files={"file": ("댓글사진.txt", b"ok", "text/plain")},
         cookies=other,
+    )
+
+    assert response.status_code == 201
+    assert len(_stored_files(storage_dir)) == 1
+
+
+def test_non_member_cannot_attach_to_a_team_board_post(
+    api_client: TestClient, account: AccountFactory, storage_dir: Path
+) -> None:
+    # 권한을 완화해도 팀 소속 확인은 유지합니다. 팀 게시판 글은 그 팀 사람만 읽습니다.
+    head_id, head = account("박서연", "head@example.com")
+    _, outsider = account("김도윤", "outsider@example.com")
+    team_id = _make_team(api_client, head, "밴드가")
+    _seat(api_client, head, team_id, head_id)
+    post_id = api_client.post(
+        f"/teams/{team_id}/posts",
+        json={"title": "팀 글", "body": "팀 내용"},
+        cookies=head,
+    ).json()["post"]["id"]
+
+    response = api_client.post(
+        f"/posts/{post_id}/attachments",
+        files={"file": ("남의팀.txt", b"nope", "text/plain")},
+        cookies=outsider,
     )
 
     assert response.status_code == 403
