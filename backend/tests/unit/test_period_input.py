@@ -3,6 +3,7 @@ from datetime import date, datetime, time
 import pytest
 
 from backend.services.period_input import (
+    ALL_WEEKDAYS,
     PracticeWindow,
     auto_sessions_per_team,
     build_engine_rooms,
@@ -23,13 +24,21 @@ def _row(
     repeats_weekly: bool = False,
     repeat_until: date | None = None,
     repeats_daily: bool = False,
+    repeat_weekdays: int | None = None,
+    repeat_count: int | None = None,
 ) -> UnavailableTime:
+    # repeats_weekly 와 repeats_daily 는 옛 표기입니다. 요일 집합으로 바꾸어 넘깁니다 —
+    # 매주는 시작일의 요일 하나, 매일은 일곱 요일 전부입니다.
+    if repeat_weekdays is None and repeats_daily:
+        repeat_weekdays = ALL_WEEKDAYS
+    if repeat_weekdays is None and repeats_weekly:
+        repeat_weekdays = 1 << starts_at.weekday()
     return UnavailableTime(
         member_id=1,
         starts_at=starts_at,
         ends_at=ends_at,
-        repeats_daily=repeats_daily,
-        repeats_weekly=repeats_weekly,
+        repeat_weekdays=repeat_weekdays,
+        repeat_count=repeat_count,
         repeat_until=repeat_until,
     )
 
@@ -136,7 +145,7 @@ def test_repeats_weekly_none_is_treated_as_not_repeating() -> None:
             member_id=1,
             starts_at=datetime(2026, 8, 3, 19, 0),
             ends_at=datetime(2026, 8, 3, 21, 0),
-            repeats_weekly=None,
+            repeat_weekdays=None,
             repeat_until=None,
         )
     ]
@@ -379,3 +388,62 @@ def test_a_day_with_no_overlap_produces_no_room() -> None:
     )
 
     assert engine_rooms == []
+
+
+def test_only_the_chosen_weekdays_repeat() -> None:
+    # 월·수·금만 고르면 화요일과 목요일에는 생기지 않습니다. 2026-09-07 은 월요일입니다.
+    chosen = (1 << 0) | (1 << 2) | (1 << 4)
+    expanded = expand_unavailable(
+        [_row(datetime(2026, 9, 7, 18), datetime(2026, 9, 7, 20), repeat_weekdays=chosen)],
+        datetime(2026, 9, 7), datetime(2026, 9, 14),
+    )
+
+    assert [item.start.date().isoformat() for item in expanded] == [
+        "2026-09-07", "2026-09-09", "2026-09-11",
+    ]
+
+
+def test_a_repeat_count_limits_how_many_times_it_happens() -> None:
+    # 매일 반복은 일곱 요일 전부이므로 3주면 21일입니다.
+    expanded = expand_unavailable(
+        [_row(datetime(2026, 9, 7, 18), datetime(2026, 9, 7, 20), repeats_daily=True, repeat_count=3)],
+        datetime(2026, 9, 7), datetime(2026, 9, 30),
+    )
+
+    assert len(expanded) == 21
+    assert expanded[0].start.date().isoformat() == "2026-09-07"
+    assert expanded[-1].start.date().isoformat() == "2026-09-27"
+
+
+def test_a_repeat_count_counts_weeks_not_single_days() -> None:
+    # 고른 요일 전부가 한 세트입니다. 월·금을 고르고 2 면 2주 동안, 곧 월·금·월·금 네 번입니다.
+    chosen = (1 << 0) | (1 << 4)
+    expanded = expand_unavailable(
+        [_row(datetime(2026, 9, 7, 18), datetime(2026, 9, 7, 20), repeat_weekdays=chosen, repeat_count=2)],
+        datetime(2026, 9, 7), datetime(2026, 9, 30),
+    )
+
+    assert [item.start.date().isoformat() for item in expanded] == [
+        "2026-09-07", "2026-09-11", "2026-09-14", "2026-09-18",
+    ]
+
+
+def test_a_repeat_count_of_one_covers_only_the_first_week() -> None:
+    # 1 이면 시작일이 속한 주의 고른 요일만이고 다음 주로 넘어가지 않습니다.
+    chosen = (1 << 0) | (1 << 4)
+    expanded = expand_unavailable(
+        [_row(datetime(2026, 9, 7, 18), datetime(2026, 9, 7, 20), repeat_weekdays=chosen, repeat_count=1)],
+        datetime(2026, 9, 7), datetime(2026, 9, 30),
+    )
+
+    assert [item.start.date().isoformat() for item in expanded] == ["2026-09-07", "2026-09-11"]
+
+
+def test_a_start_day_outside_the_chosen_weekdays_still_repeats_on_them() -> None:
+    # 월요일에 만들면서 화요일만 골랐으면 시작일에는 생기지 않고 화요일부터 생깁니다.
+    expanded = expand_unavailable(
+        [_row(datetime(2026, 9, 7, 18), datetime(2026, 9, 7, 20), repeat_weekdays=1 << 1)],
+        datetime(2026, 9, 7), datetime(2026, 9, 17),
+    )
+
+    assert [item.start.date().isoformat() for item in expanded] == ["2026-09-08", "2026-09-15"]

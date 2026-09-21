@@ -17,13 +17,13 @@ def test_weekly_repeating_unavailable_time_round_trips(db_session: Session) -> N
             member_id=member.id,
             starts_at=datetime(2026, 7, 21, 18, 0),
             ends_at=datetime(2026, 7, 21, 20, 0),
-            repeats_weekly=True,
+            repeat_weekdays=0b1000000,
             repeat_until=date(2026, 9, 30),
         )
     )
     db_session.commit()
     saved = db_session.scalars(select(UnavailableTime)).one()
-    assert saved.repeats_weekly is True
+    assert saved.repeat_weekdays == 0b1000000
     assert saved.repeat_until == date(2026, 9, 30)
 
 

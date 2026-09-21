@@ -135,7 +135,7 @@ def test_failed_assignment_saves_nothing_and_names_who_to_exclude(
             member_id=other.id,
             starts_at=datetime(2026, 8, 1, 18, 0),
             ends_at=datetime(2026, 8, 1, 19, 0),
-            repeats_weekly=False,
+            repeat_weekdays=None,
             repeat_until=None,
         )
     )
@@ -226,7 +226,7 @@ def test_failed_reassignment_preserves_the_current_schedule(
             member_id=member_id,
             starts_at=datetime(2026, 8, 1, 18, 0),
             ends_at=datetime(2026, 8, 1, 19, 0),
-            repeats_weekly=False,
+            repeat_weekdays=None,
             repeat_until=None,
         )
     )
@@ -387,7 +387,7 @@ def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
             member_id=other.id,
             starts_at=datetime(2026, 8, 2, 18, 0),
             ends_at=datetime(2026, 8, 2, 19, 0),
-            repeats_weekly=False,
+            repeat_weekdays=None,
             repeat_until=None,
         )
     )
@@ -435,14 +435,14 @@ def test_multiple_unavailable_times_for_the_same_person_all_block_assignment(
                 member_id=member_id,
                 starts_at=datetime(2026, 8, 1, 18, 0),
                 ends_at=datetime(2026, 8, 1, 20, 0),
-                repeats_weekly=False,
+                repeat_weekdays=None,
                 repeat_until=None,
             ),
             UnavailableTime(
                 member_id=member_id,
                 starts_at=datetime(2026, 8, 1, 20, 0),
                 ends_at=datetime(2026, 8, 1, 22, 0),
-                repeats_weekly=False,
+                repeat_weekdays=None,
                 repeat_until=None,
             ),
         ]
@@ -472,7 +472,7 @@ def test_excluding_the_proposed_member_makes_the_assignment_savable(
             member_id=blocked.id,
             starts_at=datetime(2026, 8, 1, 18, 0),
             ends_at=datetime(2026, 8, 1, 19, 0),
-            repeats_weekly=False,
+            repeat_weekdays=None,
             repeat_until=None,
         )
     )

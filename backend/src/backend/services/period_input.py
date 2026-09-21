@@ -9,6 +9,11 @@ from backend.scheduling.pipeline import TimeInterval, generate_slots
 
 DAY = timedelta(days=1)
 WEEK = timedelta(days=7)
+# 요일 일곱 개를 전부 고른 값입니다. 매일 반복과 같습니다.
+ALL_WEEKDAYS = 0b1111111
+# 반복을 전개할 때 시작일로부터 계산할 최대 기간입니다. 고른 요일이 없거나 종료일이 잘못 들어와도
+# 무한히 돌지 않게 하는 상한입니다. 5년이면 이 서비스의 어떤 조회 범위보다 넓습니다.
+MAX_REPEAT_SPAN = timedelta(days=365 * 5)
 
 
 def dates_in_period(starts_on: date, ends_on: date) -> list[date]:
@@ -40,8 +45,9 @@ def expand_unavailable(
 
 
 def _occurrences(row: UnavailableTime, window_end: datetime) -> list[datetime]:
-    step = _repeat_step(row)
-    if step is None:
+    """이 불가능 일정이 시작하는 시각들을 반환합니다. window_end 이후는 만들지 않습니다."""
+    chosen = row.repeat_weekdays or 0
+    if chosen == 0:
         return [row.starts_at]
 
     limit = window_end
@@ -49,25 +55,27 @@ def _occurrences(row: UnavailableTime, window_end: datetime) -> list[datetime]:
         # 반복 종료일은 "그 날짜까지"라는 뜻이므로 그날의 끝까지 인정합니다.
         limit = min(limit, datetime.combine(row.repeat_until + timedelta(days=1), time()))
 
+    # 횟수는 고른 요일 전부를 한 세트로 세는 주 단위입니다. 월·화·목·금에 4 면 그 네 요일이
+    # 4주 동안 반복해 16번입니다. 한 번에 하나씩 세면 4 가 월·화·목·금 한 주로 끝나 버립니다.
+    # 주의 경계는 월요일입니다(date.weekday() 가 0).
+    weeks = row.repeat_count
+    first_monday = (row.starts_at - timedelta(days=row.starts_at.weekday())).date()
+    if weeks is not None:
+        # 마지막 주의 일요일까지가 끝입니다. 화면이 보는 범위와 무관하게 여기서 자릅니다.
+        last_day = first_monday + timedelta(days=weeks * 7)
+        limit = min(limit, datetime.combine(last_day, time()))
+
     starts: list[datetime] = []
     current = row.starts_at
     while current < limit:
-        starts.append(current)
-        current += step
+        if chosen & (1 << current.weekday()):
+            starts.append(current)
+        current += DAY
+        # 고른 요일이 없거나 종료일이 시작일보다 앞서면 무한히 돌 수 있으므로 상한을 둡니다.
+        if current - row.starts_at > MAX_REPEAT_SPAN:
+            break
     return starts
 
-
-def _repeat_step(row: UnavailableTime) -> timedelta | None:
-    """반복 간격을 반환합니다. 반복이 아니면 None 을 반환합니다.
-
-    session 에 추가하지 않은 객체는 열의 기본값이 아직 적용되지 않아 None 일 수 있으므로
-    bool() 로 변환합니다. 매일·매주가 둘 다 켜진 경우는 경계에서 거부되므로 이 함수에서는 매일 반복을 먼저 확인합니다.
-    """
-    if bool(row.repeats_daily):
-        return DAY
-    if bool(row.repeats_weekly):
-        return WEEK
-    return None
 
 
 # 토요일·일요일의 date.weekday() 값입니다. 월요일이 0 이고 일요일이 6 입니다.

@@ -98,8 +98,8 @@ def test_unavailable_time_is_created_with_on_the_hour_bounds(
     assert body["member_id"] == owner_id
     assert body["starts_at"] == "2026-09-14T18:00:00"
     assert body["ends_at"] == "2026-09-14T20:00:00"
-    assert body["repeats_daily"] is False
-    assert body["repeats_weekly"] is False
+    assert body["repeat_weekdays"] is None
+    assert body["repeat_count"] is None
     assert body["repeat_until"] is None
     assert body["reason"] is None
     assert body["name"] is None
@@ -135,7 +135,7 @@ def test_unavailable_time_keeps_the_reason_it_was_given(
         json={
             "starts_at": "2026-09-14T18:00:00",
             "ends_at": "2026-09-14T20:00:00",
-            "repeats_daily": True,
+            "repeat_weekdays": 0b1111111,
             "reason": "  기말고사  ",
         },
         cookies=owner,
@@ -143,7 +143,7 @@ def test_unavailable_time_keeps_the_reason_it_was_given(
 
     assert response.status_code == 201
     body = response.json()["time"]
-    assert body["repeats_daily"] is True
+    assert body["repeat_weekdays"] == 0b1111111
     # 앞뒤 공백은 제거합니다.
     assert body["reason"] == "기말고사"
 
@@ -167,7 +167,7 @@ def test_unavailable_time_with_a_blank_reason_stores_nothing(
     assert response.json()["time"]["reason"] is None
 
 
-def test_unavailable_time_creation_rejects_daily_and_weekly_together(
+def test_unavailable_time_creation_rejects_a_count_and_an_end_date_together(
     api_client: TestClient, account: AccountFactory
 ) -> None:
     owner_id, owner = account("이도현", "dohyun@example.com")
@@ -177,14 +177,15 @@ def test_unavailable_time_creation_rejects_daily_and_weekly_together(
         json={
             "starts_at": "2026-09-14T18:00:00",
             "ends_at": "2026-09-14T20:00:00",
-            "repeats_daily": True,
-            "repeats_weekly": True,
+            "repeat_weekdays": 0b0000001,
+            "repeat_count": 5,
+            "repeat_until": "2026-12-31",
         },
         cookies=owner,
     )
 
     assert response.status_code == 422
-    assert "함께 켤 수 없습니다" in response.json()["detail"]
+    assert "동시에 설정할 수 없어요" in response.json()["detail"]
 
 
 def test_unavailable_time_creation_rejects_off_grid_minutes(
@@ -226,7 +227,6 @@ def test_unavailable_time_creation_rejects_a_repeat_until_when_not_weekly(
         json={
             "starts_at": "2026-09-14T18:00:00",
             "ends_at": "2026-09-14T19:00:00",
-            "repeats_weekly": False,
             "repeat_until": "2026-12-31",
         },
         cookies=owner,
@@ -283,6 +283,56 @@ def test_unavailable_time_deletion_rejects_another_members_time(
 
     response = api_client.delete(
         f"/members/{owner_id}/unavailable/{row.id}", cookies=owner
+    )
+
+    assert response.status_code == 422
+
+
+def test_unavailable_time_can_be_edited(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    owner_id, owner = account("이도현", "dohyun@example.com")
+    time_id = api_client.post(
+        f"/members/{owner_id}/unavailable",
+        json={"starts_at": "2026-09-14T18:00:00", "ends_at": "2026-09-14T20:00:00"},
+        cookies=owner,
+    ).json()["time"]["id"]
+
+    response = api_client.patch(
+        f"/members/{owner_id}/unavailable/{time_id}",
+        json={
+            "starts_at": "2026-09-15T19:00:00",
+            "ends_at": "2026-09-15T21:00:00",
+            "repeat_weekdays": 0b0000101,
+            "repeat_count": 4,
+            "name": "알바",
+        },
+        cookies=owner,
+    )
+
+    assert response.status_code == 200
+    body = response.json()["time"]
+    assert body["starts_at"] == "2026-09-15T19:00:00"
+    assert body["repeat_weekdays"] == 0b0000101
+    assert body["repeat_count"] == 4
+    assert body["name"] == "알바"
+
+
+def test_editing_someone_elses_unavailable_time_is_refused(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    owner_id, owner = account("이도현", "dohyun@example.com")
+    other_id, other = account("김도윤", "doyun@example.com")
+    time_id = api_client.post(
+        f"/members/{owner_id}/unavailable",
+        json={"starts_at": "2026-09-14T18:00:00", "ends_at": "2026-09-14T20:00:00"},
+        cookies=owner,
+    ).json()["time"]["id"]
+
+    response = api_client.patch(
+        f"/members/{other_id}/unavailable/{time_id}",
+        json={"starts_at": "2026-09-15T19:00:00", "ends_at": "2026-09-15T21:00:00"},
+        cookies=other,
     )
 
     assert response.status_code == 422
