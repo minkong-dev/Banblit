@@ -5,7 +5,10 @@ import {
   dateRangeMessage,
   ensembleMessage,
   openHoursMessage,
+  practiceWindowMessage,
   roomNameMessage,
+  sessionMinuteChoices,
+  sessionMinutesLabel,
   slotsBetween,
 } from "./settings";
 
@@ -166,5 +169,78 @@ describe("capacity", () => {
     expect(capacity({ rooms: [], days: 14, teams: 6 })).toEqual({
       perDay: 0, total: 0, perTeam: 0, leftover: 0,
     });
+  });
+});
+
+describe("sessionMinuteChoices", () => {
+  it("칸의 배수만 고를 수 있게 한다", () => {
+    // 60분 칸에서는 90분 합주가 칸 중간에서 끝나므로 선택지에 없습니다.
+    expect(sessionMinuteChoices(60)).toEqual([60, 120, 180, 240]);
+  });
+
+  it("칸 자체도 선택지에 포함한다", () => {
+    // 30분만 연습하는 팀을 위해 칸과 같은 길이를 고를 수 있어야 합니다.
+    expect(sessionMinuteChoices(30)).toContain(30);
+  });
+
+  it("칸보다 짧은 길이는 넣지 않는다", () => {
+    expect(sessionMinuteChoices(60).some((minutes) => minutes < 60)).toBe(false);
+  });
+
+  it("상한 240분을 넘지 않는다", () => {
+    expect(sessionMinuteChoices(5).every((minutes) => minutes <= 240)).toBe(true);
+  });
+
+  it("칸이 12분처럼 나누어떨어지지 않는 값이어도 배수만 남긴다", () => {
+    expect(sessionMinuteChoices(12)).toEqual([12, 60, 120, 180, 240]);
+  });
+});
+
+describe("sessionMinutesLabel", () => {
+  it("한 시간이 넘으면 시간과 분으로 끊어 읽는다", () => {
+    expect(sessionMinutesLabel(90)).toBe("1시간 30분");
+  });
+
+  it("정확히 시간 단위면 분을 붙이지 않는다", () => {
+    expect(sessionMinutesLabel(120)).toBe("2시간");
+  });
+
+  it("한 시간 미만은 분으로만 표시한다", () => {
+    expect(sessionMinutesLabel(30)).toBe("30분");
+  });
+});
+
+describe("practiceWindowMessage", () => {
+  const empty = { starts_at: "", ends_at: "" };
+
+  it("둘 다 비어 있으면 정하지 않은 것으로 보고 통과시킨다", () => {
+    expect(practiceWindowMessage(empty, empty, 30)).toBe("");
+  });
+
+  it("한쪽만 채우면 끝 시각 없는 시간대가 되므로 거절한다", () => {
+    expect(practiceWindowMessage({ starts_at: "17:00", ends_at: "" }, empty, 30))
+      .toBe("평일 합주 종료 시각을 입력해주세요.");
+  });
+
+  it("끝이 시작보다 빠르면 거절한다", () => {
+    expect(practiceWindowMessage({ starts_at: "23:00", ends_at: "17:00" }, empty, 30))
+      .toBe("평일 합주 종료 시각은 시작 시각보다 늦어야 해요.");
+  });
+
+  it("격자 위가 아니면 거절한다", () => {
+    // 배정 구간이 격자에서 벗어나면 서버가 칸을 만들지 못합니다.
+    expect(practiceWindowMessage({ starts_at: "17:15", ends_at: "23:00" }, empty, 30))
+      .toBe("평일 합주 시간은 30분 기준으로 지정해주세요.");
+  });
+
+  it("평일이 올바르면 주말도 검사한다", () => {
+    expect(practiceWindowMessage({ starts_at: "17:00", ends_at: "23:00" }, { starts_at: "09:00", ends_at: "" }, 30))
+      .toBe("주말 합주 종료 시각을 입력해주세요.");
+  });
+
+  it("둘 다 올바르면 통과시킨다", () => {
+    expect(practiceWindowMessage(
+      { starts_at: "17:00", ends_at: "23:00" }, { starts_at: "09:00", ends_at: "23:00" }, 30,
+    )).toBe("");
   });
 });

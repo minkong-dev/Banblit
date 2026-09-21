@@ -129,6 +129,45 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
     .page { column-gap: 14px; padding: 14px; }
     .panel > .ph { padding: 13px 15px; font-size: 14.5px; }
   }
+
+  /* 휴대폰 폭입니다. 이 규칙이 없으면 body 의 min-width 1060px 이 그대로 적용되어, 화면 전체를
+     가로로 밀어야 오른쪽 내용에 도달합니다. 동아리 서비스의 접속은 대부분 휴대폰입니다.
+
+     세로 스크롤을 body 가 맡도록 height 와 overflow 를 해제합니다. 데스크톱에서는 body 가
+     100vh 로 고정되고 .page 안쪽만 스크롤하는데, 좁은 화면에서 같은 구조를 쓰면 내용이
+     화면보다 길 때 주소창이 사라지지 않아 세로 공간이 더 줄어듭니다.
+
+     사이드바는 접는 버튼을 만들지 않고 상단바 아래 가로 줄로 눕힙니다. 버튼을 만들면 여닫는
+     상태와 초점 이동을 함께 처리해야 하는데, 항목이 최대 8개라 가로 줄에 전부 들어갑니다. */
+  @media (max-width: 860px) {
+    & { min-width: 0; height: auto; overflow: visible; }
+
+    .shell { display: block; height: auto; }
+    .side {
+      overflow: auto hidden;
+      border-right: none;
+      border-bottom: 1px solid var(--line);
+      position: sticky; top: 62px; z-index: 20;
+    }
+    .side .inner { height: auto; padding: 10px 12px; flex-direction: row; align-items: center; gap: 10px; }
+    .side nav { flex-direction: row; gap: 6px; }
+    .side nav :is(a, button) { padding: 9px 14px; min-height: 40px; font-size: 14px; }
+    /* 가로 줄에서는 구분선과 "관리자 메뉴" 머리글이 자리만 차지합니다. 항목은 그대로 이어 붙입니다. */
+    .side .sep { border-top: none; border-left: 1px solid var(--line); align-self: stretch; }
+    .side .cap { display: none; }
+
+    .page {
+      height: auto; padding: 14px 16px;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto;
+      row-gap: 14px;
+    }
+
+    .top .in { height: 56px; padding: 0 14px; }
+    .logo span { display: none; }
+    .profbtn .nm { display: none; }
+    .pop { right: 14px; top: 60px; width: min(280px, calc(100vw - 28px)); }
+  }
   @media (prefers-reduced-motion: reduce) { * { transition-duration: .01ms !important; animation-duration: .01ms !important; } }
 }
 
@@ -214,14 +253,17 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 @keyframes mpop { from { opacity: 0; transform: translateY(10px) scale(.985); } }
 @media (prefers-reduced-motion: reduce) { dialog[open] { animation-duration: .01ms; } }
 
-.mhead { display: flex; align-items: flex-start; gap: 12px; padding: 24px 26px 14px; }
+.mhead { display: flex; align-items: flex-start; gap: 12px; padding: 24px 26px 10px; }
 .mhead h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.03em; }
 .mhead p { margin: 6px 0 0; font-size: 13.5px; color: var(--t2); }
 .mhead button { margin-left: auto; width: 40px; height: 40px; display: grid; place-items: center; color: var(--t3); border-radius: 12px; }
 .mhead button:hover { background: var(--card-2); color: var(--t1); }
 .mhead svg { width: 20px; height: 20px; }
 /* 제목과 버튼 줄이 자기 높이를 갖고 본문이 남는 높이를 전부 사용합니다. */
-.mbody { padding: 0 26px 22px; flex: 1; min-height: 0; overflow-y: auto; }
+/* 위쪽 4px 은 첫 요소의 focus 테두리(outline) 자리입니다. overflow 를 지정한 요소는 스크롤하지 않을 때도
+   넘치는 것을 잘라내므로, 여백이 0 이면 첫 입력칸의 테두리 윗변이 잘려 아래쪽만 그려집니다.
+   제목 줄(.mhead)의 아래 여백에서 4px 을 가져와 제목과 본문 사이 간격은 그대로 14px 입니다. */
+.mbody { padding: 4px 26px 22px; flex: 1; min-height: 0; overflow-y: auto; }
 .mfoot { padding: 16px 26px 22px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
 .primary { flex: 1; min-height: 54px; padding: 15px; background: var(--brand); color: var(--brand-on); border-radius: 14px; font-size: 16px; font-weight: 700; transition: background-color .15s ease; }
 .primary:hover { background: var(--brand-press); }
@@ -272,7 +314,15 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 .listfoot .new[disabled] { opacity: .45; cursor: default; }
 
 /* ===== 멤버 검색 =====
-   팀 생성 modal 위에 한 겹 더 표시되는 modal 의 내용입니다. 빈 검색어에는 아무것도 표시하지 않습니다. */
+   팀 생성 modal 위에 한 겹 더 표시되는 modal 의 내용입니다. 빈 검색어에는 명단 전체를 표시합니다.
+   명단이 길면 modal 본문이 스크롤하므로, 입력 칸은 본문 맨 위에 고정해 스크롤해도 보이게 합니다.
+   위쪽 안쪽 여백 4px 은 붙어 있는 동안의 focus 테두리(outline) 자리입니다. 어느 선에 붙는지는
+   브라우저마다 다르고, 잘라내는 선에 그대로 붙는 브라우저에서는 .mbody 의 여백이 위에 남지 않습니다. */
+.seekbar {
+  position: sticky; top: 0; z-index: 1;
+  padding: 4px 0 10px;
+  background: var(--card);
+}
 .seek input {
   width: 100%; min-height: 50px; padding: 13px 15px;
   background: var(--card-2); color: var(--t1);
@@ -283,7 +333,7 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 .seek .empty { padding: 26px 0; text-align: center; }
 /* 자체 스크롤을 두지 않습니다. modal 본문이 이미 남는 높이를 전부 사용하고 넘칠 때만
    스크롤하므로, 이 요소에 또 상한을 두면 스크롤 안에 스크롤이 생깁니다. */
-.found { list-style: none; margin: 12px 0 0; padding: 0; }
+.found { list-style: none; margin: 0; padding: 0; }
 .found li + li { border-top: 1px solid var(--line); }
 .found button {
   width: 100%; text-align: left; min-height: 50px; padding: 13px 12px;

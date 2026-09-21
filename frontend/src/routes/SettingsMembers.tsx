@@ -20,6 +20,7 @@ import {
 } from "../components/icons";
 import { getJSON, reason } from "../lib/api";
 import { say } from "../lib/toast";
+import { cohortLabel } from "../lib/roster";
 import { PERMISSION_ITEMS, can } from "../lib/account";
 import { askDelete, askExpel } from "../lib/confirm";
 import { useMe } from "../components/queries";
@@ -108,6 +109,7 @@ function SetForm(props: {
           권한 이름
           <input
             id="setName"
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- 권한 편집 모달이 열릴 때 이름 입력칸으로 초점을 이동합니다. WAI-ARIA dialog 패턴이 규정하는 동작입니다.
             autoFocus
             value={form.name}
             placeholder="권한 이름"
@@ -417,7 +419,7 @@ function MemberRoster(props: {
                 <td>{row.name}</td>
                 <td>{row.department ?? "—"}</td>
                 <td>{row.student_no ?? "—"}</td>
-                <td>{row.cohort === null ? "—" : `${row.cohort}기`}</td>
+                <td>{cohortLabel(row.cohort)}</td>
                 <td>{row.permission_sets.join(" · ") || "—"}</td>
                 <td className="fill" />
                 {onExpel === null ? null : (

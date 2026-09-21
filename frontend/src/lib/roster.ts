@@ -51,22 +51,25 @@ export function seatsOf(counts: Record<string, number>, members: ReadonlyMap<str
   });
 }
 
-/** 서버에 저장된 자리(saved)를 seats 와 같게 만드는 요청 목록입니다.
- *  서버는 한 멤버를 한 팀의 두 자리에 배치하는 요청을 거절하므로(team_slots_team_id_member_id_key), 멤버가 변경된 자리 중
- *  멤버가 있던 자리를 전부 먼저 해제하고(clear) 그 다음 지정합니다(assign). 두 멤버의 자리를 교환해도 거절되지 않습니다. */
-export function seatChanges(
+/** 변경된 자리만 골라 서버로 보낼 최종 배정 상태를 반환합니다. member_id 가 null 인 항목은 그 자리의
+ *  배정을 해제합니다. 해제와 배정의 순서는 서버가 결정합니다 — 한 요청에서 처리하므로 화면이
+ *  순서를 정할 필요가 없습니다. */
+export function seatAssignments(
   seats: Seat[], saved: TeamSlot[],
-): { clear: number[]; assign: { slotId: number; memberId: number }[] } {
+): { slot_id: number; member_id: number | null }[] {
   const wanted = new Map(seats.map((seat) => [seatKey(seat.instrument, seat.ordinal), seat.member?.id ?? null]));
   const wantedOf = (slot: TeamSlot): number | null => wanted.get(seatKey(slot.instrument, slot.ordinal)) ?? null;
-  const changed = saved.filter((slot) => wantedOf(slot) !== slot.member_id);
-  return {
-    clear: changed.filter((slot) => slot.member_id !== null).map((slot) => slot.id),
-    assign: changed.flatMap((slot) => {
-      const memberId = wantedOf(slot);
-      return memberId === null ? [] : [{ slotId: slot.id, memberId }];
-    }),
-  };
+  return saved
+    .filter((slot) => wantedOf(slot) !== slot.member_id)
+    .map((slot) => ({ slot_id: slot.id, member_id: wantedOf(slot) }));
+}
+
+/** 기수를 화면에 표시하는 문구입니다. 값이 없으면 "-" 를 반환합니다.
+ *
+ *  빈 문자열을 반환하면 값이 없는 것인지 표시가 누락된 것인지 구별되지 않고, 표 형태의 목록에서는
+ *  열 정렬도 어긋납니다. */
+export function cohortLabel(cohort: number | null): string {
+  return cohort === null ? "-" : `${cohort}기`;
 }
 
 /** 사람 이름 옆에 기수를 붙입니다. 동명이인을 화면에서 구분하는 값이 기수뿐입니다. */
@@ -113,4 +116,12 @@ export function myTeamIds(teams: MyTeam[]): number[] {
 /** 팀 목록 화면에 표시할 팀입니다. manages 가 true 이면 전체 팀, false 이면 teamIds 에 포함된 팀만 반환합니다. */
 export function teamsShown<T extends { id: number }>(teams: T[], teamIds: number[], manages: boolean): T[] {
   return manages ? teams : teams.filter((team) => teamIds.includes(team.id));
+}
+
+/** 멤버 검색 목록에 표시할 것이 없을 때의 문구입니다. 빈 검색어에는 명단 전체를 받으므로,
+ *  그때 목록이 비었다는 것은 고를 사람이 남지 않았다는 뜻이지 검색이 실패한 것이 아닙니다. */
+export function noMembersMessage(query: string): string {
+  return query === ""
+    ? "고를 수 있는 멤버가 없어요."
+    : "해당하는 사용자를 찾지 못했어요.";
 }

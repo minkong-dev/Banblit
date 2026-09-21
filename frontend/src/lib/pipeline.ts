@@ -46,6 +46,7 @@ import {
 import {
   memberLabel,
   myTeamIds,
+  noMembersMessage,
   slotCountsMessage,
   slotName,
   teamNameMessage,
@@ -170,6 +171,9 @@ type PostForm = { title: string; body: string };
 
 export { commentMessage as checkComment };
 export { ensembleMessage as checkEnsemble, ensembleTimeMessage as checkEnsembleTime } from "./settings";
+// 팀별합주 시간대 검증입니다. 순서 의존이 없어 그대로 export 합니다.
+export { practiceWindowMessage as checkPracticeWindow } from "./settings";
+export type { WindowPair } from "./settings";
 
 export function checkPost(form: PostForm): string {
   // 제목을 먼저 검증합니다. 오류 메시지를 한 번에 하나만 표시하므로 먼저 수정할 것을 앞에 둡니다.
@@ -192,7 +196,7 @@ export function checkAttachments(files: { name: string; size: number }[]): strin
 }
 
 // 팀·포지션에 대해 화면이 하는 계산입니다. 순서 의존이 없어 그대로 export 합니다.
-export { memberLabel, myTeamIds, slotName };
+export { memberLabel, myTeamIds, noMembersMessage, slotName };
 export { teamNameMessage as checkTeamName, slotCountsMessage as checkSlotCounts };
 
 // 게시판·공지 화면이 사용하는 계산입니다. fileSizeLabel 은 순서 의존이 없어 그대로 export 합니다.
@@ -301,12 +305,22 @@ export async function removeUnavailable(memberId: number, timeId: number): Promi
 /** 점유 단위(칸 하나의 크기, 분)를 변경합니다. room_edit 권한이 필요합니다.
  *  이미 저장된 예약과 배정은 그대로 남습니다. 단위를 늘리면 새 격자에 맞지 않는 기존 행이 남지만,
  *  삭제하면 사용자의 예약이 알림 없이 삭제됩니다(services/settings_service.py 의 set_slot_minutes). */
-export async function saveSlotMinutes(minutes: number): Promise<number> {
-  const body = await getJSON<{ slot_minutes: number }>("/settings", {
+/** 칸 크기와 합주 길이를 저장합니다. 보내지 않은 값은 서버가 그대로 둡니다.
+ *
+ *  두 값을 한 요청에 담을 수 있어야 합니다. 30분 합주로 내리려면 칸도 30분이어야 하는데,
+ *  요청을 나누면 어느 쪽을 먼저 보내도 중간 상태가 "합주 길이는 칸의 배수" 를 어겨 거절됩니다. */
+export async function saveSettings(next: {
+  slotMinutes?: number;
+  sessionMinutes?: number;
+}): Promise<{ slotMinutes: number; sessionMinutes: number }> {
+  const body = await getJSON<{ slot_minutes: number; session_minutes: number }>("/settings", {
     method: "PATCH",
-    body: JSON.stringify({ slot_minutes: minutes }),
+    body: JSON.stringify({
+      slot_minutes: next.slotMinutes,
+      session_minutes: next.sessionMinutes,
+    }),
   });
-  return body.slot_minutes;
+  return { slotMinutes: body.slot_minutes, sessionMinutes: body.session_minutes };
 }
 
 /** 멤버를 추방합니다. 서버는 계정을 삭제하므로 그 멤버의 글·댓글·예약도 함께 삭제됩니다. member_expel 권한이 필요합니다. */

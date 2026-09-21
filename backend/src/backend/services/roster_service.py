@@ -106,23 +106,20 @@ def list_members(
     return [(row, held[row.id]) for row in rows]
 
 
-def search_members(session: Session, query: str, limit: int = 20) -> list[Member]:
+def search_members(session: Session, query: str, limit: int = 200) -> list[Member]:
     """이름으로 멤버를 검색합니다. 포지션에 배정할 멤버를 선택하는 검색 UI가 사용합니다.
 
-    빈 검색어에 전체 목록을 반환하지 않습니다. 명단 전체가 노출되는 endpoint 가 되면 안 됩니다.
+    빈 검색어에는 명단 전체를 반환합니다. 화면이 목록을 그대로 펼쳐 스크롤로 훑을 수 있어야
+    누가 있는지 모르는 사람을 한 글자씩 넣어 찾지 않습니다. 로그인한 계정이면 read_members
+    로 이미 명단 전체를 볼 수 있으므로, 이렇게 해도 새로 공개되는 정보는 없습니다.
+
     동명이인이 있으므로 결과에는 기수도 포함됩니다(호출자가 표시합니다).
     """
     trimmed = query.strip()
-    if not trimmed:
-        return []
-    return list(
-        session.scalars(
-            select(Member)
-            .where(Member.name.ilike(f"%{trimmed}%"))
-            .order_by(Member.name, Member.id)
-            .limit(limit)
-        ).all()
-    )
+    rows = select(Member).order_by(Member.name, Member.id).limit(limit)
+    if trimmed:
+        rows = rows.where(Member.name.ilike(f"%{trimmed}%"))
+    return list(session.scalars(rows).all())
 
 
 def expel_member(session: Session, member_id: int, requester: Member) -> None:
@@ -283,6 +280,69 @@ def assign_slot(session: Session, team_id: int, slot_id: int, member_id: int) ->
     slot.member_id = member_id
     commit_translating(session, ROSTER_MESSAGES)
     return slot
+
+
+def assign_slot_members(
+    session: Session,
+    team_id: int,
+    wanted: list[tuple[int, int | None]],
+    may_seat: bool,
+    may_unseat: bool,
+    requester_id: int,
+) -> None:
+    """자리 여러 개의 배정을 transaction 1개로 저장합니다.
+
+    wanted 는 (slot_id, member_id) 목록이고 member_id 가 None 이면 그 자리의 배정을 해제합니다.
+    자리마다 따로 저장하면 중간에서 실패했을 때 앞선 자리만 반영된 상태로 끝납니다. 이 함수는
+    전부 검증한 뒤 한 번만 commit 하므로 그 상태가 발생하지 않습니다.
+
+    권한은 항목마다 판단합니다. 자리에 사람을 앉히려면 may_seat, 다른 사람을 내리려면 may_unseat
+    가 True 여야 합니다. 자신을 내리는 항목은 두 값과 무관하게 통과합니다 — 자리마다 보내는
+    DELETE endpoint 와 같은 규칙입니다.
+
+    권한이 없으면 PermissionError, 없는 자리나 없는 사람이면 ValueError 를 발생시킵니다. 두 경우
+    모두 session 을 rollback 합니다. rollback 하지 않으면 앞선 항목의 변경이 session 에 남아,
+    같은 session 으로 조회하는 코드가 저장되지 않은 값을 읽습니다.
+    """
+    try:
+        slots = [
+            (_get_slot_or_raise(session, team_id, slot_id), member_id)
+            for slot_id, member_id in wanted
+        ]
+        for slot, member_id in slots:
+            if member_id is None:
+                _require_may_unseat(slot, requester_id, may_unseat)
+            else:
+                _require_may_seat(session, member_id, may_seat)
+
+        # 배정을 전부 해제한 뒤 flush 합니다. (team_id, member_id) unique 제약이 deferrable 이 아니라,
+        # 해제와 배정이 같은 flush 에 섞이면 두 사람의 자리를 맞바꿀 때 한쪽이 두 자리를 차지하는
+        # 순간이 생겨 DB 가 거절합니다.
+        for slot, _ in slots:
+            slot.member_id = None
+        session.flush()
+
+        for slot, member_id in slots:
+            slot.member_id = member_id
+    except BaseException:
+        session.rollback()
+        raise
+    commit_translating(session, ROSTER_MESSAGES)
+
+
+def _require_may_unseat(slot: TeamSlot, requester_id: int, may_unseat: bool) -> None:
+    """자리의 배정을 해제할 수 있는지 검증합니다. 자신의 자리는 권한 없이 해제할 수 있습니다."""
+    occupied_by_other = slot.member_id is not None and slot.member_id != requester_id
+    if occupied_by_other and not may_unseat:
+        raise PermissionError("관련된 권한을 가지고 있지 않습니다")
+
+
+def _require_may_seat(session: Session, member_id: int, may_seat: bool) -> None:
+    """자리에 사람을 배정할 수 있는지, 그리고 그 사람이 존재하는지 검증합니다."""
+    if not may_seat:
+        raise PermissionError("관련된 권한을 가지고 있지 않습니다")
+    if session.get(Member, member_id) is None:
+        raise ValueError("그런 사람이 없습니다")
 
 
 def clear_slot(session: Session, team_id: int, slot_id: int) -> TeamSlot:

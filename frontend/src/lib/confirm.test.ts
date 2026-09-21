@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { askCancel, objectParticle } from "./confirm";
+import { askCancel, askDeleteRoom, objectParticle } from "./confirm";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -36,5 +36,22 @@ describe("askCancel — 예약에는 취소라고 묻는다", () => {
   test("아니오를 누르면 false 다", () => {
     vi.stubGlobal("window", { confirm: () => false });
     expect(askCancel("예약")).toBe(false);
+  });
+});
+
+describe("askDeleteRoom — 합주실 삭제는 함께 사라지는 것을 적는다", () => {
+  test("예약과 배정이 함께 삭제되는 것을 문장에 적는다", () => {
+    const asked: string[] = [];
+    vi.stubGlobal("window", { confirm: (text: string) => { asked.push(text); return true; } });
+
+    expect(askDeleteRoom()).toBe(true);
+    expect(asked[0]).toBe(
+      "기록이 있을경우 예약과 배정안, 이전 배정기록이 모두 삭제돼요. 정말 삭제할까요?",
+    );
+  });
+
+  test("아니오를 누르면 false 다", () => {
+    vi.stubGlobal("window", { confirm: () => false });
+    expect(askDeleteRoom()).toBe(false);
   });
 });

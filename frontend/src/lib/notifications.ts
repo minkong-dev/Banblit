@@ -15,6 +15,8 @@ export function notificationText(kind: string): string {
   return TEXT[kind] ?? "새 알림이 있어요.";
 }
 
+/** 남아 있는 알림의 개수입니다. 읽음 처리가 행을 삭제하므로 목록에 있는 알림은 전부 읽지 않은
+ *  알림입니다(backend/src/backend/services/notification_service.py 의 mark_all_read). */
 export function unreadCount(list: Notification[]): number {
-  return list.filter((item) => !item.read).length;
+  return list.length;
 }

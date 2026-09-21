@@ -3,7 +3,8 @@ from datetime import date, datetime, time
 import pytest
 
 from backend.services.period_input import (
-    auto_slots_per_team,
+    PracticeWindow,
+    auto_sessions_per_team,
     build_engine_rooms,
     build_engine_teams,
     dates_in_period,
@@ -240,29 +241,42 @@ def test_rooms_with_the_same_name_stay_separate() -> None:
     assert [r.id for r in engine_rooms] == [1, 2]
 
 
-def test_slots_per_team_is_the_whole_grid_divided_by_team_count() -> None:
+def test_sessions_per_team_is_the_whole_grid_divided_by_team_count() -> None:
     rooms = [_room(1, "1번방", time(18, 0), time(22, 0))]  # 하루 4칸
     engine_rooms = build_engine_rooms(
         rooms, [date(2026, 8, 1), date(2026, 8, 2)]
     )  # 8칸
 
-    assert auto_slots_per_team(engine_rooms, slot_minutes=60, team_count=3) == 2
+    assert auto_sessions_per_team(engine_rooms, slot_minutes=60, session_minutes=60, team_count=3) == 2
 
 
-def test_slots_per_team_is_rejected_when_no_team_can_get_a_slot() -> None:
-    rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]  # 2칸
+def test_sessions_per_team_counts_the_session_length_not_the_slot() -> None:
+    # 30분 칸으로는 8칸이지만, 60분 session 은 겹치지 않게 4회만 들어갑니다.
+    rooms = [_room(1, "1번방", time(18, 0), time(22, 0))]
     engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
 
-    with pytest.raises(ValueError, match="한 칸도"):
-        auto_slots_per_team(engine_rooms, slot_minutes=60, team_count=3)
+    assert (
+        auto_sessions_per_team(
+            engine_rooms, slot_minutes=30, session_minutes=60, team_count=2
+        )
+        == 2
+    )
 
 
-def test_slots_per_team_is_rejected_when_there_are_no_teams() -> None:
+def test_sessions_per_team_is_rejected_when_no_team_can_get_a_session() -> None:
+    rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]  # 60분 session 2회
+    engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
+
+    with pytest.raises(ValueError, match="한 번도"):
+        auto_sessions_per_team(engine_rooms, slot_minutes=60, session_minutes=60, team_count=3)
+
+
+def test_sessions_per_team_is_rejected_when_there_are_no_teams() -> None:
     rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]
     engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
 
     with pytest.raises(ValueError, match="배정할 팀이 없습니다"):
-        auto_slots_per_team(engine_rooms, slot_minutes=60, team_count=0)
+        auto_sessions_per_team(engine_rooms, slot_minutes=60, session_minutes=60, team_count=0)
 
 
 def test_two_people_with_the_same_name_stay_separate() -> None:
@@ -295,3 +309,73 @@ def test_unavailable_times_follow_the_person_into_every_team() -> None:
 
     assert engine_teams[0].members[0].unavailable == blocked
     assert engine_teams[1].members[0].unavailable == blocked
+
+
+# ── 팀별합주 시간대 ────────────────────────────────────────────────────────
+#
+# 합주실 개방시각과는 다른 값입니다. 합주실이 09시에 열어도 팀별합주는 17시부터만 배정합니다.
+# 평일(월~금)과 주말(토·일)에 서로 다른 시간대를 둘 수 있습니다.
+
+MONDAY = date(2026, 8, 3)
+SATURDAY = date(2026, 8, 1)
+
+
+def test_the_window_narrows_the_room_hours() -> None:
+    """합주실은 09~23시를 열어도 팀별합주는 17시부터입니다."""
+    rooms = [_room(1, "1번방", time(9, 0), time(23, 0))]
+
+    engine_rooms = build_engine_rooms(
+        rooms, [MONDAY], PracticeWindow(weekday=(time(17, 0), time(23, 0)), weekend=None)
+    )
+
+    assert engine_rooms[0].open_period.start == datetime(2026, 8, 3, 17, 0)
+    assert engine_rooms[0].open_period.end == datetime(2026, 8, 3, 23, 0)
+
+
+def test_the_room_hours_narrow_the_window() -> None:
+    """17~23시로 정해도 합주실이 22시에 닫으면 22시까지입니다. 둘의 교집합이 배정 구간입니다."""
+    rooms = [_room(1, "1번방", time(10, 0), time(22, 0))]
+
+    engine_rooms = build_engine_rooms(
+        rooms, [MONDAY], PracticeWindow(weekday=(time(17, 0), time(23, 0)), weekend=None)
+    )
+
+    assert engine_rooms[0].open_period.end == datetime(2026, 8, 3, 22, 0)
+
+
+def test_weekends_use_their_own_window() -> None:
+    """주말은 낮에도 합주합니다. 토요일과 월요일이 다른 시간대를 받습니다."""
+    rooms = [_room(1, "1번방", time(9, 0), time(23, 0))]
+    window = PracticeWindow(
+        weekday=(time(17, 0), time(23, 0)), weekend=(time(9, 0), time(23, 0))
+    )
+
+    engine_rooms = build_engine_rooms(rooms, [SATURDAY, MONDAY], window)
+
+    assert engine_rooms[0].open_period.start == datetime(2026, 8, 1, 9, 0)
+    assert engine_rooms[1].open_period.start == datetime(2026, 8, 3, 17, 0)
+
+
+def test_a_missing_window_leaves_the_room_hours_alone() -> None:
+    """시간대를 정하지 않은 기간은 지금처럼 합주실 개방시각 전체를 씁니다."""
+    rooms = [_room(1, "1번방", time(9, 0), time(23, 0))]
+
+    engine_rooms = build_engine_rooms(rooms, [MONDAY], PracticeWindow(None, None))
+
+    assert engine_rooms[0].open_period.start == datetime(2026, 8, 3, 9, 0)
+    assert engine_rooms[0].open_period.end == datetime(2026, 8, 3, 23, 0)
+
+
+def test_a_day_with_no_overlap_produces_no_room() -> None:
+    """합주실이 16시에 닫는데 시간대가 17시부터면 그날은 배정할 자리가 없습니다.
+
+    길이가 0 이거나 음수인 구간을 엔진에 넘기면 generate_slots 가 칸을 만들지 못하거나
+    운영 시간이 잘못되었다고 거부합니다. 넘기기 전에 뺍니다.
+    """
+    rooms = [_room(1, "1번방", time(9, 0), time(16, 0))]
+
+    engine_rooms = build_engine_rooms(
+        rooms, [MONDAY], PracticeWindow(weekday=(time(17, 0), time(23, 0)), weekend=None)
+    )
+
+    assert engine_rooms == []

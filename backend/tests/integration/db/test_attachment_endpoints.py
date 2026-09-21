@@ -1,7 +1,16 @@
+import io
+import threading
+from datetime import datetime
 from pathlib import Path
 
 import pytest
+from sqlalchemy import select
+from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
+
+from backend.db.models import Attachment, Member, Post
+from backend.services import attachment_service
 
 # account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 이 파일의 첫 호출이 헤드매니저입니다.
 from conftest import AccountFactory
@@ -311,3 +320,164 @@ def test_a_moderator_cannot_attach_to_someone_elses_post(
 
     assert response.status_code == 403
     assert _stored_files(storage_dir) == []
+
+
+def test_uploads_are_rejected_once_the_post_exceeds_the_total_size(
+    api_client: TestClient,
+    account: AccountFactory,
+    storage_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """글 1개의 첨부 합계가 MAX_POST_BYTES 를 넘는 업로드는 422 로 거절합니다.
+
+    상한을 실제 값(300MB)으로 시험하면 테스트가 300MB 를 디스크에 씁니다. 상한만 작게 교체하고
+    판정 로직은 그대로 실행합니다.
+    """
+    monkeypatch.setattr(attachment_service, "MAX_POST_BYTES", 20)
+    _, head = account("박서연", "head@example.com")
+    post_id = _notice(api_client, head)
+
+    first = api_client.post(
+        f"/posts/{post_id}/attachments",
+        files={"file": ("하나.pdf", b"a" * 15, "application/pdf")},
+        cookies=head,
+    )
+    assert first.status_code == 201
+
+    second = api_client.post(
+        f"/posts/{post_id}/attachments",
+        files={"file": ("둘.pdf", b"b" * 10, "application/pdf")},
+        cookies=head,
+    )
+
+    assert second.status_code == 422
+    listed = api_client.get(f"/posts/{post_id}/attachments", cookies=head).json()
+    assert len(listed["attachments"]) == 1
+    assert len(_stored_files(storage_dir)) == 1
+
+
+def test_one_file_larger_than_the_total_size_is_rejected(
+    api_client: TestClient,
+    account: AccountFactory,
+    storage_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """첫 파일 1개가 상한을 넘으면 거절하고, 디스크에 부분 파일을 남기지 않습니다."""
+    monkeypatch.setattr(attachment_service, "MAX_POST_BYTES", 20)
+    _, head = account("박서연", "head@example.com")
+    post_id = _notice(api_client, head)
+
+    response = api_client.post(
+        f"/posts/{post_id}/attachments",
+        files={"file": ("큰파일.pdf", b"c" * 21, "application/pdf")},
+        cookies=head,
+    )
+
+    assert response.status_code == 422
+    assert _stored_files(storage_dir) == []
+
+
+def test_deleting_an_attachment_frees_the_total_size(
+    api_client: TestClient,
+    account: AccountFactory,
+    storage_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """첨부를 삭제하면 합계가 줄어 같은 크기를 다시 업로드할 수 있습니다."""
+    monkeypatch.setattr(attachment_service, "MAX_POST_BYTES", 20)
+    _, head = account("박서연", "head@example.com")
+    post_id = _notice(api_client, head)
+
+    uploaded = api_client.post(
+        f"/posts/{post_id}/attachments",
+        files={"file": ("하나.pdf", b"a" * 15, "application/pdf")},
+        cookies=head,
+    ).json()["attachment"]
+    blocked = api_client.post(
+        f"/posts/{post_id}/attachments",
+        files={"file": ("둘.pdf", b"b" * 15, "application/pdf")},
+        cookies=head,
+    )
+    assert blocked.status_code == 422
+
+    api_client.delete(f"/attachments/{uploaded['id']}", cookies=head)
+    retried = api_client.post(
+        f"/posts/{post_id}/attachments",
+        files={"file": ("둘.pdf", b"b" * 15, "application/pdf")},
+        cookies=head,
+    )
+
+    assert retried.status_code == 201
+
+
+def test_a_concurrent_upload_cannot_pass_the_total_size(
+    api_client: TestClient,
+    account: AccountFactory,
+    storage_dir: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    test_engine: Engine,
+) -> None:
+    """같은 글에 동시에 들어온 업로드 2건이 각자 상한 전체를 배정받지 못합니다.
+
+    합계를 조회한 뒤 commit 하기 전에 다른 요청이 같은 합계를 조회하면, 2건 모두 "남은 용량 있음"
+    으로 판정해 각자 상한만큼 저장합니다. 글 1개에 상한의 2배가 쌓입니다.
+
+    session A 가 Post 행을 잠근 상태에서 session B 의 save_attachment 를 실행합니다. 잠금이 있으면
+    B 는 A 가 commit 할 때까지 진행하지 못하고, commit 된 뒤 갱신된 합계를 읽어 거절합니다.
+    잠금이 없으면 B 는 즉시 통과합니다.
+    """
+    monkeypatch.setattr(attachment_service, "MAX_POST_BYTES", 20)
+    member_id, head = account("박서연", "head@example.com")
+    post_id = _notice(api_client, head)
+
+    outcome: list[object] = []
+
+    def upload_from_another_session() -> None:
+        with Session(test_engine) as session:
+            requester = session.get(Member, member_id)
+            assert requester is not None
+            try:
+                attachment_service.save_attachment(
+                    session,
+                    post_id,
+                    "둘.pdf",
+                    "application/pdf",
+                    io.BytesIO(b"b" * 15),
+                    requester,
+                    datetime(2026, 9, 19, 12, 0),
+                )
+            except BaseException as error:
+                outcome.append(error)
+            else:
+                outcome.append("저장됨")
+
+    with Session(test_engine) as locking:
+        # A 가 Post 행을 잠그고 15바이트를 기록합니다. commit 하기 전까지 잠금을 유지합니다.
+        locked = locking.scalars(
+            select(Post).where(Post.id == post_id).with_for_update()
+        ).one()
+        locking.add(
+            Attachment(
+                post_id=locked.id,
+                name="하나.pdf",
+                stored_name="0123456789abcdef0123456789abcdef.pdf",
+                size=15,
+                content_type="application/pdf",
+                uploaded_at=datetime(2026, 9, 19, 11, 0),
+            )
+        )
+        locking.flush()
+
+        worker = threading.Thread(target=upload_from_another_session)
+        worker.start()
+        worker.join(timeout=2.0)
+
+        locking.commit()
+
+    worker.join(timeout=10.0)
+    assert not worker.is_alive()
+    assert isinstance(outcome[0], ValueError), f"B 가 통과했습니다: {outcome[0]!r}"
+
+    with Session(test_engine) as checking:
+        total = attachment_service._used_bytes(checking, post_id)
+    assert total <= 20, f"글 1개의 첨부 합계가 상한 20 을 넘었습니다: {total}"

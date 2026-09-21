@@ -66,3 +66,13 @@ test("링크 미리보기 태그가 첫 화면에 들어 있다", async ({ page 
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", /\S/);
   await expect(page.locator('meta[property="og:description"]')).toHaveAttribute("content", /\S/);
 });
+
+test("등록되지 않은 주소는 없는 주소 화면을 표시한다", async ({ page }) => {
+  await page.goto("/이런주소는없습니다");
+
+  await expect(page.getByRole("heading", { name: "없는 주소예요" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "처음 화면으로" })).toBeVisible();
+
+  await page.getByRole("link", { name: "처음 화면으로" }).click();
+  await expect(page).toHaveURL(/\/$/);
+});

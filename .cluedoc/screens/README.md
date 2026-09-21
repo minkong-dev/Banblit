@@ -9,13 +9,16 @@ sources:
   - frontend/src/routes/SettingsReservations.tsx # 설정 화면의 예약 탭 — 모든 멤버의 예약과 취소
   - frontend/src/routes/SettingsBlinded.tsx      # 설정 화면의 블라인드 탭 — 가려 둔 글과 되돌리기
   - frontend/src/components/Modal.tsx            # 모든 화면이 함께 쓰는 Modal 컴포넌트
+  - frontend/src/components/MemberSearch.tsx     # 창 위에 겹쳐 뜨는 멤버 검색 창의 입력칸과 목록
   - frontend/src/styles/base.css                 # 색·본문 최대 폭 같은 모든 화면 공통 값
   - frontend/src/styles/shell.css                # 상단바·사이드바·카드·입력칸 등 모든 화면이 함께 쓰는 스타일
   - frontend/src/lib/loading.ts                  # 목록이 불러오는 중인지·실패했는지·정상인지를 값 1개로 표현하는 타입
   - frontend/src/lib/calendar.ts                 # 모든 화면이 함께 쓰는 날짜·요일·시각 표기
   - frontend/src/lib/account.ts          # 권한 항목 20가지의 한국어 이름, "내가 그 항목을 가졌는가" 판단, 프로필 카드의 역할 문구
   - frontend/src/lib/confirm.ts          # 삭제·취소·추방 전에 1회 확인하는 문구
-  - frontend/src/routes/Settings.tsx     # 설정 화면의 합주실·기간 탭. 매일 기간은 종료일 입력을 숨깁니다
+  - frontend/src/routes/Settings.tsx     # 설정 화면의 진입점 — 탭을 고르고 오른쪽 계산 패널을 표시
+  - frontend/src/routes/SettingsRooms.tsx   # 설정 화면의 합주실 탭 — 목록·추가·수정·삭제
+  - frontend/src/routes/SettingsPeriods.tsx # 설정 화면의 기간 탭. 매일 기간은 종료일 입력을 숨깁니다
   - frontend/src/lib/account.test.ts     # 역할 문구 시나리오
   - frontend/src/lib/pipeline.test.ts    # 매일 기간의 저장값과 멤버 추방 호출 시나리오
   - frontend/src/components/AppShell.tsx # 사이드바 관리 구역을 권한 항목으로 표시·숨김하는 컴포넌트
@@ -23,7 +26,9 @@ sources:
   - frontend/src/lib/jobs.ts             # 접수한 계산이 끝날 때까지 polling 하는 함수
   - frontend/src/lib/notifications.ts    # 알림 종류를 문장으로 변환하는 함수
   - frontend/src/lib/boards.ts           # 첨부의 크기·확장자를 화면에서 먼저 검증하는 함수
-  - frontend/src/components/PostBoard.tsx # 글·댓글·첨부를 함께 표시하는 컴포넌트
+  - frontend/src/components/PostBoard.tsx # 글 목록과 상세를 전환하는 게시판 컴포넌트
+  - frontend/src/components/PostComments.tsx # 댓글 작성 form 과 댓글 한 줄
+  - frontend/src/components/PostActions.tsx  # 글 블라인드·삭제·수정 버튼
   - frontend/nginx.conf.template         # 배포 앞단의 요청 크기 상한
   - frontend/src/components/             # 2개 화면이 함께 쓰는 컴포넌트
   - frontend/src/lib/                    # 서버 호출과 순수 계산 (테스트가 있는 곳)
@@ -32,7 +37,7 @@ sources:
   - docker-compose.yml                   # web 컨테이너가 화면을 제공합니다
 ---
 
-> 문서 버전: 3.2.0 draft
+> 문서 버전: 3.3.0 draft
 
 ```mermaid
 flowchart LR
@@ -260,6 +265,10 @@ flowchart LR
 **목록은 스크롤하지 않고 페이지 단위로 전환됩니다.** 화면 높이를 기준으로 표시되는 행의 개수를 계산하고 나머지는 다음 페이지로 넘깁니다. 따라서 페이지 네비게이션 행이 화면 크기에 관계없이 항상 카드 하단에 위치합니다. 페이지가 1개뿐일 때도 행이 그대로 표시됩니다. 버튼 위치가 변경되면 다음에 클릭할 위치를 매번 다시 찾아야 합니다.
 
 **수정은 수정 아이콘, 삭제는 삭제 아이콘입니다.** 수정을 클릭하면 생성 시와 동일한 dialog가 기존 값으로 채워진 상태로 열립니다. 삭제는 "정말 ~~을(를) 삭제하시겠습니까?"라는 1번의 확인만 요청합니다.
+
+**Dialog 본문의 맨 위에는 초점 테두리가 들어갈 여백을 둡니다.** 본문은 내용이 넘칠 때 스크롤하는 영역인데, 스크롤하는 영역은 스크롤하지 않을 때도 자기 밖으로 나가는 것을 잘라냅니다. 초점 테두리는 입력칸의 바깥쪽에 그려지므로, 본문의 위쪽 여백이 0이면 맨 위 입력칸의 테두리가 윗변만 잘려 아래쪽만 그려집니다. 좌우는 여백이 넉넉해 이 현상이 보이지 않아, 테두리가 한쪽만 어긋나 보입니다. 그래서 본문 위쪽에 여백을 두고, 같은 크기만큼을 제목 줄의 아래 여백에서 가져와 제목과 본문 사이 간격은 그대로 둡니다. 3단 카드 dialog 도 2026-09-15 에 같은 이유로 여백을 스크롤 영역 안쪽으로 옮겼습니다.
+
+**멤버 검색 창의 입력칸은 본문 맨 위에 고정됩니다.** 검색어 없이도 명단 전체가 나오므로 목록이 화면보다 길어집니다. 입력칸이 함께 스크롤되어 사라지면 검색어를 넣으려고 매번 맨 위로 돌아가야 합니다.
 
 ### 배치를 창 크기에 맞추지 않습니다 (2026-09-08)
 

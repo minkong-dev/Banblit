@@ -45,7 +45,7 @@ from backend.db.pipeline import (
     rollback_schedule,
 )
 from backend.scheduling.pipeline import Assignment as EngineAssignment
-from backend.scheduling.pipeline import RoomSlot
+from backend.scheduling.pipeline import RoomInterval
 
 router = APIRouter()
 
@@ -87,17 +87,21 @@ def read_schedule(
 
 def _assignment_out(assignment: EngineAssignment, result: PeriodAssignResult) -> AssignmentOut:
     # 엔진이 사용한 번호가 바로 DB의 번호입니다. 이름만 대응표에서 찾아 붙입니다.
-    def to_slot(room_slot: RoomSlot) -> RoomSlotOut:
+    def to_slot(room_interval: RoomInterval) -> RoomSlotOut:
         return RoomSlotOut(
-            room_id=room_slot.room_id,
-            room=result.room_names[room_slot.room_id],
-            start=room_slot.interval.start,
-            end=room_slot.interval.end,
+            room_id=room_interval.room_id,
+            room=result.room_names[room_interval.room_id],
+            start=room_interval.interval.start,
+            end=room_interval.interval.end,
         )
 
+    # 응답의 slots_by_team 한 항목은 session(합주 1회가 이어지는 구간) 1회입니다. 화면이 쓰는
+    # field 이름이므로 그대로 둡니다.
     slots_by_team: dict[str, list[RoomSlotOut]] = {}
-    for team_id, slots in assignment.slots_by_team.items():
-        slots_by_team[result.team_names[team_id]] = [to_slot(slot) for slot in slots]
+    for team_id, sessions in assignment.sessions_by_team.items():
+        slots_by_team[result.team_names[team_id]] = [
+            to_slot(room_session) for room_session in sessions
+        ]
 
     return AssignmentOut(
         feasible=assignment.feasible,

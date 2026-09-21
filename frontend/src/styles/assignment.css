@@ -72,3 +72,16 @@ body[data-page="admin"] {
   .times .save.on { background: var(--brand); color: var(--brand-on); }
   .times p { margin: 12px 0 0; font-size: 13px; color: var(--t3); line-height: 1.7; }
 }
+
+/* 휴대폰 폭입니다. 7열 달력을 1열에 들어갈 만큼 좁히면 칸 하나가 50px 아래로 내려가 날짜와 막대를
+   읽을 수 없습니다. 달력에 최소 폭을 주고 가로로만 스크롤합니다. 화면 전체가 가로로 밀리는 것과
+   달리, 스크롤 대상이 달력 하나로 한정됩니다. */
+@media (max-width: 860px) {
+  body[data-page="admin"] {
+    .cal { overflow-x: auto; }
+    .dow, .grid { min-width: 620px; }
+    .day { min-height: 92px; padding: 7px 6px 8px; }
+    .calhead { padding: 13px 15px; gap: 10px; }
+    .calhead .keys { margin-left: 0; }
+  }
+}

@@ -1,10 +1,11 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, NaiveDatetime
+from pydantic import BaseModel, Field, NaiveDatetime, model_validator
 
-from backend.db.models import Instrument, Permission
+from backend.db.models import PERMISSIONS, Instrument, Permission
 from backend.db.models import NotificationKind
+from backend.contract import MAX_SESSION_MINUTES
 
 class RoomSlotOut(BaseModel):
     # 배정의 slot(점유 단위 길이의 시간 칸)입니다. 합주실은 DB의 번호와 이름을 함께 반환합니다.
@@ -137,6 +138,33 @@ class EnsembleOut(BaseModel):
     days: list[EnsembleDayOut]
 
 
+class ClockRangeOut(BaseModel):
+    starts_at: str
+    ends_at: str
+
+
+class PracticeWindowOut(BaseModel):
+    """팀별합주를 배정할 수 있는 하루 중의 시간대입니다. 합주실 개방시각과는 다른 값입니다.
+
+    null 인 쪽은 시간대를 정하지 않았다는 뜻이고, 그날은 합주실 개방시각 전체를 씁니다.
+    두 쌍은 서로 독립입니다 — 평일만 좁히고 주말은 열어 둘 수 있습니다.
+    """
+
+    weekday: ClockRangeOut | None
+    weekend: ClockRangeOut | None
+
+
+class PracticeWindowIn(BaseModel):
+    """시간대 전체를 한 번에 대체합니다. 두 쌍을 모두 null 로 보내면 시간대를 지웁니다.
+
+    PATCH 에서 이 값을 보내지 않으면 저장된 시간대를 그대로 둡니다. "보내지 않음"과 "지움"을
+    이렇게 구분해야, 다른 값만 고치는 요청이 시간대를 조용히 지우지 않습니다.
+    """
+
+    weekday: ClockRangeOut | None = None
+    weekend: ClockRangeOut | None = None
+
+
 class PeriodOut(BaseModel):
     id: int
     kind: str
@@ -145,6 +173,8 @@ class PeriodOut(BaseModel):
     everyday: bool
     first_run_at: str
     second_run_at: str
+    # 정하지 않은 쌍은 null 입니다. 껍데기는 언제나 있습니다 — 화면이 null 검사를 두 번 하지 않습니다.
+    practice_window: PracticeWindowOut
     # 전체합주를 지정하지 않은 기간은 null 입니다.
     ensemble: EnsembleOut | None
 
@@ -177,6 +207,8 @@ class PeriodCreateIn(BaseModel):
     everyday: bool
     first_run_at: str
     second_run_at: str
+    # 생략하면 시간대를 정하지 않은 기간이 됩니다.
+    practice_window: PracticeWindowIn | None = None
 
 
 class PeriodUpdateIn(BaseModel):
@@ -186,6 +218,8 @@ class PeriodUpdateIn(BaseModel):
     everyday: bool | None = None
     first_run_at: str | None = None
     second_run_at: str | None = None
+    # 보내지 않으면 저장된 시간대를 그대로 둡니다. 지우려면 두 쌍이 null 인 객체를 보냅니다.
+    practice_window: PracticeWindowIn | None = None
 
 
 class TeamOut(BaseModel):
@@ -251,6 +285,23 @@ class SlotEnvelopeOut(BaseModel):
 
 class SlotAssignIn(BaseModel):
     member_id: int
+
+
+class SlotMemberIn(BaseModel):
+    """자리 1개의 배정 결과입니다. member_id 가 None 이면 그 자리의 배정을 해제합니다."""
+
+    slot_id: int
+    member_id: int | None = None
+
+
+class SlotMembersIn(BaseModel):
+    """팀 화면이 저장 버튼 1번에 보내는 자리 배정 전체입니다.
+
+    자리마다 요청을 보내면 중간 요청이 실패했을 때 앞선 요청만 반영된 상태로 끝납니다.
+    이 모델로 한 번에 수신해 transaction 1개로 처리합니다.
+    """
+
+    assignments: list[SlotMemberIn]
 
 
 class MemberOut(BaseModel):
@@ -372,7 +423,9 @@ class PermissionSetIn(BaseModel):
     name: str = Field(max_length=50)
     # 이 permission set 을 어떤 역할의 사람에게 부여하는지 설명하는 문장입니다. 빈 값을 허용하지 않습니다.
     description: str = Field(max_length=200)
-    permissions: list[Permission] = Field(max_length=20)
+    # 상한은 항목 수에서 유도합니다. 숫자를 적어 두면 항목을 추가할 때 이 줄을 함께 수정해야 하고,
+    # 수정하지 않으면 모든 항목을 선택한 요청이 거절됩니다.
+    permissions: list[Permission] = Field(max_length=len(PERMISSIONS))
 
 
 class PermissionSetMemberOut(BaseModel):
@@ -484,13 +537,33 @@ class UnavailableCreateIn(BaseModel):
 
 
 class SettingsOut(BaseModel):
-    # 예약과 배정이 쓰는 시간 칸의 크기(분)입니다.
+    # 예약과 배정이 쓰는 시간 칸의 크기(분)입니다. 합주를 시작할 수 있는 간격이기도 합니다.
     slot_minutes: int
+    # 합주 1회가 이어지는 길이(분)입니다.
+    session_minutes: int
 
 
 class SettingsUpdateIn(BaseModel):
+    """바꿀 값만 담습니다. 보내지 않은 값은 그대로 둡니다.
+
+    두 값이 한 요청에 담길 수 있어야 합니다. 30분 합주로 내리려면 칸도 30분이어야 하는데,
+    요청을 나누면 어느 쪽을 먼저 보내도 중간 상태가 조건을 어겨 거절됩니다.
+    """
+
     # 한 시간을 남김없이 나누는 값만 받습니다. DB 의 CHECK 와 같은 조건을 경계에서도 봅니다.
-    slot_minutes: Literal[5, 10, 12, 15, 20, 30, 60]
+    # 허용 값은 contract.py 의 SLOT_MINUTE_CHOICES 가 정본입니다. Literal 은 상수만 받아
+    # 목록에서 생성할 수 없으므로 값을 적고, 두 목록이 어긋나면 test_settings_endpoints.py 가 잡습니다.
+    slot_minutes: Literal[5, 10, 12, 15, 20, 30, 60] | None = None
+    # 칸의 배수인지는 저장된 칸 크기를 함께 봐야 알 수 있어 services/settings_service.py 가 판정합니다.
+    # 여기서는 값 하나만으로 판정할 수 있는 범위만 봅니다.
+    session_minutes: int | None = Field(default=None, ge=1, le=MAX_SESSION_MINUTES)
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> "SettingsUpdateIn":
+        # 빈 요청을 200 으로 받으면 이름을 잘못 적은 요청이 조용히 무시됩니다.
+        if self.slot_minutes is None and self.session_minutes is None:
+            raise ValueError("바꿀 값을 하나 이상 보내주세요")
+        return self
 
 
 class ReservationOut(BaseModel):
@@ -531,7 +604,6 @@ class NotificationOut(BaseModel):
     # 알림의 종류만 포함합니다. 사람이 읽을 문장은 화면이 이 값으로 만듭니다.
     kind: NotificationKind
     created_at: str
-    read: bool
 
 
 class NotificationsOut(BaseModel):

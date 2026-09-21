@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -18,7 +16,6 @@ def _notification_out(notification: Notification) -> NotificationOut:
         id=notification.id,
         kind=notification.kind,
         created_at=format_created_at(notification.created_at),
-        read=notification.read_at is not None,
     )
 
 
@@ -39,4 +36,5 @@ def mark_notifications_read(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> None:
-    mark_all_read(session, requester.id, datetime.now())
+    """요청자의 알림을 전부 삭제합니다. 읽은 알림을 다시 볼 경로가 없어 보존하지 않습니다."""
+    mark_all_read(session, requester.id)

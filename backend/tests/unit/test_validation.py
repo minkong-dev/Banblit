@@ -7,9 +7,10 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from backend.scheduling.assignment import Room, assign
+from backend.scheduling.assignment import Room
 from backend.scheduling.availability import Member, Team
 from backend.scheduling.interval import TimeInterval
+from conftest import assign
 
 KST = timezone(timedelta(hours=9))
 
@@ -56,14 +57,14 @@ def test_interval_rejects_timezone_aware_values() -> None:
 def test_rejects_the_same_room_opening_twice_over_the_same_time() -> None:
     # 같은 합주실의 같은 시간이 두 slot으로 세어지면 두 팀이 같은 자리에 배정됩니다.
     with pytest.raises(ValueError):
-        assign(teams=[_team()], rooms=[_room(1), _room(1)], slots_per_team=1)
+        assign(teams=[_team()], rooms=[_room(1), _room(1)], sessions_per_team=1)
 
 
 def test_rejects_overlapping_open_periods_for_the_same_room() -> None:
     # 19~21시는 앞의 18~20시 및 19~20시 slot과 겹칩니다.
     late = Room(id=1, open_period=TimeInterval(_at(19), _at(21)))
     with pytest.raises(ValueError):
-        assign(teams=[_team()], rooms=[_room(1), late], slots_per_team=1)
+        assign(teams=[_team()], rooms=[_room(1), late], sessions_per_team=1)
 
 
 def test_accepts_the_same_room_opening_on_different_days() -> None:
@@ -71,7 +72,7 @@ def test_accepts_the_same_room_opening_on_different_days() -> None:
     day_one = Room(id=1, open_period=TimeInterval(_at(18), _at(20)))
     day_two = Room(id=1, open_period=TimeInterval(_at(18, day=21), _at(20, day=21)))
 
-    result = assign(teams=[_team()], rooms=[day_one, day_two], slots_per_team=1)
+    result = assign(teams=[_team()], rooms=[day_one, day_two], sessions_per_team=1)
 
     assert result.feasible is True
 
@@ -81,7 +82,7 @@ def test_rejects_duplicate_team_ids() -> None:
         assign(
             teams=[_team(10, member_id=1), _team(10, member_id=2)],
             rooms=[_room()],
-            slots_per_team=1,
+            sessions_per_team=1,
         )
 
 
@@ -93,17 +94,17 @@ def test_rejects_a_member_listed_twice_in_the_same_team() -> None:
     # 오류 메시지 없이 넘어가면 배정 엔진이 잘못된 조율안을 출력합니다.
     kim = Member(id=7, unavailable=[])
     with pytest.raises(ValueError):
-        assign(teams=[Team(id=10, members=[kim, kim])], rooms=[_room()], slots_per_team=1)
+        assign(teams=[Team(id=10, members=[kim, kim])], rooms=[_room()], sessions_per_team=1)
 
 
 def test_rejects_a_team_with_no_members() -> None:
     with pytest.raises(ValueError):
-        assign(teams=[Team(id=10, members=[])], rooms=[_room()], slots_per_team=1)
+        assign(teams=[Team(id=10, members=[])], rooms=[_room()], sessions_per_team=1)
 
 
 # ── 요청 개수의 유효성 ───────────────────────────────────────
 
 
-def test_rejects_negative_slots_per_team() -> None:
+def test_rejects_negative_sessions_per_team() -> None:
     with pytest.raises(ValueError):
-        assign(teams=[_team()], rooms=[_room()], slots_per_team=-1)
+        assign(teams=[_team()], rooms=[_room()], sessions_per_team=-1)
