@@ -49,7 +49,7 @@ class _Entry(Generic[ResultT]):
 
 
 class JobRunner(Generic[ResultT]):
-    """작업(work)을 접수 즉시 큐에 추가하고, 스레드 풀 여유가 생길 때 실행합니다.
+    """작업(work)을 접수 즉시 queue(실행을 기다리는 작업이 쌓이는 목록)에 추가하고, 스레드 풀 여유가 생길 때 실행합니다.
 
     진행 상태를 별도로 추적하지 않습니다 — Future가 이미 관리합니다(running·done·exception·result).
     """
@@ -64,7 +64,7 @@ class JobRunner(Generic[ResultT]):
         self._entries[job_id] = entry
 
         def run() -> None:
-            # max_workers 를 초과하는 작업은 스레드 풀의 대기열에서 기다립니다. 실제로 실행을 시작할 때
+            # max_workers 를 초과하는 작업은 스레드 풀의 queue 에서 기다립니다. 실제로 실행을 시작할 때
             # started 를 True 로 기록해야 "queued" 와 "running" 이 구분됩니다.
             entry.started = True
             # finished_at 을 Future 보다 먼저 기록합니다. 순서가 반대이면 그 사이의 조회가
