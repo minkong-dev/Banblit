@@ -90,6 +90,10 @@ body[data-page="scheduler"] {
   .band { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; background: var(--brand); color: var(--brand-on); border-radius: 999px; font-size: 12.5px; white-space: nowrap; }
   .band b { font-weight: 700; }
 
+  /* 오늘 칸입니다. 달 보기의 칸과 주 보기의 요일 머리글이 같은 표시를 씁니다.
+     채움이 아니라 테두리로 표시해, 그날에 이미 붙어 있는 색(예약·배정)을 가리지 않습니다. */
+  .cell.today, .wh.today { box-shadow: inset 0 0 0 2px var(--brand); }
+
   .weekscroll { flex: 1; overflow: auto; min-height: 0; }
   /* 한 칸의 세로 길이를 이 규칙 하나가 정합니다. 최솟값은 막대가 이름과 시각 2줄을 담는 높이고,
      남는 공간은 1fr 이 나눠 갖습니다. 3시간만 여는 날은 칸이 늘고, 10시간 여는 날은 최솟값을
@@ -138,7 +142,7 @@ body[data-page="scheduler"] {
   .cut { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 18px; margin-bottom: 16px; background: var(--red-tint); border-radius: 16px; }
   .cut p { margin: 0; font-size: 13.5px; color: var(--t2); }
   .cut p b { display: block; font-size: 15.5px; color: var(--t1); font-weight: 700; }
-  .cut button { margin-left: auto; padding: 11px 18px; min-height: 44px; background: var(--red); color: #fff; border-radius: 12px; font-weight: 700; }
+  .cut button { margin-left: auto; }
   .blank { padding: 70px 20px; text-align: center; }
   .blank b { display: block; font-size: 16.5px; font-weight: 700; margin-bottom: 6px; }
   .blank p { margin: 0; font-size: 14px; color: var(--t2); }
@@ -148,8 +152,9 @@ body[data-page="scheduler"] {
   .bigtime b { display: block; font-size: 26px; font-weight: 700; color: var(--brand); letter-spacing: -.03em; }
   .bigtime small { font-size: 13.5px; color: var(--t2); }
 
-  /* .tl 을 감싸는 요소입니다. 시각 글씨(.hr::before)가 왼쪽 여백에 -50px 로 배치되어 있어
-     .tl 에 직접 padding 을 주면 잘립니다. 스크롤은 dialog 가 담당합니다. */
+  /* 스크롤은 감싼 요소에 지정합니다. .tl 자체에 지정하면 시각 글씨(.hr::before)가 왼쪽 여백에
+     -50px 로 배치되어 있어 잘립니다. 시작 방향으로 넘친 내용은 스크롤이 생기지 않습니다. */
+  .tlscroll { max-height: 42vh; overflow-y: auto; }
   /* 한 칸의 세로 길이입니다. 주 보기와 같은 이유로 이 규칙 하나만 정합니다. */
   /* --gutter 는 왼쪽 시각 글씨 칸의 폭입니다. 막대는 이 칸을 덮지 않고 그 오른쪽부터 시작합니다. */
   .tl { --slot-h: 3.4rem; --gutter: 50px; position: relative; padding-left: var(--gutter); border-bottom: 1px solid var(--line); }
@@ -169,15 +174,15 @@ body[data-page="scheduler"] {
   .tl .evb.sel { pointer-events: none; background: var(--brand-tint); color: var(--brand); border: 1.5px dashed var(--brand); }
 
   /* ===== 3단 카드. 왼쪽 타임라인, 가운데 등록 폼, 오른쪽 내 일정 목록. 열 배치는 shell.css 의 dialog.panes 가 정합니다 =====
-     높이는 grid 가 가장 긴 카드에 맞추고, 넘치는 내용은 dialog 하나가 통째로 스크롤합니다. 카드 안쪽에는 스크롤을 두지 않습니다. */
+     높이는 grid 가 dialog 높이(92vh)로 맞추고, 카드 안쪽 내용(.tlscroll·.col·.people)만 각자 스크롤합니다. 제목 줄과 버튼 줄은 스크롤되지 않습니다. */
   .pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 22px 0 24px; background: var(--card); border-radius: 22px; box-shadow: var(--shadow-up); overflow: hidden; }
   /* 좌우 여백은 카드가 아니라 스크롤 영역 안쪽에 둡니다. 세로 스크롤 영역은 가로로 넘친 것도 잘라내므로,
      여백이 바깥에 있으면 입력칸의 포커스 테두리(outline)가 양옆에서 잘립니다. .mbody 와 같은 구조입니다. */
   .pane .mhead { padding: 0 24px 14px; }
   .pane .mfoot { padding: 14px 24px 0; margin-top: auto; }
-  .pane .tlscroll, .pane .col, .pane .people { padding-left: 24px; padding-right: 24px; }
+  .pane .tlscroll, .pane .col, .pane .people { flex: 1; min-height: 0; overflow-y: auto; padding-left: 24px; padding-right: 24px; }
   /* 위 여백은 첫 시각 글씨(.hr::before, top -9px)가 잘리지 않을 만큼입니다. */
-  .pane .tlscroll { padding-top: 10px; }
+  .pane .tlscroll { max-height: none; padding-top: 10px; }
   .pane .people { margin-top: 0; }
   /* 가운데 폼과 오른쪽 목록의 머리글은 같은 크기입니다. .people h3 의 작은 회색 규칙보다 우선합니다. */
   .pane .col h3, .pane .people > h3 { margin: 0 0 14px; font-size: 16.5px; font-weight: 700; color: var(--t1); letter-spacing: -.02em; }
@@ -193,6 +198,11 @@ body[data-page="scheduler"] {
   .fld3 > textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
   .fld3 > :focus-visible, .pick select:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
   .people .none { margin: 0; font-size: 13.5px; color: var(--t3); line-height: 1.6; }
+  /* 1열로 쌓이면 카드는 내용만큼만 차지합니다. 타임라인만 상한을 둡니다. */
+  @media (max-width: 960px) {
+    .pane .tlscroll { max-height: 42vh; }
+  }
+
   .people { margin-top: 22px; }
   .people h3 { margin: 0 0 10px; font-size: 13px; color: var(--t3); font-weight: 500; }
   .plist { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 18px; }
@@ -208,7 +218,12 @@ body[data-page="scheduler"] {
   .mlist .prow { gap: 12px; }
   .mlist .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; background: var(--t3); }
   .mlist .dot:not(.off) { background: var(--tc, var(--t3)); }
-  .mlist .ps { margin-left: auto; }
+  /* 이름과 상세를 가로로 나란히 두면 좁은 카드에서 이름이 글자마다 줄바꿈됩니다("수" / "업").
+     이름을 한 줄에 두고 날짜·반복·시각은 그 아래 줄에 적습니다. */
+  .mlist .prow { align-items: center; }
+  .mlist .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .mlist .nm { font-weight: 700; overflow-wrap: anywhere; }
+  .mlist .ps { margin-left: 0; line-height: 1.5; }
   .mlist .ic { width: 36px; height: 36px; flex: none; }
   .mlist .ic svg { width: 17px; height: 17px; }
 
@@ -231,3 +246,25 @@ body[data-page="scheduler"] {
     .panel li button { padding: 9px; font-size: 13.5px; }
   }
 }
+
+  /* ===== 불가능 일정의 반복 설정(routes/DayDialogParts 의 RepeatFields) ===== */
+  /* 체크를 켜야 아래 요일 버튼과 끝나는 조건이 나타납니다. 항상 보이면 반복하지 않는 사람에게
+     고를 것이 없는 입력칸 세 개가 계속 보입니다. */
+  .rep { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+  .repon { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--t3); }
+  .repbody { display: flex; flex-direction: column; gap: 6px; }
+  /* 일곱 개가 한 줄에 균등하게 들어갑니다. 폭이 좁아지면 버튼이 같이 좁아집니다. */
+  .repdays { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .repdays button {
+    min-height: 40px; border: 1px solid var(--line-2); border-radius: 10px;
+    background: var(--card); color: var(--t3);
+    font-size: clamp(12.5px, 1.2cqi, 14px); font-weight: 700;
+    transition: border-color .12s ease, color .12s ease, background-color .12s ease;
+  }
+  /* 고른 요일입니다. 테두리와 글자가 초록색입니다(사용자 지정). 채우지 않는 이유는 일곱 개를 다
+     고르면 화면이 초록 덩어리가 되어 어느 것이 선택인지 읽기 어려워지기 때문입니다. */
+  .repdays button[aria-pressed="true"] {
+    border-color: var(--green); color: var(--green); background: var(--green-tint);
+  }
+  .repdays button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .rep .why { margin: 2px 0 0; font-size: 12.5px; color: var(--red); line-height: 1.5; }

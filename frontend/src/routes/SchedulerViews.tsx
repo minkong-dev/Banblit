@@ -7,7 +7,7 @@ import { visible } from "../lib/dayEntries";
 import type { DayTab, Entry } from "../lib/dayEntries";
 import type { DayTeam } from "../lib/roster";
 import {
-  dayWithWeekday, hoursLabel, isRangeFree, monthCells, slotLabel, takenGrid, WEEKDAY_NAMES,
+  dayKey, dayWithWeekday, hoursLabel, isRangeFree, monthCells, slotLabel, takenGrid, WEEKDAY_NAMES,
 } from "../lib/pipeline";
 import { entryClass, entryName } from "./DayDialogParts";
 
@@ -50,7 +50,8 @@ export function MonthView({
 
           const key = ymd(day);
           const weekday = index % 7;
-          const marks = [weekday === 0 ? "sun" : ""].filter(Boolean);
+          // 오늘 칸은 어느 탭에서나 테두리로 표시합니다. 날짜 문자열끼리 비교하므로 시각은 영향을 주지 않습니다.
+          const marks = [weekday === 0 ? "sun" : "", key === dayKey(new Date()) ? "today" : ""].filter(Boolean);
           let blocked = false;
           let inner = null;
 
@@ -156,7 +157,7 @@ export function WeekView({
       <div className="weekgrid">
         <div className="wh" />
         {dayKeys.map((key, index) => (
-          <div className={index === 0 ? "wh sun" : "wh"} key={key}>
+          <div className={["wh", index === 0 ? "sun" : "", key === dayKey(new Date()) ? "today" : ""].filter(Boolean).join(" ")} key={key}>
             {WEEKDAY_NAMES[index]}<b>{Number(key.slice(8, 10))}</b>
           </div>
         ))}

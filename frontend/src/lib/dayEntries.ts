@@ -1,6 +1,6 @@
 // 달력 하루에 표시할 항목(Entry)을 서버 자료에서 만드는 계산입니다. 화면이나 서버와 상호작용하지 않습니다.
 
-import { dayWithWeekday } from "./calendar";
+import { dayWithWeekday, hasWeekday, repeatLabel, weekdayIndex } from "./calendar";
 import { dayOf, mergeSessions, slotIndex } from "./slots";
 import { LOADING_TEXT } from "./loading";
 import type { Session } from "./slots";
@@ -28,8 +28,12 @@ export type Entry = {
   bookingId?: number;
   /** 항목의 날짜("2026-09-14")입니다. 여러 날짜의 항목을 한 목록에 나열하는 allOffEntries 만 값을 넣습니다. */
   day?: string;
-  /** 반복 주기입니다. 반복하지 않는 항목에는 없습니다. allOffEntries 만 값을 넣습니다. */
-  repeat?: "daily" | "weekly";
+  /** 목록 한 줄에 덧붙일 반복 표기입니다. "매일" 이나 "매주 월·수·금" 이고, 반복이 아니면 없습니다. */
+  repeat?: string;
+  /** 반복 요일 집합·횟수·종료일입니다. 수정 화면이 폼을 되살릴 때 사용합니다. */
+  repeatWeekdays?: number | null;
+  repeatCount?: number | null;
+  repeatUntil?: string | null;
 };
 
 export type DayEntries = Record<string, Entry[]>;
@@ -150,39 +154,48 @@ export function allOffEntries(times: Unavailable[], openHour: number): Entry[] {
       b: slotIndex(item.ends_at, openHour),
       removeIds: [item.id],
       day: dayOf(item.starts_at),
-      repeat: item.repeats_daily ? "daily" as const : item.repeats_weekly ? "weekly" as const : undefined,
+      repeat: repeatLabel(item.repeat_weekdays ?? 0) || undefined,
+      repeatWeekdays: item.repeat_weekdays,
+      repeatCount: item.repeat_count,
+      repeatUntil: item.repeat_until,
     }));
 }
 
-const REPEAT_TEXT = { daily: "매일", weekly: "매주" };
 
 /** allOffEntries 의 항목 1줄에 적는 날짜입니다. "9월 14일 월요일" 이고, 반복 일정이면 " · 매주" 를 덧붙입니다.
  *  day 가 없는 항목(그날의 항목만 나열하는 목록)은 날짜를 적지 않으므로 빈 문자열입니다. */
 export function offWhenLabel(entry: Entry): string {
   if (entry.day === undefined) return "";
   const day = dayWithWeekday(entry.day);
-  return entry.repeat === undefined ? day : `${day} · ${REPEAT_TEXT[entry.repeat]}`;
+  return entry.repeat === undefined ? day : day + " · " + entry.repeat;
 }
 
 /** 이 불가능 일정이 적용되는 날짜들입니다. 반복이 아니면 시작 날짜 하나뿐입니다. */
 export function repeatDays(item: Unavailable, days: string[]): string[] {
   const first = dayOf(item.starts_at);
-  if (!item.repeats_daily && !item.repeats_weekly) return [first];
+  const chosen = item.repeat_weekdays ?? 0;
+  if (chosen === 0) return [first];
 
-  const step = item.repeats_daily ? 1 : DAYS_PER_WEEK;
   const last = item.repeat_until;
+  // 횟수는 고른 요일 전부를 한 세트로 세는 주 단위입니다(services/period_input 과 같은 규칙).
+  // 주의 경계는 월요일이므로, 시작일이 속한 주의 월요일부터 weeks 주 뒤까지가 범위입니다.
+  const weeks = item.repeat_count;
+  const firstMonday = shiftDay(first, -weekdayIndex(first));
+  const afterLast = weeks === null ? null : shiftDay(firstMonday, weeks * DAYS_PER_WEEK);
   return days.filter((day) => {
-    if (day < first) return false;
+    if (day < first || !hasWeekday(chosen, weekdayIndex(day))) return false;
     if (last !== null && day > last) return false;
-    return dayDistance(first, day) % step === 0;
+    return afterLast === null || day < afterLast;
   });
 }
 
-/** from 부터 to 까지 며칠 떨어져 있는지입니다. 같은 날이면 0 입니다. */
-function dayDistance(from: string, to: string): number {
-  const ms = Date.parse(`${to}T00:00:00`) - Date.parse(`${from}T00:00:00`);
-  return Math.round(ms / 86_400_000);
+/** day 에서 며칠 뒤(음수면 며칠 전)의 날짜 문자열입니다. "2026-09-14" 형식입니다. */
+function shiftDay(day: string, days: number): string {
+  const at = new Date(`${day}T12:00:00`);
+  at.setDate(at.getDate() + days);
+  return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
 }
+
 
 /** 현재 보고 있는 달에 표시할 수 있는 날짜 전부입니다. 앞뒤로 한 주씩 더 포함하는 것은 주 보기가
  *  달의 경계를 넘을 수 있어서입니다. 반복을 전개할 때만 사용하므로 범위가 넓어도 문제없습니다. */

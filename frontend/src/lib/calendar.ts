@@ -262,3 +262,36 @@ const A_SUNDAY = { year: 2024, month: 0, day: 7 };
 /** 달력 머리글의 요일 이름 7개입니다. 일요일부터 토요일까지이며 달력 격자도 같은 순서입니다. */
 export const WEEKDAY_NAMES: string[] = Array.from({ length: DAYS_PER_WEEK }, (_, index) =>
   WEEKDAY.format(new Date(A_SUNDAY.year, A_SUNDAY.month, A_SUNDAY.day + index, NOON_HOUR)));
+
+/** 불가능 일정의 반복 요일을 담는 값입니다. 월요일 1, 화요일 2, 수요일 4 … 일요일 64 를 더해
+ *  하나의 숫자로 저장합니다. 서버의 unavailable_times.repeat_weekdays 와 같은 순서입니다.
+ *  0 이면 반복하지 않고, 127(ALL_WEEKDAYS)이면 매일입니다. */
+export const ALL_WEEKDAYS = 0b1111111;
+
+/** 반복 요일 버튼에 표시할 이름입니다. 월요일부터이고, 배열의 index 가 곧 자릿수입니다.
+ *  달력 머리글의 WEEKDAY_NAMES 는 일요일부터라 순서가 다릅니다. */
+export const REPEAT_WEEKDAY_NAMES = ["월", "화", "수", "목", "금", "토", "일"];
+
+/** mask 에 index 번째 요일이 들어 있으면 true 를 반환합니다. index 는 월요일이 0 입니다. */
+export function hasWeekday(mask: number, index: number): boolean {
+  return (mask & (1 << index)) !== 0;
+}
+
+/** mask 에서 index 번째 요일을 넣거나 뺀 새 값을 반환합니다. 원래 값은 변경하지 않습니다. */
+export function toggleWeekday(mask: number, index: number): number {
+  return hasWeekday(mask, index) ? mask & ~(1 << index) : mask | (1 << index);
+}
+
+/** "2026-09-14" 의 요일 자릿수입니다. 월요일이 0 이고 일요일이 6 입니다. */
+export function weekdayIndex(day: string): number {
+  return (new Date(`${day}T12:00:00`).getDay() + 6) % 7;
+}
+
+/** 목록 한 줄에 적는 반복 표기입니다. 반복하지 않으면 빈 문자열, 일곱 요일 전부면 "매일",
+ *  그 밖에는 "매주 월·수·금" 입니다. */
+export function repeatLabel(mask: number): string {
+  if (mask === 0) return "";
+  if (mask === ALL_WEEKDAYS) return "매일";
+  const days = REPEAT_WEEKDAY_NAMES.filter((_, index) => hasWeekday(mask, index));
+  return `매주 ${days.join("·")}`;
+}

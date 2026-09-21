@@ -235,30 +235,69 @@ export async function loadUnavailable(memberId: number): Promise<Unavailable[]> 
 }
 
 /** 반복 주기입니다. "none"이면 해당 날 한 번뿐입니다. */
-export type RepeatCycle = "none" | "daily" | "weekly";
+/** 불가능 일정의 반복 설정입니다. weekdays 가 0 이면 반복하지 않고, 127 이면 매일입니다.
+ *  끝나는 조건은 count(횟수)나 until(종료일) 중 하나이고, 둘 다 값을 주면 서버가 422 로 거절합니다. */
+export type Repeat = { weekdays: number; count: number | null; until: string | null };
+
+export const NO_REPEAT: Repeat = { weekdays: 0, count: null, until: null };
+
+/** 반복 설정을 서버가 받는 세 field 로 변환합니다. 반복하지 않으면 셋 다 null 입니다 —
+ *  서버는 반복이 아닌데 횟수나 종료일이 오면 거절합니다. */
+function repeatBody(repeat: Repeat): {
+  repeat_weekdays: number | null; repeat_count: number | null; repeat_until: string | null;
+} {
+  if (repeat.weekdays === 0) return { repeat_weekdays: null, repeat_count: null, repeat_until: null };
+  return {
+    repeat_weekdays: repeat.weekdays,
+    repeat_count: repeat.count,
+    repeat_until: repeat.until,
+  };
+}
 
 export async function addUnavailable(
   memberId: number,
   startsAt: string,
   endsAt: string,
-  repeat: RepeatCycle,
+  repeat: Repeat,
   reason: string,
   name: string,
 ): Promise<Unavailable> {
-  // repeat_until은 전송하지 않습니다. 서버는 반복이 비활성화되어 있으면 repeat_until을 수신할 때 거절하고, 활성화되어 있으면 기간의 끝까지로 자동 설정합니다.
-  // ponytail: 반복 종료일을 사용자가 직접 입력하는 UI 는 없습니다. 필요해지면 화면에 날짜
-  // 하나를 더 입력받아 repeat_until으로 함께 전송합니다.
   const body = await getJSON<{ time: Unavailable }>(`/members/${memberId}/unavailable`, {
     method: "POST",
     body: JSON.stringify({
       starts_at: startsAt,
       ends_at: endsAt,
-      repeats_daily: repeat === "daily",
-      repeats_weekly: repeat === "weekly",
+      ...repeatBody(repeat),
       reason: reason.trim() === "" ? null : reason.trim(),
       name: name.trim() === "" ? null : name.trim(),
     }),
   });
+  return body.time;
+}
+
+/** 불가능 일정 하나를 수정합니다. 서버는 보낸 값으로 전부 덮어씁니다 — 일부만 보내는 방식이 아닙니다. */
+export async function editUnavailable(
+  memberId: number,
+  timeId: number,
+  startsAt: string,
+  endsAt: string,
+  repeat: Repeat,
+  reason: string,
+  name: string,
+): Promise<Unavailable> {
+  const body = await getJSON<{ time: Unavailable }>(
+    `/members/${memberId}/unavailable/${timeId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        starts_at: startsAt,
+        ends_at: endsAt,
+        ...repeatBody(repeat),
+        reason: reason.trim() === "" ? null : reason.trim(),
+        name: name.trim() === "" ? null : name.trim(),
+      }),
+    },
+  );
   return body.time;
 }
 

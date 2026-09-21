@@ -8,6 +8,8 @@ import { askCancel, askDelete } from "../lib/confirm";
 import {
   addReservation,
   addUnavailable,
+  editUnavailable,
+  NO_REPEAT,
   cancelBooking,
   dayWithWeekday,
   isoAt,
@@ -15,7 +17,7 @@ import {
   removeUnavailable,
   takenGrid,
 } from "../lib/pipeline";
-import type { RepeatCycle } from "../lib/pipeline";
+import type { Repeat } from "../lib/pipeline";
 import { firstTaken, unitLabel } from "../lib/calendar";
 import { useSlotMinutes } from "../components/queries";
 import type { Room } from "../lib/contract";
@@ -24,7 +26,9 @@ import type { DayTab, EnsembleOn, Entry } from "../lib/dayEntries";
 import { EnsembleDayEditor } from "./SettingsEnsemble";
 import type { DayTeam } from "../lib/roster";
 import { say } from "../lib/toast";
-import { DayPeople, DayTimeline, MyEntriesList, SlotPicker, entryName, slotLabels } from "./DayDialogParts";
+import {
+  DayPeople, DayTimeline, MyEntriesList, RepeatFields, SlotPicker, entryName, repeatConflict, slotLabels,
+} from "./DayDialogParts";
 import type { SlotRange } from "./DayDialogParts";
 
 function hourText(hour: number): string {
@@ -35,7 +39,7 @@ export function DayDialog({
   dayKey, tab, teams, entries, myOff, openHour, closeHour, slotCount, fixed, inFocus, ensemble, canEditEnsemble,
   memberId, myName, rooms, onSaved, onClose,
 }: {
-  /** 이날이 전체합주 날짜면 그 시각입니다. 아니면 null 입니다. */
+  /** 선택한 날짜의이 전체합주 날짜면 그 시각입니다. 아니면 null 입니다. */
   ensemble: EnsembleOn | null;
   /** 날짜별 전체합주 시각을 변경할 수 있는지입니다. 서버 권한 항목 period_edit 과 같습니다. */
   canEditEnsemble: boolean;
@@ -43,7 +47,7 @@ export function DayDialog({
   tab: DayTab;
   teams: DayTeam[];
   entries: Entry[];
-  /** 로그인한 사용자가 등록한 불가능 일정 전부입니다(lib/dayEntries 의 allOffEntries). 이날의 항목만이 아닙니다. */
+  /** 로그인한 사용자가 등록한 불가능 일정 전부입니다(lib/dayEntries 의 allOffEntries). 선택한 날짜의의 항목만이 아닙니다. */
   myOff: Entry[];
   openHour: number;
   closeHour: number;
@@ -63,7 +67,9 @@ export function DayDialog({
   const [error, setError] = useState("");
   const [who, setWho] = useState("me");
   const [roomId, setRoomId] = useState<number | null>(null);
-  const [repeat, setRepeat] = useState<RepeatCycle>("none");
+  const [repeat, setRepeat] = useState<Repeat>(NO_REPEAT);
+  // 수정 중인 불가능 일정의 번호입니다. null 이면 새로 등록하는 중입니다.
+  const [editing, setEditing] = useState<number | null>(null);
   const [offName, setOffName] = useState("");
   const [offReason, setOffReason] = useState("");
   // 선택한 구간입니다. 타임라인 드래그와 시작·끝 select 가 같은 값을 변경합니다. null 이면 아직 선택하지 않은 것이고, 그때는 그날 전부(picked)로 등록합니다.
@@ -93,8 +99,8 @@ export function DayDialog({
     (entry) => entry.removeIds !== undefined || entry.bookingId !== undefined
       || (entry.team !== null && teams.some((t) => t.key === entry.team && t.mine)),
   );
-  // 오른쪽 목록입니다. 내 일정 탭은 이날의 항목이 아니라 내가 등록한 불가능 일정 전부(myOff)를 나열합니다.
-  // 예약 탭은 이날 내가 한 예약(bookingId 가 있는 항목)만 나열합니다. 다른 사용자의 예약과 서버가 배정한 항목에는 bookingId 가 없습니다.
+  // 오른쪽 목록입니다. 내 일정 탭은 선택한 날짜의의 항목이 아니라 내가 등록한 불가능 일정 전부(myOff)를 나열합니다.
+  // 예약 탭은 선택한 날짜의 내 예약(bookingId 가 있는 항목)만 나열합니다. 다른 사용자의 예약과 서버가 배정한 항목에는 bookingId 가 없습니다.
   const removable = tab === "me" ? myOff : entries.filter((entry) => entry.bookingId !== undefined);
 
   const roomsLabel = [...new Set(booked.map((entry) => entry.room).filter(Boolean))].join(" · ");
@@ -140,30 +146,58 @@ export function DayDialog({
     say(booking ? "예약을 취소했어요" : "해당 불가능 일정을 삭제했어요");
   };
 
+  /** 목록의 수정 버튼입니다. 그 일정의 값을 위쪽 폼에 되살리고, 저장하면 새로 만들지 않고 덮어씁니다. */
+  const startEdit = (entry: Entry) => {
+    const id = entry.removeIds?.[0];
+    if (id === undefined) return;
+    setEditing(id);
+    setRange({ a: entry.a, b: entry.b });
+    setOffName(entry.who === "불가능 일정" ? "" : (entry.who ?? ""));
+    setOffReason(entry.note ?? "");
+    setRepeat({
+      weekdays: entry.repeatWeekdays ?? 0,
+      count: entry.repeatCount ?? null,
+      until: entry.repeatUntil ?? null,
+    });
+    setError("");
+  };
+
+  /** 수정을 그만두고 새로 등록하는 상태로 되돌립니다. */
+  const cancelEdit = () => {
+    setEditing(null);
+    setRange(null);
+    setOffName("");
+    setOffReason("");
+    setRepeat(NO_REPEAT);
+    setError("");
+  };
+
   /** 불가능 일정 하나를 등록합니다. dialog 는 닫지 않습니다. 같은 날에 여러 개를 이어서 등록할 수 있게 합니다. */
   const addOff = async () => {
     const { a, b } = picked;
     if (b <= a) { setError("끝 시간을 시작 시간 이후로 설정해주세요."); return; }
     if (memberId === null) { setError("요청이 많아 지연되고 있어요. 잠시 후 다시 시도해 주세요."); return; }
+    const conflict = repeatConflict(repeat);
+    if (conflict !== "") { setError(conflict); return; }
     try {
-      await addUnavailable(
-        memberId,
-        isoAt(dayKey, a, openHour),
-        isoAt(dayKey, b, openHour),
-        repeat,
-        offReason,
-        offName,
-      );
+      // editing 이 있으면 그 일정을 덮어쓰고, 없으면 새로 등록합니다.
+      const from = isoAt(dayKey, a, openHour);
+      const to = isoAt(dayKey, b, openHour);
+      if (editing === null) await addUnavailable(memberId, from, to, repeat, offReason, offName);
+      else await editUnavailable(memberId, editing, from, to, repeat, offReason, offName);
     } catch (error) {
       setError(error instanceof Error ? error.message : "등록하지 못했어요.");
       return;
     }
+    const edited = editing !== null;
     setError("");
     setOffName("");
     setOffReason("");
     setRange(null);
+    setRepeat(NO_REPEAT);
+    setEditing(null);
     onSaved();
-    say(repeat === "none" ? "불가능 시간을 등록했어요" : "반복 일정을 등록했어요");
+    say(edited ? "불가능 일정을 수정했어요" : "불가능 시간을 등록했어요");
   };
 
   /** 예약 하나를 만듭니다. 위쪽 시간 선택으로 열린 경우(fixed)에만 닫고, 아니면 이어서 예약할 수 있게 둡니다. */
@@ -203,32 +237,20 @@ export function DayDialog({
 
   const offForm = (
     <div className="col">
-      <h3>불가능 일정을 추가할 수 있어요.</h3>
-      <p className="sub">타임라인을 드래그하거나 시각을 선택해요.</p>
+      <h3>{editing === null ? "불가능 일정을 추가할 수 있어요." : "불가능 일정을 수정하고 있어요."}</h3>
+      <p className="sub">타임라인을 드래그하거나 시간을 선택해주세요.</p>
       <p className="cap2">날짜</p>
       <b className="dayline">{dayName}</b>
       <p className="cap2">시간</p>
       <SlotPicker prefix="off" range={picked} onChange={setRange} grid={grid} lock={false} slotMinutes={slotMinutes} {...hours} />
-      <label className="fld3" htmlFor="offRepeat">
-        반복
-        <Dropdown
-          id="offRepeat"
-          value={repeat}
-          choices={[
-            { value: "none", label: "반복 없음" },
-            { value: "daily", label: "매일" },
-            { value: "weekly", label: `매주 ${dayName.split(" ").at(-1)}마다` },
-          ]}
-          onChange={setRepeat}
-        />
-      </label>
+      <RepeatFields dayKey={dayKey} value={repeat} onChange={setRepeat} />
       <label className="fld3" htmlFor="offName">
         일정 이름
         <input
           id="offName"
           value={offName}
           maxLength={60}
-          placeholder="미입력 시 불가능 일정"
+          placeholder="미입력시 기본값으로 표시돼요"
           onChange={(event) => setOffName(event.target.value)}
         />
       </label>
@@ -248,8 +270,8 @@ export function DayDialog({
 
   const bookForm = (
     <div className="col">
-      <h3>합주실을 예약할 수 있어요.</h3>
-      <p className="sub">{fixed ? "위에서 선택한 시간으로 예약해요." : "타임라인을 드래그하거나 시각을 선택해요."}</p>
+      <h3>합주실 예약</h3>
+      <p className="sub">{fixed ? "해당 선택한 시간으로 예약할게요." : "타임라인을 드래그하거나 시각을 선택해요."}</p>
       <p className="cap2">날짜</p>
       <b className="dayline">{dayName}</b>
       {/* 합주실을 먼저 선택합니다. 아래 시각 선택이 그 합주실의 예약된 slot 만 차단합니다. */}
@@ -289,7 +311,7 @@ export function DayDialog({
   // 전체합주 날짜에서 권한이 있는 사람에게만 표시합니다. 다른 사람은 타임라인의 전체합주 막대로 시각을 봅니다.
   const ensembleEditor = ensemble === null || !canEditEnsemble ? null : (
     <div className="ensday">
-      <p className="cap2">이날 전체합주 시각</p>
+      <p className="cap2">선택한 날짜의 전체합주 시각</p>
       <EnsembleDayEditor
         key={`${ensemble.startsAt}-${ensemble.endsAt}`}
         day={dayKey}
@@ -336,22 +358,25 @@ export function DayDialog({
       <section className="pane">
         {tab === "me" ? offForm : bookForm}
         <div className="mfoot">
-          <button className="ghost" onClick={onClose}>닫기</button>
+          <button className="ghost" onClick={editing === null ? onClose : cancelEdit}>
+            {editing === null ? "닫기" : "수정 취소"}
+          </button>
           <button
             className="primary"
             onClick={() => { void (tab === "me" ? addOff() : addBooking()); }}
           >
-            {tab === "me" ? "등록하기" : "예약하기"}
+            {tab !== "me" ? "예약하기" : editing === null ? "등록하기" : "수정 저장"}
           </button>
         </div>
       </section>
       <section className="pane">
         <MyEntriesList
           title={tab === "me" ? "불가능 일정 목록" : "내 예약"}
-          empty={tab === "me" ? "등록한 불가능 일정이 없어요." : "이날 내가 한 예약이 없어요."}
+          empty={tab === "me" ? "등록한 불가능 일정이 없어요." : "선택한 날짜의 내 예약이 없어요."}
           entries={removable}
           teams={teams}
           onRemove={(entry) => { void removeEntry(entry); }}
+          onEdit={startEdit}
           {...hours}
         />
       </section>
