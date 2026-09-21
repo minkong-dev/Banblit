@@ -8,7 +8,7 @@ import { Dropdown } from "../components/Dropdown";
 import { Modal } from "../components/Modal";
 import { getJSON, reason } from "../lib/api";
 import { askDelete } from "../lib/confirm";
-import { formError, loadState } from "../lib/loading";
+import { formError, LOADING_TEXT, loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { say } from "../lib/toast";
 import {
@@ -644,7 +644,7 @@ function PeriodForm(props: {
 
 /** 팀 목록이 성공적으로 조회되면 팀 수와 배정된 인원 수를 반환합니다. 그렇지 않을 경우 조회할 수 없는 이유를 반환합니다. */
 function teamLine(teams: Team[], state: LoadState): string {
-  if (state.kind === "loading") return "팀 리스트를 불러오는 중…";
+  if (state.kind === "loading") return LOADING_TEXT;
   if (state.kind === "failed") return state.why;
   const filled = teams.reduce((sum, team) => sum + team.filled_count, 0);
   const slots = teams.reduce((sum, team) => sum + team.slot_count, 0);

@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 
 import { RichText, RichTextView } from "./RichText";
 import { apiUrl, reason } from "../lib/api";
-import { formError, loadState, stateText } from "../lib/loading";
+import { formError, LOADING_TEXT, loadState, stateText } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { say } from "../lib/toast";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
@@ -334,9 +334,6 @@ function CommentForm(props: { postId: number; authorId: number | null }) {
   );
 }
 
-/** 글에 붙은 파일들을 나열합니다. 이름을 누르면 다운로드하고, 글을 삭제할 권한이 있는 사용자에게만
- *  "삭제" 버튼이 표시됩니다. attachment 는 작성자 정보를 따로 저장하지 않으므로,
- *  글의 작성자를 기준으로 판정합니다(서버도 같습니다). */
 /** 첨부파일 목록의 한 줄입니다. 등록 전(선택한 파일)과 등록 후(저장된 파일)가 같은 모양을 씁니다.
  *  href 가 있으면 이름이 다운로드 링크가 됩니다. 등록 전에는 받을 주소가 없어 넘기지 않습니다. */
 function AttachmentRow({ name, size, href, action }: {
@@ -355,6 +352,9 @@ function AttachmentRow({ name, size, href, action }: {
   );
 }
 
+/** 글에 붙은 파일들을 나열합니다. 이름을 누르면 다운로드하고, 글을 삭제할 권한이 있는 사용자에게만
+ *  "삭제" 버튼이 표시됩니다. attachment 는 작성자 정보를 따로 저장하지 않으므로,
+ *  글의 작성자를 기준으로 판정합니다(서버도 같습니다). */
 function AttachmentList(props: {
   postId: number;
   attachments: Attachment[];
@@ -657,7 +657,7 @@ function PostDetail(props: {
       ),
   });
 
-  if (detail.isPending) return <div className="empty">불러오는 중…</div>;
+  if (detail.isPending) return <div className="empty">{LOADING_TEXT}</div>;
   if (detail.isError) return <div className="empty">{reason(detail.error)}</div>;
 
   const { post, comments, attachments } = detail.data;

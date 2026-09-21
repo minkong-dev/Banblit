@@ -24,6 +24,7 @@ import { PERMISSION_ITEMS, can } from "../lib/account";
 import { askDelete, askExpel } from "../lib/confirm";
 import { useMe } from "../components/queries";
 import { expelMember } from "../lib/pipeline";
+import { LOADING_TEXT } from "../lib/loading";
 import type { MemberRow, Permission, PermissionSet } from "../lib/contract";
 import { SectionHead } from "./SettingsForm";
 
@@ -439,7 +440,7 @@ function MemberRoster(props: {
         </table>
         {shown.length === 0 ? <p className="empty">표시할 멤버가 없어요</p> : null}
         {/* 이 요소가 화면에 들어오면 다음 페이지를 불러옵니다. */}
-        <div ref={foot} className="rosterfoot">{done ? "" : "멤버를 불러오고 있어요…"}</div>
+        <div ref={foot} className="rosterfoot">{done ? "" : LOADING_TEXT}</div>
       </div>
     </Card>
   );

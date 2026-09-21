@@ -4,6 +4,7 @@ import { AppShell, Tabs } from "../components/AppShell";
 import { PostBoard } from "../components/PostBoard";
 import { can } from "../lib/account";
 import { reason } from "../lib/api";
+import { LOADING_TEXT } from "../lib/loading";
 import { useMe, useMyTeams, useTeams } from "../components/queries";
 
 import "../styles/board.css";
@@ -22,7 +23,7 @@ export function Board() {
       current="board"
     >
       {teams.isPending ? (
-        <div className="main"><div className="empty">불러오는 중…</div></div>
+        <div className="main"><div className="empty">{LOADING_TEXT}</div></div>
       ) : teams.isError ? (
         <div className="main"><div className="empty">{reason(teams.error)}</div></div>
       ) : mine.length === 0 ? (

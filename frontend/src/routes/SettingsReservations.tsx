@@ -19,6 +19,7 @@ import {
 } from "../lib/pipeline";
 import type { Booking } from "../lib/pipeline";
 import { say } from "../lib/toast";
+import { LOADING_TEXT } from "../lib/loading";
 import { SectionHead } from "./SettingsForm";
 
 // ponytail: 현재 기준 지정한 일수 범위 내의 예약만 표시합니다. 예약 목록 endpoint(API의 요청 주소 단위)가 합주실·날짜 범위 조건으로만 받으므로,
@@ -114,7 +115,7 @@ export function ReservationCards() {
             ))}
           </tbody>
         </table>
-        {list.isPending && rooms.data !== undefined ? <p className="empty">예약 내역을 불러오고 있어요.</p> : null}
+        {list.isPending && rooms.data !== undefined ? <p className="empty">{LOADING_TEXT}</p> : null}
         {list.isSuccess && bookings.length === 0 ? <p className="empty">현재 예약이 없어요</p> : null}
       </div>
     </Card>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
@@ -102,33 +102,49 @@ export function Scheduler() {
     "아직 등록된 공지가 없습니다", "공지를 못 불러왔습니다",
   );
 
-  // query.data 가 없을 때만 매번 새 빈 배열이 생깁니다. 빈 배열을 다루는 가벼운 계산이라 useMemo 로 감쌀 필요가 없습니다.
-  const rows = query.data?.rows ?? [];
+  // 조회 결과가 오기 전에는 ?? 가 매번 새 빈 배열을 만듭니다. 아래 집계의 useMemo 가 그 배열을 의존성으로
+  // 받으므로, 배열을 여기서 고정하지 않으면 집계가 렌더마다 다시 실행됩니다.
+  const rows = useMemo(() => query.data?.rows ?? [], [query.data]);
+  const roomList = useMemo(() => rooms.data?.rooms ?? [], [rooms.data]);
+  const periodList = useMemo(() => periods.data?.periods ?? [], [periods.data]);
+  const offList = useMemo(() => unavailableQuery.data ?? [], [unavailableQuery.data]);
+  const bookRows = useMemo(() => reservationQuery.data?.rows ?? [], [reservationQuery.data]);
 
-  const teams = teamsOf(rows, teamIds, allTeams);
-  const { open, close } = roomBounds(rooms.data?.rooms ?? []);
-  const focus = focusedRanges(periods.data?.periods ?? []);
+  const teams = useMemo(() => teamsOf(rows, teamIds, allTeams), [rows, teamIds, allTeams]);
+  const { open, close } = useMemo(() => roomBounds(roomList), [roomList]);
+  const focus = focusedRanges(periodList);
   const slotCount = slotCountOf(open, close);
   // 예약 탭의 시작·끝 선택지는 저장소 설정(slot_minutes) 간격입니다.
   const slotMinutes = useSlotMinutes();
   const steps = slotSteps(slotCount, slotMinutes);
 
-  const assigned = assignedByDay(rows, teams, open);
-  const offEntries = offByDay(
-    unavailableQuery.data ?? [], open, visibleDays(cursor.year, cursor.month),
+  const days = useMemo(() => visibleDays(cursor.year, cursor.month), [cursor.year, cursor.month]);
+
+  const assigned = useMemo(() => assignedByDay(rows, teams, open), [rows, teams, open]);
+  const offEntries = useMemo(() => offByDay(offList, open, days), [offList, open, days]);
+  const bookEntries = useMemo(
+    () => bookedByDay(bookRows, teams, open, me?.id ?? null),
+    [bookRows, teams, open, me?.id],
   );
-  const bookEntries = bookedByDay(reservationQuery.data?.rows ?? [], teams, open, me?.id ?? null);
-  const periodList = periods.data?.periods ?? [];
   // 전체합주는 예약 탭에서도 항목에 들어가 그 합주실의 해당 시간을 찬 칸으로 계산합니다. 서버도 그 시간의 예약을 거절합니다.
-  const ensembleEntries = ensembleByDay(
-    periodList, rooms.data?.rooms ?? [], open, visibleDays(cursor.year, cursor.month),
+  const ensembleEntries = useMemo(
+    () => ensembleByDay(periodList, roomList, open, days),
+    [periodList, roomList, open, days],
   );
 
-  const entriesOf = (key: string): Entry[] =>
-    [
-      ...(assigned[key] ?? []), ...(ensembleEntries[key] ?? []),
-      ...(offEntries[key] ?? []), ...(bookEntries[key] ?? []),
-    ].sort((x, y) => x.a - y.a);
+  // 배정·전체합주·불가능 일정·예약 네 가지를 날짜별로 합쳐 시작 시각 순으로 정렬합니다.
+  // 달력이 날짜마다 entriesOf 를 호출하므로 정렬을 렌더마다 반복하지 않도록 한 번에 계산합니다.
+  const entriesByDay = useMemo(() => {
+    const merged: Record<string, Entry[]> = {};
+    for (const source of [assigned, ensembleEntries, offEntries, bookEntries]) {
+      for (const [key, list] of Object.entries(source)) merged[key] = [...(merged[key] ?? []), ...list];
+    }
+    return Object.fromEntries(
+      Object.entries(merged).map(([key, list]) => [key, [...list].sort((x, y) => x.a - y.a)]),
+    );
+  }, [assigned, ensembleEntries, offEntries, bookEntries]);
+
+  const entriesOf = (key: string): Entry[] => entriesByDay[key] ?? [];
 
   // POST 가 끝난 뒤 화면이 새 값을 표시하게 합니다. 클라이언트 쪽에 따로 상태를 두지 않고
   // 서버가 가진 값을 다시 조회해 저장이 실제로 되었는지까지 함께 확인합니다.

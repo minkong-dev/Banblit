@@ -1,7 +1,7 @@
 // 달력이 사용하는 계산입니다. 날짜와 칸 번호만 다루고 화면이나 서버와 상호작용하지 않습니다.
-
 // 칸 하나의 길이는 설정의 점유 단위(slot_minutes)입니다. 설정값이 없을 때의 기본값 60분은 서버의
 // backend/src/backend/scheduling/slots.py 의 DEFAULT_SLOT_MINUTES 가 정본입니다.
+
 const DAYS_PER_WEEK = 7;
 // 날짜만 있는 값을 Date로 생성할 때 사용하는 시각입니다. 자정으로 설정하면 여름시간제가 있는
 // 지역에서 하루가 23시간인 날에 날짜가 하루씩 밀릴 수 있습니다.

@@ -2,6 +2,7 @@
 
 import { dayWithWeekday } from "./calendar";
 import { dayOf, mergeSessions, slotIndex } from "./slots";
+import { LOADING_TEXT } from "./loading";
 import type { Session } from "./slots";
 import type { DayTeam } from "./roster";
 import type { Period, Reservation, Room, ScheduleRow, Team, Unavailable } from "./contract";
@@ -236,7 +237,7 @@ export function listNote(
   emptyText: string,
   failText: string,
 ): string {
-  if (isPending) return "불러오는 중…";
+  if (isPending) return LOADING_TEXT;
   if (error !== null) return error instanceof Error ? error.message : failText;
   return count === 0 ? emptyText : "";
 }

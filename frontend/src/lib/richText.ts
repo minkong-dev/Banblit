@@ -83,7 +83,7 @@ export function textOf(html: string): string {
 
 
 /** 본문에 넣을 수 있는 형식입니다. file 은 본문에 넣지 않고 첨부 목록에만 둡니다. */
-export type EmbedKind = "image" | "audio" | "pdf" | "file";
+type EmbedKind = "image" | "audio" | "pdf" | "file";
 
 // 브라우저가 태그 하나로 여는 형식만 담습니다. heic 는 Safari 만, flac 은 Safari 가 열지 못하고,
 // avi·mkv 는 어느 브라우저도 재생하지 않아 넣지 않습니다 — 깨진 그림이 뜨는 것보다 이름 줄이 낫습니다.

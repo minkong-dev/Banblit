@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { BellIcon } from "./icons";
 import { useDismissible } from "./hooks";
+import { LOADING_TEXT } from "../lib/loading";
 import {
   loadNotifications,
   markNotificationsRead,
@@ -39,7 +40,7 @@ export function NotificationMenu() {
 
   let body;
   if (notifications.isPending) {
-    body = <p className="quiet">알림을 불러오는 중이에요</p>;
+    body = <p className="quiet">{LOADING_TEXT}</p>;
   } else if (notifications.isError) {
     body = <p className="quiet">알림을 불러오는데 실패했어요</p>;
   } else if (rows.length === 0) {

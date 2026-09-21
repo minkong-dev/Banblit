@@ -24,7 +24,7 @@ const DEADLINE_MARGIN_SECONDS = 30;
 
 /** 이 시간까지 끝나지 않으면 대기를 중단합니다(밀리초). 서버 상한보다 먼저 중단하면 화면은 실패를
  *  표시하고 서버는 계산을 계속해 저장하므로, 실패한 배정이 나중에 반영됩니다.
- *  ponytail: 큐 대기 시간은 포함하지 않습니다. 동시 작업 수(ASSIGN_MAX_CONCURRENT_JOBS)를 넘겨 접수된
+ *  ponytail: queue 대기 시간은 포함하지 않습니다. 동시 작업 수(ASSIGN_MAX_CONCURRENT_JOBS)를 넘겨 접수된
  *  작업은 이 시간을 넘길 수 있습니다. 그 경우가 실제로 발생하면 queued 상태에서는 시간을 세지 않게 변경합니다. */
 export const JOB_DEADLINE_MS = (SERVER_JOB_LIMIT_SECONDS + DEADLINE_MARGIN_SECONDS) * 1000;
 

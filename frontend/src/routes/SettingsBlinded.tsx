@@ -9,6 +9,7 @@ import { Card } from "../components/AppShell";
 import { reason } from "../lib/api";
 import { BLINDED_KEY, BOARD_KEY, getJSON, stampLabel } from "../lib/pipeline";
 import { say } from "../lib/toast";
+import { LOADING_TEXT } from "../lib/loading";
 import { SectionHead } from "./SettingsForm";
 import type { Post } from "../lib/contract";
 
@@ -76,7 +77,7 @@ export function BlindedCards() {
             ))}
           </tbody>
         </table>
-        {list.isPending ? <p className="empty">가려 둔 글을 불러오고 있어요.</p> : null}
+        {list.isPending ? <p className="empty">{LOADING_TEXT}</p> : null}
         {list.isSuccess && posts.length === 0 ? <p className="empty">가려 둔 글이 없어요</p> : null}
       </div>
     </Card>

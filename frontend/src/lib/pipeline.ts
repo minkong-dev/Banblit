@@ -137,7 +137,7 @@ export function checkPeriod(form: PeriodForm): string {
   return dateRangeMessage(body.starts_on, body.ends_on);
 }
 
-export type Opening = { rooms: RoomForm[]; days: number; teams: number; slotMinutes: number };
+type Opening = { rooms: RoomForm[]; days: number; teams: number; slotMinutes: number };
 
 export function openingHours(input: Opening): {
   perDay: string;
@@ -347,7 +347,7 @@ export {
   studentNoMessage,
 } from "./validate";
 
-export type SignUpForm = {
+type SignUpForm = {
   name: string;
   // 멤버를 구분하는 값의 일부입니다. 이름·학과·학번·기수 4개 항목이 모두 같아야 같은 멤버입니다.
   department: string;

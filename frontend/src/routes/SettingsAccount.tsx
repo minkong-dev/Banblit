@@ -12,6 +12,7 @@ import { Card } from "../components/AppShell";
 import { useMe } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
 import { say } from "../lib/toast";
+import { LOADING_TEXT } from "../lib/loading";
 import type { Account } from "../lib/contract";
 import { SectionHead } from "./SettingsForm";
 
@@ -212,7 +213,7 @@ export function AccountCards(props: {
 }) {
   const { theme } = props;
   const { me } = useMe();
-  if (me === null) return <div className="empty">불러오는 중…</div>;
+  if (me === null) return <div className="empty">{LOADING_TEXT}</div>;
   return (
     <>
       <MyProfile me={me} />

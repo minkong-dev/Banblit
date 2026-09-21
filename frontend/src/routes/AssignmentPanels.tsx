@@ -9,12 +9,13 @@ import { getJSON, reason } from "../lib/api";
 import { hoursOf } from "../lib/assignment";
 import { checkRunTimes, slotCountLabel } from "../lib/runs";
 import { say } from "../lib/toast";
+import { LOADING_TEXT } from "../lib/loading";
 import { dayOf, hhmm, stampLabel, WEEKDAY_NAMES } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
 import type { AssignOut, Backup, Period } from "../lib/contract";
 
 /** 팀마다 합주 횟수와 총 시간을 표시합니다. 합주가 0번인 팀은 흐리게 표시합니다. */
-export function TeamCounts({ shown, colors }: { shown: Session[]; colors: Map<string, string> }) {
+function TeamCounts({ shown, colors }: { shown: Session[]; colors: Map<string, string> }) {
   return (
     <div className="counts">
       {[...colors.entries()].map(([name, tone]) => {
@@ -121,7 +122,7 @@ export function AssignmentStatus({
         <h2>{stampLabel(roundAt)}에 밀려난 시간표입니다</h2>
         <p className="sub">
           {roundPending
-            ? "불러오는 중…"
+            ? LOADING_TEXT
             : roundError !== null
               ? reason(roundError, "해당 배정안을 불러오지 못했어요")
               : `합주 ${shown.length}번 · 총 ${hours.toFixed(1)}시간이에요`}
@@ -218,7 +219,7 @@ export function PastRunsPanel({ periodId, canRollback, roundAt, onSelect }: {
   if (!canRollback) {
     list = <li className="empty">이전 배정 되돌리기 권한이 있어야 확인이 가능해요.</li>;
   } else if (backups.isPending) {
-    list = <li className="empty">이전 배정기록 불러오는 중…</li>;
+    list = <li className="empty">{LOADING_TEXT}</li>;
   } else if (backups.isError) {
     list = <li className="empty">이전 배정기록을 불러오지 못했어요.</li>;
   } else if (rounds.length === 0) {

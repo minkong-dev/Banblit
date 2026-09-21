@@ -1,5 +1,6 @@
 // 여러 화면에서 공유하는 서버 조회 훅입니다. DOM·화면 상태 훅은 hooks.ts 에 있습니다.
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchMe, getJSON, myTeamIds } from "../lib/pipeline";
@@ -41,15 +42,16 @@ export function useMe(): {
 
   // 이전 버전의 서버가 teams 없이 응답하면 소속 팀이 없는 것으로 처리합니다. 잠시 표시되었다가
   // 사라지는 "내 팀" 배지보다 처음부터 없는 편이 낫습니다.
-  return {
-    me: mine.data?.account ?? null,
-    teamIds: myTeamIds(mine.data?.teams ?? []),
-    teams: teamList.data?.teams ?? [],
-  };
+  // 호출할 때마다 새 배열을 만들면, 이 값을 useMemo 의 의존성으로 받는 화면에서 그 useMemo 가
+  // 렌더마다 다시 실행됩니다(routes/Scheduler 의 teams·assigned·bookEntries).
+  const teamIds = useMemo(() => myTeamIds(mine.data?.teams ?? []), [mine.data]);
+  const teams = useMemo(() => teamList.data?.teams ?? [], [teamList.data]);
+
+  return { me: mine.data?.account ?? null, teamIds, teams };
 }
 
 /** 프로필 카드에 표시하는 소속 팀입니다. 서버가 반환하는 배정 자리(lib/contract 의 MyTeam)와 다른 자료형입니다. */
-export type ProfileTeam = { id: number; name: string; colorKey: string };
+type ProfileTeam = { id: number; name: string; colorKey: string };
 
 /** 내가 속한 팀을 전체 팀 목록에서 필터링하고, 팀에 저장된 색을 CSS key 로 붙입니다(스케줄러의 teamsOf 와
  *  같은 값입니다). 여러 화면에서 프로필 카드가 사용합니다. 아직 로드되지 않았거나 실패하면 빈 배열을 반환합니다.
