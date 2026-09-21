@@ -70,7 +70,11 @@ function MyProfile({ me }: { me: Account }) {
           기수
           <input
             id="myCohort"
+            type="number"
             inputMode="numeric"
+            min={1}
+            max={100}
+            step={1}
             placeholder="예: 46"
             value={cohort}
             onChange={(event) => setCohort(event.target.value)}

@@ -27,9 +27,14 @@ export function Field(props: {
   placeholder: string;
   autoComplete: string;
   inputMode?: "email" | "tel" | "numeric";
+  /** type="number" 일 때 브라우저가 강제하는 범위와 증감 폭입니다. 지정하면 증감 버튼이 min 아래로 내려가지 않고,
+   *  범위 밖의 값으로는 form 이 제출되지 않습니다. */
+  min?: number;
+  max?: number;
+  step?: number;
   error?: string;
 }) {
-  const { name, label, type, placeholder, autoComplete, inputMode, error } = props;
+  const { name, label, type, placeholder, autoComplete, inputMode, min, max, step, error } = props;
   // 비밀번호 필드에만 눈 버튼이 붙습니다. 누르면 type이 text로 변경되어 문자가 그대로 표시됩니다.
   // 브라우저는 type=password인 필드만 마스킹하므로, 마스킹 토글을 type으로 처리합니다.
   const [shown, setShown] = useState(false);
@@ -45,6 +50,9 @@ export function Field(props: {
           placeholder={placeholder}
           autoComplete={autoComplete}
           inputMode={inputMode}
+          min={min}
+          max={max}
+          step={step}
           aria-invalid={error !== undefined}
         />
         {!isPassword ? null : (
