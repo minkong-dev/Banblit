@@ -39,7 +39,7 @@ test("팀 게시판 글에 파일을 붙여 올리면 글을 열었을 때 그 �
   await page.goto("/board");
   // 목록의 "글쓰기" 는 작성 페이지로 가는 링크입니다. 폼은 그 페이지에 있습니다.
   await page.getByRole("link", { name: "글쓰기" }).click();
-  await page.getByLabel("제목").fill(title);
+  await page.getByLabel("제목", { exact: true }).fill(title);
   await page.getByLabel("내용").fill("첨부가 붙는지 보는 글입니다.");
   await page.getByLabel(/첨부파일/).setInputFiles({
     name: fileName,

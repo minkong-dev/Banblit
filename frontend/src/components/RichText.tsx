@@ -2,19 +2,28 @@
 // 저장된 HTML 을 화면에 넣기 전의 sanitize(허용 목록에 없는 태그와 속성을 제거하는 처리)와
 // 빈 값 판정은 lib/richText.ts 가 담당합니다.
 
-import { Node, mergeAttributes } from "@tiptap/core";
+import { Extension, Node, mergeAttributes } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { Audio } from "@tiptap/extension-audio";
 import FileHandler from "@tiptap/extension-file-handler";
 import Youtube from "@tiptap/extension-youtube";
-import { TextStyle } from "@tiptap/extension-text-style";
-import { FontFamily } from "@tiptap/extension-font-family";
-import { useEffect, useState } from "react";
+import TextAlign from "@tiptap/extension-text-align";
+import { TableKit } from "@tiptap/extension-table";
+import { BackgroundColor, Color, FontFamily, FontSize, TextStyle } from "@tiptap/extension-text-style";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { Dropdown } from "./Dropdown";
+import { useDismissible } from "./hooks";
+import {
+  AlignCenterIcon, AlignJustifyIcon, AlignLeftIcon, AlignRightIcon, BulletListIcon, ClipIcon,
+  CodeIcon, EraserIcon, ImageIcon, LinkIcon, NumberListIcon, PaletteIcon, QuoteIcon, RedoIcon,
+  RuleIcon, TableIcon, UndoIcon,
+} from "./icons";
+import { Modal } from "./Modal";
+import { ATTACHMENT_ACCEPT } from "../lib/boards";
 import { apiUrl, reason, sendFile } from "../lib/api";
 import { embedKind, sanitizeBody } from "../lib/richText";
 import { say } from "../lib/toast";
@@ -23,9 +32,49 @@ import { say } from "../lib/toast";
  *  빈 값은 지정하지 않은 상태이고, 그때는 화면의 기본 글꼴을 따릅니다. */
 const FONTS = [
   { value: "", label: "기본 글꼴" },
+  // index.html 이 내려받는 글꼴입니다. 나머지는 사용자 기기에 설치된 것을 씁니다.
+  { value: "'Pretendard Variable', sans-serif", label: "프리텐다드" },
   { value: "'Noto Serif KR', serif", label: "명조" },
   { value: "'Nanum Gothic', sans-serif", label: "고딕" },
   { value: "ui-monospace, monospace", label: "고정폭" },
+];
+
+/** 글자 굵기 선택지입니다. Pretendard Variable 은 굵기 축이 있어 100~900 을 연속으로 표현합니다.
+ *  이름은 Pretendard 가 쓰는 표기 그대로입니다 — Thin 100 부터 Black 900 까지입니다.
+ *  다른 글꼴은 설치된 굵기 중 가까운 값으로 표시됩니다. 빈 값은 지정하지 않은 상태입니다. */
+const WEIGHTS = [
+  { value: "", label: "기본 굵기" },
+  { value: "100", label: "Thin" },
+  { value: "200", label: "ExtraLight" },
+  { value: "300", label: "Light" },
+  { value: "400", label: "Regular" },
+  { value: "500", label: "Medium" },
+  { value: "600", label: "SemiBold" },
+  { value: "700", label: "Bold" },
+  { value: "800", label: "ExtraBold" },
+  { value: "900", label: "Black" },
+];
+
+/** 문단 종류입니다. 빈 값은 보통 문단이고 1~6 은 제목 단계입니다. */
+const LEVELS = [
+  { value: "", label: "본문" },
+  { value: "1", label: "제목 1" },
+  { value: "2", label: "제목 2" },
+  { value: "3", label: "제목 3" },
+  { value: "4", label: "제목 4" },
+  { value: "5", label: "제목 5" },
+  { value: "6", label: "제목 6" },
+];
+
+/** 글자 크기 선택지입니다. 빈 값은 본문 기본 크기입니다. */
+const SIZES = [
+  { value: "", label: "기본 크기" },
+  { value: "12px", label: "12" },
+  { value: "14px", label: "14" },
+  { value: "16px", label: "16" },
+  { value: "18px", label: "18" },
+  { value: "22px", label: "22" },
+  { value: "28px", label: "28" },
 ];
 
 /** PDF 를 본문에 넣는 노드입니다. Tiptap 에 PDF 확장이 없어 직접 만듭니다 — 유료(Conversion)는
@@ -60,6 +109,46 @@ declare module "@tiptap/core" {
   }
 }
 
+/** TextStyle 에 굵기(font-weight) 속성을 더합니다. @tiptap/extension-text-style 이 글꼴·크기·색은
+ *  제공하지만 굵기는 제공하지 않습니다. Pretendard Variable 의 굵기 축을 쓰려면 100~900 을
+ *  값으로 넣을 수 있어야 하고, StarterKit 의 bold 는 굵게 켜고 끄기만 합니다. */
+const Weight = TextStyle.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      fontWeight: {
+        default: null,
+        parseHTML: (element: HTMLElement) => element.style.fontWeight || null,
+        renderHTML: (attributes: { fontWeight?: string | null }) =>
+          attributes.fontWeight == null ? {} : { style: `font-weight: ${attributes.fontWeight}` },
+      },
+    };
+  },
+});
+
+/** 빈 제목에서 Backspace 를 누르면 보통 문단으로 되돌립니다.
+ *
+ * TipTap 은 "# " 같은 입력 규칙이 방금 적용된 직후 Backspace 를 누르면 그 규칙을 되돌려
+ * 입력했던 "# " 를 본문에 다시 넣습니다. 제목을 만들려다 취소한 사람에게는 지운 글자가
+ * 되살아나는 것으로 보이므로, 제목만 삭제하고 글자는 되살리지 않습니다.
+ *
+ * priority 를 높여 입력 규칙의 되돌리기보다 먼저 실행합니다. true 를 반환하면 그쪽은 실행되지 않습니다. */
+const HeadingBackspace = Extension.create({
+  name: "headingBackspace",
+  priority: 1000,
+  addKeyboardShortcuts() {
+    return {
+      Backspace: ({ editor }) => {
+        const { empty, $from } = editor.state.selection;
+        const inEmptyHeading = empty
+          && $from.parent.type.name === "heading"
+          && $from.parent.content.size === 0;
+        return inEmptyHeading ? editor.commands.setParagraph() : false;
+      },
+    };
+  },
+});
+
 type Editor = NonNullable<ReturnType<typeof useEditor>>;
 
 /** 본문에 넣을 수 있는 파일의 MIME(형식을 알리는 문자열)입니다. 나머지는 drop(파일을 끌어다 놓는 동작)해도 처리하지 않고
@@ -75,7 +164,7 @@ const ACCEPTED_MIME = [
  *  pos 가 있으면 drop 한 자리에, 없으면 커서 자리에 넣습니다. 올리지 못하면 사유만 알리고
  *  본문은 건드리지 않습니다 — 주소 없는 노드를 넣으면 깨진 그림이 남습니다. */
 async function attach(
-  editor: Editor, files: File[], pos: number | null, postId: number | null,
+  editor: Editor, files: File[], pos: number | null, postId: number | null, embed = true,
 ): Promise<void> {
   if (postId === null) {
     say("글을 준비하는 중이에요. 잠시 후 다시 넣어주세요.");
@@ -90,12 +179,14 @@ async function attach(
       // Content-Disposition: attachment 로 내보내므로 img·audio·iframe 이 표시하지 못합니다.
       const src = apiUrl(`/attachments/${attachment.id}/inline`);
       const at = editor.chain().focus(pos ?? undefined);
-      const kind = embedKind(file.name);
+      // embed 가 false 면 첨부 목록에만 올립니다(클립 버튼). 본문에 넣지 않습니다.
+      const kind = embed ? embedKind(file.name) : "file";
       if (kind === "image") at.setImage({ src, alt: file.name }).run();
       else if (kind === "audio") at.setAudio({ src }).run();
       else if (kind === "pdf") at.setPdf({ src, title: file.name }).run();
       // file 은 본문에 넣지 않습니다. 첨부 목록에는 이미 올라가 있습니다.
-      else say(`${file.name} 은 본문에 넣을 수 없어 첨부로만 올렸어요.`);
+      else if (embed) say(`${file.name} 은 본문에 넣을 수 없어 첨부로만 올렸어요.`);
+      else say(`${file.name} 을 첨부했어요.`);
     } catch (error) {
       say(`${file.name} 을 올리지 못했어요 — ${reason(error)}`);
     }
@@ -127,13 +218,26 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
         // dropcursor 는 파일을 끌어 오는 동안 삽입 위치에 가로 막대를 그립니다. 아래 덧댄 안내(.rtdrop)가
         // 편집기를 전부 가려 그 위치가 보이지 않으므로, 막대만 안내 위에 떠서 정체를 알 수 없는 선이 됩니다.
         dropcursor: false,
+        // trailingNode 는 마지막 블록이 문단이 아니면 빈 문단을 덧붙입니다. 제목을 만들면 그 뒤에
+        // 빈 줄이 하나 생겨, "# " 를 입력했을 때 커서가 다음 줄로 내려간 것처럼 보입니다.
+        // 표·구분선처럼 뒤에 글을 쓸 자리가 없는 블록에서만 필요하므로 문단·제목·목록은 제외합니다.
+        trailingNode: { notAfter: ["paragraph", "heading", "bulletList", "orderedList", "blockquote"] },
         link: {
           openOnClick: false,
           HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
         },
       }),
-      TextStyle,
+      // 글꼴·크기·글자색·배경색은 모두 TextStyle 위에 붙는 표시입니다. 같은 패키지가 제공합니다.
+      Weight,
       FontFamily,
+      FontSize,
+      Color,
+      BackgroundColor,
+      HeadingBackspace,
+      // 문단 정렬은 문단·제목에만 붙입니다. 목록 항목까지 켜면 정렬이 목록 기호와 어긋납니다.
+      TextAlign.configure({ types: ["paragraph", "heading"] }),
+      // 표입니다. resizable 을 켜면 열 너비를 마우스로 조절할 수 있습니다.
+      TableKit.configure({ table: { resizable: true } }),
       Image,
       // 소리는 audio player(<audio controls>)로 넣습니다.
       Audio,
@@ -181,6 +285,10 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
   // 네 가지 모두 capture 단계에서 듣습니다 — FileHandler 가 처리한 drop 은 stopPropagation 으로 전파를
   // 멈추므로, bubble 단계에서 들으면 놓은 뒤에도 안내가 그대로 남습니다.
   const [dragging, setDragging] = useState(false);
+  // 링크 modal 을 열어 둔 동안만 true 입니다.
+  const [linking, setLinking] = useState(false);
+  // 색 선택기의 "글에 사용한 색" 목록입니다. 본문이 바뀔 때마다 다시 셉니다.
+  const used = usedColors(value);
   useEffect(() => {
     let depth = 0;
     const hasFiles = (event: DragEvent): boolean => event.dataTransfer?.types.includes("Files") ?? false;
@@ -220,9 +328,10 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
       }}
     >
       <div className="rttools">
-        <Mark editor={editor} name="bold" label="굵게"><b>가</b></Mark>
-        <Mark editor={editor} name="italic" label="기울임"><i>가</i></Mark>
-        <Mark editor={editor} name="strike" label="취소줄"><s>가</s></Mark>
+        <Tool editor={editor} label="실행취소" on={() => editor.chain().focus().undo().run()}><UndoIcon /></Tool>
+        <Tool editor={editor} label="다시실행" on={() => editor.chain().focus().redo().run()}><RedoIcon /></Tool>
+        <span className="rtbar" aria-hidden="true" />
+
         <Dropdown
           ariaLabel="글꼴"
           className="rtfont"
@@ -234,11 +343,91 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
             else editor.chain().focus().setFontFamily(font).run();
           }}
         />
-        <button type="button" disabled={disabled} onClick={() => askLink(editor)}>링크</button>
-        {/* 파일은 본문에 drop 하거나 붙여넣어도 됩니다. 이 버튼은 그 두 방법을 모르는 사람을 위한
-            같은 동작의 입구입니다. */}
-        <label className="rtpick">
-          파일
+        <Dropdown
+          ariaLabel="글자 크기"
+          className="rtsize"
+          value={String(editor.getAttributes("textStyle").fontSize ?? "")}
+          choices={SIZES.map((size) => ({ value: size.value, label: size.label }))}
+          disabled={disabled}
+          onChange={(size) => {
+            if (size === "") editor.chain().focus().unsetFontSize().run();
+            else editor.chain().focus().setFontSize(size).run();
+          }}
+        />
+        <Dropdown
+          ariaLabel="글자 굵기"
+          className="rtweight"
+          value={String(editor.getAttributes("textStyle").fontWeight ?? "")}
+          choices={WEIGHTS.map((one) => ({ value: one.value, label: one.label }))}
+          disabled={disabled}
+          onChange={(weight) => {
+            const chain = editor.chain().focus();
+            if (weight === "") chain.setMark("textStyle", { fontWeight: null }).removeEmptyTextStyle().run();
+            else chain.setMark("textStyle", { fontWeight: weight }).run();
+          }}
+        />
+        <span className="rtbar" aria-hidden="true" />
+
+        <Mark editor={editor} name="bold" label="굵게"><b>B</b></Mark>
+        <Mark editor={editor} name="italic" label="기울임"><i>I</i></Mark>
+        <Mark editor={editor} name="underline" label="밑줄"><u>U</u></Mark>
+        <Mark editor={editor} name="strike" label="취소줄"><s>S</s></Mark>
+                <ColorPanel editor={editor} used={used} disabled={disabled} />
+        {/* 글자에 준 표시와 문단 종류를 함께 삭제합니다. 표시만 삭제하면 목록·인용이 남습니다. */}
+        <Tool
+          editor={editor}
+          label="서식 삭제"
+          on={() => editor.chain().focus().unsetAllMarks().clearNodes().run()}
+        >
+          <EraserIcon />
+        </Tool>
+        <span className="rtbar" aria-hidden="true" />
+
+        <Tool editor={editor} label="왼쪽 정렬" active={editor.isActive({ textAlign: "left" })}
+          on={() => editor.chain().focus().setTextAlign("left").run()}><AlignLeftIcon /></Tool>
+        <Tool editor={editor} label="가운데 정렬" active={editor.isActive({ textAlign: "center" })}
+          on={() => editor.chain().focus().setTextAlign("center").run()}><AlignCenterIcon /></Tool>
+        <Tool editor={editor} label="오른쪽 정렬" active={editor.isActive({ textAlign: "right" })}
+          on={() => editor.chain().focus().setTextAlign("right").run()}><AlignRightIcon /></Tool>
+        <Tool editor={editor} label="양쪽 정렬" active={editor.isActive({ textAlign: "justify" })}
+          on={() => editor.chain().focus().setTextAlign("justify").run()}><AlignJustifyIcon /></Tool>
+        <span className="rtbar" aria-hidden="true" />
+
+        {/* 이름을 "제목" 으로 두면 글 제목 입력칸과 같은 이름이 되어 화면 읽기가 구분하지 못합니다. */}
+        <Dropdown
+          ariaLabel="문단 종류"
+          className="rtlevel"
+          value={String(editor.getAttributes("heading").level ?? "")}
+          choices={LEVELS.map((one) => ({ value: one.value, label: one.label }))}
+          disabled={disabled}
+          onChange={(level) => {
+            if (level === "") editor.chain().focus().setParagraph().run();
+            else editor.chain().focus().toggleHeading({ level: Number(level) as 1 | 2 | 3 | 4 | 5 | 6 }).run();
+          }}
+        />
+        <Tool editor={editor} label="인용" active={editor.isActive("blockquote")}
+          on={() => editor.chain().focus().toggleBlockquote().run()}><QuoteIcon /></Tool>
+        <Tool editor={editor} label="코드 블록" active={editor.isActive("codeBlock")}
+          on={() => editor.chain().focus().toggleCodeBlock().run()}><CodeIcon /></Tool>
+        <Tool editor={editor} label="구분선"
+          on={() => editor.chain().focus().setHorizontalRule().run()}><RuleIcon /></Tool>
+        <Tool editor={editor} label="글머리 기호" active={editor.isActive("bulletList")}
+          on={() => editor.chain().focus().toggleBulletList().run()}><BulletListIcon /></Tool>
+        <Tool editor={editor} label="번호 매기기" active={editor.isActive("orderedList")}
+          on={() => editor.chain().focus().toggleOrderedList().run()}><NumberListIcon /></Tool>
+        {/* 3행 3열로 넣고 첫 줄을 제목 행으로 둡니다. 행·열 추가는 표 안에서 마우스로 합니다. */}
+        <Tool editor={editor} label="표 넣기"
+          on={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+          <TableIcon />
+        </Tool>
+        <span className="rtbar" aria-hidden="true" />
+
+        <Tool editor={editor} label="링크" active={editor.isActive("link")} on={() => setLinking(true)}>
+          <LinkIcon />
+        </Tool>
+        {/* 그림·소리·PDF 는 본문에 들어갑니다. drop 하거나 붙여넣어도 같습니다. */}
+        <label className="rtpick" aria-label="그림 넣기">
+          <ImageIcon />
           <input
             type="file"
             multiple
@@ -251,8 +440,34 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
             }}
           />
         </label>
+        {/* 본문에 넣지 않고 첨부 목록에만 올립니다. 형식 제한은 서버의 허용 목록과 같습니다. */}
+        <label className="rtpick" aria-label="파일 첨부">
+          <ClipIcon />
+          <input
+            type="file"
+            multiple
+            accept={ATTACHMENT_ACCEPT}
+            disabled={disabled}
+            onChange={(event) => {
+              const picked = [...(event.target.files ?? [])];
+              event.target.value = "";
+              void attach(editor, picked, null, postId, false);
+            }}
+          />
+        </label>
       </div>
       <EditorContent editor={editor} />
+      {!linking ? null : (
+        <LinkDialog
+          now={String(editor.getAttributes("link").href ?? "")}
+          onClose={() => setLinking(false)}
+          onSave={(url) => {
+            setLinking(false);
+            if (url === "") editor.chain().focus().unsetLink().run();
+            else editor.chain().focus().setLink({ href: url }).run();
+          }}
+        />
+      )}
       {dragging ? (
         <div className="rtdrop" aria-hidden="true">
           <b>파일을 여기에 끌어다 놓아주세요</b>
@@ -266,7 +481,7 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
 /** 굵게·기울임·취소줄처럼 켜고 끄는 서식 버튼입니다. 지금 켜져 있으면 aria-pressed 로 알립니다. */
 function Mark({ editor, name, label, children }: {
   editor: Editor;
-  name: "bold" | "italic" | "strike";
+  name: "bold" | "italic" | "underline" | "strike";
   label: string;
   children: ReactNode;
 }) {
@@ -283,24 +498,213 @@ function Mark({ editor, name, label, children }: {
   );
 }
 
-/** 주소를 물어 선택한 글자에 링크를 겁니다. 주소를 입력하지 않고 확인하면 링크를 해제합니다. */
-function askLink(editor: Editor): void {
-  const now = String(editor.getAttributes("link").href ?? "");
-  const url = window.prompt("링크 주소를 입력해주세요.", now);
-  if (url === null) return;
-  if (url.trim() === "") {
-    editor.chain().focus().unsetLink().run();
-    return;
-  }
-  // lib/richText.ts 의 sanitizeBody 와 같은 기준입니다. javascript: 같은 주소는 붙이지 않습니다.
-  if (!/^(https?:|mailto:|\/)/i.test(url.trim())) {
-    window.alert("http 또는 https 로 시작하는 주소를 입력해주세요.");
-    return;
-  }
-  editor.chain().focus().setLink({ href: url.trim() }).run();
-}
 
 /** 저장된 본문을 읽기 전용으로 표시합니다. 남이 작성한 HTML 이므로 넣기 직전에 sanitizeBody 를 거칩니다. */
 export function RichTextView({ html }: { html: string }) {
   return <div className="rtview" dangerouslySetInnerHTML={{ __html: sanitizeBody(html) }} />;
+}
+
+/** 한 번 눌러 실행하거나 켜고 끄는 도구 버튼입니다. active 를 넘기면 켜진 상태를 aria-pressed 로 알립니다. */
+function Tool({ editor, label, active, on, children }: {
+  editor: Editor;
+  label: string;
+  active?: boolean;
+  on: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      {...(active === undefined ? {} : { "aria-pressed": active })}
+      disabled={!editor.isEditable}
+      onClick={on}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** 링크 주소를 받는 modal 입니다. window.prompt 는 브라우저마다 모양이 다르고 이 서비스의
+ *  다른 대화 상자와 어긋납니다. 주소를 입력하지 않고 저장하면 링크를 해제합니다. */
+function LinkDialog({ now, onClose, onSave }: {
+  now: string;
+  onClose: () => void;
+  onSave: (url: string) => void;
+}) {
+  const [url, setUrl] = useState(now);
+  const bad = linkProblem(url);
+  return (
+    <Modal
+      title="링크"
+      hint="주소를 입력하지 않고 저장하면 링크를 해제합니다."
+      onClose={onClose}
+      foot={(
+        <>
+          <button className="btn" type="button" onClick={onClose}>취소</button>
+          <button className="btn go" type="button" disabled={bad !== ""} onClick={() => onSave(url.trim())}>
+            저장
+          </button>
+        </>
+      )}
+    >
+      <label className="fld3" htmlFor="rtLinkUrl">
+        주소
+        <input
+          id="rtLinkUrl"
+          value={url}
+          placeholder="https://"
+          aria-invalid={bad !== ""}
+          onChange={(event) => setUrl(event.target.value)}
+        />
+      </label>
+      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+    </Modal>
+  );
+}
+
+/** 링크 주소를 쓸 수 없는 사유입니다. 쓸 수 있으면 빈 문자열입니다. */
+function linkProblem(url: string): string {
+  const trimmed = url.trim();
+  if (trimmed === "") return "";
+  // lib/richText.ts 의 sanitizeBody 와 같은 기준입니다. javascript: 같은 주소는 붙이지 않습니다.
+  return /^(https?:|mailto:|\/)/i.test(trimmed) ? "" : "http 또는 https 로 시작하는 주소를 입력해주세요.";
+}
+
+/** 팔레트 맨 윗줄의 무채색 8칸입니다. 검정에서 흰색까지입니다. */
+const GREYS = ["#000000", "#444444", "#666666", "#999999", "#BBBBBB", "#DDDDDD", "#EEEEEE", "#FFFFFF"];
+
+/** 팔레트의 색 계열 8가지입니다. 빨강부터 자홍까지 색상환을 8등분한 값입니다(HSL 의 hue). */
+const HUES = [0, 30, 60, 120, 180, 240, 275, 300];
+
+/** 색 계열마다 만드는 밝기 단계입니다. 위 3줄이 밝은 쪽, 가운데가 원색, 아래 3줄이 어두운 쪽입니다.
+ *  [밝기, 채도] 순서이고 단위는 퍼센트입니다. */
+const TONES: [number, number][] = [
+  [88, 70], [78, 80], [66, 90], [50, 100], [42, 100], [33, 100], [25, 100], [17, 100],
+];
+
+/** HSL 값을 "#rrggbb" 로 변환합니다. 팔레트 64칸을 손으로 적지 않고 계산해 만듭니다. */
+function hslHex(hue: number, light: number, saturation: number): string {
+  const l = light / 100;
+  const a = (saturation / 100) * Math.min(l, 1 - l);
+  const at = (n: number): string => {
+    const k = (n + hue / 30) % 12;
+    const value = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return Math.round(value * 255).toString(16).padStart(2, "0");
+  };
+  return `#${at(0)}${at(8)}${at(4)}`;
+}
+
+/** 팔레트에 들어가는 색 전부입니다. 첫 줄이 무채색이고 그 아래 8줄이 색 계열마다의 밝기 단계입니다. */
+const PALETTE: string[] = [
+  ...GREYS,
+  ...TONES.flatMap((tone) => HUES.map((hue) => hslHex(hue, tone[0], tone[1]))),
+];
+
+/** 지금 본문에 실제로 쓰인 색입니다. 방금 쓴 색을 다시 고를 때 팔레트를 뒤지지 않아도 됩니다.
+ *  color 와 background-color 를 모두 모으고 중복을 제거해 최대 8개까지 반환합니다. */
+function usedColors(html: string): string[] {
+  const found = html.match(/(?:background-)?color:\s*([^;"']+)/gi) ?? [];
+  const values = found.map((one) => one.split(":")[1].trim().toLowerCase());
+  return [...new Set(values)].slice(0, 8);
+}
+
+/** 색 한 칸입니다. 글자색과 배경색이 같은 모양을 씁니다. */
+function ColorColumn({ title, reset, resetLabel, value, used, onPick }: {
+  title: string;
+  /** 위쪽 버튼을 눌렀을 때의 동작입니다. 글자색은 기본값으로, 배경색은 투명으로 되돌립니다. */
+  reset: () => void;
+  resetLabel: string;
+  value: string;
+  used: string[];
+  onPick: (color: string) => void;
+}) {
+  // 브라우저 색 선택기를 여는 입력칸입니다. 그 선택기 안에 스펙트럼과 HEX 입력이 이미 들어 있어
+  // 따로 만들지 않습니다. 화면에는 보이지 않고 버튼이 눌러 줍니다.
+  const picker = useRef<HTMLInputElement>(null);
+  return (
+    <div className="rtcol">
+      <p className="cap2">{title}</p>
+      <button type="button" className="rtreset" onClick={reset}>{resetLabel}</button>
+      <div className="rtgrid" role="group" aria-label={`${title} 팔레트`}>
+        {PALETTE.map((color) => (
+          <button
+            type="button"
+            key={color}
+            aria-label={color}
+            style={{ background: color }}
+            onClick={() => onPick(color)}
+          />
+        ))}
+      </div>
+      {/* 누르면 브라우저 색 선택기가 바로 열립니다. 그 안에 스펙트럼과 HEX 입력이 들어 있어
+          이 화면에서 따로 만들지 않습니다. */}
+      <button type="button" className="rtreset" onClick={() => picker.current?.click()}>
+        직접 선택
+      </button>
+      <input
+        ref={picker}
+        className="rthidden"
+        type="color"
+        tabIndex={-1}
+        aria-label={`${title} 직접 선택`}
+        value={value}
+        onChange={(event) => onPick(event.target.value)}
+      />
+      {/* 최근 사용한 색입니다. 본문에 이미 쓴 색을 다시 고를 때 팔레트를 뒤지지 않아도 됩니다. */}
+      <p className="cap2">최근 사용한 색</p>
+      <div className="rtgrid recent" role="group" aria-label={`${title} 최근 사용한 색`}>
+        {Array.from({ length: 8 }, (_, index) => used[index] ?? null).map((color, index) => (
+          color === null
+            ? <span key={`empty-${index}`} className="none" />
+            : <button
+              type="button"
+              key={color}
+              aria-label={`${title} ${color}`}
+              style={{ background: color }}
+              onClick={() => onPick(color)}
+            />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** 글자색과 배경색을 popover(버튼에 붙어 열리는 작은 창) 하나에서 고릅니다. 팔레트·초기화·스펙트럼·최근 사용한 색이 모두 들어 있습니다. */
+function ColorPanel({ editor, used, disabled }: {
+  editor: Editor;
+  used: string[];
+  disabled: boolean;
+}) {
+  const { open, toggle, box } = useDismissible();
+  const color = String(editor.getAttributes("textStyle").color ?? "#191f28");
+  const background = String(editor.getAttributes("textStyle").backgroundColor ?? "#ffffff");
+  return (
+    <div className="rtcolor" ref={box}>
+      <button type="button" aria-label="글자색과 배경색" aria-expanded={open} disabled={disabled} onClick={toggle}>
+        <PaletteIcon />
+        <i className="rtcolorbar" style={{ background: color, borderColor: background }} aria-hidden="true" />
+      </button>
+      {!open ? null : (
+        <div className="rtcolorpop" role="dialog" aria-label="글자색과 배경색">
+          <ColorColumn
+            title="글자색"
+            resetLabel="기본값으로 설정"
+            reset={() => editor.chain().focus().unsetColor().run()}
+            value={color}
+            used={used}
+            onPick={(next) => editor.chain().focus().setColor(next).run()}
+          />
+          <ColorColumn
+            title="배경색"
+            resetLabel="투명"
+            reset={() => editor.chain().focus().unsetBackgroundColor().run()}
+            value={background}
+            used={used}
+            onPick={(next) => editor.chain().focus().setBackgroundColor(next).run()}
+          />
+        </div>
+      )}
+    </div>
+  );
 }

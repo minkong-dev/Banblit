@@ -80,17 +80,33 @@ body[data-page="board"] {
 .rtdrop b { font-size: clamp(18px, 2.4cqi, 24px); font-weight: 700; color: var(--brand); }
 .rtdrop span { max-width: 44ch; font-size: clamp(13.5px, 1.4cqi, 16px); color: var(--t2); line-height: 1.5; }
 .rt.off { background: var(--card-2); }
-.rttools { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); background: var(--card-2); }
-.rttools button, .rttools .rtfont { min-height: 32px; padding: 4px 10px; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--t2); font: inherit; font-size: 13px; }
-.rttools button:hover:not(:disabled), .rttools .rtfont:hover:not(:disabled) { background: var(--card); color: var(--t1); }
-.rttools button[aria-pressed="true"] { background: var(--brand-tint); color: var(--brand-press); border-color: var(--brand); }
-.rttools button:disabled, .rttools .rtfont:disabled { color: var(--t3); }
-/* 글꼴 고르기는 도구 막대 안에 들어가므로 다른 드롭다운보다 낮고 좁습니다. */
+/* 도구 줄입니다. 버튼은 전부 같은 32px 정사각형이고 안의 글자·아이콘은 가운데에 둡니다 —
+   크기를 각자 두면 아이콘마다 높이가 달라 줄이 들쭉날쭉해집니다. */
+.rttools { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; row-gap: 4px; padding: 6px; border-bottom: 1px solid var(--line); background: var(--card-2); }
+/* 도구 줄의 직계 버튼만 정사각형입니다. 아래로 열리는 창(.rtcolorpop) 안의 버튼까지 걸리면
+   그 버튼들이 32px 로 줄어 글자가 넘칩니다. .rtcolor > button 은 색 선택을 여는 버튼입니다. */
+.rttools > button, .rtcolor > button {
+  width: 32px; height: 32px; flex: none; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; border-radius: 7px; background: none; color: var(--t2);
+  font: inherit; font-size: 15px; line-height: 1;
+}
+/* 선택칸은 글자가 줄바꿈되지 않을 만큼의 폭을 확보합니다. flex 가 줄이면 "기본 글꼴" 이 글자마다 줄바꿈됩니다. */
+/* 선택칸은 글자가 줄바꿈되지 않을 만큼의 폭을 확보합니다. 폭을 주지 않으면 "본문" 이 "본"·"문" 으로 줄바꿈됩니다. */
+.rttools .rtfont, .rttools .rtsize, .rttools .rtlevel { flex: none; white-space: nowrap; min-height: 32px; padding: 4px 10px; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--t2); font: inherit; font-size: 13px; }
+/* 묶음을 나누는 세로 선입니다. 버튼 높이보다 짧게 두어 줄이 끊겨 보이지 않게 합니다. */
+.rtbar { width: 1px; height: 18px; margin: 0 4px; flex: none; background: var(--line-2); }
+.rttools > button:hover:not(:disabled), .rtcolor > button:hover:not(:disabled), .rttools .rtfont:hover:not(:disabled), .rttools .rtsize:hover:not(:disabled), .rttools .rtlevel:hover:not(:disabled) { background: var(--card); color: var(--t1); }
+.rttools > button[aria-pressed="true"] { background: var(--brand-tint); color: var(--brand-press); border-color: var(--brand); }
+.rttools > button:disabled, .rtcolor > button:disabled, .rttools .rtfont:disabled, .rttools .rtsize:disabled, .rttools .rtlevel:disabled { color: var(--t3); }
+/* 글꼴 선택칸은 도구 막대 안에 들어가므로 다른 드롭다운보다 낮고 좁습니다. */
 .rttools .dd { flex: none; }
+.rttools .rtfont { min-width: 104px; }
+.rttools .rtsize { min-width: 78px; }
 .rttools .rtfont .ddmark { width: 15px; height: 15px; }
 /* 처음 열었을 때의 높이입니다. 글을 쓰거나 그림을 넣으면 그만큼 늘어나고, 화면(.main)이 스크롤합니다.
    창 높이에 비례하되 320px 아래로 줄지 않고 560px 위로 늘지 않습니다. */
-.rtbody { min-height: clamp(320px, 45vh, 560px); padding: 12px; outline: none; font-size: 14px; line-height: 1.7; }
+/* 글자색을 지정하지 않으면 바깥의 옅은 색을 물려받아 플레이스홀더처럼 보입니다. */
+.rtbody { min-height: clamp(320px, 45vh, 560px); padding: 12px; outline: none; color: var(--t1); font-size: 14px; line-height: 1.7; }
 .rtbody:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; }
 .rtbody p { margin: 0 0 10px; }
 .rtbody p:last-child { margin-bottom: 0; }
@@ -112,3 +128,104 @@ body[data-page="board"] {
 .rttools .rtpick { display: inline-flex; align-items: center; min-height: 32px; padding: 4px 10px; border-radius: 7px; color: var(--t2); font-size: 13px; cursor: pointer; }
 .rttools .rtpick:hover { background: var(--card); color: var(--t1); }
 .rttools .rtpick input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+/* 아이콘 버튼입니다. 글자 버튼(가·가·카)과 같은 높이를 쓰되 정사각형으로 둡니다. */
+/* 아이콘은 모두 같은 크기입니다. 글자 버튼(B·I·U·S)의 글자 높이와 눈으로 맞춘 값입니다. */
+.rttools > button svg, .rtcolor > button svg, .rttools .rtpick svg { width: 18px; height: 18px; display: block; }
+.rttools .rtpick { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+
+  width: 21px; height: 21px; margin: 0 0 0 3px; border: 1px solid var(--line-2); border-radius: 6px;
+  cursor: pointer; overflow: hidden;
+}
+
+/* 본문에 넣은 표입니다. 편집기와 읽기 화면이 같은 모양을 씁니다.
+   border-collapse 를 지정하지 않으면 셀마다 테두리가 두 겹으로 겹쳐 굵어 보입니다. */
+.rtbody table, .rtview table { width: 100%; margin: 8px 0; border-collapse: collapse; table-layout: fixed; }
+.rtbody th, .rtbody td, .rtview th, .rtview td {
+  padding: 8px 10px; border: 1px solid var(--line-2); vertical-align: top; overflow-wrap: anywhere;
+}
+.rtbody th, .rtview th { background: var(--card-2); font-weight: 700; text-align: left; }
+/* 열 너비를 끌어 조절하는 손잡이입니다. 편집 중에만 보입니다. */
+.rtbody .column-resize-handle { position: absolute; top: 0; bottom: 0; width: 3px; background: var(--brand); pointer-events: none; }
+.rtbody .selectedCell::after {
+  content: ""; position: absolute; inset: 0; background: var(--brand-tint); pointer-events: none;
+}
+.rtbody table { position: relative; }
+.rtbody td, .rtbody th { position: relative; }
+
+/* 문단 정렬과 목록입니다. 편집기와 읽기 화면이 같아야 저장 전후가 같아 보입니다. */
+.rtbody ul, .rtview ul, .rtbody ol, .rtview ol { margin: 0 0 10px; padding-left: 22px; }
+.rtbody li, .rtview li { margin: 2px 0; }
+
+/* 제목·인용·코드 블록·구분선입니다. 편집기와 읽기 화면이 같은 모양이어야 저장 전후가 같아 보입니다.
+   .rtview 쪽에 이미 있던 인용 규칙과 값을 맞춥니다. */
+/* 첫 블록의 위 여백은 삭제합니다. 남겨 두면 첫 줄에서 "# " 를 입력하는 순간 제목의 위 여백만큼
+   커서가 아래로 내려가, 줄바꿈한 것처럼 보입니다. */
+.rtbody > :first-child, .rtview > :first-child { margin-top: 0; }
+
+/* 제목 1~6 입니다. base.css 가 크기를 초기화해 두어 지정하지 않으면 본문과 같은 크기로 보입니다.
+   "# " 를 입력하면 제목이 만들어지는데도 줄바꿈한 것처럼 보이는 이유입니다. */
+.rtbody h1, .rtview h1 { margin: 18px 0 10px; font-size: 28px; font-weight: 700; letter-spacing: -.03em; line-height: 1.35; }
+.rtbody h2, .rtview h2 { margin: 16px 0 9px; font-size: 23px; font-weight: 700; letter-spacing: -.02em; line-height: 1.4; }
+.rtbody h3, .rtview h3 { margin: 14px 0 8px; font-size: 19px; font-weight: 700; letter-spacing: -.02em; line-height: 1.45; }
+.rtbody h4, .rtview h4 { margin: 13px 0 7px; font-size: 16.5px; font-weight: 700; line-height: 1.5; }
+.rtbody h5, .rtview h5 { margin: 12px 0 6px; font-size: 15px; font-weight: 700; line-height: 1.5; }
+.rtbody h6, .rtview h6 { margin: 12px 0 6px; font-size: 14px; font-weight: 700; color: var(--t2); line-height: 1.5; }
+.rtbody blockquote { margin: 0 0 10px; padding-left: 12px; border-left: 3px solid var(--line-2); color: var(--t2); }
+.rtbody hr, .rtview hr { margin: 14px 0; border: none; border-top: 1px solid var(--line-2); }
+.rtbody code, .rtview code { padding: 1px 5px; border-radius: 5px; background: var(--card-2); font-family: ui-monospace, monospace; font-size: .92em; }
+.rtbody pre code, .rtview pre code { padding: 0; background: none; }
+
+/* 색 선택입니다. popover 하나에 글자색과 배경색 두 칸을 나란히 둡니다.
+   칸마다 위에서부터 초기화 버튼, 팔레트 격자, "직접 선택"(스펙트럼과 HEX 입력), 최근 사용한 색입니다.
+   팔레트만 두면 원하는 색을 못 쓰고, 스펙트럼만 두면 매번 색을 새로 만들어야 합니다. */
+.rtcolor { position: relative; display: inline-flex; flex: none; }
+.rtcolor > button { flex-direction: column; gap: 2px; }
+/* 지금 고른 글자색을 채움으로, 배경색을 테두리로 한 칸에 함께 표시합니다. */
+.rtcolorbar { display: block; width: 18px; height: 5px; border: 1px solid; border-radius: 2px; }
+/* 절대 위치라 폭이 정해지지 않습니다. max-content 를 주지 않으면 두 칸이 0 까지 줄어
+   글자가 세로로 줄바꿈됩니다. 칸 폭은 팔레트 8칸(16px)이 정합니다. */
+.rtcolorpop {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: max-content;
+  display: grid; grid-template-columns: repeat(2, auto); gap: 16px;
+  padding: 14px; border-radius: 12px; background: var(--card);
+  border: 1px solid var(--line); box-shadow: var(--shadow-up);
+}
+/* 칸 폭은 팔레트 격자(16px 8칸 + 간격)가 정합니다. 고정 폭을 주면 격자가 칸을 넘쳐
+   제목과 버튼이 격자와 어긋납니다. */
+.rtcol { display: flex; flex-direction: column; gap: 6px; width: max-content; }
+.rtcol .cap2 { margin: 0; font-size: 12px; color: var(--t3); text-align: center; white-space: nowrap; }
+/* 초기화 버튼과 "직접 선택" 입니다. 팔레트 폭에 맞춰 가로를 채웁니다. */
+.rtreset {
+  width: 100%; min-height: 28px; padding: 0 8px; border: 1px solid var(--line-2); border-radius: 7px;
+  background: var(--card-2); color: var(--t1); font-size: 12.5px; font-weight: 500; white-space: nowrap; cursor: pointer;
+}
+.rtreset:hover { background: var(--card); border-color: var(--brand); color: var(--brand); }
+/* 8칸씩입니다. 첫 줄이 무채색이고 그 아래가 색 계열마다의 밝기 단계입니다. */
+.rtgrid { display: grid; grid-template-columns: repeat(8, 16px); gap: 2px; }
+.rtgrid button, .rtgrid .none {
+  width: 16px; height: 16px; min-height: 0; padding: 0;
+  border: 1px solid var(--line); border-radius: 3px;
+}
+.rtgrid .none { background: var(--card-2); }
+.rtgrid button:hover { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+/* 문단 종류 선택입니다. "제목 1"~"제목 6" 이 한 줄에 들어갈 폭입니다. */
+.rttools .rtlevel { min-width: 96px; }
+
+/* 글자 굵기 선택칸입니다. "ExtraLight" 가 한 줄에 들어갈 폭입니다. */
+.rttools .rtweight { min-width: 112px; }
+
+/* 버튼이 눌러 주는 입력칸입니다. 화면에서 감추되 삭제하지는 않습니다 — 삭제하면 브라우저
+   색 선택기를 열 수단이 없어집니다. display:none 은 click() 이 동작하지 않습니다.
+   선택자를 두 단계로 두는 이유는 shell.css 의 .fields input 이 더 강해 크기가 밀리기 때문입니다. */
+.rtcolorpop .rtcol .rthidden { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; border: none; opacity: 0; pointer-events: none; }
+
+/* 첨부 파일 선택입니다. 브라우저가 그리는 입력칸은 모양을 정할 수 없어 감추고,
+   같은 동작의 버튼을 둡니다. display:none 은 click() 이 동작하지 않아 크기만 줄입니다. */
+.filepick { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.filepick .meta { font-size: 13px; color: var(--t3); }
+.fields .wide .filehidden {
+  position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; border: none;
+  opacity: 0; pointer-events: none;
+}
