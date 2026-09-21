@@ -11,7 +11,7 @@ import FileHandler from "@tiptap/extension-file-handler";
 import Youtube from "@tiptap/extension-youtube";
 import { TextStyle } from "@tiptap/extension-text-style";
 import { FontFamily } from "@tiptap/extension-font-family";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { Dropdown } from "./Dropdown";
@@ -86,7 +86,9 @@ async function attach(
       const { attachment } = await sendFile<{ attachment: { id: number } }>(
         `/posts/${postId}/attachments`, file, () => undefined,
       );
-      const src = apiUrl(`/attachments/${attachment.id}`);
+      // 표시용 경로입니다. 다운로드 경로(/attachments/{id})는 모든 파일을 octet-stream 과
+      // Content-Disposition: attachment 로 내보내므로 img·audio·iframe 이 표시하지 못합니다.
+      const src = apiUrl(`/attachments/${attachment.id}/inline`);
       const at = editor.chain().focus(pos ?? undefined);
       const kind = embedKind(file.name);
       if (kind === "image") at.setImage({ src, alt: file.name }).run();
@@ -122,6 +124,9 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
       // 무시되므로, 설정을 StarterKit 안으로 넘깁니다.
       // 링크는 새 창으로 열되, 연 쪽 창을 조작하지 못하게 rel 을 붙입니다.
       StarterKit.configure({
+        // dropcursor 는 파일을 끌어 오는 동안 삽입 위치에 가로 막대를 그립니다. 아래 덧댄 안내(.rtdrop)가
+        // 편집기를 전부 가려 그 위치가 보이지 않으므로, 막대만 안내 위에 떠서 정체를 알 수 없는 선이 됩니다.
+        dropcursor: false,
         link: {
           openOnClick: false,
           HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
@@ -155,7 +160,11 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
         ...(describedBy === undefined ? {} : { "aria-describedby": describedBy }),
       },
     },
-  });
+    // postId 를 deps 에 넣습니다. 위 onDrop·onPaste 는 편집기를 만들 때의 postId 를 closure 로 붙잡는데,
+    // 글쓰기 화면은 초안 생성이 mount 뒤에 끝나 그 값이 null 로 고정됩니다. 그러면 파일을 drop 해도
+    // 올릴 글이 없다고 판정합니다. 초안 번호가 도착하면 편집기를 다시 만들고, 본문은 content 의 value 로
+    // 복원됩니다.
+  }, [postId]);
 
   // 바깥에서 값을 초기화하거나 다른 글로 변경했을 때만 편집기에 다시 넣습니다. 조건 없이 넣으면
   // 글자를 칠 때마다 편집기를 다시 채워 커서가 맨 앞으로 돌아갑니다.
@@ -167,10 +176,49 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
     editor?.setEditable(!disabled);
   }, [editor, disabled]);
 
+  // 파일을 창 안으로 끌어 오는 동안에만 안내를 표시합니다. dragenter 와 dragleave 는 자식 요소를 지날 때마다
+  // 번갈아 발생하므로 깊이를 세어 0 이 될 때만 내립니다.
+  // 네 가지 모두 capture 단계에서 듣습니다 — FileHandler 가 처리한 drop 은 stopPropagation 으로 전파를
+  // 멈추므로, bubble 단계에서 들으면 놓은 뒤에도 안내가 그대로 남습니다.
+  const [dragging, setDragging] = useState(false);
+  useEffect(() => {
+    let depth = 0;
+    const hasFiles = (event: DragEvent): boolean => event.dataTransfer?.types.includes("Files") ?? false;
+    const enter = (event: DragEvent): void => { if (hasFiles(event)) { depth += 1; setDragging(true); } };
+    const leave = (event: DragEvent): void => {
+      if (!hasFiles(event)) return;
+      depth -= 1;
+      if (depth <= 0) { depth = 0; setDragging(false); }
+    };
+    const end = (): void => { depth = 0; setDragging(false); };
+    window.addEventListener("dragenter", enter, true);
+    window.addEventListener("dragleave", leave, true);
+    window.addEventListener("drop", end, true);
+    window.addEventListener("dragend", end, true);
+    return () => {
+      window.removeEventListener("dragenter", enter, true);
+      window.removeEventListener("dragleave", leave, true);
+      window.removeEventListener("drop", end, true);
+      window.removeEventListener("dragend", end, true);
+    };
+  }, []);
+
   if (editor === null) return null;
 
   return (
-    <div className={disabled ? "rt off" : "rt"}>
+    <div
+      className={disabled ? "rt off" : "rt"}
+      // 편집기 밖(도구 줄·여백)에 놓아도 받습니다. dragOver 에서 기본 동작을 막아야 drop 이 발생합니다.
+      onDragOver={(event) => { if (!disabled) event.preventDefault(); }}
+      // FileHandler 가 처리한 drop 은 여기까지 오지 않습니다. 그것이 잡지 않는 형식만 도달합니다.
+      onDrop={(event) => {
+        if (disabled) return;
+        const dropped = [...event.dataTransfer.files];
+        if (dropped.length === 0) return;
+        event.preventDefault();
+        void attach(editor, dropped, null, postId);
+      }}
+    >
       <div className="rttools">
         <Mark editor={editor} name="bold" label="굵게"><b>가</b></Mark>
         <Mark editor={editor} name="italic" label="기울임"><i>가</i></Mark>
@@ -205,6 +253,12 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
         </label>
       </div>
       <EditorContent editor={editor} />
+      {dragging ? (
+        <div className="rtdrop" aria-hidden="true">
+          <b>파일을 여기에 끌어다 놓아주세요</b>
+          <span>임베드가 불가능한 형식은 첨부파일로 업로드돼요</span>
+        </div>
+      ) : null}
     </div>
   );
 }

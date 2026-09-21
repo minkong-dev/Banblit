@@ -81,9 +81,9 @@ test("본문에 그림을 넣으면 미리보기로 보인다", async ({ page })
     ),
   });
   const inBody = page.locator(".rtbody img");
-  await expect(inBody).toHaveAttribute("src", /\/api\/attachments\/\d+$/);
+  await expect(inBody).toHaveAttribute("src", /\/api\/attachments\/\d+\/inline$/);
 
   await page.getByRole("button", { name: "글쓰기" }).click();
   await page.getByRole("button", { name: new RegExp(escapeRegExp(title)) }).click();
-  await expect(page.locator(".rtview img")).toHaveAttribute("src", /\/api\/attachments\/\d+$/);
+  await expect(page.locator(".rtview img")).toHaveAttribute("src", /\/api\/attachments\/\d+\/inline$/);
 });
