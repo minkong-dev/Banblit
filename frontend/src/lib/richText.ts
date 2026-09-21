@@ -58,11 +58,15 @@ function purify(html: string): string {
   });
 }
 
+/** 글자가 아닌데도 본문을 이루는 요소입니다. 그림·소리·영상·PDF·유튜브·표·구분선이 여기 듭니다.
+ *  하나라도 있으면 글자가 없어도 내용이 있는 것으로 봅니다. */
+const CONTENT_TAGS = /<(img|audio|video|iframe|table|hr)\b/i;
+
 /** 본문에 사람이 읽을 내용이 있는지 판단합니다.
  *  편집기는 비어 있어도 "<p></p>" 를 내놓으므로 trim 만으로는 빈 글을 걸러내지 못합니다.
- *  태그를 걷어낸 글자가 있거나 그림이 1장이라도 있으면 내용이 있는 것으로 봅니다. */
+ *  태그를 걷어낸 글자가 있거나 위 요소가 하나라도 있으면 내용이 있는 것으로 봅니다. */
 export function hasContent(html: string): boolean {
-  return /<img\b/i.test(html) || textOf(html).trim() !== "";
+  return CONTENT_TAGS.test(html) || textOf(html).trim() !== "";
 }
 
 /** 태그를 걷어낸 글자입니다. 글자 수 상한을 셀 때 사용합니다. HTML 태그까지 세면
