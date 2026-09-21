@@ -153,12 +153,32 @@ export function WriteForm(props: {
             onChange={(next) => { setTouched(true); setBody(next); }}
           />
         </label>
-        <label className="wide" htmlFor="postFiles">
-          첨부파일 <span className="meta">{ATTACHMENT_HINT}</span>
+        {/* label 로 감싸지 않습니다. 감싸면 안내 문구를 눌러도 파일 선택 대화상자가 열립니다 —
+            여는 곳은 아래 버튼 하나뿐이어야 합니다.
+            브라우저가 그리는 파일 입력칸은 모양을 정할 수 없어 감추고, 같은 동작의 버튼을 둡니다.
+            이름은 aria-labelledby 로 연결해 화면 읽기에는 그대로 전달합니다. */}
+        <div className="wide">
+          <span id="postFilesLabel">첨부파일</span> <span className="meta">{ATTACHMENT_HINT}</span>
+          <div className="filepick">
+            <button
+              type="button"
+              className="btn"
+              disabled={send.isPending}
+              onClick={() => picker.current?.click()}
+            >
+              파일 선택
+            </button>
+            <span className="meta">
+              {files.length === 0 ? "선택한 파일 없음" : `${files.length}개 선택함`}
+            </span>
+          </div>
           <input
             id="postFiles"
+            className="filehidden"
+            aria-labelledby="postFilesLabel"
             type="file"
             multiple
+            tabIndex={-1}
             accept={ATTACHMENT_ACCEPT}
             ref={picker}
             disabled={send.isPending}
@@ -169,7 +189,7 @@ export function WriteForm(props: {
               setFiles([...(event.target.files ?? [])]);
             }}
           />
-        </label>
+        </div>
       </div>
       {files.length === 0 ? null : (
         <div className="comments">
