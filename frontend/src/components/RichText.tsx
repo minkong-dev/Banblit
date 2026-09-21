@@ -2,7 +2,7 @@
 // 저장된 HTML 을 화면에 넣기 전의 sanitize(허용 목록에 없는 태그와 속성을 제거하는 처리)와
 // 빈 값 판정은 lib/richText.ts 가 담당합니다.
 
-import { Extension, Node, mergeAttributes } from "@tiptap/core";
+import { Extension, Node, mergeAttributes, nodeInputRule } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
@@ -149,6 +149,20 @@ const HeadingBackspace = Extension.create({
   },
 });
 
+/** 유튜브 주소를 타이핑한 뒤 공백이나 줄바꿈을 입력해도 video player 로 변경합니다.
+ *  기본 확장은 붙여넣기만 처리해, 주소를 직접 쳐서 넣으면 일반 링크로 남습니다. */
+const YoutubeTyped = Youtube.extend({
+  addInputRules() {
+    return [
+      nodeInputRule({
+        find: /(?:^|\s)(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=[\w-]{11}\S*|youtu\.be\/[\w-]{11}))\s$/,
+        type: this.type,
+        getAttributes: (match) => ({ src: match[1] }),
+      }),
+    ];
+  },
+});
+
 type Editor = NonNullable<ReturnType<typeof useEditor>>;
 
 /** 본문에 넣을 수 있는 파일의 MIME(형식을 알리는 문자열)입니다. 나머지는 drop(파일을 끌어다 놓는 동작)해도 처리하지 않고
@@ -243,7 +257,9 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
       Audio,
       Pdf,
       // 유튜브 주소를 붙여넣으면 그 자리에서 video player 로 변경됩니다.
-      Youtube.configure({ nocookie: true, width: 640, height: 360 }),
+      // origin 을 넘기지 않으면 youtube-nocookie 가 임베드를 검증하지 못해 재생 화면에
+      // "플레이어 구성 오류"(153)를 표시합니다.
+      YoutubeTyped.configure({ nocookie: true, origin: window.location.origin, width: 640, height: 360 }),
       // 본문에 파일을 drop 하거나 붙여넣으면 잡아서 올립니다. 그리는 것은 이 확장이 하지 않고,
       // 아래 attach 가 형식에 따라 노드를 넣습니다.
       FileHandler.configure({
@@ -459,12 +475,28 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
       <EditorContent editor={editor} />
       {!linking ? null : (
         <LinkDialog
-          now={String(editor.getAttributes("link").href ?? "")}
+          nowText={editor.state.doc.textBetween(
+            editor.state.selection.from, editor.state.selection.to, "",
+          )}
+          nowUrl={String(editor.getAttributes("link").href ?? "")}
           onClose={() => setLinking(false)}
-          onSave={(url) => {
+          onSave={(text, url) => {
             setLinking(false);
-            if (url === "") editor.chain().focus().unsetLink().run();
-            else editor.chain().focus().setLink({ href: url }).run();
+            const chain = editor.chain().focus();
+            if (url === "") { chain.unsetLink().run(); return; }
+            const shown = text === "" ? url : text;
+            const picked = editor.state.doc.textBetween(
+              editor.state.selection.from, editor.state.selection.to, "",
+            );
+            // 표시할 텍스트를 바꾸지 않았고 선택한 글자가 있으면 그 글자에 링크만 겁니다.
+            // 서식(색·크기·굵기)은 그 글자에 이미 붙어 있으므로 그대로 남습니다.
+            if (picked !== "" && shown === picked) { chain.setLink({ href: url }).run(); return; }
+            // 그 밖에는 표시할 텍스트를 넣고 링크를 겁니다. 선택한 글자가 있으면 그것을 대체합니다.
+            chain.insertContent({
+              type: "text",
+              text: shown,
+              marks: [{ type: "link", attrs: { href: url } }],
+            }).run();
           }}
         />
       )}
@@ -527,12 +559,15 @@ function Tool({ editor, label, active, on, children }: {
 
 /** 링크 주소를 받는 modal 입니다. window.prompt 는 브라우저마다 모양이 다르고 이 서비스의
  *  다른 대화 상자와 어긋납니다. 주소를 입력하지 않고 저장하면 링크를 해제합니다. */
-function LinkDialog({ now, onClose, onSave }: {
-  now: string;
+function LinkDialog({ nowText, nowUrl, onClose, onSave }: {
+  /** 지금 선택한 글자입니다. 없으면 빈 문자열입니다. */
+  nowText: string;
+  nowUrl: string;
   onClose: () => void;
-  onSave: (url: string) => void;
+  onSave: (text: string, url: string) => void;
 }) {
-  const [url, setUrl] = useState(now);
+  const [text, setText] = useState(nowText);
+  const [url, setUrl] = useState(nowUrl);
   const bad = linkProblem(url);
   return (
     <Modal
@@ -542,18 +577,32 @@ function LinkDialog({ now, onClose, onSave }: {
       foot={(
         <>
           <button className="btn" type="button" onClick={onClose}>취소</button>
-          <button className="btn go" type="button" disabled={bad !== ""} onClick={() => onSave(url.trim())}>
+          <button
+            className="btn go"
+            type="button"
+            disabled={bad !== ""}
+            onClick={() => onSave(text.trim(), url.trim())}
+          >
             저장
           </button>
         </>
       )}
     >
+      <label className="fld3" htmlFor="rtLinkText">
+        표시할 텍스트
+        <input
+          id="rtLinkText"
+          value={text}
+          placeholder="표시할 텍스트를 입력해주세요"
+          onChange={(event) => setText(event.target.value)}
+        />
+      </label>
       <label className="fld3" htmlFor="rtLinkUrl">
-        주소
+        이동할 링크
         <input
           id="rtLinkUrl"
           value={url}
-          placeholder="https://"
+          placeholder="이동할 링크를 입력해주세요"
           aria-invalid={bad !== ""}
           onChange={(event) => setUrl(event.target.value)}
         />

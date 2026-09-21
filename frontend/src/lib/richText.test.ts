@@ -97,6 +97,15 @@ describe("hasContent — 편집기가 내놓은 빈 본문을 걸러낸다", () 
   it("글자가 없어도 그림이 있으면 내용이 있다", () => {
     expect(hasContent('<p><img src="/files/1" alt="" /></p>')).toBe(true);
   });
+
+  it("소리·PDF·유튜브·표만 있어도 내용이 있는 것으로 본다", () => {
+    // 본문에 넣은 것만으로 글이 완성되는 경우입니다. 글자를 더 쓰라고 요구하지 않습니다.
+    expect(hasContent('<p><audio src="/api/attachments/1/inline"></audio></p>')).toBe(true);
+    expect(hasContent('<iframe data-pdf src="/api/attachments/2/inline"></iframe>')).toBe(true);
+    expect(hasContent('<div data-youtube-video><iframe src="https://www.youtube-nocookie.com/embed/x"></iframe></div>')).toBe(true);
+    expect(hasContent("<table><tbody><tr><td></td></tr></tbody></table>")).toBe(true);
+    expect(hasContent("<hr>")).toBe(true);
+  });
 });
 
 describe("textOf — 글자 수를 셀 때 쓰는 평문", () => {

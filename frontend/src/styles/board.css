@@ -121,7 +121,15 @@ body[data-page="board"] {
 
 /* 본문에 넣은 소리·PDF·영상입니다. 편집기와 읽기 화면이 같은 모양을 씁니다. */
 .rtbody audio, .rtview audio { width: 100%; margin: 6px 0; }
-.rtpdf { width: 100%; height: 480px; margin: 6px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--card-2); }
+/* PDF 뷰어입니다. 480px 고정이면 A4 한 쪽이 세로로 잘려 매번 스크롤해야 합니다.
+   A4 는 210 x 297mm 라 세로가 가로의 1.414 배입니다. 그 비율로 두고 창 높이의 60% 를 상한으로
+   둡니다 — 상한을 크게 잡으면 뷰어가 편집 영역을 넘어가 본문과 뷰어의 스크롤이 겹칩니다. */
+/* 선택자를 두 단계로 둡니다. 아래 ".rtbody iframe" 이 border: 0 을 지정해 더 강하기 때문입니다. */
+.rtbody .rtpdf, .rtview .rtpdf {
+  width: 100%; aspect-ratio: 1 / 1.414; height: auto;
+  min-height: 400px; max-height: 60vh;
+  margin: 8px 0; border: 3px solid #000000; border-radius: 8px; background: var(--card-2);
+}
 .rtbody iframe, .rtview iframe { max-width: 100%; border: 0; border-radius: 8px; }
 .rtbody div[data-youtube-video] iframe, .rtview div[data-youtube-video] iframe { aspect-ratio: 16 / 9; width: 100%; height: auto; }
 /* 도구 막대의 파일 넣기입니다. 파일 선택 창은 OS 것을 그대로 쓰고 여는 자리만 맞춥니다. */
