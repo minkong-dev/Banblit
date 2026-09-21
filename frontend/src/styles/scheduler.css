@@ -148,9 +148,8 @@ body[data-page="scheduler"] {
   .bigtime b { display: block; font-size: 26px; font-weight: 700; color: var(--brand); letter-spacing: -.03em; }
   .bigtime small { font-size: 13.5px; color: var(--t2); }
 
-  /* 스크롤은 감싼 요소에 지정합니다. .tl 자체에 지정하면 시각 글씨(.hr::before)가 왼쪽 여백에
-     -50px 로 배치되어 있어 잘립니다. 시작 방향으로 넘친 내용은 스크롤이 생기지 않습니다. */
-  .tlscroll { max-height: 42vh; overflow-y: auto; }
+  /* .tl 을 감싸는 요소입니다. 시각 글씨(.hr::before)가 왼쪽 여백에 -50px 로 배치되어 있어
+     .tl 에 직접 padding 을 주면 잘립니다. 스크롤은 dialog 가 담당합니다. */
   /* 한 칸의 세로 길이입니다. 주 보기와 같은 이유로 이 규칙 하나만 정합니다. */
   /* --gutter 는 왼쪽 시각 글씨 칸의 폭입니다. 막대는 이 칸을 덮지 않고 그 오른쪽부터 시작합니다. */
   .tl { --slot-h: 3.4rem; --gutter: 50px; position: relative; padding-left: var(--gutter); border-bottom: 1px solid var(--line); }
@@ -170,15 +169,15 @@ body[data-page="scheduler"] {
   .tl .evb.sel { pointer-events: none; background: var(--brand-tint); color: var(--brand); border: 1.5px dashed var(--brand); }
 
   /* ===== 3단 카드. 왼쪽 타임라인, 가운데 등록 폼, 오른쪽 내 일정 목록. 열 배치는 shell.css 의 dialog.panes 가 정합니다 =====
-     높이는 grid 가 dialog 높이(92vh)로 맞추고, 안쪽 내용(.tlscroll·.col·.people)만 스크롤합니다. 제목 줄과 버튼 줄은 스크롤되지 않습니다. */
+     높이는 grid 가 가장 긴 카드에 맞추고, 넘치는 내용은 dialog 하나가 통째로 스크롤합니다. 카드 안쪽에는 스크롤을 두지 않습니다. */
   .pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; padding: 22px 0 24px; background: var(--card); border-radius: 22px; box-shadow: var(--shadow-up); overflow: hidden; }
   /* 좌우 여백은 카드가 아니라 스크롤 영역 안쪽에 둡니다. 세로 스크롤 영역은 가로로 넘친 것도 잘라내므로,
      여백이 바깥에 있으면 입력칸의 포커스 테두리(outline)가 양옆에서 잘립니다. .mbody 와 같은 구조입니다. */
   .pane .mhead { padding: 0 24px 14px; }
   .pane .mfoot { padding: 14px 24px 0; margin-top: auto; }
-  .pane .tlscroll, .pane .col, .pane .people { flex: 1; min-height: 0; overflow-y: auto; padding-left: 24px; padding-right: 24px; }
+  .pane .tlscroll, .pane .col, .pane .people { padding-left: 24px; padding-right: 24px; }
   /* 위 여백은 첫 시각 글씨(.hr::before, top -9px)가 잘리지 않을 만큼입니다. */
-  .pane .tlscroll { max-height: none; padding-top: 10px; }
+  .pane .tlscroll { padding-top: 10px; }
   .pane .people { margin-top: 0; }
   /* 가운데 폼과 오른쪽 목록의 머리글은 같은 크기입니다. .people h3 의 작은 회색 규칙보다 우선합니다. */
   .pane .col h3, .pane .people > h3 { margin: 0 0 14px; font-size: 16.5px; font-weight: 700; color: var(--t1); letter-spacing: -.02em; }
@@ -194,11 +193,6 @@ body[data-page="scheduler"] {
   .fld3 > textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
   .fld3 > :focus-visible, .pick select:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
   .people .none { margin: 0; font-size: 13.5px; color: var(--t3); line-height: 1.6; }
-  /* 1열로 쌓이면 카드는 내용만큼만 차지합니다. 타임라인만 상한을 둡니다. */
-  @media (max-width: 960px) {
-    .pane .tlscroll { max-height: 42vh; }
-  }
-
   .people { margin-top: 22px; }
   .people h3 { margin: 0 0 10px; font-size: 13px; color: var(--t3); font-weight: 500; }
   .plist { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 18px; }
