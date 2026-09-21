@@ -24,6 +24,8 @@ const ALLOWED_ATTR = [
   // audio player 와 뷰어가 사용하는 속성입니다. controls 가 없으면 소리를 재생할 수단이 화면에 없습니다.
   "controls", "preload", "type", "width", "height", "allow", "allowfullscreen", "frameborder",
   "data-youtube-video", "data-pdf",
+  // 아래 sanitizeBody 가 iframe 에 붙이는 값입니다. 목록에 없으면 붙이는 즉시 제거됩니다.
+  "referrerpolicy",
 ];
 
 /** 본문에 넣을 수 있는 주소입니다. 같은 서버의 첨부 주소(/attachments/…)와 유튜브만 허용합니다.
@@ -41,11 +43,21 @@ export function sanitizeBody(html: string): string {
     const src = (node as Element).getAttribute?.("src") ?? "";
     if (!ALLOWED_FRAME.test(src)) (node as Element).remove?.();
   });
+  // 배포는 문서 전체에 Referrer-Policy: same-origin 을 내려(deploy/Caddyfile) 다른 출처로 나가는
+  // 요청에 Referer 를 붙이지 않습니다. 유튜브는 Referer 가 없으면 재생 화면에
+  // "동영상 플레이어 구성 오류"(153)를 표시하므로, 살아남은 iframe 에 출처(경로 제외)만 보내게 합니다.
+  // 편집기에서 넣을 때도 같은 값을 붙이지만(components/RichText.tsx), 그 전에 저장된 글에는
+  // 없으므로 화면에 넣는 이 자리에서 붙입니다.
+  // 속성을 붙이는 자리가 위 hook 이 아닌 이유: 위는 속성 검사 전이라 붙여도 그 검사에서 지워집니다.
+  DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+    if (node.nodeName !== "IFRAME") return;
+    (node as Element).setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+  });
   try {
     return purify(html);
   } finally {
     // hook 은 전역에 쌓입니다. 삭제하지 않으면 호출할 때마다 같은 hook 이 하나씩 늘어납니다.
-    DOMPurify.removeHook("uponSanitizeElement");
+    DOMPurify.removeAllHooks();
   }
 }
 
