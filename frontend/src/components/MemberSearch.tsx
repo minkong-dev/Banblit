@@ -1,14 +1,14 @@
 // 이름으로 멤버를 검색합니다. 팀 생성 화면과 permission set(권한 집합) 편집 화면이 같은 컴포넌트를 사용합니다.
 // Modal 이 제목과 아래 버튼 줄을 렌더하고, 이 컴포넌트는 입력 칸과 검색 결과 목록만 렌더합니다.
 //
-// 검색어가 비어 있을 때는 아무것도 표시하지 않습니다. 서버도 그렇게 응답하고,
-// 전체 멤버 목록을 반환하는 기능이 아니기 때문입니다.
+// 검색어가 비어 있으면 명단 전체를 이름 순으로 표시합니다. 누가 있는지 보이지 않으면 찾으려는 사람의
+// 이름을 한 글자씩 넣어 보는 수밖에 없기 때문입니다. 목록은 modal 본문이 스크롤합니다.
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { getJSON, reason } from "../lib/api";
-import { memberLabel } from "../lib/pipeline";
+import { memberLabel, noMembersMessage } from "../lib/pipeline";
 import { LOADING_TEXT } from "../lib/loading";
 import type { Member } from "../lib/contract";
 
@@ -26,20 +26,20 @@ export function MemberSearch(props: {
     queryKey: ["member-search", query],
     queryFn: () =>
       getJSON<{ members: Member[] }>(`/members/search?q=${encodeURIComponent(query)}`),
-    enabled: query !== "",
+    // 한 글자 넣을 때마다 조회가 새로 나갑니다. 이전 결과를 지우지 않고 두면 목록이
+    // "불러오는 중…" 으로 사라졌다 돌아오지 않고, 다음 결과가 도착할 때 한 번에 바뀝니다.
+    placeholderData: keepPreviousData,
   });
   const skip = new Set(exclude ?? []);
   const members = (found.data?.members ?? []).filter((member) => !skip.has(member.id));
 
   let body;
-  if (query === "") {
-    body = <p className="empty">검색을 위해 이름을 입력해주세요.</p>;
-  } else if (found.isPending) {
+  if (found.isPending) {
     body = <p className="empty">{LOADING_TEXT}</p>;
   } else if (found.isError) {
     body = <p className="empty">{reason(found.error)}</p>;
   } else if (members.length === 0) {
-    body = <p className="empty">해당하는 사용자를 찾지 못했어요.</p>;
+    body = <p className="empty">{noMembersMessage(query)}</p>;
   } else {
     body = (
       <ul className="found">
@@ -56,14 +56,18 @@ export function MemberSearch(props: {
 
   return (
     <div className="seek">
-      <input
-        autoFocus
-        type="search"
-        value={text}
-        aria-label="검색어"
-        placeholder="이름을 입력해주세요"
-        onChange={(event) => setText(event.target.value)}
-      />
+      {/* 목록이 길어 본문이 스크롤해도 입력 칸은 제자리에 남습니다(shell.css 의 .seekbar). */}
+      <div className="seekbar">
+        <input
+          // eslint-disable-next-line jsx-a11y/no-autofocus -- 검색 컴포넌트가 열릴 때 검색어 입력칸으로 초점을 이동합니다. 페이지 최초 로드가 아닙니다.
+          autoFocus
+          type="search"
+          value={text}
+          aria-label="검색어"
+          placeholder="이름을 입력해주세요"
+          onChange={(event) => setText(event.target.value)}
+        />
+      </div>
       {body}
     </div>
   );

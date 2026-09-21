@@ -27,7 +27,8 @@ test("알림 버튼이 서버가 준 내 알림을 보여주고 모두 읽음으
   const { notifications } = (await (await page.request.get("/api/notifications")).json()) as {
     notifications: Notification[];
   };
-  const unread = notifications.filter((item) => !item.read).length;
+  // 읽음 처리가 행을 삭제하므로 목록에 있는 알림은 전부 읽지 않은 알림입니다.
+  const unread = notifications.length;
   expect(unread).toBeGreaterThan(0);
 
   await page.goto("/scheduler");
@@ -36,6 +37,7 @@ test("알림 버튼이 서버가 준 내 알림을 보여주고 모두 읽음으
   const popup = page.getByRole("dialog", { name: "알림" });
   await expect(popup.locator("li")).toHaveCount(notifications.length);
 
-  await popup.getByRole("button", { name: "모두 읽음으로 표시" }).click();
+  await popup.getByRole("button", { name: "모두 읽음" }).click();
   await expect(page.getByRole("button", { name: "알림", exact: true })).toBeVisible();
+  await expect(popup.getByText("새 알림이 없어요")).toBeVisible();
 });

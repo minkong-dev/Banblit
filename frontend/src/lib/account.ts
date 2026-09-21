@@ -29,6 +29,11 @@ export const PERMISSION_ITEMS: readonly {
     note: "합주실 이름과 개방 및 마감시간을 수정할 수 있어요.",
   },
   {
+    key: "room_delete",
+    label: "합주실 삭제",
+    note: "합주실을 삭제할 수 있어요. 그 합주실의 예약과 배정기록도 함께 삭제돼요.",
+  },
+  {
     key: "period_create",
     label: "집중합주 기간 추가",
     note: "집중 합주기간을 새로 추가할 수 있어요.",

@@ -23,9 +23,14 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-# scheduling 의 진입점(pipeline.py)이 아니라 slots.py 를 직접 참조합니다. 진입점을 거치면 이 파일을
-# import 하는 migration 까지 OR-Tools 를 로드하게 됩니다. DEFAULT_SLOT_MINUTES 는 계산 없는 상수라 공유 선언입니다.
-from backend.scheduling.slots import DEFAULT_SLOT_MINUTES
+# 칸 크기와 합주 1회 길이는 db·api·services·scheduling 이 같은 값을 참조해야 하므로 공유 규격
+# 파일에 1세트만 둡니다.
+from backend.contract import (
+    DEFAULT_SESSION_MINUTES,
+    DEFAULT_SLOT_MINUTES,
+    MAX_SESSION_MINUTES,
+    SLOT_MINUTE_CHOICES,
+)
 
 # 권한 항목입니다. 생성·수정·삭제·조회를 따로 두어, permission set(권한 집합)을 만드는 사람이
 # 필요한 항목만 선택해 묶을 수 있게 합니다. 항목이 늘면 그 항목을 처리하는 서버 코드도
@@ -34,6 +39,7 @@ from backend.scheduling.slots import DEFAULT_SLOT_MINUTES
 Permission = Literal[
     "room_create",  # 합주실 생성
     "room_edit",  # 합주실 여는 시각·닫는 시각 수정
+    "room_delete",  # 합주실 삭제(그 합주실의 예약·배정 결과·이전 배정기록도 함께 삭제)
     "period_create",  # 기간 생성
     "period_edit",  # 기간 수정
     "period_delete",  # 기간 삭제(그 기간의 배정 결과·계산 기록·이전 배정기록도 함께 삭제)
@@ -85,6 +91,13 @@ Instrument = Literal["보컬", "일렉", "통기타", "베이스", "신디", "�
 INSTRUMENTS: tuple[Instrument, ...] = get_args(Instrument)
 
 
+def _slot_minutes_sql() -> str:
+    """settings.slot_minutes 의 CHECK 제약 문구를 SLOT_MINUTE_CHOICES 에서 생성합니다."""
+    return "slot_minutes IN ({})".format(
+        ", ".join(str(value) for value in SLOT_MINUTE_CHOICES)
+    )
+
+
 def _in_sql(column: str, allowed: tuple[str, ...]) -> str:
     # column(데이터베이스의 열)과 허용 목록을 받아 "column IN ('a', 'b')" 형식으로 반환합니다.
     return "{} IN ({})".format(column, ", ".join(f"'{value}'" for value in allowed))
@@ -110,10 +123,26 @@ class Settings(Base):
     slot_minutes: Mapped[int] = mapped_column(
         default=DEFAULT_SLOT_MINUTES, server_default=text(str(DEFAULT_SLOT_MINUTES))
     )
+    # 합주 1회가 이어지는 길이입니다. 칸의 배수여야 합주가 칸 중간에서 끝나지 않습니다.
+    session_minutes: Mapped[int] = mapped_column(
+        default=DEFAULT_SESSION_MINUTES,
+        server_default=text(str(DEFAULT_SESSION_MINUTES)),
+    )
 
     __table_args__ = (
         CheckConstraint("id = 1"),
-        CheckConstraint("slot_minutes BETWEEN 5 AND 60 AND 60 % slot_minutes = 0"),
+        # 허용 값은 contract.py 의 SLOT_MINUTE_CHOICES 가 정본입니다. 목록에서 생성해,
+        # 값을 추가할 때 이 줄을 함께 수정하지 않아도 되게 합니다.
+        CheckConstraint(_slot_minutes_sql()),
+        # 합주 길이는 칸의 배수이고 칸보다 짧을 수 없습니다. 두 열을 함께 보는 조건이라
+        # 열 하나의 CHECK 로는 지킬 수 없어 table 단위로 둡니다. 한쪽만 바꿔 조건이 깨지는
+        # UPDATE 도 이 제약이 거절합니다.
+        CheckConstraint(
+            "session_minutes >= slot_minutes"
+            " AND session_minutes % slot_minutes = 0"
+            f" AND session_minutes <= {MAX_SESSION_MINUTES}",
+            name="settings_session_minutes_fits_slots",
+        ),
     )
 
 
@@ -305,6 +334,10 @@ class Period(Base):
 
     ensemble_* 다섯 열은 전체합주 설정입니다(patch_note 8번). 날짜 범위·합주실·기본 시작/끝 시각을 함께 채우거나
     함께 null 로 변경합니다. null 이면 전체합주가 없는 기간입니다. 날짜마다 다른 시각은 ensemble_days 가 저장합니다.
+
+    practice_* 네 열은 팀별합주를 배정할 수 있는 하루 중의 시간대입니다. 합주실 개방시각과는 다른
+    값입니다 — 합주실이 09시에 열어도 팀별합주는 17시부터만 배정할 수 있습니다. 평일(월~금)과
+    주말(토·일)이 각각 한 쌍이고, null 인 쪽은 그날 합주실 개방시각 전체를 씁니다.
     """
 
     __tablename__ = "periods"
@@ -321,6 +354,10 @@ class Period(Base):
     ensemble_room_id: Mapped[int | None] = mapped_column(ForeignKey("rooms.id"), nullable=True)
     ensemble_starts_at: Mapped[time | None] = mapped_column(Time, nullable=True)
     ensemble_ends_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    practice_weekday_starts_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    practice_weekday_ends_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    practice_weekend_starts_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    practice_weekend_ends_at: Mapped[time | None] = mapped_column(Time, nullable=True)
 
     # 집중 합주기간끼리의 날짜 겹침 금지 제약(EXCLUDE)은 Reservation 의 겹침 금지 제약과 같이 migration 에만
     # 둡니다(migrations/versions/b5e1d9a37c42_focused_period_no_overlap.py).
@@ -344,6 +381,18 @@ class Period(Base):
         ),
         CheckConstraint(
             "ensemble_ends_at > ensemble_starts_at", name="periods_ensemble_times_order"
+        ),
+        # 평일·주말은 각각 한 쌍입니다. 한쪽만 채우면 끝 시각 없는 시간대가 되어 배정 구간을
+        # 정할 수 없습니다. 두 쌍은 서로 독립입니다 — 평일만 정하고 주말은 개방시각 전체로 둘 수 있습니다.
+        CheckConstraint(
+            "num_nulls(practice_weekday_starts_at, practice_weekday_ends_at) IN (0, 2)"
+            " AND num_nulls(practice_weekend_starts_at, practice_weekend_ends_at) IN (0, 2)",
+            name="periods_practice_window_pairs",
+        ),
+        CheckConstraint(
+            "(practice_weekday_ends_at > practice_weekday_starts_at OR practice_weekday_starts_at IS NULL)"
+            " AND (practice_weekend_ends_at > practice_weekend_starts_at OR practice_weekend_starts_at IS NULL)",
+            name="periods_practice_window_order",
         ),
     )
 
@@ -609,10 +658,10 @@ NOTIFICATION_KINDS: tuple[NotificationKind, ...] = get_args(NotificationKind)
 
 
 class Notification(Base):
-    """멤버 1명에게 표시하는 화면 알림 하나입니다. read_at 이 null 이면 아직 읽지 않은 알림입니다.
+    """멤버 1명에게 표시하는 화면 알림 하나입니다.
 
-    읽음 여부를 알림마다 두는 이유는 나중에 알림을 하나씩 읽는 화면이 생겨도 table 을 변경할
-    필요가 없기 때문입니다. "언제까지 읽었다"는 값 하나로 두면 그때 table 을 다시 만들어야 합니다.
+    읽음 처리는 행을 삭제합니다. 읽음 표시만 남기면 삭제되는 경로가 없어 행이 쌓이기만 합니다
+    (services/notification_service.py 의 mark_all_read). 그래서 읽음 여부 열을 두지 않습니다.
     """
 
     __tablename__ = "notifications"
@@ -624,7 +673,6 @@ class Notification(Base):
     )
     kind: Mapped[NotificationKind] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime)
-    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     __table_args__ = (CheckConstraint(_in_sql("kind", NOTIFICATION_KINDS)),)
 

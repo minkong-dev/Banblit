@@ -13,8 +13,59 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
 from backend.api.rate_limit import reset_all
+from backend.contract import DEFAULT_SESSION_MINUTES, DEFAULT_SLOT_MINUTES
 from backend.db.models import Base, Settings, TeamSlot
-from backend.scheduling.slots import DEFAULT_SLOT_MINUTES
+from backend.scheduling.assignment import Assignment as EngineAssignment
+from backend.scheduling.assignment import Room as EngineRoom
+from backend.scheduling.assignment import assign as assign_sessions
+from backend.scheduling.availability import Team as EngineTeam
+from backend.scheduling.resolution import Resolution
+from backend.scheduling.resolution import resolve as resolve_sessions
+
+# 테스트가 정하는 상한(초)입니다. 운영 값은 scheduling/pipeline.py 의 SOLVER_TIME_LIMIT_SECONDS 와
+# RESOLUTION_TIME_LIMIT_SECONDS 입니다. 테스트에서 짧게 두는 이유는, 풀리지 않는 입력을 넣은
+# 테스트 하나가 검사 전체를 운영 상한만큼 멈추지 않게 하기 위해서입니다.
+TEST_SOLVER_TIME_LIMIT_SECONDS = 10.0
+TEST_RESOLUTION_TIME_LIMIT_SECONDS = 30.0
+
+
+def assign(
+    teams: list[EngineTeam],
+    rooms: list[EngineRoom],
+    sessions_per_team: int,
+    slot_minutes: int = DEFAULT_SLOT_MINUTES,
+    session_minutes: int = DEFAULT_SESSION_MINUTES,
+) -> EngineAssignment:
+    """scheduling.assignment.assign 에 테스트용 상한과 기본 칸 크기를 채워 호출합니다."""
+    return assign_sessions(
+        teams,
+        rooms,
+        sessions_per_team,
+        slot_minutes,
+        session_minutes,
+        TEST_SOLVER_TIME_LIMIT_SECONDS,
+    )
+
+
+def resolve(
+    teams: list[EngineTeam],
+    rooms: list[EngineRoom],
+    sessions_per_team: int,
+    slot_minutes: int = DEFAULT_SLOT_MINUTES,
+    session_minutes: int = DEFAULT_SESSION_MINUTES,
+    resolution_time_limit_seconds: float = TEST_RESOLUTION_TIME_LIMIT_SECONDS,
+) -> Resolution:
+    """scheduling.resolution.resolve 에 테스트용 상한과 기본 칸 크기를 채워 호출합니다."""
+    return resolve_sessions(
+        teams,
+        rooms,
+        sessions_per_team,
+        slot_minutes,
+        session_minutes,
+        TEST_SOLVER_TIME_LIMIT_SECONDS,
+        resolution_time_limit_seconds,
+    )
+
 
 def seat(
     session: Session, team_id: int, member_id: int, instrument: str = "보컬"
@@ -100,8 +151,13 @@ def db_session(test_engine: Engine) -> Iterator[Session]:
             if table.name == "settings":
                 continue
             connection.execute(table.delete())
+        # 두 값을 한 UPDATE 로 되돌립니다. 하나씩 되돌리면 중간 상태가 "합주 길이는 칸의 배수"
+        # 라는 CHECK 를 어겨, 값을 바꾼 테스트 다음에 정리 자체가 실패합니다.
         connection.execute(
-            update(Settings).values(slot_minutes=DEFAULT_SLOT_MINUTES)
+            update(Settings).values(
+                slot_minutes=DEFAULT_SLOT_MINUTES,
+                session_minutes=DEFAULT_SESSION_MINUTES,
+            )
         )
 
 

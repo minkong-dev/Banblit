@@ -355,11 +355,12 @@ docker compose run --rm dev alembic upgrade head
 ```
 docker compose run --rm dev alembic current
 docker compose run --rm dev alembic heads
+docker compose run --rm dev alembic history
 docker compose run --rm dev alembic downgrade -1
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: `alembic current`는 지금 DB에 적용된 마이그레이션 번호를 출력합니다. `alembic heads`는 DB가 아니라 `backend/migrations/versions/` 파일들을 읽어 맨 끝 번호를 출력합니다. 새 마이그레이션을 생성하기 직전에 어떤 번호 뒤에 추가할지 확인하는 용도이고, 2줄 이상 출력되면 분기가 생긴 상태입니다. `alembic downgrade -1`은 가장 최근에 적용된 마이그레이션 1개의 `downgrade()`를 실행해 그 직전 상태로 되돌립니다.
+- **용도**: `alembic current`는 지금 DB에 적용된 마이그레이션 번호를 출력합니다. `alembic heads`는 DB가 아니라 `backend/migrations/versions/` 파일들을 읽어 맨 끝 번호를 출력합니다. 새 마이그레이션을 생성하기 직전에 어떤 번호 뒤에 추가할지 확인하는 용도이고, 2줄 이상 출력되면 분기가 생긴 상태입니다. `alembic history`는 마이그레이션 전부를 최신순으로, `앞 번호 -> 뒤 번호, 설명` 한 줄씩 출력합니다. `current`가 가리키는 번호가 목록의 어디쯤인지 보여 주므로, 적용되지 않은 마이그레이션이 몇 개 남았는지 셀 때 씁니다. `alembic downgrade -1`은 가장 최근에 적용된 마이그레이션 1개의 `downgrade()`를 실행해 그 직전 상태로 되돌립니다.
 - **옵션**
   - `-1` — 되돌릴 단계 수입니다. 숫자 대신 `alembic downgrade <revision>`처럼 되돌아갈 목적지 번호를 직접 적어도 됩니다. 생략하면 오류입니다. 어디까지 되돌릴지 반드시 적어야 합니다.
 - **주의점**
@@ -660,8 +661,8 @@ docker compose run --rm --no-deps web npm run build
   - `npm run build` — `frontend/package.json` 의 `build` 를 실행합니다. 내용은 `tsc -b && vite build` 입니다. 타입 검사를 먼저 통과해야 bundle 생성으로 진행합니다.
   - `--rm --no-deps` — `10-2` 와 같은 이유입니다.
 - **주의점**
-  - **`frontend/dist/` 는 저장소에 커밋되어 있습니다.** 이 명령을 실행하면 `frontend/dist/` 안이 덮어써지므로, 커밋 전에 `git status` 로 무엇이 변경됐는지 확인합니다.
-  - 이 bundle 을 실제로 제공하는 서버는 아직 없습니다. 개발 서버는 배포에 포함되지 않으므로, 배포에서는 정적 파일을 제공하는 다른 서버가 bundle 제공을 담당해야 합니다. 아직 정하지 않았습니다.
+  - **`frontend/dist/` 는 저장소가 추적하지 않습니다**(`.gitignore` 24행). 이 명령을 실행해도 `git status` 에는 아무것도 뜨지 않습니다. 배포에 나가는 bundle 은 `10-4-1` 의 image 를 만들 때 그 안에서 다시 생성하므로, 여기서 만든 `frontend/dist/` 는 로컬 확인용입니다.
+  - 배포에서 이 bundle 을 제공하는 것은 nginx 입니다(`frontend/Dockerfile` 의 `prod` 단계가 `dist` 를 `/usr/share/nginx/html` 로 복사합니다). 요청 경로는 Caddy → nginx → api 이고, `/api` 만 서버로 전달하는 규칙이 `frontend/nginx.conf.template` 에 있습니다. 개발 서버(Vite)는 배포에 포함되지 않습니다.
 
 ### 10-4-1. 배포용 화면 image 를 만들고 링크 미리보기 주소를 확인하기
 
@@ -697,6 +698,29 @@ docker compose run --rm --no-deps web npm install @radix-ui/colors
 - **주의점**
   - **새 의존성은 사용자 승인을 받은 뒤에만 추가합니다.** `CLAUDE.md` 의 파일 생성 방식(모드 1 의 5단계)이 정한 규칙입니다.
   - 출력에 `npm warn install-scripts ... esbuild@... (postinstall: node install.js)` 가 나올 수 있습니다. 설치 스크립트 승인 경고이며, 이 경고가 나와도 패키지 설치와 `package.json` 기록은 끝난 상태입니다.
+
+### 10-5-1. 패키지 목록이 바뀐 뒤 dev 의 설치본을 맞추기
+
+```
+docker compose run --rm --no-deps web npm ci
+```
+
+- **실행 경로**: 저장소 루트 (`Banblit/`)
+- **용도**: `frontend/package.json` 이나 `frontend/package-lock.json` 이 바뀐 뒤(다른 PC 에서
+  추가한 패키지를 pull 한 경우 포함) dev 의 설치본을 lockfile 과 같게 맞춥니다.
+- **옵션**
+  - `npm ci` — `package-lock.json` 에 적힌 버전을 그대로 설치합니다. `npm install` 과 달리
+    lockfile 을 변경하지 않고, `node_modules` 를 삭제한 뒤 처음부터 설치합니다.
+- **주의점**
+  - **dev 는 패키지를 image 가 아니라 `banblit-web-modules` volume 에 보관합니다.** volume 은
+    container 를 다시 만들어도 남으므로, `package.json` 이 바뀌어도 이 명령을 실행하기 전까지
+    설치본이 갱신되지 않습니다. 배포는 `frontend/Dockerfile` 이 image 를 만들 때마다 `npm ci` 를
+    실행하므로 이 문제가 없습니다.
+  - **증상이 설치 누락처럼 보이지 않습니다.** 2026-09-19 에 `@radix-ui/colors` 가 volume 에만
+    없어, 타입이 `any` 로 해석되면서 `npm run lint` 가 `no-unsafe-assignment` 129건을
+    출력했습니다. 화면 파일 3개(`RichText.tsx`·`richText.ts`·`teamColors.ts`)의 잘못으로
+    보였으나 원인은 설치본이었습니다. lint 나 타입 검사에서 갑자기 다수의 오류가 나오면 이 명령을
+    먼저 실행해 보십시오.
 
 ---
 
@@ -819,8 +843,9 @@ docker compose -f docker-compose.yml exec -T db pg_dump --clean --if-exists -U b
 ### 11-5. 백업으로 복원하기
 
 ```
-gunzip -c /srv/banblit/backups/db-20260909T000000Z.sql.gz | docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit
-docker run --rm -v banblit-attachments:/dst -v /srv/banblit/backups:/src alpine sh -c "tar -xzf /src/files-20260909T000000Z.tar.gz -C /dst"
+gunzip -c /srv/banblit/backups/db-20260909T000000Z.sql.gz | docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -v ON_ERROR_STOP=1
+docker volume ls --format "{{.Name}}" | grep attachments
+docker run --rm -v banblit_banblit-attachments:/dst -v /srv/banblit/backups:/src alpine sh -c "tar -xzf /src/files-20260909T000000Z.tar.gz -C /dst"
 ```
 
 - **실행 경로**: 서버의 저장소 루트
@@ -831,6 +856,67 @@ docker run --rm -v banblit-attachments:/dst -v /srv/banblit/backups:/src alpine 
   - 복원하는 동안 `api` 를 정지해 두는 편이 안전합니다. table 이 삭제됐다 생성되는 사이에 들어온
     요청이 어떤 값을 읽을지 정해져 있지 않습니다.
   - 첨부파일 복원은 volume 에 직접 압축을 풉니다. 현재 저장된 같은 이름 파일을 덮어씁니다.
+  - **volume 이름 앞에는 프로젝트 이름이 붙습니다.** compose 파일에 `banblit-attachments` 로
+    적혀 있어도 실제 이름은 `banblit_banblit-attachments` 입니다. `docker run -v` 에 짧은 이름을
+    적으면 docker 가 그 이름의 volume 을 새로 생성하고 거기에 압축을 풉니다. 명령은 성공으로
+    끝나는데 첨부는 복원되지 않습니다. 그래서 `docker volume ls` 로 실제 이름을 먼저 확인합니다.
+  - `psql` 에 `-v ON_ERROR_STOP=1` 을 붙입니다. 붙이지 않으면 중간 구문이 실패해도 나머지를
+    계속 실행하고 종료 코드 0 으로 끝나, 절반만 복원된 상태를 성공으로 오인합니다.
+  - **2026-09-19 에 dev 환경에서 실행해 확인했습니다.** 마커 행 1개와 첨부 파일 1개를 넣고
+    백업한 뒤 둘 다 삭제하고 위 명령으로 복원해, 양쪽이 모두 돌아오는 것을 확인했습니다.
+
+---
+
+### 11-6. 데이터베이스의 revision 을 저장소에서 찾지 못할 때
+
+```
+docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -tAc "select version_num from alembic_version"
+ls backend/migrations/versions
+```
+
+- **실행 경로**: 서버의 저장소 루트
+- **용도**: `banblit.sh` 가 "데이터베이스가 서 있는 revision 을 저장소에서 찾지 못했습니다" 로
+  멈췄을 때, 현재 지점과 저장소에 남은 migration 을 대조합니다.
+- **왜 생기나**
+  - alembic 은 데이터베이스에 적힌 revision 에서 출발해 head 까지의 경로를 계산합니다. 출발점의
+    파일이 없으면 경로를 계산할 수 없어 아무것도 적용하지 못합니다.
+  - 2026-09-16 에 migration 36개를 1개(`080a74e46f56`)로 합치면서 옛 파일을 전부 삭제했는데,
+    그때 배포 데이터베이스는 옛 체인 중간(`b3d9f27c0a41`)에 있었습니다. 2026-09-19 배포가 이
+    지점에서 멈췄습니다. **합치기 전에 배포 데이터베이스를 먼저 head 로 올렸다면 생기지 않습니다.**
+- **되살리는 방법 2가지**
+
+  **(가) 남길 데이터를 뽑고 스키마를 새로 만듭니다.** 데이터가 적을 때 씁니다. 실패할 지점이 적습니다.
+
+  ```
+  docker compose -f docker-compose.yml exec -T db pg_dump --data-only --no-owner -U banblit -d banblit -t members -t permission_sets -t member_permission_sets > accounts.sql
+  docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE" -c "CREATE SCHEMA public"
+  bash banblit.sh update
+  docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -v ON_ERROR_STOP=1 -c "TRUNCATE members, permission_sets, member_permission_sets RESTART IDENTITY CASCADE"
+  cat accounts.sql | docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -v ON_ERROR_STOP=1
+  ```
+
+  **뽑아낸 권한 집합에는 그 시점의 항목만 들어 있습니다.** 그 뒤에 추가된 항목을 더하지 않으면
+  "모든 항목을 가진 permission set" 판정에서 빠져, 헤드매니저가 권한을 부여하지 못합니다. 개수를
+  확인하고 모자란 항목을 더합니다.
+
+  ```
+  docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -c "select name, array_length(permissions,1) from permission_sets"
+  ```
+
+  **(나) 삭제된 migration 을 되살려 순서대로 적용합니다.** 데이터가 많을 때 씁니다.
+  `git log --diff-filter=D --name-only -- backend/migrations/versions` 로 삭제한 커밋을 찾고,
+  그 커밋의 부모에서 필요한 파일만 꺼내 `backend/migrations/versions` 에 되돌린 뒤
+  `alembic upgrade <옛 head>` 를 실행합니다. 그다음 `alembic stamp 080a74e46f56` 로 통합 지점에
+  맞추고, 되살린 파일을 다시 삭제한 뒤 `alembic upgrade head` 를 실행합니다.
+
+- **주의점**
+  - **`alembic stamp` 만 실행하지 않습니다.** 건너뛴 migration 이 하는 구조 변경이 적용되지 않은
+    채 "적용됨" 으로 기록되어, 없는 열을 읽는 서버가 됩니다. 증상은 실행 시점이 아니라 그 열을
+    쓰는 화면을 열 때 나타납니다.
+  - `banblit.sh` 는 이 상황을 감지하면 migration 을 실행하지 않고 멈춥니다(`assert_revision_known`).
+    데이터는 그대로입니다.
+  - 어느 방법이든 백업을 먼저 뜹니다. `banblit.sh up`·`migrate` 는 migration 직전에 자동으로
+    뜨지만(`backup_db`), 이 절차는 손으로 실행하므로 `11-4` 를 먼저 수행합니다.
 
 ---
 

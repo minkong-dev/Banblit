@@ -1,13 +1,13 @@
 from collections.abc import Callable
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from backend.db.models import Assignment, AssignmentBackup, Member, Period, Room, Team, TeamSlot, UnavailableTime
+from backend.db.models import Assignment, AssignmentBackup, Member, Period, Room, Settings, Team, TeamSlot, UnavailableTime
 from conftest import AccountFactory, seat
 
 
@@ -889,3 +889,33 @@ def test_confirming_a_proposal_needs_proposal_confirm(
     )
     assert passed.status_code == 422
     assert "그런 기간이 없습니다" in passed.json()["detail"]
+
+
+def test_assign_gives_a_team_one_uninterrupted_session_per_turn(
+    api_client: TestClient,
+    db_session: Session,
+    poll_job: Callable[[str], dict[str, Any]],
+    head_login: dict[str, str],
+) -> None:
+    # 30분 칸에 60분 session 이면, 팀은 흩어진 30분 칸 4개가 아니라 60분 구간 4개를 받습니다.
+    period_id = _period(db_session)  # 8/1 ~ 8/2
+    team_id = _team_with_member(db_session, "A", "김민수")
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
+    db_session.add(room)
+    db_session.execute(update(Settings).values(slot_minutes=30, session_minutes=60))
+    db_session.flush()
+    db_session.commit()
+
+    submitted = api_client.post(
+        f"/periods/{period_id}/assign",
+        json={"team_ids": [team_id], "room_ids": [room.id]},
+    )
+    job = poll_job(submitted.json()["job"]["id"])
+
+    assert job["status"] == "done"
+    slots = job["result"]["assignment"]["slots_by_team"]["A"]
+    assert len(slots) == 4  # 2일 × 60분 session 2회
+    for slot in slots:
+        start = datetime.fromisoformat(slot["start"])
+        end = datetime.fromisoformat(slot["end"])
+        assert end - start == timedelta(hours=1)

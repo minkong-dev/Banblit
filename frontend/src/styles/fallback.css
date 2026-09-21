@@ -1,0 +1,91 @@
+/* ===== 대체 화면 =====
+   404 화면과 ErrorBoundary 대체 화면 2개가 사용합니다.
+   이 2개는 다른 화면과 달리 body[data-shell] 에 의존하지 않습니다. ErrorBoundary 가 잡는 error 는
+   AppShell 안에서 발생할 수 있고, 그때 shell.css 가 적용되어 있다고 보장할 수 없습니다.
+   화면 전체를 덮는 자체 container 에 배경·글꼴·색 구성을 직접 선언합니다.
+   shell.css 의 min-width 1060px 도 상속하지 않습니다. 오류 화면이 좁은 화면에서 가로로 잘리면
+   안내 문구와 버튼에 도달할 수 없습니다. */
+
+.fallback {
+  color-scheme: light dark;
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+  overflow: auto;
+  background: var(--bg);
+  color: var(--t1);
+  font-family: "Noto Sans KR", -apple-system, "Malgun Gothic", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: -.02em;
+}
+
+html[data-theme="light"] .fallback { color-scheme: light; }
+html[data-theme="dark"] .fallback { color-scheme: dark; }
+
+.fallback .box {
+  width: 100%;
+  max-width: 420px;
+  padding: 32px 28px;
+  border-radius: 16px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.fallback h1 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--t1);
+}
+
+.fallback p {
+  margin: 0;
+  color: var(--t2);
+}
+
+.fallback .act {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fallback .act :is(a, button) {
+  min-height: 44px;
+  padding: 11px 18px;
+  border: none;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  background: var(--card-2);
+  color: var(--t2);
+}
+
+.fallback .act .go { background: var(--brand); color: var(--brand-on); }
+.fallback .act .go:hover { background: var(--brand-press); }
+.fallback .act :is(a, button):not(.go):hover { color: var(--t1); }
+.fallback :is(a, button, summary):focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+
+/* 오류 원문입니다. 운영자가 옮겨 적을 수 있도록 접어 두고 필요할 때만 펼칩니다. */
+.fallback details { margin-top: 20px; text-align: left; }
+.fallback summary { cursor: pointer; color: var(--t3); font-size: 13px; }
+.fallback details pre {
+  margin: 8px 0 0;
+  padding: 12px;
+  border-radius: 10px;
+  background: var(--card-2);
+  color: var(--t2);
+  font-size: 12.5px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

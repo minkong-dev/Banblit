@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from backend.api.auth_dependency import require_account, require_permission
 from backend.services.input import format_clock
 from backend.services.room_service import create_room as create_room_row
+from backend.services.room_service import delete_room as delete_room_row
 from backend.services.room_service import list_rooms, update_room
 from backend.api.schemas import RoomCreateIn, RoomEnvelopeOut, RoomOut, RoomsOut, RoomUpdateIn
 from backend.db.models import Room
@@ -40,6 +41,16 @@ def create_room(
 ) -> RoomEnvelopeOut:
     room = create_room_row(session, req.name, req.opens_at, req.closes_at)
     return RoomEnvelopeOut(room=_room_out(room))
+
+
+@router.delete(
+    "/rooms/{room_id}",
+    status_code=204,
+    dependencies=[Depends(require_permission("room_delete"))],
+)
+def remove_room(room_id: int, session: Session = Depends(get_session)) -> None:
+    """합주실 하나를 삭제합니다. 그 합주실의 예약·배정 결과·이전 배정기록도 함께 삭제됩니다."""
+    delete_room_row(session, room_id)
 
 
 @router.patch(

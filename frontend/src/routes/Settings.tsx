@@ -1,43 +1,35 @@
+// 설정 화면의 진입점입니다. 탭을 고르고, 고른 탭의 구역을 그리고, 오른쪽 계산 패널을 표시합니다.
+// 합주실·기간·멤버·예약·블라인드·계정 구역은 각각 Settings*.tsx 가 담당합니다.
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import type { RefObject } from "react";
 
 import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
-import { CheckMark } from "../components/CheckMark";
 import { Dropdown } from "../components/Dropdown";
-import { Modal } from "../components/Modal";
-import { getJSON, reason } from "../lib/api";
-import { askDelete } from "../lib/confirm";
-import { formError, LOADING_TEXT, loadState } from "../lib/loading";
-import type { LoadState } from "../lib/loading";
-import { say } from "../lib/toast";
-import {
-  checkEnsemble, checkPeriod, checkRoom, dayLabel, daysBetween, openingHours, periodBody, savePeriod,
-  saveSlotMinutes,
-} from "../lib/pipeline";
-import { SLOT_MINUTE_CHOICES, slotMinutesLabel } from "../lib/settings";
-import type { PeriodBody } from "../lib/pipeline";
-import { EnsembleDays, EnsembleFields, ensembleBody, ensembleDraft } from "./SettingsEnsemble";
-import { useMe, usePeriods, useRooms, useSlotMinutes, useTeams } from "../components/queries";
+import { useMe, usePeriods, useRooms, useSettings, useSlotMinutes, useTeams } from "../components/queries";
 import { can } from "../lib/account";
+import { reason } from "../lib/api";
+import type { Period, Room, Team } from "../lib/contract";
+import { LOADING_TEXT, loadState } from "../lib/loading";
+import type { LoadState } from "../lib/loading";
+import { daysBetween, openingHours, saveSettings } from "../lib/pipeline";
+import {
+  SLOT_MINUTE_CHOICES,
+  sessionMinuteChoices,
+  sessionMinutesLabel,
+  slotMinutesLabel,
+} from "../lib/settings";
 import { applyTheme, readSavedTheme } from "../lib/theme";
 import type { Theme } from "../lib/theme";
-import { MemberCards } from "./SettingsMembers";
-import { ReservationCards } from "./SettingsReservations";
-import { BlindedCards } from "./SettingsBlinded";
+import { say } from "../lib/toast";
 import { AccountCards } from "./SettingsAccount";
-import {
-  Cell,
-  CardState,
-  FormTail,
-  Row,
-  useFirstField,
-  useForm,
-  SectionHead,
-  useRowFocus,
-} from "./SettingsForm";
+import { BlindedCards } from "./SettingsBlinded";
+import { Cell, SectionHead } from "./SettingsForm";
+import { MemberCards } from "./SettingsMembers";
+import { PeriodCard } from "./SettingsPeriods";
+import { ReservationCards } from "./SettingsReservations";
+import { RoomCard } from "./SettingsRooms";
 import "../styles/settings.css";
-import type { Period, Room, Team } from "../lib/contract";
 
 
 type Tab = "rooms" | "periods" | "members" | "reservations" | "blinded" | "account";
@@ -46,42 +38,13 @@ type Tab = "rooms" | "periods" | "members" | "reservations" | "blinded" | "accou
 // 내 정보·비밀번호·화면 밝기·탈퇴는 전부 자기 계정에 대한 설정이라 한 탭에 둡니다.
 // needs가 없는 탭은 로그인한 모든 사람이 볼 수 있습니다.
 const TABS = [
-  { key: "rooms" as const, text: "합주실", needs: ["room_create", "room_edit"] as const },
+  { key: "rooms" as const, text: "합주실", needs: ["room_create", "room_edit", "room_delete"] as const },
   { key: "periods" as const, text: "기간", needs: ["period_create", "period_edit", "period_delete"] as const },
   { key: "members" as const, text: "멤버", needs: ["permission_manage", "permission_grant"] as const },
   { key: "reservations" as const, text: "예약", needs: ["reservation_manage"] as const },
   { key: "blinded" as const, text: "블라인드", needs: ["board_moderate"] as const },
   { key: "account" as const, text: "계정", needs: null },
 ];
-
-const BLANK_ROOM = { name: "", opens_at: "18:00", closes_at: "23:00" };
-const BLANK_PERIOD: PeriodBody = {
-  kind: "focused",
-  starts_on: "",
-  ends_on: "",
-  everyday: false,
-  first_run_at: "09:00",
-  second_run_at: "21:00",
-};
-
-const KIND_TEXT = { open: "상시 개방", focused: "집중 합주" };
-
-/** 기간 form 이 수정하는 값만 추립니다. 목록에서 받은 기간에는 id·ensemble 이 함께 있어 그대로 보내면 요청 본문에 섞입니다. */
-function periodFields(period: Period): PeriodBody {
-  const { kind, starts_on, ends_on, everyday, first_run_at, second_run_at } = period;
-  return { kind, starts_on, ends_on, everyday, first_run_at, second_run_at };
-}
-
-/** 목록 줄 오른쪽에 붙는 한 줄입니다. 집중 합주기간(스케줄링을 자동으로 진행할 기간)일 때만 계산 시각 두 개가 더 붙고,
- *  전체합주를 지정했으면 그 날짜 범위가 붙습니다. */
-function periodSpan(period: Period): string {
-  const days = ` · ${daysBetween(period.starts_on, period.ends_on)}일`;
-  if (period.kind !== "focused") return days;
-  const ensemble = period.ensemble === null
-    ? ""
-    : ` · 전체합주 ${dayLabel(period.ensemble.starts_on)}–${dayLabel(period.ensemble.ends_on)}`;
-  return `${days} · 계산 ${period.first_run_at} · ${period.second_run_at}${ensemble}`;
-}
 
 /** 화면 밝기를 선택하는 카드입니다. 선택한 값은 브라우저에 저장되어 다음에 열 때도 유지됩니다. */
 function ThemeCard() {
@@ -159,11 +122,13 @@ export function Settings() {
               state={loadState(rooms)}
               canEdit={can(me, "room_edit")}
               canCreate={can(me, "room_create")}
+              canDelete={can(me, "room_delete")}
               onSaved={saved("rooms", "합주실 정보를 등록했어요.")}
+              onDeleted={saved("rooms", "합주실을 삭제했어요.")}
             />
             <SlotUnitCard
               canEdit={can(me, "room_edit")}
-              onSaved={saved("settings", "점유 단위를 변경했어요.")}
+              onSaved={saved("settings", "설정을 변경했어요.")}
             />
           </>
         ) : shown === "periods" ? (
@@ -203,16 +168,28 @@ export function Settings() {
   );
 }
 
-/** 점유 단위(칸 하나의 크기)를 변경하는 카드입니다. 합주실 운영을 맡은 사람의 설정이라 합주실 탭에 둡니다.
- *  권한(room_edit)이 없으면 현재 값만 표시합니다. 변경해도 이미 저장된 예약과 배정은 그대로 남습니다. */
+/** 점유 단위(칸 하나의 크기)와 합주 1회 길이를 변경하는 카드입니다. 합주실 운영을 맡은 사람의
+ *  설정이라 합주실 탭에 둡니다. 권한(room_edit)이 없으면 현재 값만 표시합니다.
+ *  변경해도 이미 저장된 예약과 배정은 그대로 남습니다.
+ *
+ *  두 값은 서로를 제약합니다 — 합주 길이는 칸의 배수여야 합주가 칸 중간에서 끝나지 않습니다.
+ *  칸을 키우면 저장된 합주 길이가 배수가 아니게 될 수 있어, 그때는 합주 길이를 함께 보내
+ *  한 요청으로 맞춥니다. 나눠 보내면 어느 쪽을 먼저 보내도 중간 상태가 거절됩니다. */
 function SlotUnitCard({ canEdit, onSaved }: { canEdit: boolean; onSaved: () => void }) {
-  const slotMinutes = useSlotMinutes();
+  const { slotMinutes, sessionMinutes } = useSettings();
   const [why, setWhy] = useState("");
   const save = useMutation({
-    mutationFn: saveSlotMinutes,
+    mutationFn: saveSettings,
     onSuccess: () => { setWhy(""); onSaved(); },
     onError: (error: unknown) => setWhy(reason(error)),
   });
+
+  // 칸을 바꿀 때 저장된 합주 길이가 그 배수가 아니면, 새 칸에서 고를 수 있는 가장 가까운
+  // 길이로 함께 내립니다. 사용자가 두 값의 관계를 외우지 않아도 됩니다.
+  const changeSlot = (next: number) => {
+    const fits = sessionMinutes >= next && sessionMinutes % next === 0;
+    save.mutate(fits ? { slotMinutes: next } : { slotMinutes: next, sessionMinutes: next });
+  };
 
   return (
     <Card>
@@ -229,416 +206,26 @@ function SlotUnitCard({ canEdit, onSaved }: { canEdit: boolean; onSaved: () => v
               value: minutes,
               label: slotMinutesLabel(minutes),
             }))}
-            onChange={(next) => save.mutate(next)}
+            onChange={changeSlot}
+          />
+        </Cell>
+        <Cell label="합주 1회" htmlFor="sessionLength">
+          <Dropdown
+            id="sessionLength"
+            value={sessionMinutes}
+            disabled={!canEdit || save.isPending}
+            invalid={why !== ""}
+            describedBy={why === "" ? undefined : "slotUnitWhy"}
+            choices={sessionMinuteChoices(slotMinutes).map((minutes) => ({
+              value: minutes,
+              label: sessionMinutesLabel(minutes),
+            }))}
+            onChange={(next) => save.mutate({ sessionMinutes: next })}
           />
         </Cell>
         {why === "" ? null : <p className="why" id="slotUnitWhy" role="alert">{why}</p>}
       </div>
     </Card>
-  );
-}
-
-/** 합주실 form 의 입력칸입니다. */
-function RoomFields(props: {
-  form: { name: string; opens_at: string; closes_at: string };
-  setForm: (next: { name: string; opens_at: string; closes_at: string }) => void;
-  at: (field: string) => string;
-  bad: string;
-  whyId: string;
-  first: RefObject<HTMLInputElement | null>;
-}) {
-  const { form, setForm, at, bad, whyId, first } = props;
-  return (
-    <>
-      <Cell label="이름" wide htmlFor={at("name")}>
-        <input
-          ref={first}
-          value={form.name}
-          id={at("name")}
-          aria-invalid={bad !== ""}
-          aria-describedby={bad === "" ? undefined : whyId}
-          placeholder="합주실"
-          onChange={(event) => setForm({ ...form, name: event.target.value })}
-        />
-      </Cell>
-      <Cell label="개방 시간" htmlFor={at("opens")}>
-        <input
-          type="time"
-          step={3600}
-          value={form.opens_at}
-          id={at("opens")}
-          aria-invalid={bad !== ""}
-          aria-describedby={bad === "" ? undefined : whyId}
-          onChange={(event) => setForm({ ...form, opens_at: event.target.value })}
-        />
-      </Cell>
-      <Cell label="마감 시간" htmlFor={at("closes")}>
-        <input
-          type="time"
-          step={3600}
-          value={form.closes_at}
-          id={at("closes")}
-          aria-invalid={bad !== ""}
-          aria-describedby={bad === "" ? undefined : whyId}
-          onChange={(event) => setForm({ ...form, closes_at: event.target.value })}
-        />
-      </Cell>
-    </>
-  );
-}
-
-/** 기간 form 의 입력칸입니다. 집중 합주기간일 때만 계산 시각 입력칸 2개가 더 표시됩니다. */
-function PeriodFields(props: {
-  form: PeriodBody;
-  setForm: (next: PeriodBody) => void;
-  at: (field: string) => string;
-  bad: string;
-  whyId: string;
-  first: RefObject<HTMLButtonElement | null>;
-}) {
-  const { form, setForm, at, bad, whyId, first } = props;
-  return (
-    <>
-      <Cell label="분류" htmlFor={at("kind")}>
-        <Dropdown
-          buttonRef={first}
-          id={at("kind")}
-          invalid={bad !== ""}
-          describedBy={bad === "" ? undefined : whyId}
-          value={form.kind}
-          choices={[
-            { value: "focused", label: "집중 합주" },
-            { value: "open", label: "상시 개방" },
-          ]}
-          onChange={(next) => setForm({ ...form, kind: next })}
-        />
-      </Cell>
-      <Cell label="시작일" htmlFor={at("starts")}>
-        <input
-          type="date"
-          value={form.starts_on}
-          id={at("starts")}
-          aria-invalid={bad !== ""}
-          aria-describedby={bad === "" ? undefined : whyId}
-          onChange={(event) => setForm({ ...form, starts_on: event.target.value })}
-        />
-      </Cell>
-      {/* 매일이 켜진 집중 합주기간은 종료일이 없습니다. 입력칸을 감추고 서버에는 시작일을 종료일로 보냅니다. */}
-      {form.kind === "focused" && form.everyday ? null : (
-        <Cell label="종료일" htmlFor={at("ends")}>
-          <input
-            type="date"
-            value={form.ends_on}
-            id={at("ends")}
-            aria-invalid={bad !== ""}
-            aria-describedby={bad === "" ? undefined : whyId}
-            onChange={(event) => setForm({ ...form, ends_on: event.target.value })}
-          />
-        </Cell>
-      )}
-      {form.kind === "focused" ? (
-        <>
-          <Cell label="매일" htmlFor={at("everyday")}>
-            <CheckMark
-              id={at("everyday")}
-              checked={form.everyday}
-              onChange={(on) => setForm({ ...form, everyday: on })}
-            />
-          </Cell>
-          <Cell label="1차 스케줄링 시간" htmlFor={at("first")}>
-            <input
-              id={at("first")}
-              type="time"
-              value={form.first_run_at}
-              onChange={(event) => setForm({ ...form, first_run_at: event.target.value })}
-            />
-          </Cell>
-          <Cell label="2차 스케줄링 시간" htmlFor={at("second")}>
-            <input
-              id={at("second")}
-              type="time"
-              value={form.second_run_at}
-              onChange={(event) => setForm({ ...form, second_run_at: event.target.value })}
-            />
-          </Cell>
-        </>
-      ) : null}
-    </>
-  );
-}
-
-function RoomCard(props: {
-  rooms: Room[]; state: LoadState; canEdit: boolean; canCreate: boolean; onSaved: () => void;
-}) {
-  const { rooms, state, canEdit, canCreate, onSaved } = props;
-  const slotMinutes = useSlotMinutes();
-  const { editing, open, close, register } = useRowFocus();
-  const [making, setMaking] = useState(false);
-
-  return (
-    <Card>
-      <SectionHead title="합주실" desc="개방 및 마감시간은 정각으로만 설정이 가능해요" />
-
-      {state.kind !== "ready" || rooms.length === 0 ? (
-        <CardState state={state} empty="아직 등록된 합주실이 없어요" />
-      ) : (
-        <ul className="rows">
-          {rooms.map((room) =>
-            canEdit && editing === room.id ? (
-              <li className="editing" key={room.id}>
-                <RoomForm
-                  start={room}
-                  // 자신의 이름은 중복 검사 대상에서 제외합니다.
-                  taken={rooms.filter((other) => other.id !== room.id).map((other) => other.name)}
-                  path={`/rooms/${room.id}`}
-                  method="PATCH"
-                  submit="저장"
-                  onCancel={close}
-                  onDone={() => {
-                    close();
-                    onSaved();
-                  }}
-                />
-              </li>
-            ) : (
-              // onEdit이 없으면 Row가 수정 버튼을 그리지 않습니다. room_edit 권한이 없는 사람에게는
-              // 목록만 표시됩니다.
-              <Row
-                key={room.id}
-                title={room.name}
-                when={<><b>{room.opens_at}</b> 부터 <b>{room.closes_at}</b> 까지</>}
-                span={` · 하루 ${openingHours({ rooms: [room], days: 1, teams: 0, slotMinutes }).perDay}`}
-                editLabel={canEdit ? `${room.name} 수정` : undefined}
-                buttonRef={canEdit ? register(room.id) : undefined}
-                onEdit={canEdit ? () => open(room.id) : undefined}
-              />
-            ),
-          )}
-        </ul>
-      )}
-
-      {/* 합주실은 하나만 사용합니다. 이미 하나 있으면 추가 form 을 표시하지 않습니다.
-          저장소와 배정 계산은 합주실 2개 이상을 다룰 수 있게 그대로 두고, 추가 경로만 차단했습니다.
-          여러 합주실을 다시 쓸 일이 생기면 이 조건 하나를 제거하면 됩니다. */}
-      {!canCreate || rooms.length > 0 ? null : (
-        <div className="listfoot">
-          <button className="new" onClick={() => setMaking(true)}>+ 새 합주실</button>
-        </div>
-      )}
-
-      {!making ? null : (
-        <Modal title="새 합주실" hint="합주실 이름과 개방 및 마감시간을 지정해주세요"
-          onClose={() => setMaking(false)}>
-          <RoomForm
-            start={BLANK_ROOM}
-            taken={rooms.map((room) => room.name)}
-            path="/rooms"
-            method="POST"
-            submit="합주실 추가"
-            onCancel={() => setMaking(false)}
-            onDone={() => { setMaking(false); onSaved(); }}
-          />
-        </Modal>
-      )}
-    </Card>
-  );
-}
-
-function RoomForm(props: {
-  start: { name: string; opens_at: string; closes_at: string };
-  taken: string[];
-  path: string;
-  method: "POST" | "PATCH";
-  submit: string;
-  onCancel?: () => void;
-  onDone: () => void;
-}) {
-  const { start, taken, path, method, submit, onCancel, onDone } = props;
-  const [form, setForm, touched, reset] = useForm(start);
-  const first = useFirstField<HTMLInputElement>(onCancel !== undefined);
-
-  const send = useMutation({
-    mutationFn: () =>
-      getJSON<{ room: Room }>(path, {
-        method,
-        body: JSON.stringify(form),
-      }),
-    onSuccess: () => {
-      // 새로 생성한 뒤에는 다음 항목을 입력하도록 form 을 초기화합니다. 수정 중이면 그대로 둡니다.
-      if (method === "POST") reset();
-      onDone();
-    },
-  });
-
-  const slotMinutes = useSlotMinutes();
-  const why = checkRoom(form, taken, slotMinutes);
-
-  // 같은 화면에 추가 form 과 수정 행이 함께 표시될 수 있습니다. label 이 어느 입력칸을 가리키는지
-  // 모호해지지 않도록, 화면 내 식별자를 form 마다 다르게 짓습니다.
-  const at = (field: string): string => `${path}-${field}`;
-  const whyId = at("why");
-  const bad = formError(touched, why, send.error);
-
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (why === "") send.mutate();
-      }}
-    >
-      <div className="fields">
-        <RoomFields form={form} setForm={setForm} at={at} bad={bad} whyId={whyId} first={first} />
-        <FormTail submit={submit} pending={send.isPending} blocked={why !== ""}
-            bad={bad} whyId={whyId} onCancel={onCancel} />
-      </div>
-    </form>
-  );
-}
-
-function PeriodCard(props: {
-  periods: Period[]; rooms: Room[]; state: LoadState; canEdit: boolean; canCreate: boolean; canDelete: boolean;
-  onSaved: () => void; onDeleted: () => void;
-}) {
-  const { periods, rooms, state, canEdit, canCreate, canDelete, onSaved, onDeleted } = props;
-  const { editing, open, close, register } = useRowFocus();
-  const [making, setMaking] = useState(false);
-  // 기간을 삭제하면 서버가 그 기간의 배정 결과·계산 기록·이전 배정기록을 함께 삭제합니다(외래 키 CASCADE).
-  const drop = useMutation({
-    mutationFn: (id: number) => getJSON(`/periods/${id}`, { method: "DELETE" }),
-    onSuccess: onDeleted,
-    onError: (error) => say(reason(error)),
-  });
-
-  return (
-    <Card>
-      <SectionHead title="집중합주 기간" desc="자동 스케줄링을 진행할 기간을 설정해요" />
-
-      {state.kind !== "ready" || periods.length === 0 ? (
-        <CardState state={state} empty="아직 등록된 집중합주 기간이 없어요." />
-      ) : (
-        <ul className="rows">
-          {periods.map((period) =>
-            canEdit && editing === period.id ? (
-              <li className="editing" key={period.id}>
-                <PeriodForm
-                  before={period}
-                  rooms={rooms}
-                  submit="저장"
-                  onCancel={close}
-                  onDone={() => {
-                    close();
-                    onSaved();
-                  }}
-                />
-              </li>
-            ) : (
-              // onEdit이 없으면 Row가 수정 버튼을 그리지 않습니다. period_edit 권한이 없는 사람에게는
-              // 목록만 표시됩니다.
-              <Row
-                key={period.id}
-                title={KIND_TEXT[period.kind] + (period.everyday ? " · 매일" : "")}
-                when={
-                  period.everyday
-                    ? <><b>{period.starts_on}</b> 부터 매일</>
-                    : <><b>{period.starts_on}</b> 부터 <b>{period.ends_on}</b> 까지</>
-                }
-                span={periodSpan(period)}
-                editLabel={canEdit ? `${period.starts_on} 부터의 기간을 수정` : undefined}
-                buttonRef={canEdit ? register(period.id) : undefined}
-                onEdit={canEdit ? () => open(period.id) : undefined}
-                deleteLabel={canDelete ? `${period.starts_on} 부터의 기간을 삭제` : undefined}
-                // 삭제 요청이 진행 중이면 다시 누른 것을 무시합니다. 연속으로 누르면 같은 DELETE 가 여러 번 전송됩니다.
-                onDelete={canDelete
-                  ? () => {
-                    if (drop.isPending) return;
-                    if (askDelete(`${period.starts_on} 부터의 집중합주 기간과 그 배정 결과`)) drop.mutate(period.id);
-                  }
-                  : undefined}
-              />
-            ),
-          )}
-        </ul>
-      )}
-
-      {!canCreate ? null : (
-        <div className="listfoot">
-          <button className="new" onClick={() => setMaking(true)}>+ 새 집중합주 기간</button>
-        </div>
-      )}
-
-      {!making ? null : (
-        <Modal title="새 집중합주 기간" hint="집중합주 기간을 설정해요"
-          onClose={() => setMaking(false)}>
-          <PeriodForm
-            before={null}
-            rooms={rooms}
-            submit="기간 추가"
-            onCancel={() => setMaking(false)}
-            onDone={() => { setMaking(false); onSaved(); }}
-          />
-        </Modal>
-      )}
-    </Card>
-  );
-}
-
-/** 기간 form 입니다. before 가 null 이면 새 기간을 만들고, 아니면 그 기간을 수정합니다.
- *  집중 합주기간이면 전체합주 입력칸이 함께 표시되고, 저장은 savePeriod 가 기간·전체합주 요청을 순서대로 보냅니다.
- *  날짜별 전체합주 시각은 저장된 전체합주가 있을 때만 form 아래에 별도 form 으로 표시합니다. form 안에 두면 그 버튼이 기간 form 을 제출합니다. */
-function PeriodForm(props: {
-  before: Period | null;
-  rooms: Room[];
-  submit: string;
-  onCancel?: () => void;
-  onDone: () => void;
-}) {
-  const { before, rooms, submit, onCancel, onDone } = props;
-  const [form, setForm, touched, reset] = useForm(before === null ? BLANK_PERIOD : periodFields(before));
-  const [draft, setDraft, draftTouched, resetDraft] = useForm(ensembleDraft(before, rooms));
-  const first = useFirstField<HTMLButtonElement>(onCancel !== undefined);
-  const slotMinutes = useSlotMinutes();
-
-  const withEnsemble = form.kind === "focused" && draft.on;
-  const send = useMutation({
-    mutationFn: () => savePeriod(before, form, withEnsemble ? ensembleBody(draft) : null),
-    onSuccess: () => {
-      if (before === null) {
-        reset();
-        resetDraft();
-      }
-      onDone();
-    },
-  });
-
-  const room = rooms.find((item) => item.id === draft.room_id);
-  const why = checkPeriod(form)
-    || (withEnsemble ? checkEnsemble(draft, periodBody(form), room, slotMinutes) : "");
-
-  const at = (field: string): string => `${before === null ? "/periods" : `/periods/${before.id}`}-${field}`;
-  const whyId = at("why");
-  const bad = formError(touched || draftTouched, why, send.error);
-  const savedRoom = rooms.find((item) => item.id === before?.ensemble?.room_id);
-
-  return (
-    <>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (why === "") send.mutate();
-        }}
-      >
-        <div className="fields">
-          <PeriodFields form={form} setForm={setForm} at={at} bad={bad} whyId={whyId} first={first} />
-          {form.kind === "focused" ? (
-            <EnsembleFields draft={draft} setDraft={setDraft} period={periodBody(form)} rooms={rooms}
-              at={at} bad={bad} whyId={whyId} />
-          ) : null}
-          <FormTail submit={submit} pending={send.isPending} blocked={why !== ""}
-              bad={bad} whyId={whyId} onCancel={onCancel} />
-        </div>
-      </form>
-      {before === null || before.ensemble === null ? null : <EnsembleDays period={before} room={savedRoom} />}
-    </>
   );
 }
 

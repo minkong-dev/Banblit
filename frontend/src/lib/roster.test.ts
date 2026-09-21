@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  cohortLabel,
   memberLabel,
   myTeamIds,
-  seatChanges,
+  noMembersMessage,
+  seatAssignments,
   seatKey,
   seatsOf,
   slotCountsMessage,
@@ -39,34 +41,6 @@ describe("seatsOf", () => {
 
     expect(seats.map((seat) => seat.label)).toEqual(["일렉 1", "일렉 2", "드럼"]);
     expect(seats.map((seat) => seat.member?.id ?? null)).toEqual([null, 7, null]);
-  });
-});
-
-describe("seatChanges", () => {
-  it("변경된 자리만 요청하고, 멤버를 지정하기 전에 변경된 자리를 전부 먼저 해제한다", () => {
-    const seats = seatsOf(
-      { 보컬: 1, 일렉: 1, 통기타: 0, 베이스: 1, 신디: 0, 드럼: 0 },
-      new Map([[seatKey("보컬", 1), LEE], [seatKey("일렉", 1), KIM]]),
-    );
-    const saved = [
-      savedSlot(11, "보컬", 1, 7), // 김민수 → 이서연
-      savedSlot(12, "일렉", 1, 8), // 이서연 → 김민수. 먼저 해제하지 않으면 한 팀 두 자리 제약으로 거절됩니다
-      savedSlot(13, "베이스", 1, 9), // 멤버 → 빈 자리
-    ];
-
-    expect(seatChanges(seats, saved)).toEqual({
-      clear: [11, 12, 13],
-      assign: [{ slotId: 11, memberId: 8 }, { slotId: 12, memberId: 7 }],
-    });
-  });
-
-  it("그대로인 자리는 요청하지 않는다", () => {
-    const seats = seatsOf(
-      { 보컬: 1, 일렉: 0, 통기타: 0, 베이스: 0, 신디: 0, 드럼: 0 },
-      new Map([[seatKey("보컬", 1), KIM]]),
-    );
-
-    expect(seatChanges(seats, [savedSlot(11, "보컬", 1, 7)])).toEqual({ clear: [], assign: [] });
   });
 });
 
@@ -180,5 +154,54 @@ describe("teamsOf — 색", () => {
 
   it("목록을 아직 못 받아왔으면 색 없는 key 를 팀마다 따로 준다", () => {
     expect(teamsOf(rows, [], []).map((team) => team.key)).toEqual(["pending-1", "pending-2"]);
+  });
+});
+
+describe("seatAssignments", () => {
+  it("변경된 자리만 최종 상태로 반환한다", () => {
+    const seats = seatsOf(
+      { 보컬: 1, 일렉: 1, 통기타: 0, 베이스: 1, 신디: 0, 드럼: 0 },
+      new Map([[seatKey("보컬", 1), LEE], [seatKey("일렉", 1), KIM]]),
+    );
+    const saved = [
+      savedSlot(11, "보컬", 1, 7), // 김민수 → 이서연
+      savedSlot(12, "일렉", 1, 8), // 이서연 → 김민수
+      savedSlot(13, "베이스", 1, 9), // 멤버 → 빈 자리
+    ];
+
+    expect(seatAssignments(seats, saved)).toEqual([
+      { slot_id: 11, member_id: 8 },
+      { slot_id: 12, member_id: 7 },
+      { slot_id: 13, member_id: null },
+    ]);
+  });
+
+  it("그대로인 자리는 포함하지 않는다", () => {
+    const seats = seatsOf(
+      { 보컬: 1, 일렉: 0, 통기타: 0, 베이스: 0, 신디: 0, 드럼: 0 },
+      new Map([[seatKey("보컬", 1), KIM]]),
+    );
+
+    expect(seatAssignments(seats, [savedSlot(11, "보컬", 1, 7)])).toEqual([]);
+  });
+})
+
+describe("cohortLabel", () => {
+  it("기수가 있으면 숫자와 기를 붙인다", () => {
+    expect(cohortLabel(21)).toBe("21기");
+  });
+
+  it("기수가 없으면 - 를 반환한다", () => {
+    expect(cohortLabel(null)).toBe("-");
+  });
+});
+
+describe("noMembersMessage", () => {
+  it("빈 검색어에는 검색 실패가 아니라 고를 사람이 없다고 알린다", () => {
+    expect(noMembersMessage("")).toBe("고를 수 있는 멤버가 없어요.");
+  });
+
+  it("검색어가 있으면 검색 결과가 없다고 알린다", () => {
+    expect(noMembersMessage("박")).toBe("해당하는 사용자를 찾지 못했어요.");
   });
 });

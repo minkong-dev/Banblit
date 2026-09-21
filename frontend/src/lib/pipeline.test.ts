@@ -15,7 +15,7 @@ import {
   periodBody,
   removeUnavailable,
   requestPasswordReset,
-  saveSlotMinutes,
+  saveSettings,
   resetPassword,
   weekKeys,
 } from "./pipeline";
@@ -351,24 +351,47 @@ describe("periodBody", () => {
   });
 });
 
-describe("saveSlotMinutes", () => {
-  it("/settings 를 PATCH 로 호출하고 고른 값을 보낸다", async () => {
-    const spy = vi.fn(
+describe("saveSettings", () => {
+  const reply = (body: object) =>
+    vi.fn(
       async (_input: RequestInfo | URL, _init?: RequestInit) =>
-        new Response(JSON.stringify({ slot_minutes: 30 }), {
+        new Response(JSON.stringify(body), {
           status: 200,
           headers: { "content-type": "application/json" },
         }),
     );
+
+  it("/settings 를 PATCH 로 호출하고 고른 값을 보낸다", async () => {
+    const spy = reply({ slot_minutes: 30, session_minutes: 60 });
     vi.stubGlobal("fetch", spy);
 
-    const saved = await saveSlotMinutes(30);
+    const saved = await saveSettings({ slotMinutes: 30 });
 
     const [url, init] = spy.mock.calls[0];
     expect(url).toBe("/api/settings");
     expect(init?.method).toBe("PATCH");
-    expect(sentBody(init)).toEqual({ slot_minutes: 30 });
-    expect(saved).toBe(30);
+    expect(saved).toEqual({ slotMinutes: 30, sessionMinutes: 60 });
+  });
+
+  it("두 값을 함께 보내면 한 요청에 담는다", async () => {
+    // 30분 합주로 내리려면 칸도 함께 내려야 합니다. 요청을 나누면 중간 상태가 거절됩니다.
+    const spy = reply({ slot_minutes: 30, session_minutes: 30 });
+    vi.stubGlobal("fetch", spy);
+
+    await saveSettings({ slotMinutes: 30, sessionMinutes: 30 });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(sentBody(spy.mock.calls[0][1])).toEqual({ slot_minutes: 30, session_minutes: 30 });
+  });
+
+  it("보내지 않은 값은 요청에 담지 않는다", async () => {
+    // 서버는 담기지 않은 값을 그대로 둡니다. null 을 보내면 값을 지우라는 뜻이 되어 다릅니다.
+    const spy = reply({ slot_minutes: 60, session_minutes: 90 });
+    vi.stubGlobal("fetch", spy);
+
+    await saveSettings({ sessionMinutes: 90 });
+
+    expect(sentBody(spy.mock.calls[0][1])).toEqual({ session_minutes: 90 });
   });
 });
 

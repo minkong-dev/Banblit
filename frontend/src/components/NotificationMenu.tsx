@@ -49,10 +49,11 @@ export function NotificationMenu() {
     body = (
       <ul>
         {rows.map((item) => (
-          <li key={item.id} className={item.read ? "note" : "note unread"}>
+          // 목록에 있는 알림은 전부 읽지 않은 알림입니다. 읽음 처리가 행을 삭제합니다.
+          <li key={item.id} className="note unread">
             {/* 비어 있는 span 의 aria-label 은 스크린 리더가 읽지 않습니다.
                 role="img" 를 붙여야 색깔로만 표시하는 상태를 음성으로도 전달합니다. */}
-            {item.read ? null : <span className="new" role="img" aria-label="안 읽음" />}
+            <span className="new" role="img" aria-label="안 읽음" />
             <b>{notificationText(item.kind)}</b>
             <small>{stampLabel(item.created_at)}</small>
           </li>
@@ -79,7 +80,7 @@ export function NotificationMenu() {
         <div className="nhead">
           <b>알림</b>
           {unread === 0 ? null : (
-            <button className="readall" onClick={() => void readAll()}>모두 읽음으로 표시</button>
+            <button className="readall" onClick={() => void readAll()}>모두 읽음</button>
           )}
         </div>
         {body}
