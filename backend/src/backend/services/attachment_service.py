@@ -191,6 +191,34 @@ def attachment_for_download(
     return attachment, path
 
 
+# 본문에 넣은 첨부를 브라우저가 표시할 때 사용하는 content type 입니다. 확장자로만 판정합니다 —
+# 업로드할 때 받은 MIME 은 보내는 쪽이 정하는 값이라 믿지 않습니다.
+# HTML·SVG·XML 은 넣지 않습니다. 그 안의 스크립트가 이 서비스 화면의 권한으로 실행됩니다.
+INLINE_TYPES: dict[str, str] = {
+    "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
+    "gif": "image/gif", "webp": "image/webp",
+    "mp3": "audio/mpeg", "wav": "audio/wav", "m4a": "audio/mp4",
+    "ogg": "audio/ogg", "aac": "audio/aac", "flac": "audio/flac",
+    "pdf": "application/pdf",
+}
+
+
+def attachment_for_inline(
+    session: Session, attachment_id: int, requester: Member
+) -> tuple[Attachment, Path, str]:
+    """게시글을 읽을 수 있는 requester 에게 (Attachment 행, 디스크 경로, content type) 을 반환합니다.
+
+    INLINE_TYPES 에 없는 확장자는 LookupError 를 발생시킵니다. 표시할 수단이 없거나, 표시하면
+    그 안의 스크립트가 실행될 수 있는 형식입니다.
+    """
+    attachment, path = attachment_for_download(session, attachment_id, requester)
+    extension = attachment.stored_name.rsplit(".", 1)[-1].lower()
+    content_type = INLINE_TYPES.get(extension)
+    if content_type is None:
+        raise LookupError("본문에 표시할 수 없는 형식입니다")
+    return attachment, path, content_type
+
+
 def delete_attachment(session: Session, attachment_id: int, requester: Member) -> None:
     """게시글 작성자인 requester 가 첨부 파일 하나를 삭제합니다. 디스크의 파일과 Attachment 행을 함께 삭제합니다."""
     attachment = _get_or_raise(session, attachment_id)
