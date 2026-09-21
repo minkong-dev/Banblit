@@ -4,9 +4,14 @@ import { useRef } from "react";
 import type { CSSProperties, PointerEvent } from "react";
 
 import { Dropdown } from "../components/Dropdown";
-import { TrashIcon } from "../components/icons";
-import { acceptsDrag, cellAt, dragRange, slotSteps } from "../lib/calendar";
-import { slotLabel } from "../lib/pipeline";
+import { CheckMark } from "../components/CheckMark";
+import { PencilIcon, TrashIcon } from "../components/icons";
+import {
+  acceptsDrag, cellAt, dragRange, hasWeekday, REPEAT_WEEKDAY_NAMES, repeatLabel, slotSteps,
+  toggleWeekday, weekdayIndex,
+} from "../lib/calendar";
+import { NO_REPEAT, slotLabel } from "../lib/pipeline";
+import type { Repeat } from "../lib/pipeline";
 import { offWhenLabel } from "../lib/dayEntries";
 import type { Entry } from "../lib/dayEntries";
 import { cohortLabel } from "../lib/roster";
@@ -164,13 +169,15 @@ export function SlotPicker({ prefix, range, onChange, grid, lock, slotMinutes, o
 /** 로그인한 사용자가 등록한 항목의 목록입니다. 줄마다 삭제 버튼이 있습니다. 불가능 일정은 전부를 나열하므로
  *  줄마다 날짜를 함께 적고(offWhenLabel), 예약은 이날의 항목만 나열하므로 시각만 적습니다.
  *  막대 안에 삭제 버튼을 넣지 않는 이유는 1시간 slot 막대가 14px 이라 클릭 영역이 없기 때문입니다. */
-export function MyEntriesList({ title, empty, entries, teams, onRemove, openHour, closeHour, slotCount }: HoursProps & {
+export function MyEntriesList({ title, empty, entries, teams, onRemove, onEdit, openHour, closeHour, slotCount }: HoursProps & {
   title: string;
   /** 항목이 없을 때 표시하는 한 줄입니다. */
   empty: string;
   entries: Entry[];
   teams: DayTeam[];
   onRemove: (entry: Entry) => void;
+  /** 불가능 일정 줄의 수정 버튼입니다. 넘기지 않으면 그 버튼을 표시하지 않습니다(예약 목록). */
+  onEdit?: (entry: Entry) => void;
 }) {
   const { label, endLabel } = slotLabels(openHour, closeHour, slotCount);
   return (
@@ -184,8 +191,20 @@ export function MyEntriesList({ title, empty, entries, teams, onRemove, openHour
             return (
               <li className="prow" key={`${entry.kind}-${entry.bookingId ?? entry.removeIds?.[0] ?? entry.a}`}>
                 <i className={`dot ${entry.team ?? "off"}`} aria-hidden="true" />
-                <span className="nm">{entryName(entry, teams)}</span>
-                <span className="ps">{when}</span>
+                {/* 이름과 상세를 세로로 쌓습니다. 가로로 두면 좁은 카드에서 이름이 글자마다 줄바꿈됩니다. */}
+                <span className="txt">
+                  <span className="nm">{entryName(entry, teams)}</span>
+                  <span className="ps">{when}</span>
+                </span>
+                {onEdit === undefined || entry.kind !== "off" ? null : (
+                  <button
+                    className="ic"
+                    aria-label={`${entryName(entry, teams)} ${when} 수정`}
+                    onClick={() => onEdit(entry)}
+                  >
+                    <PencilIcon />
+                  </button>
+                )}
                 <button
                   className="ic danger"
                   aria-label={`${entryName(entry, teams)} ${when} ${entry.kind === "book" ? "예약 취소" : "불가능 일정 삭제"}`}
@@ -231,4 +250,85 @@ export function DayPeople({ people, error }: {
       )}
     </div>
   );
+}
+
+/** 불가능 일정의 반복 설정입니다. 체크를 켜면 요일 버튼과 끝나는 조건이 나타납니다.
+ *  요일을 일곱 개 전부 고르면 매일과 같습니다. 끝나는 조건은 종료일과 횟수 중 하나만 채웁니다 —
+ *  둘 다 채우면 아래에 사유를 표시하고 저장을 막습니다(서버도 422 로 거절합니다). */
+export function RepeatFields({ dayKey, value, onChange }: {
+  /** 지금 보고 있는 날짜입니다. 반복을 처음 켤 때 이 날의 요일을 기본으로 고릅니다. */
+  dayKey: string;
+  value: Repeat;
+  onChange: (next: Repeat) => void;
+}) {
+  const on = value.weekdays !== 0;
+  return (
+    <div className="rep">
+      {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- CheckMark 컴포넌트 안에 input 이 있습니다. eslint 는 컴포넌트 내부를 확인하지 못합니다. */}
+      <label className="repon">
+        <CheckMark
+          id="offRepeatOn"
+          checked={on}
+          onChange={(next) => onChange(next
+            ? { weekdays: 1 << weekdayIndex(dayKey), count: null, until: null }
+            : NO_REPEAT)}
+        />
+        반복
+      </label>
+      {!on ? null : (
+        <div className="repbody">
+          <div className="repdays" role="group" aria-label="반복 요일">
+            {REPEAT_WEEKDAY_NAMES.map((name, index) => (
+              <button
+                type="button"
+                key={name}
+                aria-pressed={hasWeekday(value.weekdays, index)}
+                onClick={() => onChange({ ...value, weekdays: toggleWeekday(value.weekdays, index) })}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+          <p className="sub">{repeatLabel(value.weekdays) || "요일을 하나 이상 선택해주세요."}</p>
+          <label className="fld3" htmlFor="offRepeatUntil">
+            반복 종료일
+            <input
+              id="offRepeatUntil"
+              type="date"
+              value={value.until ?? ""}
+              min={dayKey}
+              onChange={(event) => onChange({ ...value, until: event.target.value || null })}
+            />
+          </label>
+          <label className="fld3" htmlFor="offRepeatCount">
+            반복 횟수(주)
+            <input
+              id="offRepeatCount"
+              type="number"
+              min={1}
+              max={1825}
+              step={1}
+              placeholder="예: 4"
+              value={value.count ?? ""}
+              onChange={(event) => onChange({
+                ...value,
+                count: event.target.value === "" ? null : Number(event.target.value),
+              })}
+            />
+          </label>
+          <p className="sub">고른 요일 전부가 한 세트입니다. 4 를 넣으면 그 요일들이 4주 동안 반복합니다.</p>
+          {repeatConflict(value) === "" ? null : <p className="why">{repeatConflict(value)}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** 반복 설정을 저장할 수 없는 사유입니다. 저장할 수 있으면 빈 문자열입니다. */
+export function repeatConflict(value: Repeat): string {
+  if (value.weekdays === 0) return "";
+  if (value.count !== null && value.until !== null) {
+    return "반복 횟수와 반복 종료일은 동시에 설정할 수 없어요. 하나를 비워주세요.";
+  }
+  return "";
 }

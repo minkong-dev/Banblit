@@ -236,9 +236,12 @@ export type Unavailable = {
   /** "2026-09-14T18:00:00" */
   starts_at: string;
   ends_at: string;
-  /** 매일과 매주는 함께 켜질 수 없습니다. 둘 다 거짓이면 그 날 한 번뿐입니다. */
-  repeats_daily: boolean;
-  repeats_weekly: boolean;
+  /** 반복할 요일의 집합입니다. 월요일 1, 화요일 2 … 일요일 64 를 더한 값이고 127 이 매일입니다.
+   *  null 이면 반복하지 않습니다(lib/calendar 의 hasWeekday·repeatLabel). */
+  repeat_weekdays: number | null;
+  /** 반복 횟수입니다. 시작 회차를 포함해 셉니다. repeat_until 과 동시에 값을 가질 수 없습니다. */
+  repeat_count: number | null;
+  /** 반복 종료일("2026-12-31")입니다. */
   repeat_until: string | null;
   /** 사람이 기록한 사유입니다. 기록하지 않으면 null입니다. */
   reason: string | null;
