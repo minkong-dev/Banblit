@@ -137,3 +137,152 @@ export function KakaoIcon() {
     </svg>
   );
 }
+
+/** 본문에 링크를 넣는 버튼의 아이콘입니다. 사슬 고리 두 개입니다. */
+export function LinkIcon(props: IconProps) {
+  return (
+    <Stroke width={1.8} {...props}>
+      <path d="M10 13a4 4 0 0 0 5.66 0l3-3A4 4 0 0 0 13 4.34l-1.5 1.5" />
+      <path d="M14 11a4 4 0 0 0-5.66 0l-3 3A4 4 0 0 0 11 19.66l1.5-1.5" />
+    </Stroke>
+  );
+}
+
+/** 본문에 그림을 넣는 버튼의 아이콘입니다. */
+export function ImageIcon(props: IconProps) {
+  return (
+    <Stroke width={1.8} {...props}>
+      <rect x="3" y="4" width="18" height="16" rx="2.5" />
+      <circle cx="8.5" cy="9.5" r="1.5" />
+      <path d="m3.5 17 4.5-4.5a2 2 0 0 1 2.8 0L17 19" />
+    </Stroke>
+  );
+}
+
+/** 파일을 첨부하는 버튼의 아이콘입니다. 종이집게입니다. */
+export function ClipIcon(props: IconProps) {
+  return (
+    <Stroke width={1.8} {...props}>
+      <path d="M20 11.5 12.2 19.3a4.6 4.6 0 0 1-6.5-6.5l8-8a3 3 0 0 1 4.3 4.3l-8 8a1.5 1.5 0 0 1-2.1-2.1l7.3-7.3" />
+    </Stroke>
+  );
+}
+
+/** 글머리표 목록 버튼의 아이콘입니다. */
+export function BulletListIcon(props: IconProps) {
+  return (
+    <Stroke width={1.8} {...props}>
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <circle cx="4.5" cy="6" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="12" r="1.2" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="18" r="1.2" fill="currentColor" stroke="none" />
+    </Stroke>
+  );
+}
+
+/** 번호 목록 버튼의 아이콘입니다. */
+export function NumberListIcon(props: IconProps) {
+  return (
+    <Stroke width={1.8} {...props}>
+      <path d="M9 6h11M9 12h11M9 18h11" />
+      <path d="M3.4 4.8 4.6 4.2V8M3.4 8h2.4" />
+      <path d="M3.4 11.2h2.2L3.4 15h2.4" />
+      <path d="M3.4 17h2.2l-1.1 1.4h.3a1.1 1.1 0 1 1-1.2 1.6" />
+    </Stroke>
+  );
+}
+
+/** 실행취소 버튼의 아이콘입니다. */
+export function UndoIcon(props: IconProps) {
+  return (
+    <Stroke width={1.8} {...props}>
+      <path d="M4 9h10a5 5 0 0 1 0 10h-4" />
+      <path d="m7.5 5.5-3.5 3.5 3.5 3.5" />
+    </Stroke>
+  );
+}
+
+/** 다시실행 버튼의 아이콘입니다. */
+export function RedoIcon(props: IconProps) {
+  return (
+    <Stroke width={1.8} {...props}>
+      <path d="M20 9H10a5 5 0 0 0 0 10h4" />
+      <path d="m16.5 5.5 3.5 3.5-3.5 3.5" />
+    </Stroke>
+  );
+}
+
+/** 문단을 왼쪽으로 정렬하는 버튼의 아이콘입니다. */
+export function AlignLeftIcon(props: IconProps) {
+  return <Stroke width={1.8} {...props}><path d="M4 6h16M4 10.7h10M4 15.4h13M4 20h8" /></Stroke>;
+}
+
+/** 문단을 가운데로 정렬하는 버튼의 아이콘입니다. */
+export function AlignCenterIcon(props: IconProps) {
+  return <Stroke width={1.8} {...props}><path d="M4 6h16M7 10.7h10M5 15.4h14M8 20h8" /></Stroke>;
+}
+
+/** 문단을 오른쪽으로 정렬하는 버튼의 아이콘입니다. */
+export function AlignRightIcon(props: IconProps) {
+  return <Stroke width={1.8} {...props}><path d="M4 6h16M10 10.7h10M7 15.4h13M12 20h8" /></Stroke>;
+}
+
+/** 문단을 양쪽으로 맞추는 버튼의 아이콘입니다. */
+export function AlignJustifyIcon(props: IconProps) {
+  return <Stroke width={1.8} {...props}><path d="M4 6h16M4 10.7h16M4 15.4h16M4 20h16" /></Stroke>;
+}
+
+/** 표를 넣는 버튼의 아이콘입니다. */
+export function TableIcon(props: IconProps) {
+  return (
+    <Stroke width={1.8} {...props}>
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M3 9.5h18M3 15h18M9 4v16M15 4v16" />
+    </Stroke>
+  );
+}
+
+/** 글자에 준 서식을 모두 삭제하는 버튼의 아이콘입니다. 서식 삭제 아이콘입니다. */
+export function EraserIcon(props: IconProps) {
+  return (
+    <Stroke width={1.8} {...props}>
+      <path d="M8.5 19.5 4 15a1.8 1.8 0 0 1 0-2.5l7.5-7.5a1.8 1.8 0 0 1 2.5 0l5 5a1.8 1.8 0 0 1 0 2.5l-7 7z" />
+      <path d="M8.5 19.5H20M8.8 8.8l6.4 6.4" />
+    </Stroke>
+  );
+}
+
+/** 제목 문단으로 변경하는 버튼의 아이콘입니다. */
+export function HeadingIcon(props: IconProps) {
+  return <Stroke width={2} {...props}><path d="M5 5v14M15 5v14M5 12h10M18.5 10.5v8.5" /></Stroke>;
+}
+
+/** 인용 문단으로 변경하는 버튼의 아이콘입니다. */
+export function QuoteIcon(props: IconProps) {
+  return (
+    <Stroke width={1.8} {...props}>
+      <path d="M4 5v14" />
+      <path d="M9 7h11M9 12h11M9 17h7" />
+    </Stroke>
+  );
+}
+
+/** 코드 블록으로 변경하는 버튼의 아이콘입니다. */
+export function CodeIcon(props: IconProps) {
+  return <Stroke width={1.8} {...props}><path d="m8.5 8-4.5 4 4.5 4M15.5 8l4.5 4-4.5 4" /></Stroke>;
+}
+
+/** 구분선을 넣는 버튼의 아이콘입니다. */
+export function RuleIcon(props: IconProps) {
+  return <Stroke width={1.8} {...props}><path d="M4 12h16M6 7h12M6 17h12" strokeOpacity="1" /></Stroke>;
+}
+
+/** 색을 선택하는 버튼의 아이콘입니다. 아래의 색 막대(.rtcolorbar)가 지금 선택한 색을 표시합니다. */
+export function PaletteIcon(props: IconProps) {
+  return (
+    <Stroke width={1.8} {...props}>
+      <path d="M7 15 11.4 5h1.2L17 15" />
+      <path d="M8.6 11.5h6.8" />
+    </Stroke>
+  );
+}

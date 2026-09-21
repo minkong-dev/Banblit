@@ -10,7 +10,7 @@ test("공지에 글을 쓰고 댓글을 달 수 있다", async ({ page }) => {
 
   await page.goto("/notices");
   await page.getByRole("link", { name: "글쓰기" }).click();
-  await page.getByLabel("제목").fill(title);
+  await page.getByLabel("제목", { exact: true }).fill(title);
   await page.getByLabel("내용").fill("종단 검사가 남긴 글입니다.");
   await page.getByRole("button", { name: "글쓰기" }).click();
 
@@ -41,7 +41,7 @@ test("공지를 블라인드하면 목록에서 사라지고 설정에서 되돌
 
   await page.goto("/notices");
   await page.getByRole("link", { name: "글쓰기" }).click();
-  await page.getByLabel("제목").fill(title);
+  await page.getByLabel("제목", { exact: true }).fill(title);
   await page.getByLabel("내용").fill("가려질 글입니다.");
   await page.getByRole("button", { name: "글쓰기" }).click();
 
@@ -67,12 +67,13 @@ test("본문에 그림을 넣으면 미리보기로 보인다", async ({ page })
 
   await page.goto("/notices");
   await page.getByRole("link", { name: "글쓰기" }).click();
-  await page.getByLabel("제목").fill(title);
+  await page.getByLabel("제목", { exact: true }).fill(title);
   await page.getByLabel("내용").fill("그림이 본문에 들어갑니다.");
 
-  // 도구 막대의 "파일" 은 떨구기·붙여넣기와 같은 경로입니다(components/RichText.tsx 의 attach).
+  // 도구 막대의 그림 버튼은 떨구기·붙여넣기와 같은 경로입니다(components/RichText.tsx 의 attach).
+  // 곁의 클립 버튼은 본문에 넣지 않고 첨부로만 올리므로 구분해서 지정합니다.
   // 1x1 png 한 장을 올려, 본문에 <img> 가 들어가고 그 주소가 첨부 주소인지 확인합니다.
-  await page.locator(".rttools .rtpick input").setInputFiles({
+  await page.locator(".rttools .rtpick[aria-label='그림 넣기'] input").setInputFiles({
     name: "점.png",
     mimeType: "image/png",
     buffer: Buffer.from(

@@ -52,7 +52,7 @@ function apply(pick: DragPick, next: SlotRange): void {
   if (acceptsDrag(pick.grid, next, pick.slotMinutes)) pick.onChange(next);
 }
 
-/** 드래그로 구간을 고르게 할 때 넘기는 값입니다. 없으면 타임라인은 보기 전용입니다. range 가 null 이면 아직 선택하지 않은 상태입니다.
+/** 드래그로 구간을 선택하게 할 때 넘기는 값입니다. 없으면 타임라인은 보기 전용입니다. range 가 null 이면 아직 선택하지 않은 상태입니다.
  *  grid 는 이미 찬 칸(slotMinutes 길이)입니다. 넘기면 찬 칸이 걸치는 구간을 반영하지 않아 드래그가 그 앞에서 멈춥니다.
  *  불가능 일정은 겹쳐도 되므로 넘기지 않습니다. */
 export type DragPick = {
@@ -253,7 +253,7 @@ export function DayPeople({ people, error }: {
 }
 
 /** 불가능 일정의 반복 설정입니다. 체크를 켜면 요일 버튼과 끝나는 조건이 나타납니다.
- *  요일을 일곱 개 전부 고르면 매일과 같습니다. 끝나는 조건은 종료일과 횟수 중 하나만 채웁니다 —
+ *  요일을 일곱 개 전부 선택하면 매일과 같습니다. 끝나는 조건은 종료일과 횟수 중 하나만 채웁니다 —
  *  둘 다 채우면 아래에 사유를 표시하고 저장을 막습니다(서버도 422 로 거절합니다). */
 export function RepeatFields({ dayKey, value, onChange }: {
   /** 지금 보고 있는 날짜입니다. 반복을 처음 켤 때 이 날의 요일을 기본으로 고릅니다. */
