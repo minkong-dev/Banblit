@@ -9,6 +9,7 @@ import { useState } from "react";
 
 import { getJSON, reason } from "../lib/api";
 import { memberLabel } from "../lib/pipeline";
+import { LOADING_TEXT } from "../lib/loading";
 import type { Member } from "../lib/contract";
 
 
@@ -34,7 +35,7 @@ export function MemberSearch(props: {
   if (query === "") {
     body = <p className="empty">검색을 위해 이름을 입력해주세요.</p>;
   } else if (found.isPending) {
-    body = <p className="empty">검색 중…</p>;
+    body = <p className="empty">{LOADING_TEXT}</p>;
   } else if (found.isError) {
     body = <p className="empty">{reason(found.error)}</p>;
   } else if (members.length === 0) {

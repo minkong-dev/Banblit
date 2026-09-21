@@ -3,6 +3,7 @@ import { useQueries } from "@tanstack/react-query";
 import { AppShell, Card } from "../components/AppShell";
 import { getJSON, reason } from "../lib/api";
 import { useMe } from "../components/queries";
+import { LOADING_TEXT } from "../lib/loading";
 import "../styles/profile.css";
 import type { Account, Member } from "../lib/contract";
 import { roleLabel } from "../lib/account";
@@ -29,7 +30,7 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
 
   return memberQueries.map((query, index) => {
     const id = teamIds[index] ?? 0;
-    if (query.isPending) return { teamName: teamName(id), text: "불러오는 중…" };
+    if (query.isPending) return { teamName: teamName(id), text: LOADING_TEXT };
     if (query.isError) return { teamName: teamName(id), text: reason(query.error) };
     const mine = me === null ? undefined : query.data.members.find((member) => member.id === me.id);
     return { teamName: teamName(id), text: cohortText(mine) };

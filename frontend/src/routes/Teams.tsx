@@ -12,7 +12,7 @@ import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { say } from "../lib/toast";
 import { askDelete } from "../lib/confirm";
 import { getJSON, reason } from "../lib/api";
-import { loadState, stateText } from "../lib/loading";
+import { LOADING_TEXT, loadState, stateText } from "../lib/loading";
 import { can, canManageTeams, teamNavLabel } from "../lib/account";
 import { checkSlotCounts, checkTeamName, memberLabel, slotName } from "../lib/pipeline";
 import { INSTRUMENTS } from "../lib/contract";
@@ -160,7 +160,7 @@ function Lineup(props: {
     onError: (error) => say(reason(error)),
   });
 
-  if (slots.isPending) return <div className="empty">불러오는 중…</div>;
+  if (slots.isPending) return <div className="empty">{LOADING_TEXT}</div>;
   if (slots.isError) return <div className="empty">{reason(slots.error)}</div>;
 
   return (
@@ -429,7 +429,7 @@ function EditTeam(props: Omit<TeamFormProps, "team" | "start"> & { team: Team })
   if (slots.isPending || slots.isError) {
     return (
       <Modal title="팀 수정" onClose={onClose}>
-        <p className="empty">{slots.isError ? reason(slots.error) : "불러오는 중…"}</p>
+        <p className="empty">{slots.isError ? reason(slots.error) : LOADING_TEXT}</p>
       </Modal>
     );
   }

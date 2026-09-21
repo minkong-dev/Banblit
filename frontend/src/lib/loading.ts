@@ -3,6 +3,9 @@
 
 import { reason } from "./api";
 
+/** 조회가 끝나지 않았을 때 그 자리에 표시할 문구입니다. 화면마다 다른 문구를 쓰지 않도록 한 곳에서 보유합니다. */
+export const LOADING_TEXT = "불러오는 중…";
+
 export type LoadState =
   | { kind: "loading" }
   | { kind: "failed"; why: string }
@@ -19,7 +22,7 @@ export function loadState(query: { isPending: boolean; error: unknown }): LoadSt
 /** 목록을 표시할 수 없을 때 그 자리에 표시할 메시지입니다. 조회에 성공했으나 목록이 비어 있는
  *  경우에 표시할 메시지는 empty 로 받습니다. */
 export function stateText(state: LoadState, empty: string): string {
-  if (state.kind === "loading") return "불러오는 중…";
+  if (state.kind === "loading") return LOADING_TEXT;
   return state.kind === "failed" ? state.why : empty;
 }
 
