@@ -1,11 +1,12 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from backend.services.attachment_service import (
     attachment_for_download,
+    attachment_for_inline,
     attachments_of_post,
     delete_attachment,
     list_attachments,
@@ -320,6 +321,34 @@ def download_attachment(
         filename=attachment.name,
         media_type="application/octet-stream",
         headers={"X-Content-Type-Options": "nosniff"},
+    )
+
+
+# 본문에 넣은 그림·소리·PDF 를 브라우저가 표시하는 경로입니다. 위 다운로드 경로는 모든 파일을
+# octet-stream 과 Content-Disposition: attachment 로 내보내므로 img·audio·iframe 이 표시하지
+# 못합니다. 표시해도 스크립트가 실행되지 않는 확장자만 INLINE_TYPES 가 허용하고, 그 밖의 형식은
+# 415 로 거절해 다운로드 경로만 남깁니다. nosniff 는 그대로 붙여 브라우저가 형식을 다시 정하지 못하게 합니다.
+@router.get("/attachments/{attachment_id}/inline")
+def view_attachment(
+    attachment_id: int,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> FileResponse:
+    try:
+        _, path, content_type = attachment_for_inline(session, attachment_id, requester)
+    except LookupError as error:
+        raise HTTPException(status_code=415, detail=str(error)) from error
+    return FileResponse(
+        path,
+        media_type=content_type,
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": "inline",
+            # 이 응답 문서가 다른 자원을 불러오지 못하게 막습니다. sandbox 토큰은 넣지 않습니다 —
+            # 브라우저 내장 PDF 뷰어가 동작하지 않습니다. object-src 는 그 뷰어에 필요합니다.
+            # frame-ancestors 는 외부 사이트가 이 응답을 자기 페이지의 frame 에 끼워 넣는 것을 막습니다.
+            "Content-Security-Policy": "default-src 'none'; object-src 'self'; img-src 'self'; frame-ancestors 'self'",
+        },
     )
 
 

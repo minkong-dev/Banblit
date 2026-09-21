@@ -481,3 +481,62 @@ def test_a_concurrent_upload_cannot_pass_the_total_size(
     with Session(test_engine) as checking:
         total = attachment_service._used_bytes(checking, post_id)
     assert total <= 20, f"글 1개의 첨부 합계가 상한 20 을 넘었습니다: {total}"
+
+
+def test_inline_serves_a_pdf_with_its_own_type(
+    api_client: TestClient, account: AccountFactory, storage_dir: Path
+) -> None:
+    # 본문에 넣은 PDF·그림·소리는 iframe·img·audio 가 표시합니다. octet-stream 과
+    # Content-Disposition: attachment 로 내보내면 브라우저가 내려받기만 하고 표시하지 않습니다.
+    _, head = account("박서연", "head@example.com")
+    post_id = _notice(api_client, head)
+    attachment_id = api_client.post(
+        f"/posts/{post_id}/attachments",
+        files={"file": ("악보.pdf", b"%PDF-1.4", "application/pdf")},
+        cookies=head,
+    ).json()["attachment"]["id"]
+
+    response = api_client.get(f"/attachments/{attachment_id}/inline", cookies=head)
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("application/pdf")
+    assert response.headers["content-disposition"].startswith("inline")
+    assert response.headers["x-content-type-options"] == "nosniff"
+    # 외부 사이트가 이 응답을 자기 페이지의 frame 에 끼워 넣지 못하게 막습니다. 끼워 넣으면
+    # 로그인한 사용자의 화면 위에서 클릭을 유도하거나 첨부의 존재 여부를 추정할 수 있습니다.
+    assert "frame-ancestors 'self'" in response.headers["content-security-policy"]
+
+
+def test_inline_refuses_a_format_that_must_not_render(
+    api_client: TestClient, account: AccountFactory, storage_dir: Path
+) -> None:
+    # zip 은 표시할 수단이 없고, 표시 가능한 목록을 넓히면 그 안의 내용이 이 화면의 권한으로 실행될
+    # 수 있습니다. 목록 밖 형식은 표시 경로를 거절하고 내려받기 경로만 남깁니다.
+    _, head = account("박서연", "head@example.com")
+    post_id = _notice(api_client, head)
+    attachment_id = api_client.post(
+        f"/posts/{post_id}/attachments",
+        files={"file": ("자료.zip", b"PK\x03\x04", "application/zip")},
+        cookies=head,
+    ).json()["attachment"]["id"]
+
+    assert api_client.get(f"/attachments/{attachment_id}/inline", cookies=head).status_code == 415
+
+
+def test_inline_requires_read_permission(
+    api_client: TestClient, account: AccountFactory, storage_dir: Path
+) -> None:
+    head_id, head = account("박서연", "head@example.com")
+    _, outsider = account("김도윤", "outsider@example.com")
+    team_id = _make_team(api_client, head, "밴드가")
+    _seat(api_client, head, team_id, head_id)
+    post_id = api_client.post(
+        f"/teams/{team_id}/posts", json={"title": "팀 글", "body": "팀 내용"}, cookies=head,
+    ).json()["post"]["id"]
+    attachment_id = api_client.post(
+        f"/posts/{post_id}/attachments",
+        files={"file": ("악보.pdf", b"%PDF-1.4", "application/pdf")},
+        cookies=head,
+    ).json()["attachment"]["id"]
+
+    assert api_client.get(f"/attachments/{attachment_id}/inline", cookies=outsider).status_code == 403
