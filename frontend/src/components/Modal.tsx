@@ -29,16 +29,46 @@ export function Modal({ title, hint, foot, panes, children, onClose }: {
     dialog.current?.showModal();
   }, []);
 
+  // 바깥(backdrop)을 누르면 닫습니다. <dialog> 는 backdrop 도 자기 영역이라, 누른 자리가 dialog
+  // 자신이면 내용이 아닌 바깥입니다. 누른 위치와 뗀 위치를 모두 확인하는 이유는, 내용 안에서
+  // 글자를 끌어 선택하다 바깥에서 손을 떼면 click 의 target 이 dialog 가 되어 닫히기 때문입니다.
+  // JSX 속성이 아니라 ref 에 직접 등록합니다. <dialog> 는 상호작용 요소가 아니라서 속성으로 붙이면
+  // jsx-a11y 가 거부하고, 키보드 사용자는 이 동작이 아니라 Esc 로 닫습니다(브라우저 기본 동작).
+  useEffect(() => {
+    const box = dialog.current;
+    if (box === null) return;
+    let downOnBackdrop = false;
+    const onDown = (event: MouseEvent) => { downOnBackdrop = event.target === box; };
+    const onClick = (event: MouseEvent) => {
+      if (downOnBackdrop && event.target === box) box.close();
+    };
+    box.addEventListener("mousedown", onDown);
+    box.addEventListener("click", onClick);
+    return () => {
+      box.removeEventListener("mousedown", onDown);
+      box.removeEventListener("click", onClick);
+    };
+  }, []);
+
   if (panes) {
     return (
-      <dialog ref={dialog} className="panes" aria-label={title} onClose={onClose}>
+      <dialog
+        ref={dialog}
+        className="panes"
+        aria-label={title}
+        onClose={onClose}
+      >
         {children}
       </dialog>
     );
   }
 
   return (
-    <dialog ref={dialog} aria-labelledby={titleId} onClose={onClose}>
+    <dialog
+      ref={dialog}
+      aria-labelledby={titleId}
+      onClose={onClose}
+    >
       <div className="mhead">
         <div>
           <h2 id={titleId}>{title}</h2>
