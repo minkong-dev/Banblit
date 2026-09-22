@@ -1,6 +1,6 @@
 // lib 모듈의 시퀀스 파일입니다. 어느 검증을 어느 순서로 호출할지 이 파일에서 결정합니다.
 
-import { getJSON, sendFile } from "./api";
+import { getJSON, isSignedIn, sendFile } from "./api";
 import type {
   Account, Ensemble, Me, Member, Notification, Period, Reservation, Unavailable,
 } from "./contract";
@@ -468,15 +468,8 @@ export async function fetchMe(): Promise<Me> {
   return getJSON<Me>("/me");
 }
 
-// 로그인 여부 표시용 cookie 이름입니다. 실제 session cookie(banblit_session)는 httpOnly 속성이라 화면에서 읽을 수 없습니다.
-// 이 이름을 정의하는 곳은 이 상수 하나입니다.
-const SIGNED_IN_COOKIE = "banblit_signed_in";
-
-/** 로그인 여부만 나타내는 cookie 의 존재 여부를 확인합니다. document.cookie 를 읽는 것은 상태를
- *  조회하는 작업이므로 시퀀스 파일인 이 파일에 둡니다. */
-export function isSignedIn(): boolean {
-  return document.cookie.split("; ").includes(`${SIGNED_IN_COOKIE}=1`);
-}
+// isSignedIn 은 api.ts 에 있습니다. 401 처리가 같은 cookie 를 읽기 때문입니다. 화면은 이 파일에서 가져갑니다.
+export { isSignedIn };
 
 export async function logOut(): Promise<void> {
   // 서버가 session 을 무효로 설정하고 cookie 2개를 삭제합니다.

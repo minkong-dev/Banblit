@@ -50,9 +50,34 @@ export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
   // 본문이 없는 응답도 있습니다.
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    throw new Error(detailOf(body) ?? `${res.status} ${res.statusText}`);
+    const detail = detailOf(body);
+    if (res.status === 401 && detail === SESSION_REJECTED_DETAIL) leaveExpiredSession();
+    throw new Error(detail ?? `${res.status} ${res.statusText}`);
   }
   return body as T;
+}
+
+// 화면이 로그인 여부를 판단하는 표시 cookie 입니다. 서버가 로그인할 때 session cookie 와 함께 설정합니다.
+// 실제 session cookie(banblit_session)는 httpOnly 라 화면에서 읽을 수 없습니다.
+const SIGNED_IN_COOKIE = "banblit_signed_in";
+
+/** 로그인 표시 cookie 가 있는지 확인합니다. */
+export function isSignedIn(): boolean {
+  return document.cookie.split("; ").includes(`${SIGNED_IN_COOKIE}=1`);
+}
+
+// 서버가 session 이 없거나 취소·만료됐을 때 보내는 401 문구입니다(backend/api/auth_dependency.py 의 UNAUTHORIZED_DETAIL).
+// 같은 401 이라도 틀린 비밀번호(/login, /me/password)는 문구가 달라 여기에 해당하지 않습니다.
+const SESSION_REJECTED_DETAIL = "로그인이 필요합니다";
+
+/** 서버가 session 을 거절했는데 표시 cookie 가 남아 있으면, 삭제하고 로그인 화면으로 보냅니다.
+ *  삭제하지 않으면 SkipIfSignedIn 이 로그인 화면을 대시보드로 되돌려 빠져나올 수 없습니다.
+ *  표시 cookie 가 없으면(로그아웃 상태의 화면) 이동하지 않습니다. 로그인 화면에서 다시 로그인 화면으로 이동하는 반복을 막습니다.
+ *  httpOnly 인 session cookie 는 JavaScript 가 삭제할 수 없지만, 서버가 이미 무효로 판단한 값이고 다음 로그인이 덮어씁니다. */
+function leaveExpiredSession(): void {
+  if (!isSignedIn()) return;
+  document.cookie = `${SIGNED_IN_COOKIE}=; Max-Age=0; path=/`;
+  window.location.replace("/login");
 }
 
 function detailOf(body: unknown): string | null {
