@@ -2,17 +2,19 @@
 body[data-page="scheduler"] {
   line-height: 1.5;
 
-  /* ===== 본문. 전체화면에서 스크롤 없이 한 화면에 들어갑니다 =====
+  /* ===== 본문 =====
      캘린더와 우측 목록은 같은 줄에 배치되어, 윗선과 높이가 정확히 같습니다.
-     탭은 캘린더 위 칸에만 배치되어 우측 목록을 밀지 않습니다. 달력은 넓을수록 좋아 폭 상한을 해제합니다. */
-  .page { max-width: none; grid-template-rows: auto auto minmax(0, 1fr); }
+     탭은 캘린더 위 칸에만 배치되어 우측 목록을 밀지 않습니다.
+     창이 충분히 높으면 달력이 남는 높이를 채우고, 낮으면 달력 안쪽이 아니라 페이지 전체가 스크롤합니다. */
+  .page { grid-template-rows: auto auto minmax(0, 1fr); height: auto; min-height: calc(100vh - var(--bar) - var(--nav, 0px)); }
   .tabs { flex-wrap: nowrap; }
   .cut { grid-column: 1 / -1; grid-row: 2; }
   .card { grid-column: 1; grid-row: 3; flex: 1; display: flex; flex-direction: column; min-height: 0; }
-  .rail { grid-column: 2; grid-row: 3; overflow-y: auto; }
+  .rail { grid-column: 2; grid-row: 3; }
   .tab { padding: 10px 20px; font-size: 15px; }
 
-  #body { flex: 1; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
+  /* container-type 은 아래 달력 칸 높이가 이 상자의 너비(cqi)를 기준으로 계산되게 합니다. */
+  #body { flex: 1; display: flex; flex-direction: column; min-height: 0; container-type: inline-size; }
   .cardfoot { flex: none; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 11px 18px; border-top: 1px solid var(--line); }
 
   .calbar { flex: none; display: flex; align-items: center; gap: 6px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
@@ -37,10 +39,11 @@ body[data-page="scheduler"] {
   .dow span { padding: 10px 0; text-align: center; font-size: 13px; font-weight: 500; color: var(--t3); }
   .dow span:first-child { color: var(--red); }
 
-  /* 칸 하나에 일정 3개가 보이는 높이를 최솟값으로 정합니다. 브라우저로 측정한 값입니다.
-     여백 위 8 + 날짜 26 + 사이 5 × 3 + 일정 26 × 3 + 여백 아래 10 = 137.
-     공간이 남으면 늘어나고, 부족하면 137 을 유지하고 #body 가 스크롤합니다. */
-  .grid { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(137px, 1fr); min-height: 0; }
+  /* 칸 높이의 최솟값은 칸 너비(달력 너비 / 7)의 0.75 배입니다. 너비가 줄면 높이도 같이 줄어듭니다.
+     아래로는 56px(여백 위 8 + 날짜 26 + 일정 한 줄 앞부분), 위로는 137px 에서 멈춥니다.
+     137 은 일정 3개가 보이는 높이입니다: 여백 위 8 + 날짜 26 + 사이 5 × 3 + 일정 26 × 3 + 여백 아래 10.
+     창 높이에 여유가 있으면 1fr 이 칸을 늘려 화면을 채웁니다. */
+  .grid { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(clamp(56px, 100cqi / 7 * 0.75, 137px), 1fr); min-height: 0; }
 
   .cell {
     position: relative; min-height: 0; overflow: hidden; padding: 8px 9px 10px;
@@ -244,6 +247,20 @@ body[data-page="scheduler"] {
 
   @media (max-width: 1240px) {
     .panel li button { padding: 9px; font-size: 13.5px; }
+  }
+
+  /* 좁음(767px 이하, shell.css 의 창 폭 단계)에서는 한 줄 배치입니다. 위에서 달력과 오른쪽 칸을 1열·2열에 직접
+     배치했으므로, 그대로 두면 2열이 새로 생겨 달력이 반으로 좁아집니다. 오른쪽 칸을 달력 아래(1열 4행)로 옮깁니다. */
+  @media (max-width: 767px) {
+    .rail { grid-column: 1; grid-row: 4; }
+    /* 오른쪽 칸이 달력 아래에 붙으므로 달력을 창 높이까지 늘리지 않습니다. 칸은 너비 비율대로만 둡니다. */
+    .page { min-height: 0; }
+    /* 1fr 을 뺍니다. 높이가 정해지지 않은 상자에서 1fr 줄은 가장 긴 칸의 내용 높이로 모두 늘어나, 일정이 하나만 있어도
+       모든 줄이 비율보다 길어집니다. 칸에 다 들어가지 않는 일정은 칸의 overflow:hidden 이 자릅니다. */
+    .grid { grid-auto-rows: clamp(56px, 100cqi / 7 * 0.75, 137px); }
+    /* 집중합주 기간 띠는 기간이 여러 개면 길어집니다. 한 줄로 두면 카드 밖으로 넘치므로 줄바꿈합니다.
+       여러 줄이 되면 알약 모양(999px)이 타원이 되므로 모서리를 줄입니다. */
+    .band { white-space: normal; border-radius: 12px; }
   }
 }
 

@@ -1,8 +1,7 @@
 /* 배정 결과 화면만의 규칙입니다. 색은 base.css, 상단바·사이드바·탭·카드·오른쪽 칸은 shell.css 가 정의합니다. */
 body[data-page="admin"] {
 
-  /* 달력은 넓을수록 좋습니다. 본문 폭 상한을 해제하고, 오른쪽 칸은 자체 스크롤합니다. */
-  .page { max-width: none; }
+  /* 오른쪽 칸은 자체 스크롤합니다. */
   .rail { overflow-y: auto; }
 
   /* 캘린더 */
@@ -74,7 +73,7 @@ body[data-page="admin"] {
 /* 휴대폰 폭입니다. 7열 달력을 1열에 들어갈 만큼 좁히면 칸 하나가 50px 아래로 내려가 날짜와 막대를
    읽을 수 없습니다. 달력에 최소 폭을 주고 가로로만 스크롤합니다. 화면 전체가 가로로 밀리는 것과
    달리, 스크롤 대상이 달력 하나로 한정됩니다. */
-@media (max-width: 860px) {
+@media (max-width: 767px) {
   body[data-page="admin"] {
     .cal { overflow-x: auto; }
     .dow, .grid { min-width: 620px; }

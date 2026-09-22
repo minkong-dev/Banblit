@@ -62,8 +62,8 @@ test("공지를 블라인드하면 목록에서 사라지고 설정에서 되돌
   await expect(postButton).toBeVisible();
 });
 
-// PDF 뷰어는 창 크기와 상관없이 A4 비율(세로 = 가로 x 1.414)을 유지하고 크기만 줄어듭니다.
-// 낮은 창에서는 세로 상한(창 높이 60%)에 걸리므로, 가로도 같이 줄어야 비율이 유지됩니다.
+// PDF 뷰어는 본문 폭을 거의 다 쓰고(좌우 여백만 조금), 세로는 A4 비율(가로 x 1.414)로 정합니다.
+// 창 높이와 상관없이 크게 보이고, 길어진 만큼 작성 화면이 스크롤됩니다.
 test("본문의 PDF 뷰어는 창 크기가 달라도 A4 비율을 유지한다", async ({ page }) => {
   await page.goto("/notices");
   await page.getByRole("link", { name: "글쓰기" }).click();
@@ -81,6 +81,11 @@ test("본문의 PDF 뷰어는 창 크기가 달라도 A4 비율을 유지한다"
       const box = await viewer.boundingBox();
       return box === null ? 0 : Math.round((box.height / box.width) * 100) / 100;
     }).toBeCloseTo(1.41, 1);
+    // 여백을 뺀 본문 폭과 뷰어 폭의 차이가 좌우 여백(16px 안팎)을 넘지 않아야 합니다.
+    await expect.poll(async () => {
+      const [box, body] = await Promise.all([viewer.boundingBox(), page.locator(".rtbody").evaluate((el) => el.clientWidth - parseFloat(getComputedStyle(el).paddingLeft) - parseFloat(getComputedStyle(el).paddingRight))]);
+      return box === null ? Infinity : body - box.width;
+    }).toBeLessThanOrEqual(20);
   }
 });
 
