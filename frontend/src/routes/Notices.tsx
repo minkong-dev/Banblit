@@ -1,4 +1,3 @@
-import { AppShell } from "../components/AppShell";
 import { PostBoard } from "../components/PostBoard";
 import { useMe } from "../components/queries";
 
@@ -10,10 +9,7 @@ export function Notices() {
   const { me } = useMe();
 
   return (
-    <AppShell
-      page="board"
-      current="notice"
-    >
+    <>
       <div className="main">
         <PostBoard
           title="공지사항"
@@ -26,6 +22,6 @@ export function Notices() {
           emptyText="아직 등록된 공지가 없어요."
         />
       </div>
-    </AppShell>
+    </>
   );
 }

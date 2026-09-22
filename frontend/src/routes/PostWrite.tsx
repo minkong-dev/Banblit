@@ -4,8 +4,6 @@
 
 import { useNavigate, useParams } from "react-router-dom";
 
-import { AppShell } from "../components/AppShell";
-import type { NavKey } from "../components/AppShell";
 import { WriteForm } from "../components/PostWriteForm";
 import { can } from "../lib/account";
 import { boardListKey } from "../lib/pipeline";
@@ -18,7 +16,6 @@ export function NoticeWrite() {
 
   return (
     <WritePage
-      current="notice"
       title="공지 작성"
       hint="멤버 전체에게 공개돼요"
       draftPath="/notices/drafts"
@@ -40,7 +37,6 @@ export function BoardWrite() {
 
   return (
     <WritePage
-      current="board"
       title={team === undefined ? "글 작성" : `${team.name} 글 작성`}
       hint="해당 팀에 소속된 멤버만 볼 수 있어요"
       draftPath={`/teams/${teamId ?? ""}/posts/drafts`}
@@ -54,9 +50,7 @@ export function BoardWrite() {
 }
 
 /** 두 화면의 공통 뼈대입니다. 쓸 수 없는 사람에게는 사유만 표시하고 form 을 그리지 않습니다. */
-function WritePage({ current, title, hint, draftPath, listPath, listKey, authorId, allowed, denied }: {
-  /** 사이드바에서 어느 메뉴를 선택한 상태로 표시할지입니다. */
-  current: NavKey;
+function WritePage({ title, hint, draftPath, listPath, listKey, authorId, allowed, denied }: {
   title: string;
   hint: string;
   /** 초안을 만드는 주소입니다. */
@@ -73,7 +67,7 @@ function WritePage({ current, title, hint, draftPath, listPath, listKey, authorI
   const toList = (): void => void navigate(listPath);
 
   return (
-    <AppShell page="board" current={current}>
+    <>
       <div className="main">
         <div className="card">
           <div className="sethead">
@@ -95,6 +89,6 @@ function WritePage({ current, title, hint, draftPath, listPath, listKey, authorI
           )}
         </div>
       </div>
-    </AppShell>
+    </>
   );
 }

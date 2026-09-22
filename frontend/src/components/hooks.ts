@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
+import { useLocation } from "react-router-dom";
 
 /** 클릭으로 여는 팝업 하나입니다. 열려 있는 동안 바깥을 누르거나 Escape를 누르면 닫힙니다.
  *  반환되는 box ref 는 열기 버튼과 팝업을 감싼 요소에 연결합니다. 버튼 클릭까지 외부 클릭으로 감지하면,
@@ -14,6 +15,14 @@ export function useDismissible(): {
 } {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  // 주소가 바뀌면(뒤로 가기처럼 클릭이 없는 이동 포함) 닫습니다. 상단바는 화면을 이동해도 유지되므로
+  // 열림 상태가 저절로 초기화되지 않습니다. effect 대신 렌더링 중에 비교해 이동한 화면이 처음부터 닫힌 상태로 그려집니다.
+  const { pathname } = useLocation();
+  const [seenPath, setSeenPath] = useState(pathname);
+  if (seenPath !== pathname) {
+    setSeenPath(pathname);
+    setOpen(false);
+  }
 
   useEffect(() => {
     if (!open) return;

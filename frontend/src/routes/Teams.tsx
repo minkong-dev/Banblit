@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 
-import { AppShell, Card } from "../components/AppShell";
+import { Card } from "../components/AppShell";
 import { Pager } from "../components/Pager";
 import { Modal, Stepper } from "../components/Modal";
 import { MemberSearch } from "../components/MemberSearch";
@@ -480,10 +480,7 @@ export function Teams() {
   const others = (team: Team | null): Team[] => allTeams.filter((one) => one.id !== team?.id);
 
   return (
-    <AppShell
-      page="teams"
-      current="find-team"
-    >
+    <>
       <div className="main">
         <Card>
           <SectionHead title={teamNavLabel(me)} desc="팀을 눌러 포지션을 확인해주세요" />
@@ -560,6 +557,6 @@ export function Teams() {
           />
         </Modal>
       )}
-    </AppShell>
+    </>
   );
 }

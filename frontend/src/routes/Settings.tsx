@@ -4,7 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
+import { Card, Panel, Tabs } from "../components/AppShell";
 import { Dropdown } from "../components/Dropdown";
 import { useMe, usePeriods, useRooms, useSettings, useSlotMinutes, useTeams } from "../components/queries";
 import { can } from "../lib/account";
@@ -108,10 +108,7 @@ export function Settings() {
   }
 
   return (
-    <AppShell
-      page="settings"
-      current="settings"
-    >
+    <>
       <Tabs label="설정" items={tabs} selected={shown} onSelect={setTab} />
 
       <div className="main">
@@ -164,7 +161,7 @@ export function Settings() {
           />
         </div>
       )}
-    </AppShell>
+    </>
   );
 }
 

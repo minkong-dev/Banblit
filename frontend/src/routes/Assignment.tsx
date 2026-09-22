@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { AppShell, Card, Tabs } from "../components/AppShell";
+import { Card, Tabs } from "../components/AppShell";
 import { Dropdown } from "../components/Dropdown";
 import { getJSON, reason } from "../lib/api";
 import { say } from "../lib/toast";
@@ -192,7 +192,7 @@ export function Assignment() {
   const firstError = periods.error ?? rooms.error ?? teams.error ?? schedule.error ?? recompute.error ?? null;
 
   return (
-    <AppShell page="admin" current="assign">
+    <>
       <Tabs label="배정안" items={tabs} selected={tabKey(view)} onSelect={(key) => setView(viewOf(key))} />
 
       <div className="main">
@@ -256,6 +256,6 @@ export function Assignment() {
         />
         <RunTimesPanel period={activePeriod} canManage={can(me, "period_edit")} />
       </div>
-    </AppShell>
+    </>
   );
 }
