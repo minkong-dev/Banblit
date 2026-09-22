@@ -143,10 +143,11 @@ def reset_password(session: Session, token: str, password: str, now: datetime) -
 
 
 def send_id_reminder(session: Session, name: str, email: str) -> None:
-    """이름과 이메일이 모두 일치하는 계정이 있을 때만 해당 이메일로 아이디를 안내합니다.
+    """이름과 이메일이 모두 일치하는 계정이 있을 때만 그 이메일로 로그인 아이디를 안내합니다.
 
-    아이디가 이메일이므로 화면에서 보여줄 정보가 없습니다 — 마스킹하여 표시해도 도메인과 일부 문자가 노출되고,
-    메일함 소유자만 접근할 수 있는 곳으로 전송하면 정보 노출이 없습니다.
+    아이디는 이메일과 별도로 가입할 때 정한 login_id 입니다. 이메일은 계정을 찾는 열쇠이자
+    메일을 받을 주소일 뿐이고, 화면에는 보여주지 않습니다 — 메일함 소유자만 접근할 수 있는
+    곳으로 전송하면 정보 노출이 없습니다.
 
     ponytail: 반복 호출을 제한하지 않았습니다. 이름과 이메일을 모두 맞혀야 메일이 전송되고
     그 메일은 해당 이메일로만 전송됩니다. 같은 주소로 대량 전송이 문제가 되면
@@ -158,7 +159,7 @@ def send_id_reminder(session: Session, name: str, email: str) -> None:
     send_mail(
         member.email,
         FIND_ID_SUBJECT,
-        f"{member.name}님, 이 주소가 Banblit 로그인 아이디입니다.\n\n"
-        f"{member.email}\n\n"
+        f"{member.name}님, 이 아이디가 Banblit 로그인 아이디입니다.\n\n"
+        f"{member.login_id}\n\n"
         "요청한 적이 없다면 이 메일을 버리셔도 됩니다.",
     )

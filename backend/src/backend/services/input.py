@@ -13,6 +13,9 @@ from backend.scheduling.pipeline import TimeInterval, generate_slots
 CLOCK_FORMAT = "%H:%M"
 DATE_FORMAT = "%Y-%m-%d"
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$")
+# 로그인 아이디입니다. 영문 소문자·숫자·밑줄만 허용하고 4~20자입니다. 화면(validate.ts 의
+# loginIdMessage)도 같은 규칙을 참조합니다.
+LOGIN_ID_PATTERN = re.compile(r"^[a-z0-9_]{4,20}$")
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_LENGTH = 20
 # 기수의 최댓값입니다. 1981년이 1기라 2026년은 46기입니다. 54기의 여유를 두되, 오타로 입력된
@@ -43,6 +46,18 @@ def require_email(value: str) -> str:
     if not EMAIL_PATTERN.match(trimmed):
         raise ValueError("이메일 형식이 올바르지 않습니다")
     return trimmed
+
+
+def require_login_id(value: str) -> str:
+    """로그인 아이디입니다. 앞뒤 공백을 제거하고 소문자로 바꾼 뒤 검증합니다.
+
+    화면도 같은 방식(strip + lowercase)으로 정규화한 값을 비교·전송하므로, 대문자를 섞어
+    입력해도 같은 아이디로 로그인할 수 있습니다.
+    """
+    normalized = value.strip().lower()
+    if not LOGIN_ID_PATTERN.match(normalized):
+        raise ValueError("아이디는 영문 소문자·숫자·밑줄(_) 4~20자로 입력해주세요")
+    return normalized
 
 
 def require_student_no(value: str) -> str:

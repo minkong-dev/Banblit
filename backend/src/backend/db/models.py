@@ -152,9 +152,11 @@ class Member(Base):
     """사용자를 나타냅니다. 동명이인이 있을 수 있으므로 이름에 고유 조건을 두지 않습니다.
     ID가 식별자입니다.
 
-    email 과 password_hash 는 로그인 계정 정보입니다. 명단에만 등록되고 아직 가입하지 않은
-    사용자는 email 과 password_hash 가 null 입니다. 가입해야만 로그인 계정이 됩니다.
-    수행 가능한 작업은 member_permission_sets 가 참조하는 permission set(권한 집합)이 결정합니다.
+    login_id 는 로그인에 사용하는 아이디이고, email 은 비밀번호 재설정·아이디 찾기 메일을
+    받는 주소입니다. password_hash 와 함께 로그인 계정 정보를 이룹니다. 명단에만 등록되고
+    아직 가입하지 않은 사용자는 login_id·email·password_hash 가 모두 null 입니다. 가입해야만
+    로그인 계정이 됩니다. 수행 가능한 작업은 member_permission_sets 가 참조하는 permission
+    set(권한 집합)이 결정합니다.
 
     cohort 는 기수(입학 연도를 구분하는 번호)입니다. 연도로 환산하지 않고
     숫자를 그대로 저장합니다.
@@ -176,6 +178,7 @@ class Member(Base):
     student_no: Mapped[str | None] = mapped_column(Text, nullable=True)
     cohort: Mapped[int | None] = mapped_column(nullable=True)
     email: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True)
+    login_id: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (

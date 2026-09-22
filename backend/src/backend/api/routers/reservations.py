@@ -9,6 +9,7 @@ from backend.services.reservation_service import (
     ReservationRow,
     cancel_reservation,
     create_reservation,
+    list_my_reservations,
     list_reservations,
     update_reservation,
 )
@@ -22,6 +23,11 @@ from backend.db.models import Member, Reservation
 from backend.db.pipeline import get_session
 
 router = APIRouter()
+
+
+def current_time() -> datetime:
+    """예약 검증에 쓰는 현재 시각입니다. 테스트가 고정된 시각으로 바꿔 넣을 수 있도록 의존성으로 둡니다."""
+    return datetime.now()
 
 
 def _reservation_out(reservation: Reservation, room_name: str, team_name: str | None, member_name: str) -> ReservationOut:
@@ -69,11 +75,21 @@ def read_room_reservations(
     return _rows_out(rows)
 
 
+@router.get("/reservations/mine", response_model=ReservationsOut)
+def read_my_reservations(
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+    now: datetime = Depends(current_time),
+) -> ReservationsOut:
+    return _rows_out(list_my_reservations(session, requester.id, now))
+
+
 @router.post("/reservations", response_model=ReservationsOut, status_code=201)
 def create_reservation_endpoint(
     req: ReservationCreateIn,
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
+    now: datetime = Depends(current_time),
 ) -> ReservationsOut:
     # 예약자는 요청 body(본문)가 아니라 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 확인한 requester 입니다. 다른 사람 이름으로 예약할 수 없습니다.
     row, room_name, member_name, team_name = create_reservation(
@@ -84,7 +100,7 @@ def create_reservation_endpoint(
         req.name,
         req.starts_at,
         req.ends_at,
-        datetime.now(),
+        now,
     )
     return _rows_out([(row, room_name, team_name, member_name)])
 
@@ -95,6 +111,7 @@ def update_reservation_endpoint(
     req: ReservationUpdateIn,
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
+    now: datetime = Depends(current_time),
 ) -> ReservationsOut:
     # 응답은 새로 만들어진 행입니다. 옛 행은 취소 표시로 남고 목록에 나오지 않습니다.
     row, room_name, member_name, team_name = update_reservation(
@@ -103,7 +120,7 @@ def update_reservation_endpoint(
         requester,
         req.starts_at,
         req.ends_at,
-        datetime.now(),
+        now,
     )
     return _rows_out([(row, room_name, team_name, member_name)])
 

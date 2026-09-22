@@ -103,6 +103,7 @@ def _account_out(session: Session, member: Member) -> AccountOut:
         id=member.id,
         name=member.name,
         email=member.email or "",
+        login_id=member.login_id,
         role="head_manager" if len(permissions) == len(PERMISSIONS) else "member",
         permissions=permissions,  # type: ignore[arg-type]
         permission_sets=account_permission_set_names(session, member.id),
@@ -122,6 +123,7 @@ def signup(
         req.department,
         req.student_no,
         req.email,
+        req.login_id,
         req.password,
         req.cohort,
         req.admin_code,
@@ -136,7 +138,7 @@ def login(
     req: LoginIn, response: Response, session: Session = Depends(get_session)
 ) -> AuthOut:
     try:
-        member = login_account(session, req.email, req.password)
+        member = login_account(session, req.login_id, req.password)
     except ValueError as error:
         raise HTTPException(status_code=401, detail=str(error)) from error
     token = create_session(session, member.id, datetime.now(), keep=req.keep)

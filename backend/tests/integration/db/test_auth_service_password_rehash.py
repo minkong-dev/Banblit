@@ -25,6 +25,7 @@ def _add_member(db_session: Session, *, password_hash: str) -> Member:
     member = Member(
         name="박서연",
         email="seoyeon@example.com",
+        login_id="seoyeon1",
         password_hash=password_hash,
     )
     db_session.add(member)
@@ -35,10 +36,10 @@ def _add_member(db_session: Session, *, password_hash: str) -> Member:
 def test_login_upgrades_a_weak_hash_on_success(db_session: Session) -> None:
     _add_member(db_session, password_hash=_weak_hash("password123"))
 
-    login(db_session, "seoyeon@example.com", "password123")
+    login(db_session, "seoyeon1", "password123")
 
     stored = db_session.scalar(
-        select(Member.password_hash).where(Member.email == "seoyeon@example.com")
+        select(Member.password_hash).where(Member.login_id == "seoyeon1")
     )
     assert stored is not None
     assert stored.startswith("scrypt$16384$")
@@ -48,10 +49,10 @@ def test_login_keeps_a_new_format_hash_unchanged(db_session: Session) -> None:
     new_hash = hash_password("password123")
     _add_member(db_session, password_hash=new_hash)
 
-    login(db_session, "seoyeon@example.com", "password123")
+    login(db_session, "seoyeon1", "password123")
 
     stored = db_session.scalar(
-        select(Member.password_hash).where(Member.email == "seoyeon@example.com")
+        select(Member.password_hash).where(Member.login_id == "seoyeon1")
     )
     assert stored == new_hash
 
@@ -60,7 +61,7 @@ def test_login_rejects_a_wrong_password_for_a_weak_hash(db_session: Session) -> 
     _add_member(db_session, password_hash=_weak_hash("password123"))
 
     try:
-        login(db_session, "seoyeon@example.com", "wrong-password")
+        login(db_session, "seoyeon1", "wrong-password")
         raised = False
     except ValueError:
         raised = True
