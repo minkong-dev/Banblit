@@ -74,19 +74,40 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); min-height: calc(100vh - var(--bar)); }
   .side { position: sticky; top: var(--bar); height: calc(100vh - var(--bar)); align-self: start; overflow: hidden auto; background: var(--card); border-right: 1px solid var(--line); }
   .side .inner { width: 100%; height: 100%; padding: 20px 14px; display: flex; flex-direction: column; gap: 18px; }
-  .side nav { display: flex; flex-direction: column; gap: 2px; }
-  .side nav :is(a, button) { display: flex; align-items: center; text-align: left; padding: 12px; min-height: 46px; color: var(--t1); text-decoration: none; font-size: 15px; font-weight: 500; border-radius: 10px; white-space: nowrap; transition: background-color .15s ease; }
-  .side nav a:hover { background: var(--card-2); }
-  .side nav a[aria-current="page"] { background: var(--brand); color: var(--brand-on); font-weight: 700; }
+  /* 메뉴 항목 모양은 사이드바와 휴대폰 메뉴 판(.drawer)이 같이 씁니다. */
+  :is(.side, .drawer) nav { display: flex; flex-direction: column; gap: 2px; }
+  :is(.side, .drawer) nav :is(a, button) { display: flex; align-items: center; text-align: left; padding: 12px; min-height: 46px; color: var(--t1); text-decoration: none; font-size: 15px; font-weight: 500; border-radius: 10px; white-space: nowrap; transition: background-color .15s ease; }
+  :is(.side, .drawer) nav a:hover { background: var(--card-2); }
+  :is(.side, .drawer) nav a[aria-current="page"] { background: var(--brand); color: var(--brand-on); font-weight: 700; }
   .side nav button:disabled { cursor: default; }
-  .side .cap { font-size: 12px; color: var(--t3); padding: 0 12px; }
-  .side .sep { border-top: 1px solid var(--line); }
+  :is(.side, .drawer) .cap { font-size: 12px; color: var(--t3); padding: 0 12px; }
+  :is(.side, .drawer) .sep { border-top: 1px solid var(--line); }
+
+  /* 휴대폰 메뉴 판입니다(Material Design 모달 드로어). 왼쪽에서 밀려 나오고 뒤는 어두워집니다.
+     popover 의 기본 배치(화면 가운데)를 왼쪽 끝 세로 전체로 바꿉니다. */
+  .menubtn { display: none; }
+  .drawer {
+    position: fixed; inset: 0 auto 0 0; margin: 0;
+    width: min(300px, 84vw); height: 100dvh; max-height: none;
+    padding: 64px 14px 20px; border: none; border-radius: 0 20px 20px 0;
+    display: flex; flex-direction: column; gap: 18px; overflow-y: auto;
+    background: var(--card); color: var(--t1); box-shadow: var(--shadow-up);
+    transform: translateX(-100%);
+    transition: transform .22s cubic-bezier(.22,1,.36,1), overlay .22s allow-discrete, display .22s allow-discrete;
+  }
+  .drawer:not(:popover-open) { display: none; }
+  .drawer:popover-open { transform: none; }
+  @starting-style { .drawer:popover-open { transform: translateX(-100%); } }
+  .drawer::backdrop { background: rgba(10,14,20,.45); }
+  .drawer .x { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px; color: var(--t2); }
+  .drawer .x svg { width: 22px; height: 22px; }
 
   /* 본문입니다. 탭 한 줄이 위, 본문과 오른쪽 칸이 아래입니다. 사이드바를 뺀 폭을 전부 씁니다.
-     높이는 기본이 창 높이입니다. 목록·달력처럼 창 높이에 맞춰 줄 수를 정하는 화면이 이 값을 씁니다.
-     내용이 늘어나는 화면(글쓰기·상세, 카드 여러 장)은 각 화면 CSS 가 height:auto 로 풀어 페이지 전체가 스크롤합니다. */
+     높이는 내용만큼입니다. 창 바닥까지 채우는 화면은 대시보드 하나이고 scheduler.css 가 따로 정합니다(사용자 결정).
+     목록은 한 쪽에 10줄(lib/paging 의 PER_PAGE)이고 쪽 넘김 줄은 목록 바로 아래에 옵니다. */
   .page {
-    height: calc(100vh - var(--bar)); padding: 18px; min-height: 0;
+    /* align-self: start — .shell 이 창 높이를 최소 높이로 가지므로, 기본값(stretch)이면 .page 가 창 바닥까지 늘어납니다. */
+    padding: 18px; min-height: 0; align-self: start;
     display: grid; grid-template-columns: minmax(0, 1fr) clamp(280px, 24%, 400px);
     grid-template-rows: auto minmax(0, 1fr); column-gap: 18px;
   }
@@ -162,14 +183,17 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
     /* 가로 줄에서는 구분선과 "관리자 메뉴" 머리글이 자리만 차지합니다. 항목은 그대로 이어 붙입니다. */
     .side .sep { border-top: none; border-left: 1px solid var(--line); align-self: stretch; }
     .side .cap { display: none; }
-    .page { height: calc(100vh - var(--bar) - var(--nav)); }
   }
 
   /* 좁음(휴대폰)입니다. 동아리 서비스의 접속은 대부분 휴대폰입니다. 본문 높이를 창에 묶지 않고 페이지 전체가
      스크롤합니다. 창 높이에 묶으면 내용이 화면보다 길 때 주소창이 사라지지 않아 세로 공간이 더 줄어듭니다. */
   @media (max-width: 767px) {
-    /* 상단바가 56px 로 줄어듭니다. 테두리 1px 을 더합니다. */
-    & { --bar: 57px; }
+    /* 상단바가 56px 로 줄어듭니다. 테두리 1px 을 더합니다. 사이드 메뉴 줄은 숨기고 햄버거 버튼의 메뉴 판으로 대신하므로
+       가로 메뉴 줄 높이(--nav)는 0 입니다. */
+    & { --bar: 57px; --nav: 0px; }
+    .side { display: none; }
+    .menubtn { display: grid; place-items: center; width: 44px; height: 44px; margin-left: -10px; border-radius: 10px; color: var(--t1); }
+    .menubtn svg { width: 24px; height: 24px; }
     .page {
       height: auto; padding: 14px 16px;
       grid-template-columns: minmax(0, 1fr);
@@ -325,7 +349,9 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 .pager button[aria-current="page"] { background: var(--brand); color: var(--brand-on); font-weight: 700; }
 .pager button:disabled { opacity: .35; cursor: default; }
 
+/* 목록 아래 버튼(+ 새 팀 등)은 좁은 화면에서도 한 줄입니다. */
 .listfoot .new {
+  white-space: nowrap;
   grid-column: 3; justify-self: end;
   min-height: 44px; padding: 11px 18px; border-radius: 10px;
   background: var(--brand); color: var(--brand-on);

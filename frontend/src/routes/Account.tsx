@@ -21,6 +21,7 @@ import {
   cohortMessage,
   emailMessage,
   findId,
+  loginIdMessage,
   logIn,
   passwordMessage,
   signupPasswordMessage,
@@ -38,7 +39,7 @@ import {
 const HEADS: Record<string, { title: string; sub: string }> = {
   "/login": { title: "로그인", sub: "유일무이 버스킹 동아리 여섯줄 안에서." },
   "/signup": { title: "회원가입", sub: "가입에 필요한 정보를 작성해주세요." },
-  "/find-id": { title: "아이디 찾기", sub: "가입한 이메일로 찾기" },
+  "/find-id": { title: "아이디 찾기", sub: "이름과 가입한 이메일을 입력하면 그 이메일로 아이디를 보내드려요" },
   "/find-password": { title: "비밀번호 찾기", sub: "가입한 이메일로 비밀번호 찾기" },
   "/reset-password": { title: "비밀번호 재설정", sub: "대소문자, 숫자, 특수기호 포함 8~20자" },
 };
@@ -111,13 +112,13 @@ export function SignIn() {
   const navigate = useNavigate();
   const { errors, onSubmit, isPending } = useFormAction(
     (data) => ({
-      mail: emailMessage(fieldText(data, "mail").trim()),
+      loginId: loginIdMessage(fieldText(data, "loginId").trim()),
       pw: passwordMessage(fieldText(data, "pw")),
     }),
     async (data) => {
       try {
         await logIn(
-          fieldText(data, "mail").trim(),
+          fieldText(data, "loginId").trim(),
           fieldText(data, "pw"),
           // 체크박스는 켜졌을 때만 값을 보냅니다. 켜지지 않았으면 빈 문자열입니다.
           fieldText(data, "keep") !== "",
@@ -132,8 +133,8 @@ export function SignIn() {
 
   return (
     <form aria-label="로그인" noValidate onSubmit={onSubmit}>
-      <Field name="mail" label="이메일" type="email" inputMode="email"
-        autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.mail} />
+      <Field name="loginId" label="아이디" type="text"
+        autoComplete="username" placeholder="아이디를 입력해주세요" error={errors.loginId} />
       <Field name="pw" label="비밀번호" type="password"
         autoComplete="current-password" placeholder="비밀번호를 입력해주세요" error={errors.pw} />
       <div className="row">
@@ -171,6 +172,7 @@ export function SignUp() {
     (data) => {
       const password = fieldText(data, "pw2");
       return {
+        loginId: loginIdMessage(fieldText(data, "loginId").trim()),
         nm: fieldText(data, "nm").trim() ? "" : "이름을 입력해 주세요.",
         dept: fieldText(data, "dept").trim() ? "" : "학과를 입력해 주세요.",
         sno: studentNoMessage(fieldText(data, "sno")),
@@ -184,6 +186,7 @@ export function SignUp() {
       const adminCode = fieldText(data, "admincode").trim();
       try {
         const account = await signUp({
+          login_id: fieldText(data, "loginId").trim(),
           name: fieldText(data, "nm").trim(),
           department: fieldText(data, "dept").trim(),
           student_no: fieldText(data, "sno").trim(),
@@ -203,6 +206,8 @@ export function SignUp() {
 
   return (
     <form aria-label="회원가입" noValidate onSubmit={onSubmit}>
+      <Field name="loginId" label="아이디" type="text"
+        autoComplete="username" placeholder="영문 소문자·숫자·밑줄(_) 4~20자" error={errors.loginId} />
       <Field name="nm" label="이름" type="text"
         autoComplete="name" placeholder="이름을 입력해주세요." error={errors.nm} />
       <Field name="dept" label="학과" type="text"
@@ -246,7 +251,7 @@ export function FindId() {
     async (data) => {
       try {
         await findId(fieldText(data, "fidName").trim(), fieldText(data, "fidMail").trim());
-        say(MAIL_SENT);
+        say("입력하신 이메일로 아이디를 보냈어요 · 전송된 메일을 확인해주세요");
       } catch (error) {
         say(reason(error));
       }

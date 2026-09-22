@@ -7,9 +7,12 @@ import { E2E_ACCOUNT, SIGNED_OUT } from "./helpers";
 // 가입 rate limit 이 1시간에 5번이고 global-setup 이 2번 쓰므로, 이 파일의 가입 요청은 3번을 넘기지 않습니다(지금 2번).
 test.use({ storageState: SIGNED_OUT });
 
-/** 가입 form 을 채웁니다. 이름·학과·학번·기수 조합이 겹치면 서버가 거절하므로 이름에 stamp 를 붙여 구분합니다. */
+/** 가입 form 을 채웁니다. 이름·학과·학번·기수 조합이 겹치면 서버가 거절하므로 이름에 stamp 를 붙여 구분합니다.
+ *  아이디도 호출마다 겹치지 않아야 하므로 stamp 에서 파생시킵니다(영문 소문자·숫자만, 4~20자). */
 async function fillSignup(page: Page, name: string, email: string): Promise<void> {
+  const loginId = `e2e${Date.now()}`.slice(0, 20);
   await page.goto("/signup");
+  await page.getByLabel("아이디").fill(loginId);
   await page.getByLabel("이름").fill(name);
   await page.getByLabel("학과").fill(E2E_ACCOUNT.department);
   await page.getByLabel("학번").fill(String(Date.now()).slice(-8));
@@ -44,13 +47,22 @@ test("가입한 이메일로 다시 가입하면 서버가 거절한다", async 
 
 test("틀린 비밀번호로 로그인하면 거절 문구가 뜬다", async ({ page }) => {
   await page.goto("/login");
-  await page.getByLabel("이메일").fill(E2E_ACCOUNT.email);
+  await page.getByLabel("아이디").fill(E2E_ACCOUNT.login_id);
   // "비밀번호 보기" 버튼도 label 에 걸리므로 exact 로 입력칸만 고릅니다.
   await page.getByLabel("비밀번호", { exact: true }).fill("Wrong-Password1!");
   await page.getByRole("button", { name: "로그인", exact: true }).click();
 
-  await expect(page.getByText("이메일 또는 비밀번호가 올바르지 않습니다")).toBeVisible();
+  await expect(page.getByText("아이디 또는 비밀번호가 올바르지 않습니다")).toBeVisible();
   await expect(page).toHaveURL(/\/login$/);
+});
+
+test("아이디로 로그인하면 스케줄러로 들어간다", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByLabel("아이디").fill(E2E_ACCOUNT.login_id);
+  await page.getByLabel("비밀번호", { exact: true }).fill(E2E_ACCOUNT.password);
+  await page.getByRole("button", { name: "로그인", exact: true }).click();
+
+  await expect(page).toHaveURL(/\/scheduler$/);
 });
 
 // 크롤러는 JavaScript 를 실행하지 않고 index.html 만 읽습니다. 링크를 붙여넣었을 때 보이는

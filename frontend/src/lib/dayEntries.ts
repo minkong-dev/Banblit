@@ -235,6 +235,21 @@ export function bookedByDay(
   return byDay;
 }
 
+/** 내가 잡은 예약 전부입니다(서버 /reservations/mine 은 아직 끝나지 않은 것만 줍니다). 예약 모달 오른쪽 "내 예약" 목록이
+ *  선택한 날짜와 관계없이 이 목록을 나열합니다. 여러 날짜가 섞이므로 day 를 붙여 줄마다 날짜를 적습니다(offWhenLabel). */
+export function allBookedEntries(rows: Reservation[], teams: DayTeam[], openHour: number): Entry[] {
+  return rows.map((booking) => ({
+    kind: "book" as const,
+    team: teams.find((item) => item.id === booking.team_id)?.key ?? null,
+    room: booking.room,
+    who: booking.name ?? booking.team ?? booking.member,
+    a: slotIndex(booking.start, openHour),
+    b: slotIndex(booking.end, openHour),
+    bookingId: booking.id,
+    day: dayOf(booking.start),
+  }));
+}
+
 /** 팀 하나의 자리를 "3/5명"으로 표시합니다. 목록에 없는 팀이면 빈 문자열을 반환합니다. */
 export function memberCountLabel(allTeams: Team[], teamId: number): string {
   const found = allTeams.find((team) => team.id === teamId);

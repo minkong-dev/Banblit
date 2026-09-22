@@ -136,3 +136,69 @@ test("좁은 창의 설정 화면에서 탭이 한 줄이고 본문 카드가 �
   expect(m.railTop, "오른쪽 칸이 본문 아래").toBeGreaterThanOrEqual(m.mainBottom);
   expect(m.overflow, "화면 가로 잘림 없음").toBeLessThanOrEqual(1);
 });
+
+// 휴대폰(767px 이하)에서는 사이드 메뉴 줄을 숨기고 상단바의 햄버거 버튼으로 메뉴 판을 엽니다(Material Design 모달 드로어).
+// 메뉴를 고르거나 Esc 를 누르면 닫힙니다. 탭은 상단바 바로 아래에 옵니다.
+test("휴대폰에서는 햄버거 버튼으로 메뉴를 열고, 메뉴를 고르거나 Esc 를 누르면 닫힌다", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto("/scheduler");
+  await expect(page.locator(".side")).toBeHidden();
+  const gap = await page.evaluate(() =>
+    document.querySelector(".tabs")!.getBoundingClientRect().top - document.querySelector("header.top")!.getBoundingClientRect().bottom);
+  expect(gap, "탭이 상단바 바로 아래").toBeLessThanOrEqual(24);
+
+  const open = page.getByRole("button", { name: "메뉴 열기" });
+  await open.click();
+  const drawer = page.getByRole("dialog", { name: "메뉴" });
+  await expect(drawer).toBeVisible();
+  await drawer.getByRole("link", { name: "공지사항" }).click();
+  await expect(page).toHaveURL(/\/notices$/);
+  await expect(drawer).toBeHidden();
+
+  await open.click();
+  await expect(drawer).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(drawer).toBeHidden();
+});
+
+test("넓은 창에서는 햄버거 버튼이 없고 사이드바가 보인다", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/scheduler");
+  await expect(page.getByRole("button", { name: "메뉴 열기" })).toBeHidden();
+  await expect(page.locator(".side")).toBeVisible();
+});
+
+// 휴대폰에서도 목록은 화면 높이만큼 줄을 채웁니다. 페이지 높이를 풀어 두면 줄 수 계산이 목록 상자를 0 에 가깝게 재서
+// 한 쪽에 1줄만 나옵니다. 목록 아래 버튼("+ 새 팀")은 한 줄이어야 합니다.
+test("휴대폰의 목록은 한 쪽에 여러 줄이 나오고 버튼이 꺾이지 않는다", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/teams");
+  await expect(page.locator(".rows li").first()).toBeVisible();
+  await expect.poll(() => page.locator(".rows li").count()).toBeGreaterThanOrEqual(2);
+  const button = await page.getByRole("button", { name: "+ 새 팀" }).boundingBox();
+  expect(button?.height ?? 0, "+ 새 팀 버튼 한 줄").toBeLessThan(50);
+});
+
+// 휴대폰에서 집중합주 기간 띠가 줄바꿈되어도 시계 아이콘은 글자 크기를 유지합니다.
+test("휴대폰의 집중합주 기간 띠 아이콘이 커지지 않는다", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/scheduler");
+  const icon = await page.locator(".band svg").boundingBox();
+  expect(icon?.width ?? 0).toBeLessThanOrEqual(16);
+});
+
+// 대시보드만 창 바닥까지 채우고, 나머지 화면의 카드는 내용 높이만큼만 씁니다. 목록은 한 쪽에 10줄이고
+// 쪽 넘김 줄은 목록 바로 아래에 옵니다.
+test("대시보드만 창 바닥까지 채우고 나머지 화면은 내용 높이만큼 쓴다", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  const gapBelow = (selector: string) => page.evaluate((sel) =>
+    innerHeight - document.querySelector(sel)!.getBoundingClientRect().bottom, selector);
+  for (const path of ["/teams", "/notices", "/settings"]) {
+    await page.goto(path);
+    await expect(page.locator(".main .card").first()).toBeVisible();
+    expect(await gapBelow(".main .card"), path).toBeGreaterThan(200);
+  }
+  await page.goto("/scheduler");
+  await expect(page.locator(".page > .card")).toBeVisible();
+  expect(await gapBelow(".page > .card"), "/scheduler").toBeLessThan(40);
+});

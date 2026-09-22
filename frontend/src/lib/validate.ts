@@ -2,6 +2,8 @@
 // 오류 메시지가 화면에 표시되는 빨간 텍스트입니다.
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// 로그인 아이디입니다. 서버(input.py 의 LOGIN_ID_PATTERN)와 같은 규칙입니다.
+const LOGIN_ID = /^[a-z0-9_]{4,20}$/;
 const PASSWORD_MIN = 8;
 const STRONG_MIN = 8;
 const STRONG_MAX = 20;
@@ -10,6 +12,16 @@ export function emailMessage(value: string): string {
   // @ 기호 앞뒤에 공백이 없고 마지막 점 뒤가 두 글자 이상이어야 합니다.
   if (!value) return "이메일을 입력해 주세요.";
   return EMAIL.test(value) ? "" : "이메일 형식이 맞는지 확인해주세요.";
+}
+
+/** 로그인 아이디입니다. 앞뒤 공백을 지우고 소문자로 바꾼 값으로 검사합니다 — 서버도 같은 방식으로
+ *  정규화한 뒤 저장·비교합니다. 서버의 같은 규칙은 input.py 의 require_login_id() 입니다. */
+export function loginIdMessage(value: string): string {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return "아이디를 입력해 주세요.";
+  return LOGIN_ID.test(normalized)
+    ? ""
+    : "아이디는 영문 소문자·숫자·밑줄(_) 4~20자로 입력해주세요";
 }
 
 /** 로그인 입력 필드입니다. 강화된 규칙을 적용하지 않습니다. 이 함수에서 규칙을 강화하면 규칙 변경 전에 생성한 계정이 로그인할 수 없게 됩니다. 유효성은 서버가 판단합니다. */

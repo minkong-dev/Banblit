@@ -332,6 +332,12 @@ type ReservationForm = {
 };
 
 /** 예약 한 건을 취소합니다. 서버가 구간 한 행으로 들고 있어 요청도 한 번입니다. */
+/** 내가 잡은 예약 중 아직 끝나지 않은 것 전부입니다. 모든 합주실에 걸칩니다. */
+export async function loadMyBookings(): Promise<Reservation[]> {
+  const body = await getJSON<{ reservations: Reservation[] }>("/reservations/mine");
+  return body.reservations;
+}
+
 export async function cancelBooking(reservationId: number): Promise<void> {
   await getJSON(`/reservations/${reservationId}`, { method: "DELETE" });
 }
@@ -394,6 +400,7 @@ export { hoursLabel };
 export {
   cohortMessage,
   emailMessage,
+  loginIdMessage,
   passwordMessage,
   signupPasswordMessage,
   strongPasswordMessage,
@@ -406,6 +413,7 @@ type SignUpForm = {
   department: string;
   student_no: string;
   email: string;
+  login_id: string;
   password: string;
   cohort: number;
   /** 관리자코드입니다. 환경변수의 코드와 같으면 권한 항목을 모두 받습니다.
@@ -425,14 +433,14 @@ export async function signUp(form: SignUpForm): Promise<Account> {
 }
 
 export async function logIn(
-  email: string,
+  loginId: string,
   password: string,
   /** 로그인 상태 유지 여부입니다. false 로 설정하면 브라우저를 닫을 때 로그아웃됩니다. session 의 유효 기간은 서버가 결정합니다. */
   keep: boolean,
 ): Promise<Account> {
   const { account } = await getJSON<{ account: Account }>("/login", {
     method: "POST",
-    body: JSON.stringify({ email, password, keep }),
+    body: JSON.stringify({ login_id: loginId, password, keep }),
   });
   return account;
 }

@@ -5,7 +5,8 @@ body[data-page="scheduler"] {
   /* ===== 본문 =====
      캘린더와 우측 목록은 같은 줄에 배치되어, 윗선과 높이가 정확히 같습니다.
      탭은 캘린더 위 칸에만 배치되어 우측 목록을 밀지 않습니다.
-     창이 충분히 높으면 달력이 남는 높이를 채우고, 낮으면 달력 안쪽이 아니라 페이지 전체가 스크롤합니다. */
+     창 바닥까지 채우는 화면은 대시보드 하나입니다(사용자 결정). 창이 충분히 높으면 달력이 남는 높이를 채우고,
+     낮으면 달력 안쪽이 아니라 페이지 전체가 스크롤합니다. */
   .page { grid-template-rows: auto auto minmax(0, 1fr); height: auto; min-height: calc(100vh - var(--bar) - var(--nav, 0px)); }
   .tabs { flex-wrap: nowrap; }
   .cut { grid-column: 1 / -1; grid-row: 2; }
@@ -92,6 +93,8 @@ body[data-page="scheduler"] {
 
   .band { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; background: var(--brand); color: var(--brand-on); border-radius: 999px; font-size: 12.5px; white-space: nowrap; }
   .band b { font-weight: 700; }
+  /* 아이콘은 글자 크기에 맞춰 고정합니다. 띠가 줄바꿈되면 크기가 없는 svg 가 남는 폭만큼 커집니다. */
+  .band svg { width: 14px; height: 14px; flex: none; }
 
   /* 오늘 칸입니다. 달 보기의 칸과 주 보기의 요일 머리글이 같은 표시를 씁니다.
      채움이 아니라 테두리로 표시해, 그날에 이미 붙어 있는 색(예약·배정)을 가리지 않습니다. */
@@ -110,7 +113,9 @@ body[data-page="scheduler"] {
   .wh:last-child { border-right: none; }
   .wh b { display: block; font-size: 17px; font-weight: 700; color: var(--t1); margin-top: 2px; }
   .wh.sun, .wh.sun b { color: var(--red); }
-  .wt { font-size: 11.5px; color: var(--t3); text-align: right; padding-right: 9px; transform: translateY(-8px); }
+  /* 시각 글자는 칸 윗선 바로 아래, 칸 안쪽에 둡니다(Outlook 달력 방식). 윗선에 걸치도록 위로 올리면 맨 위 칸의 글자가
+     고정된 요일 머리글(.wh) 아래로 들어가 가려집니다. */
+  .wt { font-size: 11.5px; color: var(--t3); text-align: right; padding: 4px 9px 0 0; }
   .wcell { border-top: 1px solid var(--line); border-right: 1px solid var(--line); position: relative; }
   .wcell:nth-child(8n) { border-right: none; }
   /* --offset 은 시작 시각이 줄 안에서 차지하는 비율(0~1)입니다. 18:10 시작이면 18시 줄에서 1/6 만큼 내려 그립니다. */

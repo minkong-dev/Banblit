@@ -6,7 +6,6 @@ import { Pager } from "../components/Pager";
 import { Modal, Stepper } from "../components/Modal";
 import { MemberSearch } from "../components/MemberSearch";
 import { PencilIcon, SearchIcon, TrashIcon } from "../components/icons";
-import { useFitCount } from "../components/hooks";
 import { useMe, useTeams } from "../components/queries";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { say } from "../lib/toast";
@@ -472,9 +471,8 @@ export function Teams() {
   // 목록을 렌더링할 수 없는 경우입니다. 아직 데이터를 받지 못했거나, 오류가 발생했거나, 데이터가 비어 있을 때입니다.
   const noList = state.kind !== "ready" || list.length === 0;
 
-  // 한 페이지에 표시할 행 개수는 컨테이너 높이에 따라 결정됩니다. 목록은 스크롤하지 않고 페이지로 넘깁니다.
-  const [box, perPage] = useFitCount(64);
-  const pages = pageCount(list.length, perPage);
+  // 한 쪽에 PER_PAGE(10)개씩 보여 줍니다(lib/paging). 쪽 넘김 줄은 목록 바로 아래에 옵니다.
+  const pages = pageCount(list.length);
   const shownPage = clampPage(page, pages);
   const opened = list.find((team) => team.id === openId) ?? null;
   const others = (team: Team | null): Team[] => allTeams.filter((one) => one.id !== team?.id);
@@ -487,11 +485,11 @@ export function Teams() {
 
           {/* 데이터가 비어 있거나 로딩 중이어도 컨테이너는 그대로 유지합니다. 컨테이너 높이를 측정하여 한 페이지의 행 수를 결정하므로,
               컨테이너가 사라지면 측정할 대상이 없어집니다. */}
-          <ul className="rows" ref={box}>
+          <ul className="rows">
             {noList ? (
               <li className="empty">{stateText(state, manages ? "아직 생성된 팀이 없어요." : "소속된 팀이 없어요.")}</li>
             ) : (
-              pageSlice(list, shownPage, perPage).map((team) => (
+              pageSlice(list, shownPage).map((team) => (
                 <li key={team.id}>
                   <TeamRow
                     team={team}

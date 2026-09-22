@@ -36,7 +36,7 @@ function hourText(hour: number): string {
 }
 
 export function DayDialog({
-  dayKey, tab, teams, entries, myOff, openHour, closeHour, slotCount, fixed, inFocus, ensemble, canEditEnsemble,
+  dayKey, tab, teams, entries, myOff, myBookings, openHour, closeHour, slotCount, fixed, inFocus, ensemble, canEditEnsemble,
   memberId, myName, rooms, onSaved, onClose,
 }: {
   /** 선택한 날짜의이 전체합주 날짜면 그 시각입니다. 아니면 null 입니다. */
@@ -49,6 +49,8 @@ export function DayDialog({
   entries: Entry[];
   /** 로그인한 사용자가 등록한 불가능 일정 전부입니다(lib/dayEntries 의 allOffEntries). 선택한 날짜의의 항목만이 아닙니다. */
   myOff: Entry[];
+  /** 로그인한 사용자가 잡은 예약 중 아직 끝나지 않은 것 전부입니다(lib/dayEntries 의 allBookedEntries). 선택한 날짜의 항목만이 아닙니다. */
+  myBookings: Entry[];
   openHour: number;
   closeHour: number;
   slotCount: number;
@@ -100,8 +102,8 @@ export function DayDialog({
       || (entry.team !== null && teams.some((t) => t.key === entry.team && t.mine)),
   );
   // 오른쪽 목록입니다. 내 일정 탭은 선택한 날짜의의 항목이 아니라 내가 등록한 불가능 일정 전부(myOff)를 나열합니다.
-  // 예약 탭은 선택한 날짜의 내 예약(bookingId 가 있는 항목)만 나열합니다. 다른 사용자의 예약과 서버가 배정한 항목에는 bookingId 가 없습니다.
-  const removable = tab === "me" ? myOff : entries.filter((entry) => entry.bookingId !== undefined);
+  // 예약 탭도 선택한 날짜가 아니라 내가 잡은 예약 전부(myBookings)를 나열합니다. 끝난 예약은 서버가 빼고 줍니다.
+  const removable = tab === "me" ? myOff : myBookings;
 
   const roomsLabel = [...new Set(booked.map((entry) => entry.room).filter(Boolean))].join(" · ");
 
@@ -121,7 +123,7 @@ export function DayDialog({
   /** 등록한 항목 하나를 삭제합니다. 예약은 번호 하나로 통째로 취소하고, 불가능 일정은 그 행의 id 로 삭제합니다. */
   const removeEntry = async (entry: Entry) => {
     if (memberId === null) return;
-    // 내 일정 탭의 목록은 여러 날짜의 항목을 나열하므로 확인 문구에 날짜를 함께 적습니다. 예약 항목에는 날짜가 없어 시각만 적습니다.
+    // 두 목록 모두 여러 날짜의 항목을 나열하므로 확인 문구에 날짜를 함께 적습니다.
     const when = `${offWhenLabel(entry)} ${label(entry.a)}–${endLabel(entry.b)}`.trim();
     const bookingId = entry.bookingId;
     const booking = bookingId !== undefined;
@@ -372,7 +374,7 @@ export function DayDialog({
       <section className="pane">
         <MyEntriesList
           title={tab === "me" ? "불가능 일정 목록" : "내 예약"}
-          empty={tab === "me" ? "등록한 불가능 일정이 없어요." : "선택한 날짜의 내 예약이 없어요."}
+          empty={tab === "me" ? "등록한 불가능 일정이 없어요." : "잡은 예약이 없어요."}
           entries={removable}
           teams={teams}
           onRemove={(entry) => { void removeEntry(entry); }}

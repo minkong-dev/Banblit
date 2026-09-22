@@ -149,7 +149,9 @@ export function WeekView({
   useEffect(() => {
     const row = box.current?.querySelector<HTMLElement>(`[data-hour="${openHour}"]`);
     if (!box.current || !row) return;
-    box.current.scrollTop += row.getBoundingClientRect().top - box.current.getBoundingClientRect().top;
+    // 요일 머리글은 스크롤해도 맨 위에 고정되므로, 그 높이만큼 덜 내려야 여는 시각 줄이 머리글 바로 아래에 보입니다.
+    const header = box.current.querySelector(".wh")?.getBoundingClientRect().height ?? 0;
+    box.current.scrollTop += row.getBoundingClientRect().top - box.current.getBoundingClientRect().top - header;
   }, [firstDay, openHour, tab]);
 
   return (

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   emailMessage,
+  loginIdMessage,
   passwordMessage,
   signupPasswordMessage,
   strongPasswordMessage,
@@ -72,6 +73,29 @@ describe("strongPasswordMessage — 재설정", () => {
   ])("%s 는 막는다", (given, expected) => {
     expect(strongPasswordMessage(given)).toBe(expected);
   });
+});
+
+describe("loginIdMessage", () => {
+  it("영문 소문자·숫자·밑줄 4~20자면 통과한다", () => {
+    expect(loginIdMessage("seoyeon1")).toBe("");
+  });
+
+  it("대문자가 섞여도 정규화해서 통과한다", () => {
+    expect(loginIdMessage("Seoyeon1")).toBe("");
+  });
+
+  it("비었으면 넣어 달라고 한다", () => {
+    expect(loginIdMessage("  ")).toBe("아이디를 입력해 주세요.");
+  });
+
+  it.each(["ab", "a".repeat(21), "seoyeon!", "seoyeon 1"])(
+    "규칙에 맞지 않으면 막는다 — %s",
+    (bad) => {
+      expect(loginIdMessage(bad)).toBe(
+        "아이디는 영문 소문자·숫자·밑줄(_) 4~20자로 입력해주세요",
+      );
+    },
+  );
 });
 
 describe("studentNoMessage", () => {

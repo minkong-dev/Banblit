@@ -65,8 +65,8 @@ export function openHoursMessage(
   opens: string, closes: string, slotMinutes: number = DEFAULT_SLOT_MINUTES,
 ): string {
   // opens·closes를 받아, 격자에 맞지 않거나 순서가 뒤집혔으면 그 메시지를 반환합니다.
-  if (!opens) return "여는 시각을 입력해 주세요.";
-  if (!closes) return "닫는 시각을 입력해 주세요.";
+  if (!opens) return "개방 시간을 입력해 주세요.";
+  if (!closes) return "마감 시각을 입력해 주세요.";
   return gridMessage(minutesOf(opens), minutesOf(closes), slotMinutes);
 }
 

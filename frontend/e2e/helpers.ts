@@ -13,6 +13,7 @@ export const E2E_ACCOUNT = {
   department: "검사학과",
   student_no: "20260915",
   email: "e2e@banblit.test",
+  login_id: "e2eadmin",
   password: "E2e-Password1!",
   cohort: 46,
 } as const;
@@ -24,6 +25,7 @@ export const E2E_MEMBER = {
   name: "E2E 멤버",
   student_no: "20260916",
   email: "e2e-member@banblit.test",
+  login_id: "e2emember",
 } as const;
 
 /** E2E 계정과 E2E_MEMBER 가 소속된 팀입니다. */
