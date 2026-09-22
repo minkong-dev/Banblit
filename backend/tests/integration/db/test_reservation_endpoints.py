@@ -165,7 +165,7 @@ def test_a_reservation_that_partly_overlaps_another_is_refused(
     )
 
     assert response.status_code == 422
-    assert "이미" in response.json()["detail"]
+    assert "예약이 불가능합니다" in response.json()["detail"]
 
 
 def test_a_reservation_may_start_when_another_ends(
@@ -308,7 +308,7 @@ def test_reservation_creation_rejects_a_slot_already_taken(
     )
 
     assert second.status_code == 422
-    assert "이미" in second.json()["detail"]
+    assert "예약이 불가능합니다" in second.json()["detail"]
     # slot(1시간 단위 시간 칸)이 겹쳐서 거절되었으므로 뒤의 slot 도 생성되지 않아야 합니다. 전체가 rollback 됩니다.
     remaining = api_client.get(
         f"/rooms/{room.id}/reservations",
@@ -553,7 +553,7 @@ def test_reservation_slot_race_at_commit_time_is_translated_not_500(
         create_reservation(
             session_a, room.id, member, None, None, slot_start, slot_end, created_at
         )
-        with pytest.raises(ValueError, match="이미"):
+        with pytest.raises(ValueError, match="예약이 불가능합니다"):
             create_reservation(
                 session_b, room.id, member, None, None, slot_start, slot_end, created_at
             )
@@ -631,7 +631,7 @@ def test_moving_a_reservation_slot_onto_a_taken_time_keeps_the_original(
     )
 
     assert response.status_code == 422
-    assert "이미" in response.json()["detail"]
+    assert "예약이 불가능합니다" in response.json()["detail"]
     listed = api_client.get(
         f"/rooms/{room.id}/reservations",
         params={"from": OPEN_DAY, "to": OPEN_DAY},
@@ -912,3 +912,80 @@ def test_a_reservation_cannot_be_moved_into_the_ensemble_time(
 
     assert moved.status_code == 422
     assert "전체합주" in moved.json()["detail"]
+
+
+def _now_is(moment: datetime) -> None:
+    """예약 endpoint 가 쓰는 현재 시각을 moment 로 둡니다. api_client 가 끝날 때 원래대로 돌아갑니다."""
+    from backend.api.app import app
+    from backend.api.routers.reservations import current_time
+
+    app.dependency_overrides[current_time] = lambda: moment
+
+
+def test_a_reservation_that_starts_in_the_past_is_refused(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, owner = account("이도현", "dohyun@example.com")
+    room = _room(db_session)
+    _open_period(db_session)
+    db_session.commit()
+    _now_is(datetime(2026, 9, 14, 19, 30))
+
+    def book(start: str, end: str) -> int:
+        return api_client.post(
+            "/reservations",
+            json={"room_id": room.id, "starts_at": f"{OPEN_DAY}T{start}", "ends_at": f"{OPEN_DAY}T{end}"},
+            cookies=owner,
+        ).status_code
+
+    # 이미 시작한 칸(19:00)과 끝난 칸(18:00)은 거절하고, 아직 오지 않은 칸(20:00)은 받습니다.
+    assert book("18:00:00", "19:00:00") == 422
+    assert book("19:00:00", "20:00:00") == 422
+    assert book("20:00:00", "21:00:00") == 201
+
+
+def test_moving_a_reservation_into_the_past_is_refused(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, owner = account("이도현", "dohyun@example.com")
+    room = _room(db_session)
+    _open_period(db_session)
+    db_session.commit()
+    created = api_client.post(
+        "/reservations",
+        json={"room_id": room.id, "starts_at": "2026-09-16T18:00:00", "ends_at": "2026-09-16T19:00:00"},
+        cookies=owner,
+    ).json()["reservations"][0]
+    _now_is(datetime(2026, 9, 15, 12, 0))
+
+    response = api_client.patch(
+        f"/reservations/{created['id']}",
+        json={"starts_at": "2026-09-14T18:00:00", "ends_at": "2026-09-14T19:00:00"},
+        cookies=owner,
+    )
+
+    assert response.status_code == 422
+
+
+def test_my_reservations_list_only_my_reservations_that_have_not_ended(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, owner = account("이도현", "dohyun@example.com")
+    _, other = account("김민지", "minji@example.com")
+    room = _room(db_session)
+    _open_period(db_session)
+    db_session.commit()
+    for cookies, day in ((owner, "2026-09-14"), (owner, "2026-09-16"), (other, "2026-09-17")):
+        api_client.post(
+            "/reservations",
+            json={"room_id": room.id, "starts_at": f"{day}T18:00:00", "ends_at": f"{day}T19:00:00"},
+            cookies=cookies,
+        )
+    _now_is(datetime(2026, 9, 15, 12, 0))
+
+    assert api_client.get("/reservations/mine").status_code == 401
+    rows = api_client.get("/reservations/mine", cookies=owner).json()["reservations"]
+
+    # 끝난 예약(14일)과 다른 사람의 예약(17일)은 빠집니다.
+    assert [row["start"] for row in rows] == ["2026-09-16T18:00:00"]
+    assert rows[0]["room"] == "1번방"

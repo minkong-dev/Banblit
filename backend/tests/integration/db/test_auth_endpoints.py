@@ -14,6 +14,7 @@ SIGNUP_BODY = {
     "student_no": "20260001",
     "name": "박서연",
     "email": "seoyeon@example.com",
+    "login_id": "seoyeon1",
     "password": "Password123!",
     "cohort": 46,
 }
@@ -97,7 +98,13 @@ def test_a_later_account_becomes_a_member(api_client: TestClient) -> None:
     _signup(api_client)
 
     response = api_client.post(
-        "/signup", json={**SIGNUP_BODY, "email": "second@example.com", "student_no": "20260002"}
+        "/signup",
+        json={
+            **SIGNUP_BODY,
+            "email": "second@example.com",
+            "login_id": "second1",
+            "student_no": "20260002",
+        },
     )
 
     assert response.json()["account"]["role"] == "member"
@@ -109,7 +116,12 @@ def test_signup_allows_a_duplicate_name(api_client: TestClient) -> None:
 
     response = api_client.post(
         "/signup",
-        json={**SIGNUP_BODY, "email": "second@example.com", "student_no": "20260002"},
+        json={
+            **SIGNUP_BODY,
+            "email": "second@example.com",
+            "login_id": "second1",
+            "student_no": "20260002",
+        },
     )
 
     assert response.status_code == 201
@@ -119,9 +131,9 @@ def test_signup_refuses_the_same_person_twice(api_client: TestClient) -> None:
     """이름·학과·학번·기수가 모두 같으면 같은 사람입니다(사용자 결정)."""
     _signup(api_client)
 
-    # 이메일만 다르고 나머지 4개 값이 같습니다.
+    # 이메일·아이디만 다르고 나머지 4개 값이 같습니다.
     response = api_client.post(
-        "/signup", json={**SIGNUP_BODY, "email": "second@example.com"}
+        "/signup", json={**SIGNUP_BODY, "email": "second@example.com", "login_id": "second1"}
     )
 
     assert response.status_code == 422
@@ -131,7 +143,11 @@ def test_signup_refuses_the_same_person_twice(api_client: TestClient) -> None:
 def test_signup_rejects_a_duplicate_email(api_client: TestClient) -> None:
     _signup(api_client)
 
-    response = api_client.post("/signup", json=SIGNUP_BODY)
+    # 아이디는 다르게 주어 이메일 충돌만 검증합니다. 이름·학과·학번·기수가 같아 사람 조합
+    # 제약도 함께 걸리지만, 이메일 오류 문구가 먼저 나오는 것은 기존부터의 동작입니다.
+    response = api_client.post(
+        "/signup", json={**SIGNUP_BODY, "login_id": "seoyeon2"}
+    )
 
     assert response.status_code == 422
     assert "이메일" in response.json()["detail"]
@@ -180,7 +196,7 @@ def test_login_sets_a_session_cookie_and_does_not_return_a_token(
     _signup(api_client)
 
     response = api_client.post(
-        "/login", json={"email": SIGNUP_BODY["email"], "password": SIGNUP_BODY["password"]}
+        "/login", json={"login_id": SIGNUP_BODY["login_id"], "password": SIGNUP_BODY["password"]}
     )
 
     assert response.status_code == 200
@@ -192,7 +208,7 @@ def test_login_rejects_an_unknown_email_without_revealing_that(
     api_client: TestClient,
 ) -> None:
     unknown = api_client.post(
-        "/login", json={"email": "nobody@example.com", "password": "whatever1"}
+        "/login", json={"login_id": "unknown1", "password": "whatever1"}
     )
 
     assert unknown.status_code == 401
@@ -200,7 +216,7 @@ def test_login_rejects_an_unknown_email_without_revealing_that(
 
     _signup(api_client)
     wrong_password = api_client.post(
-        "/login", json={"email": SIGNUP_BODY["email"], "password": "Wrong-Password1"}
+        "/login", json={"login_id": SIGNUP_BODY["login_id"], "password": "Wrong-Password1"}
     )
 
     assert wrong_password.status_code == 401
@@ -305,7 +321,7 @@ def test_login_removes_that_accounts_expired_session_row(
     db_session.commit()
 
     api_client.post(
-        "/login", json={"email": SIGNUP_BODY["email"], "password": SIGNUP_BODY["password"]}
+        "/login", json={"login_id": SIGNUP_BODY["login_id"], "password": SIGNUP_BODY["password"]}
     )
 
     assert _session_count(db_session, member_id) == 1
@@ -320,13 +336,15 @@ def test_login_removes_only_the_dead_rows_of_that_account(
     first_id = first["account"]["id"]
     api_client.post("/logout")
 
-    second = _signup(api_client, email="second@example.com", student_no="20260002")
+    second = _signup(
+        api_client, email="second@example.com", login_id="second1", student_no="20260002"
+    )
     second_id = second["account"]["id"]
     _session_row(db_session, second_id).expires_at = datetime.now() - timedelta(seconds=1)
     db_session.commit()
 
     api_client.post(
-        "/login", json={"email": SIGNUP_BODY["email"], "password": SIGNUP_BODY["password"]}
+        "/login", json={"login_id": SIGNUP_BODY["login_id"], "password": SIGNUP_BODY["password"]}
     )
 
     assert _session_count(db_session, first_id) == 1
@@ -356,7 +374,7 @@ def test_login_without_keep_lasts_only_for_the_browser_session(
 
     response = api_client.post(
         "/login",
-        json={"email": SIGNUP_BODY["email"], "password": SIGNUP_BODY["password"]},
+        json={"login_id": SIGNUP_BODY["login_id"], "password": SIGNUP_BODY["password"]},
     )
 
     assert response.status_code == 200
@@ -371,7 +389,7 @@ def test_login_with_keep_lasts_far_longer(
     response = api_client.post(
         "/login",
         json={
-            "email": SIGNUP_BODY["email"],
+            "login_id": SIGNUP_BODY["login_id"],
             "password": SIGNUP_BODY["password"],
             "keep": True,
         },
@@ -389,7 +407,7 @@ def test_keeping_the_login_also_stretches_the_row_on_the_server(
     api_client.post(
         "/login",
         json={
-            "email": SIGNUP_BODY["email"],
+            "login_id": SIGNUP_BODY["login_id"],
             "password": SIGNUP_BODY["password"],
             "keep": True,
         },
@@ -453,7 +471,7 @@ def test_editing_my_profile_into_someone_else_says_who_it_collides_with(
 ) -> None:
     # 학과·학번·기수가 같은 두 사람은 이름만 다릅니다. 이름을 같게 수정하면 가입 때와 같은 문구가 나와야 합니다.
     _signup(api_client)
-    _signup(api_client, name="김민준", email="minjun@example.com")
+    _signup(api_client, name="김민준", email="minjun@example.com", login_id="minjun1")
 
     response = api_client.patch("/me", json={"name": SIGNUP_BODY["name"], "cohort": 46})
 
@@ -494,7 +512,7 @@ def test_changing_my_password_lets_me_log_in_with_the_new_one(
     assert changed.status_code == 204, changed.text
     api_client.post("/logout")
     again = api_client.post(
-        "/login", json={"email": SIGNUP_BODY["email"], "password": "Newpass12345!"}
+        "/login", json={"login_id": SIGNUP_BODY["login_id"], "password": "Newpass12345!"}
     )
     assert again.status_code == 200
 
@@ -571,3 +589,54 @@ def test_the_code_is_refused_when_the_environment_has_none(
 
     assert _signup_with(api_client, admin_code="아무값").status_code == 201
     assert api_client.get("/me").json()["account"]["permissions"] == []
+
+
+# ── 로그인 아이디 ──────────────────────────────────────────────────────────
+
+
+def test_signup_rejects_an_invalid_login_id(api_client: TestClient) -> None:
+    # 20자를 넘는 값은 Pydantic 의 Field(max_length=20)가 먼저 거절하므로 여기서 확인하지 않습니다.
+    # "Seoyeon1"처럼 대문자만 섞인 값은 정규화(strip+lower) 후 규칙을 통과하므로 유효한 값입니다.
+    for bad in ("ab", "seoyeon!", " "):
+        response = api_client.post("/signup", json={**SIGNUP_BODY, "login_id": bad})
+
+        assert response.status_code == 422, bad
+        assert "아이디" in response.json()["detail"]
+
+
+def test_signup_rejects_a_duplicate_login_id(api_client: TestClient) -> None:
+    _signup(api_client)
+
+    # 이메일은 다르게 주어 아이디 충돌만 검증합니다.
+    response = api_client.post(
+        "/signup", json={**SIGNUP_BODY, "email": "second@example.com", "student_no": "20260002"}
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == "이미 사용 중인 아이디입니다"
+
+
+def test_login_works_with_the_login_id_and_normalizes_uppercase_input(
+    api_client: TestClient,
+) -> None:
+    _signup(api_client)
+
+    response = api_client.post(
+        "/login",
+        json={
+            "login_id": SIGNUP_BODY["login_id"].upper(),
+            "password": SIGNUP_BODY["password"],
+        },
+    )
+
+    assert response.status_code == 200, response.text
+
+
+def test_login_with_the_email_instead_of_the_login_id_fails(api_client: TestClient) -> None:
+    _signup(api_client)
+
+    response = api_client.post(
+        "/login", json={"login_id": SIGNUP_BODY["email"], "password": SIGNUP_BODY["password"]}
+    )
+
+    assert response.status_code == 401

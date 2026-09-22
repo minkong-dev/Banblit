@@ -16,7 +16,7 @@ from backend.db.pipeline import commit_translating
 # 선착순은 겹침 금지 제약이 commit 시점에 결정합니다. 먼저 commit 한 요청이 그 구간을 가져갑니다.
 # 제약 이름은 migration 이 지정한 이름입니다(c8e4a1b60d93_reservation_as_one_row.py).
 RESERVATION_MESSAGES = {
-    "reservations_no_overlap": "이미 다른 사람이 예약한 시간입니다. 다른 시간을 선택해 주세요",
+    "reservations_no_overlap": "다른 멤버의 예약이 존재하여, 예약이 불가능합니다",
 }
 
 ReservationRow = tuple[Reservation, str, str | None, str]
@@ -25,7 +25,7 @@ ReservationRow = tuple[Reservation, str, str | None, str]
 def _get_room_or_raise(session: Session, room_id: int) -> Room:
     room = session.get(Room, room_id)
     if room is None:
-        raise ValueError("그런 합주실이 없습니다")
+        raise ValueError("존재하지 않는 합주실입니다")
     return room
 
 
@@ -43,7 +43,7 @@ def _require_team_member(session: Session, team_id: int, member_id: int) -> None
 def _get_team_or_raise(session: Session, team_id: int) -> Team:
     team = session.get(Team, team_id)
     if team is None:
-        raise ValueError("그런 팀이 없습니다")
+        raise ValueError("존재하지 않는 팀입니다")
     return team
 
 
@@ -76,7 +76,7 @@ def _require_not_in_focused_period(
         return
     first, last = period.ensemble_starts_on, period.ensemble_ends_on
     if first is None or last is None or not first <= day <= last:
-        raise ValueError("집중 합주기간이라 예약할 수 없습니다")
+        raise ValueError("집중 합주기간에는 예약이 불가능합니다")
     if room_id != period.ensemble_room_id:
         return
     own = session.scalars(
@@ -84,7 +84,13 @@ def _require_not_in_focused_period(
     ).first()
     start, end = (own.starts_at, own.ends_at) if own else (period.ensemble_starts_at, period.ensemble_ends_at)
     if start is not None and end is not None and starts_at.time() < end and start < ends_at.time():
-        raise ValueError("전체합주 시간이라 예약할 수 없습니다. 다른 시간이나 합주실을 선택해 주세요")
+        raise ValueError("전체합주 시간에는 예약할 수 없습니다")
+
+
+def _require_not_started(starts_at: datetime, now: datetime) -> None:
+    """이미 시작했거나 지난 시각의 예약을 거절합니다. 지난 예약은 쓸 수 없고, 남겨 두면 지울 곳도 없습니다."""
+    if starts_at <= now:
+        raise ValueError("과거 시간에는 예약이 불가능합니다.")
 
 
 def _planned_row(
@@ -105,6 +111,7 @@ def _planned_row(
     """
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_same_day(starts_at, ends_at)
+    _require_not_started(starts_at, created_at)
     room = _get_room_or_raise(session, room_id)
     require_within_room_hours(room.opens_at, room.closes_at, starts_at, ends_at)
     team = None
@@ -174,6 +181,27 @@ def list_reservations(
     ]
 
 
+def list_my_reservations(session: Session, member_id: int, now: datetime) -> list[ReservationRow]:
+    """member_id 가 잡은 예약 중 아직 끝나지 않은 것을 시작 시각 순으로 반환합니다. 모든 합주실에 걸칩니다.
+
+    끝난 예약은 소멸한 것으로 보고 빼며, 달력에는 기록으로 남습니다(list_reservations).
+    """
+    rows = session.execute(
+        select(Reservation, Room.name, Team.name, Member.name)
+        .join(Room, Room.id == Reservation.room_id)
+        .join(Member, Member.id == Reservation.member_id)
+        .outerjoin(Team, Team.id == Reservation.team_id)
+        .where(Reservation.member_id == member_id)
+        .where(Reservation.cancelled_at.is_(None))
+        .where(Reservation.ends_at > now)
+        .order_by(Reservation.starts_at)
+    ).all()
+    return [
+        (reservation, room_name, team_name, member_name)
+        for reservation, room_name, team_name, member_name in rows
+    ]
+
+
 def _get_own_reservation(
     session: Session, reservation_id: int, requester: Member, verb: str
 ) -> Reservation:
@@ -236,6 +264,7 @@ def update_reservation(
 
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_same_day(starts_at, ends_at)
+    _require_not_started(starts_at, moved_at)
     require_within_room_hours(room.opens_at, room.closes_at, starts_at, ends_at)
     _require_not_in_focused_period(session, old.room_id, starts_at, ends_at)
 

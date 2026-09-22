@@ -408,6 +408,9 @@ class AccountOut(BaseModel):
     id: int
     name: str
     email: str
+    # 명단에만 등록되고 아직 가입하지 않은 계정은 없지만(가입해야 로그인해 이 응답을 받으므로),
+    # Member.login_id 자체는 null 을 허용하는 열이라 타입을 그대로 맞춥니다.
+    login_id: str | None
     # role 은 permissions 에서 계산한 값입니다. PERMISSIONS 의 항목 전부가 설정되어 있으면
     # head_manager 입니다. 화면이 아직 이 값으로 label(화면에 표시되는 텍스트)을
     # 선택하고 있어 함께 제공합니다.
@@ -477,6 +480,7 @@ class SignupIn(BaseModel):
     department: str = Field(max_length=50)
     student_no: str = Field(max_length=20)
     email: str = Field(max_length=254)
+    login_id: str = Field(max_length=20)
     password: str = Field(max_length=100)
     # 기수입니다. 1981년이 1기지만 연도로 환산하지 않고 숫자를 그대로 받습니다.
     cohort: int
@@ -496,7 +500,7 @@ class PasswordChangeIn(BaseModel):
 
 
 class LoginIn(BaseModel):
-    email: str = Field(max_length=254)
+    login_id: str = Field(max_length=20)
     password: str = Field(max_length=100)
     # 로그인 상태 유지 여부입니다. False 이면 브라우저를 닫을 때 로그인이 해제됩니다.
     keep: bool = False

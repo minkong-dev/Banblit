@@ -1,4 +1,5 @@
 import logging
+import zlib
 from datetime import datetime, timedelta
 
 import httpx
@@ -15,6 +16,8 @@ HEAD = ("박서연", "seoyeon@example.com")
 OTHER = ("김민수", "minsu@example.com")
 NEW_PASSWORD = "Brand-New-Pass9"
 UNKNOWN_EMAIL = "nobody@example.com"
+# account fixture(conftest.py)가 이메일에서 파생시키는 login_id 와 같은 계산식입니다.
+HEAD_LOGIN_ID = f"u{zlib.crc32(HEAD[1].encode()) % 10**8:08d}"
 
 
 def _confirm(api_client: TestClient, token: str, password: str) -> httpx.Response:
@@ -34,7 +37,7 @@ def test_a_token_changes_the_password_and_the_new_one_logs_in(
 
     assert response.status_code == 200
     logged_in = api_client.post(
-        "/login", json={"email": HEAD[1], "password": NEW_PASSWORD}
+        "/login", json={"login_id": HEAD_LOGIN_ID, "password": NEW_PASSWORD}
     )
     assert logged_in.status_code == 200
 
@@ -53,7 +56,7 @@ def test_the_same_token_is_refused_the_second_time(
     # 두 번째 요청이 거절되었으므로 첫 번째로 변경한 비밀번호가 그대로 유지됩니다.
     assert (
         api_client.post(
-            "/login", json={"email": HEAD[1], "password": NEW_PASSWORD}
+            "/login", json={"login_id": HEAD_LOGIN_ID, "password": NEW_PASSWORD}
         ).status_code
         == 200
     )
@@ -149,10 +152,15 @@ def test_find_id_answers_the_same_whether_the_account_exists(
 
 
 def test_find_id_mails_the_registered_address_only_when_the_pair_matches(
-    api_client: TestClient, account: AccountFactory, caplog: pytest.LogCaptureFixture
+    api_client: TestClient,
+    account: AccountFactory,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     account(*HEAD)
     account(*OTHER)
+    # 본문(로그인 아이디가 담긴 내용)을 확인하려면 개발 환경처럼 로그에 본문을 남기게 합니다.
+    monkeypatch.setenv("MAIL_LOG_BODY", "true")
 
     with caplog.at_level(logging.INFO, logger="backend.services.mailer"):
         api_client.post("/find-id", json={"name": HEAD[0], "email": HEAD[1]})
@@ -161,3 +169,5 @@ def test_find_id_mails_the_registered_address_only_when_the_pair_matches(
     # 이름과 이메일이 함께 일치하는 첫 요청만 메일이 발송됩니다.
     mails = [record for record in caplog.records if HEAD[1] in record.getMessage()]
     assert len(mails) == 1
+    # 메일 본문에 로그인 아이디가 담겨야 합니다 — 아이디 찾기의 목적이 이메일이 아니라 아이디를 알리는 것입니다.
+    assert HEAD_LOGIN_ID in mails[0].getMessage()

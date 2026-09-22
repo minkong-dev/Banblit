@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from backend.services.input import (
     require_cohort,
     require_email,
+    require_login_id,
     require_non_empty,
     require_password,
     require_student_no,
@@ -29,6 +30,7 @@ _SCRYPT_DKLEN = 32
 # 이름·학과·학번·기수가 모두 같으면 같은 사람으로 판정합니다.
 MEMBER_MESSAGES = {
     "members_email_key": "이미 가입된 이메일입니다",
+    "members_login_id_key": "이미 사용 중인 아이디입니다",
     "members_name_department_student_no_cohort_key": "이미 가입된 사람입니다 — 이름·학과·학번·기수가 같습니다",
 }
 
@@ -92,11 +94,12 @@ def signup(
     department: str,
     student_no: str,
     email: str,
+    login_id: str,
     password: str,
     cohort: int,
     admin_code: str | None = None,
 ) -> Member:
-    """새 계정을 만듭니다. 이름 중복은 허용합니다. 이메일이 같거나 이름·학과·학번·기수가 모두 같은 계정이 있으면 거부합니다.
+    """새 계정을 만듭니다. 이름 중복은 허용합니다. 이메일·아이디가 같거나 이름·학과·학번·기수가 모두 같은 계정이 있으면 거부합니다.
 
     cohort 를 받는 이유는 동명이인 때문입니다. 화면에서 두 사람을 구분하는 유일한 값이 이름 옆의 기수이므로, 가입 시 입력받지 않으면 나중에 채울 수 없습니다.
 
@@ -107,6 +110,7 @@ def signup(
     clean_department = require_non_empty(department, "학과")
     clean_student_no = require_student_no(student_no)
     clean_email = require_email(email)
+    clean_login_id = require_login_id(login_id)
     require_password(password)
     clean_cohort = require_cohort(cohort)
 
@@ -116,6 +120,7 @@ def signup(
         student_no=clean_student_no,
         cohort=clean_cohort,
         email=clean_email,
+        login_id=clean_login_id,
         password_hash=hash_password(password),
     )
     session.add(member)
@@ -130,7 +135,7 @@ def signup(
 def update_profile(
     session: Session, member: Member, name: str, cohort: int | None
 ) -> Member:
-    """로그인 사용자의 이름과 기수를 수정합니다. 이메일은 이 함수에서 수정하지 않습니다. 로그인 식별자이므로 변경하려면 새 주소의 소유권을 확인하는 별도 절차가 필요합니다."""
+    """로그인 사용자의 이름과 기수를 수정합니다. 이메일은 이 함수에서 수정하지 않습니다. 비밀번호 재설정·아이디 찾기를 받는 주소이므로 변경하려면 새 주소의 소유권을 확인하는 별도 절차가 필요합니다."""
     member.name = require_non_empty(name, "이름")
     member.cohort = None if cohort is None else require_cohort(cohort)
     # 이름·기수를 다른 사람과 같게 수정하면 가입 때와 같은 신원 제약을 위반합니다.
@@ -150,13 +155,15 @@ def change_password(
     session.commit()
 
 
-def login(session: Session, email: str, password: str) -> Member:
-    """이메일이 없거나 비밀번호가 틀려도 같은 오류 메시지를 반환합니다. 어느 쪽이 틀렸는지 알리면 가입된 이메일을 공개하는 보안 문제가 됩니다."""
-    member = session.scalar(select(Member).where(Member.email == email.strip()))
+def login(session: Session, login_id: str, password: str) -> Member:
+    """아이디가 없거나 비밀번호가 틀려도 같은 오류 메시지를 반환합니다. 어느 쪽이 틀렸는지 알리면 가입된 아이디를 공개하는 보안 문제가 됩니다."""
+    member = session.scalar(
+        select(Member).where(Member.login_id == login_id.strip().lower())
+    )
     if member is None or member.password_hash is None or not verify_password(
         password, member.password_hash
     ):
-        raise ValueError("이메일 또는 비밀번호가 올바르지 않습니다")
+        raise ValueError("아이디 또는 비밀번호가 올바르지 않습니다")
     # 비밀번호 검증에 성공한 순간만 평문 비밀번호를 알 수 있습니다. 이때 기존 강도로 저장된 해시를 현재 강도로 다시 생성하여 자동으로 업그레이드합니다.
     if _needs_rehash(member.password_hash):
         member.password_hash = hash_password(password)

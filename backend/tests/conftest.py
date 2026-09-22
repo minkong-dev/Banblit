@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 import time
 import zlib
 from collections.abc import Callable, Iterator
@@ -178,6 +179,10 @@ def api_client(db_session: Session) -> Iterator[TestClient]:
     # 값이 commit 된 뒤 db_session 에서도 조회됩니다.
     test_engine = db_session.get_bind()
     app.dependency_overrides[get_session] = lambda: db_session
+    # 예약 테스트는 2026-09 중순 날짜를 씁니다. 실제 오늘을 쓰면 날짜가 지나는 순간 "지난 시간" 으로 거절되므로
+    # 그보다 앞선 고정 시각을 현재로 둡니다. 개별 테스트가 다른 시각이 필요하면 덮어씁니다.
+    from backend.api.routers.reservations import current_time
+    app.dependency_overrides[current_time] = lambda: datetime(2026, 9, 1, 12, 0)
     app.dependency_overrides[get_session_factory] = lambda: (
         lambda: Session(test_engine)
     )
@@ -233,6 +238,9 @@ def account(api_client: TestClient) -> AccountFactory:
                 "department": "실용음악과",
                 "student_no": f"{zlib.crc32(email.encode()) % 10**8:08d}",
                 "email": email,
+                # 아이디도 학번처럼 이메일에서 파생시켜 호출마다 고유하게 만듭니다. 8자리 숫자에
+                # 접두사를 붙여 login_id 최소 길이(4자)를 만족합니다.
+                "login_id": f"u{zlib.crc32(email.encode()) % 10**8:08d}",
                 "password": "Password123!",
                 "cohort": 46,
             },
