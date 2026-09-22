@@ -13,6 +13,14 @@ server {
     add_header Cache-Control "public, immutable";
   }
 
+  # 이미지는 없으면 404 를 낸다. 아래 location / 의 index.html 대체를 그대로 받으면 없는 이미지에도
+  # 200 + HTML 이 나가고, 카카오톡 같은 미리보기 수집기가 그 HTML 을 이미지로 저장한다.
+  # 2026-09-22 에 지운 미리보기 이미지를 카카오가 요청해 HTML 을 받아 가서 미리보기가 회색으로 나왔다.
+  location /images/ {
+    root /usr/share/nginx/html;
+    try_files $uri =404;
+  }
+
   # 화면은 주소가 여럿이지만 파일은 index.html 하나다. 없는 경로는 그것으로 떨어뜨린다.
   # 이게 없으면 /scheduler 를 직접 치거나 새로 고칠 때 404 가 난다.
   location / {
