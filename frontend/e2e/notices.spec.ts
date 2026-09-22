@@ -62,6 +62,28 @@ test("공지를 블라인드하면 목록에서 사라지고 설정에서 되돌
   await expect(postButton).toBeVisible();
 });
 
+// PDF 뷰어는 창 크기와 상관없이 A4 비율(세로 = 가로 x 1.414)을 유지하고 크기만 줄어듭니다.
+// 낮은 창에서는 세로 상한(창 높이 60%)에 걸리므로, 가로도 같이 줄어야 비율이 유지됩니다.
+test("본문의 PDF 뷰어는 창 크기가 달라도 A4 비율을 유지한다", async ({ page }) => {
+  await page.goto("/notices");
+  await page.getByRole("link", { name: "글쓰기" }).click();
+  await page.locator(".rttools .rtpick[aria-label='그림 넣기'] input").setInputFiles({
+    name: "악보.pdf",
+    mimeType: "application/pdf",
+    buffer: Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"),
+  });
+  const viewer = page.locator(".rtbody .rtpdf");
+  await expect(viewer).toBeVisible();
+
+  for (const size of [{ width: 1280, height: 600 }, { width: 1280, height: 1000 }]) {
+    await page.setViewportSize(size);
+    await expect.poll(async () => {
+      const box = await viewer.boundingBox();
+      return box === null ? 0 : Math.round((box.height / box.width) * 100) / 100;
+    }).toBeCloseTo(1.41, 1);
+  }
+});
+
 test("본문에 그림을 넣으면 미리보기로 보인다", async ({ page }) => {
   const title = `E2E 본문 그림 ${Date.now()}`;
 
