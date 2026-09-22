@@ -1,7 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 import { useLayoutEffect } from "react";
 import type { ReactNode } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { NotificationMenu } from "./NotificationMenu";
 import { useDismissible, usePage } from "./hooks";
@@ -28,38 +28,36 @@ const MANAGER_NAV = [
   { key: "assign", label: "배정 결과 확인", to: "/admin", needs: ["assign_read"] },
 ] as const satisfies readonly { key: string; label: string; to: string; needs: readonly Permission[] }[];
 
-export type NavKey = (typeof NAV)[number]["key"] | (typeof MANAGER_NAV)[number]["key"];
+// 주소의 첫 구간 → 화면 CSS 가 격리되는 이름(body[data-page])입니다. 공지사항과 팀 게시판은 board.css 를 함께 씁니다.
+const PAGE_BY_PATH: Record<string, string> = {
+  scheduler: "scheduler",
+  admin: "admin",
+  settings: "settings",
+  notices: "board",
+  board: "board",
+  teams: "teams",
+  profile: "profile",
+};
 
 type NavItem = { key: string; label: string; to: string };
 
-function NavList({ items, current }: { items: readonly NavItem[]; current: NavKey | undefined }) {
+// NavLink 는 주소가 to 와 같거나 그 아래(/notices/new 등)이면 aria-current="page" 를 붙입니다.
+// 사이드바에 없는 화면(프로필 설정)에서는 아무 항목도 켜지지 않습니다.
+function NavList({ items }: { items: readonly NavItem[] }) {
   return (
     <nav>
-      {items.map((item) => (
-          <NavLink key={item.key} to={item.to}
-            aria-current={item.key === current ? "page" : undefined}>
-            {item.label}
-          </NavLink>
-      ))}
+      {items.map((item) => <NavLink key={item.key} to={item.to}>{item.label}</NavLink>)}
     </nav>
   );
 }
 
-export function AppShell(props: {
-  /** 화면별 CSS 가 격리되는 이름입니다. 예: scheduler, admin. */
-  page: string;
-  /** 사이드바에 없는 화면(프로필 설정)은 아무 항목도 켜지 않도록 값을 넣지 않습니다. */
-  current?: NavKey;
-  children: ReactNode;
-}) {
-  const { page, current, children } = props;
+/** 로그인 뒤 화면의 layout route 입니다. 화면을 이동해도 유지되고 Outlet 안의 화면만 교체됩니다. */
+export function AppShell() {
+  const { pathname } = useLocation();
   const toast = useToast();
-  usePage(page);
+  usePage(PAGE_BY_PATH[pathname.split("/")[1]] ?? "");
   // shell.css 가 이 속성으로 공통 layout(상단바·사이드바·탭·카드)의 스타일을 적용합니다. 계정·랜딩 화면에는 없습니다.
-  // useLayoutEffect 인 이유: 화면을 옮길 때 useEffect 는 자식(PostBoard 의 useFitCount)의 effect 를 먼저 실행합니다.
-  // 그 effect 가 크기를 재는 순간 이전 화면의 cleanup 이 속성을 삭제한 상태라, 프로필 카드가 shell.css 없이
-  // opacity 1 로 계산되고 속성이 돌아오면서 0 으로 전환되어 열렸다 닫히는 것처럼 보였습니다.
-  // layout effect 는 cleanup 과 설정이 모두 그리기 전, 모든 useEffect 보다 먼저 끝납니다.
+  // AppShell 이 유지되므로 로그인 뒤 화면 사이를 이동하는 동안에는 삭제되지 않습니다.
   useLayoutEffect(() => {
     document.body.dataset.shell = "";
     return () => { delete document.body.dataset.shell; };
@@ -84,18 +82,18 @@ export function AppShell(props: {
       <div className="shell">
         <aside className="side" aria-label="메뉴">
           <div className="inner">
-            <NavList items={nav} current={current} />
+            <NavList items={nav} />
             {managerNav.length === 0 ? null : (
               <>
                 <div className="sep" />
                 <div className="cap">관리자 메뉴</div>
-                <NavList items={managerNav} current={current} />
+                <NavList items={managerNav} />
               </>
             )}
           </div>
         </aside>
 
-        <div className="page">{children}</div>
+        <div className="page"><Outlet /></div>
       </div>
 
       <div className={toast ? "toast on" : "toast"} role="status" aria-live="polite">

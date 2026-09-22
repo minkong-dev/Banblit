@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { AppShell, Tabs } from "../components/AppShell";
+import { Tabs } from "../components/AppShell";
 import { PostBoard } from "../components/PostBoard";
 import { can } from "../lib/account";
 import { reason } from "../lib/api";
@@ -18,10 +18,7 @@ export function Board() {
   const current = mine.find((team) => String(team.id) === teamId) ?? mine[0];
 
   return (
-    <AppShell
-      page="board"
-      current="board"
-    >
+    <>
       {teams.isPending ? (
         <div className="main"><div className="empty">{LOADING_TEXT}</div></div>
       ) : teams.isError ? (
@@ -53,6 +50,6 @@ export function Board() {
           </div>
         </>
       )}
-    </AppShell>
+    </>
   );
 }

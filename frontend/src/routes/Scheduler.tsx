@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
-import { AppShell, Card, Panel, Tabs } from "../components/AppShell";
+import { Card, Panel, Tabs } from "../components/AppShell";
 import { Dropdown } from "../components/Dropdown";
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from "../components/icons";
 import { getJSON, reason } from "../lib/api";
@@ -179,7 +179,7 @@ export function Scheduler() {
   const viewProps = { tab, teams, entriesOf, openHour: open, slotCount, slotMinutes };
 
   return (
-    <AppShell page="scheduler" current="schedule">
+    <>
       <Tabs label="레이아웃" items={TABS} selected={tab} onSelect={setTab} />
 
       {/* 합주실·기간·시간표 중 하나라도 실패하면 성공한 것만 표시하고 첫 실패 사유를
@@ -321,6 +321,6 @@ export function Scheduler() {
           onClose={() => setOpenDay(null)}
         />
       )}
-    </AppShell>
+    </>
   );
 }

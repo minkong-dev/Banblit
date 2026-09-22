@@ -1,6 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
 
-import { AppShell, Card } from "../components/AppShell";
+import { Card } from "../components/AppShell";
 import { getJSON, reason } from "../lib/api";
 import { cohortLabel } from "../lib/roster";
 import { useMe } from "../components/queries";
@@ -45,9 +45,7 @@ export function Profile() {
   const name = me?.name ?? "";
 
   return (
-    <AppShell
-      page="profile"
-    >
+    <>
       <div className="main">
         <Card>
           <div className="prohead">
@@ -74,6 +72,6 @@ export function Profile() {
           </div>
         </Card>
       </div>
-    </AppShell>
+    </>
   );
 }
