@@ -113,7 +113,8 @@ export function Dropdown<T extends string | number>({
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
-      {!open ? null : (
+      {/* 선택지가 없으면 목록을 그리지 않습니다. 빈 목록은 안쪽 여백만 남아 얇은 칸으로 보입니다. */}
+      {!open || choices.length === 0 ? null : (
         <ul className="ddlist" role="listbox" aria-label={ariaLabel} aria-labelledby={id} ref={list}>
           {choices.map((choice, index) => (
             // 목록의 초점은 버튼에 있고 키 입력도 버튼이 받습니다(aria-activedescendant).
