@@ -11,10 +11,11 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
 
 :where(body[data-shell]) {
   margin: 0; background: var(--bg); color: var(--t1);
-  min-width: var(--minw);
   font-family: "Noto Sans KR", -apple-system, "Malgun Gothic", sans-serif;
   font-size: 15px; line-height: 1.6; letter-spacing: -.02em;
-  font-variant-numeric: tabular-nums; height: 100vh; overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  /* 상단바 높이입니다. .top .in 62px 에 아래 테두리 1px 을 더한 값입니다. 사이드바와 본문 높이를 이 값으로 뺍니다. */
+  --bar: 63px;
   -webkit-text-size-adjust: 100%;
 
   :where(button, select, input) { font: inherit; color: inherit; letter-spacing: inherit; }
@@ -67,8 +68,11 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .pop .act.quit { color: var(--t2); }
 
   /* 사이드바 */
-  .shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); height: calc(100vh - 62px); }
-  .side { overflow: hidden auto; background: var(--card); border-right: 1px solid var(--line); }
+  /* 페이지 전체가 스크롤합니다(GitHub Primer PageLayout 방식). body 를 창 높이로 묶고 overflow:hidden 으로 숨기면
+     드래그할 때 숨은 스크롤이 움직여 상단바가 사라지고 아래에 빈 회색이 드러납니다.
+     상단바(.top)와 사이드바는 sticky 로 제자리에 남습니다. */
+  .shell { display: grid; grid-template-columns: var(--side) minmax(0, 1fr); min-height: calc(100vh - var(--bar)); }
+  .side { position: sticky; top: var(--bar); height: calc(100vh - var(--bar)); align-self: start; overflow: hidden auto; background: var(--card); border-right: 1px solid var(--line); }
   .side .inner { width: 100%; height: 100%; padding: 20px 14px; display: flex; flex-direction: column; gap: 18px; }
   .side nav { display: flex; flex-direction: column; gap: 2px; }
   .side nav :is(a, button) { display: flex; align-items: center; text-align: left; padding: 12px; min-height: 46px; color: var(--t1); text-decoration: none; font-size: 15px; font-weight: 500; border-radius: 10px; white-space: nowrap; transition: background-color .15s ease; }
@@ -78,11 +82,11 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .side .cap { font-size: 12px; color: var(--t3); padding: 0 12px; }
   .side .sep { border-top: 1px solid var(--line); }
 
-  /* 본문입니다. 탭 한 줄이 위, 본문과 오른쪽 칸이 아래입니다. 본문은 --content 까지만 커지고 가운데 정렬됩니다.
-     달력 화면은 max-width: none 으로 이 상한을 해제합니다. */
+  /* 본문입니다. 탭 한 줄이 위, 본문과 오른쪽 칸이 아래입니다. 사이드바를 뺀 폭을 전부 씁니다.
+     높이는 기본이 창 높이입니다. 목록·달력처럼 창 높이에 맞춰 줄 수를 정하는 화면이 이 값을 씁니다.
+     내용이 늘어나는 화면(글쓰기·상세, 카드 여러 장)은 각 화면 CSS 가 height:auto 로 풀어 페이지 전체가 스크롤합니다. */
   .page {
-    height: 100%; padding: 18px; min-height: 0;
-    width: 100%; max-width: var(--content); margin-inline: auto;
+    height: calc(100vh - var(--bar)); padding: 18px; min-height: 0;
     display: grid; grid-template-columns: minmax(0, 1fr) clamp(280px, 24%, 400px);
     grid-template-rows: auto minmax(0, 1fr); column-gap: 18px;
   }
@@ -135,24 +139,22 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
     .panel > .ph { padding: 13px 15px; font-size: 14.5px; }
   }
 
-  /* 휴대폰 폭입니다. 이 규칙이 없으면 body 의 min-width 1060px 이 그대로 적용되어, 화면 전체를
-     가로로 밀어야 오른쪽 내용에 도달합니다. 동아리 서비스의 접속은 대부분 휴대폰입니다.
+  /* 창 폭은 세 단계입니다. 넓음(1060px 이상)은 위 기본 배치, 중간(768~1059px)은 사이드바를 상단바 아래 가로 줄로
+     올리고 본문·오른쪽 칸 두 칸을 유지, 좁음(767px 이하)은 오른쪽 칸을 본문 아래로 내린 한 줄 배치입니다
+     (Material Design 3 의 사이드 메뉴 → 가로 메뉴 → 한 줄 순서). 최소 폭을 두지 않습니다 — 예전 최소 폭 1060px 과
+     휴대폰 전환 860px 사이에서는 어느 배치도 적용되지 않아 화면 오른쪽이 잘렸습니다.
 
-     세로 스크롤을 body 가 맡도록 height 와 overflow 를 해제합니다. 데스크톱에서는 body 가
-     100vh 로 고정되고 .page 안쪽만 스크롤하는데, 좁은 화면에서 같은 구조를 쓰면 내용이
-     화면보다 길 때 주소창이 사라지지 않아 세로 공간이 더 줄어듭니다.
-
-     사이드바는 접는 버튼을 만들지 않고 상단바 아래 가로 줄로 눕힙니다. 버튼을 만들면 여닫는
-     상태와 초점 이동을 함께 처리해야 하는데, 항목이 최대 8개라 가로 줄에 전부 들어갑니다. */
-  @media (max-width: 860px) {
-    & { min-width: 0; height: auto; overflow: visible; }
-
-    .shell { display: block; height: auto; }
+     사이드바는 접는 버튼을 만들지 않고 가로 줄로 눕힙니다. 버튼을 만들면 여닫는 상태와 초점 이동을 함께
+     처리해야 하는데, 항목이 최대 8개라 가로 줄에 전부 들어갑니다. */
+  @media (max-width: 1059px) {
+    /* 가로 메뉴 줄의 높이입니다. 안쪽 여백 10px x 2 + 항목 40px + 아래 테두리 1px. 본문 높이에서 이만큼 뺍니다. */
+    & { --nav: 61px; }
+    .shell { display: block; }
     .side {
       overflow: auto hidden;
       border-right: none;
       border-bottom: 1px solid var(--line);
-      position: sticky; top: 62px; z-index: 20;
+      position: sticky; top: var(--bar); z-index: 20; height: auto;
     }
     .side .inner { height: auto; padding: 10px 12px; flex-direction: row; align-items: center; gap: 10px; }
     .side nav { flex-direction: row; gap: 6px; }
@@ -160,13 +162,27 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
     /* 가로 줄에서는 구분선과 "관리자 메뉴" 머리글이 자리만 차지합니다. 항목은 그대로 이어 붙입니다. */
     .side .sep { border-top: none; border-left: 1px solid var(--line); align-self: stretch; }
     .side .cap { display: none; }
+    .page { height: calc(100vh - var(--bar) - var(--nav)); }
+  }
 
+  /* 좁음(휴대폰)입니다. 동아리 서비스의 접속은 대부분 휴대폰입니다. 본문 높이를 창에 묶지 않고 페이지 전체가
+     스크롤합니다. 창 높이에 묶으면 내용이 화면보다 길 때 주소창이 사라지지 않아 세로 공간이 더 줄어듭니다. */
+  @media (max-width: 767px) {
+    /* 상단바가 56px 로 줄어듭니다. 테두리 1px 을 더합니다. */
+    & { --bar: 57px; }
     .page {
       height: auto; padding: 14px 16px;
       grid-template-columns: minmax(0, 1fr);
       grid-template-rows: auto;
       row-gap: 14px;
     }
+    /* 오른쪽 칸은 기본 배치에서 2열에 직접 놓여 있습니다. 그대로 두면 2열이 새로 생겨 탭과 본문이 좁은 1열에 갇힙니다.
+       본문 아래(1열 3행)로 옮깁니다. 달력처럼 행 배치가 다른 화면은 각 화면 CSS 가 따로 정합니다. */
+    .rail { grid-column: 1; grid-row: 3; }
+    /* 탭은 줄바꿈하지 않고 한 줄로 두고 가로로 밉니다(사이드 메뉴 줄과 같은 방식). 아래 여백은 탭 그림자 자리입니다.
+       줄 간격은 .page 의 row-gap 이 맡으므로 탭 자체의 아래 여백은 없앱니다. */
+    .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-bottom: 0; padding: 2px 2px 6px; }
+    .tab { flex: none; }
 
     .top .in { height: 56px; padding: 0 14px; }
     .logo span { display: none; }
@@ -233,14 +249,17 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .notes .notepop { width: min(320px, calc(100vw - 28px)); right: -8px; }
 }
 
-/* ===== 모달 ===== */
-dialog { width: min(560px, calc(100vw - 40px)); max-height: 92vh; padding: 0; border: none; border-radius: 22px; background: var(--card); color: var(--t1); box-shadow: var(--shadow-up); overflow: hidden; }
+/* ===== 모달 =====
+   너비는 창 폭에 비례합니다. 좁은 창에서는 560px, 창 폭의 36% 가 그보다 크면 36% 를 씁니다.
+   어느 경우든 창보다 40px 좁습니다(휴대폰). 고정 560px 이면 넓은 모니터에서 모달이 화면의 1/5 로 작게 보입니다. */
+dialog { width: min(max(560px, 36vw), calc(100vw - 40px)); max-height: 92vh; padding: 0; border: none; border-radius: 22px; background: var(--card); color: var(--t1); box-shadow: var(--shadow-up); overflow: hidden; }
 /* 카드 여러 장으로 보이는 dialog(하루 dialog 의 내 일정·예약 탭)입니다. 배경·그림자·모서리는 카드(.pane)가 갖고,
    dialog 는 카드를 3열로 세우는 투명한 grid 틀입니다. 높이를 고정해 내용이 적은 카드도 같은 높이로 늘립니다(사용자 결정).
    카드 3장은 서로 다른 내용이라 각자 스크롤합니다. dialog 하나로 묶어 스크롤하면 왼쪽 타임라인을
    보려고 오른쪽 목록까지 함께 움직입니다. dialog 의 크기와 위치는 고정입니다.
 */
-dialog.panes { width: min(1320px, calc(100vw - 40px)); height: 92vh; max-height: none; background: transparent; box-shadow: none; overflow: visible; }
+/* 3장 틀의 너비도 창 폭에 비례합니다. 좁은 창에서는 1320px, 창 폭의 80% 가 그보다 크면 80% 입니다. */
+dialog.panes { width: min(max(1320px, 80vw), calc(100vw - 40px)); height: 92vh; max-height: none; background: transparent; box-shadow: none; overflow: visible; }
 /* 카드 3장의 폭은 같습니다(사용자 결정). */
 dialog.panes[open] { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 1.8vw, 24px); align-items: stretch; }
 /* 1열로 쌓이면 카드는 내용만큼만 차지하고 dialog 가 스크롤합니다. */
