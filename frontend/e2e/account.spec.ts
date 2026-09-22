@@ -63,9 +63,9 @@ test("링크 미리보기 태그가 첫 화면에 들어 있다", async ({ page 
     "content",
     /^https?:\/\/[^%]+\/images\/domain_link_preview\.jpg\?v=\d+$/,
   );
-  // 이미지 크기를 알려 주면 받기 전에 자리를 잡습니다.
-  await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute("content", "2650");
-  await expect(page.locator('meta[property="og:image:height"]')).toHaveAttribute("content", "1414");
+  // 크기 태그는 두지 않습니다. 넣은 뒤로 카카오 썸네일 서버가 이미지를 한 번도 가져가지 않았습니다(2026-09-22 서버 기록).
+  await expect(page.locator('meta[property="og:image:width"]')).toHaveCount(0);
+  await expect(page.locator('meta[property="og:image:height"]')).toHaveCount(0);
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "BANBLIT");
   await expect(page.locator('meta[property="og:description"]')).toHaveAttribute("content", "IN SIX STRINGS");
 });
