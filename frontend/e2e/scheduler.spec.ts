@@ -41,3 +41,12 @@ test("알림 버튼이 서버가 준 내 알림을 보여주고 모두 읽음으
   await expect(page.getByRole("button", { name: "알림", exact: true })).toBeVisible();
   await expect(popup.getByText("새 알림이 없어요")).toBeVisible();
 });
+
+// 로그인 상태 유지로 cookie 가 살아 있으면 랜딩·로그인 화면을 거치지 않고 대시보드로 갑니다.
+// 이 이동이 없으면 브라우저를 다시 열었을 때 로그인 화면이 보여 로그인이 풀린 것처럼 보입니다.
+test("로그인한 상태로 랜딩이나 로그인 화면에 들어가면 대시보드로 간다", async ({ page }) => {
+  for (const path of ["/", "/login"]) {
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/scheduler$/);
+  }
+});
