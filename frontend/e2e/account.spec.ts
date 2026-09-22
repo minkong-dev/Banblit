@@ -61,7 +61,7 @@ test("링크 미리보기 태그가 첫 화면에 들어 있다", async ({ page 
   // og:image 는 절대 주소여야 합니다. 상대 주소를 넣으면 카카오톡·페이스북이 이미지를 받지 못합니다.
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",
-    /^https?:\/\/[^%]+\/images\/domain_link_preview\.jpg$/,
+    /^https?:\/\/[^%]+\/images\/domain_link_preview\.jpg\?v=\d+$/,
   );
   // 이미지 크기를 알려 주면 받기 전에 자리를 잡습니다.
   await expect(page.locator('meta[property="og:image:width"]')).toHaveAttribute("content", "2650");
