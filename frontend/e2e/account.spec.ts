@@ -63,9 +63,11 @@ test("링크 미리보기 태그가 첫 화면에 들어 있다", async ({ page 
     "content",
     /^https?:\/\/[^%]+\/images\/domain_link_preview\.jpg\?v=\d+$/,
   );
-  // 크기 태그는 두지 않습니다. 넣은 뒤로 카카오 썸네일 서버가 이미지를 한 번도 가져가지 않았습니다(2026-09-22 서버 기록).
-  await expect(page.locator('meta[property="og:image:width"]')).toHaveCount(0);
-  await expect(page.locator('meta[property="og:image:height"]')).toHaveCount(0);
+  // 카카오 스크랩은 이미지를 3초 안에 받아야 합니다. 661KB 이미지가 카카오 서버에서 6초 넘게 걸려 회색으로 나왔습니다.
+  // 파일이 다시 커지지 않도록 200KB 를 상한으로 둡니다.
+  const image = await page.request.get("/images/domain_link_preview.jpg");
+  expect(image.headers()["content-type"]).toBe("image/jpeg");
+  expect((await image.body()).length).toBeLessThan(200 * 1024);
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "BANBLIT");
   await expect(page.locator('meta[property="og:description"]')).toHaveAttribute("content", "IN SIX STRINGS");
 });
