@@ -61,18 +61,40 @@ test("링크 미리보기 태그가 첫 화면에 들어 있다", async ({ page 
   // og:image 는 절대 주소여야 합니다. 상대 주소를 넣으면 카카오톡·페이스북이 이미지를 받지 못합니다.
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",
-    /^https?:\/\/[^%]+\.(jpg|png)$/,
+    /^https?:\/\/[^%]+\/images\/domain_link_preview\.jpg$/,
   );
-  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", /\S/);
-  await expect(page.locator('meta[property="og:description"]')).toHaveAttribute("content", /\S/);
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", "BANBLIT");
+  await expect(page.locator('meta[property="og:description"]')).toHaveAttribute("content", "IN SIX STRINGS");
 });
 
 test("등록되지 않은 주소는 없는 주소 화면을 표시한다", async ({ page }) => {
   await page.goto("/이런주소는없습니다");
 
-  await expect(page.getByRole("heading", { name: "없는 주소예요" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "처음 화면으로" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Oops!" })).toBeVisible();
+  await expect(page.getByText("존재하지 않는 페이지에요")).toBeVisible();
 
-  await page.getByRole("link", { name: "처음 화면으로" }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await page.getByRole("link", { name: "로그인으로 돌아가기" }).click();
+  await expect(page).toHaveURL(/\/login$/);
+});
+
+// 로그인 표시 cookie 는 남았는데 서버 session 이 없는 경우입니다(다른 기기에서 비밀번호 변경 등).
+// 서버가 401 "로그인이 필요합니다" 로 거절하면 표시 cookie 를 삭제하고 로그인 화면으로 보내야 합니다.
+// 삭제하지 않으면 SkipIfSignedIn 이 로그인 화면을 대시보드로 되돌려 빠져나올 수 없습니다.
+test.describe("서버 session 이 취소된 경우", () => {
+  test.use({
+    storageState: {
+      cookies: [
+        { name: "banblit_signed_in", value: "1", domain: "localhost", path: "/", expires: -1, httpOnly: false, secure: false, sameSite: "Lax" },
+        { name: "banblit_session", value: "revoked", domain: "localhost", path: "/", expires: -1, httpOnly: true, secure: false, sameSite: "Lax" },
+      ],
+      origins: [],
+    },
+  });
+
+  test("대시보드 요청이 401 로 거절되면 로그인 화면으로 간다", async ({ page, context }) => {
+    await page.goto("/scheduler");
+    await expect(page).toHaveURL(/\/login$/);
+    const names = (await context.cookies()).map((cookie) => cookie.name);
+    expect(names).not.toContain("banblit_signed_in");
+  });
 });

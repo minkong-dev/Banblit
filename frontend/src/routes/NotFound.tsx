@@ -4,19 +4,18 @@
 
 import { Link } from "react-router-dom";
 
+import { ArrowIcon } from "../components/icons";
 import "../styles/fallback.css";
 
 export function NotFound() {
   return (
-    <div className="fallback">
-      <div className="box">
-        <h1>없는 주소예요</h1>
-        <p>주소가 변경되었거나 삭제된 화면이에요.</p>
-        <div className="act">
-          <Link className="go" to="/scheduler">합주실 예약으로</Link>
-          <Link to="/">처음 화면으로</Link>
-        </div>
-      </div>
+    <div className="fallback lost">
+      <h1>Oops!</h1>
+      <p>존재하지 않는 페이지에요</p>
+      {/* 장식 그림이라 읽어 줄 내용이 없습니다. */}
+      <img src="/images/lost.svg" alt="" />
+      {/* 로그인한 사람은 /login 에서 대시보드로 이동합니다(App.tsx 의 SkipIfSignedIn). */}
+      <Link className="go" to="/login">로그인으로 돌아가기<ArrowIcon /></Link>
     </div>
   );
 }

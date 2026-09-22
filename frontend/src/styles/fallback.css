@@ -89,3 +89,32 @@ html[data-theme="dark"] .fallback { color-scheme: dark; }
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+/* 404 화면입니다. 랜딩처럼 밝은 화면으로 고정합니다 — 그림의 분홍 배경이 흰 바탕을 전제로 그려져 있습니다.
+   "로그인으로 돌아가기" 는 랜딩의 "시작하기"(landing.css .hero .go)와 같은 모양입니다. */
+.fallback.lost {
+  color-scheme: light;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #FFFFFF;
+  color: #000000;
+  text-align: center;
+}
+.fallback.lost h1 { margin: 0; font-size: clamp(44px, 5vw, 64px); font-weight: 900; line-height: 1.1; letter-spacing: -.01em; color: inherit; }
+.fallback.lost p { margin: 14px 0 0; font-size: clamp(17px, 1.6vw, 21px); font-weight: 700; color: inherit; }
+.fallback.lost img { display: block; width: min(652px, 100%); height: auto; margin: clamp(24px, 5vh, 64px) 0; }
+.fallback.lost .go {
+  display: inline-flex; align-items: center; gap: 10px;
+  min-height: 44px; color: var(--coral);
+  font-size: 17px; font-weight: 700; text-decoration: none;
+  transition: color .18s ease;
+}
+.fallback.lost .go svg { width: 18px; height: 18px; transition: transform .18s ease; }
+/* 랜딩은 어두운 사진 위라 hover 에 더 밝은 --coral-lite 를 씁니다. 흰 바탕에서는 흐려지므로 어두운 단계를 씁니다. */
+.fallback.lost .go:hover { color: var(--coral-press); }
+.fallback.lost .go:hover svg { transform: translateX(4px); }
+@media (prefers-reduced-motion: reduce) {
+  .fallback.lost .go, .fallback.lost .go svg { transition: none; }
+}
