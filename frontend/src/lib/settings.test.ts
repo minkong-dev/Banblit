@@ -79,8 +79,8 @@ describe("openHoursMessage", () => {
   });
 
   it("비어 있으면 채워 달라고 한다", () => {
-    expect(openHoursMessage("", "23:00")).toBe("여는 시각을 입력해 주세요.");
-    expect(openHoursMessage("18:00", "")).toBe("닫는 시각을 입력해 주세요.");
+    expect(openHoursMessage("", "23:00")).toBe("개방 시간을 입력해 주세요.");
+    expect(openHoursMessage("18:00", "")).toBe("마감 시각을 입력해 주세요.");
   });
 });
 

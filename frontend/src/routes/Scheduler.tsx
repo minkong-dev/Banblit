@@ -7,16 +7,16 @@ import { Dropdown } from "../components/Dropdown";
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from "../components/icons";
 import { getJSON, reason } from "../lib/api";
 import { currentMonth, slotSteps } from "../lib/calendar";
-import { boardListKey, focusedRanges, inRanges, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
+import { boardListKey, focusedRanges, inRanges, loadMyBookings, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
 import { MonthView, WeekView } from "./SchedulerViews";
 import {
-  allOffEntries, assignedByDay, bookedByDay, ensembleByDay, ensembleOn, listNote, memberCountLabel, offByDay, visibleDays,
+  allBookedEntries, allOffEntries, assignedByDay, bookedByDay, ensembleByDay, ensembleOn, listNote, memberCountLabel, offByDay, visibleDays,
 } from "../lib/dayEntries";
 import { can } from "../lib/account";
 import type { DayTab, Entry } from "../lib/dayEntries";
 import { teamsOf } from "../lib/roster";
-import { useMe, usePeriods, useRooms, useSlotMinutes } from "../components/queries";
+import { useMe, useMyTeams, usePeriods, useRooms, useSlotMinutes } from "../components/queries";
 import "../styles/scheduler.css";
 import type { Post, ScheduleRow } from "../lib/contract";
 import { dayLabel, slotCountOf, slotLabel, stampLabel, weekKeys } from "../lib/pipeline";
@@ -90,6 +90,9 @@ export function Scheduler() {
     queryFn: () => loadReservationRows(roomIds, rangeFrom, rangeTo),
     enabled: rooms.data !== undefined,
   });
+  // 예약 모달 오른쪽 "내 예약" 목록입니다. 달력 범위와 관계없이 아직 끝나지 않은 내 예약 전부입니다.
+  // queryKey 가 "reservations" 로 시작해서, 예약·취소 후 ["reservations"] 를 무효로 할 때 함께 다시 받습니다.
+  const myBookingsQuery = useQuery({ queryKey: ["reservations", "mine"], queryFn: loadMyBookings });
   // 공지 화면(routes/Notices 의 PostBoard)이 사용하는 queryKey 와 endpoint(API의 요청 주소 단위)를 그대로 사용합니다. 두 화면이
   // 같은 목록을 공유하므로, 공지를 작성하고 돌아오면 이 화면도 함께 갱신됩니다.
   const notices = useQuery({
@@ -163,7 +166,8 @@ export function Scheduler() {
     ? `${dayLabel(weekDayKeys[0])} – ${Number(weekDayKeys[6].slice(8, 10))}일`
     : `${dayLabel(weekDayKeys[0])} – ${dayLabel(weekDayKeys[6])}`;
 
-  const myTeams = teams.filter((team) => team.mine);
+  // 오른쪽 "내 팀" 은 소속된 팀 전부입니다. teams 는 배정 일정에 나온 팀만 담고 있어, 아직 일정이 없는 팀이 빠집니다.
+  const myTeams = useMyTeams();
   // 달력 위 화살표 하나가 두 가지를 이동합니다. 달 보기에서는 달을, 주 보기에서는 주를 이동합니다.
   // 달을 이동하면 주는 그 달 15일이 포함된 주로 돌아갑니다(weekShift 를 0 으로 초기화합니다).
   const shift = (step: number) => {
@@ -290,7 +294,7 @@ export function Scheduler() {
             {myTeams.map((team) => (
               <li key={team.id}>
                 <button className="teamrow" onClick={() => void navigate("/teams")}>
-                  <i style={{ background: `var(--${team.key})` }} />
+                  <i style={{ background: `var(--${team.colorKey})` }} />
                   <b>{team.name}</b>
                   <small>{memberCountLabel(allTeams, team.id)}</small>
                 </button>
@@ -307,6 +311,7 @@ export function Scheduler() {
           teams={teams}
           entries={entriesOf(openDay)}
           myOff={allOffEntries(unavailableQuery.data ?? [], open)}
+          myBookings={allBookedEntries(myBookingsQuery.data ?? [], teams, open)}
           openHour={open}
           closeHour={close}
           slotCount={slotCount}

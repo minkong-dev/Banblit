@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { NotificationMenu } from "./NotificationMenu";
+import { CloseIcon, WideMenuIcon } from "./icons";
 import { useDismissible, usePage } from "./hooks";
 import { useMe, useMyTeams } from "./queries";
 import { useToast } from "../lib/toast";
@@ -41,6 +42,9 @@ const PAGE_BY_PATH: Record<string, string> = {
 
 type NavItem = { key: string; label: string; to: string };
 
+// 휴대폰 메뉴 판의 id 입니다. 상단바의 햄버거 버튼이 popoverTarget 으로 이 판을 엽니다.
+const MENU_ID = "shellmenu";
+
 // NavLink 는 주소가 to 와 같거나 그 아래(/notices/new 등)이면 aria-current="page" 를 붙입니다.
 // 사이드바에 없는 화면(프로필 설정)에서는 아무 항목도 켜지지 않습니다.
 function NavList({ items }: { items: readonly NavItem[] }) {
@@ -48,6 +52,22 @@ function NavList({ items }: { items: readonly NavItem[] }) {
     <nav>
       {items.map((item) => <NavLink key={item.key} to={item.to}>{item.label}</NavLink>)}
     </nav>
+  );
+}
+
+/** 사이드바와 휴대폰 메뉴 판이 함께 쓰는 메뉴 목록입니다. 관리자 메뉴는 권한이 있을 때만 붙습니다. */
+function MenuItems({ nav, managerNav }: { nav: readonly NavItem[]; managerNav: readonly NavItem[] }) {
+  return (
+    <>
+      <NavList items={nav} />
+      {managerNav.length === 0 ? null : (
+        <>
+          <div className="sep" />
+          <div className="cap">관리자 메뉴</div>
+          <NavList items={managerNav} />
+        </>
+      )}
+    </>
   );
 }
 
@@ -73,6 +93,10 @@ export function AppShell() {
     <>
       <header className="top">
         <div className="in">
+          {/* 휴대폰(767px 이하)에서만 보입니다. 넓은 창에서는 사이드바가 늘 보이므로 CSS 가 숨깁니다. */}
+          <button className="menubtn" aria-label="메뉴 열기" popoverTarget={MENU_ID}>
+            <WideMenuIcon />
+          </button>
           <div className="logo"><b>Banblit</b><span>IN SIX STRINGS</span></div>
           <NotificationMenu />
           <ProfileMenu />
@@ -81,19 +105,27 @@ export function AppShell() {
 
       <div className="shell">
         <aside className="side" aria-label="메뉴">
-          <div className="inner">
-            <NavList items={nav} />
-            {managerNav.length === 0 ? null : (
-              <>
-                <div className="sep" />
-                <div className="cap">관리자 메뉴</div>
-                <NavList items={managerNav} />
-              </>
-            )}
-          </div>
+          <div className="inner"><MenuItems nav={nav} managerNav={managerNav} /></div>
         </aside>
 
         <div className="page"><Outlet /></div>
+      </div>
+
+      {/* 휴대폰 메뉴 판입니다(Material Design 모달 드로어). popover="auto" 라 바깥을 누르거나 Esc 를 누르면 브라우저가 닫습니다.
+          링크는 popoverTarget 을 걸 수 없어서(버튼만 가능) 링크를 누르면 여기서 닫습니다. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- 링크를 눌렀을 때 판을 닫습니다. 키보드의 Enter 는 click 으로 전달되고 Escape 는 브라우저가 처리합니다. */}
+      <div
+        id={MENU_ID}
+        popover="auto"
+        className="drawer"
+        role="dialog"
+        aria-label="메뉴"
+        onClick={(event) => { if ((event.target as HTMLElement).closest("a")) event.currentTarget.hidePopover(); }}
+      >
+        <button className="x" aria-label="메뉴 닫기" popoverTarget={MENU_ID} popoverTargetAction="hide">
+          <CloseIcon />
+        </button>
+        <MenuItems nav={nav} managerNav={managerNav} />
       </div>
 
       <div className={toast ? "toast on" : "toast"} role="status" aria-live="polite">

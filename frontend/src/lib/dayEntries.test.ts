@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { allOffEntries, ensembleByDay, ensembleOn, offByDay, offWhenLabel, repeatDays, visible } from "./dayEntries";
+import { allBookedEntries, allOffEntries, ensembleByDay, ensembleOn, offByDay, offWhenLabel, repeatDays, visible } from "./dayEntries";
 import type { Entry } from "./dayEntries";
-import type { Period, Unavailable } from "./contract";
+import type { Period, Reservation, Unavailable } from "./contract";
 
 const withEnsemble: Period = {
   id: 3,
@@ -141,5 +141,22 @@ describe("visible", () => {
     const withOne: Entry[] = [...entries, { kind: "ensemble", team: null, a: 3, b: 4 }];
     expect(visible(withOne, "me", teams).map((entry) => entry.kind)).toContain("ensemble");
     expect(visible(withOne, "all", teams).map((entry) => entry.kind)).toContain("ensemble");
+  });
+});
+
+describe("allBookedEntries", () => {
+  // 예약 모달 오른쪽 "내 예약" 은 선택한 날짜가 아니라 내가 잡은 예약 전부입니다. 날짜를 붙여 어느 날인지 보입니다.
+  it("내 예약마다 날짜와 취소용 번호를 붙인다", () => {
+    const rows: Reservation[] = [
+      { id: 7, room_id: 1, room: "1번방", team_id: 2, team: "새벽 네시", member_id: 5, member: "이도현", name: null, start: "2026-09-16T19:00:00", end: "2026-09-16T21:00:00" },
+      { id: 9, room_id: 1, room: "1번방", team_id: null, team: null, member_id: 5, member: "이도현", name: "개인 연습", start: "2026-09-18T18:00:00", end: "2026-09-18T19:00:00" },
+    ];
+    const entries = allBookedEntries(rows, [{ id: 2, name: "새벽 네시", key: "c2", mine: true }], 18);
+
+    expect(entries.map((entry) => [entry.day, entry.bookingId, entry.who, entry.a, entry.b, entry.team])).toEqual([
+      ["2026-09-16", 7, "새벽 네시", 1, 3, "c2"],
+      ["2026-09-18", 9, "개인 연습", 0, 1, null],
+    ]);
+    expect(offWhenLabel(entries[0])).toContain("9월 16일");
   });
 });

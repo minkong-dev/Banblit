@@ -67,7 +67,10 @@ test("공지를 블라인드하면 목록에서 사라지고 설정에서 되돌
 test("본문의 PDF 뷰어는 창 크기가 달라도 A4 비율을 유지한다", async ({ page }) => {
   await page.goto("/notices");
   await page.getByRole("link", { name: "글쓰기" }).click();
-  await page.locator(".rttools .rtpick[aria-label='그림 넣기'] input").setInputFiles({
+  // 임시 저장본이 만들어져야 파일 넣기가 활성화됩니다. 그 전에 넣으면 무시됩니다.
+  const picker = page.locator(".rttools .rtpick[aria-label='그림 넣기'] input");
+  await expect(picker).toBeEnabled();
+  await picker.setInputFiles({
     name: "악보.pdf",
     mimeType: "application/pdf",
     buffer: Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"),

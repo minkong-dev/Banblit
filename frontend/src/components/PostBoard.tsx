@@ -14,7 +14,6 @@ import type { LoadState } from "../lib/loading";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { boardActions, boardListKey, getJSON, stampLabel } from "../lib/pipeline";
 import { Card } from "./AppShell";
-import { useFitCount } from "./hooks";
 import { PencilIcon } from "./icons";
 import { Pager } from "./Pager";
 import { AttachmentList } from "./PostAttachments";
@@ -73,11 +72,10 @@ function PostList(props: {
   emptyText: string;
   onOpen: (id: number) => void;
   buttonRef: (id: number) => (el: HTMLButtonElement | null) => void;
-  boxRef: (el: HTMLUListElement | null) => (() => void) | undefined;
 }) {
-  const { posts, state, emptyText, onOpen, buttonRef, boxRef } = props;
+  const { posts, state, emptyText, onOpen, buttonRef } = props;
   return (
-    <ul className="rows" ref={boxRef}>
+    <ul className="rows">
       {state.kind !== "ready" || posts.length === 0 ? (
         <li className="empty">{stateText(state, emptyText)}</li>
       ) : (
@@ -206,14 +204,12 @@ export function PostBoard(props: {
   });
   const list = posts.data?.posts ?? [];
   const state = loadState(posts);
-  // 컨테이너 높이에 따라 한 page(페이지)에 표시할 글 개수를 계산합니다.
-  // 수직 스크롤 없이 pagination(페이지네이션) 버튼으로 이동합니다.
-  const [box, perPage] = useFitCount(76);
   // 글이 삭제되어 현재 page 가 범위를 벗어날 수 있으므로,
   // render 마다 유효한 page 로 clamp(제한)합니다.
-  const pages = pageCount(list.length, perPage);
+  // 한 쪽에 PER_PAGE(10)개씩 보여 줍니다(lib/paging). 쪽 넘김 줄은 목록 바로 아래에 옵니다.
+  const pages = pageCount(list.length);
   const shownPage = clampPage(page, pages);
-  const shown = pageSlice(list, shownPage, perPage);
+  const shown = pageSlice(list, shownPage);
 
   // 목록으로 돌아올 때 query 를 invalidate(갱신 대기 상태로 표시)합니다.
   // 댓글을 추가하고 돌아오면 목록의 댓글 개수도 최신 상태로 반영되어야 합니다.
@@ -236,7 +232,6 @@ export function PostBoard(props: {
             emptyText={emptyText}
             onOpen={focus.open}
             buttonRef={focus.register}
-            boxRef={box}
           />
 
           {/* Pagination 과 글쓰기 버튼이 한 줄에 함께 표시됩니다. 페이지가 하나뿐이어도

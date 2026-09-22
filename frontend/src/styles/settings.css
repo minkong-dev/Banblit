@@ -5,10 +5,8 @@ body[data-page="settings"] {
   .page:not(:has(.rail)) { grid-template-columns: minmax(0, 1fr); column-gap: 0; }
 
   /* 목록은 스크롤하지 않습니다. 들어가는 만큼만 표시하고 나머지는 page 로 나눕니다.
-     카드가 2개 이상인 화면(계정)은 page 로 나누지 않고 이어서 읽는 화면이므로 아래 규칙으로 페이지 전체가 스크롤합니다. */
+     카드가 2개 이상인 화면(계정)은 page 로 나누지 않고 이어서 읽는 화면이므로 페이지 전체가 스크롤합니다. */
   .main { overflow: hidden; }
-  /* 카드가 여러 장이면 본문 높이를 창에 묶지 않고 페이지 전체가 스크롤합니다(shell.css .shell). */
-  .page:has(.main > .card ~ .card) { height: auto; min-height: calc(100vh - var(--bar) - var(--nav, 0px)); }
   .main:has(> .card ~ .card) { overflow: visible; }
   /* flex 세로 배치에서 자식은 기본으로 줄어듭니다. 그대로 두면 카드 4개가 창 높이에 맞춰
      줄어들고 넘치는 부분이 카드의 overflow:hidden 에 잘립니다. */

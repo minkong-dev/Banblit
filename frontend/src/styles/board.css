@@ -14,9 +14,7 @@ body[data-page="board"] {
   .main > .card:only-child > .listfoot { margin-top: auto; }
 
   /* 상세와 글쓰기는 내용 길이가 정해져 있지 않습니다. 본문에 그림·소리·PDF 를 넣거나 글이 길어지면
-     늘어납니다. 본문 높이를 창에 묶지 않고 페이지 전체가 스크롤하며(shell.css .shell), 카드는 내용만큼만
-     차지합니다. flex:1 을 남겨 두면 내용이 짧을 때 카드가 창 높이까지 늘어나 아래가 비어 보입니다. */
-  .page:has(.thread, .rt) { height: auto; min-height: calc(100vh - var(--bar) - var(--nav, 0px)); }
+     늘어납니다. 페이지 전체가 스크롤하며(shell.css .shell), 카드는 내용만큼만 차지합니다. */
   .main:has(.thread, .rt) { overflow: visible; }
   .main:has(.thread, .rt) > .card:only-child { flex: none; }
 
