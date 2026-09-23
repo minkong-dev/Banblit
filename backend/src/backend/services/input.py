@@ -23,6 +23,15 @@ PRINTABLE_ASCII = re.compile(r"^[\x20-\x7E]*$")
 LOGIN_ID_PATTERN = re.compile(r"^[a-z0-9]+$")
 LOGIN_ID_MIN_LENGTH = 4
 LOGIN_ID_MAX_LENGTH = 20
+# 사람 이름과 학과 이름에 쓰는 글자입니다. 한글·영어 글자와 낱말 사이 공백만 받습니다.
+# 화면(validate.ts 의 NAME_LETTERS)도 같은 규칙을 참조합니다.
+NAME_PATTERN = re.compile(r"^[가-힣a-zA-Z]+( [가-힣a-zA-Z]+)*$")
+
+# 학과 이름에 쓰는 글자입니다. 한글·영어 글자와 낱말 사이 공백만 받습니다. 숫자와 기호는
+# 학과 이름에 쓰지 않고, 들어가면 같은 학과가 다른 학과로 저장되어 동명이인 판정이 어긋납니다.
+# 화면(validate.ts 의 departmentMessage)도 같은 규칙을 참조합니다.
+DEPARTMENT_PATTERN = NAME_PATTERN
+
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_LENGTH = 20
 # 비밀번호에 쓸 수 있는 특수문자입니다. 자판에서 바로 칠 수 있고, 주소·질의문·명령줄에서 따로
@@ -79,6 +88,22 @@ def require_login_id(value: str) -> str:
             f"아이디는 {LOGIN_ID_MIN_LENGTH}자 이상 {LOGIN_ID_MAX_LENGTH}자 이하로 입력해주세요"
         )
     return normalized
+
+
+def require_person_name(value: str) -> str:
+    """사람 이름입니다. 앞뒤 공백을 제거하고, 한글·영어 글자와 낱말 사이 공백만 허용합니다."""
+    trimmed = require_non_empty(value, "이름")
+    if not NAME_PATTERN.match(trimmed):
+        raise ValueError("이름은 한글과 영어만 사용 가능해요")
+    return trimmed
+
+
+def require_department(value: str) -> str:
+    """학과입니다. 앞뒤 공백을 제거하고, 한글·영어 글자와 낱말 사이 공백만 허용합니다."""
+    trimmed = require_non_empty(value, "학과")
+    if not DEPARTMENT_PATTERN.match(trimmed):
+        raise ValueError("학과는 한글과 영어만 사용 가능해요")
+    return trimmed
 
 
 def require_student_no(value: str) -> str:

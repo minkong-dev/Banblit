@@ -29,6 +29,8 @@ from backend.services.input import (
     require_closes_after_opens,
 
     require_email,
+    require_department,
+    require_person_name,
     require_login_id,
 
     require_ends_not_before_starts,
@@ -238,6 +240,28 @@ def test_require_password_rejects_symbols_outside_the_list(value: str) -> None:
 def test_require_password_accepts_every_symbol_on_the_list() -> None:
     for symbol in PASSWORD_SYMBOLS:
         require_password(f"Abcdef1{symbol}")
+
+
+@pytest.mark.parametrize("value", ["실용음악과1", "경영학과!", "20260001"])
+def test_require_department_rejects_digits_and_symbols(value: str) -> None:
+    with pytest.raises(ValueError, match="한글과 영어"):
+        require_department(value)
+
+
+@pytest.mark.parametrize("value", ["실용음악과", "AI융합학부", "글로벌 비즈니스학과"])
+def test_require_department_accepts_letters_and_spaces(value: str) -> None:
+    assert require_department(f" {value} ") == value
+
+
+@pytest.mark.parametrize("value", ["박서연1", "박서연!", "20260001"])
+def test_require_person_name_rejects_digits_and_symbols(value: str) -> None:
+    with pytest.raises(ValueError, match="한글과 영어"):
+        require_person_name(value)
+
+
+@pytest.mark.parametrize("value", ["박서연", "John Smith"])
+def test_require_person_name_accepts_letters_and_spaces(value: str) -> None:
+    assert require_person_name(f" {value} ") == value
 
 
 def test_parse_clock_reads_a_room_time() -> None:

@@ -8,9 +8,11 @@ from sqlalchemy.orm import Session
 
 from backend.services.input import (
     require_cohort,
+    require_department,
     require_email,
     require_login_id,
     require_non_empty,
+    require_person_name,
     require_password,
     require_student_no,
 )
@@ -106,8 +108,8 @@ def signup(
     admin_code 가 환경변수의 코드와 같으면 권한 항목이 모두 활성화된 permission set 을 부여합니다.
     넣지 않았거나 다르면 권한 0개로 가입하고, 이미 권한을 가진 사람에게서 부여받습니다
    . 틀린 코드로 가입을 거절하지 않습니다."""
-    clean_name = require_non_empty(name, "이름")
-    clean_department = require_non_empty(department, "학과")
+    clean_name = require_person_name(name)
+    clean_department = require_department(department)
     clean_student_no = require_student_no(student_no)
     clean_email = require_email(email)
     clean_login_id = require_login_id(login_id)
@@ -136,7 +138,7 @@ def update_profile(
     session: Session, member: Member, name: str, cohort: int | None
 ) -> Member:
     """로그인 사용자의 이름과 기수를 수정합니다. 이메일은 이 함수에서 수정하지 않습니다. 비밀번호 재설정·아이디 찾기를 받는 주소이므로 변경하려면 새 주소의 소유권을 확인하는 별도 절차가 필요합니다."""
-    member.name = require_non_empty(name, "이름")
+    member.name = require_person_name(name)
     member.cohort = None if cohort is None else require_cohort(cohort)
     # 이름·기수를 다른 사람과 같게 수정하면 가입 때와 같은 신원 제약을 위반합니다.
     commit_translating(session, MEMBER_MESSAGES)
