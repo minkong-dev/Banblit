@@ -1,13 +1,15 @@
 import os
 from datetime import datetime
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
+from fastapi import APIRouter, Cookie, Depends, File, HTTPException, Response, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account
 from backend.services.auth_service import change_password, update_profile
 from backend.services.auth_service import login as login_account
 from backend.services.auth_service import signup as signup_account
+from backend.services.avatar_service import avatar_path, delete_avatar, save_avatar
 from backend.services.auth_session import (
     KEEP_TTL,
     SESSION_COOKIE,
@@ -104,6 +106,7 @@ def _account_out(session: Session, member: Member) -> AccountOut:
         name=member.name,
         email=member.email or "",
         login_id=member.login_id,
+        avatar=member.avatar,
         role="head_manager" if len(permissions) == len(PERMISSIONS) else "member",
         permissions=permissions,  # type: ignore[arg-type]
         permission_sets=account_permission_set_names(session, member.id),
@@ -154,6 +157,55 @@ def edit_me(
 ) -> AuthOut:
     member = update_profile(session, requester, req.name, req.cohort)
     return AuthOut(account=_account_out(session, member))
+
+
+# 프로필 사진입니다. 올리고 지우는 것은 자기 것만 가능하므로 /me 아래에 둡니다. 보는 것은
+# 계정 번호로 누구나(로그인한 사람) 할 수 있습니다 — 명단·검색 화면이 서로의 사진을 표시합니다.
+@router.post("/me/avatar", response_model=AckOut)
+def upload_my_avatar(
+    file: UploadFile = File(...),
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> AckOut:
+    save_avatar(session, requester, file.filename or "", file.file)
+    return AckOut()
+
+
+@router.delete("/me/avatar", status_code=204)
+def delete_my_avatar(
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> None:
+    delete_avatar(session, requester)
+
+
+@router.get("/members/{member_id}/avatar")
+def show_avatar(
+    member_id: int,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> FileResponse:
+    member = session.get(Member, member_id)
+    if member is None:
+        raise HTTPException(status_code=404, detail="프로필 사진이 없습니다")
+    try:
+        path, content_type = avatar_path(member)
+    except LookupError as error:
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    # 첨부 파일을 표시하는 경로와 같은 머리말을 붙입니다. 브라우저가 내용을 보고 형식을 다시
+    # 정하지 못하게 하고, 이 응답이 다른 자원을 불러오지 못하게 합니다.
+    return FileResponse(
+        path,
+        media_type=content_type,
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Content-Disposition": "inline",
+            "Content-Security-Policy": "default-src 'none'; img-src 'self'; frame-ancestors 'self'",
+            # 사진을 바꾸면 주소가 그대로라 브라우저가 옛 사진을 계속 표시합니다. 매번 서버에
+            # 확인하게 하되, 바뀌지 않았으면 FileResponse 가 304 로 답해 다시 내려보내지 않습니다.
+            "Cache-Control": "no-cache",
+        },
+    )
 
 
 @router.post("/me/password", status_code=204)

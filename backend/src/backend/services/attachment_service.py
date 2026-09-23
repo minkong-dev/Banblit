@@ -38,7 +38,7 @@ def storage_root() -> Path:
     return Path(os.environ.get("ATTACHMENT_DIR", DEFAULT_STORAGE_DIR))
 
 
-def _display_name(raw: str) -> str:
+def display_name(raw: str) -> str:
     """입력받은 파일명에서 경로 부분을 제거하고 파일명만 반환합니다.
 
     "../../etc/passwd" 를 입력하면 "passwd" 를 반환합니다. 이 값은 화면에 표시할 때만
@@ -59,7 +59,7 @@ def _allowed_extension(name: str) -> str:
     return extension
 
 
-def _stored_path(stored_name: str) -> Path:
+def stored_path(stored_name: str) -> Path:
     """저장된 파일명을 폴더 안의 실제 경로로 변환합니다. 폴더 밖을 가리키면 ValueError 를 발생시킵니다."""
     root = storage_root().resolve()
     path = (root / stored_name).resolve()
@@ -82,7 +82,7 @@ def _used_bytes(session: Session, post_id: int) -> int:
     return int(total or 0)
 
 
-def _write_stream(stream: BinaryIO, path: Path, limit: int) -> int:
+def write_stream(stream: BinaryIO, path: Path, limit: int) -> int:
     """stream 을 path 에 복사하고, 쓴 바이트 수를 반환합니다.
 
     조각으로 나눠 복사하므로 파일 전체가 메모리에 올라오지 않습니다. 쓴 양이 limit 을 초과하면
@@ -124,7 +124,7 @@ def save_attachment(
     # board_moderate 를 통로로 쓰지 않는 이유는 그 권한자가 팀 소속을 확인받지 않아, 허용하면
     # 어느 팀의 어느 글에도 붙일 수 있기 때문입니다.
     post = require_post_readable(session, post_id, requester)
-    name = _display_name(filename)
+    name = display_name(filename)
     extension = _allowed_extension(name)
 
     root = storage_root()
@@ -135,7 +135,7 @@ def save_attachment(
     # reservation_service.py 의 _owned_reservation 이 사용합니다.
     session.scalars(select(Post).where(Post.id == post.id).with_for_update()).one()
     remaining = MAX_POST_BYTES - _used_bytes(session, post.id)
-    size = _write_stream(stream, _stored_path(stored_name), remaining)
+    size = write_stream(stream, stored_path(stored_name), remaining)
 
     attachment = Attachment(
         post_id=post.id,
@@ -150,7 +150,7 @@ def save_attachment(
         session.commit()
     except BaseException:
         # 커밋이 실패하면 방금 저장한 파일도 삭제하고 예외를 다시 발생시킵니다.
-        _stored_path(stored_name).unlink(missing_ok=True)
+        stored_path(stored_name).unlink(missing_ok=True)
         raise
     return attachment
 
@@ -185,7 +185,7 @@ def attachment_for_download(
     """게시글을 읽을 수 있는 requester 에게 (Attachment 행, 디스크 경로) 튜플을 반환합니다."""
     attachment = _get_or_raise(session, attachment_id)
     require_post_readable(session, attachment.post_id, requester)
-    path = _stored_path(attachment.stored_name)
+    path = stored_path(attachment.stored_name)
     if not path.is_file():
         raise ValueError("파일을 찾을 수 없습니다")
     return attachment, path
@@ -223,7 +223,7 @@ def delete_attachment(session: Session, attachment_id: int, requester: Member) -
     """게시글 작성자인 requester 가 첨부 파일 하나를 삭제합니다. 디스크의 파일과 Attachment 행을 함께 삭제합니다."""
     attachment = _get_or_raise(session, attachment_id)
     require_post_author(session, attachment.post_id, requester)
-    _stored_path(attachment.stored_name).unlink(missing_ok=True)
+    stored_path(attachment.stored_name).unlink(missing_ok=True)
     session.delete(attachment)
     session.commit()
 
@@ -234,4 +234,4 @@ def remove_post_files(session: Session, post_id: int) -> None:
         select(Attachment.stored_name).where(Attachment.post_id == post_id)
     )
     for stored_name in stored_names:
-        _stored_path(stored_name).unlink(missing_ok=True)
+        stored_path(stored_name).unlink(missing_ok=True)

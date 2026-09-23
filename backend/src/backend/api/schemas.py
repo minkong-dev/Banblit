@@ -411,6 +411,9 @@ class AccountOut(BaseModel):
     # 명단에만 등록되고 아직 가입하지 않은 계정은 없지만(가입해야 로그인해 이 응답을 받으므로),
     # Member.login_id 자체는 null 을 허용하는 열이라 타입을 그대로 맞춥니다.
     login_id: str | None
+    # 프로필 사진의 저장 파일명입니다. 사진이 없으면 null 입니다. 화면은 이 값이 바뀌는 것을 보고
+    # 사진을 다시 불러옵니다 — 사진 주소는 계정 번호로 고정이라 값이 없으면 옛 사진이 남습니다.
+    avatar: str | None
     # role 은 permissions 에서 계산한 값입니다. PERMISSIONS 의 항목 전부가 설정되어 있으면
     # head_manager 입니다. 화면이 아직 이 값으로 label(화면에 표시되는 텍스트)을
     # 선택하고 있어 함께 제공합니다.

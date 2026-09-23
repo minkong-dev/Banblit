@@ -180,6 +180,8 @@ class Member(Base):
     email: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True)
     login_id: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # 프로필 사진의 저장 파일명입니다. 파일 자체는 첨부와 같은 폴더에 둡니다(avatar_service).
+    avatar: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
         UniqueConstraint("name", "department", "student_no", "cohort"),
