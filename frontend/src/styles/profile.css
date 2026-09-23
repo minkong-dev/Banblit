@@ -8,8 +8,14 @@ body[data-page="profile"] {
 
   /* 카드 제목 영역입니다. 큰 프로필 사진 + 이름 + 역할 */
   .prohead { display: flex; align-items: center; gap: 16px; padding: 24px 24px 20px; border-bottom: 1px solid var(--line); }
-  .prohead .big { width: 64px; height: 64px; border-radius: 20px; background: var(--brand); color: var(--brand-on); display: grid; place-items: center; font-size: 20px; font-weight: 700; flex: none; }
+  .prohead .big, .photo .big { width: 64px; height: 64px; border-radius: 20px; background: var(--brand); color: var(--brand-on); display: grid; place-items: center; font-size: 20px; font-weight: 700; flex: none; }
   .prohead h1 { margin: 0; font-size: 20px; font-weight: 700; }
+
+  /* 사진 카드입니다. 왼쪽에 지금 사진, 오른쪽에 고르기·삭제 단추를 둡니다. */
+  .photo { display: flex; align-items: center; gap: 16px; padding: 16px 24px 20px; }
+  .photo .pickfile { display: flex; gap: 8px; flex-wrap: wrap; }
+  /* 파일 선택 칸은 브라우저마다 모양이 달라 숨기고, 옆의 단추가 대신 누릅니다. */
+  .photo .pickfile input { display: none; }
   .prohead .role { display: inline-block; margin-top: 5px; font-size: 12px; padding: 3px 10px; }
 
   .read { padding: 18px 24px 22px; display: flex; flex-direction: column; gap: 14px; }

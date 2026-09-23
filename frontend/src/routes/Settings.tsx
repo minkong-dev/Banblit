@@ -19,10 +19,7 @@ import {
   sessionMinutesLabel,
   slotMinutesLabel,
 } from "../lib/settings";
-import { applyTheme, readSavedTheme } from "../lib/theme";
-import type { Theme } from "../lib/theme";
 import { say } from "../lib/toast";
-import { AccountCards } from "./SettingsAccount";
 import { BlindedCards } from "./SettingsBlinded";
 import { Cell, SectionHead } from "./SettingsForm";
 import { MemberCards } from "./SettingsMembers";
@@ -32,49 +29,18 @@ import { RoomCard } from "./SettingsRooms";
 import "../styles/settings.css";
 
 
-type Tab = "rooms" | "periods" | "members" | "reservations" | "blinded" | "account";
+type Tab = "rooms" | "periods" | "members" | "reservations" | "blinded";
 
-// 탭마다 필요한 권한 항목이 다릅니다. 가진 권한의 탭만 표시되므로, 관리 권한이 없는 사람에게는 계정 탭 하나만 남습니다.
-// 내 정보·비밀번호·화면 밝기·탈퇴는 전부 자기 계정에 대한 설정이라 한 탭에 둡니다.
-// needs가 없는 탭은 로그인한 모든 사람이 볼 수 있습니다.
+// 탭마다 필요한 권한 항목이 다릅니다. 가진 권한의 탭만 표시되므로, 관리 권한이 하나도 없는
+// 사람에게는 표시할 탭이 없습니다. 자기 계정에 대한 설정(이름·사진·비밀번호·테마·탈퇴)은
+// 2026-09-23 에 프로필 화면(/profile)으로 옮겼습니다.
 const TABS = [
   { key: "rooms" as const, text: "합주실", needs: ["room_create", "room_edit", "room_delete"] as const },
   { key: "periods" as const, text: "기간", needs: ["period_create", "period_edit", "period_delete"] as const },
   { key: "members" as const, text: "멤버", needs: ["permission_manage", "permission_grant"] as const },
   { key: "reservations" as const, text: "예약", needs: ["reservation_manage"] as const },
   { key: "blinded" as const, text: "블라인드", needs: ["board_moderate"] as const },
-  { key: "account" as const, text: "계정", needs: null },
 ];
-
-/** 화면 밝기를 선택하는 카드입니다. 선택한 값은 브라우저에 저장되어 다음에 열 때도 유지됩니다. */
-function ThemeCard() {
-  // 초기값을 한 번만 읽습니다. 이후 사용자가 선택한 값이 정본입니다.
-  const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
-
-  const choices: { key: Theme; label: string }[] = [
-    { key: "light", label: "라이트" },
-    { key: "dark", label: "다크" },
-  ];
-
-  return (
-    <Card>
-      <SectionHead title="테마" desc="현재 브라우저에서의 테마를 지정해요" />
-      <div className="display">
-        <div className="pick" role="group" aria-label="화면 밝기">
-          {choices.map((choice) => (
-            <button
-              key={choice.key}
-              aria-pressed={theme === choice.key}
-              onClick={() => setTheme(applyTheme(choice.key))}
-            >
-              {choice.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </Card>
-  );
-}
 
 export function Settings() {
   const [tab, setTab] = useState<Tab>("rooms");
@@ -86,8 +52,8 @@ export function Settings() {
     (item) => item.needs === null || item.needs.some((need) => can(me, need)),
   );
   // 권한을 잃은 채로 그 탭에 머물러 있지 않게, 없는 탭이면 남은 탭 중 첫 탭을 표시합니다.
-  // 계정 탭은 모든 사람이 볼 수 있으므로 tabs가 비는 일은 없습니다.
-  const shown: Tab = tabs.some((item) => item.key === tab) ? tab : tabs[0].key;
+  // 관리 권한이 하나도 없으면 표시할 탭이 없습니다(shown 이 null).
+  const shown: Tab | null = tabs.some((item) => item.key === tab) ? tab : tabs[0]?.key ?? null;
 
   const rooms = useRooms();
   const periods = usePeriods();
@@ -105,6 +71,20 @@ export function Settings() {
       void client.invalidateQueries({ queryKey: [key] });
       say(text);
     };
+  }
+
+  // 관리 권한이 하나도 없으면 이 화면에 표시할 것이 없습니다. 사이드바에도 설정 메뉴가 없지만,
+  // 주소를 직접 입력해 들어올 수 있어 어디로 가야 하는지 안내합니다.
+  if (shown === null) {
+    return (
+      <div className="main">
+        <Card>
+          <div className="empty">
+            설정할 수 있는 항목이 없어요. 내 계정은 프로필 화면에서 수정해요.
+          </div>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -143,14 +123,12 @@ export function Settings() {
           <MemberCards />
         ) : shown === "reservations" ? (
           <ReservationCards />
-        ) : shown === "blinded" ? (
-          <BlindedCards />
         ) : (
-          <AccountCards theme={<ThemeCard />} />
+          <BlindedCards />
         )}
       </div>
 
-      {shown === "members" || shown === "reservations" || shown === "blinded" || shown === "account" ? null : (
+      {shown === "members" || shown === "reservations" || shown === "blinded" ? null : (
         <div className="rail">
           <Readout
             rooms={roomList}

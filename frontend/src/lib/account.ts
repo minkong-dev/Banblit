@@ -132,6 +132,19 @@ export function can(me: Account | null, item: Permission): boolean {
   return me?.permissions?.includes(item) ?? false;
 }
 
+/** 설정 화면에 표시할 탭이 하나라도 있으면 true 를 반환합니다. 사이드바의 설정 메뉴가 이 값을 따릅니다.
+ *  자기 계정에 대한 설정은 2026-09-23 에 프로필 화면으로 옮겼으므로, 관리 권한이 없는 사람에게
+ *  설정 화면은 빈 화면입니다. 항목 목록은 Settings.tsx 의 TABS 와 같습니다. */
+export function canOpenSettings(me: Account | null): boolean {
+  return ([
+    "room_create", "room_edit", "room_delete",
+    "period_create", "period_edit", "period_delete",
+    "permission_manage", "permission_grant",
+    "reservation_manage",
+    "board_moderate",
+  ] as const).some((item) => can(me, item));
+}
+
 /** 팀 생성·수정·삭제 권한 중 하나라도 있으면 true 를 반환합니다. 사이드바 팀 메뉴 이름과 팀 목록 범위가 이 값을 따릅니다. */
 export function canManageTeams(me: Account | null): boolean {
   return (["team_create", "team_edit", "team_delete"] as const).some((item) => can(me, item));

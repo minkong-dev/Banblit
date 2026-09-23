@@ -49,3 +49,39 @@ test("프로필 카드는 버튼을 누를 때만 열리고 바깥을 누르거�
   await expect(page).toHaveURL(/\/profile$/);
   await expect(card).not.toHaveClass(/\bon\b/);
 });
+
+// 프로필 사진입니다. 없으면 이름 앞 두 글자(span), 올리면 사진(img)이 같은 자리에 표시됩니다.
+// 올린 사진은 상단바에도 같은 주소로 표시되므로 두 자리를 함께 확인합니다.
+test("프로필 사진을 올리면 이니셜 대신 사진이 표시되고, 지우면 되돌아간다", async ({ page }) => {
+  // 1x1 크기의 PNG 입니다. 화면에 보이는 내용은 검사하지 않으므로 가장 작은 파일을 씁니다.
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "base64",
+  );
+
+  await page.goto("/profile");
+  const photoCard = page.locator(".photo");
+  await expect(photoCard.locator("span.big")).toBeVisible();
+
+  await photoCard.locator("input[type=file]").setInputFiles({
+    name: "얼굴.png",
+    mimeType: "image/png",
+    buffer: png,
+  });
+
+  await expect(photoCard.locator("img.big")).toBeVisible();
+  await expect(page.locator(".profbtn img.face")).toBeVisible();
+
+  await photoCard.getByRole("button", { name: "사진 삭제" }).click();
+
+  await expect(photoCard.locator("span.big")).toBeVisible();
+});
+
+// 설정 화면의 계정 탭을 프로필 화면으로 옮겼습니다(2026-09-23). 옮긴 항목이 전부 있는지 확인합니다.
+test("프로필 화면에서 이름·비밀번호·테마·탈퇴를 다룬다", async ({ page }) => {
+  await page.goto("/profile");
+
+  for (const title of ["프로필 사진", "내 정보", "비밀번호", "테마", "회원 탈퇴"]) {
+    await expect(page.getByText(title, { exact: true })).toBeVisible();
+  }
+});

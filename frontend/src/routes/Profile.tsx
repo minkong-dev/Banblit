@@ -1,5 +1,6 @@
 import { useQueries } from "@tanstack/react-query";
 
+import { Avatar } from "../components/Avatar";
 import { Card } from "../components/AppShell";
 import { getJSON, reason } from "../lib/api";
 import { cohortLabel } from "../lib/roster";
@@ -8,6 +9,7 @@ import { LOADING_TEXT } from "../lib/loading";
 import "../styles/profile.css";
 import type { Account, Member } from "../lib/contract";
 import { roleLabel } from "../lib/account";
+import { ProfileCards } from "./ProfileCards";
 
 
 
@@ -38,7 +40,8 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
   });
 }
 
-/** 프로필을 표시합니다. 내 이름과 소속 팀별 포지션을 표시합니다. 수정하는 endpoint(API의 요청 주소 단위)는 미구현입니다. */
+/** 프로필을 표시하고 수정합니다. 내 이름·소속 팀별 포지션을 표시하고, 아래 카드에서 사진·이름·기수·
+ *  비밀번호·테마·탈퇴를 다룹니다. 2026-09-23 에 설정 화면의 계정 탭을 이 화면으로 옮겼습니다. */
 export function Profile() {
   const { me, teamIds, teams } = useMe();
   const affiliations = useMyAffiliations(me, teamIds, teams);
@@ -49,7 +52,7 @@ export function Profile() {
       <div className="main">
         <Card>
           <div className="prohead">
-            <span className="big" aria-hidden="true">{name.slice(0, 2)}</span>
+            <Avatar id={me?.id ?? null} name={name} className="big" photo={me?.avatar ?? null} />
             <div>
               <h1>{name}</h1>
               <span className="role">{roleLabel(me)}</span>
@@ -66,11 +69,9 @@ export function Profile() {
                 </div>
               ))}
             </dl>
-            <p className="note">
-              정보 수정은 설정 탭에서 진행해주세요.
-            </p>
           </div>
         </Card>
+        <ProfileCards />
       </div>
     </>
   );
