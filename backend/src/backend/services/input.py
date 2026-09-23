@@ -13,6 +13,10 @@ from backend.scheduling.pipeline import TimeInterval, generate_slots
 CLOCK_FORMAT = "%H:%M"
 DATE_FORMAT = "%Y-%m-%d"
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$")
+# 이메일과 비밀번호가 받는 글자입니다. 눈에 보이는 ASCII 문자(공백부터 물결표까지)만 허용합니다.
+# 한글은 메일 서버가 SMTPUTF8 을 지원해야 전달되고, 제어문자는 헤더·기록에 보이지 않는 채로
+# 남습니다. 화면(validate.ts 의 ASCII_ONLY)도 같은 범위를 참조합니다.
+PRINTABLE_ASCII = re.compile(r"^[\x20-\x7E]*$")
 # 로그인 아이디입니다. 영문 소문자·숫자·밑줄만 허용하고 4~20자입니다. 화면(validate.ts 의
 # loginIdMessage)도 같은 규칙을 참조합니다.
 LOGIN_ID_PATTERN = re.compile(r"^[a-z0-9_]{4,20}$")
@@ -41,8 +45,14 @@ def require_non_empty(value: str, field_label: str) -> str:
 
 
 def require_email(value: str) -> str:
-    """@ 앞뒤에 공백 없는 문자가 있고, 도메인이 두 글자 이상이어야 합니다."""
+    """@ 앞뒤에 공백 없는 문자가 있고, 도메인이 두 글자 이상이어야 합니다.
+
+    한글과 제어문자는 거부합니다(PRINTABLE_ASCII). 한글 주소는 메일 서버끼리 SMTPUTF8 을
+    지원해야 전달되고, 제어문자는 To 헤더와 기록에 보이지 않는 채로 남습니다.
+    """
     trimmed = value.strip()
+    if not PRINTABLE_ASCII.match(trimmed):
+        raise ValueError("이메일은 영문·숫자·기호만 사용할 수 있습니다")
     if not EMAIL_PATTERN.match(trimmed):
         raise ValueError("이메일 형식이 올바르지 않습니다")
     return trimmed
@@ -82,6 +92,10 @@ PASSWORD_RULES: tuple[tuple[str, str], ...] = (
 def require_password(value: str) -> None:
     """새로 설정하는 비밀번호를 검증합니다. 로그인은 이 함수를 호출하지 않습니다.
     규칙을 변경하기 전에 생성된 계정이 로그인할 수 없어서는 안 되기 때문입니다."""
+    # 한글은 영문·숫자가 아니라서 특수기호 규칙을 충족해 버립니다. 규칙 4가지를 모두 통과하는
+    # 한글 비밀번호가 만들어지는데, 자판이 다른 기기에서는 본인도 다시 입력하지 못합니다.
+    if not PRINTABLE_ASCII.match(value):
+        raise ValueError("비밀번호는 영문·숫자·기호만 사용할 수 있습니다")
     if not PASSWORD_MIN_LENGTH <= len(value) <= PASSWORD_MAX_LENGTH:
         raise ValueError(
             f"비밀번호는 {PASSWORD_MIN_LENGTH}자에서 {PASSWORD_MAX_LENGTH}자 사이여야 합니다"
