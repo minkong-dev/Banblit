@@ -2,6 +2,10 @@
 // 오류 메시지가 화면에 표시되는 빨간 텍스트입니다.
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+// 한글을 비롯한 ASCII 밖의 글자를 거르는 규칙입니다. 서버(input.py 의 isascii 검사)와 같습니다.
+// 이메일은 SMTPUTF8 을 지원하지 않는 메일 서버를 거치면 발송이 실패하고, 비밀번호는 자판이
+// 다른 기기에서 본인도 다시 입력하지 못합니다.
+const ASCII_ONLY = /^[\x20-\x7E]*$/;
 // 로그인 아이디입니다. 서버(input.py 의 LOGIN_ID_PATTERN)와 같은 규칙입니다.
 const LOGIN_ID = /^[a-z0-9_]{4,20}$/;
 const PASSWORD_MIN = 8;
@@ -11,6 +15,7 @@ const STRONG_MAX = 20;
 export function emailMessage(value: string): string {
   // @ 기호 앞뒤에 공백이 없고 마지막 점 뒤가 두 글자 이상이어야 합니다.
   if (!value) return "이메일을 입력해 주세요.";
+  if (!ASCII_ONLY.test(value)) return "이메일은 영문·숫자·기호만 사용할 수 있습니다.";
   return EMAIL.test(value) ? "" : "이메일 형식이 맞는지 확인해주세요.";
 }
 
@@ -32,6 +37,7 @@ export function passwordMessage(value: string): string {
 
 /** 새로 설정하는 비밀번호가 충족해야 할 규칙입니다. 가입과 재설정이 이 함수를 공유합니다. 화면마다 따로 정의하면 규칙이 어긋납니다. 서버의 같은 규칙은 input.py 의 require_password() 입니다. 빈 값은 호출자가 먼저 검증합니다. 화면마다 표시하는 문구가 다르기 때문입니다. */
 function passwordRuleMessage(value: string): string {
+  if (!ASCII_ONLY.test(value)) return "비밀번호는 영문·숫자·기호만 사용할 수 있습니다.";
   if (value.length < STRONG_MIN || value.length > STRONG_MAX) {
     return "8자에서 20자 사이로 입력해주세요.";
   }
