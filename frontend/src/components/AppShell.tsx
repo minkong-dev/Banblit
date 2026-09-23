@@ -8,7 +8,8 @@ import { CloseIcon, WideMenuIcon } from "./icons";
 import { useDismissible, usePage } from "./hooks";
 import { useMe, useMyTeams } from "./queries";
 import { useToast } from "../lib/toast";
-import { can, roleLabel, teamNavLabel } from "../lib/account";
+import { Avatar } from "./Avatar";
+import { can, canOpenSettings, roleLabel, teamNavLabel } from "../lib/account";
 import { cohortLabel } from "../lib/roster";
 import { getJSON, logOut } from "../lib/pipeline";
 import type { Member, Permission } from "../lib/contract";
@@ -20,7 +21,7 @@ const NAV = [
   { key: "notice", label: "공지사항", to: "/notices" },
   { key: "find-team", label: "팀 찾기", to: "/teams" },
   { key: "board", label: "팀 게시판", to: "/board" },
-  // 다크/라이트 모드 설정은 권한이 없는 사용자에게도 표시됩니다.
+  // 관리 권한이 있는 사람에게만 표시합니다. 자기 계정에 대한 설정은 프로필 화면에 있습니다.
   { key: "settings", label: "설정", to: "/settings" },
 ] as const;
 
@@ -87,7 +88,9 @@ export function AppShell() {
   // 가진 권한으로 필터링합니다. 계정을 아직 받지 못했으면 아무것도 표시되지 않습니다.
   const managerNav = MANAGER_NAV.filter((item) => item.needs.some((need) => can(me, need)));
   // 팀 메뉴 이름만 권한에 따라 "팀 관리"·"내 팀"으로 변경됩니다. 주소와 key 는 같습니다.
-  const nav = NAV.map((item) => (item.key === "find-team" ? { ...item, label: teamNavLabel(me) } : item));
+  const nav = NAV.filter((item) => item.key !== "settings" || canOpenSettings(me)).map((item) =>
+    item.key === "find-team" ? { ...item, label: teamNavLabel(me) } : item,
+  );
 
   return (
     <>
@@ -168,7 +171,6 @@ export function ProfileMenu() {
   const teams = useMyTeams();
   const name = me?.name ?? "";
   const sub = roleLabel(me);
-  const initial = name.slice(0, 2);
 
   // 팀마다 그 팀의 명단을 받습니다. 명단에서 내 번호와 같은 사람을 찾으면 그 사람이
   // 그 팀에서 맡은 포지션입니다. 이름이 아니라 번호로 구분합니다(동명이인 규칙).
@@ -197,13 +199,13 @@ export function ProfileMenu() {
     // 바깥 클릭을 감지하는 요소만 만듭니다.
     <div className="profwrap" ref={box}>
       <button className="profbtn" aria-expanded={open} onClick={toggle}>
-        <span className="face" aria-hidden="true">{initial}</span>
+        <Avatar id={me?.id ?? null} name={name} photo={me?.avatar ?? null} />
         <span className="nm">{name}</span>
         <span className="ar" aria-hidden="true">▾</span>
       </button>
       <div className={open ? "pop on" : "pop"} role="dialog" aria-label="내 프로필">
         <div className="who">
-          <span className="face" aria-hidden="true">{initial}</span>
+          <Avatar id={me?.id ?? null} name={name} photo={me?.avatar ?? null} />
           <div><b>{name}</b><small>{sub}</small></div>
         </div>
         <hr />

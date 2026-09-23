@@ -147,6 +147,8 @@ export type Account = {
   email: string;
   /** 로그인에 사용하는 아이디입니다. 이메일은 비밀번호 재설정·아이디 찾기 메일을 받는 주소로만 씁니다. */
   login_id: string | null;
+  /** 프로필 사진의 저장 파일명입니다. 없으면 null 입니다. 이 값이 바뀌면 사진을 다시 불러옵니다. */
+  avatar: string | null;
   /** 저장된 값이 아니라 permissions 에서 계산한 값입니다. 20가지가 모두 켜져 있으면 head_manager 입니다. */
   role: "head_manager" | "member";
   permissions: Permission[];

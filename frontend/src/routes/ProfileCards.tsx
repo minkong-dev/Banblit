@@ -1,16 +1,19 @@
-// 설정 화면의 계정 구역입니다. 권한과 무관하게 로그인한 모든 사람이 봅니다.
-// 이 구역의 항목은 전부 자신의 계정에 대한 설정입니다.
+// 프로필 화면(/profile)의 카드들입니다. 로그인한 모든 사람이 자기 계정을 여기에서 수정합니다.
+// 2026-09-23 에 설정 화면의 계정 탭을 없애고 이 화면으로 옮겼습니다 — 같은 항목의 입력칸이
+// 두 곳에 있었습니다.
 //
 // 이메일은 다루지 않습니다. 로그인 식별자는 새 주소가 실제로 본인의 주소인지 검증하는
 // 절차가 따로 필요하며, 그 절차가 미구현이기 때문입니다.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { Avatar } from "../components/Avatar";
 import { Card } from "../components/AppShell";
 import { useMe } from "../components/queries";
-import { getJSON, reason } from "../lib/api";
+import { getJSON, reason, sendFile } from "../lib/api";
+import { applyTheme, readSavedTheme, type Theme } from "../lib/theme";
 import { say } from "../lib/toast";
 import { LOADING_TEXT } from "../lib/loading";
 import type { Account } from "../lib/contract";
@@ -32,6 +35,92 @@ function FootButton({ label, busyLabel, pending, disabled = false, danger = fals
         {pending ? busyLabel : label}
       </button>
     </div>
+  );
+}
+
+
+/** 프로필 사진입니다. 계정 1개에 1장이고, 없으면 이름 앞 두 글자를 표시합니다. */
+function MyPhoto({ me }: { me: Account }) {
+  const client = useQueryClient();
+  const pick = useRef<HTMLInputElement>(null);
+  const [bad, setBad] = useState("");
+
+  function done(text: string): void {
+    void client.invalidateQueries({ queryKey: ["me"] });
+    setBad("");
+    say(text);
+  }
+
+  const upload = useMutation({
+    mutationFn: (file: File) => sendFile<{ ok: boolean }>("/me/avatar", file, () => {}),
+    onSuccess: () => done("프로필 사진을 변경했어요."),
+    onError: (error) => setBad(reason(error)),
+  });
+
+  const remove = useMutation({
+    mutationFn: () => getJSON<null>("/me/avatar", { method: "DELETE" }),
+    onSuccess: () => done("프로필 사진을 삭제했어요."),
+    onError: (error) => setBad(reason(error)),
+  });
+
+  return (
+    <Card>
+      <SectionHead title="프로필 사진" desc="jpg·png·gif·webp 파일 1장을 올릴 수 있어요" />
+      <div className="photo">
+        <Avatar id={me.id} name={me.name} className="big" photo={me.avatar} />
+        <div className="pickfile">
+          <input
+            ref={pick}
+            id="myPhoto"
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              // 같은 파일을 다시 선택해도 변경으로 감지되도록 입력칸을 비웁니다.
+              event.target.value = "";
+              if (file !== undefined) upload.mutate(file);
+            }}
+          />
+          <button className="new" disabled={upload.isPending} onClick={() => pick.current?.click()}>
+            {upload.isPending ? "올리는 중…" : "사진 선택"}
+          </button>
+          <button className="new danger" disabled={remove.isPending} onClick={() => remove.mutate()}>
+            {remove.isPending ? "삭제하는 중…" : "사진 삭제"}
+          </button>
+        </div>
+      </div>
+      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+    </Card>
+  );
+}
+
+/** 화면 밝기를 선택하는 카드입니다. 선택한 값은 브라우저에 저장되어 다음에 열 때도 유지됩니다. */
+function ThemeCard() {
+  // 초기값을 한 번만 읽습니다. 이후 사용자가 선택한 값이 정본입니다.
+  const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
+
+  const choices: { key: Theme; label: string }[] = [
+    { key: "light", label: "라이트" },
+    { key: "dark", label: "다크" },
+  ];
+
+  return (
+    <Card>
+      <SectionHead title="테마" desc="현재 브라우저에서의 테마를 지정해요" />
+      <div className="display">
+        <div className="pick" role="group" aria-label="화면 밝기">
+          {choices.map((choice) => (
+            <button
+              key={choice.key}
+              aria-pressed={theme === choice.key}
+              onClick={() => setTheme(applyTheme(choice.key))}
+            >
+              {choice.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -210,19 +299,15 @@ function Leave({ me }: { me: Account }) {
   );
 }
 
-export function AccountCards(props: {
-  /** 화면 밝기 카드입니다. 밝기는 이 브라우저에만 저장되는 값이라 서버를 호출하지 않습니다.
-   *  따라서 계정 구역과 다른 위치(Settings.tsx)가 생성하고, 이 구역에서는 표시만 합니다. */
-  theme: React.ReactNode;
-}) {
-  const { theme } = props;
+export function ProfileCards() {
   const { me } = useMe();
   if (me === null) return <div className="empty">{LOADING_TEXT}</div>;
   return (
     <>
+      <MyPhoto me={me} />
       <MyProfile me={me} />
       <MyPassword />
-      {theme}
+      <ThemeCard />
       <Leave me={me} />
     </>
   );

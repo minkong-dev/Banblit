@@ -36,6 +36,8 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
 
   .profbtn { display: flex; align-items: center; gap: 9px; padding: 6px 12px 6px 6px; min-height: 44px; border-radius: 999px; transition: background-color .15s ease; }
   .profbtn:hover { background: var(--card-2); }
+  /* img 와 span 이 같은 클래스를 씁니다 — 사진이 있으면 img, 없으면 이름 앞 두 글자입니다. */
+  img.face, img.big { object-fit: cover; }
   .face { width: 32px; height: 32px; border-radius: 50%; background: var(--brand); color: var(--brand-on); display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: none; }
   .profbtn .nm { font-size: 14.5px; font-weight: 500; }
   .profbtn .ar { color: var(--t3); font-size: 11px; }

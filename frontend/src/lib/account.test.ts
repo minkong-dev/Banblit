@@ -12,6 +12,7 @@ function accountWith(
     name: "김민수",
     email: "a@b.c",
     login_id: "minsu1",
+    avatar: null,
     role: "member",
     permissions,
     permission_sets: permissionSets,
