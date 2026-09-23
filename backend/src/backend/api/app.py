@@ -21,6 +21,24 @@ from backend.api.routers import (
 from backend.db.pipeline import check_database
 
 logger = logging.getLogger(__name__)
+
+# uvicorn 은 자기 logger 만 설정하고 root logger 는 설정하지 않습니다. 그대로 두면 backend 의
+# 기록이 어디로도 출력되지 않고 사라집니다. backend 아래 모든 logger 의 기록을 컨테이너
+# 기록(표준 오류)으로 내보냅니다. root 에 붙이지 않는 이유는 SQLAlchemy 가 실행한 SQL 전부를
+# INFO 로 출력하기 때문입니다.
+#
+# 수준(level)은 여기에서 올리지 않습니다. 여기에서 올리면 backend 아래 모든 모듈의 INFO 가
+# 함께 통과하는데, mailer 의 INFO 에는 개발 환경용 메일 본문(재설정 token 포함)이 들어 있습니다.
+# INFO 를 남겨야 하는 모듈이 자기 logger 의 수준을 직접 올립니다(services/password_reset.py).
+_service_logs = logging.getLogger("backend")
+if not _service_logs.handlers:
+    # 이 모듈이 두 번 적재되면 handler 가 2개가 되어 같은 기록이 2줄씩 출력됩니다.
+    _service_handler = logging.StreamHandler()
+    _service_handler.setFormatter(
+        logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+    )
+    _service_logs.addHandler(_service_handler)
+
 app = FastAPI(title="Banblit Scheduling API")
 
 

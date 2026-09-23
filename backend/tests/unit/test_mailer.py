@@ -35,3 +35,16 @@ def test_a_deployment_missing_the_settings_records_the_failure_without_the_body(
     # 본문에는 재설정 token 이 포함되어 있습니다. 설정을 빠뜨린 배포 환경에서 token 이 로그로 노출되면 안 됩니다.
     assert "secret-token-value" not in recorded
     assert TO in recorded
+
+
+def test_the_deployment_log_setup_does_not_let_the_body_through() -> None:
+    """배포 환경의 기록 설정에서 mailer 의 INFO(메일 본문)가 통과하지 않는지 확인합니다.
+
+    본문에는 재설정 token 이 들어 있습니다. backend logger 전체의 수준을 INFO 로 올리면
+    MAIL_LOG_BODY 를 잘못 설정한 배포 환경에서 token 이 기록에 남습니다.
+    """
+    import backend.api.app  # noqa: F401 — import 하는 것만으로 기록 설정이 적용됩니다
+
+    assert not logging.getLogger("backend.services.mailer").isEnabledFor(logging.INFO)
+    # 메일 발송 사유는 반대로 남아야 합니다.
+    assert logging.getLogger("backend.services.password_reset").isEnabledFor(logging.INFO)

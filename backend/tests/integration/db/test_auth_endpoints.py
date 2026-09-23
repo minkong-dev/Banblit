@@ -9,12 +9,13 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import PERMISSIONS, LoginSession, Member, Post
 
+LOGIN_ID = "seoyeon1"
 SIGNUP_BODY = {
     "department": "실용음악과",
     "student_no": "20260001",
     "name": "박서연",
     "email": "seoyeon@example.com",
-    "login_id": "seoyeon1",
+    "login_id": LOGIN_ID,
     "password": "Password123!",
     "cohort": 46,
 }
@@ -624,7 +625,7 @@ def test_login_works_with_the_login_id_and_normalizes_uppercase_input(
     response = api_client.post(
         "/login",
         json={
-            "login_id": SIGNUP_BODY["login_id"].upper(),
+            "login_id": LOGIN_ID.upper(),
             "password": SIGNUP_BODY["password"],
         },
     )

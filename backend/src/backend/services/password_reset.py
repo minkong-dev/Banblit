@@ -1,3 +1,4 @@
+import logging
 import os
 import secrets
 from datetime import datetime, timedelta
@@ -27,6 +28,16 @@ DEFAULT_APP_ORIGIN = "http://localhost:5173"
 RESET_SUBJECT = "[Banblit] 비밀번호 재설정"
 FIND_ID_SUBJECT = "[Banblit] 아이디 안내"
 BAD_TOKEN = "재설정 링크가 만료되었거나 이미 사용되었습니다"
+
+# 보낸 메일과 보내지 않은 메일의 사유를 남깁니다. 못 받았다는 문의가 들어왔을 때 수신 측 문제인지
+# 서버가 조건을 이유로 보내지 않은 것인지 구분하는 근거입니다. 계정은 번호로만 남깁니다 —
+# 기록을 열람할 수 있는 사람에게 가입자의 메일 주소가 노출되지 않게 하기 위해서입니다.
+#
+# 수준을 이 모듈에서 올립니다 — 상위(backend)에서 올리면 mailer 의 INFO 까지 통과하고,
+# 그 기록에는 개발 환경용 메일 본문(재설정 token 포함)이 들어 있습니다. 출력 경로(handler)는
+# api/app.py 가 backend logger 에 부착합니다.
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def _find_account(session: Session, email: str) -> Member | None:
@@ -110,10 +121,17 @@ def request_password_reset(session: Session, email: str, now: datetime) -> None:
     """
     member = _find_account(session, email)
     if member is None or member.email is None:
+        logger.info("비밀번호 재설정 메일을 발송하지 않았습니다 — 사유: 일치하는 계정 없음")
         return
     token = issue_reset_token(session, member.id, now)
     if token is None:
+        logger.info(
+            "비밀번호 재설정 메일을 발송하지 않았습니다 — 사유: 재발송 제한 %d분 이내, 계정 %d",
+            int(RESEND_INTERVAL.total_seconds() // 60),
+            member.id,
+        )
         return
+    logger.info("비밀번호 재설정 메일을 발송했습니다 — 계정 %d", member.id)
     send_mail(
         member.email,
         RESET_SUBJECT,
@@ -154,8 +172,15 @@ def send_id_reminder(session: Session, name: str, email: str) -> None:
     issue_reset_token이 하듯이 마지막 전송 시각을 기록하여 간격을 설정하면 됩니다.
     """
     member = _find_account(session, email)
-    if member is None or member.email is None or member.name != name.strip():
+    if member is None or member.email is None:
+        logger.info("아이디 안내 메일을 발송하지 않았습니다 — 사유: 일치하는 계정 없음")
         return
+    if member.name != name.strip():
+        logger.info(
+            "아이디 안내 메일을 발송하지 않았습니다 — 사유: 이름 불일치, 계정 %d", member.id
+        )
+        return
+    logger.info("아이디 안내 메일을 발송했습니다 — 계정 %d", member.id)
     send_mail(
         member.email,
         FIND_ID_SUBJECT,
