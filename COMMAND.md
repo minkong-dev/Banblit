@@ -950,6 +950,18 @@ docker compose --profile e2e up -d --force-recreate --wait e2e-api
 docker compose --profile e2e run --rm e2e
 ```
 
+**검사 파일 1개만 실행하기**
+
+```
+docker compose --profile e2e run --rm e2e sh -c "npx playwright test profile-card"
+```
+
+- **용도**: `frontend/e2e/` 에서 이름이 일치하는 파일만 실행합니다. 방금 고친 화면만 확인할 때 씁니다.
+- **주의**
+  - 위 첫 줄(`up -d --force-recreate --wait e2e-api`)을 **먼저 실행해야 합니다.** e2e 는 빈 DB 를 전제로
+    가입부터 진행하므로, 앞선 실행이 남긴 계정이 있으면 `이미 가입된 이메일입니다` 로 중단됩니다.
+  - `npm install` 을 생략했습니다. 한 번이라도 전체 실행을 한 뒤라면 이미 설치돼 있습니다.
+
 - **실행 경로**: 저장소 루트 (`Banblit/`)
 - **용도**: `frontend/e2e/` 의 Playwright 검사 18개를 전부 실행합니다. 로그인·가입, 배정 다시
   계산과 조율안, 팀 게시판 권한·첨부, 공지 글·댓글, 달력·알림, 합주실 수정, 전체합주 지정, 팀 명단을 브라우저로
