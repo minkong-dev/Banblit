@@ -399,10 +399,12 @@ export { dayLabel, dayWithWeekday, stampLabel, WEEKDAY_NAMES };
 export { hoursLabel };
 export {
   cohortMessage,
+  departmentMessage,
   emailMessage,
   loginIdMessage,
   passwordChecks,
   passwordMessage,
+  personNameMessage,
   signupPasswordMessage,
   strongPasswordMessage,
   studentNoMessage,

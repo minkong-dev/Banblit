@@ -9,6 +9,11 @@ const ASCII_ONLY = /^[\x20-\x7E]*$/;
 // 로그인 아이디입니다. 서버(input.py 의 LOGIN_ID_PATTERN)와 같은 규칙입니다. 글자 종류와 길이를
 // 따로 봅니다 — 무엇이 틀렸는지 다른 문장으로 알려 주기 위해서입니다.
 const LOGIN_ID = /^[a-z0-9]+$/;
+// 사람 이름과 학과 이름입니다. 서버(input.py 의 NAME_PATTERN)와 같은 규칙입니다. 한글·영어
+// 글자와 낱말 사이 공백만 받습니다. 숫자가 섞이면 같은 사람·같은 학과가 다른 값으로 저장되어,
+// 이름·학과·학번·기수로 같은 사람을 가려내는 판정이 어긋납니다.
+const NAME_LETTERS = /^[가-힣a-zA-Z]+( [가-힣a-zA-Z]+)*$/;
+
 const LOGIN_ID_MIN = 4;
 const LOGIN_ID_MAX = 20;
 
@@ -40,6 +45,20 @@ export function loginIdMessage(value: string): string {
     return `아이디는 ${LOGIN_ID_MIN}자 이상 ${LOGIN_ID_MAX}자 이하로 입력해주세요.`;
   }
   return "";
+}
+
+/** 사람 이름입니다. 앞뒤 공백을 지운 값으로 검사합니다. 서버의 같은 규칙은 input.py 의 require_person_name() 입니다. */
+export function personNameMessage(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "이름을 입력해 주세요.";
+  return NAME_LETTERS.test(trimmed) ? "" : "이름은 한글과 영어만 사용 가능해요.";
+}
+
+/** 학과입니다. 앞뒤 공백을 지운 값으로 검사합니다. 서버의 같은 규칙은 input.py 의 require_department() 입니다. */
+export function departmentMessage(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "학과를 입력해 주세요.";
+  return NAME_LETTERS.test(trimmed) ? "" : "학과는 한글과 영어만 사용 가능해요.";
 }
 
 /** 로그인 입력 필드입니다. 강화된 규칙을 적용하지 않습니다. 이 함수에서 규칙을 강화하면 규칙 변경 전에 생성한 계정이 로그인할 수 없게 됩니다. 유효성은 서버가 판단합니다. */
