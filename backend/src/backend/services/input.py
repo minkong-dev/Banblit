@@ -17,11 +17,18 @@ EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$")
 # 한글은 메일 서버가 SMTPUTF8 을 지원해야 전달되고, 제어문자는 헤더·기록에 보이지 않는 채로
 # 남습니다. 화면(validate.ts 의 ASCII_ONLY)도 같은 범위를 참조합니다.
 PRINTABLE_ASCII = re.compile(r"^[\x20-\x7E]*$")
-# 로그인 아이디입니다. 영문 소문자·숫자·밑줄만 허용하고 4~20자입니다. 화면(validate.ts 의
-# loginIdMessage)도 같은 규칙을 참조합니다.
-LOGIN_ID_PATTERN = re.compile(r"^[a-z0-9_]{4,20}$")
+# 로그인 아이디입니다. 영어 소문자와 숫자만 허용합니다. 화면(validate.ts 의 loginIdMessage)도
+# 같은 규칙을 참조합니다. 길이는 아래 LOGIN_ID_MIN·MAX 가 따로 검사해, 글자 종류가 틀린 것과
+# 길이가 틀린 것을 다른 문장으로 알려 줍니다.
+LOGIN_ID_PATTERN = re.compile(r"^[a-z0-9]+$")
+LOGIN_ID_MIN_LENGTH = 4
+LOGIN_ID_MAX_LENGTH = 20
 PASSWORD_MIN_LENGTH = 8
 PASSWORD_MAX_LENGTH = 20
+# 비밀번호에 쓸 수 있는 특수문자입니다. 자판에서 바로 칠 수 있고, 주소·질의문·명령줄에서 따로
+# 처리해야 하는 글자(따옴표·역슬래시·역따옴표·꺾쇠·수직선·빗금·물결·공백)는 넣지 않았습니다.
+# 화면(validate.ts 의 PASSWORD_SYMBOLS)도 같은 목록을 참조합니다.
+PASSWORD_SYMBOLS = "!@#$%^&*()-_=+[]{};:,.?"
 # 기수의 최댓값입니다. 1981년이 1기라 2026년은 46기입니다. 54기의 여유를 두되, 오타로 입력된
 # 큰 수는 거부합니다. 화면(validate.ts 의 cohortMessage)도 같은 값을 참조합니다.
 MAX_COHORT = 100
@@ -66,7 +73,11 @@ def require_login_id(value: str) -> str:
     """
     normalized = value.strip().lower()
     if not LOGIN_ID_PATTERN.match(normalized):
-        raise ValueError("아이디는 영문 소문자·숫자·밑줄(_) 4~20자로 입력해주세요")
+        raise ValueError("아이디는 영어 소문자와 숫자만 사용 가능해요")
+    if not LOGIN_ID_MIN_LENGTH <= len(normalized) <= LOGIN_ID_MAX_LENGTH:
+        raise ValueError(
+            f"아이디는 {LOGIN_ID_MIN_LENGTH}자 이상 {LOGIN_ID_MAX_LENGTH}자 이하로 입력해주세요"
+        )
     return normalized
 
 
@@ -85,17 +96,22 @@ PASSWORD_RULES: tuple[tuple[str, str], ...] = (
     (r"[a-z]", "비밀번호에는 소문자가 하나 이상 있어야 합니다"),
     (r"[A-Z]", "비밀번호에는 대문자가 하나 이상 있어야 합니다"),
     (r"[0-9]", "비밀번호에는 숫자가 하나 이상 있어야 합니다"),
-    (r"[^A-Za-z0-9]", "비밀번호에는 특수기호가 하나 이상 있어야 합니다"),
+    (f"[{re.escape(PASSWORD_SYMBOLS)}]", "비밀번호에는 특수기호가 하나 이상 있어야 합니다"),
 )
+
+# 목록에 없는 글자를 찾아내는 규칙입니다. 영어 글자·숫자·위 특수문자 외에는 전부 거부합니다.
+PASSWORD_ALLOWED = re.compile(f"^[A-Za-z0-9{re.escape(PASSWORD_SYMBOLS)}]*$")
 
 
 def require_password(value: str) -> None:
     """새로 설정하는 비밀번호를 검증합니다. 로그인은 이 함수를 호출하지 않습니다.
     규칙을 변경하기 전에 생성된 계정이 로그인할 수 없어서는 안 되기 때문입니다."""
-    # 한글은 영문·숫자가 아니라서 특수기호 규칙을 충족해 버립니다. 규칙 4가지를 모두 통과하는
-    # 한글 비밀번호가 만들어지는데, 자판이 다른 기기에서는 본인도 다시 입력하지 못합니다.
+    # 한글은 영어 글자도 숫자도 아니라 예전 특수기호 규칙([^A-Za-z0-9])을 충족해 버렸습니다.
+    # 지금은 쓸 수 있는 글자를 목록으로 정해, 목록 밖의 글자는 종류를 가리지 않고 거부합니다.
     if not PRINTABLE_ASCII.match(value):
         raise ValueError("비밀번호는 영문·숫자·기호만 사용할 수 있습니다")
+    if not PASSWORD_ALLOWED.match(value):
+        raise ValueError(f"특수문자는 {' '.join(PASSWORD_SYMBOLS)} 만 사용 가능해요")
     if not PASSWORD_MIN_LENGTH <= len(value) <= PASSWORD_MAX_LENGTH:
         raise ValueError(
             f"비밀번호는 {PASSWORD_MIN_LENGTH}자에서 {PASSWORD_MAX_LENGTH}자 사이여야 합니다"
