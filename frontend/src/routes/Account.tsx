@@ -1,4 +1,4 @@
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { FormEvent } from "react";
 import { reason } from "../lib/api";
 import {
@@ -12,7 +12,7 @@ import {
 import { Field, failures, fieldText } from "../components/Field";
 import type { Errors } from "../components/Field";
 import { CheckMark } from "../components/CheckMark";
-import { GoogleIcon, KakaoIcon } from "../components/icons";
+import { CheckIcon, CrossIcon, GoogleIcon, KakaoIcon } from "../components/icons";
 
 import { usePage } from "../components/hooks";
 import { say, useToast } from "../lib/toast";
@@ -22,6 +22,7 @@ import {
   emailMessage,
   findId,
   loginIdMessage,
+  passwordChecks,
   logIn,
   passwordMessage,
   signupPasswordMessage,
@@ -39,9 +40,9 @@ import {
 const HEADS: Record<string, { title: string; sub: string }> = {
   "/login": { title: "로그인", sub: "유일무이 버스킹 동아리 여섯줄 안에서." },
   "/signup": { title: "회원가입", sub: "가입에 필요한 정보를 작성해주세요." },
-  "/find-id": { title: "아이디 찾기", sub: "이름과 가입한 이메일을 입력하면 그 이메일로 아이디를 보내드려요" },
+  "/find-id": { title: "아이디 찾기", sub: "이름과 가입한 이메일로 아이디 찾기" },
   "/find-password": { title: "비밀번호 찾기", sub: "가입한 이메일로 비밀번호 찾기" },
-  "/reset-password": { title: "비밀번호 재설정", sub: "대소문자, 숫자, 특수기호 포함 8~20자" },
+  "/reset-password": { title: "비밀번호 재설정", sub: "새 비밀번호를 설정해주세요." },
 };
 
 export function AccountLayout() {
@@ -166,8 +167,27 @@ export function SignIn() {
   );
 }
 
+
+/** 비밀번호 규칙 한 줄입니다. 충족하면 초록색 체크, 충족하기 전에는 포인트 색 X 입니다. */
+function Rule({ ok, text }: { ok: boolean; text: string }) {
+  return (
+    <li className={ok ? "met" : ""}>
+      {ok ? <CheckIcon /> : <CrossIcon />}
+      {text}
+    </li>
+  );
+}
+
 export function SignUp() {
   const navigate = useNavigate();
+  // 비밀번호 칸은 값이 바뀔 때마다 체크리스트를 다시 그려야 해서 값을 화면이 들고 있습니다.
+  // 다른 칸은 브라우저가 들고 있습니다(제출할 때 form 에서 한 번에 읽습니다).
+  const [password, setPassword] = useState("");
+  const [again, setAgain] = useState("");
+  // 칸을 한 번이라도 누르면 체크리스트를 표시하고, 그 뒤로는 닫지 않습니다. 확인 칸으로 옮겨도
+  // 앞 규칙을 계속 볼 수 있어야 합니다.
+  const [rulesShown, setRulesShown] = useState(false);
+  const [matchShown, setMatchShown] = useState(false);
   const { errors, onSubmit, isPending } = useFormAction(
     (data) => {
       const password = fieldText(data, "pw2");
@@ -207,7 +227,7 @@ export function SignUp() {
   return (
     <form aria-label="회원가입" noValidate onSubmit={onSubmit}>
       <Field name="loginId" label="아이디" type="text"
-        autoComplete="username" placeholder="영문 소문자·숫자·밑줄(_) 4~20자" error={errors.loginId} />
+        autoComplete="username" placeholder="아이디를 입력해주세요." error={errors.loginId} />
       <Field name="nm" label="이름" type="text"
         autoComplete="name" placeholder="이름을 입력해주세요." error={errors.nm} />
       <Field name="dept" label="학과" type="text"
@@ -217,9 +237,28 @@ export function SignUp() {
       <Field name="mail2" label="이메일" type="email" inputMode="email"
         autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.mail2} />
       <Field name="pw2" label="비밀번호" type="password" autoComplete="new-password"
-        placeholder="대소문자·숫자·특수기호 포함 8~20자" error={errors.pw2} />
+        placeholder="비밀번호를 입력해주세요." error={errors.pw2}
+        value={password} onChange={setPassword} onFocus={() => setRulesShown(true)}>
+        {!rulesShown ? null : (
+          <ul className="rules">
+            {passwordChecks(password).map((rule) => (
+              <Rule key={rule.text} ok={rule.ok} text={rule.text} />
+            ))}
+            {!matchShown ? null : (
+              <Rule
+                ok={again !== "" && again === password}
+                text={again !== "" && again === password
+                  ? "비밀번호가 일치해요"
+                  : "비밀번호가 일치하지 않아요"}
+              />
+            )}
+          </ul>
+        )}
+      </Field>
       <Field name="pw3" label="비밀번호 확인" type="password" autoComplete="new-password"
-        placeholder="비밀번호를 한 번 더 입력해주세요." error={errors.pw3} />
+        placeholder="비밀번호를 한 번 더 입력해주세요." error={errors.pw3}
+        value={again} onChange={setAgain}
+        onFocus={() => { setRulesShown(true); setMatchShown(true); }} />
 
       <Field name="cohort" label="기수" type="number" inputMode="numeric"
         min={1} max={100} step={1}
@@ -227,8 +266,8 @@ export function SignUp() {
 
       {/* 관리자코드는 운영을 맡은 사람만 받습니다. 넣으면 모든 권한을 가진 계정이 되고,
           입력하지 않으면 권한 없이 가입해 나중에 부여받습니다. */}
-      <Field name="admincode" label="관리자코드 (선택)" type="password"
-        autoComplete="off" placeholder="받으신 코드가 있을 때만 입력해주세요" error="" />
+      <Field name="admincode" label="관리자코드(선택)" type="password"
+        autoComplete="off" placeholder="관리자 코드를 보유하신 경우 입력해주세요" error="" />
 
       <button className="go" type="submit" style={{ marginTop: 22 }} disabled={isPending}>
         {isPending ? "가입 중…" : "가입하기"}
@@ -251,7 +290,7 @@ export function FindId() {
     async (data) => {
       try {
         await findId(fieldText(data, "fidName").trim(), fieldText(data, "fidMail").trim());
-        say("입력하신 이메일로 아이디를 보냈어요 · 전송된 메일을 확인해주세요");
+        say("입력하신 이메일로 아이디를 보냈어요.");
       } catch (error) {
         say(reason(error));
       }

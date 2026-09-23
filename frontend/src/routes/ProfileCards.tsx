@@ -65,7 +65,7 @@ function MyPhoto({ me }: { me: Account }) {
 
   return (
     <Card>
-      <SectionHead title="프로필 사진" desc="jpg·png·gif·webp 파일 1장을 올릴 수 있어요" />
+      <SectionHead title="프로필 사진" desc="이미지 형식만 업로드가 가능해요." />
       <div className="photo">
         <Avatar id={me.id} name={me.name} className="big" photo={me.avatar} />
         <div className="pickfile">

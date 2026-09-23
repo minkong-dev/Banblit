@@ -401,6 +401,7 @@ export {
   cohortMessage,
   emailMessage,
   loginIdMessage,
+  passwordChecks,
   passwordMessage,
   signupPasswordMessage,
   strongPasswordMessage,

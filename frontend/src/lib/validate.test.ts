@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  PASSWORD_SYMBOLS,
   emailMessage,
+  passwordChecks,
   loginIdMessage,
   passwordMessage,
   signupPasswordMessage,
@@ -109,14 +111,13 @@ describe("loginIdMessage", () => {
     expect(loginIdMessage("  ")).toBe("아이디를 입력해 주세요.");
   });
 
-  it.each(["ab", "a".repeat(21), "seoyeon!", "seoyeon 1"])(
-    "규칙에 맞지 않으면 막는다 — %s",
-    (bad) => {
-      expect(loginIdMessage(bad)).toBe(
-        "아이디는 영문 소문자·숫자·밑줄(_) 4~20자로 입력해주세요",
-      );
-    },
-  );
+  it.each(["seoyeon!", "seoyeon 1", "seo_yeon"])("글자 종류가 틀리면 막는다 — %s", (bad) => {
+    expect(loginIdMessage(bad)).toBe("아이디는 영어 소문자와 숫자만 사용 가능해요.");
+  });
+
+  it.each(["ab", "a".repeat(21)])("길이가 틀리면 막는다 — %s", (bad) => {
+    expect(loginIdMessage(bad)).toBe("아이디는 4자 이상 20자 이하로 입력해주세요.");
+  });
 });
 
 describe("studentNoMessage", () => {
@@ -134,4 +135,50 @@ describe("studentNoMessage", () => {
       expect(studentNoMessage(bad)).toBe("학번은 숫자 8자리여야 해요.");
     },
   );
+});
+
+describe("loginIdMessage", () => {
+  it.each(["seo_yeon", "seoyeon!", "서연1234"])("영어 소문자와 숫자만 받는다 — %s", (bad) => {
+    expect(loginIdMessage(bad)).toBe("아이디는 영어 소문자와 숫자만 사용 가능해요.");
+  });
+
+  it("대문자로 입력해도 소문자로 보고 통과시킨다", () => {
+    expect(loginIdMessage("SeoYeon1")).toBe("");
+  });
+
+  it("글자 종류가 맞고 길이가 모자라면 길이를 알려 준다", () => {
+    expect(loginIdMessage("seo")).toBe("아이디는 4자 이상 20자 이하로 입력해주세요.");
+  });
+});
+
+describe("passwordChecks", () => {
+  it("빈 값이면 네 항목 모두 미충족이다", () => {
+    expect(passwordChecks("").map((item) => item.ok)).toEqual([false, false, false, false]);
+  });
+
+  it("네 항목을 모두 갖추면 전부 충족이다", () => {
+    expect(passwordChecks("Abcdef1!").map((item) => item.ok)).toEqual([true, true, true, true]);
+  });
+
+  it("대문자만 있으면 첫 항목이 미충족이다", () => {
+    expect(passwordChecks("ABCDEF1!")[0].ok).toBe(false);
+  });
+
+  it("스물한 자면 길이 항목이 미충족이다", () => {
+    expect(passwordChecks("Abcdefghij1234567890!")[3].ok).toBe(false);
+  });
+});
+
+describe("목록에 없는 특수문자", () => {
+  it.each(["Abcdef1<", "Abcdef1'", 'Abcdef1"', "Abcdef1 x"])("거절한다 — %s", (bad) => {
+    expect(signupPasswordMessage(bad)).toBe(
+      `특수문자는 ${PASSWORD_SYMBOLS.split("").join(" ")} 만 사용 가능해요.`,
+    );
+  });
+
+  it("목록에 있는 특수문자는 전부 받는다", () => {
+    for (const symbol of PASSWORD_SYMBOLS) {
+      expect(signupPasswordMessage(`Abcdef1${symbol}`)).toBe("");
+    }
+  });
 });

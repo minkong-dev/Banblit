@@ -115,6 +115,12 @@ export function CheckIcon(props: IconProps) {
   return <Stroke width={2.6} {...props}><path d="M4.5 12.5l5 5 10-11" /></Stroke>;
 }
 
+/** 충족하지 못한 항목의 표시입니다. 닫기 버튼의 CloseIcon 과 모양은 비슷하지만 다른 컴포넌트입니다 —
+ *  닫기 아이콘을 바꾸면 규칙 목록의 표시까지 같이 바뀝니다. 굵기는 짝이 되는 CheckIcon 과 맞춥니다. */
+export function CrossIcon(props: IconProps) {
+  return <Stroke width={2.6} {...props}><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" /></Stroke>;
+}
+
 export function ArrowIcon(props: IconProps) {
   return <Stroke width={2.2} {...props}><path d="M5 12h14M13 6l6 6-6 6" /></Stroke>;
 }

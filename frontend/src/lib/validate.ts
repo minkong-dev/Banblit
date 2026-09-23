@@ -6,8 +6,19 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 // 이메일은 SMTPUTF8 을 지원하지 않는 메일 서버를 거치면 발송이 실패하고, 비밀번호는 자판이
 // 다른 기기에서 본인도 다시 입력하지 못합니다.
 const ASCII_ONLY = /^[\x20-\x7E]*$/;
-// 로그인 아이디입니다. 서버(input.py 의 LOGIN_ID_PATTERN)와 같은 규칙입니다.
-const LOGIN_ID = /^[a-z0-9_]{4,20}$/;
+// 로그인 아이디입니다. 서버(input.py 의 LOGIN_ID_PATTERN)와 같은 규칙입니다. 글자 종류와 길이를
+// 따로 봅니다 — 무엇이 틀렸는지 다른 문장으로 알려 주기 위해서입니다.
+const LOGIN_ID = /^[a-z0-9]+$/;
+const LOGIN_ID_MIN = 4;
+const LOGIN_ID_MAX = 20;
+
+/** 비밀번호에 쓸 수 있는 특수문자입니다. 서버(input.py 의 PASSWORD_SYMBOLS)와 같은 목록입니다.
+ *  자판에서 바로 칠 수 있고, 주소·질의문·명령줄에서 따로 처리해야 하는 글자는 넣지 않았습니다. */
+export const PASSWORD_SYMBOLS = "!@#$%^&*()-_=+[]{};:,.?";
+// 정규식 안에서 뜻을 갖는 글자(- ] ^ 등)를 글자 그대로 쓰기 위해 역슬래시를 붙입니다.
+const SYMBOL_CLASS = PASSWORD_SYMBOLS.replace(/[\^\]-]/g, "\\$&");
+const HAS_SYMBOL = new RegExp(`[${SYMBOL_CLASS}]`);
+const ONLY_ALLOWED = new RegExp(`^[A-Za-z0-9${SYMBOL_CLASS}]*$`);
 const PASSWORD_MIN = 8;
 const STRONG_MIN = 8;
 const STRONG_MAX = 20;
@@ -24,9 +35,11 @@ export function emailMessage(value: string): string {
 export function loginIdMessage(value: string): string {
   const normalized = value.trim().toLowerCase();
   if (!normalized) return "아이디를 입력해 주세요.";
-  return LOGIN_ID.test(normalized)
-    ? ""
-    : "아이디는 영문 소문자·숫자·밑줄(_) 4~20자로 입력해주세요";
+  if (!LOGIN_ID.test(normalized)) return "아이디는 영어 소문자와 숫자만 사용 가능해요.";
+  if (normalized.length < LOGIN_ID_MIN || normalized.length > LOGIN_ID_MAX) {
+    return `아이디는 ${LOGIN_ID_MIN}자 이상 ${LOGIN_ID_MAX}자 이하로 입력해주세요.`;
+  }
+  return "";
 }
 
 /** 로그인 입력 필드입니다. 강화된 규칙을 적용하지 않습니다. 이 함수에서 규칙을 강화하면 규칙 변경 전에 생성한 계정이 로그인할 수 없게 됩니다. 유효성은 서버가 판단합니다. */
@@ -38,14 +51,31 @@ export function passwordMessage(value: string): string {
 /** 새로 설정하는 비밀번호가 충족해야 할 규칙입니다. 가입과 재설정이 이 함수를 공유합니다. 화면마다 따로 정의하면 규칙이 어긋납니다. 서버의 같은 규칙은 input.py 의 require_password() 입니다. 빈 값은 호출자가 먼저 검증합니다. 화면마다 표시하는 문구가 다르기 때문입니다. */
 function passwordRuleMessage(value: string): string {
   if (!ASCII_ONLY.test(value)) return "비밀번호는 영문·숫자·기호만 사용할 수 있습니다.";
+  if (!ONLY_ALLOWED.test(value)) {
+    return `특수문자는 ${PASSWORD_SYMBOLS.split("").join(" ")} 만 사용 가능해요.`;
+  }
   if (value.length < STRONG_MIN || value.length > STRONG_MAX) {
     return "8자에서 20자 사이로 입력해주세요.";
   }
   if (!/[a-z]/.test(value)) return "소문자를 하나 이상 넣어주세요.";
   if (!/[A-Z]/.test(value)) return "대문자를 하나 이상 넣어주세요.";
   if (!/[0-9]/.test(value)) return "숫자를 하나 이상 넣어주세요.";
-  if (!/[^A-Za-z0-9]/.test(value)) return "특수기호를 하나 이상 넣어주세요.";
+  if (!HAS_SYMBOL.test(value)) return "특수기호를 하나 이상 넣어주세요.";
   return "";
+}
+
+/** 가입 화면이 비밀번호 칸 아래에 표시하는 체크리스트입니다. 규칙 하나가 한 줄입니다.
+ *  문구와 순서가 화면에 그대로 나오므로 이 함수가 정본입니다. */
+export function passwordChecks(value: string): { text: string; ok: boolean }[] {
+  return [
+    { text: "영어 대문자 및 소문자 1자 이상 포함", ok: /[a-z]/.test(value) && /[A-Z]/.test(value) },
+    { text: "숫자 1자 이상 포함", ok: /[0-9]/.test(value) },
+    { text: "특수문자 1자 이상 포함", ok: HAS_SYMBOL.test(value) },
+    {
+      text: `${STRONG_MIN}자 이상 ${STRONG_MAX}자 이하`,
+      ok: value.length >= STRONG_MIN && value.length <= STRONG_MAX,
+    },
+  ];
 }
 
 /** 가입에서 처음 설정하는 비밀번호입니다. */
