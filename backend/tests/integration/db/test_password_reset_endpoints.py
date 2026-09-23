@@ -171,3 +171,49 @@ def test_find_id_mails_the_registered_address_only_when_the_pair_matches(
     assert len(mails) == 1
     # 메일 본문에 로그인 아이디가 담겨야 합니다 — 아이디 찾기의 목적이 이메일이 아니라 아이디를 알리는 것입니다.
     assert HEAD_LOGIN_ID in mails[0].getMessage()
+
+
+def _mail_reasons(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [
+        record.getMessage()
+        for record in caplog.records
+        if record.name == "backend.services.password_reset"
+    ]
+
+
+def test_the_log_tells_whether_a_reset_mail_went_out_and_why_not(
+    api_client: TestClient, account: AccountFactory, caplog: pytest.LogCaptureFixture
+) -> None:
+    member_id, _ = account(*HEAD)
+
+    # caplog.at_level 을 쓰지 않습니다 — 기록이 남는 수준으로 설정되어 있는지까지 함께 확인합니다.
+    # 그 설정은 backend/src/backend/api/app.py 가 합니다. 이 테스트가 기록을 하나도 받지 못하면
+    # 사유 문구가 아니라 그 설정을 먼저 확인합니다.
+    api_client.post("/password-reset", json={"email": HEAD[1]})
+    api_client.post("/password-reset", json={"email": HEAD[1]})
+    api_client.post("/password-reset", json={"email": UNKNOWN_EMAIL})
+
+    assert _mail_reasons(caplog) == [
+        f"비밀번호 재설정 메일을 발송했습니다 — 계정 {member_id}",
+        f"비밀번호 재설정 메일을 발송하지 않았습니다 — 사유: 재발송 제한 1분 이내, 계정 {member_id}",
+        "비밀번호 재설정 메일을 발송하지 않았습니다 — 사유: 일치하는 계정 없음",
+    ]
+
+
+def test_the_log_tells_whether_an_id_reminder_went_out_and_why_not(
+    api_client: TestClient, account: AccountFactory, caplog: pytest.LogCaptureFixture
+) -> None:
+    member_id, _ = account(*HEAD)
+
+    api_client.post("/find-id", json={"name": HEAD[0], "email": HEAD[1]})
+    api_client.post("/find-id", json={"name": OTHER[0], "email": HEAD[1]})
+    api_client.post("/find-id", json={"name": HEAD[0], "email": UNKNOWN_EMAIL})
+
+    reasons = _mail_reasons(caplog)
+    assert reasons == [
+        f"아이디 안내 메일을 발송했습니다 — 계정 {member_id}",
+        f"아이디 안내 메일을 발송하지 않았습니다 — 사유: 이름 불일치, 계정 {member_id}",
+        "아이디 안내 메일을 발송하지 않았습니다 — 사유: 일치하는 계정 없음",
+    ]
+    # 메일 주소는 기록에 남기지 않습니다 — 기록만 열람할 수 있는 사람에게 가입자 주소가 노출됩니다.
+    assert HEAD[1] not in "\n".join(reasons)
