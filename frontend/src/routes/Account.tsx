@@ -19,10 +19,12 @@ import { say, useToast } from "../lib/toast";
 import "../styles/account.css";
 import {
   cohortMessage,
+  departmentMessage,
   emailMessage,
   findId,
   loginIdMessage,
   passwordChecks,
+  personNameMessage,
   logIn,
   passwordMessage,
   signupPasswordMessage,
@@ -193,8 +195,8 @@ export function SignUp() {
       const password = fieldText(data, "pw2");
       return {
         loginId: loginIdMessage(fieldText(data, "loginId").trim()),
-        nm: fieldText(data, "nm").trim() ? "" : "이름을 입력해 주세요.",
-        dept: fieldText(data, "dept").trim() ? "" : "학과를 입력해 주세요.",
+        nm: personNameMessage(fieldText(data, "nm")),
+        dept: departmentMessage(fieldText(data, "dept")),
         sno: studentNoMessage(fieldText(data, "sno")),
         mail2: emailMessage(fieldText(data, "mail2").trim()),
         pw2: signupPasswordMessage(password),

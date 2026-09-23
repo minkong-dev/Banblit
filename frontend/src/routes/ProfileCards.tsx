@@ -13,6 +13,7 @@ import { Avatar } from "../components/Avatar";
 import { Card } from "../components/AppShell";
 import { useMe } from "../components/queries";
 import { getJSON, reason, sendFile } from "../lib/api";
+import { personNameMessage } from "../lib/validate";
 import { applyTheme, readSavedTheme, type Theme } from "../lib/theme";
 import { say } from "../lib/toast";
 import { LOADING_TEXT } from "../lib/loading";
@@ -175,8 +176,8 @@ function MyProfile({ me }: { me: Account }) {
         busyLabel="저장하는 중…"
         pending={save.isPending}
         onClick={() => {
-          // 상세한 검증은 서버가 합니다. 화면은 빈 값만 먼저 차단합니다.
-          const why = name.trim() === "" ? "이름을 입력해 주세요." : "";
+          // 가입 화면과 같은 규칙으로 먼저 봅니다. 서버도 같은 규칙으로 다시 검증합니다.
+          const why = personNameMessage(name);
           setBad(why);
           if (why === "") save.mutate();
         }}

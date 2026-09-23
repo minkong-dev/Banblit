@@ -9,7 +9,7 @@ import type { APIRequestContext } from "@playwright/test";
 export const E2E_ADMIN_CODE = "e2e-admin-code";
 
 export const E2E_ACCOUNT = {
-  name: "E2E 검사",
+  name: "검사 계정",
   department: "검사학과",
   student_no: "20260915",
   email: "e2e@banblit.test",
@@ -22,7 +22,7 @@ export const E2E_ACCOUNT = {
  *  배정 엔진은 멤버 없는 팀을 거절하므로 E2E 계정이 속하지 않은 팀에도 멤버가 있어야 합니다. */
 export const E2E_MEMBER = {
   ...E2E_ACCOUNT,
-  name: "E2E 멤버",
+  name: "검사 멤버",
   student_no: "20260916",
   email: "e2e-member@banblit.test",
   login_id: "e2emember",

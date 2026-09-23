@@ -30,7 +30,7 @@ test("로그인하지 않으면 스케줄러 대신 로그인 화면으로 간�
 
 test("가입한 뒤 로그인 상태로 스케줄러까지 들어간다", async ({ page }) => {
   const stamp = Date.now();
-  await fillSignup(page, `E2E 가입 ${stamp}`, `e2e-signup-${stamp}@banblit.test`);
+  await fillSignup(page, "가입 검사", `e2e-signup-${stamp}@banblit.test`);
   await page.getByRole("button", { name: "가입하기" }).click();
 
   await expect(page).toHaveURL(/\/scheduler$/);
@@ -38,7 +38,7 @@ test("가입한 뒤 로그인 상태로 스케줄러까지 들어간다", async 
 
 // global-setup 이 가입시킨 E2E 계정의 이메일을 그대로 씁니다. 먼저 가입하는 요청을 따로 보내지 않아 가입 rate limit 을 아낍니다.
 test("가입한 이메일로 다시 가입하면 서버가 거절한다", async ({ page }) => {
-  await fillSignup(page, `E2E 중복 ${Date.now()}`, E2E_ACCOUNT.email);
+  await fillSignup(page, "중복 검사", E2E_ACCOUNT.email);
   await page.getByRole("button", { name: "가입하기" }).click();
 
   await expect(page.getByText("이미 가입된 이메일입니다")).toBeVisible();

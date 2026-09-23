@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import {
   PASSWORD_SYMBOLS,
+  departmentMessage,
   emailMessage,
   passwordChecks,
+  personNameMessage,
   loginIdMessage,
   passwordMessage,
   signupPasswordMessage,
@@ -180,5 +182,29 @@ describe("목록에 없는 특수문자", () => {
     for (const symbol of PASSWORD_SYMBOLS) {
       expect(signupPasswordMessage(`Abcdef1${symbol}`)).toBe("");
     }
+  });
+});
+
+describe("departmentMessage", () => {
+  it.each(["실용음악과", "AI융합학부", "글로벌 비즈니스학과"])("글자와 공백은 받는다 — %s", (ok) => {
+    expect(departmentMessage(` ${ok} `)).toBe("");
+  });
+
+  it.each(["실용음악과1", "경영학과!", "20260001"])("숫자와 기호는 막는다 — %s", (bad) => {
+    expect(departmentMessage(bad)).toBe("학과는 한글과 영어만 사용 가능해요.");
+  });
+
+  it("비었으면 넣어 달라고 한다", () => {
+    expect(departmentMessage("  ")).toBe("학과를 입력해 주세요.");
+  });
+});
+
+describe("personNameMessage", () => {
+  it.each(["박서연", "John Smith"])("글자와 공백은 받는다 — %s", (ok) => {
+    expect(personNameMessage(` ${ok} `)).toBe("");
+  });
+
+  it.each(["박서연1", "박서연!", "20260001"])("숫자와 기호는 막는다 — %s", (bad) => {
+    expect(personNameMessage(bad)).toBe("이름은 한글과 영어만 사용 가능해요.");
   });
 });
