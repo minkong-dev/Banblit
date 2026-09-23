@@ -115,3 +115,39 @@ test.describe("서버 session 이 취소된 경우", () => {
     expect(names).not.toContain("banblit_signed_in");
   });
 });
+
+// 가입 화면의 비밀번호 체크리스트입니다. 칸을 누르면 나타나고, 충족한 줄만 초록으로 바뀝니다.
+test("비밀번호 칸을 누르면 규칙 목록이 나오고 충족한 줄이 초록으로 바뀐다", async ({ page }) => {
+  await page.goto("/signup");
+  const rules = page.locator(".field .rules li");
+
+  await expect(rules).toHaveCount(0);
+  await page.locator("#pw2").click();
+  await expect(rules).toHaveCount(4);
+  // 누르기만 했을 때는 네 줄 모두 미충족입니다.
+  await expect(page.locator(".field .rules li.met")).toHaveCount(0);
+
+  await page.locator("#pw2").fill("Abcdef1!");
+  await expect(page.locator(".field .rules li.met")).toHaveCount(4);
+
+  // 확인 칸으로 옮겨도 앞 네 줄은 닫히지 않고, 일치 여부 한 줄이 더 붙습니다.
+  await page.locator("#pw3").click();
+  await expect(rules).toHaveCount(5);
+  await expect(rules.last()).toHaveText("비밀번호가 일치하지 않아요");
+
+  await page.locator("#pw3").fill("Abcdef1!");
+  await expect(rules.last()).toHaveText("비밀번호가 일치해요");
+  await expect(rules.last()).toHaveClass(/met/);
+});
+
+// 아이디는 영어 소문자와 숫자만 받습니다. 규칙 안내는 위반했을 때만 칸 아래에 나타납니다.
+test("아이디에 밑줄을 넣으면 칸 아래에 사유가 나온다", async ({ page }) => {
+  await page.goto("/signup");
+
+  await page.locator("#loginId").fill("seo_yeon");
+  await page.getByRole("button", { name: "가입하기" }).click();
+
+  await expect(page.locator(".field.err .bad").first()).toHaveText(
+    "아이디는 영어 소문자와 숫자만 사용 가능해요.",
+  );
+});

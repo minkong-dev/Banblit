@@ -33,8 +33,17 @@ export function Field(props: {
   max?: number;
   step?: number;
   error?: string;
+  /** 값을 바깥에서 다룰 때만 넘깁니다. 넘기지 않으면 브라우저가 값을 들고 있습니다(기본). */
+  value?: string;
+  onChange?: (value: string) => void;
+  onFocus?: () => void;
+  /** 오류 문구 자리 바로 위에 넣을 내용입니다. 가입 화면의 비밀번호 체크리스트가 씁니다. */
+  children?: React.ReactNode;
 }) {
-  const { name, label, type, placeholder, autoComplete, inputMode, min, max, step, error } = props;
+  const {
+    name, label, type, placeholder, autoComplete, inputMode, min, max, step, error,
+    value, onChange, onFocus, children,
+  } = props;
   // 비밀번호 필드에만 눈 버튼이 붙습니다. 누르면 type이 text로 변경되어 문자가 그대로 표시됩니다.
   // 브라우저는 type=password인 필드만 마스킹하므로, 마스킹 토글을 type으로 처리합니다.
   const [shown, setShown] = useState(false);
@@ -53,6 +62,9 @@ export function Field(props: {
           min={min}
           max={max}
           step={step}
+          value={value}
+          onChange={onChange === undefined ? undefined : (event) => onChange(event.target.value)}
+          onFocus={onFocus}
           aria-invalid={error !== undefined}
         />
         {!isPassword ? null : (
@@ -67,6 +79,7 @@ export function Field(props: {
           </button>
         )}
       </div>
+      {children}
       <p className="bad">{error ?? ""}</p>
     </div>
   );
