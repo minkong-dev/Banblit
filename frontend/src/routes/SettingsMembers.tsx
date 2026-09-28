@@ -399,31 +399,35 @@ function MemberRoster(props: {
         />
       </SectionHead>
 
-      <div className="roster">
-        <table>
+      {/* 휴대폰에서는 CSS 가 행을 묶음 배치(grid)로 바꿉니다. 그때 일부 브라우저(Safari 등)가 표 구조를 버리므로
+          역할(role)을 명시해 화면 읽기가 제목 칸과 값을 계속 연결하게 합니다. */}
+      <div className="roster members">
+        <table role="table">
           <thead>
-            <tr>
-              <th>이름</th>
-              <th>학과</th>
-              <th>학번</th>
-              <th>기수</th>
-              <th>권한</th>
+            <tr role="row">
+              <th role="columnheader">이름</th>
+              <th role="columnheader">학과</th>
+              <th role="columnheader">학번</th>
+              <th role="columnheader">기수</th>
+              <th role="columnheader">권한</th>
               {/* 남는 가로 공간을 차지하는 빈 칸입니다. 이 요소가 없으면 넓은 화면에서 앞의 열들이 가로 공간을 나눠 가져 값 사이가 크게 벌어집니다. */}
               <th className="fill" aria-hidden="true" />
-              {onExpel === null ? null : <th>추방</th>}
+              {onExpel === null ? null : <th role="columnheader">추방</th>}
             </tr>
           </thead>
+          {/* eslint-disable jsx-a11y/no-interactive-element-to-noninteractive-role -- td 는 상호작용 요소가 아닙니다. 이 규칙이
+              td 를 잘못 분류합니다. 묶음 배치에서 표 구조를 유지하려고 cell 역할을 명시합니다. */}
           <tbody>
             {shown.map((row) => (
-              <tr key={row.id}>
-                <td>{row.name}</td>
-                <td>{row.department ?? "—"}</td>
-                <td>{row.student_no ?? "—"}</td>
-                <td>{cohortLabel(row.cohort)}</td>
-                <td>{row.permission_sets.join(" · ") || "—"}</td>
+              <tr role="row" key={row.id}>
+                <td role="cell">{row.name}</td>
+                <td role="cell">{row.department ?? "—"}</td>
+                <td role="cell">{row.student_no ?? "—"}</td>
+                <td role="cell">{cohortLabel(row.cohort)}</td>
+                <td role="cell">{row.permission_sets.join(" · ") || "—"}</td>
                 <td className="fill" />
                 {onExpel === null ? null : (
-                  <td>
+                  <td role="cell">
                     {/* 자기 계정은 탈퇴로만 삭제합니다. 서버도 자기 자신의 추방을 거부합니다. */}
                     {row.id === meId ? null : (
                       <button
@@ -439,6 +443,7 @@ function MemberRoster(props: {
               </tr>
             ))}
           </tbody>
+          {/* eslint-enable jsx-a11y/no-interactive-element-to-noninteractive-role */}
         </table>
         {shown.length === 0 ? <p className="empty">표시할 멤버가 없어요</p> : null}
         {/* 이 요소가 화면에 들어오면 다음 페이지를 불러옵니다. */}

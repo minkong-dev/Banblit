@@ -295,3 +295,85 @@ test("글쓰기 화면은 아무것도 입력하지 않으면 오류를 표시�
   await page.waitForTimeout(500);
   await expect(page.locator("#postWhy")).toHaveCount(0);
 });
+
+test("기준 휴대폰 폭에서 랜딩 3단은 좌우로 넘기는 카드이고 글이 카드 안에 들어간다", async ({ browser }) => {
+  for (const size of PHONES) {
+    const guest = await browser.newContext({ viewport: size, isMobile: true, hasTouch: true, baseURL: "http://localhost:5173", storageState: { cookies: [], origins: [] } });
+    const page = await guest.newPage();
+    await page.goto("/");
+    const m = await page.locator(".three").evaluate((row) => ({
+      swipes: row.scrollWidth > row.clientWidth,
+      page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      clipped: [...row.querySelectorAll(".box")].map((box) => box.querySelector(".full")!.getBoundingClientRect().height - box.getBoundingClientRect().height),
+    }));
+    expect(m.swipes, `${size.width}px`).toBe(true);
+    expect(m.page, `${size.width}px 페이지 가로 밀림`).toBeLessThanOrEqual(1);
+    for (const over of m.clipped) expect(over, `${size.width}px 카드 글 잘림`).toBeLessThanOrEqual(0);
+    await guest.close();
+  }
+});
+
+test("기준 휴대폰 폭에서 멤버 탭의 권한 카드와 멤버 목록이 잘리지 않는다", async ({ page }) => {
+  for (const size of PHONES) {
+    await page.setViewportSize(size);
+    await page.goto("/settings");
+    await page.getByRole("tab", { name: "멤버" }).click();
+    // 권한 목록이 도착한 뒤에 잽니다. 도착 전에는 "+ 새 권한" 카드만 있어 잘림이 드러나지 않습니다.
+    await expect(page.locator(".tiles li:not(.add)").first()).toBeVisible();
+    await page.waitForTimeout(300);
+    const m = await page.evaluate(() => {
+      const card = document.querySelector(".tiles")!.closest(".card")!.getBoundingClientRect();
+      const first = document.querySelector(".tiles li")!.getBoundingClientRect();
+      const roster = document.querySelector(".roster")!;
+      return { firstLeft: first.left - card.left, rosterOver: roster.scrollWidth - roster.clientWidth };
+    });
+    expect(m.firstLeft, `${size.width}px 첫 권한 카드`).toBeGreaterThanOrEqual(0);
+    expect(m.rosterOver, `${size.width}px 멤버 목록 가로 넘침`).toBeLessThanOrEqual(1);
+  }
+});
+
+// 칸 폭에 들어가지 않는 글자는 옆으로 넘치지 않고 꺾여 아래로 밀립니다. 그래서 세로 방향 잘림도 잽니다.
+test("기준 휴대폰 폭에서 예약 달력의 날짜 칸 글씨와 막대가 칸을 넘지 않는다", async ({ page }) => {
+  for (const size of PHONES) {
+    await page.setViewportSize(size);
+    await page.goto("/scheduler");
+    await page.getByRole("tab", { name: "예약" }).click();
+    await expect(page.locator(".grid .avail").first()).toBeVisible();
+    const over = await page.evaluate(() => Math.max(...[...document.querySelectorAll(".grid .cell")].map((cell) =>
+      Math.max(0, ...[...cell.querySelectorAll(".avail > *")].map((part) => {
+        // 상자가 아니라 글자·막대가 실제로 그려진 영역을 잽니다. 상자는 칸 폭에 맞춰지고 글자만 넘칠 수 있습니다.
+        const box = cell.getBoundingClientRect();
+        const range = document.createRange();
+        range.selectNodeContents(part);
+        const r = range.getBoundingClientRect();
+        return r.width === 0 ? 0 : Math.max(r.right - box.right, box.left - r.left, r.bottom - box.bottom);
+      })))));
+    expect(over, `${size.width}px`).toBeLessThanOrEqual(0);
+  }
+});
+
+// 멤버 목록의 휴대폰 묶음 배치는 멤버 표에만 씁니다. 같은 .roster 를 쓰는 예약·블라인드 표는 열 구성이 달라
+// 표 모양을 유지하고 표 안에서만 가로로 스크롤합니다.
+test("기준 휴대폰 폭에서 설정의 예약·블라인드 표는 표 모양을 유지하고 화면을 밀지 않는다", async ({ page }) => {
+  await page.setViewportSize(PHONES[0]!);
+  for (const tab of ["예약", "블라인드"]) {
+    await page.goto("/settings");
+    await page.getByRole("tab", { name: tab }).click();
+    await page.waitForLoadState("networkidle");
+    const m = await page.evaluate(() => ({
+      table: getComputedStyle(document.querySelector(".roster table")!).display,
+      page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    }));
+    expect(m.table, tab).toBe("table");
+    expect(m.page, tab).toBeLessThanOrEqual(1);
+  }
+});
+
+test("멤버 표는 휴대폰 묶음 배치에서도 표 구조를 화면 읽기에 전달한다", async ({ page }) => {
+  await page.setViewportSize(PHONES[0]!);
+  await page.goto("/settings");
+  await page.getByRole("tab", { name: "멤버" }).click();
+  await expect(page.getByRole("table")).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "학과" })).toHaveCount(1);
+  await expect(page.getByRole("cell", { name: "검사학과" }).first()).toBeVisible();
+});

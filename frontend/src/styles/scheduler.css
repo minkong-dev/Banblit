@@ -274,6 +274,19 @@ body[data-page="scheduler"] {
     .ev.ens { background: var(--green); }
     .cell { gap: 3px; padding: 6px 5px 8px; }
     .calbar .ml { font-size: 16px; min-width: 0; white-space: nowrap; }
+    /* 예약 탭의 날짜 칸입니다. 칸 폭(약 46px)에 "4시간" 19px 는 들어가지 않아 "4시 / 간" 으로 꺾이고 아래가 잘립니다.
+       글씨를 줄이고, 칸 폭에 들어가지 않는 시간 막대(meter)와 "예약 가능" 보조 문구는 숨깁니다.
+       시간대별로 비어 있는지는 날짜를 눌러 여는 dialog 에서 확인합니다. */
+    .avail { gap: 2px; }
+    .avail .big { font-size: 12px; line-height: 1.25; white-space: nowrap; }
+    .avail .big small { display: none; }
+    .avail.none .big, .avail.auto .big, .avail .yes, .avail .no { font-size: 11px; line-height: 1.25; white-space: normal; }
+    .avail .yes svg { display: none; }
+    .meter { display: none; }
+    /* 시작·끝 시간은 두 칸으로 나란히 두고, 취소 버튼과 안내 문구는 그 아래 한 줄씩 씁니다. */
+    .timebar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 16px; }
+    .timebar .fld { flex-direction: column; align-items: stretch; gap: 6px; }
+    .timebar > :not(.fld) { grid-column: 1 / -1; margin-left: 0; }
   }
 }
 
