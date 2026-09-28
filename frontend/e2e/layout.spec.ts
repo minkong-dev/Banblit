@@ -239,3 +239,59 @@ test("프로필 편집 상태의 저장 버튼은 바탕색을 갖고 입력칸�
   expect(gaps.length).toBeGreaterThan(0);
   for (const gap of gaps) expect(gap).toBeGreaterThanOrEqual(16);
 });
+
+// 기준 휴대폰은 갤럭시 S24(360×780)와 아이폰 17(402×874)입니다(2026-09-28 사용자 결정).
+const PHONES = [{ width: 360, height: 780 }, { width: 402, height: 874 }];
+
+test("기준 휴대폰 폭에서 어느 화면도 가로로 밀리지 않는다", async ({ browser, page }) => {
+  const overflow = (target: typeof page) =>
+    target.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  for (const size of PHONES) {
+    await page.setViewportSize(size);
+    for (const path of ["/scheduler", "/notices", "/notices/new", "/board", "/teams", "/settings", "/admin", "/profile"]) {
+      await page.goto(path);
+      await page.waitForLoadState("networkidle");
+      expect(await overflow(page), `${path} ${size.width}px`).toBeLessThanOrEqual(1);
+    }
+    // 계정 화면은 로그인하지 않은 상태로 엽니다. 로그인 상태면 대시보드로 이동합니다.
+    const guest = await browser.newContext({ viewport: size, baseURL: "http://localhost:5173", storageState: { cookies: [], origins: [] } });
+    const out = await guest.newPage();
+    for (const path of ["/login", "/signup", "/find-id", "/find-password"]) {
+      await out.goto(path);
+      await out.waitForLoadState("networkidle");
+      expect(await overflow(out), `${path} ${size.width}px`).toBeLessThanOrEqual(1);
+    }
+    await guest.close();
+  }
+});
+
+test("기준 휴대폰 폭에서 알림 말풍선이 화면 안에 들어온다", async ({ page }) => {
+  for (const size of PHONES) {
+    await page.setViewportSize(size);
+    await page.goto("/scheduler");
+    await page.locator(".notes .bell").click();
+    const box = await page.locator(".notes .notepop").boundingBox();
+    expect(box, `${size.width}px`).not.toBeNull();
+    expect(box!.x, `${size.width}px 왼쪽`).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width, `${size.width}px 오른쪽`).toBeLessThanOrEqual(size.width);
+  }
+});
+
+// 휴대폰에서 날짜 dialog 의 카드 3장은 세로로 쌓이고 dialog 가 스크롤합니다. 카드가 dialog 높이에 맞춰 줄어들면
+// 가운데 입력 카드가 잘리고 버튼 줄이 입력칸을 가립니다.
+test("기준 휴대폰 폭에서 날짜 dialog 의 입력 카드가 잘리지 않는다", async ({ page }) => {
+  await page.setViewportSize(PHONES[0]!);
+  await page.goto("/scheduler");
+  await page.locator(".grid .cell:not(:disabled)").nth(10).click();
+  const col = page.locator("dialog[open] .pane .col").first();
+  await expect(col).toBeVisible();
+  const clipped = await col.evaluate((el) => el.scrollHeight - el.clientHeight);
+  expect(clipped).toBeLessThanOrEqual(1);
+});
+
+test("글쓰기 화면은 아무것도 입력하지 않으면 오류를 표시하지 않는다", async ({ page }) => {
+  await page.goto("/notices/new");
+  await expect(page.locator(".rtbody")).toBeVisible();
+  await page.waitForTimeout(500);
+  await expect(page.locator("#postWhy")).toHaveCount(0);
+});

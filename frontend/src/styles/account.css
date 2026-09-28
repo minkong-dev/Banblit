@@ -9,10 +9,6 @@
     --kakao: #FEE500; --kakao-ink: #191600;
   }
 
-  /* 최소 창 크기입니다. 이 크기 아래로는 요소가 겹칩니다.
-     가로 420px: form 하나의 최소 폭 388 + 좌우 여백 36.
-     세로 620px: 사진 200 + 제목 74 + 입력 4줄 + 버튼. */
-  body[data-page="account"] { min-width: 420px; min-height: 620px; }
   body[data-page="account"] {
     margin: 0; background: var(--paper); color: var(--ink);
     font-family: "Noto Sans KR", -apple-system, "Malgun Gothic", sans-serif;
@@ -156,6 +152,8 @@ body[data-page="account"] {
     .stage { position: relative; height: auto; min-height: 280px; padding: 28px; }
     .stage .say h1 { font-size: 23px; }
     .form { padding: 40px 24px 64px; }
+    /* 한 열에서는 form 과 약관 줄을 위아래로 쌓습니다. 가로(flex 기본 방향)로 두면 약관 줄이 form 옆에 붙습니다. */
+    .form { flex-direction: column; }
     .legal { position: static; margin-top: 36px; }
   }
   @media (max-width: 680px) {

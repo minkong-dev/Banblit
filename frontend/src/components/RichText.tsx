@@ -277,7 +277,9 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
     ],
     content: value,
     editable: !disabled,
-    onUpdate: ({ editor: changed }) => onChange(changed.getHTML()),
+    // 문서 내용이 실제로 바뀐 경우만 바깥에 알립니다. 편집기를 만들거나 편집 가능 여부를 바꿀 때도 onUpdate 가
+    // 빈 문서("<p></p>")로 불려, 그대로 알리면 글쓰기 화면이 입력한 것으로 판정해 빈 제목 오류를 처음부터 표시합니다.
+    onUpdate: ({ editor: changed, transaction }) => { if (transaction.docChanged) onChange(changed.getHTML()); },
     editorProps: {
       attributes: {
         id,
@@ -295,8 +297,10 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
 
   // 바깥에서 값을 초기화하거나 다른 글로 변경했을 때만 편집기에 다시 넣습니다. 조건 없이 넣으면
   // 글자를 칠 때마다 편집기를 다시 채워 커서가 맨 앞으로 돌아갑니다.
+  // 바깥 값을 넣은 것은 사용자의 입력이 아니므로 onChange 로 되돌려 보내지 않습니다(emitUpdate: false).
+  // 되돌려 보내면 빈 값("")이 "<p></p>" 로 돌아와 글쓰기 화면이 입력한 것으로 판정해 빈 제목 오류를 처음부터 표시합니다.
   useEffect(() => {
-    if (editor !== null && value !== editor.getHTML()) editor.commands.setContent(value);
+    if (editor !== null && value !== editor.getHTML()) editor.commands.setContent(value, { emitUpdate: false });
   }, [editor, value]);
 
   useEffect(() => {

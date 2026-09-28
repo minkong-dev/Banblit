@@ -271,8 +271,12 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
 .notes .note.unread { background: var(--card-2); }
 
 /* 좁은 화면에서는 상단바 폭을 넘지 않게 붙입니다. */
-@media (max-width: 420px) {
-  .notes .notepop { width: min(320px, calc(100vw - 28px)); right: -8px; }
+/* 휴대폰(767px 이하)에서는 알림 버튼이 아니라 화면을 기준으로 양옆 12px 안에 붙입니다. 알림 버튼 기준으로 320px 를
+   왼쪽으로 펼치면 버튼 오른쪽의 프로필 버튼 폭만큼 화면 왼쪽 밖으로 나갑니다. 화살표는 가리킬 위치가 화면 폭마다 달라 숨깁니다. */
+@media (max-width: 767px) {
+  .notes { position: static; }
+  .notes .notepop { position: fixed; left: 12px; right: 12px; top: calc(var(--bar) + 6px); width: auto; }
+  .notes .notepop::before { display: none; }
 }
 
 /* ===== 모달 =====
@@ -289,9 +293,11 @@ dialog.panes { width: min(max(1320px, 80vw), calc(100vw - 40px)); height: 92vh; 
 /* 카드 3장의 폭은 같습니다(사용자 결정). */
 dialog.panes[open] { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 1.8vw, 24px); align-items: stretch; }
 /* 1열로 쌓이면 카드는 내용만큼만 차지하고 dialog 가 스크롤합니다. */
+/* 1열로 쌓이면 카드는 내용 높이만큼 차지하고 dialog 가 스크롤합니다. 줄 높이를 내용(max-content)으로 고정하지 않으면
+   grid 가 카드를 dialog 높이(92vh) 안에 맞추려고 줄여, 가운데 입력 카드가 잘리고 버튼 줄이 입력칸을 가립니다. */
 @media (max-width: 960px) {
   dialog.panes { height: auto; max-height: 92vh; overflow-y: auto; }
-  dialog.panes[open] { grid-template-columns: 1fr; }
+  dialog.panes[open] { grid-template-columns: 1fr; grid-auto-rows: max-content; }
 }
 /* 열렸을 때만 flex 로 배치합니다. dialog 자체에 display 를 지정하면 닫혀 있어도 표시됩니다.
    브라우저가 dialog:not([open]) 에 display:none 을 적용하는 방식이라 그 규칙을 덮어쓰기 때문입니다.
@@ -361,6 +367,8 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
   transition: background-color .15s ease;
 }
 .listfoot .new:hover { background: var(--brand-press); }
+/* 글쓰기처럼 주소로 이동하는 버튼은 링크(a)라 밑줄이 붙습니다. 버튼 모양이므로 밑줄을 없앱니다. */
+.listfoot a.new { text-decoration: none; }
 /* 되돌릴 수 없는 동작의 버튼입니다. 색으로도 다른 동작임을 표시합니다. */
 .listfoot .new.danger { background: var(--red); }
 .listfoot .new[disabled] { opacity: .45; cursor: default; }
