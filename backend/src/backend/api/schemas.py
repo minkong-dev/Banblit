@@ -423,6 +423,8 @@ class AccountOut(BaseModel):
     permission_sets: list[str]
     # 기수입니다. 화면이 동명이인을 구분할 때 이름 옆에 표시합니다.
     cohort: int | None = None
+    # 학과입니다. 프로필 화면이 이름 아래에 표시합니다. 이 열이 추가되기 전에 가입한 계정은 null 입니다.
+    department: str | None = None
 
 
 class PermissionSetIn(BaseModel):

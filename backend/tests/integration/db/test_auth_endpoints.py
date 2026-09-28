@@ -233,6 +233,8 @@ def test_me_returns_the_signed_in_account(api_client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json()["account"]["email"] == SIGNUP_BODY["email"]
+    # 프로필 화면이 이름 아래에 학과를 표시합니다.
+    assert response.json()["account"]["department"] == SIGNUP_BODY["department"]
 
 
 def test_me_rejects_a_missing_session_cookie(api_client: TestClient) -> None:

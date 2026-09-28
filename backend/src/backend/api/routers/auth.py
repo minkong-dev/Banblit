@@ -111,6 +111,7 @@ def _account_out(session: Session, member: Member) -> AccountOut:
         permissions=permissions,  # type: ignore[arg-type]
         permission_sets=account_permission_set_names(session, member.id),
         cohort=member.cohort,
+        department=member.department,
     )
 
 
