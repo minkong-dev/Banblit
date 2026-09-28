@@ -23,6 +23,10 @@ describe("notificationText", () => {
     expect(notificationText("assignment_updated")).toBe("합주 일정이 업데이트 되었어요.");
   });
 
+  it("집중 합주기간 때문에 예약이 취소된 알림을 사람이 읽을 문장으로 바꾼다", () => {
+    expect(notificationText("reservation_cancelled")).toBe("예약이 집중 합주기간과 겹쳐 취소되었어요.");
+  });
+
   it("모르는 종류가 와도 종류 이름을 그대로 내보이지 않는다", () => {
     const text = notificationText("something_new");
     expect(text).not.toContain("something_new");

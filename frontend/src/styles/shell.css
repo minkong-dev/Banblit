@@ -466,3 +466,7 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 .ddlist li[aria-selected="true"] { background: var(--brand-tint); color: var(--brand-press); font-weight: 700; }
 .ddlist li.ddoff { color: var(--t3); background: none; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) { .ddmark { transition: none; } }
+/* 목록이 열려 있는 동안에는 목록을 품은 카드와 본문이 넘치는 내용을 자르지 않습니다. 카드는 둥근 모서리 때문에
+   overflow: hidden 이라, 그대로 두면 카드보다 긴 목록이 카드 안에서 잘려 아래 선택지를 누를 수 없습니다. */
+.card:has(.ddbtn[aria-expanded="true"]),
+.main:has(.ddbtn[aria-expanded="true"]) { overflow: visible; }

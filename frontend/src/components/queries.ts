@@ -18,14 +18,16 @@ export function useRooms() {
  *  칸은 합주를 시작할 수 있는 간격이고, 합주 길이는 한 번 시작하면 이어지는 시간입니다.
  *  아직 받지 못했으면 둘 다 60 입니다. 서버 기본값과 같은 값이라, 받는 사이에
  *  화면이 잠깐 다른 격자를 그리는 일이 없습니다. */
-export function useSettings(): { slotMinutes: number; sessionMinutes: number } {
+export function useSettings(): { slotMinutes: number; sessionMinutes: number; dailyMaxHours: number } {
   const query = useQuery({
     queryKey: ["settings"],
-    queryFn: () => getJSON<{ slot_minutes: number; session_minutes: number }>("/settings"),
+    queryFn: () => getJSON<{ slot_minutes: number; session_minutes: number; daily_max_hours: number }>("/settings"),
   });
   return {
     slotMinutes: query.data?.slot_minutes ?? 60,
     sessionMinutes: query.data?.session_minutes ?? 60,
+    // 팀 하나가 하루에 배정받는 시간의 상한입니다. 서버 기본값(3)과 같게 둡니다.
+    dailyMaxHours: query.data?.daily_max_hours ?? 3,
   };
 }
 
