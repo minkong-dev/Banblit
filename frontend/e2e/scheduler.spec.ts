@@ -84,8 +84,9 @@ test("주 보기의 맨 위 시각 글자가 요일 머리글에 가려지지 �
     const scroll = document.querySelector(".weekscroll")!;
     const header = document.querySelector(".weekgrid .wh")!.getBoundingClientRect();
     const labels = [...document.querySelectorAll(".weekgrid .wt")].map((el) => el.getBoundingClientRect());
-    const inView = labels.filter((rect) => rect.bottom > header.top && rect.top < scroll.getBoundingClientRect().bottom);
-    // 보이는 영역에 걸친 글자 중 가장 위의 것이 머리글 아래 끝보다 위로 올라가 있으면 가려진 것입니다.
+    // 머리글 뒤에 완전히 들어간 글자는 보이지 않으므로 제외합니다. 줄 높이가 머리글보다 낮으면 윗줄 글자가 그 자리에 있습니다.
+    const inView = labels.filter((rect) => rect.bottom > header.bottom && rect.top < scroll.getBoundingClientRect().bottom);
+    // 머리글 아래 끝에 걸친 글자가 있으면 반쯤 가려진 것입니다.
     return header.bottom - Math.min(...inView.map((rect) => rect.top));
   });
   expect(await covered(), "들어온 직후").toBeLessThanOrEqual(0);

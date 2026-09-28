@@ -88,10 +88,11 @@ test("창 폭 세 단계에서 가로로 잘리지 않고 단계마다 배치가
   }
 });
 
-// 달력 칸 높이는 칸 너비의 0.75 배이고 56~137px 사이입니다. 너비가 줄면 높이도 같이 줄어듭니다.
-// 달력 안쪽(#body)은 따로 스크롤하지 않습니다. 달력이 창보다 길면 페이지 전체가 스크롤합니다.
-test("달력 칸 높이가 너비에 비례하고 달력 안쪽은 따로 스크롤하지 않는다", async ({ page }) => {
-  for (const size of [{ width: 1280, height: 600 }, { width: 960, height: 600 }, { width: 390, height: 800 }]) {
+// 좁은 창(휴대폰)의 달력 칸 높이는 칸 너비의 0.75 배이고 56~137px 사이입니다. 오른쪽 칸이 달력 아래에 붙어
+// 페이지 전체가 스크롤합니다. 넓은 창은 창 높이에 맞춰 줄어듭니다(아래 "스크롤 없이 한 화면" 검사).
+// 달력 안쪽(#body)은 어느 폭에서도 따로 스크롤하지 않습니다.
+test("좁은 창의 달력 칸 높이가 너비에 비례하고 달력 안쪽은 따로 스크롤하지 않는다", async ({ page }) => {
+  for (const size of [{ width: 390, height: 800 }]) {
     await page.setViewportSize(size);
     await page.goto("/scheduler");
     await expect(page.locator(".grid .cell").first()).toBeVisible();
@@ -201,4 +202,40 @@ test("대시보드만 창 바닥까지 채우고 나머지 화면은 내용 높�
   await page.goto("/scheduler");
   await expect(page.locator(".page > .card")).toBeVisible();
   expect(await gapBelow(".page > .card"), "/scheduler").toBeLessThan(40);
+});
+
+// 대시보드 달력은 창 높이 안에 한 달이 전부 들어옵니다(사용자 결정). 칸이 줄어들고 다 들어가지 않는 일정은
+// 칸이 자릅니다. 예전에는 줄 최소 높이가 창 너비 기준(최대 137px)이라 6주짜리 달이 창을 넘겨 페이지가 스크롤했습니다.
+test("넓은 창에서 대시보드 달력이 스크롤 없이 한 화면에 들어온다", async ({ page }) => {
+  for (const size of [{ width: 1280, height: 720 }, { width: 1920, height: 1080 }, { width: 960, height: 700 }]) {
+    await page.setViewportSize(size);
+    await page.goto("/scheduler");
+    await expect(page.locator(".grid .cell").first()).toBeVisible();
+    const fit = await page.evaluate(() => ({
+      overflow: document.documentElement.scrollHeight - innerHeight,
+      gridBottom: document.querySelector(".grid")?.getBoundingClientRect().bottom ?? Infinity,
+      viewport: innerHeight,
+    }));
+    expect(fit.overflow, `창 ${size.width}x${size.height}`).toBeLessThanOrEqual(1);
+    expect(fit.gridBottom, `창 ${size.width}x${size.height}`).toBeLessThanOrEqual(fit.viewport);
+  }
+});
+
+// 프로필 카드는 설정 화면에서 옮겨 왔습니다. 설정 화면 전용 CSS 에 남은 규칙이 있으면 프로필에서는 버튼이
+// 글자만 남고 입력칸이 카드 가장자리에 붙습니다. 브라우저 기본 파일 선택 칸은 보이지 않아야 합니다.
+test("프로필 편집 상태의 저장 버튼은 바탕색을 갖고 입력칸은 카드 안쪽 여백을 둔다", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/profile");
+  await page.getByRole("button", { name: "프로필 편집" }).click();
+  await expect(page.locator("#myPhoto")).toBeHidden();
+  const background = await page.getByRole("button", { name: "저장", exact: true })
+    .evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(background).not.toBe("rgba(0, 0, 0, 0)");
+  const gaps = await page.evaluate(() => [...document.querySelectorAll(".card .fields input")].map((el) => {
+    const card = el.closest(".card")!.getBoundingClientRect();
+    const input = el.getBoundingClientRect();
+    return Math.min(input.left - card.left, card.right - input.right);
+  }));
+  expect(gaps.length).toBeGreaterThan(0);
+  for (const gap of gaps) expect(gap).toBeGreaterThanOrEqual(16);
 });

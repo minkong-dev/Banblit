@@ -156,6 +156,8 @@ export type Account = {
   permission_sets: string[];
   /** 기수입니다. 화면이 동명이인을 구분할 때 이름 옆에 붙입니다. */
   cohort: number | null;
+  /** 학과입니다. 프로필 화면이 이름 아래에 표시합니다. 학과 열이 생기기 전에 가입한 계정은 null 입니다. */
+  department: string | null;
 };
 
 /** permission set(권한 집합) 하나입니다. members 는 이 permission set 을 가진 멤버 목록이며, 이름까지 서버가 제공합니다.

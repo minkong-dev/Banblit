@@ -68,13 +68,6 @@ body[data-page="settings"] {
   .switches .sw:checked::after { transform: translateX(18px); }
   .switches .sw:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 
-  /* 밝게·어둡게 둘 중 하나입니다. 선택한 쪽만 바탕색이 채워집니다. */
-  .display { padding: 18px 20px; }
-  .read .pick, .display .pick { display: flex; gap: 8px; max-width: 320px; }
-  .read .pick button, .display .pick button { flex: 1; min-height: 44px; border-radius: 12px; background: var(--card-2); color: var(--t2); font-size: 14px; font-weight: 700; transition: background-color .15s ease, color .15s ease; }
-  .read .pick button:hover, .display .pick button:hover { color: var(--t1); }
-  .read .pick button[aria-pressed="true"], .display .pick button[aria-pressed="true"] { background: var(--brand); color: var(--brand-on); }
-
   /* ===== permission set 카드 줄 =====
      정사각형 카드가 가로로 배치됩니다. 한 화면에 다 들어가지 않으면 ‹ › 로 넘깁니다.
      세로로 쌓으면 permission set 이 몇 개인지 한눈에 보이지 않습니다. */

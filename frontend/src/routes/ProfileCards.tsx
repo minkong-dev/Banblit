@@ -1,9 +1,12 @@
-// 프로필 화면(/profile)의 카드들입니다. 로그인한 모든 사람이 자기 계정을 여기에서 수정합니다.
+// 프로필 화면(/profile)의 카드입니다. 로그인한 모든 사람이 자기 계정을 여기에서 수정합니다.
 // 2026-09-23 에 설정 화면의 계정 탭을 없애고 이 화면으로 옮겼습니다 — 같은 항목의 입력칸이
 // 두 곳에 있었습니다.
 //
-// 이메일은 다루지 않습니다. 로그인 식별자는 새 주소가 실제로 본인의 주소인지 검증하는
-// 절차가 따로 필요하며, 그 절차가 미구현이기 때문입니다.
+// 평소에는 값만 표시합니다. 오른쪽 위 편집을 누르면 입력칸이 열리고, 저장 한 번으로 이름·기수·비밀번호를
+// 전부 기록합니다(2026-09-28 사용자 결정). 프로필 사진은 편집 상태와 관계없이 바로 변경합니다.
+//
+// 이메일·학과는 표시만 합니다. 이메일은 새 주소가 본인의 주소인지 검증하는 절차가 미구현이고,
+// 학과는 가입자를 구분하는 값(이름·학과·학번·기수)이라 서버에 수정 기능이 없습니다.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -11,254 +14,232 @@ import { useNavigate } from "react-router-dom";
 
 import { Avatar } from "../components/Avatar";
 import { Card } from "../components/AppShell";
-import { useMe } from "../components/queries";
+import { useDismissible } from "../components/hooks";
+import { ChevronLeftIcon, PencilIcon } from "../components/icons";
 import { getJSON, reason, sendFile } from "../lib/api";
+import { roleLabel } from "../lib/account";
 import { personNameMessage } from "../lib/validate";
-import { applyTheme, readSavedTheme, type Theme } from "../lib/theme";
 import { say } from "../lib/toast";
-import { LOADING_TEXT } from "../lib/loading";
 import type { Account } from "../lib/contract";
 import { SectionHead } from "./SettingsForm";
 
+/** 표시 상태의 한 줄입니다. 왼쪽 항목 이름, 오른쪽 값. */
+export type InfoRow = { label: string; text: string };
 
-/** 카드 아래 줄의 실행 버튼입니다. 요청 중이면 비활성화하고 busyLabel 을 표시합니다. 카드 3개가 같은 부품을 사용합니다. */
-function FootButton({ label, busyLabel, pending, disabled = false, danger = false, onClick }: {
-  label: string;
-  busyLabel: string;
-  pending: boolean;
-  disabled?: boolean;
-  danger?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <div className="listfoot">
-      <button className={danger ? "new danger" : "new"} disabled={disabled || pending} onClick={onClick}>
-        {pending ? busyLabel : label}
-      </button>
-    </div>
-  );
+/** 편집 상태의 입력값입니다. 편집을 누를 때 지금 계정 값으로 새로 만듭니다. */
+type Draft = { name: string; cohort: string; current: string; next: string; again: string };
+
+function draftOf(me: Account): Draft {
+  return { name: me.name, cohort: me.cohort === null ? "" : String(me.cohort), current: "", next: "", again: "" };
 }
 
+/** 저장 전에 화면에서 먼저 보는 규칙입니다. 서버도 같은 규칙으로 다시 검증합니다.
+ *  서버는 새 비밀번호 하나만 받으므로 두 번 입력한 값의 일치 여부는 화면만 확인할 수 있습니다. */
+function draftMessage(draft: Draft): string {
+  const nameWhy = personNameMessage(draft.name);
+  if (nameWhy !== "") return nameWhy;
+  const cohort = draft.cohort.trim();
+  if (cohort !== "" && !/^(100|[1-9][0-9]?)$/.test(cohort)) return "기수는 1부터 100 사이의 숫자로 입력해 주세요.";
+  if (draft.next !== draft.again) return "비밀번호가 일치하지 않아요.";
+  return "";
+}
 
-/** 프로필 사진입니다. 계정 1개에 1장이고, 없으면 이름 앞 두 글자를 표시합니다. */
-function MyPhoto({ me }: { me: Account }) {
+/** 큰 원형 사진과 그 위의 "프로필 사진 변경" 버튼입니다. 버튼을 누르면 말풍선 메뉴 2개를 표시합니다.
+ *  업로드는 숨긴 파일 입력칸을 대신 누르고, 기본 이미지 적용은 올린 사진을 삭제해 이름 앞 두 글자로 되돌립니다. */
+function PhotoEdit({ me }: { me: Account }) {
   const client = useQueryClient();
   const pick = useRef<HTMLInputElement>(null);
-  const [bad, setBad] = useState("");
+  const trigger = useRef<HTMLButtonElement>(null);
+  const { open, setOpen, toggle, box } = useDismissible();
 
   function done(text: string): void {
     void client.invalidateQueries({ queryKey: ["me"] });
-    setBad("");
     say(text);
+  }
+
+  // 말풍선이 닫히면 초점을 여는 버튼으로 되돌립니다. 되돌리지 않으면 초점이 사라진 메뉴와 함께 문서 맨 앞으로 갑니다.
+  function close(): void {
+    setOpen(false);
+    trigger.current?.focus();
   }
 
   const upload = useMutation({
     mutationFn: (file: File) => sendFile<{ ok: boolean }>("/me/avatar", file, () => {}),
     onSuccess: () => done("프로필 사진을 변경했어요."),
-    onError: (error) => setBad(reason(error)),
+    onError: (error) => say(reason(error)),
   });
 
-  const remove = useMutation({
+  const reset = useMutation({
     mutationFn: () => getJSON<null>("/me/avatar", { method: "DELETE" }),
-    onSuccess: () => done("프로필 사진을 삭제했어요."),
-    onError: (error) => setBad(reason(error)),
+    onSuccess: () => done("기본 이미지를 적용했어요."),
+    onError: (error) => say(reason(error)),
   });
 
   return (
-    <Card>
-      <SectionHead title="프로필 사진" desc="이미지 형식만 업로드가 가능해요." />
-      <div className="photo">
-        <Avatar id={me.id} name={me.name} className="big" photo={me.avatar} />
-        <div className="pickfile">
-          <input
-            ref={pick}
-            id="myPhoto"
-            type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              // 같은 파일을 다시 선택해도 변경으로 감지되도록 입력칸을 비웁니다.
-              event.target.value = "";
-              if (file !== undefined) upload.mutate(file);
-            }}
-          />
-          <button className="new" disabled={upload.isPending} onClick={() => pick.current?.click()}>
-            {upload.isPending ? "올리는 중…" : "사진 선택"}
+    // Escape 로 닫을 때도 초점을 되돌립니다. 문서 전체의 Escape 는 useDismissible 도 받아 한 번 더 닫지만 결과는 같습니다.
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- 안쪽 버튼에서 올라온 Escape 만 받습니다.
+    <div className="photo" ref={box} onKeyDown={(event) => { if (event.key === "Escape" && open) close(); }}>
+      <button
+        ref={trigger}
+        type="button"
+        className="change"
+        aria-controls="photoMenu"
+        aria-expanded={open}
+        disabled={upload.isPending || reset.isPending}
+        onClick={toggle}
+      >
+        프로필 사진 변경
+      </button>
+      {open ? (
+        <div id="photoMenu" className="pop on" role="group" aria-label="프로필 사진 변경">
+          <button type="button" className="act" onClick={() => { close(); pick.current?.click(); }}>
+            프로필 사진 업로드
           </button>
-          <button className="new danger" disabled={remove.isPending} onClick={() => remove.mutate()}>
-            {remove.isPending ? "삭제하는 중…" : "사진 삭제"}
+          <button type="button" className="act" onClick={() => { close(); reset.mutate(); }}>
+            기본 이미지 적용
           </button>
         </div>
-      </div>
-      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
-    </Card>
+      ) : null}
+      <Avatar id={me.id} name={me.name} className="big" photo={me.avatar} />
+      <input
+        ref={pick}
+        id="myPhoto"
+        type="file"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          // 같은 파일을 다시 선택해도 변경으로 감지되도록 입력칸을 비웁니다.
+          event.target.value = "";
+          if (file !== undefined) upload.mutate(file);
+        }}
+      />
+    </div>
   );
 }
 
-/** 화면 밝기를 선택하는 카드입니다. 선택한 값은 브라우저에 저장되어 다음에 열 때도 유지됩니다. */
-function ThemeCard() {
-  // 초기값을 한 번만 읽습니다. 이후 사용자가 선택한 값이 정본입니다.
-  const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
-
-  const choices: { key: Theme; label: string }[] = [
-    { key: "light", label: "라이트" },
-    { key: "dark", label: "다크" },
-  ];
-
-  return (
-    <Card>
-      <SectionHead title="테마" desc="현재 브라우저에서의 테마를 지정해요" />
-      <div className="display">
-        <div className="pick" role="group" aria-label="화면 밝기">
-          {choices.map((choice) => (
-            <button
-              key={choice.key}
-              aria-pressed={theme === choice.key}
-              onClick={() => setTheme(applyTheme(choice.key))}
-            >
-              {choice.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/** 자신의 이름과 기수입니다. */
-function MyProfile({ me }: { me: Account }) {
-  const client = useQueryClient();
-  const [name, setName] = useState(me.name);
-  const [cohort, setCohort] = useState(me.cohort === null ? "" : String(me.cohort));
-  const [bad, setBad] = useState("");
-
-  const save = useMutation({
-    mutationFn: () =>
-      getJSON<{ account: Account }>("/me", {
-        method: "PATCH",
-        body: JSON.stringify({
-          name: name.trim(),
-          cohort: cohort.trim() === "" ? null : Number(cohort),
-        }),
-      }),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["me"] });
-      say("내 정보를 수정했어요.");
-    },
-    onError: (error) => setBad(reason(error)),
+/** 편집 상태의 입력칸입니다. 비밀번호 3칸은 변경할 때만 채웁니다. */
+function DraftFields({ draft, onChange }: { draft: Draft; onChange: (next: Draft) => void }) {
+  const field = (key: keyof Draft) => ({
+    value: draft[key],
+    onChange: (event: React.ChangeEvent<HTMLInputElement>) => onChange({ ...draft, [key]: event.target.value }),
   });
-
   return (
-    <Card>
-      <SectionHead title="내 정보" desc="가입한 이메일을 제외한 정보를 수정할 수 있어요" />
+    <>
       <div className="fields">
-        <label className="wide" htmlFor="myName">
-          이름
-          <input id="myName" value={name} onChange={(event) => setName(event.target.value)} />
-        </label>
+        <label className="wide" htmlFor="myName">이름<input id="myName" {...field("name")} /></label>
         <label className="wide" htmlFor="myCohort">
           기수
-          <input
-            id="myCohort"
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={100}
-            step={1}
-            placeholder="예: 46"
-            value={cohort}
-            onChange={(event) => setCohort(event.target.value)}
-          />
+          <input id="myCohort" type="number" inputMode="numeric" min={1} max={100} step={1} placeholder="예: 46" {...field("cohort")} />
         </label>
       </div>
-      <FootButton
-        label="저장"
-        busyLabel="저장하는 중…"
-        pending={save.isPending}
-        onClick={() => {
-          // 가입 화면과 같은 규칙으로 먼저 봅니다. 서버도 같은 규칙으로 다시 검증합니다.
-          const why = personNameMessage(name);
-          setBad(why);
-          if (why === "") save.mutate();
-        }}
-      />
-      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
-    </Card>
+      <SectionHead title="비밀번호" desc="변경할 때만 입력해요" />
+      <div className="fields">
+        <label className="wide" htmlFor="pwNow">
+          현재 비밀번호<input id="pwNow" type="password" autoComplete="current-password" {...field("current")} />
+        </label>
+        <label className="wide" htmlFor="pwNext">
+          새 비밀번호<input id="pwNext" type="password" autoComplete="new-password" {...field("next")} />
+        </label>
+        <label className="wide" htmlFor="pwAgain">
+          새 비밀번호 확인<input id="pwAgain" type="password" autoComplete="new-password" {...field("again")} />
+        </label>
+      </div>
+    </>
   );
 }
 
-/** 비밀번호를 변경합니다. 현재 비밀번호를 먼저 확인하는 방식은 서버도 같습니다. */
-function MyPassword() {
-  const [current, setCurrent] = useState("");
-  const [next, setNext] = useState("");
-  const [again, setAgain] = useState("");
-  const [bad, setBad] = useState("");
-
-  const save = useMutation({
-    mutationFn: () =>
-      getJSON<null>("/me/password", {
-        method: "POST",
-        body: JSON.stringify({ current, next }),
-      }),
-    onSuccess: () => {
-      setCurrent("");
-      setNext("");
-      setAgain("");
-      setBad("");
-      say("비밀번호를 변경했어요.");
+/** 저장 한 번에 바뀐 것만 보냅니다. 이름·기수가 그대로면 PATCH 를, 새 비밀번호가 비어 있으면 비밀번호 변경을 건너뜁니다.
+ *  ponytail: 요청 2개를 차례로 보내 이름은 저장되고 비밀번호만 실패할 수 있습니다. 실패 사유는 화면에 표시하고
+ *  편집 상태를 유지합니다. 한 번에 기록해야 하면 서버에 두 값을 함께 받는 endpoint 를 만듭니다. */
+function useSaveProfile(me: Account, onSaved: () => void) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (draft: Draft) => {
+      const cohort = draft.cohort.trim() === "" ? null : Number(draft.cohort);
+      const infoChanged = draft.name.trim() !== me.name || cohort !== me.cohort;
+      if (infoChanged) {
+        await getJSON<{ account: Account }>("/me", {
+          method: "PATCH",
+          body: JSON.stringify({ name: draft.name.trim(), cohort }),
+        });
+      }
+      if (draft.next === "") return;
+      try {
+        await getJSON<null>("/me/password", {
+          method: "POST",
+          body: JSON.stringify({ current: draft.current, next: draft.next }),
+        });
+      } catch (error) {
+        // 이름·기수가 이미 저장된 경우 그 사실을 함께 알립니다. 알리지 않으면 아무것도 저장되지 않은 것으로 읽힙니다.
+        if (!infoChanged) throw error;
+        throw new Error(`이름·기수는 저장했지만 비밀번호는 변경하지 못했어요. ${reason(error)}`);
+      }
     },
-    onError: (error) => setBad(reason(error)),
+    onSettled: () => { void client.invalidateQueries({ queryKey: ["me"] }); },
+    onSuccess: () => {
+      say("프로필을 수정했어요.");
+      onSaved();
+    },
   });
+}
+
+/** 프로필 카드 하나입니다. 표시 상태와 편집 상태를 전환하고, 편집 상태에서만 회원 탈퇴 카드를 아래에 표시합니다. */
+export function ProfileCard({ me, rows }: { me: Account; rows: InfoRow[] }) {
+  const navigate = useNavigate();
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<Draft>(() => draftOf(me));
+  const [bad, setBad] = useState("");
+  const save = useSaveProfile(me, () => setEditing(false));
+
+  function startEdit(): void {
+    setDraft(draftOf(me));
+    setBad("");
+    setEditing(true);
+  }
+
+  function submit(): void {
+    const why = draftMessage(draft);
+    setBad(why);
+    if (why === "") save.mutate(draft, { onError: (error) => setBad(reason(error)) });
+  }
 
   return (
-    <Card>
-      <SectionHead title="비밀번호" desc="비밀번호를 변경 할 수 있어요" />
-      <div className="fields">
-        <label className="wide" htmlFor="pwNow">
-          현재 비밀번호
-          <input
-            id="pwNow"
-            type="password"
-            autoComplete="current-password"
-            value={current}
-            onChange={(event) => setCurrent(event.target.value)}
-          />
-        </label>
-        <label className="wide" htmlFor="pwNext">
-          새 비밀번호
-          <input
-            id="pwNext"
-            type="password"
-            autoComplete="new-password"
-            value={next}
-            onChange={(event) => setNext(event.target.value)}
-          />
-        </label>
-        <label className="wide" htmlFor="pwAgain">
-          새 비밀번호 확인
-          <input
-            id="pwAgain"
-            type="password"
-            autoComplete="new-password"
-            value={again}
-            onChange={(event) => setAgain(event.target.value)}
-          />
-        </label>
-      </div>
-      <FootButton
-        label="비밀번호 변경"
-        busyLabel="변경사항 저장 중…"
-        pending={save.isPending}
-        onClick={() => {
-          // 길이 등의 규칙은 서버가 검증합니다. 두 번 입력한 값이 일치하지 않는 경우만
-          // 화면에서 먼저 감지합니다. 서버는 새 비밀번호 하나만 받으므로 일치 여부를 확인할 수 없기 때문입니다.
-          const why = next === again ? "" : "비밀번호가 일치하지 않아요.";
-          setBad(why);
-          if (why === "") save.mutate();
-        }}
-      />
-      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
-    </Card>
+    <>
+      <Card>
+        <div className="probar">
+          {editing
+            ? <button type="button" className="btn" onClick={() => setEditing(false)}>취소</button>
+            : <button type="button" className="ic" aria-label="뒤로 가기" onClick={() => void navigate(-1)}><ChevronLeftIcon /></button>}
+          {editing
+            ? <button type="button" className="btn go" disabled={save.isPending} onClick={submit}>{save.isPending ? "저장하는 중…" : "저장"}</button>
+            : <button type="button" className="ic" aria-label="프로필 편집" onClick={startEdit}><PencilIcon /></button>}
+        </div>
+        <div className="prohead">
+          <PhotoEdit me={me} />
+          <span className="role">{roleLabel(me)}</span>
+          <h1>{me.name}</h1>
+          {me.department === null ? null : <p className="dept">{me.department}</p>}
+        </div>
+        {editing ? <DraftFields draft={draft} onChange={setDraft} /> : <InfoList rows={rows} />}
+        {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+      </Card>
+      {editing ? <Leave me={me} /> : null}
+    </>
+  );
+}
+
+function InfoList({ rows }: { rows: InfoRow[] }) {
+  return (
+    <div className="read">
+      <dl>
+        {rows.map((row) => (
+          <div className="afrow" key={row.label}>
+            <dt>{row.label}</dt>
+            <dd>{row.text}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }
 
@@ -288,28 +269,11 @@ function Leave({ me }: { me: Account }) {
           />
         </label>
       </div>
-      <FootButton
-        label="탈퇴하기"
-        busyLabel="회원 탈퇴 중…"
-        pending={leave.isPending}
-        disabled={!matched}
-        danger
-        onClick={() => leave.mutate()}
-      />
+      <div className="listfoot">
+        <button className="new danger" disabled={!matched || leave.isPending} onClick={() => leave.mutate()}>
+          {leave.isPending ? "회원 탈퇴 중…" : "탈퇴하기"}
+        </button>
+      </div>
     </Card>
-  );
-}
-
-export function ProfileCards() {
-  const { me } = useMe();
-  if (me === null) return <div className="empty">{LOADING_TEXT}</div>;
-  return (
-    <>
-      <MyPhoto me={me} />
-      <MyProfile me={me} />
-      <MyPassword />
-      <ThemeCard />
-      <Leave me={me} />
-    </>
   );
 }

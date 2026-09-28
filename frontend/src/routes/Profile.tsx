@@ -1,15 +1,12 @@
 import { useQueries } from "@tanstack/react-query";
 
-import { Avatar } from "../components/Avatar";
-import { Card } from "../components/AppShell";
 import { getJSON, reason } from "../lib/api";
 import { cohortLabel } from "../lib/roster";
 import { useMe } from "../components/queries";
 import { LOADING_TEXT } from "../lib/loading";
 import "../styles/profile.css";
 import type { Account, Member } from "../lib/contract";
-import { roleLabel } from "../lib/account";
-import { ProfileCards } from "./ProfileCards";
+import { ProfileCard } from "./ProfileCards";
 
 
 
@@ -40,39 +37,18 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
   });
 }
 
-/** 프로필을 표시하고 수정합니다. 내 이름·소속 팀별 포지션을 표시하고, 아래 카드에서 사진·이름·기수·
- *  비밀번호·테마·탈퇴를 다룹니다. 2026-09-23 에 설정 화면의 계정 탭을 이 화면으로 옮겼습니다. */
+/** 프로필을 표시하고 수정합니다. 카드 하나가 평소에는 값을 표시하고, 오른쪽 위 편집을 누르면 입력칸으로 전환합니다.
+ *  테마는 상단바의 버튼이 전환합니다. 2026-09-23 에 설정 화면의 계정 탭을 이 화면으로 옮겼습니다. */
 export function Profile() {
   const { me, teamIds, teams } = useMe();
   const affiliations = useMyAffiliations(me, teamIds, teams);
-  const name = me?.name ?? "";
+  if (me === null) return <div className="main"><div className="empty">{LOADING_TEXT}</div></div>;
 
-  return (
-    <>
-      <div className="main">
-        <Card>
-          <div className="prohead">
-            <Avatar id={me?.id ?? null} name={name} className="big" photo={me?.avatar ?? null} />
-            <div>
-              <h1>{name}</h1>
-              <span className="role">{roleLabel(me)}</span>
-            </div>
-          </div>
-          <div className="read">
-            <dl>
-              <dt>이름</dt>
-              <dd>{name}</dd>
-              {affiliations.map((row) => (
-                <div className="afrow" key={row.teamName}>
-                  <dt>{row.teamName}</dt>
-                  <dd>{row.text}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </Card>
-        <ProfileCards />
-      </div>
-    </>
-  );
+  const rows = [
+    { label: "아이디", text: me.login_id ?? "" },
+    { label: "이메일", text: me.email },
+    { label: "기수", text: cohortLabel(me.cohort) },
+    ...affiliations.map((row) => ({ label: row.teamName, text: row.text })),
+  ];
+  return <div className="main"><ProfileCard me={me} rows={rows} /></div>;
 }

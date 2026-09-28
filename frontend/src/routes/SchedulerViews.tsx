@@ -151,7 +151,13 @@ export function WeekView({
     if (!box.current || !row) return;
     // 요일 머리글은 스크롤해도 맨 위에 고정되므로, 그 높이만큼 덜 내려야 여는 시각 줄이 머리글 바로 아래에 보입니다.
     const header = box.current.querySelector(".wh")?.getBoundingClientRect().height ?? 0;
-    box.current.scrollTop += row.getBoundingClientRect().top - box.current.getBoundingClientRect().top - header;
+    const rowRect = row.getBoundingClientRect();
+    const target = box.current.scrollTop + rowRect.top - box.current.getBoundingClientRect().top - header;
+    // 늦게 여는 합주실은 목표가 스크롤 최댓값을 넘어 잘립니다. 잘린 위치는 줄 경계와 어긋나 맨 위 시각 글자가
+    // 머리글에 반쯤 가려지므로, 줄 높이 단위로 올려 경계에 맞춥니다. 모든 줄의 높이는 같습니다.
+    const overshoot = target - (box.current.scrollHeight - box.current.clientHeight);
+    const step = rowRect.height;
+    box.current.scrollTop = overshoot > 0 && step > 0 ? target - Math.ceil(overshoot / step) * step : target;
   }, [firstDay, openHour, tab]);
 
   return (

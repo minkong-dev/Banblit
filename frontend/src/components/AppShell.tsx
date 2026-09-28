@@ -1,10 +1,10 @@
 import { useQueries } from "@tanstack/react-query";
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { NotificationMenu } from "./NotificationMenu";
-import { CloseIcon, WideMenuIcon } from "./icons";
+import { CloseIcon, MoonIcon, SunIcon, WideMenuIcon } from "./icons";
 import { useDismissible, usePage } from "./hooks";
 import { useMe, useMyTeams } from "./queries";
 import { useToast } from "../lib/toast";
@@ -13,6 +13,7 @@ import { can, canOpenSettings, roleLabel, teamNavLabel } from "../lib/account";
 import { cohortLabel } from "../lib/roster";
 import { getJSON, logOut } from "../lib/pipeline";
 import type { Member, Permission } from "../lib/contract";
+import { applyTheme, readSavedTheme, type Theme } from "../lib/theme";
 import "../styles/shell.css";
 
 // 사이드바 메뉴입니다. 권한에 따라 표시되는 항목이 다릅니다.
@@ -101,6 +102,7 @@ export function AppShell() {
             <WideMenuIcon />
           </button>
           <div className="logo"><b>Banblit</b><span>IN SIX STRINGS</span></div>
+          <ThemeButton />
           <NotificationMenu />
           <ProfileMenu />
         </div>
@@ -164,6 +166,24 @@ export function Tabs<T extends string>(props: {
 
 /** 상단 오른쪽 프로필 버튼 + 프로필 카드입니다. 여러 화면에서 함께 씁니다.
  *  "프로필 설정"은 이 프로필 카드에서 `/profile`로 들어가는 유일한 입구입니다. */
+/** 상단바의 라이트·다크 전환 버튼입니다. 누를 때마다 반대 테마로 전환하고, 선택한 값은 브라우저에 저장합니다.
+ *  아이콘은 누르면 전환될 테마를 표시합니다. */
+function ThemeButton() {
+  // 초기값을 한 번만 읽습니다. 이후 사용자가 선택한 값이 정본입니다.
+  const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
+  const next: Theme = theme === "dark" ? "light" : "dark";
+  return (
+    <button
+      type="button"
+      className="ic theme"
+      aria-label={next === "dark" ? "다크 모드로 전환" : "라이트 모드로 전환"}
+      onClick={() => setTheme(applyTheme(next))}
+    >
+      {next === "dark" ? <MoonIcon /> : <SunIcon />}
+    </button>
+  );
+}
+
 export function ProfileMenu() {
   const { open, setOpen, toggle, box } = useDismissible();
   const navigate = useNavigate();
