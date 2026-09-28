@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from backend.api.auth_dependency import require_account, require_permission
 from backend.api.schemas import SettingsOut, SettingsUpdateIn
 from backend.services.settings_service import (
+    daily_max_hours,
     session_minutes,
     set_settings,
     slot_minutes,
@@ -19,7 +20,9 @@ router = APIRouter()
 @router.get("/settings", response_model=SettingsOut, dependencies=[Depends(require_account)])
 def read_settings(session: Session = Depends(get_session)) -> SettingsOut:
     return SettingsOut(
-        slot_minutes=slot_minutes(session), session_minutes=session_minutes(session)
+        slot_minutes=slot_minutes(session),
+        session_minutes=session_minutes(session),
+        daily_max_hours=daily_max_hours(session),
     )
 
 
@@ -34,5 +37,5 @@ def update_settings(
     req: SettingsUpdateIn,
     session: Session = Depends(get_session),
 ) -> SettingsOut:
-    slot, length = set_settings(session, req.slot_minutes, req.session_minutes)
-    return SettingsOut(slot_minutes=slot, session_minutes=length)
+    set_settings(session, req.slot_minutes, req.session_minutes, req.daily_max_hours)
+    return read_settings(session)

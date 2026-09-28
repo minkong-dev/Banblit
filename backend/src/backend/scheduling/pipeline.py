@@ -27,6 +27,7 @@ def resolve(
     sessions_per_team: int,
     slot_minutes: int,
     session_minutes: int,
+    daily_max_minutes: int | None = None,
 ) -> Resolution:
     """teams 를 rooms 에 배정하고, 배정이 불가능하면 조율안을 함께 반환합니다."""
     # 상한 2개를 이 자리에서 전달합니다. 기능 파일이 상한을 직접 들고 있으면 계산 1회의 상한과
@@ -39,6 +40,7 @@ def resolve(
         session_minutes,
         solver_time_limit_seconds=SOLVER_TIME_LIMIT_SECONDS,
         resolution_time_limit_seconds=RESOLUTION_TIME_LIMIT_SECONDS,
+        daily_max_minutes=daily_max_minutes,
     )
 
 

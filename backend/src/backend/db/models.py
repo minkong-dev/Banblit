@@ -28,6 +28,8 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 # 칸 크기와 합주 1회 길이는 db·api·services·scheduling 이 같은 값을 참조해야 하므로 공유 규격
 # 파일에 1세트만 둡니다.
 from backend.contract import (
+    DAILY_MAX_HOUR_CHOICES,
+    DEFAULT_DAILY_MAX_HOURS,
     DEFAULT_SESSION_MINUTES,
     DEFAULT_SLOT_MINUTES,
     MAX_SESSION_MINUTES,
@@ -130,6 +132,11 @@ class Settings(Base):
         default=DEFAULT_SESSION_MINUTES,
         server_default=text(str(DEFAULT_SESSION_MINUTES)),
     )
+    # 팀 하나가 하루에 배정받는 시간의 상한(시간)입니다. 배정 계산이 이 값을 넘겨 한 날에 몰지 않습니다.
+    daily_max_hours: Mapped[int] = mapped_column(
+        default=DEFAULT_DAILY_MAX_HOURS,
+        server_default=text(str(DEFAULT_DAILY_MAX_HOURS)),
+    )
 
     __table_args__ = (
         CheckConstraint("id = 1"),
@@ -144,6 +151,10 @@ class Settings(Base):
             " AND session_minutes % slot_minutes = 0"
             f" AND session_minutes <= {MAX_SESSION_MINUTES}",
             name="settings_session_minutes_fits_slots",
+        ),
+        CheckConstraint(
+            f"daily_max_hours BETWEEN {min(DAILY_MAX_HOUR_CHOICES)} AND {max(DAILY_MAX_HOUR_CHOICES)}",
+            name="settings_daily_max_hours_range",
         ),
     )
 
@@ -663,7 +674,8 @@ class AssignmentBackup(Base):
 # 알림의 종류입니다. 문구는 이 코드에 두지 않습니다. table 에는 종류만 저장하고 사람이 읽을
 # 문장은 화면이 만듭니다. 그래서 문구를 수정하면 이미 저장된 알림에도 적용되고, table 을
 # 수정할 필요가 없습니다.
-NotificationKind = Literal["assignment_updated"]
+# reservation_cancelled: 집중 합주기간이 생기거나 넓어져 예약이 취소되었습니다(services/reservation_service.py).
+NotificationKind = Literal["assignment_updated", "reservation_cancelled"]
 NOTIFICATION_KINDS: tuple[NotificationKind, ...] = get_args(NotificationKind)
 
 

@@ -556,6 +556,8 @@ class SettingsOut(BaseModel):
     slot_minutes: int
     # 합주 1회가 이어지는 길이(분)입니다.
     session_minutes: int
+    # 팀 하나가 하루에 배정받는 시간의 상한(시간)입니다.
+    daily_max_hours: int
 
 
 class SettingsUpdateIn(BaseModel):
@@ -572,11 +574,13 @@ class SettingsUpdateIn(BaseModel):
     # 칸의 배수인지는 저장된 칸 크기를 함께 봐야 알 수 있어 services/settings_service.py 가 판정합니다.
     # 여기서는 값 하나만으로 판정할 수 있는 범위만 봅니다.
     session_minutes: int | None = Field(default=None, ge=1, le=MAX_SESSION_MINUTES)
+    # 허용 값은 contract.py 의 DAILY_MAX_HOUR_CHOICES 가 정본입니다(Literal 은 상수만 받아 값을 적습니다).
+    daily_max_hours: Literal[1, 2, 3] | None = None
 
     @model_validator(mode="after")
     def _at_least_one(self) -> "SettingsUpdateIn":
         # 빈 요청을 200 으로 받으면 이름을 잘못 적은 요청이 조용히 무시됩니다.
-        if self.slot_minutes is None and self.session_minutes is None:
+        if self.slot_minutes is None and self.session_minutes is None and self.daily_max_hours is None:
             raise ValueError("바꿀 값을 하나 이상 보내주세요")
         return self
 

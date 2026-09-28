@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from backend.services.period_input import (
     PracticeWindow,
     auto_sessions_per_team,
+    capped_sessions_per_team,
     build_engine_rooms,
     build_engine_teams,
     dates_in_period,
@@ -21,7 +22,7 @@ from backend.db.models import (
     Team,
     UnavailableTime,
 )
-from backend.services.settings_service import session_minutes, slot_minutes
+from backend.services.settings_service import daily_max_hours, session_minutes, slot_minutes
 from backend.db.pipeline import AssignmentRow, save_schedule
 from backend.scheduling.pipeline import Assignment as EngineAssignment
 from backend.scheduling.pipeline import (
@@ -96,14 +97,20 @@ def assign_period(
     engine_rooms = build_engine_rooms(rooms, days, practice_window(period))
     unit = slot_minutes(session)
     length = session_minutes(session)
-    sessions_per_team = auto_sessions_per_team(
-        engine_rooms, len(team_ids), unit, length
+    daily_max_minutes = daily_max_hours(session) * 60
+    sessions_per_team = capped_sessions_per_team(
+        auto_sessions_per_team(engine_rooms, len(team_ids), unit, length),
+        day_count=len(days),
+        daily_max_minutes=daily_max_minutes,
+        session_minutes=length,
     )
     engine_teams = build_engine_teams(
         team_ids, member_ids_by_team, unavailable_by_member
     )
 
-    resolution = resolve(engine_teams, engine_rooms, sessions_per_team, unit, length)
+    resolution = resolve(
+        engine_teams, engine_rooms, sessions_per_team, unit, length, daily_max_minutes
+    )
 
     saved = False
     if resolution.assignment.feasible:

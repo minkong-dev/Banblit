@@ -447,3 +447,11 @@ def test_a_start_day_outside_the_chosen_weekdays_still_repeats_on_them() -> None
     )
 
     assert [item.start.date().isoformat() for item in expanded] == ["2026-09-08", "2026-09-15"]
+
+
+def test_sessions_per_team_is_capped_by_days_times_the_daily_limit() -> None:
+    # 7일 · 하루 2시간 · 1시간 합주면 팀당 최대 14회입니다. 자리로 계산한 값이 더 크면 14로 줄입니다.
+    from backend.services.period_input import capped_sessions_per_team
+
+    assert capped_sessions_per_team(20, day_count=7, daily_max_minutes=120, session_minutes=60) == 14
+    assert capped_sessions_per_team(5, day_count=7, daily_max_minutes=120, session_minutes=60) == 5

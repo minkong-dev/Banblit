@@ -28,8 +28,16 @@ def session_minutes(session: Session) -> int:
     return _row(session).session_minutes
 
 
+def daily_max_hours(session: Session) -> int:
+    """팀 하나가 하루에 배정받는 시간의 상한(시간)입니다."""
+    return _row(session).daily_max_hours
+
+
 def set_settings(
-    session: Session, slot: int | None = None, length: int | None = None
+    session: Session,
+    slot: int | None = None,
+    length: int | None = None,
+    daily_hours: int | None = None,
 ) -> tuple[int, int]:
     """칸 크기와 합주 길이를 변경하고 저장된 두 값을 반환합니다. None 인 값은 그대로 둡니다.
 
@@ -42,9 +50,19 @@ def set_settings(
     row = _row(session)
     wanted_slot = row.slot_minutes if slot is None else slot
     wanted_length = row.session_minutes if length is None else length
+    wanted_daily = row.daily_max_hours if daily_hours is None else daily_hours
     _check_fits(wanted_slot, wanted_length)
+    # 하루 상한이 합주 1회보다 짧으면 하루에 들어가는 합주가 0회라, 오류 없이 모든 팀이 빈 배정을 받습니다.
+    # 두 값은 따로 바꿀 수 있으므로 어느 쪽을 바꾸든 저장 전에 함께 봅니다.
+    if wanted_length > wanted_daily * 60:
+        raise ValueError(
+            f"합주 1회({wanted_length}분)가 팀당 하루 최대({wanted_daily}시간)보다 길어요. "
+            "하루 최대를 늘리거나 합주 길이를 줄여주세요"
+        )
+    # 세 값을 한 번에 기록합니다. 나눠 기록하면 뒤의 기록이 실패했을 때 앞의 변경만 남습니다.
     row.slot_minutes = wanted_slot
     row.session_minutes = wanted_length
+    row.daily_max_hours = wanted_daily
     session.commit()
     return row.slot_minutes, row.session_minutes
 
