@@ -264,6 +264,16 @@ body[data-page="scheduler"] {
     /* 집중합주 기간 띠는 기간이 여러 개면 길어집니다. 한 줄로 두면 카드 밖으로 넘치므로 줄바꿈합니다.
        여러 줄이 되면 알약 모양(999px)이 타원이 되므로 모서리를 줄입니다. */
     .band { white-space: normal; border-radius: 12px; }
+    /* inline-flex 는 글자 덩어리마다 칸을 나눠 좁은 폭에서 여러 칸으로 쪼개집니다. 한 문단으로 흐르게 합니다. */
+    .band { display: block; padding: 8px 12px; line-height: 1.5; }
+    .band svg { display: inline-block; vertical-align: -2px; margin-right: 6px; }
+    /* 칸 폭(약 46px)에는 팀 이름이 두세 글자도 들어가지 않습니다. 글자 대신 팀 색 막대로 표시하고, 이름과 시각은
+       날짜를 눌러 여는 dialog 에서 읽습니다. */
+    .ev { height: 6px; padding: 0; gap: 0; font-size: 0; border-radius: 3px; background: var(--tc, var(--t3)); }
+    .ev.off { background: var(--t3); }
+    .ev.ens { background: var(--green); }
+    .cell { gap: 3px; padding: 6px 5px 8px; }
+    .calbar .ml { font-size: 16px; min-width: 0; white-space: nowrap; }
   }
 }
 

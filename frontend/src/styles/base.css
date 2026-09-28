@@ -4,7 +4,9 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html { overflow: auto; }
-body { margin: 0; }
+/* 한글은 낱말 단위로 줄바꿈합니다. 기본값은 글자마다 끊어 "집중합 / 주 기간" 처럼 낱말 중간에서 꺾입니다.
+   한 낱말이 칸보다 길 때(긴 주소·이메일)만 글자 단위로 끊습니다. */
+body { margin: 0; word-break: keep-all; overflow-wrap: break-word; }
 [hidden] { display: none !important; }
 
 /* 스크롤 막대를 감춥니다. 스크롤은 그대로 동작하고 막대만 표시하지 않습니다. 화면 곳곳이
