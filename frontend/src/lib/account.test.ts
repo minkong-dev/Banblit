@@ -17,6 +17,7 @@ function accountWith(
     permissions,
     permission_sets: permissionSets,
     cohort: 46,
+    department: null,
   };
 }
 

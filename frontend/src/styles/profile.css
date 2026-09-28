@@ -1,4 +1,4 @@
-/* 프로필 화면만의 규칙입니다. 색은 base.css, 상단바·사이드바·카드는 shell.css 가 정의합니다. */
+/* 프로필 화면만의 규칙입니다. 색은 base.css, 상단바·사이드바·카드·입력칸·버튼(.btn)은 shell.css 가 정의합니다. */
 body[data-page="profile"] {
 
   /* 오른쪽 목록 없이 정보 카드 하나만 가운데로 모읍니다. */
@@ -6,17 +6,29 @@ body[data-page="profile"] {
 
   .note { margin: 10px 0 0; font-size: 12.5px; color: var(--t3); line-height: 1.6; }
 
-  /* 카드 제목 영역입니다. 큰 프로필 사진 + 이름 + 역할 */
-  .prohead { display: flex; align-items: center; gap: 16px; padding: 24px 24px 20px; border-bottom: 1px solid var(--line); }
-  .prohead .big, .photo .big { width: 64px; height: 64px; border-radius: 20px; background: var(--brand); color: var(--brand-on); display: grid; place-items: center; font-size: 20px; font-weight: 700; flex: none; }
-  .prohead h1 { margin: 0; font-size: 20px; font-weight: 700; }
+  /* 카드 맨 위 줄입니다. 표시 상태에서는 왼쪽 뒤로 가기·오른쪽 편집, 편집 상태에서는 취소·저장입니다. */
+  .probar { display: flex; justify-content: space-between; align-items: center; padding: 12px 12px 0; }
+  .probar .btn { min-height: 40px; padding: 8px 16px; }
 
-  /* 사진 카드입니다. 왼쪽에 지금 사진, 오른쪽에 고르기·삭제 단추를 둡니다. */
-  .photo { display: flex; align-items: center; gap: 16px; padding: 16px 24px 20px; }
-  .photo .pickfile { display: flex; gap: 8px; flex-wrap: wrap; }
-  /* 파일 선택 칸은 브라우저마다 모양이 달라 숨기고, 옆의 단추가 대신 누릅니다. */
-  .photo .pickfile input { display: none; }
-  .prohead .role { display: inline-block; margin-top: 5px; font-size: 12px; padding: 3px 10px; }
+  /* 카드 머리입니다. 사진 변경 버튼 → 큰 원형 사진 → 역할 → 이름 → 학과를 가운데 한 줄로 쌓습니다. */
+  .prohead { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 24px 24px; text-align: center; border-bottom: 1px solid var(--line); }
+  .prohead .role { margin-top: 6px; font-size: 12px; padding: 3px 10px; }
+  .prohead h1 { margin: 0; font-size: 22px; font-weight: 700; }
+  .prohead .dept { margin: 0; font-size: 14px; color: var(--t3); }
+
+  /* 말풍선은 "프로필 사진 변경" 버튼 바로 아래에 가운데로 표시합니다. 모양·메뉴 줄은 상단바 프로필 카드와 같은
+     .pop·.act 이고 위치만 옮깁니다. */
+  .photo { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .photo .change { min-height: 32px; padding: 4px 10px; border-radius: 8px; font-size: 13.5px; color: var(--t3); transition: color .15s ease; }
+  .photo .change:hover:not(:disabled) { color: var(--t1); }
+  .photo .change:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .photo .big { width: 128px; height: 128px; border-radius: 50%; background: var(--brand); color: var(--brand-on); display: grid; place-items: center; font-size: 36px; font-weight: 700; object-fit: cover; }
+  .photo .pop { left: 50%; right: auto; top: 44px; width: 220px; padding: 8px; transform: translateX(-50%); }
+  .photo .pop::before { left: calc(50% - 7px); right: auto; }
+  /* 카드는 기본으로 넘치는 내용을 자릅니다. 말풍선이 카드 밖으로 나갈 수 있으므로 프로필 카드는 자르지 않습니다. */
+  .card:has(.prohead) { overflow: visible; }
+  /* 파일 선택 칸은 브라우저마다 모양이 달라 숨기고, 말풍선의 업로드 메뉴가 대신 누릅니다. */
+  .photo input[type="file"] { display: none; }
 
   .read { padding: 18px 24px 22px; display: flex; flex-direction: column; gap: 14px; }
   .read dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 12px 14px; font-size: 14.5px; }
@@ -24,4 +36,11 @@ body[data-page="profile"] {
   .read .afrow { display: contents; }
   .read dt { color: var(--t3); }
   .read dd { margin: 0; text-align: right; font-weight: 500; }
+
+  /* 입력칸 묶음과 오류 문구의 안쪽 여백입니다. 2026-09-23 에 설정 화면에서 옮겨 온 카드라 settings.css 의
+     같은 규칙이 이 화면에는 적용되지 않습니다. */
+  .card .fields { padding: 16px 20px; }
+  .card > .fields label { gap: 7px; }
+  .card > .why { margin: 0; padding: 0 20px 16px; }
+
 }
