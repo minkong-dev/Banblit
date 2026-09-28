@@ -81,6 +81,9 @@ body[data-page="settings"] {
   .tiles {
     list-style: none; margin: 0; padding: 4px 20px 18px;
     display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+    /* 멈춤 위치 계산에 안쪽 여백을 넣습니다. 넣지 않으면 카드가 적을 때 브라우저가 마지막 카드에 맞춰 멈춰
+       첫 카드가 왼쪽으로 잘립니다. */
+    scroll-padding-inline: 20px;
     /* 카드 폭을 측정하는 기준 요소입니다. 아래 cqi 는 창이 아니라 이 줄의 폭을 뜻합니다.
        창 크기를 기준으로 하면 오른쪽 칸이 열리고 닫힐 때 타일 크기가 같이 변합니다. */
     container-type: inline-size;
@@ -101,7 +104,9 @@ body[data-page="settings"] {
   .tilenote { margin: 0; flex: 1; min-height: 0; overflow: hidden; font-size: 13.5px; color: var(--t2); line-height: 1.5; }
   .tileacts { display: flex; gap: 2px; margin-top: auto; }
 
-  .tile.add { display: grid; place-items: center; border-style: dashed; background: none; }
+  /* "+ 새 권한" 카드는 멈춤 위치에서 제외합니다. 목록을 받기 전에는 이 카드만 있어 브라우저가 이 카드를 멈춤 위치로
+     기억하고, 목록이 도착해 앞에 카드가 생기면 이 카드를 따라 끝까지 스크롤해 첫 카드가 잘립니다. */
+  .tile.add { display: grid; place-items: center; border-style: dashed; background: none; scroll-snap-align: none; }
   .tile.add button { width: 100%; height: 100%; color: var(--t2); font-size: 14.5px; font-weight: 700; }
   .tile.add button:hover { color: var(--brand); }
 
@@ -133,11 +138,33 @@ body[data-page="settings"] {
   }
 }
 
-/* 휴대폰 폭입니다. 명단 표는 열이 5개라 좁은 화면에서 글자가 세로로 깨집니다. 표만 가로로
-   스크롤하고 화면 전체는 밀리지 않게 합니다. */
+/* 휴대폰 폭입니다. 명단 표는 열이 5개라 화면에 다 들어가지 않습니다. 표를 가로로 스크롤하면 뒤쪽 열이
+   잘린 것처럼 보이므로, 한 사람을 한 묶음으로 쌓습니다 — 1줄 이름·기수, 2줄 학과·학번, 3줄 권한, 오른쪽 추방.
+   열 머리글은 화면에서만 숨기고 화면 읽기에는 남깁니다. */
 @media (max-width: 767px) {
   body[data-page="settings"] {
-    .roster { overflow-x: auto; }
-    .roster table { min-width: 520px; }
+    /* 권한 카드는 손가락으로 넘깁니다. ‹ › 버튼은 제목 줄을 두 줄로 밀어내므로 숨깁니다. */
+    .sethead .railnav { display: none; }
+    .roster.members table, .roster.members tbody { display: block; }
+    .roster.members thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .roster.members tbody tr {
+      display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+      grid-template-areas: "name cohort act" "dept no act" "sets sets act";
+      column-gap: 10px; row-gap: 3px; align-items: center;
+      padding: 12px 0; border-bottom: 1px solid var(--line);
+    }
+    .roster.members tbody tr:last-child { border-bottom: none; }
+    /* 넓은 화면의 열 폭·줄바꿈 금지 규칙(.roster :is(th, td):nth-child(n))보다 강한 선택자로 되돌립니다. */
+    .roster.members tbody td:nth-child(n) { width: auto; min-width: 0; white-space: normal; padding: 0; border: none; font-size: 13px; color: var(--t3); }
+    .roster.members tbody td:nth-child(1) { grid-area: name; font-size: 15px; font-weight: 700; color: var(--t1); }
+    .roster.members tbody td:nth-child(2) { grid-area: dept; }
+    .roster.members tbody td:nth-child(3) { grid-area: no; }
+    .roster.members tbody td:nth-child(4) { grid-area: cohort; }
+    .roster.members tbody td:nth-child(5) { grid-area: sets; color: var(--t2); }
+    .roster.members tbody td.fill { display: none; }
+    .roster.members tbody td:nth-child(7) { grid-area: act; }
+    /* 예약·블라인드 표는 열 구성이 달라 표 모양을 유지하고, 표 안에서만 가로로 스크롤합니다. */
+    .roster:not(.members) { overflow-x: auto; }
+    .roster:not(.members) table { min-width: 520px; }
   }
 }

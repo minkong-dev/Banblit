@@ -207,11 +207,14 @@ body[data-page="landing"] {
     .stack { grid-template-columns: 1fr; gap: 44px; }
     .stack .copy { text-align: left; }
     .shots { padding-bottom: 70px; max-width: 460px; }
-    /* 좁은 화면에서는 넓히는 동작 대신 3장을 세로로 쌓고 전부 펼칩니다 */
-    .three { flex-direction: column; height: auto; }
-    .box { flex: none; height: 300px; }
+    /* 좁은 화면(터치)에는 마우스를 올리는 동작이 없습니다. 넓히는 동작 대신 3장을 좌우로 넘기는 카드로 둡니다.
+       카드 폭을 86% 로 두어 다음 카드가 옆에 보이고, 넘길 수 있다는 것이 드러납니다.
+       높이는 내용만큼 늘어나 글이 사진 아래쪽에 잘리지 않고 들어갑니다. */
+    .three { height: auto; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+    .three::-webkit-scrollbar { display: none; }
+    .box { flex: 0 0 86%; min-height: 420px; display: flex; align-items: flex-end; scroll-snap-align: start; }
     .box .box-rail { display: none; }
-    .box .full { opacity: 1; transform: none; width: 100%; }
+    .box .full { position: relative; opacity: 1; transform: none; width: 100%; }
     .steps { grid-template-columns: 1fr; gap: 30px; }
     .admin .row { grid-template-columns: 1fr; gap: 36px; }
   }
@@ -219,7 +222,7 @@ body[data-page="landing"] {
     .sec { padding: 70px 0; }
     .lead { font-size: 20px; }
     .shots { max-width: 100%; }
-    .box { height: 260px; }
+    .box { min-height: 380px; }
     .box .full { padding: 26px 22px; }
     .steps { margin-top: 40px; }
     .admin li { flex-direction: column; gap: 4px; }
@@ -229,7 +232,6 @@ body[data-page="landing"] {
     .wrap { padding: 0 20px; }
     .nav { padding: 16px 20px; }
     .hero { min-height: 92vh; }
-    .box { padding: 30px 24px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .rise { opacity: 1; transform: none; transition: none; }
