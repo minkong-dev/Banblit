@@ -28,3 +28,9 @@ DEFAULT_SESSION_MINUTES = 60
 # 합주 1회 길이의 상한(분)입니다. 이보다 긴 합주는 한 번에 진행하지 않습니다. 상한이 없으면
 # 하루 운영 시간보다 긴 값이 저장되어, 배정할 수 있는 자리가 하나도 없는 설정이 조용히 만들어집니다.
 MAX_SESSION_MINUTES = 240
+
+# 팀 하나가 하루에 배정받는 시간의 상한(시간)으로 고를 수 있는 값과 기본값입니다(2026-09-28 사용자 결정).
+# 상한이 없으면 배정 계산이 연속 배정을 최대화하면서 팀의 시간을 하루에 전부 몰아 7시간 연속 같은 배정이 나옵니다.
+# API(api/schemas.py), DB CHECK 제약(db/models.py), 화면(frontend/src/lib/settings.ts)이 같은 값을 씁니다.
+DAILY_MAX_HOUR_CHOICES: tuple[int, ...] = (1, 2, 3)
+DEFAULT_DAILY_MAX_HOURS = 3

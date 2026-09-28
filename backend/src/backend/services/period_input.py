@@ -129,6 +129,16 @@ def build_engine_rooms(
     return engine_rooms
 
 
+def capped_sessions_per_team(
+    per_team: int, day_count: int, daily_max_minutes: int, session_minutes: int
+) -> int:
+    """팀당 session 횟수를 "날짜 수 × 하루에 들어가는 session 수" 이하로 줄입니다.
+
+    자리로 계산한 횟수가 이보다 크면, 하루 상한 때문에 어떤 배정으로도 채울 수 없어 매번 배정 불가가 됩니다.
+    """
+    return min(per_team, day_count * (daily_max_minutes // session_minutes))
+
+
 def auto_sessions_per_team(
     engine_rooms: list[EngineRoom],
     team_count: int,

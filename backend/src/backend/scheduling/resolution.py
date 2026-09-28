@@ -25,6 +25,7 @@ def resolve(
     session_minutes: int,
     solver_time_limit_seconds: float,
     resolution_time_limit_seconds: float,
+    daily_max_minutes: int | None = None,
 ) -> Resolution:
     """배정이 불가능하면 멤버 1명씩 제외한 계산을 멤버 수만큼 반복해 조율안을 만듭니다.
 
@@ -34,7 +35,7 @@ def resolve(
     deadline = monotonic() + resolution_time_limit_seconds
     base = assign(
         teams, rooms, sessions_per_team, slot_minutes, session_minutes,
-        solver_time_limit_seconds,
+        solver_time_limit_seconds, daily_max_minutes,
     )
     if base.feasible:
         return Resolution(assignment=base, proposals=[])
@@ -51,7 +52,7 @@ def resolve(
             continue
         trial = assign(
             reduced, rooms, sessions_per_team, slot_minutes, session_minutes,
-            solver_time_limit_seconds,
+            solver_time_limit_seconds, daily_max_minutes,
         )
         if trial.feasible:
             proposals.append(

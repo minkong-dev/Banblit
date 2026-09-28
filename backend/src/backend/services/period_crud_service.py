@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from datetime import datetime
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -10,6 +11,7 @@ from backend.services.input import (
     require_valid_kind,
 )
 from backend.db.models import Period
+from backend.services.reservation_service import cancel_reservations_in_focus
 from backend.db.pipeline import commit_translating
 
 # 위반될 수 있는 제약과 그때 표시할 문장입니다. 제약 이름은 migration b5e1d9a37c42·d9a4c6e1f207 이 지정했습니다.
@@ -97,7 +99,11 @@ def create_period(
         **(WindowIn() if window is None else window).columns(),
     )
     session.add(period)
+    # 기간을 먼저 저장한 뒤 그 안에 남은 예약을 취소합니다. 취소가 먼저면 그 안의 flush 가 기간 제약 위반을
+    # commit_translating 밖에서 일으켜 사람이 읽을 문장으로 바뀌지 않습니다.
     commit_translating(session, PERIOD_MESSAGES)
+    if cancel_reservations_in_focus(session, period, datetime.now()):
+        session.commit()
     return period
 
 
@@ -163,7 +169,11 @@ def update_period(
     for field, value in changes.items():
         setattr(period, field, value)
 
+    # 기간을 먼저 저장한 뒤 그 안에 남은 예약을 취소합니다. 취소가 먼저면 그 안의 flush 가 기간 제약 위반을
+    # commit_translating 밖에서 일으켜 사람이 읽을 문장으로 바뀌지 않습니다.
     commit_translating(session, PERIOD_MESSAGES)
+    if cancel_reservations_in_focus(session, period, datetime.now()):
+        session.commit()
     return period
 
 

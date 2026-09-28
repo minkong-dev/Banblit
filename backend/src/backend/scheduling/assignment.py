@@ -1,11 +1,38 @@
+import threading
 from collections import Counter, defaultdict
 from dataclasses import dataclass
+from datetime import date, datetime
 
 from ortools.sat.python import cp_model
 
 from backend.scheduling.availability import Team, is_team_available
 from backend.scheduling.interval import TimeInterval
 from backend.scheduling.slots import generate_sessions, generate_slots
+
+
+# 첫 배정을 찾은 뒤 연속 배정을 더 늘리는 데 쓰는 시간(초)입니다(2026-09-28 사용자 결정). 연속 배정이 최대인지는
+# 끝까지 증명하지 못해, 멈추지 않으면 상한(solver_time_limit_seconds)을 매번 다 씁니다. 12팀·40명 규모에서 3초면
+# 12팀 중 11팀이 한 덩어리였고, 60초면 12팀 전부였습니다. 배정 가능 여부를 찾는 시간은 이 값과 관계없이 상한까지 씁니다.
+IMPROVE_SECONDS_AFTER_FIRST = 3.0
+
+
+class _StopAfterFirst(cp_model.CpSolverSolutionCallback):
+    """첫 해를 찾으면 IMPROVE_SECONDS_AFTER_FIRST 초 뒤에 계산을 멈추는 timer 를 겁니다."""
+
+    def __init__(self, solver: cp_model.CpSolver) -> None:
+        super().__init__()
+        self._solver = solver
+        self._timer: threading.Timer | None = None
+
+    def on_solution_callback(self) -> None:
+        if self._timer is None:
+            self._timer = threading.Timer(IMPROVE_SECONDS_AFTER_FIRST, self._solver.stop_search)
+            self._timer.daemon = True
+            self._timer.start()
+
+    def cancel(self) -> None:
+        if self._timer is not None:
+            self._timer.cancel()
 
 
 @dataclass(frozen=True)
@@ -126,6 +153,7 @@ def assign(
     slot_minutes: int,
     session_minutes: int,
     solver_time_limit_seconds: float,
+    daily_max_minutes: int | None = None,
 ) -> Assignment:
     """각 팀에게, 그 팀이 사용 가능한 시간의 빈 합주실 session 을 sessions_per_team 회 배정합니다.
 
@@ -202,11 +230,20 @@ def assign(
                         shared.append(chosen[(team_id, index)])
             _at_most_one(model, shared)
 
+    if daily_max_minutes is not None:
+        _limit_per_day(model, chosen, room_sessions, daily_max_minutes // session_minutes)
+    _prefer_back_to_back(model, chosen, room_sessions)
+
     solver = cp_model.CpSolver()
     # solver_time_limit_seconds 를 넘기면 계산을 중단합니다. 그때까지 배정안을 찾지 못했으면
     # feasible=False 로 처리합니다.
     solver.parameters.max_time_in_seconds = solver_time_limit_seconds
-    status = solver.solve(model)
+    stopper = _StopAfterFirst(solver)
+    # 계산 중 오류가 나도 timer 를 취소합니다. 남겨 두면 끝난 계산에 3초 뒤 stop_search 를 부릅니다.
+    try:
+        status = solver.solve(model, stopper)
+    finally:
+        stopper.cancel()
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         return Assignment(feasible=False, sessions_by_team={}, open_slots=[])
 
@@ -226,6 +263,55 @@ def assign(
     return Assignment(
         feasible=True, sessions_by_team=sessions_by_team, open_slots=open_slots
     )
+
+
+def _limit_per_day(
+    model: cp_model.CpModel,
+    chosen: dict[tuple[int, int], cp_model.IntVar],
+    room_sessions: list[RoomInterval],
+    most: int,
+) -> None:
+    """팀마다 하루에 배정되는 session 수를 most 이하로 묶습니다(2026-09-28 사용자 결정).
+
+    연속 배정을 최대화하면 이 제약이 없을 때 팀의 시간이 하루에 전부 몰립니다. 날짜는 session 시작일입니다.
+    """
+    by_day: dict[tuple[int, date], list[cp_model.IntVar]] = defaultdict(list)
+    for (team_id, index), var in chosen.items():
+        by_day[(team_id, room_sessions[index].interval.start.date())].append(var)
+    for variables in by_day.values():
+        if len(variables) > most:
+            model.add(cp_model.LinearExpr.sum(variables) <= most)
+
+
+def _prefer_back_to_back(
+    model: cp_model.CpModel,
+    chosen: dict[tuple[int, int], cp_model.IntVar],
+    room_sessions: list[RoomInterval],
+) -> None:
+    """같은 팀이 같은 합주실에서 바로 이어 쓰는 session 쌍의 수를 최대화합니다(2026-09-28 사용자 결정).
+
+    제약만 두면 조건을 충족하는 해 중 아무것이나 나와, 불가능 시간이 없어도 팀의 시간이 흩어지고
+    실행할 때마다 배치가 달라집니다. 날짜별 한도는 두지 않습니다 — 불가능 시간만 피하고 나머지는 붙입니다.
+    합주실을 옮겨 가며 이어지는 쌍은 세지 않습니다.
+    """
+    by_start: dict[tuple[int, int, datetime], cp_model.IntVar] = {}
+    for (team_id, index), var in chosen.items():
+        room_session = room_sessions[index]
+        by_start[(team_id, room_session.room_id, room_session.interval.start)] = var
+
+    joined: list[cp_model.IntVar] = []
+    for (team_id, index), var in chosen.items():
+        room_session = room_sessions[index]
+        after = by_start.get((team_id, room_session.room_id, room_session.interval.end))
+        if after is None:
+            continue
+        # both 는 두 session 이 모두 선택되었을 때만 1 이 될 수 있습니다. 최대화하므로 그때는 1 이 됩니다.
+        both = model.new_bool_var(f"joined_{team_id}_{index}")
+        model.add(both <= var)
+        model.add(both <= after)
+        joined.append(both)
+    if joined:
+        model.maximize(cp_model.LinearExpr.sum(joined))
 
 
 def _at_most_one(model: cp_model.CpModel, variables: list[cp_model.IntVar]) -> None:

@@ -365,7 +365,8 @@ def test_rollback_restores_the_previous_schedule(
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
     room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
-    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(22, 0))
+    # 2번방은 1칸만 엽니다. 팀당 하루 상한(기본 3시간) 안에 두 방의 칸이 전부 들어가야 S2 가 모든 칸을 받습니다.
+    room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(21, 0))
     db_session.add_all([room_1, room_2])
     db_session.flush()
     db_session.commit()
@@ -378,7 +379,7 @@ def test_rollback_restores_the_previous_schedule(
         json={"team_ids": [team_id], "room_ids": [room_1.id]},
     )
     assert poll_job(r1.json()["job"]["id"])["result"]["saved"] is True
-    # S2: 1번방 + 2번방을 지정합니다. 전체 자리가 8칸으로 늘어 팀이 8칸 전부를 받습니다.
+    # S2: 1번방 + 2번방을 지정합니다. 전체 자리가 6칸으로 늘어 팀이 6칸 전부를 받습니다.
     #     합주실 구성 자체가 S1 과 다르므로 결과도 다릅니다.
     r2 = api_client.post(
         f"/periods/{period_id}/assign",
@@ -399,7 +400,7 @@ def test_rollback_restores_the_previous_schedule(
 
     rows = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
     # 직전 배정기록(S2)과 정확히 같아야 합니다. 시각·합주실까지 실제 값으로 비교합니다.
-    # 합주실마다 이어진 2칸이 구간 한 행이라, 8칸이 하루 2행씩 4행으로 저장됩니다.
+    # 합주실마다 이어진 칸이 구간 한 행이라, 6칸이 하루 2행씩 4행으로 저장됩니다.
     assert rows == [
         {
             "team_id": team_id,
@@ -415,7 +416,7 @@ def test_rollback_restores_the_previous_schedule(
             "room_id": room_2.id,
             "room": "2번방",
             "start": "2026-08-01T20:00:00",
-            "end": "2026-08-01T22:00:00",
+            "end": "2026-08-01T21:00:00",
         },
         {
             "team_id": team_id,
@@ -431,7 +432,7 @@ def test_rollback_restores_the_previous_schedule(
             "room_id": room_2.id,
             "room": "2번방",
             "start": "2026-08-02T20:00:00",
-            "end": "2026-08-02T22:00:00",
+            "end": "2026-08-02T21:00:00",
         },
     ]
 

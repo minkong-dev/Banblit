@@ -123,7 +123,7 @@ def test_the_session_length_can_be_changed_on_its_own(
     response = api_client.patch("/settings", json={"session_minutes": 120}, cookies=admin)
 
     assert response.status_code == 200
-    assert response.json() == {"slot_minutes": 60, "session_minutes": 120}
+    assert response.json() == {"slot_minutes": 60, "session_minutes": 120, "daily_max_hours": 3}
 
 
 def test_a_session_shorter_than_one_slot_is_refused(
@@ -160,7 +160,7 @@ def test_both_values_change_together_when_sent_together(
     )
 
     assert response.status_code == 200
-    assert response.json() == {"slot_minutes": 30, "session_minutes": 30}
+    assert response.json() == {"slot_minutes": 30, "session_minutes": 30, "daily_max_hours": 3}
 
 
 def test_a_slot_size_that_would_break_the_saved_session_length_is_refused(
@@ -193,3 +193,46 @@ def test_the_database_rejects_a_session_length_that_is_not_a_whole_number_of_slo
         db_session.execute(update(Settings).values(slot_minutes=60, session_minutes=90))
         db_session.flush()
     db_session.rollback()
+
+
+def test_the_daily_limit_per_team_starts_at_three_hours_and_takes_one_to_three(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    # 팀 하나가 하루에 배정받는 시간의 상한입니다(2026-09-28 사용자 결정). 1~3시간만 받습니다.
+    _, admin = account("이도현", "dohyun@example.com")
+
+    assert api_client.get("/settings", cookies=admin).json()["daily_max_hours"] == 3
+    changed = api_client.patch("/settings", json={"daily_max_hours": 2}, cookies=admin)
+    assert changed.status_code == 200
+    assert changed.json()["daily_max_hours"] == 2
+    assert api_client.get("/settings", cookies=admin).json()["daily_max_hours"] == 2
+    assert api_client.patch("/settings", json={"daily_max_hours": 4}, cookies=admin).status_code == 422
+
+
+def test_the_daily_limit_cannot_be_shorter_than_one_session(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    # 하루 상한이 합주 1회보다 짧으면 하루에 들어가는 합주가 0회라, 모든 팀이 빈 배정을 받습니다.
+    # 어느 쪽을 먼저 바꾸든 거절합니다.
+    _, admin = account("이도현", "dohyun@example.com")
+
+    assert api_client.patch("/settings", json={"daily_max_hours": 1}, cookies=admin).status_code == 200
+    longer = api_client.patch("/settings", json={"session_minutes": 120}, cookies=admin)
+    assert longer.status_code == 422
+    assert api_client.get("/settings", cookies=admin).json()["session_minutes"] == 60
+
+    assert api_client.patch("/settings", json={"daily_max_hours": 3, "session_minutes": 180}, cookies=admin).status_code == 200
+    shorter = api_client.patch("/settings", json={"daily_max_hours": 2}, cookies=admin)
+    assert shorter.status_code == 422
+    assert api_client.get("/settings", cookies=admin).json()["daily_max_hours"] == 3
+
+
+def test_the_api_daily_limit_choices_match_the_contract() -> None:
+    from typing import get_args
+
+    from backend.api.schemas import SettingsUpdateIn
+    from backend.contract import DAILY_MAX_HOUR_CHOICES
+
+    annotation = SettingsUpdateIn.model_fields["daily_max_hours"].annotation
+    literal = next(arg for arg in get_args(annotation) if arg is not type(None))
+    assert get_args(literal) == DAILY_MAX_HOUR_CHOICES
