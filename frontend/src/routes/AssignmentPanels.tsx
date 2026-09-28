@@ -23,7 +23,7 @@ function TeamCounts({ shown, colors }: { shown: Session[]; colors: Map<string, s
         return (
           <span className={own.length ? "cnt" : "cnt short"} key={name}>
             <i style={{ background: `var(--${tone})` }} />{name}
-            {" 합주 "}<b>{own.length}번</b>{` · ${hoursOf(own).toFixed(1)}시간`}
+            {" 합주 "}<b>{hoursOf(own).toFixed(1)}시간</b>
           </span>
         );
       })}
@@ -125,7 +125,7 @@ export function AssignmentStatus({
             ? LOADING_TEXT
             : roundError !== null
               ? reason(roundError, "해당 배정안을 불러오지 못했어요")
-              : `합주 ${shown.length}번 · 총 ${hours.toFixed(1)}시간이에요`}
+              : `총 ${hours.toFixed(1)}시간이에요`}
         </p>
         {counts}
         <div className="act">
@@ -186,7 +186,7 @@ export function AssignmentStatus({
     <>
       <h2>확정된 배정안이에요</h2>
       <p className="sub">
-        총 {shown.length}회 합주이고, 도합 {hours.toFixed(1)}시간이에요.
+        총 {hours.toFixed(1)}시간이에요.
       </p>
       {counts}
       {!canRun ? null : (

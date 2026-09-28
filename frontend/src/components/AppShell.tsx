@@ -11,8 +11,8 @@ import { useToast } from "../lib/toast";
 import { Avatar } from "./Avatar";
 import { can, canOpenSettings, roleLabel, teamNavLabel } from "../lib/account";
 import { cohortLabel } from "../lib/roster";
-import { getJSON, logOut } from "../lib/pipeline";
-import type { Member, Permission } from "../lib/contract";
+import { loadTeamMembers, logOut } from "../lib/pipeline";
+import type { Permission } from "../lib/contract";
 import { applyTheme, readSavedTheme, type Theme } from "../lib/theme";
 import "../styles/shell.css";
 
@@ -198,7 +198,8 @@ export function ProfileMenu() {
   const rosters = useQueries({
     queries: teams.map((team) => ({
       queryKey: ["members", team.id],
-      queryFn: () => getJSON<{ members: Member[] }>(`/teams/${team.id}/members`),
+      // 같은 query key 를 날짜 dialog·프로필 화면도 씁니다. 저장하는 값의 모양이 같아야 하므로 셋 다 loadTeamMembers(배열)를 씁니다.
+      queryFn: () => loadTeamMembers(team.id),
     })),
   });
 
@@ -231,7 +232,7 @@ export function ProfileMenu() {
         <hr />
         <div className="cap">소속 팀 {teams.length}개</div>
         {teams.map((team, index) => {
-          const mine = rosters[index]?.data?.members.find((member) => member.id === me?.id);
+          const mine = rosters[index]?.data?.find((member) => member.id === me?.id);
           return (
             <div className="tm" key={team.id}>
               <i style={{ background: `var(--${team.colorKey})` }} />{team.name}

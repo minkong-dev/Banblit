@@ -357,15 +357,17 @@ export async function removeUnavailable(memberId: number, timeId: number): Promi
 export async function saveSettings(next: {
   slotMinutes?: number;
   sessionMinutes?: number;
-}): Promise<{ slotMinutes: number; sessionMinutes: number }> {
-  const body = await getJSON<{ slot_minutes: number; session_minutes: number }>("/settings", {
+  dailyMaxHours?: number;
+}): Promise<{ slotMinutes: number; sessionMinutes: number; dailyMaxHours: number }> {
+  const body = await getJSON<{ slot_minutes: number; session_minutes: number; daily_max_hours: number }>("/settings", {
     method: "PATCH",
     body: JSON.stringify({
       slot_minutes: next.slotMinutes,
       session_minutes: next.sessionMinutes,
+      daily_max_hours: next.dailyMaxHours,
     }),
   });
-  return { slotMinutes: body.slot_minutes, sessionMinutes: body.session_minutes };
+  return { slotMinutes: body.slot_minutes, sessionMinutes: body.session_minutes, dailyMaxHours: body.daily_max_hours };
 }
 
 /** 멤버를 추방합니다. 서버는 계정을 삭제하므로 그 멤버의 글·댓글·예약도 함께 삭제됩니다. member_expel 권한이 필요합니다. */

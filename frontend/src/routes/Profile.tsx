@@ -1,6 +1,7 @@
 import { useQueries } from "@tanstack/react-query";
 
-import { getJSON, reason } from "../lib/api";
+import { reason } from "../lib/api";
+import { loadTeamMembers } from "../lib/pipeline";
 import { cohortLabel } from "../lib/roster";
 import { useMe } from "../components/queries";
 import { LOADING_TEXT } from "../lib/loading";
@@ -18,7 +19,7 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
   const memberQueries = useQueries({
     queries: teamIds.map((id) => ({
       queryKey: ["members", id],
-      queryFn: () => getJSON<{ members: Member[] }>(`/teams/${id}/members`),
+      queryFn: () => loadTeamMembers(id),
     })),
   });
 
@@ -32,7 +33,7 @@ function useMyAffiliations(me: Account | null, teamIds: number[], teams: { id: n
     const id = teamIds[index] ?? 0;
     if (query.isPending) return { teamName: teamName(id), text: LOADING_TEXT };
     if (query.isError) return { teamName: teamName(id), text: reason(query.error) };
-    const mine = me === null ? undefined : query.data.members.find((member) => member.id === me.id);
+    const mine = me === null ? undefined : query.data.find((member) => member.id === me.id);
     return { teamName: teamName(id), text: cohortText(mine) };
   });
 }

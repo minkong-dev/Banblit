@@ -90,3 +90,36 @@ test("집중합주 기간에 전체합주를 지정하고 날짜별 시각을 �
   await page.getByRole("button", { name: `${starts} 부터의 기간을 삭제` }).click();
   await expect.poll(saved).toBeUndefined();
 });
+
+// 팀 하나가 하루에 배정받는 시간의 상한입니다(2026-09-28 사용자 결정). 점유 단위 카드에서 1~3시간 중 고릅니다.
+test("점유 단위 카드에서 팀당 하루 최대 배정 시간을 1~3시간 중 선택하고 저장한다", async ({ page }) => {
+  await page.goto("/settings");
+  const pick = page.locator("#dailyMax");
+  await expect(pick).toHaveText(/3시간/);
+  await pick.click();
+  await expect(page.getByRole("option")).toHaveText(["1시간", "2시간", "3시간"]);
+  await page.getByRole("option", { name: "2시간" }).click();
+  await expect(pick).toHaveText(/2시간/);
+  await page.reload();
+  await expect(page.locator("#dailyMax")).toHaveText(/2시간/);
+  // 다른 검사가 기본값을 전제로 하므로 되돌립니다.
+  await page.locator("#dailyMax").click();
+  await page.getByRole("option", { name: "3시간" }).click();
+  await expect(page.locator("#dailyMax")).toHaveText(/3시간/);
+});
+
+// 카드는 넘치는 내용을 잘라 냅니다. 드롭다운 목록이 카드 안에 갇히면 아래 선택지가 잘려 누를 수 없습니다.
+test("카드 안의 드롭다운 목록이 카드에 잘리지 않고 모든 선택지를 누를 수 있다", async ({ page }) => {
+  await page.goto("/settings");
+  await page.locator("#slotUnit").click();
+  const options = page.getByRole("option");
+  await expect(options.first()).toBeVisible();
+  // 스크롤하지 않은 채로 목록의 위·아래 가장자리 바로 안쪽이 목록 자신으로 보이는지 잽니다. 카드에 잘리면 그 자리에
+  // 카드 바깥 요소(다음 카드·바탕)가 보입니다.
+  const edges = await page.getByRole("listbox").evaluate((list) => {
+    const r = list.getBoundingClientRect();
+    const at = (y: number) => list.contains(document.elementFromPoint(r.left + r.width / 2, y));
+    return { top: at(r.top + 3), bottom: at(r.bottom - 3) };
+  });
+  expect(edges).toEqual({ top: true, bottom: true });
+});

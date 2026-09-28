@@ -14,6 +14,10 @@ const MINUTES_PER_HOUR = 60;
  *  서버 정본은 backend/src/backend/api/schemas.py 의 SettingsUpdateIn 과 settings 의 CHECK 입니다. */
 export const SLOT_MINUTE_CHOICES = [5, 10, 12, 15, 20, 30, 60] as const;
 
+// 팀 하나가 하루에 배정받는 시간의 상한(시간)으로 고를 수 있는 값입니다.
+// 서버 쪽 정본은 backend/src/backend/contract.py 의 DAILY_MAX_HOUR_CHOICES 입니다.
+export const DAILY_MAX_HOUR_CHOICES = [1, 2, 3] as const;
+
 /** 선택지에 표시할 문구입니다. 60분은 "1시간" 이 자연스럽습니다. */
 export function slotMinutesLabel(minutes: number): string {
   return minutes === MINUTES_PER_HOUR ? "1시간" : `${minutes}분`;

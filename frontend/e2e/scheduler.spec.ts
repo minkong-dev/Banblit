@@ -115,3 +115,21 @@ test("예약 모달의 내 예약은 다른 날짜의 예약도 날짜와 함께
   const target = dateParts(`${booked}T00:00:00`);
   await expect(page.locator("dialog .pane").last()).toContainText(`${target.month}월 ${target.day}일`);
 });
+
+// 상단바 프로필 카드와 날짜 dialog 는 같은 팀 명단(query key ["members", 팀 번호])을 씁니다. 한쪽이 다른 모양으로
+// 저장하면 다른 쪽이 그 값을 읽다가 화면 전체가 오류로 바뀝니다. 프로필 카드를 먼저 열어 명단을 받아 둔 뒤,
+// 배정이 있는 날의 dialog 를 엽니다.
+test("프로필 카드로 명단을 받아 둔 뒤에도 전체 일정의 날짜 dialog 가 열린다", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto("/scheduler");
+  await page.locator(".profbtn").click();
+  await expect(page.locator(".pop.on .tm").first().locator("small")).not.toHaveText("");
+  await page.locator(".profbtn").click();
+  await page.getByRole("tab", { name: "전체 일정" }).click();
+  await page.locator(".grid .cell:has(.ev)").first().click();
+  await expect(page.locator("dialog[open]")).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(errors).toEqual([]);
+  await expect(page.locator("dialog[open]")).toBeVisible();
+});

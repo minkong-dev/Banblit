@@ -14,6 +14,7 @@ import { LOADING_TEXT, loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { daysBetween, openingHours, saveSettings } from "../lib/pipeline";
 import {
+  DAILY_MAX_HOUR_CHOICES,
   SLOT_MINUTE_CHOICES,
   sessionMinuteChoices,
   sessionMinutesLabel,
@@ -151,7 +152,7 @@ export function Settings() {
  *  칸을 키우면 저장된 합주 길이가 배수가 아니게 될 수 있어, 그때는 합주 길이를 함께 보내
  *  한 요청으로 맞춥니다. 나눠 보내면 어느 쪽을 먼저 보내도 중간 상태가 거절됩니다. */
 function SlotUnitCard({ canEdit, onSaved }: { canEdit: boolean; onSaved: () => void }) {
-  const { slotMinutes, sessionMinutes } = useSettings();
+  const { slotMinutes, sessionMinutes, dailyMaxHours } = useSettings();
   const [why, setWhy] = useState("");
   const save = useMutation({
     mutationFn: saveSettings,
@@ -196,6 +197,18 @@ function SlotUnitCard({ canEdit, onSaved }: { canEdit: boolean; onSaved: () => v
               label: sessionMinutesLabel(minutes),
             }))}
             onChange={(next) => save.mutate({ sessionMinutes: next })}
+          />
+        </Cell>
+        {/* 배정 계산이 팀 하나에 하루 이 시간까지만 배정합니다. 상한이 없으면 팀의 시간이 하루에 전부 몰립니다. */}
+        <Cell label="팀당 하루 최대" htmlFor="dailyMax">
+          <Dropdown
+            id="dailyMax"
+            value={dailyMaxHours}
+            disabled={!canEdit || save.isPending}
+            invalid={why !== ""}
+            describedBy={why === "" ? undefined : "slotUnitWhy"}
+            choices={DAILY_MAX_HOUR_CHOICES.map((hours) => ({ value: hours, label: `${hours}시간` }))}
+            onChange={(next) => save.mutate({ dailyMaxHours: next })}
           />
         </Cell>
         {why === "" ? null : <p className="why" id="slotUnitWhy" role="alert">{why}</p>}

@@ -72,3 +72,12 @@ test.describe("배정 다시 계산", () => {
     await expect(page.getByRole("tab", { name: "A안" })).toBeVisible({ timeout: ASSIGN_WAIT_MS });
   });
 });
+
+// 배정 결과는 시간만 표시합니다. 붙은 칸 묶음의 개수(횟수)는 같은 시간을 받아도 배치에 따라 달라져 오해를 삽니다.
+test("배정 결과는 횟수 없이 팀별 시간만 표시한다", async ({ page }) => {
+  await page.goto("/admin");
+  const counts = page.locator(".counts .cnt");
+  await expect(counts.first()).toContainText("시간");
+  for (const text of await counts.allTextContents()) expect(text).not.toMatch(/\d+번/);
+  for (const text of await page.locator("p.sub").allTextContents()) expect(text).not.toMatch(/\d+(번|회)/);
+});

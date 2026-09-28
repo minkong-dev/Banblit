@@ -274,7 +274,7 @@ export type Reservation = {
  *  (lib/notifications.ts). read가 거짓이면 아직 읽지 않은 것입니다. */
 export type Notification = {
   id: number;
-  kind: "assignment_updated";
+  kind: "assignment_updated" | "reservation_cancelled";
   /** "2026-09-14T18:00:00" */
   created_at: string;
 };
