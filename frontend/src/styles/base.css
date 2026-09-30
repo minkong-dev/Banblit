@@ -69,10 +69,11 @@ body { margin: 0; word-break: keep-all; overflow-wrap: break-word; }
 
   /* 모서리 반경 4단계입니다. 입력칸·일정 칩 sm, 버튼·목록 줄 md, 카드·모달 lg, 탭·배지 pill. */
   --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-pill: 999px;
-  /* 글자 크기 8단계입니다. 본문은 base, 구획 제목은 lg, 탭은 xl, 큰 숫자는 2xl, 달 이름은 display 입니다.
-     display 는 창 폭을 따라 44~88px 사이에서 움직입니다 — 화면에서 가장 큰 글자이고 하나뿐입니다. */
-  --fs-xs: 12px; --fs-sm: 13px; --fs-md: 14px; --fs-base: 15px; --fs-lg: 17px; --fs-xl: 20px; --fs-2xl: 26px;
-  --fs-display: clamp(44px, 6.4vw, 88px);
+  /* 글자 크기 7단계입니다. 본문은 base, 구획 제목은 lg, 탭은 xl, 달 이름·큰 숫자는 2xl 입니다. */
+  --fs-xs: 12px; --fs-sm: 13px; --fs-md: 14px; --fs-base: 15px; --fs-lg: 17px; --fs-xl: 20px; --fs-2xl: 28px;
+  /* 상자 없이 선으로만 나누므로 줄이 맞아야 합니다. 상단바 아래 첫 줄(탭·메뉴 항목)의 시작 높이와,
+     달력 머리줄·오른쪽 목록 제목줄의 높이를 이 두 값이 정합니다. 화면 CSS 가 같은 값을 씁니다. */
+  --page-top: 30px; --head-h: 52px;
   /* 글꼴은 Pretendard 하나입니다(main.tsx 가 가변 글꼴 파일을 불러옵니다). 굵기 대비(300~800)로 위계를 만듭니다. */
   --font: "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, "Malgun Gothic", sans-serif;
 
