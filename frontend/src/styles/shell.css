@@ -11,8 +11,11 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
 
 :where(body[data-shell]) {
   margin: 0; color: var(--t1);
-  /* 바탕 왼쪽 위에서 코랄 빛이 옅게 번집니다(무대 조명). 스크롤해도 따라오지 않고 화면에 고정입니다. */
-  background: radial-gradient(70% 50% at 0% 0%, light-dark(rgba(255,127,80,.10), rgba(255,127,80,.14)), transparent 70%) fixed, var(--bg);
+  /* 바탕 왼쪽 위와 오른쪽 아래에서 코랄 빛이 옅게 번집니다(무대 조명 두 개). 스크롤해도 따라오지 않고 화면에 고정입니다. */
+  background:
+    radial-gradient(70% 50% at 0% 0%, light-dark(rgba(255,127,80,.10), rgba(255,127,80,.14)), transparent 70%) fixed,
+    radial-gradient(60% 45% at 100% 100%, light-dark(rgba(255,127,80,.08), rgba(255,127,80,.12)), transparent 70%) fixed,
+    var(--bg);
   font-family: var(--font);
   font-size: var(--fs-base); line-height: 1.6; letter-spacing: -.01em;
   font-variant-numeric: tabular-nums;
