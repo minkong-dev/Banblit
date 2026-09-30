@@ -2,8 +2,8 @@ from datetime import date, datetime, time
 
 import pytest
 
+from backend.services.validation.input import ALL_WEEKDAYS
 from backend.services.period.period_input import (
-    ALL_WEEKDAYS,
     PracticeWindow,
     auto_sessions_per_team,
     build_engine_rooms,

@@ -57,7 +57,7 @@ def list_slots(session: Session, team_id: int) -> list[tuple[TeamSlot, Member | 
 
     빈 포지션도 함께 포함합니다. 화면이 비어 있는 포지션을 표시해야 하므로 제외하면 안 됩니다.
     """
-    _get_team_or_raise(session, team_id)
+    get_team_or_raise(session, team_id)
     rows = session.execute(
         select(TeamSlot, Member)
         .outerjoin(Member, Member.id == TeamSlot.member_id)
@@ -161,11 +161,25 @@ def require_slot_counts(counts: dict[str, int]) -> dict[Instrument, int]:
     return checked
 
 
-def _get_team_or_raise(session: Session, team_id: int) -> Team:
+def get_team_or_raise(session: Session, team_id: int) -> Team:
+    """team_id 의 팀을 반환합니다. 없으면 ValueError 입니다. 다른 모듈은 pipeline 을 통해 이 함수를 씁니다."""
     team = session.get(Team, team_id)
     if team is None:
-        raise ValueError("그런 팀이 없습니다")
+        raise ValueError("존재하지 않는 팀입니다")
     return team
+
+
+def require_team_member(session: Session, team_id: int, member_id: int) -> None:
+    # 인증된 사람이라도 팀 소속이 아니면 PermissionError(403)입니다. 팀이나 게시글이 없는 경우는
+    # ValueError(422)이며, 응답 상태 코드가 다르므로 구분합니다.
+    row = session.execute(
+        select(TeamSlot.id).where(
+            TeamSlot.team_id == team_id,
+            TeamSlot.member_id == member_id,
+        )
+    ).first()
+    if row is None:
+        raise PermissionError("그 팀 소속이 아닙니다")
 
 
 def _get_slot_or_raise(session: Session, team_id: int, slot_id: int) -> TeamSlot:
@@ -218,7 +232,7 @@ def create_team(
 
 def update_team(session: Session, team_id: int, name: str, color: str | None = None) -> Team:
     """팀 이름과 팀 색을 수정합니다. color 가 None 이면 색은 그대로 둡니다. 포지션 구성은 포지션 관련 endpoint가 담당합니다."""
-    team = _get_team_or_raise(session, team_id)
+    team = get_team_or_raise(session, team_id)
     clean_name = require_non_empty(name, "팀 이름")
     # 검증을 전부 통과한 뒤에 대입합니다. 대입이 앞서면 색 검증이 실패해도 이름 변경이 session 에 남습니다.
     checked_color = None if color is None else _require_known_color(color)
@@ -238,7 +252,7 @@ def replace_slots(session: Session, team_id: int, counts: dict[str, int]) -> Non
 
     감소할 때는 번호가 큰 포지션부터 삭제합니다. 삭제되는 포지션에 배정된 멤버는 팀에서 제거됩니다.
     """
-    _get_team_or_raise(session, team_id)
+    get_team_or_raise(session, team_id)
     checked = require_slot_counts(counts)
 
     keep: set[tuple[str, int]] = {
@@ -266,7 +280,7 @@ def delete_team(session: Session, team_id: int) -> None:
 
     포지션에 배정되어 있던 멤버 행은 삭제하지 않습니다.
     """
-    team = _get_team_or_raise(session, team_id)
+    team = get_team_or_raise(session, team_id)
     session.execute(delete(TeamSlot).where(TeamSlot.team_id == team_id))
     session.delete(team)
     commit_translating(session, ROSTER_MESSAGES)

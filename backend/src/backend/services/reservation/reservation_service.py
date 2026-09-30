@@ -9,8 +9,10 @@ from backend.services.validation.pipeline import (
     require_within_room_hours,
 )
 from backend.services.permission.pipeline import account_permissions
+from backend.services.room.pipeline import get_room_or_raise
+from backend.services.roster.pipeline import get_team_or_raise, require_team_member
 from backend.services.settings.pipeline import slot_minutes
-from backend.db.models import EnsembleDay, Member, Notification, Period, Reservation, Room, Team, TeamSlot
+from backend.db.models import EnsembleDay, Member, Notification, Period, Reservation, Room, Team
 from backend.db.pipeline import commit_translating
 
 # 선착순은 겹침 금지 제약이 commit 시점에 결정합니다. 먼저 commit 한 요청이 그 구간을 가져갑니다.
@@ -20,31 +22,6 @@ RESERVATION_MESSAGES = {
 }
 
 ReservationRow = tuple[Reservation, str, str | None, str]
-
-
-def _get_room_or_raise(session: Session, room_id: int) -> Room:
-    room = session.get(Room, room_id)
-    if room is None:
-        raise ValueError("존재하지 않는 합주실입니다")
-    return room
-
-
-def _require_team_member(session: Session, team_id: int, member_id: int) -> None:
-    row = session.execute(
-        select(TeamSlot.id).where(
-            TeamSlot.team_id == team_id,
-            TeamSlot.member_id == member_id,
-        )
-    ).first()
-    if row is None:
-        raise PermissionError("그 팀 소속이 아닙니다")
-
-
-def _get_team_or_raise(session: Session, team_id: int) -> Team:
-    team = session.get(Team, team_id)
-    if team is None:
-        raise ValueError("존재하지 않는 팀입니다")
-    return team
 
 
 def _require_not_in_focused_period(
@@ -58,7 +35,7 @@ def _require_not_in_focused_period(
 def cancel_reservations_in_focus(session: Session, period: Period, now: datetime) -> int:
     """집중 합주기간 안에 남은 앞으로의 예약을 취소하고 예약자에게 알림을 만듭니다. commit 은 부르는 쪽이 합니다.
 
-    기간을 만들거나 넓힐 때 부릅니다(2026-09-28 사용자 결정 — 기간을 막지 않고 예약을 밀어냅니다). 취소 기준은
+    기간을 만들거나 넓힐 때 부릅니다(기간을 막지 않고 예약을 밀어냅니다). 취소 기준은
     "지금 새로 예약하면 거절되는가"이고, 예약을 받을 때와 같은 focus_refusal 로 판정합니다. 그래서 전체합주 날짜의
     전체합주 외 시간 예약은 남습니다. 이미 시작한 예약은 기록으로 남기고 취소하지 않습니다.
     """
@@ -101,7 +78,7 @@ def focus_refusal(
     지난 모든 날에 자동 배정이 실행되므로, 저장된 종료일 뒤의 날짜도 차단합니다.
 
     전체합주 날짜는 팀별 배정이 없어 예약을 허용하고, 전체합주에 지정한 합주실의 전체합주 시각과
-    겹치는 구간만 거절합니다(patch_note 8번). 시각은 날짜별 지정(ensemble_days)이 기본 시각보다 우선합니다.
+    겹치는 구간만 거절합니다. 시각은 날짜별 지정(ensemble_days)이 기본 시각보다 우선합니다.
     집중 합주기간끼리는 겹칠 수 없으므로(periods_focused_no_overlap) 그날의 기간은 하나뿐입니다.
     """
     day = starts_at.date()
@@ -155,12 +132,12 @@ def _planned_row(
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_same_day(starts_at, ends_at)
     _require_not_started(starts_at, created_at)
-    room = _get_room_or_raise(session, room_id)
+    room = get_room_or_raise(session, room_id)
     require_within_room_hours(room.opens_at, room.closes_at, starts_at, ends_at)
     team = None
     if team_id is not None:
-        team = _get_team_or_raise(session, team_id)
-        _require_team_member(session, team_id, requester.id)
+        team = get_team_or_raise(session, team_id)
+        require_team_member(session, team_id, requester.id)
     _require_not_in_focused_period(session, room_id, starts_at, ends_at)
 
     row = Reservation(
@@ -205,7 +182,7 @@ def list_reservations(
 
     각 행마다 합주실 이름·팀 이름(팀 예약이 아니면 None)·예약한 멤버 이름을 함께 포함합니다.
     """
-    room = _get_room_or_raise(session, room_id)
+    room = get_room_or_raise(session, room_id)
     range_start = datetime.combine(from_date, time.min)
     range_end = datetime.combine(to_date, time.max)
     rows = session.execute(
@@ -303,7 +280,7 @@ def update_reservation(
     원래 구간과 겹치는 이동도 됩니다. 제약이 취소된 행을 보지 않으므로 옛 행은 비교 대상이 아닙니다.
     """
     old = _get_own_reservation(session, reservation_id, requester, "옮길")
-    room = _get_room_or_raise(session, old.room_id)
+    room = get_room_or_raise(session, old.room_id)
 
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_same_day(starts_at, ends_at)
