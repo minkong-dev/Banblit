@@ -65,6 +65,11 @@ body { margin: 0; word-break: keep-all; overflow-wrap: break-word; }
   --shadow: 0 1px 2px light-dark(rgba(0,23,51,.04), rgba(0,0,0,.4)), 0 8px 24px light-dark(rgba(0,23,51,.07), rgba(0,0,0,.35));
   --shadow-up: 0 12px 48px light-dark(rgba(0,23,51,.18), rgba(0,0,0,.6));
 
+  /* 모서리 반경 4단계입니다. 입력칸·일정 칩 sm, 버튼·목록 줄 md, 카드·모달 lg, 탭·배지 pill. */
+  --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-pill: 999px;
+  /* 글자 크기 7단계입니다. 본문은 base, 카드 제목은 lg, 달 이름은 xl, 큰 숫자는 2xl 입니다. */
+  --fs-xs: 12px; --fs-sm: 13px; --fs-md: 14px; --fs-base: 15px; --fs-lg: 17px; --fs-xl: 20px; --fs-2xl: 26px;
+
   /* 왼쪽 메뉴 폭입니다. 창 폭 단계(shell.css)에서 1059px 이하가 되면 메뉴가 가로 줄로 바뀌어 이 값을 쓰지 않습니다. */
   --side: clamp(232px, 15%, 300px);
 }

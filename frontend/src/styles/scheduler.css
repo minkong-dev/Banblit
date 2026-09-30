@@ -12,20 +12,21 @@ body[data-page="scheduler"] {
   .cut { grid-column: 1 / -1; grid-row: 2; }
   .card { grid-column: 1; grid-row: 3; flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .rail { grid-column: 2; grid-row: 3; }
-  .tab { padding: 10px 20px; font-size: 15px; }
 
   /* container-type 은 아래 달력 칸 높이가 이 상자의 너비(cqi)를 기준으로 계산되게 합니다. */
   #body { flex: 1; display: flex; flex-direction: column; min-height: 0; container-type: inline-size; }
   .cardfoot { flex: none; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 11px 18px; border-top: 1px solid var(--line); }
 
   .calbar { flex: none; display: flex; align-items: center; gap: 6px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
-  .calbar .ml { font-size: 18px; font-weight: 700; min-width: 116px; text-align: center; }
+  .calbar .ml { font-size: var(--fs-xl); font-weight: 700; min-width: 124px; text-align: center; }
   .navb { width: 38px; height: 38px; display: grid; place-items: center; color: var(--t2); border-radius: 10px; transition: background-color .15s ease, color .15s ease; }
   .navb:hover { background: var(--card-2); color: var(--t1); }
   .navb svg { width: 16px; height: 16px; }
-  .seg { margin-left: auto; display: flex; background: var(--card-2); border-radius: 10px; padding: 3px; gap: 2px; }
-  .seg button { padding: 6px 14px; min-height: 36px; border-radius: 8px; font-size: 13.5px; font-weight: 500; color: var(--t3); transition: background-color .15s ease, color .15s ease; }
-  .seg button[aria-pressed="true"] { background: var(--card); color: var(--t1); font-weight: 700; box-shadow: 0 1px 3px rgba(0,23,51,.10); }
+  /* 월·주 전환도 탭과 같은 규칙입니다. 고른 쪽은 본문색과 아래 선, 나머지는 흐린 글자입니다. */
+  .seg { margin-left: auto; display: flex; gap: 14px; }
+  .seg button { padding: 6px 2px; min-height: 36px; font-size: var(--fs-md); font-weight: 500; color: var(--t3); transition: color .15s ease; }
+  .seg button:hover { color: var(--t2); }
+  .seg button[aria-pressed="true"] { color: var(--t1); font-weight: 700; box-shadow: inset 0 -2px 0 var(--t1); }
 
   .timebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px 18px; border-bottom: 1px solid var(--line); background: var(--card-2); }
   .timebar .fld { display: flex; align-items: center; gap: 8px; }
@@ -43,6 +44,10 @@ body[data-page="scheduler"] {
   /* 달력 줄은 남는 높이를 똑같이 나눠 가집니다. 칸에 다 들어가지 않는 일정은 칸의 overflow:hidden 이 자릅니다.
      좁은 창(767px 이하)은 아래 @media 가 칸 너비 기준 높이로 따로 정합니다. */
   .grid { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(0, 1fr); min-height: 0; }
+  /* 달을 넘기면 칸 묶음이 새로 그려지며(SchedulerViews 의 key) 짧게 떠오릅니다. 무엇이 바뀌었는지 보여주는
+     움직임입니다. 움직임 줄이기 설정은 shell.css 가 끕니다. */
+  .grid { animation: monthin .24s cubic-bezier(.22,1,.36,1); }
+  @keyframes monthin { from { opacity: 0; transform: translateY(6px); } }
 
   .cell {
     position: relative; min-height: 0; overflow: hidden; padding: 8px 9px 10px;
@@ -61,16 +66,18 @@ body[data-page="scheduler"] {
   .cell.pickable { box-shadow: inset 0 0 0 2px var(--brand-tint); }
   .cell.pickable:hover { background: var(--brand-tint); }
 
-  .ev { display: flex; align-items: center; gap: 7px; padding: 5px 8px; border-radius: 8px; font-size: 12.5px; font-weight: 700; line-height: 1.3; white-space: nowrap; overflow: hidden; }
-  .ev time { font-weight: 400; font-size: 11.5px; opacity: .8; margin-left: auto; }
-  /* 팀 색은 .team-<색> class 가 --tc·--tc-tint 로 줍니다(lib/teamColors.ts). 색이 없는 팀은 불가능 일정과 같은 회색입니다. */
-  .ev { background: var(--tc-tint, var(--off-tint)); color: var(--tc, var(--t3)); }
-  .ev.off { background: var(--off-tint); color: var(--t3); }
+  .ev { display: flex; align-items: center; gap: 7px; padding: 5px 8px 5px 10px; border-radius: 6px; font-size: 12.5px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; }
+  .ev time { font-size: 11.5px; color: var(--t2); margin-left: auto; }
+  /* 팀 색은 .team-<색> class 가 --tc·--tc-tint 로 줍니다(lib/teamColors.ts). 색이 없는 팀은 불가능 일정과 같은 회색입니다.
+     팀 색은 옅은 바탕과 왼쪽 3px 선에만 쓰고 글자는 본문색입니다. 글자까지 팀 색이면 20색이 한 화면에서 다투어 읽히지 않습니다.
+     일정 막대(.ev·.blk·.evb)와 배정 블록(assignment.css 의 .ses)이 같은 규칙입니다. */
+  :is(.ev, .blk, .evb) { background: var(--tc-tint, var(--off-tint)); color: var(--t1); box-shadow: inset 3px 0 0 var(--tc, var(--off)); }
+  :is(.ev, .blk, .evb).off { background: var(--off-tint); color: var(--t2); box-shadow: inset 3px 0 0 var(--off); }
   /* 전체합주는 한 팀이 아니라 전원의 일정입니다. 팀 20색과 겹치지 않는 지정 보조색(세이지)에 빗금을 겹쳐,
      색 이름을 몰라도 팀 막대와 구분됩니다. 달 보기·주 보기·하루 타임라인이 같은 규칙을 씁니다. */
   :is(.ev, .blk, .evb).ens {
     background: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--green) 14%, transparent) 5px 10px), var(--green-tint);
-    color: var(--green);
+    color: var(--green); box-shadow: inset 3px 0 0 var(--green);
   }
   .legend i.ens { background: var(--green); }
   /* 하루 dialog 의 날짜별 전체합주 시각 입력입니다. 왼쪽 카드에서는 타임라인 아래에 구분선으로 붙습니다. */
@@ -89,14 +96,20 @@ body[data-page="scheduler"] {
   .meter i { flex: 1; background: var(--line); border-radius: 2px; }
   .meter i.on { background: var(--brand); }
 
-  .band { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; background: var(--brand); color: var(--brand-on); border-radius: 999px; font-size: 12.5px; white-space: nowrap; }
+  /* 집중합주 기간은 코랄 면이 아니라 옅은 코랄 바탕에 본문색 글자입니다. 코랄은 시계 아이콘에만 씁니다. */
+  .band { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; background: var(--brand-tint); color: var(--t1); border-radius: var(--r-pill); font-size: 12.5px; white-space: nowrap; }
   .band b { font-weight: 700; }
+  .band svg { color: var(--brand); }
   /* 아이콘은 글자 크기에 맞춰 고정합니다. 띠가 줄바꿈되면 크기가 없는 svg 가 남는 폭만큼 커집니다. */
   .band svg { width: 14px; height: 14px; flex: none; }
 
-  /* 오늘 칸입니다. 달 보기의 칸과 주 보기의 요일 머리글이 같은 표시를 씁니다.
-     채움이 아니라 테두리로 표시해, 그날에 이미 붙어 있는 색(예약·배정)을 가리지 않습니다. */
-  .cell.today, .wh.today { box-shadow: inset 0 0 0 2px var(--brand); }
+  /* 오늘 칸입니다. 날짜 숫자를 코랄 원으로 채우고, 칸 왼쪽 위에서 옅은 코랄 빛이 번지게 합니다(무대 조명).
+     빛은 옅어서 그날에 붙어 있는 일정 색(예약·배정)을 가리지 않습니다. 이 화면에서 코랄을 가장 크게 쓰는 곳입니다.
+     주 보기는 요일 머리글의 날짜 숫자만 같은 원으로 표시합니다. */
+  .cell.today { --glow: radial-gradient(130% 90% at 0% 0%, color-mix(in srgb, var(--brand) 18%, transparent), transparent 62%); background: var(--glow); }
+  .cell.today:hover:not(:disabled) { background: var(--glow), var(--card-2); }
+  :is(.cell.today .n, .wh.today b) { background: var(--brand); color: var(--brand-on); font-weight: 700; }
+  .wh.today b { width: fit-content; min-width: 30px; height: 30px; margin: 2px auto 0; padding: 0 7px; display: grid; place-items: center; border-radius: var(--r-pill); }
 
   .weekscroll { flex: 1; overflow: auto; min-height: 0; }
   /* 한 칸의 세로 길이를 이 규칙 하나가 정합니다. 최솟값은 막대가 이름과 시각 2줄을 담는 높이고,
@@ -118,10 +131,8 @@ body[data-page="scheduler"] {
   .wcell:nth-child(8n) { border-right: none; }
   /* --offset 은 시작 시각이 줄 안에서 차지하는 비율(0~1)입니다. 18:10 시작이면 18시 줄에서 1/6 만큼 내려 그립니다. */
   .wcell .blk { position: absolute; left: 3px; right: 3px; top: calc(var(--offset, 0) * 100% + 2px); height: calc(var(--span, 1) * 100% - 4px);
-    border-radius: 9px; padding: 5px 8px; font-size: 12px; font-weight: 700; line-height: 1.3; overflow: hidden; }
-  .wcell .blk small { display: block; font-weight: 400; font-size: 11px; opacity: .85; }
-  .blk { background: var(--tc-tint, var(--off-tint)); color: var(--tc, var(--t3)); }
-  .blk.off { background: var(--off-tint); color: var(--t3); }
+    border-radius: 6px; padding: 5px 8px 5px 10px; font-size: 12px; font-weight: 500; line-height: 1.3; overflow: hidden; }
+  .wcell .blk small { display: block; font-weight: 400; font-size: 11px; color: var(--t2); }
 
   .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; }
   .legend span { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--t2); }
@@ -135,7 +146,10 @@ body[data-page="scheduler"] {
   .panel > .ph { width: 100%; transition: background-color .15s ease; }
   .panel > .ph:hover { background: var(--card-2); }
   .panel li button { display: block; width: 100%; text-align: left; padding: 11px 10px; min-height: 44px; border-radius: 10px; text-decoration: none; color: var(--t1); font-size: 14px; transition: background-color .15s ease; }
-  .panel li button:hover { background: var(--card-2); }
+  .panel li button:hover:not(:disabled) { background: var(--card-2); }
+  /* 목록이 비었거나 불러오지 못했을 때의 한 줄입니다(버튼을 disabled 로 둡니다). 목록 항목과 구분되게 흐린 글자로 가운데 둡니다. */
+  .panel li button:disabled { padding: 28px 10px; text-align: center; color: var(--t3); cursor: default; }
+  .panel li button:disabled b { font-weight: 400; }
   .panel li button b { display: block; font-weight: 500; }
   .panel li button small { color: var(--t3); font-size: 12.5px; }
   .panel li button .new { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--red); vertical-align: 2px; margin-right: 5px; }
@@ -170,14 +184,12 @@ body[data-page="scheduler"] {
   .tl .hr::before { content: attr(data-h); position: absolute; left: calc(var(--gutter) * -1); top: -9px; width: 42px; text-align: right; font-size: 12px; color: var(--t3); }
   .tl .evb { position: absolute; z-index: 0; left: var(--gutter); right: 0; top: calc(var(--from, 0) * var(--slot-h));
     height: calc(var(--span, 1) * var(--slot-h) - 3px);
-    border-radius: 11px; padding: 7px 12px; font-size: 13px; font-weight: 700; line-height: 1.35; overflow: hidden; }
-  .tl .evb small { display: block; font-weight: 400; font-size: 11.5px; opacity: .85; }
-  .evb { background: var(--tc-tint, var(--off-tint)); color: var(--tc, var(--t3)); }
-  .evb.off { background: var(--off-tint); color: var(--t3); }
+    border-radius: var(--r-sm); padding: 7px 12px 7px 14px; font-size: 13px; font-weight: 500; line-height: 1.35; overflow: hidden; }
+  .tl .evb small { display: block; font-weight: 400; font-size: 11.5px; color: var(--t2); }
   /* 드래그로 고르는 띠입니다. 글자 선택과 브라우저 스크롤 제스처를 끄지 않으면 드래그가 그쪽으로 새어 나갑니다. */
   .tl.pickable { cursor: crosshair; user-select: none; touch-action: none; }
   /* 고른 구간입니다. 다른 막대와 같은 층(z-index 0)에 두어 시각 글씨(.hr::before, z-index 1)를 가리지 않습니다. DOM 순서가 마지막이라 다른 막대 위에 그려집니다. */
-  .tl .evb.sel { pointer-events: none; background: var(--brand-tint); color: var(--brand); border: 1.5px dashed var(--brand); }
+  .tl .evb.sel { pointer-events: none; background: var(--brand-tint); color: var(--brand); border: 1.5px dashed var(--brand); box-shadow: none; }
 
   /* ===== 3단 카드. 왼쪽 타임라인, 가운데 등록 폼, 오른쪽 내 일정 목록. 열 배치는 shell.css 의 dialog.panes 가 정합니다 =====
      높이는 grid 가 dialog 높이(92vh)로 맞추고, 카드 안쪽 내용(.tlscroll·.col·.people)만 각자 스크롤합니다. 제목 줄과 버튼 줄은 스크롤되지 않습니다. */
@@ -269,7 +281,9 @@ body[data-page="scheduler"] {
     .band svg { display: inline-block; vertical-align: -2px; margin-right: 6px; }
     /* 칸 폭(약 46px)에는 팀 이름이 두세 글자도 들어가지 않습니다. 글자 대신 팀 색 막대로 표시하고, 이름과 시각은
        날짜를 눌러 여는 dialog 에서 읽습니다. */
-    .ev { height: 6px; padding: 0; gap: 0; font-size: 0; border-radius: 3px; background: var(--tc, var(--t3)); }
+    .ev { height: 6px; padding: 0; gap: 0; font-size: 0; border-radius: 3px; background: var(--tc, var(--t3)); box-shadow: none; }
+    /* 시각은 글자 크기를 따로 가져 font-size: 0 으로 숨겨지지 않습니다. 막대 위에 겹쳐 그려지므로 감춥니다. */
+    .ev time { display: none; }
     .ev.off { background: var(--t3); }
     .ev.ens { background: var(--green); }
     .cell { gap: 3px; padding: 6px 5px 8px; }
