@@ -116,7 +116,7 @@ export function Landing() {
       <section className="hero">
         <div>
           <h1>
-            합주시간 배정, 어렵지 않을 때도 됐으니까.<br />
+            합주시간 배정,<br />어렵지 않을 때도 됐으니까.<br />
             지금, <span className="mark">BANBLIT.</span>
           </h1>
           <p className="sub">세상 쉬운 합주 일정 관리, Banblit</p>

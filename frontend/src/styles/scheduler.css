@@ -27,8 +27,9 @@ body[data-page="scheduler"] {
   .navb svg { width: 16px; height: 16px; }
   /* 월·주 전환은 고른 쪽만 본문색 굵은 글자이고, 나머지는 흐린 글자입니다. */
   .seg { margin-left: auto; display: flex; gap: 16px; }
-  .seg button { padding: 0; min-height: 36px; font-size: var(--fs-base); font-weight: 500; color: var(--t3); transition: color .15s ease; }
-  .seg button:hover { color: var(--t2); }
+  /* 선택 안 된 쪽의 글자색은 --t2 입니다. --t3 는 밝은 화면에서 명도 대비 약 3:1 로 글자 기준 4.5:1 에 못 미칩니다(2026-09-30 리뷰). */
+  .seg button { padding: 0; min-height: 36px; font-size: var(--fs-base); font-weight: 500; color: var(--t2); transition: color .15s ease; }
+  .seg button:hover { color: var(--t1); }
   .seg button[aria-pressed="true"] { color: var(--t1); font-weight: 700; }
 
   .timebar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 0; border-top: 1px solid var(--line); }

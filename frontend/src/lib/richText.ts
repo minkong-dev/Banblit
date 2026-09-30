@@ -51,7 +51,7 @@ export function sanitizeBody(html: string): string {
   // 속성을 붙이는 자리가 위 hook 이 아닌 이유: 위는 속성 검사 전이라 붙여도 그 검사에서 지워집니다.
   DOMPurify.addHook("afterSanitizeAttributes", (node) => {
     if (node.nodeName !== "IFRAME") return;
-    (node as Element).setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+    node.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
   });
   try {
     return purify(html);

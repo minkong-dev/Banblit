@@ -27,7 +27,7 @@ export function monthCells(year: number, month: number): (number | null)[] {
   return [...cells, ...Array<null>(trailing).fill(null)];
 }
 
-const MINUTES_PER_HOUR = 60;
+export const MINUTES_PER_HOUR = 60;
 
 export function slotLabel(index: number, openHour: number): string {
   // 여는 시각을 0번으로 둔 칸 번호를 "18:00"으로 표시합니다. 소수 칸 번호는 분으로 변경해 "18:10"이 됩니다.
@@ -116,6 +116,15 @@ export function isRangeFree(
   grid: boolean[], from: number, to: number, slotMinutes: number = MINUTES_PER_HOUR,
 ): boolean {
   return firstTaken(grid, from, to, slotMinutes) === null;
+}
+
+/** 오늘 날짜의 grid 에서 시작 시각이 now 와 같거나 이른 칸을 찬 칸(true)으로 바꾼 새 배열을 반환합니다.
+ *  서버(reservation_service._require_not_started)가 starts_at <= now 인 예약을 거절하는 것과 같은 규칙입니다. */
+export function withPastTaken(
+  grid: boolean[], now: Date, openHour: number, slotMinutes: number = MINUTES_PER_HOUR,
+): boolean[] {
+  const nowMinutes = now.getHours() * MINUTES_PER_HOUR + now.getMinutes();
+  return grid.map((taken, i) => taken || openHour * MINUTES_PER_HOUR + i * slotMinutes <= nowMinutes);
 }
 
 /** 드래그로 선택한 구간을 반영할지 판단합니다. grid 가 없으면 항상 반영하고(불가능 일정은 겹쳐도 됩니다),

@@ -65,7 +65,7 @@ export function Field(props: {
           value={value}
           onChange={onChange === undefined ? undefined : (event) => onChange(event.target.value)}
           onFocus={onFocus}
-          aria-invalid={error !== undefined}
+          aria-invalid={Boolean(error)}
         />
         {!isPassword ? null : (
           <button

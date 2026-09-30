@@ -128,8 +128,9 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   /* 탭은 면 없이 글자만 두고, 고른 탭은 본문색 글자 아래에 2px 코랄 가로선을 긋습니다. 나머지는 흐린 글자입니다.
      탭 줄은 사이드바 첫 메뉴 항목과 같은 높이(44px)라 두 글자의 세로 중심이 맞습니다. */
   .tabs { grid-column: 1; grid-row: 1; display: flex; gap: 26px; margin-bottom: 24px; flex-wrap: wrap; }
-  .tab { padding: 0 2px; min-height: 44px; color: var(--t3); font-size: var(--fs-xl); font-weight: 600; letter-spacing: -.02em; box-shadow: inset 0 -2px 0 transparent; transition: color .15s ease, box-shadow .15s ease; }
-  .tab:hover { color: var(--t2); }
+  /* 선택 안 된 탭의 글자색은 --t2 입니다. --t3 는 밝은 화면에서 명도 대비 약 3:1 로 글자 기준 4.5:1 에 못 미칩니다(2026-09-30 리뷰). */
+  .tab { padding: 0 2px; min-height: 44px; color: var(--t2); font-size: var(--fs-xl); font-weight: 600; letter-spacing: -.02em; box-shadow: inset 0 -2px 0 transparent; transition: color .15s ease, box-shadow .15s ease; }
+  .tab:hover { color: var(--t1); }
   .tab[aria-selected="true"] { color: var(--t1); font-weight: 800; box-shadow: inset 0 -2px 0 var(--brand); }
   .tab.ghost[aria-selected="true"] { box-shadow: inset 0 -2px 0 var(--t1); }
 
@@ -159,6 +160,10 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .fields input, .fields select, .fields textarea { min-height: 44px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: var(--r-md); background: var(--card); color: var(--t1); font: inherit; letter-spacing: inherit; transition: border-color .16s ease, box-shadow .16s ease; }
   .fields :is(input, select, textarea):hover { border-color: var(--t3); }
   .fields :is(input, select, textarea):focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-tint); }
+  /* 고대비 모드(forced-colors)는 box-shadow 를 그리지 않으므로 시스템 강조색 외곽선으로 초점을 표시합니다. */
+  @media (forced-colors: active) {
+    .fields :is(input, select, textarea):focus-visible { outline: 2px solid Highlight; outline-offset: 2px; }
+  }
   /* 여백을 뺀 나머지를 고르게 나눠 갖습니다. 한 줄에 둘이면 반씩, 셋이면 삼분의 일씩입니다. */
   .fields .wide { flex: 1 1 180px; }
   .fields .wide input, .fields .wide textarea { width: 100%; }
@@ -337,7 +342,8 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 @keyframes mpop { from { opacity: 0; transform: translateY(10px) scale(.985); } }
 @media (prefers-reduced-motion: reduce) { dialog[open] { animation-duration: .01ms; } }
 
-.mhead { display: flex; align-items: flex-start; gap: 12px; padding: 24px 26px 10px; }
+/* 좌우 여백 24px 은 하루 dialog 의 카드(scheduler.css .pane)와 같은 값입니다. */
+.mhead { display: flex; align-items: flex-start; gap: 12px; padding: 24px 24px 10px; }
 .mhead h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -.03em; }
 .mhead p { margin: 6px 0 0; font-size: 13.5px; color: var(--t2); }
 .mhead button { margin-left: auto; width: 40px; height: 40px; display: grid; place-items: center; color: var(--t3); border-radius: 12px; }
@@ -347,8 +353,8 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 /* 위쪽 4px 은 첫 요소의 focus 테두리(outline) 자리입니다. overflow 를 지정한 요소는 스크롤하지 않을 때도
    넘치는 것을 잘라내므로, 여백이 0 이면 첫 입력칸의 테두리 윗변이 잘려 아래쪽만 그려집니다.
    제목 줄(.mhead)의 아래 여백에서 4px 을 가져와 제목과 본문 사이 간격은 그대로 14px 입니다. */
-.mbody { padding: 4px 26px 22px; flex: 1; min-height: 0; overflow-y: auto; }
-.mfoot { padding: 16px 26px 22px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
+.mbody { padding: 4px 24px 22px; flex: 1; min-height: 0; overflow-y: auto; }
+.mfoot { padding: 16px 24px 22px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
 .primary { flex: 1; min-height: 54px; padding: 15px; background: var(--brand); color: var(--brand-on); border-radius: var(--r-pill); font-size: 16px; font-weight: 700; transition: background-color .15s ease, transform .12s ease; }
 .primary:hover { background: var(--coral-lite); }
 .primary:active:not(:disabled) { transform: scale(.985); }
@@ -481,6 +487,8 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 }
 .ddbtn:hover:not(:disabled) { border-color: var(--t3); }
 .ddbtn:focus-visible, .ddbtn[aria-expanded="true"] { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-tint); }
+/* 고대비 모드(forced-colors)는 box-shadow 를 그리지 않으므로 시스템 강조색 외곽선으로 초점을 표시합니다. 위 outline: none 보다 뒤에 둡니다. */
+@media (forced-colors: active) { .ddbtn:focus-visible { outline: 2px solid Highlight; outline-offset: 2px; } }
 .ddbtn:disabled { color: var(--t3); background: var(--card-2); cursor: not-allowed; }
 /* 값이 없을 때의 안내 문구입니다. 고른 값과 같은 굵기로 두면 고른 것처럼 보입니다. */
 .ddempty { color: var(--t3); }

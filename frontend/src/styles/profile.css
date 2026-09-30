@@ -7,11 +7,11 @@ body[data-page="profile"] {
   .note { margin: 10px 0 0; font-size: 12.5px; color: var(--t3); line-height: 1.6; }
 
   /* 카드 맨 위 줄입니다. 표시 상태에서는 왼쪽 뒤로 가기·오른쪽 편집, 편집 상태에서는 취소·저장입니다. */
-  .probar { display: flex; justify-content: space-between; align-items: center; padding: 12px 12px 0; }
+  .probar { display: flex; justify-content: space-between; align-items: center; padding: 0; }
   .probar .btn { min-height: 40px; padding: 8px 16px; }
 
   /* 카드 머리입니다. 사진 변경 버튼 → 큰 원형 사진 → 역할 → 이름 → 학과를 가운데 한 줄로 쌓습니다. */
-  .prohead { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 24px 24px; text-align: center; border-bottom: 1px solid var(--line); }
+  .prohead { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 0 24px; text-align: center; border-bottom: 1px solid var(--line); }
   .prohead .role { margin-top: 6px; font-size: 12px; padding: 3px 10px; }
   .prohead h1 { margin: 0; font-size: 22px; font-weight: 700; }
   .prohead .dept { margin: 0; font-size: 14px; color: var(--t3); }
@@ -38,17 +38,18 @@ body[data-page="profile"] {
   /* 파일 선택 칸은 브라우저마다 모양이 달라 숨기고, 말풍선의 업로드 메뉴가 대신 누릅니다. */
   .photo input[type="file"] { display: none; }
 
-  .read { padding: 18px 24px 22px; display: flex; flex-direction: column; gap: 14px; }
+  /* 여백은 설정 화면 오른쪽 칸(settings.css .read)과 같은 값입니다. */
+  .read { padding: 16px 0 18px; display: flex; flex-direction: column; gap: 14px; }
   .read dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 12px 14px; font-size: 14.5px; }
   /* afrow 는 dt+dd 한 쌍을 담는 div 입니다. display:contents 로 grid 배치를 그대로 dt·dd 에 적용합니다. */
   .read .afrow { display: contents; }
   .read dt { color: var(--t3); }
   .read dd { margin: 0; text-align: right; font-weight: 500; }
 
-  /* 입력칸 묶음과 오류 문구의 안쪽 여백입니다. 2026-09-23 에 설정 화면에서 옮겨 온 카드라 settings.css 의
-     같은 규칙이 이 화면에는 적용되지 않습니다. */
-  .card .fields { padding: 16px 20px; }
+  /* 입력칸 묶음과 오류 문구의 안쪽 여백입니다. settings.css 의 .card > .fields 와 같은 값입니다.
+     2026-09-23 에 설정 화면에서 옮겨 온 카드라 settings.css 의 규칙이 이 화면에는 적용되지 않습니다. */
+  .card .fields { padding: 16px 0 14px; }
   .card > .fields label { gap: 7px; }
-  .card > .why { margin: 0; padding: 0 20px 16px; }
+  .card > .why { margin: 0; padding: 0 0 16px; }
 
 }

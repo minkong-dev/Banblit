@@ -4,13 +4,14 @@ body[data-page="admin"] {
   /* 오른쪽 칸은 자체 스크롤합니다. */
   .rail { overflow-y: auto; }
 
-  /* 캘린더 */
-  .calhead { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+  /* 캘린더. 머리줄의 높이는 대시보드 달력 머리줄(scheduler.css .calbar)과 같은 --head-h 이고 좌우 여백은 0 입니다. */
+  .calhead { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-height: var(--head-h); padding: 0; border-bottom: 1px solid var(--line); }
   .calhead b { font-size: 16.5px; font-weight: 700; }
-  .calhead span { font-size: 13.5px; color: var(--t3); }
-  .calhead .keys { margin-left: auto; display: flex; gap: 12px; flex-wrap: wrap; }
-  .calhead .keys i { display: inline-flex; align-items: center; gap: 6px; font-style: normal; font-size: 12.5px; color: var(--t2); }
-  .calhead .keys i em { width: 9px; height: 9px; border-radius: 50%; }
+  /* 날짜 범위 글자와 기간 드롭다운을 한 줄에 놓고 세로 가운데를 맞춥니다. 드롭다운이 block 이라 그대로 두면 글자 아래로 내려가
+     두 줄이 되고, 왼쪽 제목이 두 줄의 가운데에 걸립니다. */
+  .calhead span { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--t3); }
+  /* 머리줄 높이(52px) 안에서 아래 선과 8px 떨어지도록 드롭다운을 36px 로 낮춥니다(대시보드 월·주 버튼과 같은 높이). */
+  .calhead .ddbtn { min-height: 36px; padding: 6px 12px; }
 
   .dow { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--line); }
   .dow span { padding: 9px 0; text-align: center; font-size: 12.5px; color: var(--t3); }
@@ -30,7 +31,7 @@ body[data-page="admin"] {
   .ses .out { display: block; font-size: 11.5px; color: var(--t2); text-decoration: none; margin-top: 3px; }
 
   /* 캘린더 아래 설명 */
-  .under { padding: 20px 22px 22px; }
+  .under { padding: 20px 0 22px; }
   .under h2 { margin: 0 0 4px; font-size: 16.5px; font-weight: 700; letter-spacing: -.03em; }
   .under .sub { margin: 0 0 16px; font-size: 13.5px; color: var(--t3); }
   .counts { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
@@ -47,20 +48,22 @@ body[data-page="admin"] {
   .note { padding: 15px 17px; background: var(--amber-tint); border-radius: 13px; font-size: 13.5px; color: var(--t2); line-height: 1.75; margin-bottom: 18px; }
   .note b { color: var(--t1); font-weight: 700; }
 
-  /* 오른쪽 칸의 지난 배정기록 목록입니다. 줄 전체가 버튼입니다. */
+  /* 오른쪽 칸의 지난 배정기록 목록입니다. 줄 전체가 버튼입니다. 대시보드 오른쪽 목록(scheduler.css .panel li button)과
+     같은 모양이고, 표시 중인 배정기록은 사이드바의 현재 화면과 같이 왼쪽 2px 코랄 선으로 표시합니다. */
   .panel .round {
     display: block; width: 100%; text-align: left;
-    padding: 12px 10px; border-radius: 12px;
-    transition: background-color .15s ease;
+    padding: 12px 0; border-bottom: 1px solid var(--line);
+    transition: color .15s ease;
   }
-  .panel .round:hover { background: var(--card-2); }
-  .panel .round.on { background: var(--brand-tint); }
+  .panel .round:hover { color: var(--brand-press); }
+  .panel .round.on { padding-left: 10px; box-shadow: inset 2px 0 0 var(--brand); }
+  .panel .round.on b { font-weight: 700; }
   .panel .round b { display: block; font-size: 14px; font-weight: 500; }
   .panel .round small { font-size: 12.5px; color: var(--t3); }
-  .panel li.empty { padding: 12px 10px; font-size: 13.5px; color: var(--t3); line-height: 1.7; }
+  .panel li.empty { padding: 12px 0; font-size: 13.5px; color: var(--t3); line-height: 1.7; }
 
-  /* 오른쪽 칸의 계산 시각 */
-  .times { padding: 18px; }
+  /* 오른쪽 칸의 계산 시각. 여백은 설정 화면 오른쪽 칸(settings.css .read)과 같은 값입니다. */
+  .times { padding: 16px 0 18px; }
   .times .k { font-size: 12.5px; color: var(--t3); }
   .times .t { font-size: 22px; font-weight: 700; letter-spacing: -.04em; margin: 4px 0 14px; }
   /* 두 칸이 나란히 들어가지 않는 폭이면 아래로 내려갑니다. */
@@ -81,7 +84,6 @@ body[data-page="admin"] {
     .cal { overflow-x: auto; }
     .dow, .grid { min-width: 620px; }
     .day { min-height: 92px; padding: 7px 6px 8px; }
-    .calhead { padding: 13px 15px; gap: 10px; }
-    .calhead .keys { margin-left: 0; }
+    .calhead { padding: 0 0 10px; gap: 10px; }
   }
 }
