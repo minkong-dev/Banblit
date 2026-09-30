@@ -5,9 +5,10 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import type { RefObject } from "react";
 
-import { Card } from "../components/AppShell";
+import { Card, SectionHead } from "../components/AppShell";
 import { CheckMark } from "../components/CheckMark";
 import { Dropdown } from "../components/Dropdown";
+import { useReturnFocus } from "../components/hooks";
 import { Modal } from "../components/Modal";
 import { useSlotMinutes } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
@@ -30,8 +31,6 @@ import {
   Row,
   useFirstField,
   useForm,
-  SectionHead,
-  useRowFocus,
 } from "./SettingsForm";
 
 const NO_WINDOW: PracticeWindow = { weekday: null, weekend: null };
@@ -214,7 +213,7 @@ export function PeriodCard(props: {
   onSaved: () => void; onDeleted: () => void;
 }) {
   const { periods, rooms, state, canEdit, canCreate, canDelete, onSaved, onDeleted } = props;
-  const { editing, open, close, register } = useRowFocus();
+  const { openId: editing, open, close, register } = useReturnFocus();
   const [making, setMaking] = useState(false);
   // 기간을 삭제하면 서버가 그 기간의 배정 결과·계산 기록·이전 배정기록을 함께 삭제합니다(외래 키 CASCADE).
   const drop = useMutation({

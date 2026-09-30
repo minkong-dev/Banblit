@@ -1,17 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 
-import { Card } from "../components/AppShell";
+import { Card, SectionHead } from "../components/AppShell";
 import { Pager } from "../components/Pager";
-import { Modal, Stepper } from "../components/Modal";
-import { MemberSearch } from "../components/MemberSearch";
+import { MemberPicker } from "../components/MemberPicker";
+import { Modal, ModalFormFoot, Stepper } from "../components/Modal";
 import { PencilIcon, SearchIcon, TrashIcon } from "../components/icons";
+import { SeatRow } from "../components/SeatRow";
 import { useMe, useTeams } from "../components/queries";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { say } from "../lib/toast";
 import { askDelete } from "../lib/confirm";
 import { getJSON, reason } from "../lib/api";
-import { LOADING_TEXT, loadState, stateText } from "../lib/loading";
+import { loadState, stateText } from "../lib/loading";
 import { can, canManageTeams, teamNavLabel } from "../lib/account";
 import { checkSlotCounts, checkTeamName, memberLabel, slotName } from "../lib/pipeline";
 import { INSTRUMENTS } from "../lib/contract";
@@ -19,7 +20,6 @@ import { TEAM_COLORS, teamColorKey } from "../lib/teamColors";
 import { MAX_SLOTS_PER_TEAM, seatAssignments, seatKey, seatsOf, teamsShown } from "../lib/roster";
 import type { Seat } from "../lib/roster";
 import type { Instrument, Member, Team, TeamSlot } from "../lib/contract";
-import { SectionHead } from "./SettingsForm";
 import "../styles/teams.css";
 
 
@@ -159,21 +159,18 @@ function Lineup(props: {
     onError: (error) => say(reason(error)),
   });
 
-  if (slots.isPending) return <div className="empty">{LOADING_TEXT}</div>;
-  if (slots.isError) return <div className="empty">{reason(slots.error)}</div>;
+  // isSuccess 로 분기해야 TypeScript 가 아래에서 slots.data 를 undefined 없이 좁혀줍니다.
+  if (!slots.isSuccess) return <div className="empty">{stateText(loadState(slots), "")}</div>;
 
   return (
     <ul className="lineup">
       {labelled(slots.data.slots).map(({ slot, label }) => (
-        <li className={slot.member_id === null ? "seat open" : "seat"} key={slot.id}>
-          <span className="part">{label}</span>
-          {slot.member_id === null ? (
-            <span className="who none">멤버가 지정되지 않았어요</span>
-          ) : (
-            <span className="who">{memberLabel(slot.member_name ?? "", slot.member_cohort)}</span>
-          )}
-          {!canAdd && !canRemove ? null : (
-            <span className="acts">
+        <SeatRow
+          key={slot.id}
+          label={label}
+          name={slot.member_id === null ? null : memberLabel(slot.member_name ?? "", slot.member_cohort)}
+          actions={!canAdd && !canRemove ? undefined : (
+            <>
               {!canAdd ? null : (
                 <button
                   className="ic"
@@ -192,16 +189,18 @@ function Lineup(props: {
                   삭제
                 </button>
               )}
-            </span>
+            </>
           )}
+        >
           {seeking !== slot.id ? null : (
-            <Modal title="멤버 검색" hint={label} onClose={() => setSeeking(null)}>
-              <MemberSearch
-                onPick={(member) => sit.mutate({ slotId: slot.id, memberId: member.id })}
-              />
-            </Modal>
+            <MemberPicker
+              title="멤버 검색"
+              hint={label}
+              onPick={(member) => sit.mutate({ slotId: slot.id, memberId: member.id })}
+              onClose={() => setSeeking(null)}
+            />
           )}
-        </li>
+        </SeatRow>
       ))}
     </ul>
   );
@@ -307,33 +306,33 @@ function SeatRows(props: {
     <>
       <ul className="lineup">
         {seats.map((seat) => (
-          <li className={seat.member === null ? "seat open" : "seat"} key={seatKey(seat.instrument, seat.ordinal)}>
-            <span className="part">{seat.label}</span>
-            {seat.member === null ? (
-              <span className="who none">멤버가 지정되지 않았어요</span>
-            ) : (
-              <span className="who">{memberLabel(seat.member.name, seat.member.cohort)}</span>
+          <SeatRow
+            key={seatKey(seat.instrument, seat.ordinal)}
+            label={seat.label}
+            name={seat.member === null ? null : memberLabel(seat.member.name, seat.member.cohort)}
+            actions={(
+              <>
+                {!canAdd ? null : (
+                  <button className="ic" type="button" aria-label={`${seat.label} 지정할 멤버 찾기`} onClick={() => setSeeking(seat)}>
+                    <SearchIcon />
+                  </button>
+                )}
+                {seat.member === null || !canRemove ? null : (
+                  <button className="btn" type="button" onClick={() => onRemove(seat)}>삭제</button>
+                )}
+              </>
             )}
-            <span className="acts">
-              {!canAdd ? null : (
-                <button className="ic" type="button" aria-label={`${seat.label} 지정할 멤버 찾기`} onClick={() => setSeeking(seat)}>
-                  <SearchIcon />
-                </button>
-              )}
-              {seat.member === null || !canRemove ? null : (
-                <button className="btn" type="button" onClick={() => onRemove(seat)}>삭제</button>
-              )}
-            </span>
-          </li>
+          />
         ))}
       </ul>
       {seeking === null ? null : (
-        <Modal title="멤버 검색" hint={seeking.label} onClose={() => setSeeking(null)}>
-          <MemberSearch
-            exclude={seats.flatMap((seat) => (seat.member === null ? [] : [seat.member.id]))}
-            onPick={(member) => { onPick(seeking, member); setSeeking(null); }}
-          />
-        </Modal>
+        <MemberPicker
+          title="멤버 검색"
+          hint={seeking.label}
+          exclude={seats.flatMap((seat) => (seat.member === null ? [] : [seat.member.id]))}
+          onPick={(member) => { onPick(seeking, member); setSeeking(null); }}
+          onClose={() => setSeeking(null)}
+        />
       )}
     </>
   );
@@ -397,11 +396,13 @@ function TeamForm(props: TeamFormProps) {
   return (
     <Modal title={isNew ? "새 팀" : "팀 수정"} hint="이름·색·포지션·멤버를 설정한 뒤 한 번에 저장해요" onClose={onClose}
       foot={
-        <>
-          {onDelete === undefined ? null : <button className="ghost drop" onClick={onDelete}>팀 삭제</button>}
-          <button className="ghost" onClick={onClose}>취소</button>
-          <button className="primary" disabled={save.isPending} onClick={submit}>{save.isPending ? "저장하는 중…" : idle}</button>
-        </>
+        <ModalFormFoot
+          extra={onDelete === undefined ? undefined : <button className="ghost drop" onClick={onDelete}>팀 삭제</button>}
+          onCancel={onClose}
+          pending={save.isPending}
+          submitLabel={idle}
+          onSubmit={submit}
+        />
       }
     >
       <TeamFields
@@ -428,10 +429,11 @@ function EditTeam(props: Omit<TeamFormProps, "team" | "start"> & { team: Team })
     queryFn: () => getJSON<{ slots: TeamSlot[] }>(`/teams/${team.id}/slots`),
   });
 
-  if (slots.isPending || slots.isError) {
+  // isSuccess 로 분기해야 TypeScript 가 아래에서 slots.data 를 undefined 없이 좁혀줍니다.
+  if (!slots.isSuccess) {
     return (
       <Modal title="팀 수정" onClose={onClose}>
-        <p className="empty">{slots.isError ? reason(slots.error) : LOADING_TEXT}</p>
+        <p className="empty">{stateText(loadState(slots), "")}</p>
       </Modal>
     );
   }

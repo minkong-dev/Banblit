@@ -124,7 +124,8 @@ test("프로필 카드로 명단을 받아 둔 뒤에도 전체 일정의 날짜
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/scheduler");
   await page.locator(".profbtn").click();
-  await expect(page.locator(".pop.on .tm").first().locator("small")).not.toHaveText("");
+  await expect(page.locator(".pop")).toBeVisible();
+  await expect(page.locator(".pop .tm").first().locator("small")).not.toHaveText("");
   await page.locator(".profbtn").click();
   await page.getByRole("tab", { name: "전체 일정" }).click();
   await page.locator(".grid .cell:has(.ev)").first().click();

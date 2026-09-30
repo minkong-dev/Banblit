@@ -13,15 +13,14 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Avatar } from "../components/Avatar";
-import { Card } from "../components/AppShell";
-import { useDismissible } from "../components/hooks";
+import { Card, SectionHead } from "../components/AppShell";
+import { usePopoverRouteClose } from "../components/hooks";
 import { ChevronLeftIcon, PencilIcon } from "../components/icons";
 import { getJSON, reason, sendFile } from "../lib/api";
 import { roleLabel } from "../lib/account";
 import { personNameMessage } from "../lib/validate";
 import { say } from "../lib/toast";
 import type { Account } from "../lib/contract";
-import { SectionHead } from "./SettingsForm";
 
 /** 표시 상태의 한 줄입니다. 왼쪽 항목 이름, 오른쪽 값. */
 export type InfoRow = { label: string; text: string };
@@ -44,23 +43,25 @@ function draftMessage(draft: Draft): string {
   return "";
 }
 
+// 프로필 사진 변경 popover 의 id 입니다.
+const PHOTO_MENU_ID = "photoMenu";
+
 /** 큰 원형 사진과 그 위의 "프로필 사진 변경" 버튼입니다. 버튼을 누르면 말풍선 메뉴 2개를 표시합니다.
  *  업로드는 숨긴 파일 입력칸을 대신 누르고, 기본 이미지 적용은 올린 사진을 삭제해 이름 앞 두 글자로 되돌립니다. */
 function PhotoEdit({ me }: { me: Account }) {
   const client = useQueryClient();
   const pick = useRef<HTMLInputElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
-  const { open, setOpen, toggle, box } = useDismissible();
+  const [open, setOpen] = useState(false);
+  usePopoverRouteClose(PHOTO_MENU_ID);
 
   function done(text: string): void {
     void client.invalidateQueries({ queryKey: ["me"] });
     say(text);
   }
 
-  // 말풍선이 닫히면 초점을 여는 버튼으로 되돌립니다. 되돌리지 않으면 초점이 사라진 메뉴와 함께 문서 맨 앞으로 갑니다.
   function close(): void {
-    setOpen(false);
-    trigger.current?.focus();
+    document.getElementById(PHOTO_MENU_ID)?.hidePopover();
   }
 
   const upload = useMutation({
@@ -76,30 +77,41 @@ function PhotoEdit({ me }: { me: Account }) {
   });
 
   return (
-    // Escape 로 닫을 때도 초점을 되돌립니다. 문서 전체의 Escape 는 useDismissible 도 받아 한 번 더 닫지만 결과는 같습니다.
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- 안쪽 버튼에서 올라온 Escape 만 받습니다.
-    <div className="photo" ref={box} onKeyDown={(event) => { if (event.key === "Escape" && open) close(); }}>
+    <div className="photo">
       <button
         ref={trigger}
         type="button"
         className="change"
-        aria-controls="photoMenu"
+        aria-controls={PHOTO_MENU_ID}
         aria-expanded={open}
         disabled={upload.isPending || reset.isPending}
-        onClick={toggle}
+        popoverTarget={PHOTO_MENU_ID}
       >
         프로필 사진 변경
       </button>
-      {open ? (
-        <div id="photoMenu" className="pop on" role="group" aria-label="프로필 사진 변경">
-          <button type="button" className="act" onClick={() => { close(); pick.current?.click(); }}>
-            프로필 사진 업로드
-          </button>
-          <button type="button" className="act" onClick={() => { close(); reset.mutate(); }}>
-            기본 이미지 적용
-          </button>
-        </div>
-      ) : null}
+      <div
+        id={PHOTO_MENU_ID}
+        popover="auto"
+        className="pop"
+        role="group"
+        aria-label="프로필 사진 변경"
+        onToggle={(event) => {
+          setOpen(event.newState === "open");
+          // 팝업이 닫히면 초점을 여는 버튼으로 되돌립니다. popover 는 이 동작을 대신해주지 않습니다.
+          // 되돌리지 않으면 초점이 사라진 메뉴와 함께 문서 맨 앞으로 갑니다.
+          // 메뉴 안의 버튼을 눌러 닫을 때는 그 버튼이 이미 초점을 갖고 있어, 브라우저가 popover 를
+          // 숨기며 처리하는 초점 정리가 이 함수보다 나중에 실행되면 여기서 옮긴 초점을 덮어씁니다.
+          // requestAnimationFrame 으로 한 프레임 미뤄 브라우저의 정리가 끝난 뒤에 옮깁니다(2026-09-29 e2e 로 발견).
+          if (event.newState === "closed") requestAnimationFrame(() => trigger.current?.focus());
+        }}
+      >
+        <button type="button" className="act" onClick={() => { close(); pick.current?.click(); }}>
+          프로필 사진 업로드
+        </button>
+        <button type="button" className="act" onClick={() => { close(); reset.mutate(); }}>
+          기본 이미지 적용
+        </button>
+      </div>
       <Avatar id={me.id} name={me.name} className="big" photo={me.avatar} />
       <input
         ref={pick}

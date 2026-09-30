@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { BellIcon } from "./icons";
-import { useDismissible } from "./hooks";
+import { usePopoverRouteClose } from "./hooks";
 import { LOADING_TEXT } from "../lib/loading";
 import {
   loadNotifications,
@@ -11,12 +12,15 @@ import {
   unreadCount,
 } from "../lib/pipeline";
 
-/** 상단바의 알림 아이콘과 그 아래 popover(팝업 메뉴)입니다. 프로필 메뉴와 같은 구조를 사용하되,
- *  아이콘에는 읽지 않은 알림 개수를 표시합니다. 어느 화면에 있든 배정이 변경되었음을 알 수 있어야 합니다. */
+// 알림 popover 의 id 입니다. 알림 버튼이 popoverTarget 으로 이 판을 엽니다.
+const NOTES_POP_ID = "notesPop";
+
+/** 상단바의 알림 아이콘과 그 아래 popover(HTML popover 속성, 바깥 클릭·Escape 로 자동으로 닫히는
+ *  브라우저 기본 팝업)입니다. 프로필 메뉴와 같은 구조를 사용하되, 아이콘에는 읽지 않은 알림 개수를 표시합니다.
+ *  어느 화면에 있든 배정이 변경되었음을 알 수 있어야 합니다. */
 export function NotificationMenu() {
-  // popover 바깥을 누르면 닫습니다. 목록이 길어 화면의 많은 부분을 차지하므로,
-  // 아이콘으로만 닫아야 하면 사용자가 닫는 방법을 찾기 어렵습니다.
-  const { open, toggle, box } = useDismissible();
+  const [open, setOpen] = useState(false);
+  usePopoverRouteClose(NOTES_POP_ID);
   const queryClient = useQueryClient();
 
   // 이 query(서버 조회)는 항상 현재 로그인한 사람의 알림만 반환합니다.
@@ -63,12 +67,12 @@ export function NotificationMenu() {
   }
 
   return (
-    <div className="notes" ref={box}>
+    <div className="notes">
       <button
         className="ic bell"
         aria-expanded={open}
         aria-label={unread === 0 ? "알림" : `알림 · 안 읽음 ${unread}개`}
-        onClick={toggle}
+        popoverTarget={NOTES_POP_ID}
       >
         <BellIcon />
         {unread === 0 ? null : (
@@ -76,7 +80,14 @@ export function NotificationMenu() {
         )}
       </button>
 
-      <div className={open ? "notepop on" : "notepop"} role="dialog" aria-label="알림">
+      <div
+        id={NOTES_POP_ID}
+        popover="auto"
+        className="notepop"
+        role="dialog"
+        aria-label="알림"
+        onToggle={(event) => setOpen(event.newState === "open")}
+      >
         <div className="nhead">
           <b>알림</b>
           {unread === 0 ? null : (

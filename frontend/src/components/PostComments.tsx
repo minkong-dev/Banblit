@@ -10,7 +10,7 @@ import { formError } from "../lib/loading";
 import { checkComment, getJSON, stampLabel } from "../lib/pipeline";
 import { say } from "../lib/toast";
 import { PencilIcon, TrashIcon } from "./icons";
-import { Modal } from "./Modal";
+import { Modal, ModalFormFoot } from "./Modal";
 import { RichText, RichTextView } from "./RichText";
 
 /** 댓글을 새로 다는 form 입니다. 로그인하지 않았으면(authorId 가 null) 버튼이 비활성화됩니다. */
@@ -125,18 +125,16 @@ export function CommentRow(props: {
       {!editing ? null : (
         <Modal title="댓글 수정" onClose={() => setEditing(false)}
           foot={
-            <>
-              <button className="ghost" onClick={() => setEditing(false)}>취소</button>
-              <button className="primary" disabled={save.isPending}
-                onClick={() => {
-                  const why = checkComment(body);
-                  setBad(why);
-                  if (why === "") save.mutate();
-                }}
-              >
-                {save.isPending ? "저장하는 중…" : "저장"}
-              </button>
-            </>
+            <ModalFormFoot
+              onCancel={() => setEditing(false)}
+              pending={save.isPending}
+              submitLabel="저장"
+              onSubmit={() => {
+                const why = checkComment(body);
+                setBad(why);
+                if (why === "") save.mutate();
+              }}
+            />
           }
         >
           <div className="fields">

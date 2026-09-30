@@ -186,18 +186,28 @@ body[data-page="board"] {
 /* 색 선택입니다. popover 하나에 글자색과 배경색 두 칸을 나란히 둡니다.
    칸마다 위에서부터 초기화 버튼, 팔레트 격자, "직접 선택"(스펙트럼과 HEX 입력), 최근 사용한 색입니다.
    팔레트만 두면 원하는 색을 못 쓰고, 스펙트럼만 두면 매번 색을 새로 만들어야 합니다. */
-.rtcolor { position: relative; display: inline-flex; flex: none; }
+.rtcolor { position: relative; display: inline-flex; flex: none; anchor-name: --rtcolor-trigger; }
 .rtcolor > button { flex-direction: column; gap: 2px; }
 /* 지금 고른 글자색을 채움으로, 배경색을 테두리로 한 칸에 함께 표시합니다. */
 .rtcolorbar { display: block; width: 18px; height: 5px; border: 1px solid; border-radius: 2px; }
 /* 절대 위치라 폭이 정해지지 않습니다. max-content 를 주지 않으면 두 칸이 0 까지 줄어
    글자가 세로로 줄바꿈됩니다. 칸 폭은 팔레트 8칸(16px)이 정합니다. */
+/* popover="auto" 요소입니다. top layer(브라우저가 다른 요소 위에 그리는 계층)에서는 position: absolute 가
+   DOM 상의 조상이 아니라 뷰포트를 기준으로 계산되어(2026-09-29 e2e 스크린샷으로 발견 — 화면 바깥에 그려졌습니다),
+   CSS anchor positioning 으로 .rtcolor 버튼을 직접 기준 삼습니다. 칸 폭(팔레트 2칸 기준 약 330px)이 360px
+   폭 화면에서 버튼 위치 그대로 넘칠 수 있어, left 를 [12px, 뷰포트 폭 - 칸 폭 - 12px] 범위로 clamp 합니다
+   (position-try-fallbacks 의 flip-inline 은 이 폭에서 뒤집지 않아 대신 씁니다. 2026-09-29 스크린샷으로 확인).
+   :popover-open 에서 display 를 다시 지정해야, 열렸을 때 grid 대신 브라우저 기본값(block)이 쓰이지 않습니다. */
 .rtcolorpop {
-  position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; width: max-content;
-  display: grid; grid-template-columns: repeat(2, auto); gap: 16px;
+  position: fixed; position-anchor: --rtcolor-trigger;
+  top: calc(anchor(bottom) + 6px); right: auto; bottom: auto;
+  left: max(12px, min(anchor(left), calc(100vw - 342px)));
+  z-index: 20; width: max-content;
+  margin: 0; grid-template-columns: repeat(2, auto); gap: 16px;
   padding: 14px; border-radius: 12px; background: var(--card);
   border: 1px solid var(--line); box-shadow: var(--shadow-up);
 }
+.rtcolorpop:popover-open { display: grid; }
 /* 칸 폭은 팔레트 격자(16px 8칸 + 간격)가 정합니다. 고정 폭을 주면 격자가 칸을 넘쳐
    제목과 버튼이 격자와 어긋납니다. */
 .rtcol { display: flex; flex-direction: column; gap: 6px; width: max-content; }

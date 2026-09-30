@@ -1,3 +1,4 @@
+import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -13,10 +14,13 @@ import {
   NO_REPEAT,
   logOut,
   openingHours,
+  PERIOD_DELETE_KEYS,
   periodBody,
   removeUnavailable,
   requestPasswordReset,
+  ROOM_DELETE_KEYS,
   saveSettings,
+  SCHEDULE_KEY,
   resetPassword,
   weekKeys,
 } from "./pipeline";
@@ -411,5 +415,82 @@ describe("expelMember", () => {
     const [url, init] = spy.mock.calls[0];
     expect(url).toBe("/api/members/7");
     expect(init?.method).toBe("DELETE");
+  });
+});
+
+// routes/Assignment.tsx 는 ["schedule", activePeriodId](숫자 하나)를, routes/Scheduler.tsx 는
+// ["schedule", periodIds](배열 하나)를 queryKey 로 씁니다. 배정을 확정해도 배정 화면이 자신의
+// key 만 무효화하면 캘린더 화면의 key 모양이 달라 무효화되지 않아 이전 배정이 그대로 표시되던 문제였습니다.
+describe("SCHEDULE_KEY — 두 화면의 서로 다른 schedule queryKey 를 접두사 하나로 함께 무효화한다", () => {
+  it("숫자 key 와 배열 key 가 둘 다 무효화된다", () => {
+    const client = new QueryClient();
+    client.setQueryData(["schedule", 5], { rows: [] });
+    client.setQueryData(["schedule", [5, 6]], { rows: [] });
+
+    void client.invalidateQueries({ queryKey: SCHEDULE_KEY });
+
+    expect(client.getQueryState(["schedule", 5])?.isInvalidated).toBe(true);
+    expect(client.getQueryState(["schedule", [5, 6]])?.isInvalidated).toBe(true);
+  });
+
+  it("접두사 없이 숫자 key 하나만 무효화하면 배열 key 는 무효화되지 않는다 — 고치기 전 재현", () => {
+    const client = new QueryClient();
+    client.setQueryData(["schedule", 5], { rows: [] });
+    client.setQueryData(["schedule", [5, 6]], { rows: [] });
+
+    void client.invalidateQueries({ queryKey: ["schedule", 5] });
+
+    expect(client.getQueryState(["schedule", [5, 6]])?.isInvalidated).toBe(false);
+  });
+});
+
+// backend/src/backend/db/models.py 의 ON DELETE CASCADE 기준입니다. 기간 삭제는 assignments·
+// assignment_runs·assignment_backups 를 지우고 reservations 는 기간을 참조하지 않아 남습니다.
+// 합주실 삭제는 assignments·assignment_backups·reservations 를 모두 지웁니다.
+describe("PERIOD_DELETE_KEYS — 기간 삭제로 CASCADE 삭제되는 캐시만 무효화한다", () => {
+  it("periods·schedule·backups·backup-round 는 무효화되고 reservations·rooms 는 남는다", () => {
+    const client = new QueryClient();
+    const periods = ["periods"];
+    const rooms = ["rooms"];
+    const schedule = ["schedule", 1];
+    const backups = ["backups", 1];
+    const backupRound = ["backup-round", 1, "2026-01-01T00:00:00"];
+    const reservations = ["reservations", [1], "2026-01-01", "2026-01-31"];
+    for (const key of [periods, rooms, schedule, backups, backupRound, reservations]) {
+      client.setQueryData(key, {});
+    }
+
+    for (const prefix of PERIOD_DELETE_KEYS) void client.invalidateQueries({ queryKey: [prefix] });
+
+    expect(client.getQueryState(periods)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(schedule)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(backups)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(backupRound)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(reservations)?.isInvalidated).toBe(false);
+    expect(client.getQueryState(rooms)?.isInvalidated).toBe(false);
+  });
+});
+
+describe("ROOM_DELETE_KEYS — 합주실 삭제로 CASCADE 삭제되는 캐시만 무효화한다", () => {
+  it("rooms·schedule·backups·backup-round·reservations 가 모두 무효화되고 periods 는 남는다", () => {
+    const client = new QueryClient();
+    const periods = ["periods"];
+    const rooms = ["rooms"];
+    const schedule = ["schedule", 1];
+    const backups = ["backups", 1];
+    const backupRound = ["backup-round", 1, "2026-01-01T00:00:00"];
+    const reservations = ["reservations", [1], "2026-01-01", "2026-01-31"];
+    for (const key of [periods, rooms, schedule, backups, backupRound, reservations]) {
+      client.setQueryData(key, {});
+    }
+
+    for (const prefix of ROOM_DELETE_KEYS) void client.invalidateQueries({ queryKey: [prefix] });
+
+    expect(client.getQueryState(rooms)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(schedule)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(backups)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(backupRound)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(reservations)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(periods)?.isInvalidated).toBe(false);
   });
 });

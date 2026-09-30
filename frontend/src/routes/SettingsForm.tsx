@@ -8,40 +8,6 @@ import { stateText } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { PencilIcon, TrashIcon } from "../components/icons";
 
-
-/** 수정/취소로 행이 재생성될 때 초점이 유지되도록, 편집 시작 전 눌린 버튼을 기억합니다. */
-export function useRowFocus(): {
-  editing: number | null;
-  open: (id: number) => void;
-  close: () => void;
-  register: (id: number) => (el: HTMLButtonElement | null) => void;
-} {
-  const [editing, setEditing] = useState<number | null>(null);
-  const buttons = useRef(new Map<number, HTMLButtonElement>());
-  // 돌아갈 버튼 ID를 state가 아닌 ref로 보유합니다. state로 보유하면 초점 이동 후 값을 초기화하는 과정에서 불필요한 재생성이 발생합니다.
-  const back = useRef<number | null>(null);
-
-  // 편집 모드를 벗어나면 버튼이 재생성됩니다. 재생성 후 초점을 옮겨야 작동합니다.
-  useEffect(() => {
-    if (editing !== null || back.current === null) return;
-    buttons.current.get(back.current)?.focus();
-    back.current = null;
-  }, [editing]);
-
-  return {
-    editing,
-    open: (id) => setEditing(id),
-    close: () => {
-      back.current = editing;
-      setEditing(null);
-    },
-    register: (id) => (el) => {
-      if (el === null) buttons.current.delete(id);
-      else buttons.current.set(id, el);
-    },
-  };
-}
-
 /** 편집 모드에 진입한 form 의 첫 입력칸으로 초점을 이동합니다. autoFocus 속성이 이 화면에서 동작하지 않아 직접 이동합니다.
  *  추가 form(editing 이 false 인 경우)에는 적용하지 않습니다. 화면이 열린 직후 아래쪽 form 으로 초점이 이동하면 안 됩니다. */
 export function useFirstField<T extends HTMLElement>(editing: boolean): RefObject<T | null> {
@@ -74,17 +40,6 @@ export function Cell(props: { label: string; htmlFor: string; wide?: boolean; ch
       {props.label}
       {props.children}
     </label>
-  );
-}
-
-/** 카드의 제목 줄입니다. 제목, 설명, 오른쪽 부속(children — 필터·이전/다음 버튼)을 표시합니다. 카드 10개가 같은 부품을 사용합니다. */
-export function SectionHead({ title, desc, children }: { title: string; desc: string; children?: ReactNode }) {
-  return (
-    <div className="sethead">
-      <b>{title}</b>
-      <span>{desc}</span>
-      {children}
-    </div>
   );
 }
 

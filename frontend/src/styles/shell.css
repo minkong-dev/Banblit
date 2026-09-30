@@ -34,7 +34,8 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .ic.danger:hover { background: var(--red-tint); color: var(--red); }
   .ic[disabled] { opacity: .45; cursor: default; }
 
-  .profbtn { display: flex; align-items: center; gap: 9px; padding: 6px 12px 6px 6px; min-height: 44px; border-radius: 999px; transition: background-color .15s ease; }
+  /* anchor-name 은 .pop(아래)이 이 버튼을 기준으로 자기 위치를 계산하게 연결하는 이름입니다. */
+  .profbtn { anchor-name: --profile-trigger; display: flex; align-items: center; gap: 9px; padding: 6px 12px 6px 6px; min-height: 44px; border-radius: 999px; transition: background-color .15s ease; }
   .profbtn:hover { background: var(--card-2); }
   /* img 와 span 이 같은 클래스를 씁니다 — 사진이 있으면 img, 없으면 이름 앞 두 글자입니다. */
   img.face, img.big { object-fit: cover; }
@@ -46,14 +47,21 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   /* 프로필 카드입니다. .profwrap 은 여는 버튼과 프로필 카드를 한 요소로 묶기만 합니다.
      display:contents 라 배치에는 영향이 없습니다. */
   .profwrap { display: contents; }
+  /* popover="auto" 요소입니다. top layer(브라우저가 다른 요소 위에 그리는 계층)로 올라가면 DOM 상의
+     조상이 기준이 아니라 뷰포트(화면 보이는 영역)가 기준이 되어, position: absolute 만으로는 .profbtn
+     위치를 알 수 없습니다(2026-09-29 e2e 스크린샷으로 발견 — 화면 바깥에 그려졌습니다). CSS anchor
+     positioning(anchor-name/position-anchor/anchor())으로 .profbtn 을 직접 기준 삼습니다. */
   .pop {
-    position: absolute; right: 18px; top: 66px; z-index: 50;
+    position: fixed; position-anchor: --profile-trigger;
+    top: anchor(bottom); right: anchor(right); left: auto; bottom: auto;
+    margin: 8px 0 0; border: none; z-index: 50;
     width: 280px; padding: 20px;
     background: var(--card); border-radius: 18px; box-shadow: var(--shadow-up);
-    opacity: 0; transform: translateY(-6px) scale(.98); pointer-events: none;
-    transition: opacity .16s ease, transform .16s ease;
+    opacity: 0; transform: translateY(-6px) scale(.98);
+    transition: opacity .16s ease, transform .16s ease, overlay .16s allow-discrete, display .16s allow-discrete;
   }
-  .pop.on { opacity: 1; transform: none; pointer-events: auto; }
+  .pop:popover-open { opacity: 1; transform: none; }
+  @starting-style { .pop:popover-open { opacity: 0; transform: translateY(-6px) scale(.98); } }
   .pop::before { content: ""; position: absolute; right: 26px; top: -7px; width: 14px; height: 14px; background: var(--card); transform: rotate(45deg); border-radius: 3px 0 0 0; }
   .pop .who { display: flex; align-items: center; gap: 12px; }
   .pop .who .face { width: 46px; height: 46px; border-radius: 16px; font-size: 15px; }
@@ -222,7 +230,8 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
    프로필 카드를 이 상자에 붙여 두므로 프로필 버튼 폭이 바뀌어도 화살표가 알림 아이콘 위에 유지됩니다. */
 .notes { position: relative; display: flex; align-items: center; }
 
-.notes .bell { position: relative; }
+/* anchor-name 은 .notepop(아래)이 이 버튼을 기준으로 자기 위치를 계산하게 연결하는 이름입니다. */
+.notes .bell { position: relative; anchor-name: --notes-trigger; }
 .notes .bell .count {
   position: absolute; top: 5px; right: 5px;
   min-width: 17px; height: 17px; padding: 0 4px;
@@ -234,14 +243,19 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   box-shadow: 0 0 0 2px var(--card);
 }
 
+/* popover="auto" 요소입니다. .pop(shell.css 상단)과 같은 이유로 CSS anchor positioning 으로 .bell 을
+   직접 기준 삼습니다(top layer 에서는 DOM 상의 조상이 기준이 아닙니다). */
 .notes .notepop {
-  position: absolute; right: 0; top: 52px; z-index: 50;
+  position: fixed; position-anchor: --notes-trigger;
+  top: anchor(bottom); right: anchor(right); left: auto; bottom: auto; z-index: 50;
+  margin: 6px 0 0; border: none;
   width: 320px; padding: 16px 0 8px;
   background: var(--card); border-radius: 18px; box-shadow: var(--shadow-up);
-  opacity: 0; transform: translateY(-6px) scale(.98); pointer-events: none;
-  transition: opacity .16s ease, transform .16s ease;
+  opacity: 0; transform: translateY(-6px) scale(.98);
+  transition: opacity .16s ease, transform .16s ease, overlay .16s allow-discrete, display .16s allow-discrete;
 }
-.notes .notepop.on { opacity: 1; transform: none; pointer-events: auto; }
+.notes .notepop:popover-open { opacity: 1; transform: none; }
+@starting-style { .notes .notepop:popover-open { opacity: 0; transform: translateY(-6px) scale(.98); } }
 /* 알림 아이콘 한가운데를 가리킵니다. 아이콘은 44px 이므로 오른쪽에서 22px 에서 화살표 폭의 절반을 뺍니다. */
 .notes .notepop::before {
   content: ""; position: absolute; right: 15px; top: -7px;
@@ -275,7 +289,7 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
    왼쪽으로 펼치면 버튼 오른쪽의 프로필 버튼 폭만큼 화면 왼쪽 밖으로 나갑니다. 화살표는 가리킬 위치가 화면 폭마다 달라 숨깁니다. */
 @media (max-width: 767px) {
   .notes { position: static; }
-  .notes .notepop { position: fixed; left: 12px; right: 12px; top: calc(var(--bar) + 6px); width: auto; }
+  .notes .notepop { position: fixed; left: 12px; right: 12px; top: calc(var(--bar) + 6px); bottom: auto; width: auto; }
   .notes .notepop::before { display: none; }
 }
 

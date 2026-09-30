@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, Tabs } from "../components/AppShell";
 import { Dropdown } from "../components/Dropdown";
 import { getJSON, reason } from "../lib/api";
+import { askRollback } from "../lib/confirm";
 import { say } from "../lib/toast";
 import { runAssignment } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
@@ -14,7 +15,7 @@ import type { View } from "../lib/assignment";
 import { AssignmentCalendar, AssignmentStatus, PastRunsPanel, RunTimesPanel } from "./AssignmentPanels";
 import "../styles/assignment.css";
 import type { AssignOut, ScheduleRow } from "../lib/contract";
-import { datesBetween, dayOf, mergeSessions, stampLabel } from "../lib/pipeline";
+import { datesBetween, dayOf, mergeSessions, SCHEDULE_KEY, stampLabel } from "../lib/pipeline";
 
 // 조회 결과가 아직 없을 때 사용하는 빈 목록입니다. 같은 배열을 계속 사용해야 useMemo 의 의존성이 변하지 않습니다.
 const NO_ROWS: ScheduleRow[] = [];
@@ -59,8 +60,11 @@ export function Assignment() {
 
   // 저장까지 끝났으면 확정된 시간표를 다시 받아 화면과 서버를 맞춥니다. 저장이 되었으면
   // 이전 시간표가 배정기록으로 밀려나므로 목록도 다시 받습니다.
+  // SCHEDULE_KEY(["schedule"]) 로 무효화해야 캘린더 화면(routes/Scheduler.tsx)의
+  // ["schedule", periodIds] 캐시도 함께 무효화됩니다. activePeriodId 로만 무효화하면
+  // key 모양이 달라 캘린더 화면에 이전 배정이 그대로 남습니다.
   const refreshSchedule = async () => {
-    await queryClient.invalidateQueries({ queryKey: ["schedule", activePeriodId] });
+    await queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY });
     await queryClient.invalidateQueries({ queryKey: ["backups", activePeriodId] });
     setView(NOW);
   };
@@ -179,7 +183,7 @@ export function Assignment() {
       {!canRollback ? null : (
         <button className="btn" disabled={rollback.isPending || activePeriodId === null}
           onClick={() => {
-            if (window.confirm("현재 확정된 시간표를 해당 배정안으로 되돌려요. 해당 작업은 진행 후 다시 복구하기 어려워요. 그래도 되돌릴까요?")) {
+            if (askRollback()) {
               rollback.mutate();
             }
           }}>

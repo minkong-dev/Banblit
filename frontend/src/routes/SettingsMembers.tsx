@@ -6,10 +6,11 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
-import { Card } from "../components/AppShell";
+import { Card, SectionHead } from "../components/AppShell";
 import { Dropdown } from "../components/Dropdown";
-import { Modal } from "../components/Modal";
-import { MemberSearch } from "../components/MemberSearch";
+import { MemberPicker } from "../components/MemberPicker";
+import { Modal, ModalFormFoot } from "../components/Modal";
+import { SeatRow } from "../components/SeatRow";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -27,7 +28,6 @@ import { useMe } from "../components/queries";
 import { expelMember } from "../lib/pipeline";
 import { LOADING_TEXT } from "../lib/loading";
 import type { MemberRow, Permission, PermissionSet } from "../lib/contract";
-import { SectionHead } from "./SettingsForm";
 
 const SETS_KEY = ["permission-sets"];
 const MEMBERS_KEY = ["member-roster"];
@@ -80,28 +80,24 @@ function SetForm(props: {
   return (
     <Modal title={title} hint="부여할 권한을 설정해 커스텀 권한을 만들 수 있어요." onClose={onClose}
       foot={
-        <>
-          <button className="ghost" onClick={onClose}>취소</button>
-          <button
-            className="primary"
-            disabled={send.isPending}
-            onClick={() => {
-              const clash = taken.some((other) => other.trim() === form.name.trim());
-              const why =
-                form.name.trim() === ""
-                  ? "권한 이름을 입력해 주세요."
-                  : clash
-                    ? "이미 같은 이름을 가진 권한이 있어요."
-                    : form.description.trim() === ""
-                      ? "이 권한에 대한 설명을 작성해주세요."
-                      : "";
-              setBad(why);
-              if (why === "") send.mutate();
-            }}
-          >
-            {send.isPending ? "저장하는 중…" : "저장"}
-          </button>
-        </>
+        <ModalFormFoot
+          onCancel={onClose}
+          pending={send.isPending}
+          submitLabel="저장"
+          onSubmit={() => {
+            const clash = taken.some((other) => other.trim() === form.name.trim());
+            const why =
+              form.name.trim() === ""
+                ? "권한 이름을 입력해 주세요."
+                : clash
+                  ? "이미 같은 이름을 가진 권한이 있어요."
+                  : form.description.trim() === ""
+                    ? "이 권한에 대한 설명을 작성해주세요."
+                    : "";
+            setBad(why);
+            if (why === "") send.mutate();
+          }}
+        />
       }
     >
       <div className="fields">
@@ -187,12 +183,13 @@ function GrantModal(props: {
 
   if (mode === "add") {
     return (
-      <Modal title={set.name} hint="권한을 부여할 멤버를 검색해요" onClose={onClose}>
-        <MemberSearch
-          exclude={set.members.map((person) => person.id)}
-          onPick={(one) => grant.mutate(one.id)}
-        />
-      </Modal>
+      <MemberPicker
+        title={set.name}
+        hint="권한을 부여할 멤버를 검색해요"
+        exclude={set.members.map((person) => person.id)}
+        onPick={(one) => grant.mutate(one.id)}
+        onClose={onClose}
+      />
     );
   }
 
@@ -203,9 +200,10 @@ function GrantModal(props: {
           <li className="empty">아직 해당 권한을 가진 멤버가 없어요</li>
         ) : (
           set.members.map((person) => (
-            <li className="seat" key={person.id}>
-              <span className="who">{person.name}</span>
-              <span className="acts">
+            <SeatRow
+              key={person.id}
+              name={person.name}
+              actions={
                 <button
                   className="ic danger"
                   disabled={busy}
@@ -214,8 +212,8 @@ function GrantModal(props: {
                 >
                   <TrashIcon />
                 </button>
-              </span>
-            </li>
+              }
+            />
           ))
         )}
       </ul>
