@@ -2,31 +2,31 @@
 // 저장된 HTML 을 화면에 넣기 전의 sanitize(허용 목록에 없는 태그와 속성을 제거하는 처리)와
 // 빈 값 판정은 lib/richText.ts 가 담당합니다.
 
-import { Extension, Node, mergeAttributes, nodeInputRule } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { Audio } from "@tiptap/extension-audio";
 import FileHandler from "@tiptap/extension-file-handler";
-import Youtube from "@tiptap/extension-youtube";
 import TextAlign from "@tiptap/extension-text-align";
 import { TableKit } from "@tiptap/extension-table";
-import { BackgroundColor, Color, FontFamily, FontSize, TextStyle } from "@tiptap/extension-text-style";
-import { useEffect, useId, useRef, useState } from "react";
+import { BackgroundColor, Color, FontFamily, FontSize } from "@tiptap/extension-text-style";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 
 import { Dropdown } from "./Dropdown";
-import { usePopoverRouteClose } from "./hooks";
 import {
   AlignCenterIcon, AlignJustifyIcon, AlignLeftIcon, AlignRightIcon, BulletListIcon, ClipIcon,
-  CodeIcon, EraserIcon, ImageIcon, LinkIcon, NumberListIcon, PaletteIcon, QuoteIcon, RedoIcon,
+  CodeIcon, EraserIcon, ImageIcon, LinkIcon, NumberListIcon, QuoteIcon, RedoIcon,
   RuleIcon, TableIcon, UndoIcon,
 } from "./icons";
 import { Modal } from "./Modal";
+import {
+  ACCEPTED_MIME, HeadingBackspace, Pdf, Weight, YoutubeTyped, attach,
+} from "./richTextEditor";
+import type { Editor } from "./richTextEditor";
+import { ColorPanel } from "./RichTextColor";
 import { ATTACHMENT_ACCEPT } from "../lib/boards";
-import { apiUrl, reason, sendFile } from "../lib/api";
-import { PALETTE, embedKind, linkProblem, sanitizeBody, usedColors } from "../lib/richText";
-import { say } from "../lib/toast";
+import { linkProblem, sanitizeBody, usedColors } from "../lib/richText";
 
 /** 선택할 수 있는 글꼴입니다. 값은 CSS 의 font-family 에 그대로 들어갑니다.
  *  빈 값은 지정하지 않은 상태이고, 그때는 화면의 기본 글꼴을 따릅니다. */
@@ -76,136 +76,6 @@ const SIZES = [
   { value: "22px", label: "22" },
   { value: "28px", label: "28" },
 ];
-
-/** PDF 를 본문에 넣는 노드입니다. Tiptap 에 PDF 확장이 없어 직접 만듭니다 — 유료(Conversion)는
- *  내보내기이고 뷰어가 아닙니다. 뷰어는 브라우저에 내장돼 있어 iframe 하나면 되므로
- *  라이브러리를 더하지 않습니다. */
-const Pdf = Node.create({
-  name: "pdf",
-  group: "block",
-  atom: true,
-  addAttributes() {
-    return { src: { default: null }, title: { default: null } };
-  },
-  parseHTML() {
-    return [{ tag: "iframe[data-pdf]" }];
-  },
-  renderHTML({ HTMLAttributes }) {
-    return ["iframe", mergeAttributes(HTMLAttributes, { "data-pdf": "", class: "rtpdf" })];
-  },
-  addCommands() {
-    return {
-      setPdf:
-        (options: { src: string; title?: string }) =>
-        ({ commands }) =>
-          commands.insertContent({ type: this.name, attrs: options }),
-    };
-  },
-});
-
-declare module "@tiptap/core" {
-  interface Commands<ReturnType> {
-    pdf: { setPdf: (options: { src: string; title?: string }) => ReturnType };
-  }
-}
-
-/** TextStyle 에 굵기(font-weight) 속성을 더합니다. @tiptap/extension-text-style 이 글꼴·크기·색은
- *  제공하지만 굵기는 제공하지 않습니다. Pretendard Variable 의 굵기 축을 쓰려면 100~900 을
- *  값으로 넣을 수 있어야 하고, StarterKit 의 bold 는 굵게 켜고 끄기만 합니다. */
-const Weight = TextStyle.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      fontWeight: {
-        default: null,
-        parseHTML: (element: HTMLElement) => element.style.fontWeight || null,
-        renderHTML: (attributes: { fontWeight?: string | null }) =>
-          attributes.fontWeight == null ? {} : { style: `font-weight: ${attributes.fontWeight}` },
-      },
-    };
-  },
-});
-
-/** 빈 제목에서 Backspace 를 누르면 보통 문단으로 되돌립니다.
- *
- * TipTap 은 "# " 같은 입력 규칙이 방금 적용된 직후 Backspace 를 누르면 그 규칙을 되돌려
- * 입력했던 "# " 를 본문에 다시 넣습니다. 제목을 만들려다 취소한 사람에게는 지운 글자가
- * 되살아나는 것으로 보이므로, 제목만 삭제하고 글자는 되살리지 않습니다.
- *
- * priority 를 높여 입력 규칙의 되돌리기보다 먼저 실행합니다. true 를 반환하면 그쪽은 실행되지 않습니다. */
-const HeadingBackspace = Extension.create({
-  name: "headingBackspace",
-  priority: 1000,
-  addKeyboardShortcuts() {
-    return {
-      Backspace: ({ editor }) => {
-        const { empty, $from } = editor.state.selection;
-        const inEmptyHeading = empty
-          && $from.parent.type.name === "heading"
-          && $from.parent.content.size === 0;
-        return inEmptyHeading ? editor.commands.setParagraph() : false;
-      },
-    };
-  },
-});
-
-/** 유튜브 주소를 타이핑한 뒤 공백이나 줄바꿈을 입력해도 video player 로 변경합니다.
- *  기본 확장은 붙여넣기만 처리해, 주소를 직접 쳐서 넣으면 일반 링크로 남습니다. */
-const YoutubeTyped = Youtube.extend({
-  addInputRules() {
-    return [
-      nodeInputRule({
-        find: /(?:^|\s)(https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?v=[\w-]{11}\S*|youtu\.be\/[\w-]{11}))\s$/,
-        type: this.type,
-        getAttributes: (match) => ({ src: match[1] }),
-      }),
-    ];
-  },
-});
-
-type Editor = NonNullable<ReturnType<typeof useEditor>>;
-
-/** 본문에 넣을 수 있는 파일의 MIME(형식을 알리는 문자열)입니다. 나머지는 drop(파일을 끌어다 놓는 동작)해도 처리하지 않고
- *  브라우저 기본 동작(파일 열기)에 맡깁니다. 서버 쪽 허용 목록은 이보다 넓습니다 —
- *  넣지 못하는 형식도 첨부 파일로는 올라갑니다(lib/boards.ts 의 ALLOWED_EXTENSIONS). */
-const ACCEPTED_MIME = [
-  "image/jpeg", "image/png", "image/gif", "image/webp",
-  "audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp4", "audio/aac", "audio/ogg",
-  "application/pdf",
-];
-
-/** drop 하거나 붙여넣은 파일을 글에 올리고, 받은 주소를 본문에 넣습니다.
- *  pos 가 있으면 drop 한 자리에, 없으면 커서 자리에 넣습니다. 올리지 못하면 사유만 알리고
- *  본문은 건드리지 않습니다 — 주소 없는 노드를 넣으면 깨진 그림이 남습니다. */
-async function attach(
-  editor: Editor, files: File[], pos: number | null, postId: number | null, embed = true,
-): Promise<void> {
-  if (postId === null) {
-    say("글을 준비하는 중이에요. 잠시 후 다시 넣어주세요.");
-    return;
-  }
-  for (const file of files) {
-    try {
-      const { attachment } = await sendFile<{ attachment: { id: number } }>(
-        `/posts/${postId}/attachments`, file, () => undefined,
-      );
-      // 표시용 경로입니다. 다운로드 경로(/attachments/{id})는 모든 파일을 octet-stream 과
-      // Content-Disposition: attachment 로 내보내므로 img·audio·iframe 이 표시하지 못합니다.
-      const src = apiUrl(`/attachments/${attachment.id}/inline`);
-      const at = editor.chain().focus(pos ?? undefined);
-      // embed 가 false 면 첨부 목록에만 올립니다(클립 버튼). 본문에 넣지 않습니다.
-      const kind = embed ? embedKind(file.name) : "file";
-      if (kind === "image") at.setImage({ src, alt: file.name }).run();
-      else if (kind === "audio") at.setAudio({ src }).run();
-      else if (kind === "pdf") at.setPdf({ src, title: file.name }).run();
-      // file 은 본문에 넣지 않습니다. 첨부 목록에는 이미 올라가 있습니다.
-      else if (embed) say(`${file.name} 은 본문에 넣을 수 없어 첨부로만 올렸어요.`);
-      else say(`${file.name} 을 첨부했어요.`);
-    } catch (error) {
-      say(`${file.name} 을 올리지 못했어요 — ${reason(error)}`);
-    }
-  }
-}
 
 /** 본문을 작성하는 편집기입니다. value 는 HTML 이고, 편집할 때마다 onChange 로 HTML 을 넘깁니다.
  *  id 는 곁에 둔 label 의 htmlFor 가 가리키는 값입니다. */
@@ -623,109 +493,3 @@ function LinkDialog({ nowText, nowUrl, onClose, onSave }: {
   );
 }
 
-/** 색 한 칸입니다. 글자색과 배경색이 같은 모양을 씁니다. */
-function ColorColumn({ title, reset, resetLabel, value, used, onPick }: {
-  title: string;
-  /** 위쪽 버튼을 눌렀을 때의 동작입니다. 글자색은 기본값으로, 배경색은 투명으로 되돌립니다. */
-  reset: () => void;
-  resetLabel: string;
-  value: string;
-  used: string[];
-  onPick: (color: string) => void;
-}) {
-  // 브라우저 색 선택기를 여는 입력칸입니다. 그 선택기 안에 스펙트럼과 HEX 입력이 이미 들어 있어
-  // 따로 만들지 않습니다. 화면에는 보이지 않고 버튼이 눌러 줍니다.
-  const picker = useRef<HTMLInputElement>(null);
-  return (
-    <div className="rtcol">
-      <p className="cap2">{title}</p>
-      <button type="button" className="rtreset" onClick={reset}>{resetLabel}</button>
-      <div className="rtgrid" role="group" aria-label={`${title} 팔레트`}>
-        {PALETTE.map((color) => (
-          <button
-            type="button"
-            key={color}
-            aria-label={color}
-            style={{ background: color }}
-            onClick={() => onPick(color)}
-          />
-        ))}
-      </div>
-      {/* 누르면 브라우저 색 선택기가 바로 열립니다. 그 안에 스펙트럼과 HEX 입력이 들어 있어
-          이 화면에서 따로 만들지 않습니다. */}
-      <button type="button" className="rtreset" onClick={() => picker.current?.click()}>
-        직접 선택
-      </button>
-      <input
-        ref={picker}
-        className="rthidden"
-        type="color"
-        tabIndex={-1}
-        aria-label={`${title} 직접 선택`}
-        value={value}
-        onChange={(event) => onPick(event.target.value)}
-      />
-      {/* 최근 사용한 색입니다. 본문에 이미 쓴 색을 다시 고를 때 팔레트를 뒤지지 않아도 됩니다. */}
-      <p className="cap2">최근 사용한 색</p>
-      <div className="rtgrid recent" role="group" aria-label={`${title} 최근 사용한 색`}>
-        {Array.from({ length: 8 }, (_, index) => used[index] ?? null).map((color, index) => (
-          color === null
-            ? <span key={`empty-${index}`} className="none" />
-            : <button
-              type="button"
-              key={color}
-              aria-label={`${title} ${color}`}
-              style={{ background: color }}
-              onClick={() => onPick(color)}
-            />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** 글자색과 배경색을 popover(버튼에 붙어 열리는 작은 창) 하나에서 고릅니다. 팔레트·초기화·스펙트럼·최근 사용한 색이 모두 들어 있습니다. */
-function ColorPanel({ editor, used, disabled }: {
-  editor: Editor;
-  used: string[];
-  disabled: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const popId = useId();
-  usePopoverRouteClose(popId);
-  const color = String(editor.getAttributes("textStyle").color ?? "#191f28");
-  const background = String(editor.getAttributes("textStyle").backgroundColor ?? "#ffffff");
-  return (
-    <div className="rtcolor">
-      <button type="button" aria-label="글자색과 배경색" aria-expanded={open} disabled={disabled} popoverTarget={popId}>
-        <PaletteIcon />
-        <i className="rtcolorbar" style={{ background: color, borderColor: background }} aria-hidden="true" />
-      </button>
-      <div
-        id={popId}
-        popover="auto"
-        className="rtcolorpop"
-        role="dialog"
-        aria-label="글자색과 배경색"
-        onToggle={(event) => setOpen(event.newState === "open")}
-      >
-        <ColorColumn
-          title="글자색"
-          resetLabel="기본값으로 설정"
-          reset={() => editor.chain().focus().unsetColor().run()}
-          value={color}
-          used={used}
-          onPick={(next) => editor.chain().focus().setColor(next).run()}
-        />
-        <ColorColumn
-          title="배경색"
-          resetLabel="투명"
-          reset={() => editor.chain().focus().unsetBackgroundColor().run()}
-          value={background}
-          used={used}
-          onPick={(next) => editor.chain().focus().setBackgroundColor(next).run()}
-        />
-      </div>
-    </div>
-  );
-}
