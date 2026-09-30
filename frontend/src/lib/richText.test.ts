@@ -4,7 +4,110 @@
 
 import { describe, expect, it } from "vitest";
 
-import { embedKind, hasContent, sanitizeBody, textOf } from "./richText";
+import { PALETTE, embedKind, hasContent, hslHex, linkProblem, sanitizeBody, textOf, usedColors } from "./richText";
+
+describe("hslHex — HSL 을 #rrggbb 로 변환", () => {
+  it("채도 0 은 무채색을 반환한다", () => {
+    expect(hslHex(0, 0, 0)).toBe("#000000");
+    expect(hslHex(0, 100, 0)).toBe("#ffffff");
+    expect(hslHex(120, 50, 0)).toBe("#808080");
+  });
+
+  it("밝기 50 채도 100 은 원색을 반환한다", () => {
+    expect(hslHex(0, 50, 100)).toBe("#ff0000");
+    expect(hslHex(120, 50, 100)).toBe("#00ff00");
+    expect(hslHex(240, 50, 100)).toBe("#0000ff");
+  });
+
+  it("두 자리가 되도록 0 을 채운다", () => {
+    // 각 색 성분이 한 자리(예: 0x5)일 때 "#5..." 가 아니라 "#05..." 가 되어야 합니다.
+    expect(hslHex(0, 2, 100)).toMatch(/^#[0-9a-f]{6}$/);
+  });
+});
+
+describe("PALETTE — 팔레트에 들어가는 색 전부", () => {
+  it("무채색 8칸과 색 계열 8줄로 72칸이다", () => {
+    expect(PALETTE).toHaveLength(72);
+  });
+
+  it("전부 #rrggbb 형식이다", () => {
+    for (const color of PALETTE) expect(color).toMatch(/^#[0-9a-fA-F]{6}$/);
+  });
+});
+
+describe("usedColors — 본문에 실제로 쓰인 색", () => {
+  it("색이 없으면 빈 배열을 반환한다", () => {
+    expect(usedColors("<p>글자</p>")).toEqual([]);
+  });
+
+  it("color 와 background-color 를 모두 모은다", () => {
+    expect(usedColors('<span style="color: #ff0000">가</span><span style="background-color: #00ff00">나</span>'))
+      .toEqual(["#ff0000", "#00ff00"]);
+  });
+
+  it("같은 색이 여러 번 나오면 한 번만 반환한다", () => {
+    expect(usedColors('<span style="color:#ff0000">가</span><span style="color:#ff0000">나</span>'))
+      .toEqual(["#ff0000"]);
+  });
+
+  it("대문자를 소문자로 변환한다", () => {
+    expect(usedColors('<span style="color: #AABBCC">가</span>')).toEqual(["#aabbcc"]);
+  });
+
+  it("최대 8개까지 반환한다", () => {
+    const html = PALETTE.slice(0, 20).map((color) => `<span style="color:${color}">가</span>`).join("");
+    expect(usedColors(html)).toHaveLength(8);
+  });
+
+  it("rgb() 처럼 괄호가 있는 값도 그대로 반환한다", () => {
+    expect(usedColors('<span style="color: rgb(255, 0, 0)">가</span>')).toEqual(["rgb(255, 0, 0)"]);
+  });
+});
+
+describe("linkProblem — 링크 주소를 쓸 수 없는 사유", () => {
+  it("빈 주소는 사유가 없다", () => {
+    // 링크 dialog 를 열자마자 빨간 문구가 표시되지 않게, 아직 입력하지 않은 상태는 통과시킵니다.
+    expect(linkProblem("")).toBe("");
+    expect(linkProblem("   ")).toBe("");
+  });
+
+  it("http·https·mailto 와 / 로 시작하는 주소를 허용한다", () => {
+    expect(linkProblem("http://example.com")).toBe("");
+    expect(linkProblem("https://example.com/a?b=1")).toBe("");
+    expect(linkProblem("mailto:a@example.com")).toBe("");
+    expect(linkProblem("/notices/3")).toBe("");
+  });
+
+  it("대소문자를 구분하지 않는다", () => {
+    expect(linkProblem("HTTPS://example.com")).toBe("");
+  });
+
+  it("앞뒤 공백을 제거한 뒤 판정한다", () => {
+    expect(linkProblem("  https://example.com  ")).toBe("");
+  });
+
+  it("javascript: 주소는 사유를 반환한다", () => {
+    expect(linkProblem("javascript:alert(1)")).toBe("http 또는 https 로 시작하는 주소를 입력해주세요.");
+  });
+
+  it("data: 와 blob: 주소도 사유를 반환한다", () => {
+    expect(linkProblem("data:text/html,<script>alert(1)</script>")).not.toBe("");
+    expect(linkProblem("blob:https://example.com/abc")).not.toBe("");
+  });
+
+  it("scheme 이 없는 주소는 사유를 반환한다", () => {
+    expect(linkProblem("example.com")).not.toBe("");
+  });
+
+  it("sanitizeBody 가 제거하는 주소를 통과시키지 않는다", () => {
+    // 두 곳의 기준이 어긋나면 dialog 는 허용하는데 저장 시 제거되거나 그 반대가 됩니다.
+    // 같은 정규식(ALLOWED_URI)을 참조하는지 검사합니다.
+    for (const url of ["javascript:alert(1)", "data:text/html,x", "vbscript:x", "file:///etc/passwd"]) {
+      expect(linkProblem(url)).not.toBe("");
+      expect(sanitizeBody(`<a href="${url}">링크</a>`)).not.toContain(url);
+    }
+  });
+});
 
 describe("sanitizeBody — 남이 쓴 본문에서 허용하지 않은 태그와 속성을 제거한다", () => {
   it("서식 태그는 남긴다", () => {
