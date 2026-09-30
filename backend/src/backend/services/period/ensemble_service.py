@@ -14,14 +14,14 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import EnsembleDay, Period, Room
 from backend.db.pipeline import commit_translating
-from backend.services.reservation_service import cancel_reservations_in_focus
-from backend.services.input import (
+from backend.services.reservation.pipeline import cancel_reservations_in_focus
+from backend.services.validation.pipeline import (
     parse_calendar_date,
     parse_clock,
     require_ends_not_before_starts,
 )
-from backend.services.period_crud_service import PERIOD_MESSAGES
-from backend.services.settings_service import slot_minutes
+from backend.services.period.period_crud_service import PERIOD_MESSAGES
+from backend.services.settings.pipeline import slot_minutes
 
 ENSEMBLE_FIELDS = (
     "ensemble_starts_on",

@@ -2,7 +2,7 @@ import logging
 
 import pytest
 
-from backend.services.mailer import send_mail
+from backend.services.auth.mailer import send_mail
 
 TO = "seoyeon@example.com"
 SUBJECT = "[Banblit] 비밀번호 재설정"
@@ -14,7 +14,7 @@ def _send_without_smtp(
 ) -> str:
     monkeypatch.delenv("SMTP_HOST", raising=False)
     monkeypatch.setenv("MAIL_LOG_BODY", log_body)
-    with caplog.at_level(logging.INFO, logger="backend.services.mailer"):
+    with caplog.at_level(logging.INFO, logger="backend.services.auth.mailer"):
         send_mail(TO, SUBJECT, BODY)
     return caplog.text
 
@@ -45,6 +45,6 @@ def test_the_deployment_log_setup_does_not_let_the_body_through() -> None:
     """
     import backend.api.app  # noqa: F401 — import 하는 것만으로 기록 설정이 적용됩니다
 
-    assert not logging.getLogger("backend.services.mailer").isEnabledFor(logging.INFO)
+    assert not logging.getLogger("backend.services.auth.mailer").isEnabledFor(logging.INFO)
     # 메일 발송 사유는 반대로 남아야 합니다.
-    assert logging.getLogger("backend.services.password_reset").isEnabledFor(logging.INFO)
+    assert logging.getLogger("backend.services.auth.password_reset").isEnabledFor(logging.INFO)

@@ -6,7 +6,7 @@ import secrets
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.services.input import (
+from backend.services.validation.pipeline import (
     require_cohort,
     require_department,
     require_email,
@@ -16,7 +16,7 @@ from backend.services.input import (
     require_password,
     require_student_no,
 )
-from backend.services.permission_service import grant_full_permissions
+from backend.services.permission.pipeline import grant_full_permissions
 from backend.db.models import Member
 from backend.db.pipeline import commit_translating
 

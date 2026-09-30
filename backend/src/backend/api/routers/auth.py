@@ -6,25 +6,25 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account
-from backend.services.auth_service import change_password, update_profile
-from backend.services.auth_service import login as login_account
-from backend.services.auth_service import signup as signup_account
-from backend.services.avatar_service import avatar_path, delete_avatar, save_avatar
-from backend.services.auth_session import (
+from backend.services.auth.pipeline import change_password, update_profile
+from backend.services.auth.pipeline import login as login_account
+from backend.services.auth.pipeline import signup as signup_account
+from backend.services.roster.pipeline import avatar_path, delete_avatar, save_avatar
+from backend.services.auth.pipeline import (
     KEEP_TTL,
     SESSION_COOKIE,
     SIGNED_IN_COOKIE,
     create_session,
     revoke_session,
 )
-from backend.services.password_reset import (
+from backend.services.auth.pipeline import (
     request_password_reset,
     reset_password,
     send_id_reminder,
 )
-from backend.services.permission_service import account_permission_set_names, account_permissions
+from backend.services.permission.pipeline import account_permission_set_names, account_permissions
 from backend.api.rate_limit import limit_guesses
-from backend.services.roster_service import list_my_teams
+from backend.services.roster.pipeline import list_my_teams
 from backend.api.schemas import (
     AccountOut,
     AckOut,

@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import Member, Reservation, Room, Team, TeamSlot, UnavailableTime
 from backend.db.pipeline import get_engine
-from backend.services.auth_service import hash_password
+from backend.services.auth.pipeline import hash_password
 
 PASSWORD = "Banblit123!"
 PEOPLE = 40

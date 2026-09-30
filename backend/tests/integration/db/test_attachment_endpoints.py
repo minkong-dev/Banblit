@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
 
 from backend.db.models import Attachment, Member, Post
-from backend.services import attachment_service
+from backend.services.board import attachment_service
 
 # account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 이 파일의 첫 호출이 헤드매니저입니다.
 from conftest import AccountFactory

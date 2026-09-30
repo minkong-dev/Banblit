@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from backend.db.models import Comment, Member, Post, Team, TeamSlot
 
 # account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 이 파일의 첫 호출이 헤드매니저입니다.
-from backend.services.board_service import sweep_stale_drafts
+from backend.services.board.pipeline import sweep_stale_drafts
 from conftest import AccountFactory, seat
 
 
