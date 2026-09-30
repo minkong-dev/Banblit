@@ -86,14 +86,15 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   /* 사이드바도 바탕과 같은 색이고 오른쪽 1px 선만 있습니다. 메뉴는 면 없는 글자 목록이고, 지금 화면은
      본문색 굵은 글자와 왼쪽 코랄 선으로 표시합니다. 코랄 면은 주요 동작 버튼에만 씁니다. */
   .side { position: sticky; top: var(--bar); height: calc(100vh - var(--bar)); align-self: start; overflow: hidden auto; border-right: 1px solid var(--line); }
-  .side .inner { width: 100%; height: 100%; padding: 30px 28px; display: flex; flex-direction: column; gap: 22px; }
+  /* 메뉴 글자의 왼쪽 끝은 상단바 로고와 같은 28px 입니다. 선택 표시 선은 글자 12px 왼쪽에 긋습니다. */
+  .side .inner { width: 100%; height: 100%; padding: var(--page-top) 28px; display: flex; flex-direction: column; gap: 22px; }
   /* 메뉴 항목 모양은 사이드바와 휴대폰 메뉴 판(.drawer)이 같이 씁니다. */
   :is(.side, .drawer) nav { display: flex; flex-direction: column; gap: 2px; }
-  :is(.side, .drawer) nav :is(a, button) { display: flex; align-items: center; text-align: left; padding: 10px 14px; min-height: 44px; color: var(--t2); text-decoration: none; font-size: var(--fs-base); font-weight: 500; white-space: nowrap; box-shadow: inset 2px 0 0 transparent; transition: color .15s ease, box-shadow .15s ease; }
+  :is(.side, .drawer) nav :is(a, button) { display: flex; align-items: center; text-align: left; margin-left: -12px; padding: 10px 0 10px 12px; min-height: 44px; color: var(--t2); text-decoration: none; font-size: var(--fs-base); font-weight: 500; white-space: nowrap; box-shadow: inset 2px 0 0 transparent; transition: color .15s ease, box-shadow .15s ease; }
   :is(.side, .drawer) nav a:hover { color: var(--t1); }
   :is(.side, .drawer) nav a[aria-current="page"] { color: var(--t1); font-weight: 700; box-shadow: inset 2px 0 0 var(--brand); }
   .side nav button:disabled { cursor: default; }
-  :is(.side, .drawer) .cap { font-size: var(--fs-xs); font-weight: 500; letter-spacing: .08em; color: var(--t3); padding: 0 14px; }
+  :is(.side, .drawer) .cap { font-size: var(--fs-xs); font-weight: 500; letter-spacing: .08em; color: var(--t3); }
   :is(.side, .drawer) .sep { border-top: 1px solid var(--line); }
 
   /* 휴대폰 메뉴 판입니다(Material Design 모달 드로어). 왼쪽에서 밀려 나오고 뒤는 어두워집니다.
@@ -120,13 +121,14 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
      목록은 한 쪽에 10줄(lib/paging 의 PER_PAGE)이고 쪽 넘김 줄은 목록 바로 아래에 옵니다. */
   .page {
     /* align-self: start — .shell 이 창 높이를 최소 높이로 가지므로, 기본값(stretch)이면 .page 가 창 바닥까지 늘어납니다. */
-    padding: 28px 36px 36px; min-height: 0; align-self: start;
+    padding: var(--page-top) 36px 36px; min-height: 0; align-self: start;
     display: grid; grid-template-columns: minmax(0, 1fr) clamp(260px, 22%, 360px);
     grid-template-rows: auto minmax(0, 1fr); column-gap: 48px;
   }
-  /* 탭은 면 없이 글자 밝기로 구분합니다. 고른 탭은 본문색, 나머지는 흐린 글자입니다. 선도 상자도 없습니다. */
-  .tabs { grid-column: 1; grid-row: 1; display: flex; gap: 26px; margin-bottom: 20px; flex-wrap: wrap; }
-  .tab { padding: 8px 0; min-height: 44px; color: var(--t3); font-size: var(--fs-xl); font-weight: 600; letter-spacing: -.02em; transition: color .15s ease; }
+  /* 탭은 면 없이 글자 밝기로 구분합니다. 고른 탭은 본문색, 나머지는 흐린 글자입니다. 선도 상자도 없습니다.
+     탭 줄은 사이드바 첫 메뉴 항목과 같은 높이(44px)라 두 글자의 세로 중심이 맞습니다. */
+  .tabs { grid-column: 1; grid-row: 1; display: flex; gap: 26px; margin-bottom: 24px; flex-wrap: wrap; }
+  .tab { padding: 0; min-height: 44px; color: var(--t3); font-size: var(--fs-xl); font-weight: 600; letter-spacing: -.02em; transition: color .15s ease; }
   .tab:hover { color: var(--t2); }
   .tab[aria-selected="true"] { color: var(--t1); font-weight: 800; }
 
@@ -135,15 +137,16 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   /* 카드·패널은 상자가 아닙니다. 바탕 위에 그대로 놓이고, 안쪽 구획만 1px 선이 나눕니다. */
   .card { overflow: hidden; }
   .panel { overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
-  /* 패널 제목은 작은 글자와 아래 선입니다. 제목은 한 줄로 두고 오른쪽 설명 문구만 줄바꿈합니다. */
-  .panel .ph { display: flex; align-items: center; gap: 12px; padding: 0 0 12px; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+  /* 패널 제목은 작은 글자와 아래 선입니다. 줄 높이는 달력 머리줄과 같아(--head-h) 두 선이 한 높이에 놓입니다.
+     제목은 한 줄로 두고 오른쪽 설명 문구만 줄바꿈합니다. */
+  .panel .ph { display: flex; align-items: center; gap: 12px; height: var(--head-h); padding: 0; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
   .panel .ph span { margin-left: auto; font-size: var(--fs-xs); font-weight: 400; color: var(--t3); white-space: normal; text-align: right; }
   .panel ul { list-style: none; margin: 0; padding: 8px 0 0; }
   .toast { position: fixed; left: 50%; bottom: 26px; transform: translate(-50%, calc(100% + 26px)); z-index: 60; padding: 14px 22px; background: var(--t1); color: var(--card); font-size: 14.5px; font-weight: 500; border-radius: 14px; transition: transform .26s cubic-bezier(.22,1,.36,1); }
   .toast.on { transform: translate(-50%, 0); }
 
   /* 카드 제목·목록 줄·입력칸·버튼입니다. 팀·게시판·설정이 같은 모양으로 사용합니다. */
-  .sethead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding: 0 0 14px; border-bottom: 1px solid var(--line); }
+  .sethead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-height: var(--head-h); padding: 0 0 12px; border-bottom: 1px solid var(--line); }
   .sethead b { font-size: var(--fs-2xl); font-weight: 800; letter-spacing: -.03em; }
   .sethead span { font-size: var(--fs-sm); color: var(--t3); }
   .rows { list-style: none; margin: 0; padding: 0; }
@@ -193,7 +196,7 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
     }
     .side .inner { height: auto; padding: 10px 24px; flex-direction: row; align-items: center; gap: 10px; }
     .side nav { flex-direction: row; gap: 6px; }
-    .side nav :is(a, button) { padding: 9px 12px; min-height: 40px; font-size: var(--fs-md); box-shadow: inset 0 -2px 0 transparent; }
+    .side nav :is(a, button) { margin-left: 0; padding: 9px 12px; min-height: 40px; font-size: var(--fs-md); box-shadow: inset 0 -2px 0 transparent; }
     /* 가로 줄에서는 선택 표시 선을 왼쪽이 아니라 아래에 긋습니다. */
     .side nav a[aria-current="page"] { box-shadow: inset 0 -2px 0 var(--brand); }
     /* 가로 줄에서는 구분선과 "관리자 메뉴" 머리글이 자리만 차지합니다. 항목은 그대로 이어 붙입니다. */
