@@ -6,8 +6,10 @@
 
 from datetime import date, datetime, time
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from conftest import AccountFactory
@@ -114,3 +116,30 @@ def test_removing_a_narrower_day_time_cancels_what_now_overlaps_the_default(db_s
     delete_ensemble_day(db_session, period.id, "2027-03-13")
 
     assert _cancelled(db_session, row.id) is True
+
+
+def test_the_period_change_and_the_cancellations_are_saved_in_one_commit(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # 기간 변경 뒤 예약 취소를 두 번째 commit 으로 저장하면, 두 번째 commit 이 실패했을 때 기간만 바뀌고
+    # 취소·알림은 저장되지 않습니다. 두 번째 commit 을 실패하게 두고, 한 번의 commit 으로 둘 다 저장되는지 확인합니다.
+    period, room, member = _ensemble_setup(db_session)
+    row = _booking(db_session, room, member, 10, 12)
+    real_commit = db_session.commit
+    commits = {"count": 0}
+
+    def commit_failing_from_the_second_call() -> None:
+        commits["count"] += 1
+        if commits["count"] >= 2:
+            raise OperationalError("두 번째 commit", None, Exception("연결 끊김"))
+        real_commit()
+
+    monkeypatch.setattr(db_session, "commit", commit_failing_from_the_second_call)
+
+    delete_ensemble(db_session, period.id)
+
+    assert commits["count"] == 1
+    assert _cancelled(db_session, row.id) is True
+    db_session.expire_all()
+    saved = db_session.get(Period, period.id)
+    assert saved is not None and saved.ensemble_room_id is None

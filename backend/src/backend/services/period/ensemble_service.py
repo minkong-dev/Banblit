@@ -6,21 +6,19 @@
 """
 
 from collections import defaultdict
-from datetime import datetime, time
+from datetime import time
 
 from sqlalchemy import delete, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from backend.db.models import EnsembleDay, Period, Room
-from backend.db.pipeline import commit_translating
-from backend.services.reservation.pipeline import cancel_reservations_in_focus
 from backend.services.validation.pipeline import (
     parse_calendar_date,
     parse_clock,
     require_ends_not_before_starts,
 )
-from backend.services.period.period_crud_service import PERIOD_MESSAGES
+from backend.services.period.period_crud_service import commit_with_cancellations
 from backend.services.settings.pipeline import slot_minutes
 
 ENSEMBLE_FIELDS = (
@@ -90,10 +88,8 @@ def set_ensemble(
     )
     for field, value in zip(ENSEMBLE_FIELDS, (starts, ends, room_id, start, end), strict=True):
         setattr(period, field, value)
-    commit_translating(session, PERIOD_MESSAGES)
-    # 전체합주 합주실·시각과 겹치게 된 예약을 취소합니다(services/period_crud_service.py 와 같은 순서).
-    if cancel_reservations_in_focus(session, period, datetime.now()):
-        session.commit()
+    # 전체합주 합주실·시각과 겹치게 된 예약의 취소까지 commit 1회로 저장합니다.
+    commit_with_cancellations(session, period)
     return period
 
 
@@ -103,10 +99,8 @@ def delete_ensemble(session: Session, period_id: int) -> Period:
     session.execute(delete(EnsembleDay).where(EnsembleDay.period_id == period_id))
     for field in ENSEMBLE_FIELDS:
         setattr(period, field, None)
-    session.commit()
     # 전체합주 날짜가 일반 집중 합주일로 돌아가, 그날 허용되던 예약이 거절 대상이 됩니다.
-    if cancel_reservations_in_focus(session, period, datetime.now()):
-        session.commit()
+    commit_with_cancellations(session, period)
     return period
 
 
@@ -134,9 +128,7 @@ def set_ensemble_day(
         .values(period_id=period_id, day=target, **values)
         .on_conflict_do_update(index_elements=["period_id", "day"], set_=values)
     )
-    session.commit()
-    if cancel_reservations_in_focus(session, period, datetime.now()):
-        session.commit()
+    commit_with_cancellations(session, period)
     return period
 
 
@@ -147,10 +139,8 @@ def delete_ensemble_day(session: Session, period_id: int, day: str) -> Period:
     session.execute(
         delete(EnsembleDay).where(EnsembleDay.period_id == period_id, EnsembleDay.day == target)
     )
-    session.commit()
     # 좁게 지정한 시각이 넓은 기본 시각으로 돌아가면, 그 사이에 잡힌 예약이 전체합주 시각과 겹칠 수 있습니다.
-    if cancel_reservations_in_focus(session, period, datetime.now()):
-        session.commit()
+    commit_with_cancellations(session, period)
     return period
 
 
