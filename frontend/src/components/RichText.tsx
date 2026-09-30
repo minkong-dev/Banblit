@@ -25,7 +25,7 @@ import {
 import { Modal } from "./Modal";
 import { ATTACHMENT_ACCEPT } from "../lib/boards";
 import { apiUrl, reason, sendFile } from "../lib/api";
-import { embedKind, sanitizeBody } from "../lib/richText";
+import { PALETTE, embedKind, linkProblem, sanitizeBody, usedColors } from "../lib/richText";
 import { say } from "../lib/toast";
 
 /** 선택할 수 있는 글꼴입니다. 값은 CSS 의 font-family 에 그대로 들어갑니다.
@@ -621,52 +621,6 @@ function LinkDialog({ nowText, nowUrl, onClose, onSave }: {
       {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
     </Modal>
   );
-}
-
-/** 링크 주소를 쓸 수 없는 사유입니다. 쓸 수 있으면 빈 문자열입니다. */
-function linkProblem(url: string): string {
-  const trimmed = url.trim();
-  if (trimmed === "") return "";
-  // lib/richText.ts 의 sanitizeBody 와 같은 기준입니다. javascript: 같은 주소는 붙이지 않습니다.
-  return /^(https?:|mailto:|\/)/i.test(trimmed) ? "" : "http 또는 https 로 시작하는 주소를 입력해주세요.";
-}
-
-/** 팔레트 맨 윗줄의 무채색 8칸입니다. 검정에서 흰색까지입니다. */
-const GREYS = ["#000000", "#444444", "#666666", "#999999", "#BBBBBB", "#DDDDDD", "#EEEEEE", "#FFFFFF"];
-
-/** 팔레트의 색 계열 8가지입니다. 빨강부터 자홍까지 색상환을 8등분한 값입니다(HSL 의 hue). */
-const HUES = [0, 30, 60, 120, 180, 240, 275, 300];
-
-/** 색 계열마다 만드는 밝기 단계입니다. 위 3줄이 밝은 쪽, 가운데가 원색, 아래 3줄이 어두운 쪽입니다.
- *  [밝기, 채도] 순서이고 단위는 퍼센트입니다. */
-const TONES: [number, number][] = [
-  [88, 70], [78, 80], [66, 90], [50, 100], [42, 100], [33, 100], [25, 100], [17, 100],
-];
-
-/** HSL 값을 "#rrggbb" 로 변환합니다. 팔레트 64칸을 손으로 적지 않고 계산해 만듭니다. */
-function hslHex(hue: number, light: number, saturation: number): string {
-  const l = light / 100;
-  const a = (saturation / 100) * Math.min(l, 1 - l);
-  const at = (n: number): string => {
-    const k = (n + hue / 30) % 12;
-    const value = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
-    return Math.round(value * 255).toString(16).padStart(2, "0");
-  };
-  return `#${at(0)}${at(8)}${at(4)}`;
-}
-
-/** 팔레트에 들어가는 색 전부입니다. 첫 줄이 무채색이고 그 아래 8줄이 색 계열마다의 밝기 단계입니다. */
-const PALETTE: string[] = [
-  ...GREYS,
-  ...TONES.flatMap((tone) => HUES.map((hue) => hslHex(hue, tone[0], tone[1]))),
-];
-
-/** 지금 본문에 실제로 쓰인 색입니다. 방금 쓴 색을 다시 고를 때 팔레트를 뒤지지 않아도 됩니다.
- *  color 와 background-color 를 모두 모으고 중복을 제거해 최대 8개까지 반환합니다. */
-function usedColors(html: string): string[] {
-  const found = html.match(/(?:background-)?color:\s*([^;"']+)/gi) ?? [];
-  const values = found.map((one) => one.split(":")[1].trim().toLowerCase());
-  return [...new Set(values)].slice(0, 8);
 }
 
 /** 색 한 칸입니다. 글자색과 배경색이 같은 모양을 씁니다. */

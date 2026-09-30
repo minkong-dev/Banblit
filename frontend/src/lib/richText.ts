@@ -61,13 +61,69 @@ export function sanitizeBody(html: string): string {
   }
 }
 
+/** href·src 에 쓸 수 있는 주소입니다. javascript:·data:·blob: 같은 주소를 막습니다.
+ *  그림은 첨부한 파일의 주소만 사용합니다.
+ *  저장할 때 제거하는 기준(purify)과 링크 dialog 가 거절하는 기준(linkProblem)이 이 값 하나입니다.
+ *  두 곳에 따로 적으면 한쪽만 수정했을 때 dialog 는 허용하는데 저장 시 제거되거나 그 반대가 됩니다. */
+const ALLOWED_URI = /^(?:https?:|mailto:|\/)/i;
+
 function purify(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
-    // data: 와 blob: 주소를 막습니다. 그림은 첨부한 파일의 주소만 사용합니다.
-    ALLOWED_URI_REGEXP: /^(?:https?:|mailto:|\/)/i,
+    ALLOWED_URI_REGEXP: ALLOWED_URI,
   });
+}
+
+/** 링크 주소를 쓸 수 없는 사유입니다. 쓸 수 있을 경우 빈 문자열을 반환합니다.
+ *  아직 입력하지 않은 빈 주소도 빈 문자열을 반환합니다 — dialog 를 열자마자 사유가
+ *  표시되지 않게 합니다. 판정은 앞뒤 공백을 제거한 뒤 합니다. */
+export function linkProblem(url: string): string {
+  const trimmed = url.trim();
+  if (trimmed === "") return "";
+  return ALLOWED_URI.test(trimmed) ? "" : "http 또는 https 로 시작하는 주소를 입력해주세요.";
+}
+
+/** 팔레트 맨 윗줄의 무채색 8칸입니다. 검정에서 흰색까지입니다. */
+const GREYS = ["#000000", "#444444", "#666666", "#999999", "#BBBBBB", "#DDDDDD", "#EEEEEE", "#FFFFFF"];
+
+/** 팔레트의 색 계열 8가지입니다. 빨강부터 자홍까지 색상환을 8등분한 값입니다(HSL 의 hue). */
+const HUES = [0, 30, 60, 120, 180, 240, 275, 300];
+
+/** 색 계열마다 만드는 밝기 단계입니다. 위 3줄이 밝은 쪽, 가운데가 원색, 아래 3줄이 어두운 쪽입니다.
+ *  [밝기, 채도] 순서이고 단위는 퍼센트입니다. */
+const TONES: [number, number][] = [
+  [88, 70], [78, 80], [66, 90], [50, 100], [42, 100], [33, 100], [25, 100], [17, 100],
+];
+
+/** HSL 값을 "#rrggbb" 로 변환합니다. 팔레트 64칸을 손으로 적지 않고 계산해 만듭니다.
+ *  CSS Color 4 의 HSL → RGB 변환 공식입니다. at 은 색 성분 하나를 두 자리 16진수로 반환합니다. */
+export function hslHex(hue: number, light: number, saturation: number): string {
+  const l = light / 100;
+  const a = (saturation / 100) * Math.min(l, 1 - l);
+  const at = (n: number): string => {
+    const k = (n + hue / 30) % 12;
+    const value = l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    // padStart 는 한 자리 16진수 앞에 0 을 채웁니다. "#5a0" 같은 잘못된 값이 되지 않게 합니다.
+    return Math.round(value * 255).toString(16).padStart(2, "0");
+  };
+  // at(0)·at(8)·at(4) 가 각각 빨강·초록·파랑 성분입니다.
+  return `#${at(0)}${at(8)}${at(4)}`;
+}
+
+/** 팔레트에 들어가는 색 전부입니다. 첫 줄이 무채색 8칸이고 그 아래 8줄이 색 계열마다의 밝기 단계입니다. */
+export const PALETTE: string[] = [
+  ...GREYS,
+  ...TONES.flatMap((tone) => HUES.map((hue) => hslHex(hue, tone[0], tone[1]))),
+];
+
+/** 지금 본문에 실제로 쓰인 색입니다. 방금 쓴 색을 다시 고를 때 팔레트를 뒤지지 않아도 됩니다.
+ *  color 와 background-color 를 모두 모으고 중복을 제거해 최대 8개까지 반환합니다. */
+export function usedColors(html: string): string[] {
+  const found = html.match(/(?:background-)?color:\s*([^;"']+)/gi) ?? [];
+  // 정규식이 "color:" 를 포함해 찾으므로 매치마다 콜론이 반드시 있습니다. [1] 은 그 뒤의 값입니다.
+  const values = found.map((one) => one.split(":")[1].trim().toLowerCase());
+  return [...new Set(values)].slice(0, 8);
 }
 
 /** 글자가 아닌데도 본문을 이루는 요소입니다. 그림·소리·영상·PDF·유튜브·표·구분선이 여기 듭니다.

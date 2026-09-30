@@ -178,8 +178,6 @@ export function Tabs<T extends string>(props: {
   );
 }
 
-/** 상단 오른쪽 프로필 버튼 + 프로필 카드입니다. 여러 화면에서 함께 씁니다.
- *  "프로필 설정"은 이 프로필 카드에서 `/profile`로 들어가는 유일한 입구입니다. */
 /** 상단바의 라이트·다크 전환 버튼입니다. 누를 때마다 반대 테마로 전환하고, 선택한 값은 브라우저에 저장합니다.
  *  아이콘은 누르면 전환될 테마를 표시합니다. */
 function ThemeButton() {
@@ -198,6 +196,8 @@ function ThemeButton() {
   );
 }
 
+/** 상단 오른쪽 프로필 버튼 + 프로필 카드입니다. 여러 화면에서 함께 씁니다.
+ *  "프로필 설정"은 이 프로필 카드에서 `/profile`로 들어가는 유일한 입구입니다. */
 export function ProfileMenu() {
   const [open, setOpen] = useState(false);
   usePopoverRouteClose(PROFILE_POP_ID);
