@@ -148,8 +148,8 @@ test("예약 탭에서 지난 달의 날짜는 누를 수 없고 남은 시간�
   expect(enabled, "누를 수 있는 지난 날짜 칸").toBe(0);
 });
 
-// 집중 합주기간에 든 날짜는 어느 탭에서나 칸 바탕에 코랄 빛이 깔립니다(.focus). 기간이 이어지는 칸끼리
-// 띠가 되어 달력 아래 "집중합주 기간" 글자를 읽지 않아도 기간이 어디인지 보입니다.
+// 집중 합주기간에 든 날짜 칸은 어느 탭에서나 .focus class 를 갖습니다(scheduler.css 가 바탕을 코랄 그라데이션으로 채웁니다).
+// 이어지는 날짜 칸이 한 띠로 표시되어, 달력 아래 "집중합주 기간" 문구를 읽지 않아도 기간의 시작일과 종료일이 보입니다.
 test("집중 합주기간의 날짜 칸은 어느 탭에서나 focus 표시를 갖는다", async ({ page }) => {
   await page.goto("/scheduler");
   const today = await page.locator(".grid .cell.today").getAttribute("aria-label");

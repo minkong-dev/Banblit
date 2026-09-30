@@ -52,13 +52,13 @@ body[data-page="scheduler"] {
   /* 달력 줄은 남는 높이를 똑같이 나눠 가집니다. 칸에 다 들어가지 않는 일정은 칸의 overflow:hidden 이 자릅니다.
      좁은 창(767px 이하)은 아래 @media 가 칸 너비 기준 높이로 따로 정합니다. */
   .grid { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: minmax(0, 1fr); min-height: 0; }
-  /* 달을 넘기면 칸 묶음이 새로 그려지며(SchedulerViews 의 key) 짧게 떠오릅니다. 무엇이 바뀌었는지 보여주는
-     움직임입니다. 움직임 줄이기 설정은 shell.css 가 끕니다. */
+  /* 달이나 탭이 바뀌면 칸 묶음을 새로 그리고(SchedulerViews 의 key), 투명도 0 → 1, 위치 6px 아래 → 제자리로
+     0.24초 동안 전환합니다. 움직임 줄이기 설정(prefers-reduced-motion)은 shell.css 가 처리합니다. */
   .grid { animation: monthin .24s cubic-bezier(.22,1,.36,1); }
   @keyframes monthin { from { opacity: 0; transform: translateY(6px); } }
 
-  /* 칸은 세로 선 없이 가로 선만으로 나눕니다. 달력 한 장이 여섯 줄(현으로 여섯줄 동아리)로 읽힙니다.
-     같은 주의 칸은 사이가 비어 있고, 날짜 숫자는 작고 흐리게, 일정 막대가 칸의 주인공입니다. */
+  /* 칸은 세로 선 없이 가로 선(border-top)만으로 나눕니다. 같은 주의 칸 사이에는 선이 없습니다.
+     날짜 숫자는 13px 보조 글자색이고, 일정 막대(.ev)가 칸에서 가장 진합니다. */
   .cell {
     /* 왼쪽 여백 8px 은 요일 글자·오늘 외곽선 안의 내용과 같은 값입니다. 모든 칸의 날짜와 일정 막대가 같은 x 에서 시작합니다. */
     position: relative; min-height: 0; overflow: hidden; padding: 10px 10px 10px 8px;
@@ -66,13 +66,14 @@ body[data-page="scheduler"] {
     border-top: 1px solid var(--line);
     background: none; transition: background-color .13s ease;
   }
-  /* 누를 수 있는 칸은 hover 에서 살짝 떠오릅니다. 움직임 줄이기 설정은 shell.css 가 끕니다. */
+  /* 누를 수 있는 칸에 마우스를 올리면 바탕색이 --card-2 로 바뀌고 일정 막대가 오른쪽으로 2px 이동합니다.
+     움직임 줄이기 설정(prefers-reduced-motion)은 shell.css 가 처리합니다. */
   .cell:hover:not(:disabled) { background: var(--card-2); }
   .cell:hover:not(:disabled) .ev { transform: translateX(2px); }
   .ev { transition: transform .18s cubic-bezier(.22,1,.36,1); }
   .cell.void { cursor: default; }
-  /* 집중 합주기간의 날은 칸 바탕에 코랄 빛이 깔립니다. 이어지는 날끼리 띠가 되어 기간이 어디인지 보입니다.
-     지난 날(disabled)도 같은 색이라 지난 기간도 보입니다. */
+  /* 집중 합주기간에 든 날짜 칸은 바탕을 코랄 12% → 5% 세로 그라데이션으로 채웁니다. 이어지는 날짜끼리 한 띠로 표시되어
+     기간의 시작일과 종료일이 달력에서 보입니다. 지난 날짜(disabled)도 같은 바탕입니다. */
   .cell.focus { background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 12%, transparent), color-mix(in srgb, var(--brand) 5%, transparent)); }
   .cell.focus:hover:not(:disabled) { background: color-mix(in srgb, var(--brand) 18%, transparent); }
   .cell .n { align-self: flex-start; line-height: 26px; font-size: var(--fs-sm); font-weight: 600; color: var(--t2); font-variant-numeric: tabular-nums; }
@@ -86,7 +87,8 @@ body[data-page="scheduler"] {
   .ev { display: flex; align-items: center; gap: 7px; padding: 5px 8px 5px 10px; border-radius: 6px; font-size: 12.5px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; }
   .ev time { font-size: 11.5px; color: var(--t2); margin-left: auto; }
   /* 팀 색은 .team-<색> class 가 --tc·--tc-tint 로 줍니다(lib/teamColors.ts). 색이 없는 팀은 불가능 일정과 같은 회색입니다.
-     팀 색은 옅은 바탕과 왼쪽 3px 선에만 쓰고 글자는 본문색입니다. 글자까지 팀 색이면 20색이 한 화면에서 다투어 읽히지 않습니다.
+     팀 색은 옅은 바탕(--tc-tint)과 왼쪽 3px 선(--tc)에만 쓰고 글자는 본문색(--t1)입니다. 글자까지 팀 색으로 쓰면
+     밝은 팀 색(노랑·하늘)은 옅은 바탕과 대비가 3:1 미만이라 읽히지 않습니다.
      일정 막대(.ev·.blk·.evb)와 배정 블록(assignment.css 의 .ses)이 같은 규칙입니다. */
   :is(.ev, .blk, .evb) { background: var(--tc-tint, var(--off-tint)); color: var(--t1); box-shadow: inset 3px 0 0 var(--tc, var(--off)); }
   :is(.ev, .blk, .evb).off { background: var(--off-tint); color: var(--t2); box-shadow: inset 3px 0 0 var(--off); }
