@@ -25,6 +25,7 @@ from backend.db.models import (
 from backend.services.settings.pipeline import daily_max_hours, session_minutes, slot_minutes
 from backend.db.pipeline import AssignmentRow, save_schedule
 from backend.scheduling.pipeline import Assignment as EngineAssignment
+from backend.scheduling.pipeline import Room as EngineRoom
 from backend.scheduling.pipeline import (
     Resolution,
     TimeInterval,
@@ -68,17 +69,9 @@ def assign_period(
     excluded_member_id 를 지정하면 그 멤버를 명단에서 제외하고 계산합니다. 조율안 확정이
     이 매개변수를 사용합니다. 조율안이 지목한 멤버를 제외하면 조율안과 같은 계산이 됩니다.
     없는 기간·팀·합주실, 상시 기간(kind="open"), 명단에 없는 멤버는 ValueError 로 거부합니다.
+    saved_at 은 저장 시각이자 everyday 기간의 배정 날짜입니다. 부르는 쪽(api)이 넘겨야 같은 입력에 같은 결과가 나옵니다.
     """
-    period = session.get(Period, period_id)
-    if period is None:
-        raise ValueError("그런 기간이 없습니다")
-    if period.kind != "focused":
-        raise ValueError("집중 합주기간에서만 자동 배정을 실행할 수 있습니다")
-    if len(team_ids) != len(set(team_ids)):
-        raise ValueError("팀 id가 중복되었습니다")
-    if len(room_ids) != len(set(room_ids)):
-        raise ValueError("합주실 id가 중복되었습니다")
-
+    period = _check_request(session, period_id, team_ids, room_ids)
     rooms = _load_rooms(session, room_ids)
     team_names = _load_team_names(session, team_ids)
     member_ids_by_team, member_names = _load_members(session, team_ids)
@@ -95,14 +88,8 @@ def assign_period(
     )
 
     engine_rooms = build_engine_rooms(rooms, days, practice_window(period))
-    unit = slot_minutes(session)
-    length = session_minutes(session)
-    daily_max_minutes = daily_max_hours(session) * 60
-    sessions_per_team = capped_sessions_per_team(
-        auto_sessions_per_team(engine_rooms, len(team_ids), unit, length),
-        day_count=len(days),
-        daily_max_minutes=daily_max_minutes,
-        session_minutes=length,
+    unit, length, daily_max_minutes, sessions_per_team = _engine_limits(
+        session, engine_rooms, len(team_ids), len(days)
     )
     engine_teams = build_engine_teams(
         team_ids, member_ids_by_team, unavailable_by_member
@@ -131,6 +118,39 @@ def assign_period(
     )
 
 
+def _check_request(session: Session, period_id: int, team_ids: list[int], room_ids: list[int]) -> Period:
+    """배정 요청을 검증하고 기간을 반환합니다. 없는 기간, 상시 기간(kind="open"), 중복된 팀·합주실 번호는 ValueError 입니다."""
+    period = session.get(Period, period_id)
+    if period is None:
+        raise ValueError("그런 기간이 없습니다")
+    if period.kind != "focused":
+        raise ValueError("집중 합주기간에서만 자동 배정을 실행할 수 있습니다")
+    if len(team_ids) != len(set(team_ids)):
+        raise ValueError("팀 id가 중복되었습니다")
+    if len(room_ids) != len(set(room_ids)):
+        raise ValueError("합주실 id가 중복되었습니다")
+    return period
+
+
+def _engine_limits(
+    session: Session, engine_rooms: list[EngineRoom], team_count: int, day_count: int
+) -> tuple[int, int, int, int]:
+    """저장소 설정에서 엔진에 넘길 값 4개를 (slot_minutes, session_minutes, daily_max_minutes, sessions_per_team) 순서로 반환합니다.
+
+    sessions_per_team 은 합주실의 빈 시간을 팀 수로 나눈 값(auto_sessions_per_team)을 날짜 수와 하루 상한으로 자른 값입니다.
+    """
+    unit = slot_minutes(session)
+    length = session_minutes(session)
+    daily_max_minutes = daily_max_hours(session) * 60
+    sessions_per_team = capped_sessions_per_team(
+        auto_sessions_per_team(engine_rooms, team_count, unit, length),
+        day_count=day_count,
+        daily_max_minutes=daily_max_minutes,
+        session_minutes=length,
+    )
+    return unit, length, daily_max_minutes, sessions_per_team
+
+
 def practice_window(period: Period) -> PracticeWindow:
     """기간에 저장된 팀별합주 시간대입니다. 정하지 않은 쌍은 None 이고, 그날은 합주실 개방시각 전체를 씁니다.
 
@@ -151,8 +171,8 @@ def period_days(period: Period, on: date) -> list[date]:
     """배정을 계산할 날짜 목록을 반환합니다.
 
     everyday 가 켜진 기간은 종료일이 없으므로 계산을 실행한 날 on 하루만 반환합니다.
-    그 외에는 시작일부터 종료일까지 전부 반환합니다. 전체합주 날짜는 팀별 배정 대상이 아니므로 제외합니다
-    (patch_note 8번). 전부 전체합주 날짜면 빈 목록입니다.
+    그 외에는 시작일부터 종료일까지 전부 반환합니다. 전체합주(모든 팀이 함께 하는 합주) 날짜는 팀별 배정 대상이
+    아니므로 제외합니다. 전부 전체합주 날짜면 빈 목록입니다.
     """
     days = [on] if period.everyday else dates_in_period(period.starts_on, period.ends_on)
     first, last = period.ensemble_starts_on, period.ensemble_ends_on
@@ -220,8 +240,8 @@ def _without_member(
     }
 
 
-def open_slots_in_period(session: Session, period: Period) -> list[OpenSlot]:
-    """그 기간에서 어떤 팀도 배정받지 않은 칸을 시작 시각순으로 반환합니다.
+def open_slots_in_period(session: Session, period: Period, on: date) -> list[OpenSlot]:
+    """그 기간에서 어떤 팀도 배정받지 않은 칸을 시작 시각순으로 반환합니다. on 은 everyday 기간의 대상 날짜입니다(period_days).
 
     저장된 배정에 사용된 합주실의 운영시간을 기간의 날짜마다 칸으로 분할한 뒤, 배정 구간과
     겹치는 칸을 제외합니다. 배정은 구간 한 행으로 저장되므로(db/models.py 의 Assignment) 시작
@@ -250,7 +270,7 @@ def open_slots_in_period(session: Session, period: Period) -> list[OpenSlot]:
     ).all()
     room_names = {room.id: room.name for room in rooms}
 
-    days = period_days(period, date.today())
+    days = period_days(period, on)
     open_slots: list[OpenSlot] = []
     # 팀별합주 시간대(practice_window)를 넘기지 않습니다. 시간대 밖의 시간은 자동 배정만 하지
     # 않을 뿐 선착순 예약은 열려 있어야 하기 때문입니다. 합주실이 10시에 열고 팀별합주가 17시부터면

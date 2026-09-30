@@ -1,7 +1,7 @@
 """확정 스케줄·배정 계산·배정기록·되돌리기 endpoint(API의 요청 주소 단위)입니다. 스케줄을 수정하는 endpoint 는 이 모듈에만 있습니다."""
 
 from collections.abc import Callable
-from datetime import datetime
+from datetime import date, datetime
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -80,7 +80,7 @@ def read_schedule(
         rows=[_row_out(row) for row in list_schedule(session, period.id)],
         open_slots=[
             RoomSlotOut(room_id=slot.room_id, room=slot.room, start=slot.start, end=slot.end)
-            for slot in open_slots_in_period(session, period)
+            for slot in open_slots_in_period(session, period, date.today())
         ],
     )
 

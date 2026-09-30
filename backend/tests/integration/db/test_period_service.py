@@ -536,7 +536,7 @@ def test_open_slots_come_from_the_saved_schedule_without_recomputing(
 
     period = db_session.get(Period, period_id)
     assert period is not None
-    left_open = open_slots_in_period(db_session, period)
+    left_open = open_slots_in_period(db_session, period, SAVED_AT.date())
 
     assert len(left_open) == 1
     assert left_open[0].room_id == room_id
@@ -551,7 +551,7 @@ def test_open_slots_are_empty_when_nothing_is_assigned(db_session: Session) -> N
 
     period = db_session.get(Period, period_id)
     assert period is not None
-    assert open_slots_in_period(db_session, period) == []
+    assert open_slots_in_period(db_session, period, SAVED_AT.date()) == []
 
 
 def test_an_everyday_period_assigns_only_the_day_of_the_run(db_session: Session) -> None:
