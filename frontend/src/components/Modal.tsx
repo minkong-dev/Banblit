@@ -86,6 +86,27 @@ export function Modal({ title, hint, foot, panes, children, onClose }: {
   );
 }
 
+/** Modal.foot 에 넣는 취소·저장 버튼 줄입니다. form 4개가 같은 줄을 사용합니다.
+ *  extra 는 삭제처럼 왼쪽에 추가로 붙는 버튼입니다(Teams.tsx 의 팀 삭제). */
+export function ModalFormFoot({ onCancel, onSubmit, pending, submitLabel, pendingLabel = "저장하는 중…", extra }: {
+  onCancel: () => void;
+  onSubmit: () => void;
+  pending: boolean;
+  submitLabel: string;
+  pendingLabel?: string;
+  extra?: React.ReactNode;
+}) {
+  return (
+    <>
+      {extra}
+      <button className="ghost" onClick={onCancel}>취소</button>
+      <button className="primary" disabled={pending} onClick={onSubmit}>
+        {pending ? pendingLabel : submitLabel}
+      </button>
+    </>
+  );
+}
+
 /** 이름(왼쪽)과 숫자·버튼(오른쪽)를 한 줄에 표시합니다. 예: `드럼   − 1 +`. */
 export function Stepper(props: {
   label: string;

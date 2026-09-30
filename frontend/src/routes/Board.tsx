@@ -3,8 +3,7 @@ import { useState } from "react";
 import { Tabs } from "../components/AppShell";
 import { PostBoard } from "../components/PostBoard";
 import { can } from "../lib/account";
-import { reason } from "../lib/api";
-import { LOADING_TEXT } from "../lib/loading";
+import { loadState, stateText } from "../lib/loading";
 import { useMe, useMyTeams, useTeams } from "../components/queries";
 
 import "../styles/board.css";
@@ -16,15 +15,12 @@ export function Board() {
   const mine = useMyTeams();
   const [teamId, setTeamId] = useState<string | null>(null);
   const current = mine.find((team) => String(team.id) === teamId) ?? mine[0];
+  const state = loadState(teams);
 
   return (
     <>
-      {teams.isPending ? (
-        <div className="main"><div className="empty">{LOADING_TEXT}</div></div>
-      ) : teams.isError ? (
-        <div className="main"><div className="empty">{reason(teams.error)}</div></div>
-      ) : mine.length === 0 ? (
-        <div className="main"><div className="empty">소속된 팀이 없어요</div></div>
+      {state.kind !== "ready" || mine.length === 0 ? (
+        <div className="main"><div className="empty">{stateText(state, "소속된 팀이 없어요")}</div></div>
       ) : (
         <>
           {mine.length > 1 ? (

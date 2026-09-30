@@ -14,7 +14,7 @@ import { dayOf, hhmm, stampLabel, WEEKDAY_NAMES } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
 import type { AssignOut, Backup, Period } from "../lib/contract";
 
-/** 팀마다 합주 횟수와 총 시간을 표시합니다. 합주가 0번인 팀은 흐리게 표시합니다. */
+/** 팀마다 배정된 합주 총 시간을 표시합니다. 배정된 합주가 0건인 팀은 흐리게 표시합니다. */
 function TeamCounts({ shown, colors }: { shown: Session[]; colors: Map<string, string> }) {
   return (
     <div className="counts">

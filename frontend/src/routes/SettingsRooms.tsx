@@ -5,7 +5,8 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import type { RefObject } from "react";
 
-import { Card } from "../components/AppShell";
+import { Card, SectionHead } from "../components/AppShell";
+import { useReturnFocus } from "../components/hooks";
 import { Modal } from "../components/Modal";
 import { useSlotMinutes } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
@@ -22,8 +23,6 @@ import {
   Row,
   useFirstField,
   useForm,
-  SectionHead,
-  useRowFocus,
 } from "./SettingsForm";
 
 const BLANK_ROOM = { name: "", opens_at: "18:00", closes_at: "23:00" };
@@ -83,7 +82,7 @@ export function RoomCard(props: {
 }) {
   const { rooms, state, canEdit, canCreate, canDelete, onSaved, onDeleted } = props;
   const slotMinutes = useSlotMinutes();
-  const { editing, open, close, register } = useRowFocus();
+  const { openId: editing, open, close, register } = useReturnFocus();
   const [making, setMaking] = useState(false);
   // 합주실을 삭제하면 서버가 그 합주실의 예약·배정 결과·이전 배정기록을 함께 삭제합니다(외래 키 CASCADE).
   const drop = useMutation({

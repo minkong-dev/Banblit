@@ -5,7 +5,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { NotificationMenu } from "./NotificationMenu";
 import { CloseIcon, MoonIcon, SunIcon, WideMenuIcon } from "./icons";
-import { useDismissible, usePage } from "./hooks";
+import { usePage, usePopoverRouteClose } from "./hooks";
 import { useMe, useMyTeams } from "./queries";
 import { useToast } from "../lib/toast";
 import { Avatar } from "./Avatar";
@@ -46,6 +46,9 @@ type NavItem = { key: string; label: string; to: string };
 
 // 휴대폰 메뉴 판의 id 입니다. 상단바의 햄버거 버튼이 popoverTarget 으로 이 판을 엽니다.
 const MENU_ID = "shellmenu";
+
+// 프로필 popover 의 id 입니다. 프로필 버튼이 popoverTarget 으로 이 판을 엽니다.
+const PROFILE_POP_ID = "profileMenuPop";
 
 // NavLink 는 주소가 to 와 같거나 그 아래(/notices/new 등)이면 aria-current="page" 를 붙입니다.
 // 사이드바에 없는 화면(프로필 설정)에서는 아무 항목도 켜지지 않습니다.
@@ -145,6 +148,17 @@ export function Card({ children }: { children: ReactNode }) {
   return <div className="card">{children}</div>;
 }
 
+/** 카드의 제목 줄입니다. 제목, 설명, 오른쪽 부속(children — 필터·이전/다음 버튼)을 표시합니다. */
+export function SectionHead({ title, desc, children }: { title: string; desc: string; children?: ReactNode }) {
+  return (
+    <div className="sethead">
+      <b>{title}</b>
+      <span>{desc}</span>
+      {children}
+    </div>
+  );
+}
+
 export function Tabs<T extends string>(props: {
   label: string;
   items: readonly { key: T; text: string }[];
@@ -185,7 +199,8 @@ function ThemeButton() {
 }
 
 export function ProfileMenu() {
-  const { open, setOpen, toggle, box } = useDismissible();
+  const [open, setOpen] = useState(false);
+  usePopoverRouteClose(PROFILE_POP_ID);
   const navigate = useNavigate();
   const { me } = useMe();
   const teams = useMyTeams();
@@ -206,7 +221,7 @@ export function ProfileMenu() {
   // 서버 호출이 실패해도 로그인 화면으로 이동합니다. 표시용 cookie(브라우저가 저장해 요청마다 함께 보내는 값)가 남아 있어도
   // 다음 요청은 401 로 거절되므로 현재 화면을 유지할 이유가 없습니다.
   async function handleLogOut(): Promise<void> {
-    setOpen(false);
+    document.getElementById(PROFILE_POP_ID)?.hidePopover();
     try {
       await logOut();
     } catch {
@@ -216,15 +231,21 @@ export function ProfileMenu() {
   }
 
   return (
-    // display:contents 이므로 자리를 차지하지 않습니다. 상단바의 배치는 그대로 두고,
-    // 바깥 클릭을 감지하는 요소만 만듭니다.
-    <div className="profwrap" ref={box}>
-      <button className="profbtn" aria-expanded={open} onClick={toggle}>
+    // display:contents 이므로 자리를 차지하지 않습니다. 상단바의 배치는 그대로 둡니다.
+    <div className="profwrap">
+      <button className="profbtn" aria-expanded={open} popoverTarget={PROFILE_POP_ID}>
         <Avatar id={me?.id ?? null} name={name} photo={me?.avatar ?? null} />
         <span className="nm">{name}</span>
         <span className="ar" aria-hidden="true">▾</span>
       </button>
-      <div className={open ? "pop on" : "pop"} role="dialog" aria-label="내 프로필">
+      <div
+        id={PROFILE_POP_ID}
+        popover="auto"
+        className="pop"
+        role="dialog"
+        aria-label="내 프로필"
+        onToggle={(event) => setOpen(event.newState === "open")}
+      >
         <div className="who">
           <Avatar id={me?.id ?? null} name={name} photo={me?.avatar ?? null} />
           <div><b>{name}</b><small>{sub}</small></div>
@@ -242,7 +263,10 @@ export function ProfileMenu() {
           );
         })}
         <hr />
-        <button className="act" onClick={() => { setOpen(false); void navigate("/profile"); }}>
+        <button
+          className="act"
+          onClick={() => { document.getElementById(PROFILE_POP_ID)?.hidePopover(); void navigate("/profile"); }}
+        >
           프로필 설정<span>›</span>
         </button>
         <button className="act quit" onClick={() => void handleLogOut()}>로그아웃</button>

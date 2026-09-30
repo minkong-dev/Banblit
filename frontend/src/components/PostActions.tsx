@@ -4,11 +4,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { reason } from "../lib/api";
+import { askBlind, askDeletePost } from "../lib/confirm";
 import type { Post } from "../lib/contract";
 import { BLINDED_KEY, checkPost, getJSON } from "../lib/pipeline";
 import { say } from "../lib/toast";
 import { EyeOffIcon, TrashIcon } from "./icons";
-import { Modal } from "./Modal";
+import { Modal, ModalFormFoot } from "./Modal";
 import { RichText } from "./RichText";
 
 /** board_moderate 권한자에게만 표시되는 블라인드 버튼입니다. 글을 삭제하지 않고 목록·상세에서 가립니다.
@@ -40,7 +41,7 @@ export function BlindPost(props: {
         aria-label="글 블라인드"
         disabled={blind.isPending}
         onClick={() => {
-          if (window.confirm("해당 글을 가릴까요? 작성자 본인도 볼 수 없게 되고, 설정의 블라인드 탭에서 되돌릴 수 있어요.")) {
+          if (askBlind()) {
             blind.mutate();
           }
         }}
@@ -81,7 +82,7 @@ export function RemovePost(props: {
         aria-label="글 삭제"
         disabled={remove.isPending}
         onClick={() => {
-          if (window.confirm("해당 글과 첨부된 파일을 모두 삭제할까요?")) {
+          if (askDeletePost()) {
             remove.mutate();
           }
         }}
@@ -123,18 +124,16 @@ export function EditPost(props: {
   return (
     <Modal title="글 수정" onClose={onClose}
       foot={
-        <>
-          <button className="ghost" onClick={onClose}>취소</button>
-          <button className="primary" disabled={send.isPending}
-            onClick={() => {
-              const why = checkPost({ title, body });
-              setBad(why);
-              if (why === "") send.mutate();
-            }}
-          >
-            {send.isPending ? "저장하는 중…" : "저장"}
-          </button>
-        </>
+        <ModalFormFoot
+          onCancel={onClose}
+          pending={send.isPending}
+          submitLabel="저장"
+          onSubmit={() => {
+            const why = checkPost({ title, body });
+            setBad(why);
+            if (why === "") send.mutate();
+          }}
+        />
       }
     >
       <div className="fields">

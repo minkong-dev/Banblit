@@ -14,7 +14,7 @@ test("화면을 이동해도 상단바와 프로필 카드가 다시 생성되�
   for (const name of ["공지사항", /팀 관리|내 팀|팀 찾기/, "대시보드"]) {
     await page.getByRole("link", { name }).click();
     await expect(page.locator('header.top[data-probe="kept"]')).toHaveCount(1);
-    await expect(card).not.toHaveClass(/\bon\b/);
+    await expect(card).toBeHidden();
   }
 });
 
@@ -27,13 +27,13 @@ test("프로필 카드를 연 채 주소가 바뀌면 카드가 닫힌다", asyn
   await openButton.click();
   await page.getByRole("link", { name: "공지사항" }).click();
   await expect(page).toHaveURL(/\/notices$/);
-  await expect(card).not.toHaveClass(/\bon\b/);
+  await expect(card).toBeHidden();
 
   await openButton.click();
-  await expect(card).toHaveClass(/\bon\b/);
+  await expect(card).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(/\/scheduler$/);
-  await expect(card).not.toHaveClass(/\bon\b/);
+  await expect(card).toBeHidden();
 });
 
 test("프로필 카드는 버튼을 누를 때만 열리고 바깥을 누르거나 이동하면 닫힌다", async ({ page }) => {
@@ -42,14 +42,14 @@ test("프로필 카드는 버튼을 누를 때만 열리고 바깥을 누르거�
 
   await page.goto("/scheduler");
   await openButton.click();
-  await expect(card).toHaveClass(/\bon\b/);
+  await expect(card).toBeVisible();
   await page.locator(".page").click({ position: { x: 5, y: 5 } });
-  await expect(card).not.toHaveClass(/\bon\b/);
+  await expect(card).toBeHidden();
 
   await openButton.click();
   await card.getByRole("button", { name: /프로필 설정/ }).click();
   await expect(page).toHaveURL(/\/profile$/);
-  await expect(card).not.toHaveClass(/\bon\b/);
+  await expect(card).toBeHidden();
 });
 
 // 프로필 사진입니다. 없으면 이름 앞 두 글자(span), 올리면 사진(img)이 같은 자리에 표시됩니다.

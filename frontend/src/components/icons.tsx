@@ -258,11 +258,6 @@ export function EraserIcon(props: IconProps) {
   );
 }
 
-/** 제목 문단으로 변경하는 버튼의 아이콘입니다. */
-export function HeadingIcon(props: IconProps) {
-  return <Stroke width={2} {...props}><path d="M5 5v14M15 5v14M5 12h10M18.5 10.5v8.5" /></Stroke>;
-}
-
 /** 인용 문단으로 변경하는 버튼의 아이콘입니다. */
 export function QuoteIcon(props: IconProps) {
   return (

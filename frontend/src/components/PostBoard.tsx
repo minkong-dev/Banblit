@@ -2,66 +2,24 @@
 // 작성 form 은 자기 주소를 가진 화면(routes/PostWrite)이 맡고, 첨부·댓글·조치 부품은 Post*.tsx 가 각각 담당합니다.
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type { RefObject } from "react";
 
 import { Link } from "react-router-dom";
 
-import { reason } from "../lib/api";
 import type { Attachment, Post, PostComment } from "../lib/contract";
-import { LOADING_TEXT, loadState, stateText } from "../lib/loading";
+import { loadState, stateText } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { boardActions, boardListKey, getJSON, stampLabel } from "../lib/pipeline";
-import { Card } from "./AppShell";
+import { Card, SectionHead } from "./AppShell";
+import { useReturnFocus } from "./hooks";
 import { PencilIcon } from "./icons";
 import { Pager } from "./Pager";
 import { AttachmentList } from "./PostAttachments";
 import { BlindPost, EditPost, RemovePost } from "./PostActions";
 import { CommentForm, CommentRow } from "./PostComments";
 import { RichTextView } from "./RichText";
-
-
-
-
-/** focus(키보드 입력을 받는 요소 상태)를 관리합니다: 목록에서 상세 글로 이동할 때 제목으로,
- *  목록으로 돌아올 때 눌렀던 글 버튼으로 옮깁니다. */
-function useDetailFocus(): {
-  openId: number | null;
-  open: (id: number) => void;
-  back: () => void;
-  register: (id: number) => (el: HTMLButtonElement | null) => void;
-  heading: RefObject<HTMLHeadingElement | null>;
-} {
-  const [openId, setOpenId] = useState<number | null>(null);
-  const buttons = useRef(new Map<number, HTMLButtonElement>());
-  const backTo = useRef<number | null>(null);
-  const heading = useRef<HTMLHeadingElement>(null);
-
-  useEffect(() => {
-    if (openId === null) {
-      if (backTo.current === null) return;
-      buttons.current.get(backTo.current)?.focus();
-      backTo.current = null;
-    } else {
-      heading.current?.focus();
-    }
-  }, [openId]);
-
-  return {
-    openId,
-    open: (id) => setOpenId(id),
-    back: () => {
-      backTo.current = openId;
-      setOpenId(null);
-    },
-    register: (id) => (el) => {
-      if (el === null) buttons.current.delete(id);
-      else buttons.current.set(id, el);
-    },
-    heading,
-  };
-}
 
 /** 글 목록을 렌더합니다. 비어 있거나 로딩 중이어도 컨테이너는 유지합니다.
  *  컨테이너 높이를 측정해 한 page(페이지)에 표시할 글 개수를 계산하므로,
@@ -116,8 +74,9 @@ function PostDetail(props: {
       ),
   });
 
-  if (detail.isPending) return <div className="empty">{LOADING_TEXT}</div>;
-  if (detail.isError) return <div className="empty">{reason(detail.error)}</div>;
+  // isSuccess 로 분기해야 TypeScript 가 아래에서 detail.data 를 undefined 없이 좁혀줍니다.
+  // loadState(detail).kind === "ready" 는 같은 조건이지만 별개 값이라 좁히지 못합니다.
+  if (!detail.isSuccess) return <div className="empty">{stateText(loadState(detail), "")}</div>;
 
   const { post, comments, attachments } = detail.data;
   const { canEdit, canDelete } = boardActions(post.author_id, authorId, canModerate);
@@ -194,7 +153,7 @@ export function PostBoard(props: {
 }) {
   const { title, hint, listPath, newPath, authorId, canWrite, canModerate, emptyText } = props;
   const queryKey = boardListKey(listPath);
-  const focus = useDetailFocus();
+  const focus = useReturnFocus<HTMLHeadingElement>();
   const client = useQueryClient();
   const [page, setPage] = useState(1);
 
@@ -215,17 +174,14 @@ export function PostBoard(props: {
   // 댓글을 추가하고 돌아오면 목록의 댓글 개수도 최신 상태로 반영되어야 합니다.
   const backToList = (): void => {
     void client.invalidateQueries({ queryKey });
-    focus.back();
+    focus.close();
   };
 
   return (
     <Card>
       {focus.openId === null ? (
         <>
-          <div className="sethead">
-            <b>{title}</b>
-            <span>{hint}</span>
-          </div>
+          <SectionHead title={title} desc={hint} />
           <PostList
             posts={shown}
             state={state}
@@ -254,7 +210,7 @@ export function PostBoard(props: {
           authorId={authorId}
           canModerate={canModerate}
           listKey={queryKey}
-          heading={focus.heading}
+          heading={focus.openFocus}
           onBack={backToList}
         />
       )}

@@ -12,11 +12,11 @@ import Youtube from "@tiptap/extension-youtube";
 import TextAlign from "@tiptap/extension-text-align";
 import { TableKit } from "@tiptap/extension-table";
 import { BackgroundColor, Color, FontFamily, FontSize, TextStyle } from "@tiptap/extension-text-style";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { Dropdown } from "./Dropdown";
-import { useDismissible } from "./hooks";
+import { usePopoverRouteClose } from "./hooks";
 import {
   AlignCenterIcon, AlignJustifyIcon, AlignLeftIcon, AlignRightIcon, BulletListIcon, ClipIcon,
   CodeIcon, EraserIcon, ImageIcon, LinkIcon, NumberListIcon, PaletteIcon, QuoteIcon, RedoIcon,
@@ -736,35 +736,42 @@ function ColorPanel({ editor, used, disabled }: {
   used: string[];
   disabled: boolean;
 }) {
-  const { open, toggle, box } = useDismissible();
+  const [open, setOpen] = useState(false);
+  const popId = useId();
+  usePopoverRouteClose(popId);
   const color = String(editor.getAttributes("textStyle").color ?? "#191f28");
   const background = String(editor.getAttributes("textStyle").backgroundColor ?? "#ffffff");
   return (
-    <div className="rtcolor" ref={box}>
-      <button type="button" aria-label="글자색과 배경색" aria-expanded={open} disabled={disabled} onClick={toggle}>
+    <div className="rtcolor">
+      <button type="button" aria-label="글자색과 배경색" aria-expanded={open} disabled={disabled} popoverTarget={popId}>
         <PaletteIcon />
         <i className="rtcolorbar" style={{ background: color, borderColor: background }} aria-hidden="true" />
       </button>
-      {!open ? null : (
-        <div className="rtcolorpop" role="dialog" aria-label="글자색과 배경색">
-          <ColorColumn
-            title="글자색"
-            resetLabel="기본값으로 설정"
-            reset={() => editor.chain().focus().unsetColor().run()}
-            value={color}
-            used={used}
-            onPick={(next) => editor.chain().focus().setColor(next).run()}
-          />
-          <ColorColumn
-            title="배경색"
-            resetLabel="투명"
-            reset={() => editor.chain().focus().unsetBackgroundColor().run()}
-            value={background}
-            used={used}
-            onPick={(next) => editor.chain().focus().setBackgroundColor(next).run()}
-          />
-        </div>
-      )}
+      <div
+        id={popId}
+        popover="auto"
+        className="rtcolorpop"
+        role="dialog"
+        aria-label="글자색과 배경색"
+        onToggle={(event) => setOpen(event.newState === "open")}
+      >
+        <ColorColumn
+          title="글자색"
+          resetLabel="기본값으로 설정"
+          reset={() => editor.chain().focus().unsetColor().run()}
+          value={color}
+          used={used}
+          onPick={(next) => editor.chain().focus().setColor(next).run()}
+        />
+        <ColorColumn
+          title="배경색"
+          resetLabel="투명"
+          reset={() => editor.chain().focus().unsetBackgroundColor().run()}
+          value={background}
+          used={used}
+          onPick={(next) => editor.chain().focus().setBackgroundColor(next).run()}
+        />
+      </div>
     </div>
   );
 }

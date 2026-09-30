@@ -4,6 +4,7 @@
 
 import { useNavigate, useParams } from "react-router-dom";
 
+import { SectionHead } from "../components/AppShell";
 import { WriteForm } from "../components/PostWriteForm";
 import { can } from "../lib/account";
 import { boardListKey } from "../lib/pipeline";
@@ -70,10 +71,7 @@ function WritePage({ title, hint, draftPath, listPath, listKey, authorId, allowe
     <>
       <div className="main">
         <div className="card">
-          <div className="sethead">
-            <b>{title}</b>
-            <span>{hint}</span>
-          </div>
+          <SectionHead title={title} desc={hint} />
           {!allowed ? (
             <div className="empty">{denied}</div>
           ) : (

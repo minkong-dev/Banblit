@@ -5,12 +5,11 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Card } from "../components/AppShell";
+import { Card, SectionHead } from "../components/AppShell";
 import { reason } from "../lib/api";
 import { BLINDED_KEY, BOARD_KEY, getJSON, stampLabel } from "../lib/pipeline";
 import { say } from "../lib/toast";
-import { LOADING_TEXT } from "../lib/loading";
-import { SectionHead } from "./SettingsForm";
+import { loadState, stateText } from "../lib/loading";
 import type { Post } from "../lib/contract";
 
 export function BlindedCards() {
@@ -34,13 +33,14 @@ export function BlindedCards() {
   });
 
   const posts = list.data?.posts ?? [];
+  const state = loadState(list);
 
   return (
     <Card>
       <SectionHead title="블라인드" desc="가려 둔 글이에요. 해제하면 원래 게시판으로 돌아가요." />
 
       <div className="roster">
-        {list.isError ? <p className="empty">{reason(list.error)}</p> : null}
+        {state.kind === "failed" ? <p className="empty">{state.why}</p> : null}
         <table>
           <thead>
             <tr>
@@ -77,8 +77,9 @@ export function BlindedCards() {
             ))}
           </tbody>
         </table>
-        {list.isPending ? <p className="empty">{LOADING_TEXT}</p> : null}
-        {list.isSuccess && posts.length === 0 ? <p className="empty">가려 둔 글이 없어요</p> : null}
+        {state.kind !== "failed" && posts.length === 0 ? (
+          <p className="empty">{stateText(state, "가려 둔 글이 없어요")}</p>
+        ) : null}
       </div>
     </Card>
   );

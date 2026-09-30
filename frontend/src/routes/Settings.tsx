@@ -4,7 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { Card, Panel, Tabs } from "../components/AppShell";
+import { Card, Panel, SectionHead, Tabs } from "../components/AppShell";
 import { Dropdown } from "../components/Dropdown";
 import { useMe, usePeriods, useRooms, useSettings, useSlotMinutes, useTeams } from "../components/queries";
 import { can } from "../lib/account";
@@ -12,7 +12,7 @@ import { reason } from "../lib/api";
 import type { Period, Room, Team } from "../lib/contract";
 import { LOADING_TEXT, loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
-import { daysBetween, openingHours, saveSettings } from "../lib/pipeline";
+import { daysBetween, openingHours, PERIOD_DELETE_KEYS, ROOM_DELETE_KEYS, saveSettings } from "../lib/pipeline";
 import {
   DAILY_MAX_HOUR_CHOICES,
   SLOT_MINUTE_CHOICES,
@@ -22,7 +22,7 @@ import {
 } from "../lib/settings";
 import { say } from "../lib/toast";
 import { BlindedCards } from "./SettingsBlinded";
-import { Cell, SectionHead } from "./SettingsForm";
+import { Cell } from "./SettingsForm";
 import { MemberCards } from "./SettingsMembers";
 import { PeriodCard } from "./SettingsPeriods";
 import { ReservationCards } from "./SettingsReservations";
@@ -67,9 +67,13 @@ export function Settings() {
   const teamList = teams.data?.teams ?? [];
 
   // 저장이 끝나면 목록을 서버에서 다시 조회합니다. 화면은 서버에서 받은 값만 표시합니다.
-  function saved(key: string, text: string): () => void {
+  // keys 가 여럿이면 전부 무효화합니다 — 삭제로 서버가 CASCADE 삭제하는 데이터의 캐시까지
+  // 함께 무효화할 때 씁니다(PERIOD_DELETE_KEYS, ROOM_DELETE_KEYS).
+  function saved(keys: string | readonly string[], text: string): () => void {
     return () => {
-      void client.invalidateQueries({ queryKey: [key] });
+      for (const key of typeof keys === "string" ? [keys] : keys) {
+        void client.invalidateQueries({ queryKey: [key] });
+      }
       say(text);
     };
   }
@@ -102,7 +106,7 @@ export function Settings() {
               canCreate={can(me, "room_create")}
               canDelete={can(me, "room_delete")}
               onSaved={saved("rooms", "합주실 정보를 등록했어요.")}
-              onDeleted={saved("rooms", "합주실을 삭제했어요.")}
+              onDeleted={saved(ROOM_DELETE_KEYS, "합주실을 삭제했어요.")}
             />
             <SlotUnitCard
               canEdit={can(me, "room_edit")}
@@ -118,7 +122,7 @@ export function Settings() {
             canCreate={can(me, "period_create")}
             canDelete={can(me, "period_delete")}
             onSaved={saved("periods", "집중 합주기간을 등록했어요.")}
-            onDeleted={saved("periods", "집중 합주기간을 삭제했어요.")}
+            onDeleted={saved(PERIOD_DELETE_KEYS, "집중 합주기간을 삭제했어요.")}
           />
         ) : shown === "members" ? (
           <MemberCards />

@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Card } from "../components/AppShell";
+import { Card, SectionHead } from "../components/AppShell";
 import { useRooms } from "../components/queries";
 import { reason } from "../lib/api";
 import { askCancel } from "../lib/confirm";
@@ -19,8 +19,7 @@ import {
 } from "../lib/pipeline";
 import type { Booking } from "../lib/pipeline";
 import { say } from "../lib/toast";
-import { LOADING_TEXT } from "../lib/loading";
-import { SectionHead } from "./SettingsForm";
+import { loadState, stateText } from "../lib/loading";
 
 // ponytail: 현재 기준 지정한 일수 범위 내의 예약만 표시합니다. 예약 목록 endpoint(API의 요청 주소 단위)가 합주실·날짜 범위 조건으로만 받으므로,
 // 합주실마다 요청을 하나씩 동시에 보냅니다(loadReservationRows). 합주실 수가 증가하여 성능 저하가 발생하거나 더 먼 범위의
@@ -73,6 +72,7 @@ export function ReservationCards() {
     end: row.end,
   })));
   const failures = list.data?.failures ?? [];
+  const state = loadState(list);
 
   return (
     <Card>
@@ -115,8 +115,9 @@ export function ReservationCards() {
             ))}
           </tbody>
         </table>
-        {list.isPending && rooms.data !== undefined ? <p className="empty">{LOADING_TEXT}</p> : null}
-        {list.isSuccess && bookings.length === 0 ? <p className="empty">현재 예약이 없어요</p> : null}
+        {rooms.data !== undefined && (state.kind === "loading" || (state.kind === "ready" && bookings.length === 0)) ? (
+          <p className="empty">{stateText(state, "현재 예약이 없어요")}</p>
+        ) : null}
       </div>
     </Card>
   );

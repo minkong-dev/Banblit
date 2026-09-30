@@ -17,13 +17,21 @@ body[data-page="profile"] {
   .prohead .dept { margin: 0; font-size: 14px; color: var(--t3); }
 
   /* 말풍선은 "프로필 사진 변경" 버튼 바로 아래에 가운데로 표시합니다. 모양·메뉴 줄은 상단바 프로필 카드와 같은
-     .pop·.act 이고 위치만 옮깁니다. */
+     .pop·.act 이고 위치만 옮깁니다. anchor-name 으로 popover(top layer, DOM 상의 조상이 기준이 아닌 계층)가
+     된 .pop 이 이 버튼을 직접 기준 삼게 합니다. */
   .photo { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-  .photo .change { min-height: 32px; padding: 4px 10px; border-radius: 8px; font-size: 13.5px; color: var(--t3); transition: color .15s ease; }
+  .photo .change {
+    anchor-name: --photo-trigger;
+    min-height: 32px; padding: 4px 10px; border-radius: 8px; font-size: 13.5px; color: var(--t3); transition: color .15s ease;
+  }
   .photo .change:hover:not(:disabled) { color: var(--t1); }
   .photo .change:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   .photo .big { width: 128px; height: 128px; border-radius: 50%; background: var(--brand); color: var(--brand-on); display: grid; place-items: center; font-size: 36px; font-weight: 700; object-fit: cover; }
-  .photo .pop { left: 50%; right: auto; top: 44px; width: 220px; padding: 8px; transform: translateX(-50%); }
+  .photo .pop {
+    position-anchor: --photo-trigger;
+    top: anchor(bottom); left: anchor(center); right: auto; bottom: auto; margin-top: 8px;
+    width: 220px; padding: 8px; transform: translateX(-50%);
+  }
   .photo .pop::before { left: calc(50% - 7px); right: auto; }
   /* 카드는 기본으로 넘치는 내용을 자릅니다. 말풍선이 카드 밖으로 나갈 수 있으므로 프로필 카드는 자르지 않습니다. */
   .card:has(.prohead) { overflow: visible; }
