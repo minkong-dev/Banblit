@@ -24,6 +24,7 @@ import { getJSON, reason } from "../lib/api";
 import { say } from "../lib/toast";
 import { cohortLabel } from "../lib/roster";
 import { PERMISSION_ITEMS, can } from "../lib/account";
+import { permissionSetProblem } from "../lib/validate";
 import { askDelete, askExpel } from "../lib/confirm";
 import { useMe } from "../components/queries";
 import { expelMember } from "../lib/pipeline";
@@ -91,15 +92,7 @@ function SetForm(props: {
           pending={send.isPending}
           submitLabel="저장"
           onSubmit={() => {
-            const clash = taken.some((other) => other.trim() === form.name.trim());
-            const why =
-              form.name.trim() === ""
-                ? "권한 이름을 입력해 주세요."
-                : clash
-                  ? "이미 같은 이름을 가진 권한이 있어요."
-                  : form.description.trim() === ""
-                    ? "이 권한에 대한 설명을 작성해주세요."
-                    : "";
+            const why = permissionSetProblem(form, taken);
             setBad(why);
             if (why === "") send.mutate();
           }}

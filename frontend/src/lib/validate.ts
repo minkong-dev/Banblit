@@ -128,6 +128,20 @@ export function uniqueNameMessage(name: string, taken: string[], what: string): 
   return clash ? `같은 이름의 ${what}이 이미 있습니다.` : "";
 }
 
+/** 권한 집합을 저장할 수 없는 사유입니다. 저장할 수 있을 경우 빈 문자열을 반환합니다.
+ *  이름 없음 → 이름 중복 → 설명 없음 순서로 검사합니다. 입력칸의 위아래 순서와 같아야
+ *  사용자가 위에서부터 채울 수 있습니다.
+ *  중복은 앞뒤 공백을 제거한 뒤 비교하므로 공백만 다른 이름도 같은 이름으로 판정합니다.
+ *  taken 은 이미 쓰인 권한 집합 이름이고, 수정 중인 집합의 이름은 호출부가 제외해 넘깁니다. */
+export function permissionSetProblem(
+  draft: { name: string; description: string }, taken: readonly string[],
+): string {
+  const name = draft.name.trim();
+  if (name === "") return "권한 이름을 입력해 주세요.";
+  if (taken.some((other) => other.trim() === name)) return "이미 같은 이름을 가진 권한이 있어요.";
+  return draft.description.trim() === "" ? "이 권한에 대한 설명을 작성해주세요." : "";
+}
+
 /** 학번입니다. 숫자 8자리만 수신합니다. 서버의 같은 규칙은 input.py의 require_student_no()입니다. */
 export function studentNoMessage(value: string): string {
   const trimmed = value.trim();

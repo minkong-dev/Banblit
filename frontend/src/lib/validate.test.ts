@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   PASSWORD_SYMBOLS,
+  permissionSetProblem,
   departmentMessage,
   emailMessage,
   passwordChecks,
@@ -206,5 +207,38 @@ describe("personNameMessage", () => {
 
   it.each(["박서연1", "박서연!", "20260001"])("숫자와 기호는 막는다 — %s", (bad) => {
     expect(personNameMessage(bad)).toBe("이름은 한글과 영어만 사용 가능해요.");
+  });
+});
+
+describe("permissionSetProblem — 권한 집합을 저장할 수 없는 사유", () => {
+  const taken = ["운영자", "예약 담당"];
+
+  it("이름과 설명이 모두 있고 겹치지 않으면 빈 문자열을 반환한다", () => {
+    expect(permissionSetProblem({ name: "총무", description: "회비를 관리해요" }, taken)).toBe("");
+  });
+
+  it("이름이 비었으면 이름 사유를 먼저 반환한다", () => {
+    // 설명도 비어 있지만 이름 사유가 먼저 나옵니다. 입력 순서와 같아야 사용자가 위에서부터 채웁니다.
+    expect(permissionSetProblem({ name: "  ", description: "" }, taken))
+      .toBe("권한 이름을 입력해 주세요.");
+  });
+
+  it("이미 있는 이름이면 중복 사유를 반환한다", () => {
+    expect(permissionSetProblem({ name: "운영자", description: "설명" }, taken))
+      .toBe("이미 같은 이름을 가진 권한이 있어요.");
+  });
+
+  it("앞뒤 공백만 다른 이름도 중복으로 판정한다", () => {
+    expect(permissionSetProblem({ name: " 운영자 ", description: "설명" }, taken))
+      .toBe("이미 같은 이름을 가진 권한이 있어요.");
+  });
+
+  it("설명이 비었으면 설명 사유를 반환한다", () => {
+    expect(permissionSetProblem({ name: "총무", description: "   " }, taken))
+      .toBe("이 권한에 대한 설명을 작성해주세요.");
+  });
+
+  it("이미 쓰인 이름이 없으면 중복을 판정하지 않는다", () => {
+    expect(permissionSetProblem({ name: "운영자", description: "설명" }, [])).toBe("");
   });
 });
