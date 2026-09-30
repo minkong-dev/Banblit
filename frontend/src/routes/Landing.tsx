@@ -115,6 +115,8 @@ export function Landing() {
 
       <section className="hero">
         <div>
+          {/* 모서리 메타입니다. 고정폭 작은 글자로 동아리 이름과 창단 연도를 둡니다. */}
+          <p className="nav-meta">In six strings / since 1981</p>
           <h1>
             합주시간 배정, 어렵지 않을 때도 됐으니까.<br />
             지금, <span className="mark">BANBLIT.</span>
