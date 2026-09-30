@@ -1,6 +1,6 @@
-/* 랜딩은 한 장의 공연 포스터입니다. 어두운 공연장 사진 위에 큰 글자로 시작해 흰 지면으로 넘어갑니다.
-   보는 사람의 화면 설정(밝음·어두움)을 따르지 않고 이 모습으로 고정합니다 — 흐름 자체가 브랜드입니다.
-   글꼴은 앱과 같은 Pretendard 하나이고, 크기 대비(본문 16px ↔ 제목 최대 112px)와 굵기 대비(400 ↔ 800)로 위계를 만듭니다. */
+/* 랜딩 화면의 규칙입니다. 어두운 공연장 사진 위의 제목으로 시작해 흰 바탕의 본문으로 이어집니다.
+   보는 사람의 화면 설정(밝음·어두움)을 따르지 않고 이 색으로 고정합니다.
+   글꼴은 앱과 같은 Pretendard 1종이고, 크기(본문 16px, 제목 최대 144px)와 굵기(300·400·700·800)로 위계를 만듭니다. */
 body[data-page="landing"] {
   --ink: #0E0F11;
   --ink-2: #3D4046;
@@ -130,7 +130,7 @@ body[data-page="landing"] {
   /* 겹친 두 장 + 오른쪽 글 */
   .stack { display: grid; grid-template-columns: 1.1fr .9fr; gap: 72px; align-items: center; }
   .shots { position: relative; padding-bottom: 110px; }
-  /* 사진은 흰 테두리를 두른 인화지(스티커)입니다(Trevor Noah·Decathlon 방식). 서로 다른 각도로 살짝 기울여 겹칩니다. */
+  /* 사진 2장에 10px 흰 테두리를 두르고, 뒤 사진은 -3도, 앞 사진은 2.5도 기울여 겹칩니다(Trevor Noah·Decathlon 사이트의 방식). */
   .shot {
     border: 10px solid #fff; border-radius: 3px;
     box-shadow: 0 24px 60px rgba(14,15,17,.22), 0 2px 6px rgba(14,15,17,.12);
@@ -207,11 +207,11 @@ body[data-page="landing"] {
   .admin li span { color: #A3A8B0; font-size: 15px; line-height: 1.7; }
 
   /* ===== 마지막 =====
-     BANBLIT 이 화면 폭만큼 커집니다. 글자가 곧 장면입니다. */
+     BANBLIT 을 화면 폭에 맞춰 최대 240px 로 표시합니다. */
   .end {
     color: var(--ink); text-align: left;
     padding-bottom: clamp(60px, 8vw, 120px);
-    /* 여섯 줄(기타 현)이 거대한 BANBLIT 뒤를 가로지릅니다. 1px 선 여섯 개를 같은 간격으로 깝니다. */
+    /* 1px 가로선 6개를 BANBLIT 글자 뒤에 6% 간격으로 깝니다. 기타 줄 6개를 나타냅니다. */
     background:
       linear-gradient(var(--edge), var(--edge)) 0 34% / 100% 1px no-repeat,
       linear-gradient(var(--edge), var(--edge)) 0 40% / 100% 1px no-repeat,
@@ -231,7 +231,7 @@ body[data-page="landing"] {
   footer .b { font-weight: 800; letter-spacing: .18em; color: var(--ink); font-size: 13px; margin-right: auto; }
   footer button:disabled { cursor: default; }
 
-  /* 스크롤을 따라 글이 떠오릅니다(routes/Landing 의 useRiseOnScroll 이 .in 을 붙입니다). */
+  /* .rise 요소는 화면에 들어올 때 투명도 0 → 1, 위치 22px 아래 → 제자리로 전환합니다(routes/Landing 의 useRiseOnScroll 이 .in 을 추가합니다). */
   .rise { opacity: 0; transform: translateY(22px); transition: opacity .8s ease, transform .8s cubic-bezier(.22,1,.36,1); }
   .rise.in { opacity: 1; transform: none; }
 

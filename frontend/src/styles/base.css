@@ -44,8 +44,8 @@ body { margin: 0; word-break: keep-all; overflow-wrap: break-word; }
    사용하는 곳의 color-scheme 을 보고 하나를 고릅니다. 어느 쪽인지는 shell.css 가 body 에
    정합니다(main.tsx 가 첫 렌더링 전에 html 의 data-theme 을 설정합니다). */
 :root {
-  /* 화면은 상자(카드) 없이 한 장의 종이처럼 그립니다. 바탕이 곧 면이고, 구획은 1px 선(--line)이 나눕니다.
-     --card 는 바탕 위에 떠 있는 것(모달·팝업·드롭다운·입력칸)에만 씁니다. */
+  /* 화면은 카드(테두리·그림자가 있는 상자) 없이 바탕색 1면에 그리고, 구획은 1px 선(--line)으로 나눕니다.
+     --card 는 바탕 위에 겹쳐 표시되는 요소(모달·팝업·드롭다운·입력칸)에만 씁니다. */
   --bg: light-dark(#FFFFFF, #15181D);
   --card: light-dark(#FFFFFF, #1D2127);
   --card-2: light-dark(#F1F2F4, #262B32);
