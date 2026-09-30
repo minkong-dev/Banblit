@@ -25,6 +25,22 @@ PERIOD_MESSAGES = {
 }
 
 
+def commit_with_cancellations(session: Session, period: Period) -> None:
+    """기간 변경과, 그 변경으로 거절 대상이 된 예약의 취소·알림을 commit 1회로 저장합니다.
+
+    취소(cancel_reservations_in_focus)는 시작할 때 flush 하므로 기간 제약 위반이 그 flush 에서 발생합니다.
+    commit_translating 의 action 안에서 실행해, 그 위반도 rollback 되고 PERIOD_MESSAGES 의 문장으로 변환됩니다.
+    기간을 먼저 commit 하고 취소를 두 번째 commit 으로 저장하면, 두 번째 commit 이 실패했을 때 기간만 바뀌고
+    취소·알림은 저장되지 않았습니다(2026-09-29 발견).
+    """
+
+    def action() -> None:
+        cancel_reservations_in_focus(session, period, datetime.now())
+        session.commit()
+
+    commit_translating(session, PERIOD_MESSAGES, action)
+
+
 # 팀별합주 시간대 한 쌍입니다. 시각 두 개를 "HH:MM" 문자열로 받습니다. None 이면 그 쌍을 정하지
 # 않았다는 뜻이고, 그날은 합주실 개방시각 전체를 씁니다.
 ClockPair = tuple[str, str] | None
@@ -99,11 +115,7 @@ def create_period(
         **(WindowIn() if window is None else window).columns(),
     )
     session.add(period)
-    # 기간을 먼저 저장한 뒤 그 안에 남은 예약을 취소합니다. 취소가 먼저면 그 안의 flush 가 기간 제약 위반을
-    # commit_translating 밖에서 일으켜 사람이 읽을 문장으로 바뀌지 않습니다.
-    commit_translating(session, PERIOD_MESSAGES)
-    if cancel_reservations_in_focus(session, period, datetime.now()):
-        session.commit()
+    commit_with_cancellations(session, period)
     return period
 
 
@@ -168,12 +180,7 @@ def update_period(
         changes.update(window.columns())
     for field, value in changes.items():
         setattr(period, field, value)
-
-    # 기간을 먼저 저장한 뒤 그 안에 남은 예약을 취소합니다. 취소가 먼저면 그 안의 flush 가 기간 제약 위반을
-    # commit_translating 밖에서 일으켜 사람이 읽을 문장으로 바뀌지 않습니다.
-    commit_translating(session, PERIOD_MESSAGES)
-    if cancel_reservations_in_focus(session, period, datetime.now()):
-        session.commit()
+    commit_with_cancellations(session, period)
     return period
 
 
