@@ -10,6 +10,7 @@ import {
   inRanges,
   firstTaken,
   isRangeFree,
+  withPastTaken,
   acceptsDrag,
   monthCells,
   roomBounds,
@@ -108,6 +109,32 @@ describe("hoursLabel — 칸 개수를 사람이 읽는 시간으로", () => {
 
   it("하나도 없으면 0시간이다", () => {
     expect(hoursLabel(0)).toBe("0시간");
+  });
+});
+
+describe("withPastTaken — 오늘은 시작 시각이 지난 칸을 찬 칸으로 표시한다", () => {
+  it("서버 규칙(starts_at <= now 거절)과 같이, 시작 시각이 now 와 같거나 이른 칸을 true 로 바꾼다", () => {
+    // 09시 개장, 60분 칸 4개(09·10·11·12시 시작). now 는 10:00 → 09시·10시 칸은 시작이 now 이하입니다.
+    const now = new Date(2026, 8, 30, 10, 0);
+    expect(withPastTaken([false, false, true, false], now, 9, 60)).toEqual([true, true, true, false]);
+  });
+
+  it("now 가 개장 전이면 그대로 반환한다", () => {
+    const now = new Date(2026, 8, 30, 8, 59);
+    expect(withPastTaken([false, false], now, 9, 60)).toEqual([false, false]);
+  });
+
+  it("자정 직후(00:00)에 0시 개장이면 첫 칸만 시작 시각이 now 와 같아 true 이다", () => {
+    expect(withPastTaken([false, false], new Date(2026, 8, 30, 0, 0), 0, 60)).toEqual([true, false]);
+  });
+
+  it("마지막 칸의 시작 시각도 지났으면 전부 true 이다", () => {
+    expect(withPastTaken([false, false, false], new Date(2026, 8, 30, 23, 30), 9, 60)).toEqual([true, true, true]);
+  });
+
+  it("30분 칸이면 30분 단위로 판정한다", () => {
+    // 09:00·09:30·10:00·10:30 시작. now 10:00 → 10:00 칸까지 true.
+    expect(withPastTaken([false, false, false, false], new Date(2026, 8, 30, 10, 0), 9, 30)).toEqual([true, true, true, false]);
   });
 });
 

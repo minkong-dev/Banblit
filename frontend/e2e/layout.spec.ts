@@ -222,8 +222,9 @@ test("넓은 창에서 대시보드 달력이 스크롤 없이 한 화면에 들
 });
 
 // 프로필 카드는 설정 화면에서 옮겨 왔습니다. 설정 화면 전용 CSS 에 남은 규칙이 있으면 프로필에서는 버튼이
-// 글자만 남고 입력칸이 카드 가장자리에 붙습니다. 브라우저 기본 파일 선택 칸은 보이지 않아야 합니다.
-test("프로필 편집 상태의 저장 버튼은 바탕색을 갖고 입력칸은 카드 안쪽 여백을 둔다", async ({ page }) => {
+// 글자만 남습니다. 브라우저 기본 파일 선택 칸은 보이지 않아야 합니다.
+// 화면은 상자 없이 선으로만 구획하므로(2026-09-30) 입력칸 묶음(.fields)의 왼쪽·오른쪽 끝은 카드의 끝과 같습니다.
+test("프로필 편집 상태의 저장 버튼은 바탕색을 갖고 입력칸 묶음은 카드의 양 끝에 맞는다", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/profile");
   await page.getByRole("button", { name: "프로필 편집" }).click();
@@ -231,13 +232,13 @@ test("프로필 편집 상태의 저장 버튼은 바탕색을 갖고 입력칸�
   const background = await page.getByRole("button", { name: "저장", exact: true })
     .evaluate((el) => getComputedStyle(el).backgroundColor);
   expect(background).not.toBe("rgba(0, 0, 0, 0)");
-  const gaps = await page.evaluate(() => [...document.querySelectorAll(".card .fields input")].map((el) => {
+  const gaps = await page.evaluate(() => [...document.querySelectorAll(".card .fields")].map((el) => {
     const card = el.closest(".card")!.getBoundingClientRect();
-    const input = el.getBoundingClientRect();
-    return Math.min(input.left - card.left, card.right - input.right);
+    const fields = el.getBoundingClientRect();
+    return Math.max(fields.left - card.left, card.right - fields.right);
   }));
   expect(gaps.length).toBeGreaterThan(0);
-  for (const gap of gaps) expect(gap).toBeGreaterThanOrEqual(16);
+  for (const gap of gaps) expect(gap).toBe(0);
 });
 
 // 기준 휴대폰은 갤럭시 S24(360×780)와 아이폰 17(402×874)입니다(2026-09-28 사용자 결정).
@@ -280,7 +281,7 @@ test("기준 휴대폰 폭에서 알림 말풍선이 화면 안에 들어온다"
 // 휴대폰에서 날짜 dialog 의 카드 3장은 세로로 쌓이고 dialog 가 스크롤합니다. 카드가 dialog 높이에 맞춰 줄어들면
 // 가운데 입력 카드가 잘리고 버튼 줄이 입력칸을 가립니다.
 test("기준 휴대폰 폭에서 날짜 dialog 의 입력 카드가 잘리지 않는다", async ({ page }) => {
-  await page.setViewportSize(PHONES[0]!);
+  await page.setViewportSize(PHONES[0]);
   await page.goto("/scheduler");
   await page.locator(".grid .cell:not(:disabled)").nth(10).click();
   const col = page.locator("dialog[open] .pane .col").first();
@@ -355,7 +356,7 @@ test("기준 휴대폰 폭에서 예약 달력의 날짜 칸 글씨와 막대가
 // 멤버 목록의 휴대폰 묶음 배치는 멤버 표에만 씁니다. 같은 .roster 를 쓰는 예약·블라인드 표는 열 구성이 달라
 // 표 모양을 유지하고 표 안에서만 가로로 스크롤합니다.
 test("기준 휴대폰 폭에서 설정의 예약·블라인드 표는 표 모양을 유지하고 화면을 밀지 않는다", async ({ page }) => {
-  await page.setViewportSize(PHONES[0]!);
+  await page.setViewportSize(PHONES[0]);
   for (const tab of ["예약", "블라인드"]) {
     await page.goto("/settings");
     await page.getByRole("tab", { name: tab }).click();
@@ -370,7 +371,7 @@ test("기준 휴대폰 폭에서 설정의 예약·블라인드 표는 표 모�
 });
 
 test("멤버 표는 휴대폰 묶음 배치에서도 표 구조를 화면 읽기에 전달한다", async ({ page }) => {
-  await page.setViewportSize(PHONES[0]!);
+  await page.setViewportSize(PHONES[0]);
   await page.goto("/settings");
   await page.getByRole("tab", { name: "멤버" }).click();
   await expect(page.getByRole("table")).toBeVisible();
