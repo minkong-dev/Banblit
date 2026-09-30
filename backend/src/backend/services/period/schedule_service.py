@@ -14,7 +14,7 @@ ScheduleRow = tuple[int, str, int, str, datetime, datetime]
 def get_period_or_raise(session: Session, period_id: int) -> Period:
     period = session.get(Period, period_id)
     if period is None:
-        raise ValueError("그런 기간이 없습니다")
+        raise ValueError("존재하지 않는 기간입니다")
     return period
 
 

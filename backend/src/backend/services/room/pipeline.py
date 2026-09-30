@@ -5,6 +5,7 @@ from backend.services.room.room_service import (
     ROOM_MESSAGES,
     create_room,
     delete_room,
+    get_room_or_raise,
     list_rooms,
     update_room,
 )
@@ -13,6 +14,7 @@ __all__ = [
     "ROOM_MESSAGES",
     "create_room",
     "delete_room",
+    "get_room_or_raise",
     "list_rooms",
     "update_room",
 ]

@@ -255,7 +255,7 @@ def test_unknown_period_is_rejected(db_session: Session) -> None:
     team_id = _team_with_member(db_session, "A", "김민수")
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
-    with pytest.raises(ValueError, match="그런 기간이 없습니다"):
+    with pytest.raises(ValueError, match="존재하지 않는 기간입니다"):
         assign_period(db_session, 999999, [team_id], [room_id], saved_at=SAVED_AT)
 
 

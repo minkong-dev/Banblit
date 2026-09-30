@@ -41,9 +41,7 @@ def update_room(
     closes_at: str | None,
 ) -> Room:
     """전달된 항목만 수정합니다. 전달되지 않은 항목은 기존 값을 그대로 검증에 다시 적용합니다."""
-    room = session.get(Room, room_id)
-    if room is None:
-        raise ValueError("그런 합주실이 없습니다")
+    room = get_room_or_raise(session, room_id)
 
     new_opens = (
         _parse_room_clock(opens_at, "여는 시각") if opens_at is not None else room.opens_at
@@ -76,8 +74,14 @@ def delete_room(session: Session, room_id: int) -> None:
     전체합주 합주실로 지정된 합주실은 settings.ensemble_room_id 가 CASCADE 가 아니라서 DB 가
     거절하고, 그 요청은 409 로 반환됩니다.
     """
-    room = session.get(Room, room_id)
-    if room is None:
-        raise ValueError("그런 합주실이 없습니다")
+    room = get_room_or_raise(session, room_id)
     session.delete(room)
     commit_translating(session, ROOM_MESSAGES)
+
+
+def get_room_or_raise(session: Session, room_id: int) -> Room:
+    """room_id 의 합주실을 반환합니다. 없으면 ValueError 입니다. 다른 모듈은 pipeline 을 통해 이 함수를 씁니다."""
+    room = session.get(Room, room_id)
+    if room is None:
+        raise ValueError("존재하지 않는 합주실입니다")
+    return room

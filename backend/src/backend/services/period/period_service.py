@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from collections import defaultdict
 from datetime import date, datetime, time
 
 from sqlalchemy import select
@@ -22,6 +23,7 @@ from backend.db.models import (
     Team,
     UnavailableTime,
 )
+from backend.services.period.schedule_service import get_period_or_raise
 from backend.services.settings.pipeline import daily_max_hours, session_minutes, slot_minutes
 from backend.db.pipeline import AssignmentRow, save_schedule
 from backend.scheduling.pipeline import Assignment as EngineAssignment
@@ -120,9 +122,7 @@ def assign_period(
 
 def _check_request(session: Session, period_id: int, team_ids: list[int], room_ids: list[int]) -> Period:
     """배정 요청을 검증하고 기간을 반환합니다. 없는 기간, 상시 기간(kind="open"), 중복된 팀·합주실 번호는 ValueError 입니다."""
-    period = session.get(Period, period_id)
-    if period is None:
-        raise ValueError("그런 기간이 없습니다")
+    period = get_period_or_raise(session, period_id)
     if period.kind != "focused":
         raise ValueError("집중 합주기간에서만 자동 배정을 실행할 수 있습니다")
     if len(team_ids) != len(set(team_ids)):
@@ -216,10 +216,10 @@ def _load_members(
         .where(TeamSlot.team_id.in_(team_ids))
         .order_by(TeamSlot.team_id, Member.id)
     ).all()
-    member_ids_by_team: dict[int, list[int]] = {}
+    member_ids_by_team: dict[int, list[int]] = defaultdict(list)
     member_names: dict[int, str] = {}
     for team_id, member_id, member_name in rows:
-        member_ids_by_team.setdefault(team_id, []).append(member_id)
+        member_ids_by_team[team_id].append(member_id)
         member_names[member_id] = member_name
     return member_ids_by_team, member_names
 
@@ -262,9 +262,9 @@ def open_slots_in_period(session: Session, period: Period, on: date) -> list[Ope
     # ponytail: 칸마다 그 합주실의 배정 구간을 전부 훑습니다(칸 수 × 구간 수). 합주실 하나의
     # 기간 전체가 대상이라 지금 규모에서는 문제가 없습니다. 느려지면 구간을 시작 시각순으로
     # 정렬해 이분 탐색으로 변경합니다.
-    occupied: dict[int, list[tuple[datetime, datetime]]] = {}
+    occupied: dict[int, list[tuple[datetime, datetime]]] = defaultdict(list)
     for room_id, starts_at, ends_at in taken:
-        occupied.setdefault(room_id, []).append((starts_at, ends_at))
+        occupied[room_id].append((starts_at, ends_at))
     rooms = session.scalars(
         select(Room).where(Room.id.in_(occupied.keys()))
     ).all()
@@ -304,9 +304,9 @@ def _load_unavailable(
     rows = session.scalars(
         select(UnavailableTime).where(UnavailableTime.member_id.in_(member_ids))
     ).all()
-    by_member: dict[int, list[UnavailableTime]] = {}
+    by_member: dict[int, list[UnavailableTime]] = defaultdict(list)
     for row in rows:
-        by_member.setdefault(row.member_id, []).append(row)
+        by_member[row.member_id].append(row)
     return {
         member_id: expand_unavailable(member_rows, window_start, window_end)
         for member_id, member_rows in by_member.items()

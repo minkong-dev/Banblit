@@ -11,6 +11,7 @@ from backend.services.validation.pipeline import (
     require_valid_kind,
 )
 from backend.db.models import Period
+from backend.services.period.schedule_service import get_period_or_raise
 from backend.services.reservation.pipeline import cancel_reservations_in_focus
 from backend.db.pipeline import commit_translating
 
@@ -31,7 +32,7 @@ def commit_with_cancellations(session: Session, period: Period) -> None:
     취소(cancel_reservations_in_focus)는 시작할 때 flush 하므로 기간 제약 위반이 그 flush 에서 발생합니다.
     commit_translating 의 action 안에서 실행해, 그 위반도 rollback 되고 PERIOD_MESSAGES 의 문장으로 변환됩니다.
     기간을 먼저 commit 하고 취소를 두 번째 commit 으로 저장하면, 두 번째 commit 이 실패했을 때 기간만 바뀌고
-    취소·알림은 저장되지 않았습니다(2026-09-29 발견).
+    취소·알림은 저장되지 않았습니다.
     """
 
     def action() -> None:
@@ -164,9 +165,7 @@ def update_period(
     window 가 None 이면 저장된 시간대를 그대로 둡니다. 지우려면 두 쌍이 None 인 WindowIn 을
     넘깁니다. "보내지 않음"과 "지움"을 구분해야, 다른 값만 고치는 요청이 시간대를 지우지 않습니다.
     """
-    period = session.get(Period, period_id)
-    if period is None:
-        raise ValueError("그런 기간이 없습니다")
+    period = get_period_or_raise(session, period_id)
 
     # _validated_changes 를 먼저 통과시킨 뒤에만 대입합니다. 대입이 앞서면 검증이 실패해도
     # session 에 dirty 상태로 남아, 같은 session 에서 조회가 한 번이라도 실행되면 autoflush 로
@@ -190,8 +189,6 @@ def delete_period(session: Session, period_id: int) -> None:
     그 기간의 배정 결과(assignments)·계산 기록(assignment_runs)·이전 배정기록(assignment_backups)은
     외래 키 ondelete=CASCADE 로 DB 가 함께 삭제합니다. 예약은 기간과 연결되어 있지 않아 남습니다.
     """
-    period = session.get(Period, period_id)
-    if period is None:
-        raise ValueError("그런 기간이 없습니다")
+    period = get_period_or_raise(session, period_id)
     session.delete(period)
     session.commit()

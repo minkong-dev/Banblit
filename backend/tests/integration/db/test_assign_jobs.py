@@ -139,7 +139,7 @@ def test_assign_on_an_unknown_period_is_rejected_immediately(
     )
 
     assert response.status_code == 422
-    assert "그런 기간이 없습니다" in response.json()["detail"]
+    assert "존재하지 않는 기간입니다" in response.json()["detail"]
 
 
 def test_unknown_job_id_is_rejected(

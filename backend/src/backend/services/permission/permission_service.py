@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import NamedTuple
 
 from sqlalchemy import Select, select
@@ -148,14 +149,14 @@ class SetMember(NamedTuple):
 
 def list_permission_sets(session: Session) -> list[tuple[PermissionSet, list[SetMember]]]:
     """permission set을 id 오름차순으로, 그 permission set을 가진 멤버와 함께 반환합니다."""
-    holders: dict[int, list[SetMember]] = {}
+    holders: dict[int, list[SetMember]] = defaultdict(list)
     rows = session.execute(
         select(MemberPermissionSet.permission_set_id, Member.id, Member.name)
         .join(Member, Member.id == MemberPermissionSet.member_id)
         .order_by(Member.id)
     ).all()
     for set_id, member_id, name in rows:
-        holders.setdefault(set_id, []).append(SetMember(member_id, name))
+        holders[set_id].append(SetMember(member_id, name))
 
     sets = session.scalars(select(PermissionSet).order_by(PermissionSet.id)).all()
     return [(row, holders.get(row.id, [])) for row in sets]

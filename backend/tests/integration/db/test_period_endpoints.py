@@ -552,7 +552,7 @@ def test_assign_needs_assign_run(
     # 없는 기간으로 호출해 계산을 실행하지 않고 권한 검증만 통과하는지 확인합니다.
     passed = api_client.post("/periods/999999/assign", json=body, cookies=head)
     assert passed.status_code == 422
-    assert "그런 기간이 없습니다" in passed.json()["detail"]
+    assert "존재하지 않는 기간입니다" in passed.json()["detail"]
 
 
 def test_rollback_needs_rollback(
@@ -759,7 +759,7 @@ def test_backups_of_unknown_period_are_rejected(
     response = api_client.get("/periods/999999/backups")
 
     assert response.status_code == 422
-    assert "그런 기간이 없습니다" in response.json()["detail"]
+    assert "존재하지 않는 기간입니다" in response.json()["detail"]
 
 
 def test_backups_need_rollback(
@@ -889,7 +889,7 @@ def test_confirming_a_proposal_needs_proposal_confirm(
         "/periods/999999/proposals/1/confirm", json=body, cookies=head
     )
     assert passed.status_code == 422
-    assert "그런 기간이 없습니다" in passed.json()["detail"]
+    assert "존재하지 않는 기간입니다" in passed.json()["detail"]
 
 
 def test_assign_gives_a_team_one_uninterrupted_session_per_turn(

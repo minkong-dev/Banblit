@@ -12,12 +12,17 @@ PostRow = tuple[Post, str, int, str | None]
 CommentRow = tuple[Comment, str]
 
 
-def _require_team_exists(session: Session, team_id: int) -> None:
-    if session.get(Team, team_id) is None:
-        raise ValueError("그런 팀이 없습니다")
+# 아래 두 함수는 roster 모듈의 get_team_or_raise·require_team_member 와 같습니다. roster 의 아바타 저장이
+# 이 모듈의 파일 저장 함수를 import 하므로, 여기서 roster 를 import 하면 순환 import 가 됩니다.
+# 파일 저장 함수가 별도 모듈로 나가면 이 두 함수를 삭제하고 roster 것을 씁니다.
+def get_team_or_raise(session: Session, team_id: int) -> Team:
+    team = session.get(Team, team_id)
+    if team is None:
+        raise ValueError("존재하지 않는 팀입니다")
+    return team
 
 
-def _require_team_member(session: Session, team_id: int, member_id: int) -> None:
+def require_team_member(session: Session, team_id: int, member_id: int) -> None:
     # 인증된 사람이라도 팀 소속이 아니면 PermissionError(403)입니다. 팀이나 게시글이 없는 경우는
     # ValueError(422)이며, 응답 상태 코드가 다르므로 구분합니다.
     row = session.execute(
@@ -28,6 +33,13 @@ def _require_team_member(session: Session, team_id: int, member_id: int) -> None
     ).first()
     if row is None:
         raise PermissionError("그 팀 소속이 아닙니다")
+
+
+def _get_post_or_raise(session: Session, post_id: int) -> Post:
+    post = session.get(Post, post_id)
+    if post is None:
+        raise ValueError("그런 글이 없습니다")
+    return post
 
 
 def require_post_readable(session: Session, post_id: int, requester: Member) -> Post:
@@ -43,7 +55,7 @@ def require_post_readable(session: Session, post_id: int, requester: Member) -> 
         # 아직 쓰는 중인 초안입니다. 쓰는 사람만 봅니다.
         raise PermissionError("그런 글이 없습니다")
     if post.team_id is not None:
-        _require_team_member(session, post.team_id, requester.id)
+        require_team_member(session, post.team_id, requester.id)
     return post
 
 
@@ -62,10 +74,7 @@ def require_post_author(
     남의 글을 수정하면 작성자가 쓴 내용과 수정한 사람이 쓴 내용을 구분할 수 없습니다.
     """
     if allow_moderator and _moderates(session, requester):
-        post = session.get(Post, post_id)
-        if post is None:
-            raise ValueError("그런 글이 없습니다")
-        return post
+        return _get_post_or_raise(session, post_id)
     post = require_post_readable(session, post_id, requester)
     if post.author_id != requester.id:
         raise PermissionError("글쓴이만 할 수 있습니다")
@@ -135,9 +144,7 @@ def set_post_blinded(
     require_post_readable 을 거치지 않습니다. 그 함수는 가려진 글을 없는 글로 거절하므로, 거치면
     되돌리기가 불가능해집니다. 팀 소속도 확인하지 않습니다 — 가리는 사람은 그 팀 사람이 아닙니다.
     """
-    post = session.get(Post, post_id)
-    if post is None:
-        raise ValueError("그런 글이 없습니다")
+    post = _get_post_or_raise(session, post_id)
     post.blinded_at = blinded_at
     post.blinded_by_id = requester.id if blinded_at is not None else None
     session.commit()
@@ -184,8 +191,8 @@ def create_draft(
     화면이 DELETE /posts/{id} 로 삭제하고, 그러지 못한 행은 하루 뒤 sweep_stale_drafts 가 삭제합니다.
     """
     if team_id is not None:
-        _require_team_exists(session, team_id)
-        _require_team_member(session, team_id, requester.id)
+        get_team_or_raise(session, team_id)
+        require_team_member(session, team_id, requester.id)
     post = Post(
         team_id=team_id,
         title="",
@@ -233,8 +240,8 @@ def sweep_stale_drafts(session: Session, older_than: datetime) -> int:
 
 
 def list_team_posts(session: Session, team_id: int, requester: Member) -> list[PostRow]:
-    _require_team_exists(session, team_id)
-    _require_team_member(session, team_id, requester.id)
+    get_team_or_raise(session, team_id)
+    require_team_member(session, team_id, requester.id)
     return _posts_with_author_and_count(session, team_id=team_id)
 
 
@@ -249,8 +256,8 @@ def create_team_post(
     """팀 게시판 게시글 하나를 만듭니다. 작성자는 token 으로 확인한 requester 이며, 해당 팀 소속이어야 합니다."""
     clean_title = require_non_empty(title, "제목")
     clean_body = require_non_empty(body, "내용")
-    _require_team_exists(session, team_id)
-    _require_team_member(session, team_id, requester.id)
+    get_team_or_raise(session, team_id)
+    require_team_member(session, team_id, requester.id)
 
     post = Post(
         team_id=team_id,

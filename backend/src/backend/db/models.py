@@ -353,7 +353,7 @@ class Period(Base):
 
     everyday 는 집중 합주기간의 "매일" 옵션입니다. first_run_at 과 second_run_at 은 하루 2회 계산하는 시각입니다.
 
-    ensemble_* 다섯 열은 전체합주 설정입니다(patch_note 8번). 날짜 범위·합주실·기본 시작/끝 시각을 함께 채우거나
+    ensemble_* 다섯 열은 전체합주 설정입니다. 날짜 범위·합주실·기본 시작/끝 시각을 함께 채우거나
     함께 null 로 변경합니다. null 이면 전체합주가 없는 기간입니다. 날짜마다 다른 시각은 ensemble_days 가 저장합니다.
 
     practice_* 네 열은 팀별합주를 배정할 수 있는 하루 중의 시간대입니다. 합주실 개방시각과는 다른
