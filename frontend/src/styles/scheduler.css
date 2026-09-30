@@ -66,8 +66,15 @@ body[data-page="scheduler"] {
     border-top: 1px solid var(--line);
     background: none; transition: background-color .13s ease;
   }
+  /* 누를 수 있는 칸은 hover 에서 살짝 떠오릅니다. 움직임 줄이기 설정은 shell.css 가 끕니다. */
   .cell:hover:not(:disabled) { background: var(--card-2); }
+  .cell:hover:not(:disabled) .ev { transform: translateX(2px); }
+  .ev { transition: transform .18s cubic-bezier(.22,1,.36,1); }
   .cell.void { cursor: default; }
+  /* 집중 합주기간의 날은 칸 바탕에 코랄 빛이 깔립니다. 이어지는 날끼리 띠가 되어 기간이 어디인지 보입니다.
+     지난 날(disabled)도 같은 색이라 지난 기간도 보입니다. */
+  .cell.focus { background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 12%, transparent), color-mix(in srgb, var(--brand) 5%, transparent)); }
+  .cell.focus:hover:not(:disabled) { background: color-mix(in srgb, var(--brand) 18%, transparent); }
   .cell .n { align-self: flex-start; line-height: 26px; font-size: var(--fs-sm); font-weight: 600; color: var(--t2); font-variant-numeric: tabular-nums; }
   .cell.sun .n { color: var(--red); }
   .cell:disabled { cursor: not-allowed; }

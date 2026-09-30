@@ -45,15 +45,16 @@ export function MonthView({
       <div className="dow">
         {WEEKDAY_NAMES.map((name) => <span key={name}>{name}</span>)}
       </div>
-      {/* key 로 달이 바뀔 때 칸 묶음을 새로 그려 scheduler.css 의 넘김 움직임이 다시 재생되게 합니다. */}
-      <div className="grid" key={`${year}-${month}`}>
+      {/* key 로 달이나 탭이 바뀔 때 칸 묶음을 새로 그려 scheduler.css 의 넘김 움직임이 다시 재생되게 합니다. */}
+      <div className="grid" key={`${year}-${month}-${tab}`}>
         {cells.map((day, index) => {
           if (day === null) return <div className="cell void" key={`void-${index}`} />;
 
           const key = ymd(day);
           const weekday = index % 7;
           // 오늘 칸은 어느 탭에서나 테두리로 표시합니다. 날짜 문자열끼리 비교하므로 시각은 영향을 주지 않습니다.
-          const marks = [weekday === 0 ? "sun" : "", key === today ? "today" : ""].filter(Boolean);
+          // 집중 합주기간에 든 날은 어느 탭에서나 칸 바탕으로 표시합니다(scheduler.css 의 .focus).
+          const marks = [weekday === 0 ? "sun" : "", key === today ? "today" : "", inFocus(key) ? "focus" : ""].filter(Boolean);
           let blocked = false;
           let inner = null;
 
