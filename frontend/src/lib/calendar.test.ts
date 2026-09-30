@@ -21,8 +21,58 @@ import {
   stampLabel,
   takenGrid,
   unitLabel,
+  monthRange,
+  weekLabel,
+  slotLabels,
   WEEKDAY_NAMES,
 } from "./calendar";
+
+describe("monthRange — 한 달의 첫날과 마지막 날", () => {
+  it("월은 0부터 세고 두 자리로 채운다", () => {
+    // month 8 은 9월입니다. 예약 조회가 이 값을 그대로 서버에 보내므로 한 자리 월은 "09" 가 됩니다.
+    expect(monthRange(2026, 8)).toEqual({ from: "2026-09-01", to: "2026-09-30" });
+  });
+
+  it("1월과 12월을 올바로 반환한다", () => {
+    expect(monthRange(2026, 0)).toEqual({ from: "2026-01-01", to: "2026-01-31" });
+    expect(monthRange(2026, 11)).toEqual({ from: "2026-12-01", to: "2026-12-31" });
+  });
+
+  it("2월의 마지막 날을 해마다 다르게 반환한다", () => {
+    expect(monthRange(2026, 1).to).toBe("2026-02-28");
+    // 2028년은 윤년입니다.
+    expect(monthRange(2028, 1).to).toBe("2028-02-29");
+  });
+});
+
+describe("weekLabel — 주 보기의 날짜 범위 문구", () => {
+  it("같은 달 안의 주는 뒤쪽 월 이름을 생략한다", () => {
+    expect(weekLabel(["2026-09-13", "", "", "", "", "", "2026-09-19"])).toBe("9월 13일 – 19일");
+  });
+
+  it("달을 넘는 주는 양쪽에 월 이름을 붙인다", () => {
+    expect(weekLabel(["2026-08-30", "", "", "", "", "", "2026-09-05"])).toBe("8월 30일 – 9월 5일");
+  });
+
+  it("해를 넘는 주도 양쪽에 월 이름을 붙인다", () => {
+    expect(weekLabel(["2026-12-27", "", "", "", "", "", "2027-01-02"])).toBe("12월 27일 – 1월 2일");
+  });
+});
+
+describe("slotLabels — slot 번호를 시각 문구로", () => {
+  it("여는 시각을 0번으로 두고 칸 번호를 시각으로 반환한다", () => {
+    const { label } = slotLabels(9, 22, 13);
+    expect(label(0)).toBe("09:00");
+    expect(label(3)).toBe("12:00");
+  });
+
+  it("endLabel 은 마지막 칸을 넘어서면 닫는 시각을 반환한다", () => {
+    // slotCount 13 은 09시부터 22시까지입니다. 13번 칸의 끝은 여는 시각 + 13 이 아니라 닫는 시각입니다.
+    const { endLabel } = slotLabels(9, 22, 13);
+    expect(endLabel(12)).toBe("21:00");
+    expect(endLabel(13)).toBe("22:00");
+  });
+});
 
 describe("monthCells — 한 달을 7칸씩 나눠 담는다", () => {
   // 2026년 9월 1일은 화요일이라 앞에 빈 칸 2개가 붙습니다. month 는 0부터 세는 값입니다.

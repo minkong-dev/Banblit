@@ -38,6 +38,21 @@ export type Entry = {
 
 export type DayEntries = Record<string, Entry[]>;
 
+/** 날짜별 항목 여러 벌을 한 벌로 합치고, 각 날짜의 목록을 시작 slot 번호(a) 순서로 정렬합니다.
+ *  달력은 배정·전체합주·불가능 일정·예약 네 가지를 한 칸에 함께 표시하고 칸마다 목록을 다시
+ *  꺼내므로, 정렬을 한 번만 해 둡니다.
+ *  넘긴 객체와 그 안의 배열은 수정하지 않습니다 — 각 벌은 useMemo 가 보유한 값이고, 그것을
+ *  수정하면 다음 렌더에서 항목이 중복됩니다. */
+export function mergeByDay(...sources: readonly DayEntries[]): DayEntries {
+  const merged: DayEntries = {};
+  for (const source of sources) {
+    for (const [key, list] of Object.entries(source)) merged[key] = [...(merged[key] ?? []), ...list];
+  }
+  return Object.fromEntries(
+    Object.entries(merged).map(([key, list]) => [key, [...list].sort((x, y) => x.a - y.a)]),
+  );
+}
+
 /** 달력 화면의 탭입니다. 내 일정, 예약, 전체 일정 순서입니다. */
 export type DayTab = "me" | "book" | "all";
 

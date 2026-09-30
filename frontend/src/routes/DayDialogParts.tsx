@@ -7,10 +7,10 @@ import { Dropdown } from "../components/Dropdown";
 import { CheckMark } from "../components/CheckMark";
 import { PencilIcon, TrashIcon } from "../components/icons";
 import {
-  acceptsDrag, cellAt, dragRange, hasWeekday, REPEAT_WEEKDAY_NAMES, repeatLabel, slotSteps,
+  acceptsDrag, cellAt, dragRange, hasWeekday, REPEAT_WEEKDAY_NAMES, repeatLabel, slotLabels, slotSteps,
   toggleWeekday, weekdayIndex,
 } from "../lib/calendar";
-import { NO_REPEAT, slotLabel } from "../lib/pipeline";
+import { NO_REPEAT } from "../lib/pipeline";
 import type { Repeat } from "../lib/pipeline";
 import { offWhenLabel } from "../lib/dayEntries";
 import type { Entry } from "../lib/dayEntries";
@@ -18,13 +18,6 @@ import { cohortLabel } from "../lib/roster";
 import type { DayTeam } from "../lib/roster";
 
 export type SlotRange = { a: number; b: number };
-
-/** slot 번호를 "18:00" 으로 변경하는 함수 2개를 반환합니다. endLabel 은 마지막 칸이면 닫는 시각을 씁니다. */
-export function slotLabels(openHour: number, closeHour: number, slotCount: number) {
-  const label = (index: number) => slotLabel(index, openHour);
-  const endLabel = (index: number) => (index >= slotCount ? `${closeHour}:00` : label(index));
-  return { label, endLabel };
-}
 
 /** 항목에 표시할 이름입니다. 불가능 일정은 일정 이름, 배정·예약은 팀 이름, 팀이 없으면 예약자 이름입니다. */
 export function entryName(entry: Entry, teams: DayTeam[]): string {

@@ -1,8 +1,53 @@
 import { describe, expect, it } from "vitest";
 
-import { allBookedEntries, allOffEntries, ensembleByDay, ensembleOn, offByDay, offWhenLabel, repeatDays, visible } from "./dayEntries";
-import type { Entry } from "./dayEntries";
+import { allBookedEntries, allOffEntries, ensembleByDay, ensembleOn, mergeByDay, offByDay, offWhenLabel, repeatDays, visible } from "./dayEntries";
+import type { DayEntries, Entry } from "./dayEntries";
 import type { Period, Reservation, Unavailable } from "./contract";
+
+/** 검사용 항목 하나입니다. mergeByDay 는 a·b 만 읽고 나머지 필드는 그대로 옮깁니다. */
+function entry(kind: Entry["kind"], a: number, b: number): Entry {
+  return { kind, team: null, a, b };
+}
+
+describe("mergeByDay — 날짜별 항목 여러 벌을 하나로", () => {
+  it("아무것도 넘기지 않으면 빈 객체를 반환한다", () => {
+    expect(mergeByDay()).toEqual({});
+  });
+
+  it("같은 날짜의 항목을 한 목록으로 합친다", () => {
+    const assigned: DayEntries = { "2026-09-14": [entry("assign", 2, 3)] };
+    const off: DayEntries = { "2026-09-14": [entry("off", 5, 6)] };
+    expect(mergeByDay(assigned, off)["2026-09-14"]).toHaveLength(2);
+  });
+
+  it("시작 slot 번호 순서로 정렬한다", () => {
+    // 배정을 먼저 넘기지만 불가능 일정이 더 이른 시각이므로 앞에 놓입니다.
+    const assigned: DayEntries = { "2026-09-14": [entry("assign", 5, 6)] };
+    const off: DayEntries = { "2026-09-14": [entry("off", 1, 2)] };
+    expect(mergeByDay(assigned, off)["2026-09-14"].map((one) => one.a)).toEqual([1, 5]);
+  });
+
+  it("날짜가 다르면 각 날짜에 따로 담는다", () => {
+    const assigned: DayEntries = { "2026-09-14": [entry("assign", 2, 3)] };
+    const off: DayEntries = { "2026-09-15": [entry("off", 5, 6)] };
+    const merged = mergeByDay(assigned, off);
+    expect(Object.keys(merged).sort()).toEqual(["2026-09-14", "2026-09-15"]);
+    expect(merged["2026-09-14"]).toHaveLength(1);
+  });
+
+  it("넘긴 객체와 그 안의 배열을 수정하지 않는다", () => {
+    const assigned: DayEntries = { "2026-09-14": [entry("assign", 5, 6)] };
+    const off: DayEntries = { "2026-09-14": [entry("off", 1, 2)] };
+    mergeByDay(assigned, off);
+    expect(assigned["2026-09-14"]).toHaveLength(1);
+    expect(assigned["2026-09-14"][0].a).toBe(5);
+  });
+
+  it("빈 객체를 섞어 넘겨도 나머지를 그대로 담는다", () => {
+    const assigned: DayEntries = { "2026-09-14": [entry("assign", 2, 3)] };
+    expect(mergeByDay({}, assigned, {})["2026-09-14"]).toHaveLength(1);
+  });
+});
 
 const withEnsemble: Period = {
   id: 3,

@@ -18,7 +18,7 @@ import {
   takenGrid,
 } from "../lib/pipeline";
 import type { Repeat } from "../lib/pipeline";
-import { firstTaken, unitLabel } from "../lib/calendar";
+import { firstTaken, slotLabels, unitLabel } from "../lib/calendar";
 import { useMe, useSlotMinutes } from "../components/queries";
 import type { Room } from "../lib/contract";
 import { offWhenLabel } from "../lib/dayEntries";
@@ -27,7 +27,7 @@ import { EnsembleDayEditor } from "./SettingsEnsemble";
 import type { DayTeam } from "../lib/roster";
 import { say } from "../lib/toast";
 import {
-  DayPeople, DayTimeline, MyEntriesList, RepeatFields, SlotPicker, entryName, repeatConflict, slotLabels,
+  DayPeople, DayTimeline, MyEntriesList, RepeatFields, SlotPicker, entryName, repeatConflict,
 } from "./DayDialogParts";
 import type { SlotRange } from "./DayDialogParts";
 
