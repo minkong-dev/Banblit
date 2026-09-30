@@ -30,5 +30,10 @@ export default defineConfig({
     reuseExistingServer: false,
     timeout: DEV_SERVER_WAIT_MS,
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    // Safari 엔진입니다. 팝업 4종(프로필·알림·사진 변경·글자색)이 CSS anchor positioning 으로 위치를 잡으므로,
+    // 그 검사 2개만 WebKit 에서도 실행해 Safari 에서 팝업이 화면 밖으로 나가지 않는지 확인합니다(2026-09-30).
+    { name: "webkit", use: { ...devices["Desktop Safari"] }, testMatch: /(popovers|profile-card)\.spec\.ts/ },
+  ],
 });

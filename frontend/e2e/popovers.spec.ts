@@ -12,6 +12,7 @@ test("프로필 메뉴가 popover 로 열리고, 바깥을 누르거나 Esc 를 
 
   await trigger.click();
   await expect(menu).toBeVisible();
+  await expect(menu).toBeInViewport({ ratio: 1 });
 
   await page.mouse.click(10, 10);
   await expect(menu).toBeHidden();
@@ -44,6 +45,7 @@ test("알림 popover 가 바깥을 누르면 닫힌다", async ({ page }) => {
 
   await trigger.click();
   await expect(menu).toBeVisible();
+  await expect(menu).toBeInViewport({ ratio: 1 });
 
   await page.mouse.click(10, 10);
   await expect(menu).toBeHidden();
@@ -56,6 +58,7 @@ test("글자색 popover 가 열리고 바깥을 누르면 닫힌다", async ({ p
 
   await trigger.click();
   await expect(panel).toBeVisible();
+  await expect(panel).toBeInViewport({ ratio: 1 });
 
   await page.mouse.click(10, 10);
   await expect(panel).toBeHidden();
@@ -70,6 +73,7 @@ test("프로필 사진 변경 popover 가 닫히면 초점이 여는 버튼으�
 
   await trigger.click();
   await expect(menu).toBeVisible();
+  await expect(menu).toBeInViewport({ ratio: 1 });
 
   await page.mouse.click(10, 10);
   await expect(menu).toBeHidden();
