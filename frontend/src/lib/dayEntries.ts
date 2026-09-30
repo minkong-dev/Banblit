@@ -66,6 +66,22 @@ export function visible(entries: Entry[], tab: DayTab, teams: DayTeam[]): Entry[
     : entries.filter((entry) => entry.kind !== "off");
 }
 
+/** 날짜 dialog 의 타임라인에 그릴 항목입니다. 내 팀에 배정된 항목, 내가 등록한 불가능 일정
+ *  (removeIds 가 있는 항목), 내가 잡은 예약(bookingId 가 있는 항목)입니다.
+ *  개인 이름으로 한 예약은 team 이 null 이라 팀만 보고는 구분할 수 없어 bookingId 로 판정합니다.
+ *
+ *  visible 과 판정이 다릅니다 — visible 은 탭에 표시할 항목이라 전체합주를 남기지만, 이 목록은
+ *  내가 삭제·취소할 수 있는 항목만 담아 전체합주를 뺍니다. 두 판정을 한 함수로 합치면
+ *  타임라인에 남의 전체합주가 내 항목으로 나타납니다. */
+export function myEntries(entries: readonly Entry[], teams: readonly DayTeam[]): Entry[] {
+  const mineKeys = new Set(teams.filter((team) => team.mine).map((team) => team.key));
+  return entries.filter(
+    (entry) => entry.removeIds !== undefined
+      || entry.bookingId !== undefined
+      || (entry.team !== null && mineKeys.has(entry.team)),
+  );
+}
+
 /** 그날의 전체합주입니다. custom 이 true 면 날짜별로 지정한 시각이고, false 면 기본 시각입니다. */
 export type EnsembleOn = {
   periodId: number; roomId: number; startsAt: string; endsAt: string; custom: boolean;

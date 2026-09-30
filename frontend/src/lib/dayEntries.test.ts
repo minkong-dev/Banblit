@@ -1,13 +1,63 @@
 import { describe, expect, it } from "vitest";
 
-import { allBookedEntries, allOffEntries, ensembleByDay, ensembleOn, mergeByDay, offByDay, offWhenLabel, repeatDays, visible } from "./dayEntries";
+import { allBookedEntries, allOffEntries, ensembleByDay, ensembleOn, mergeByDay, myEntries, offByDay, offWhenLabel, repeatDays, visible } from "./dayEntries";
 import type { DayEntries, Entry } from "./dayEntries";
 import type { Period, Reservation, Unavailable } from "./contract";
+import type { DayTeam } from "./roster";
 
 /** 검사용 항목 하나입니다. mergeByDay 는 a·b 만 읽고 나머지 필드는 그대로 옮깁니다. */
 function entry(kind: Entry["kind"], a: number, b: number): Entry {
   return { kind, team: null, a, b };
 }
+
+describe("myEntries — 내 타임라인에 그릴 항목", () => {
+  const teams: DayTeam[] = [
+    { id: 1, name: "내 팀", key: "t1", mine: true },
+    { id: 2, name: "남의 팀", key: "t2", mine: false },
+  ];
+
+  it("내 팀의 배정을 남긴다", () => {
+    const list: Entry[] = [{ kind: "assign", team: "t1", a: 1, b: 2 }];
+    expect(myEntries(list, teams)).toHaveLength(1);
+  });
+
+  it("다른 팀의 배정을 뺀다", () => {
+    const list: Entry[] = [{ kind: "assign", team: "t2", a: 1, b: 2 }];
+    expect(myEntries(list, teams)).toEqual([]);
+  });
+
+  it("내가 등록한 불가능 일정을 남긴다", () => {
+    // removeIds 가 있으면 서버가 이 사용자에게 삭제 권한을 준 항목입니다.
+    const list: Entry[] = [{ kind: "off", team: null, a: 1, b: 2, removeIds: [7] }];
+    expect(myEntries(list, teams)).toHaveLength(1);
+  });
+
+  it("내가 잡은 예약을 팀이 없어도 남긴다", () => {
+    // 개인 이름으로 한 예약은 team 이 null 이라 팀만 보고는 구분할 수 없습니다.
+    const list: Entry[] = [{ kind: "book", team: null, a: 1, b: 2, bookingId: 3 }];
+    expect(myEntries(list, teams)).toHaveLength(1);
+  });
+
+  it("다른 사용자의 예약을 뺀다", () => {
+    const list: Entry[] = [{ kind: "book", team: null, a: 1, b: 2, who: "다른 사람" }];
+    expect(myEntries(list, teams)).toEqual([]);
+  });
+
+  it("전체합주는 뺀다 — visible 과 다른 판정이다", () => {
+    // visible(tab="me") 은 전체합주를 남기지만 이 목록은 내가 삭제·취소할 수 있는 항목만 담습니다.
+    const list: Entry[] = [{ kind: "ensemble", team: null, a: 1, b: 2 }];
+    expect(myEntries(list, teams)).toEqual([]);
+  });
+
+  it("순서를 바꾸지 않고 입력 목록을 수정하지 않는다", () => {
+    const list: Entry[] = [
+      { kind: "assign", team: "t1", a: 5, b: 6 },
+      { kind: "off", team: null, a: 1, b: 2, removeIds: [7] },
+    ];
+    expect(myEntries(list, teams).map((one) => one.a)).toEqual([5, 1]);
+    expect(list).toHaveLength(2);
+  });
+});
 
 describe("mergeByDay — 날짜별 항목 여러 벌을 하나로", () => {
   it("아무것도 넘기지 않으면 빈 객체를 반환한다", () => {

@@ -21,7 +21,7 @@ import type { Repeat } from "../lib/pipeline";
 import { firstTaken, slotLabels, unitLabel } from "../lib/calendar";
 import { useMe, useSlotMinutes } from "../components/queries";
 import type { Room } from "../lib/contract";
-import { offWhenLabel } from "../lib/dayEntries";
+import { myEntries, offWhenLabel } from "../lib/dayEntries";
 import type { DayTab, EnsembleOn, Entry } from "../lib/dayEntries";
 import { EnsembleDayEditor } from "./SettingsEnsemble";
 import type { DayTeam } from "../lib/roster";
@@ -101,12 +101,7 @@ export function DayDialog({
     slotCount,
     slotMinutes,
   );
-  // 내 팀에 배정된 항목과, 내가 직접 등록한 항목(removeIds 가 있는 항목)입니다. 개인 이름으로 한 예약은
-  // 팀이 없어 팀만 보고는 구분할 수 없습니다.
-  const mine = entries.filter(
-    (entry) => entry.removeIds !== undefined || entry.bookingId !== undefined
-      || (entry.team !== null && teams.some((t) => t.key === entry.team && t.mine)),
-  );
+  const mine = myEntries(entries, teams);
   // 오른쪽 목록입니다. 내 일정 탭은 선택한 날짜의 항목이 아니라 내가 등록한 불가능 일정 전부(myOff)를 나열합니다.
   // 예약 탭도 선택한 날짜가 아니라 내가 잡은 예약 전부(myBookings)를 나열합니다. 끝난 예약은 서버가 빼고 줍니다.
   const removable = tab === "me" ? myOff : myBookings;
@@ -131,19 +126,22 @@ export function DayDialog({
     if (memberId === null) return;
     // 두 목록 모두 여러 날짜의 항목을 나열하므로 확인 문구에 날짜를 함께 적습니다.
     const when = `${offWhenLabel(entry)} ${label(entry.a)}–${endLabel(entry.b)}`.trim();
+    // 두 id 를 지역 변수로 받아 아래 요청까지 타입이 좁혀진 상태를 유지합니다. entry 에서 다시
+    // 읽으면 undefined 가 아니라는 사실이 남지 않아 non-null 단언(!)이 필요해집니다.
     const bookingId = entry.bookingId;
-    const booking = bookingId !== undefined;
-    if (booking) {
+    const removeIds = entry.removeIds;
+    if (bookingId !== undefined) {
       if (!askCancel(`${entryName(entry, teams)} ${when} 예약`)) return;
-    } else if (entry.removeIds !== undefined) {
+    } else if (removeIds !== undefined) {
       if (!askDelete(`${when} 불가능 일정`)) return;
     } else {
       return;
     }
     try {
-      await (bookingId !== undefined
-        ? cancelBooking(bookingId)
-        : removeUnavailable(memberId, entry.removeIds![0]));
+      // 불가능 일정은 removeIds 의 첫 id 로 삭제합니다. 반복으로 전개한 항목은 같은 행에서
+      // 나왔으므로 그 행 하나를 삭제하면 전개된 항목이 모두 사라집니다.
+      if (bookingId !== undefined) await cancelBooking(bookingId);
+      else if (removeIds !== undefined) await removeUnavailable(memberId, removeIds[0]);
     } catch (error) {
       setError(error instanceof Error ? error.message : "삭제하지 못했어요.");
       onSaved();
@@ -151,7 +149,7 @@ export function DayDialog({
     }
     setError("");
     onSaved();
-    say(booking ? "예약을 취소했어요" : "해당 불가능 일정을 삭제했어요");
+    say(bookingId !== undefined ? "예약을 취소했어요" : "해당 불가능 일정을 삭제했어요");
   };
 
   /** 목록의 수정 버튼입니다. 그 일정의 값을 위쪽 폼에 되살리고, 저장하면 새로 만들지 않고 덮어씁니다. */
