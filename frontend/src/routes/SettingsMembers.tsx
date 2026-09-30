@@ -7,7 +7,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import type { QueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
-import { Card, SectionHead } from "../components/AppShell";
+import { Card, SectionHead } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
 import { MemberPicker } from "../components/MemberPicker";
 import { Modal, ModalFormFoot } from "../components/Modal";

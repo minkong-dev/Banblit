@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Panel } from "../components/AppShell";
+import { Panel } from "../components/Layout";
 import { getJSON, reason } from "../lib/api";
 import { hoursOf } from "../lib/assignment";
 import { checkRunTimes, slotCountLabel } from "../lib/runs";

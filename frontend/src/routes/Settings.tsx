@@ -4,7 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { Card, Panel, SectionHead, Tabs } from "../components/AppShell";
+import { Card, Panel, SectionHead, Tabs } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
 import { useMe, usePeriods, useRooms, useSettings, useSlotMinutes, useTeams } from "../components/queries";
 import { can } from "../lib/account";

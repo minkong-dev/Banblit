@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Card, Tabs } from "../components/AppShell";
+import { Card, Tabs } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
 import { getJSON, reason } from "../lib/api";
 import { askRollback } from "../lib/confirm";

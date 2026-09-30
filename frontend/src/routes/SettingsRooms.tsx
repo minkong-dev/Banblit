@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import type { RefObject } from "react";
 
-import { Card, SectionHead } from "../components/AppShell";
+import { Card, SectionHead } from "../components/Layout";
 import { useReturnFocus } from "../components/hooks";
 import { Modal } from "../components/Modal";
 import { useSlotMinutes } from "../components/queries";

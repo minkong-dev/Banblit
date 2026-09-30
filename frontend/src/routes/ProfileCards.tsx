@@ -13,7 +13,7 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Avatar } from "../components/Avatar";
-import { Card, SectionHead } from "../components/AppShell";
+import { Card, SectionHead } from "../components/Layout";
 import { usePopoverRouteClose } from "../components/hooks";
 import { ChevronLeftIcon, PencilIcon } from "../components/icons";
 import { getJSON, reason, sendFile } from "../lib/api";

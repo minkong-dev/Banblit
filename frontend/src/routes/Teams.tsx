@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 
-import { Card, SectionHead } from "../components/AppShell";
+import { Card, SectionHead } from "../components/Layout";
 import { Pager } from "../components/Pager";
 import { MemberPicker } from "../components/MemberPicker";
 import { Modal, ModalFormFoot, Stepper } from "../components/Modal";

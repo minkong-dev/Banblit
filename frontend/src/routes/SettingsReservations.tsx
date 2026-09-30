@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { Card, SectionHead } from "../components/AppShell";
+import { Card, SectionHead } from "../components/Layout";
 import { useRooms } from "../components/queries";
 import { reason } from "../lib/api";
 import { askCancel } from "../lib/confirm";

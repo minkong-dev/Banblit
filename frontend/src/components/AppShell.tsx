@@ -1,6 +1,5 @@
 import { useQueries } from "@tanstack/react-query";
 import { useLayoutEffect, useState } from "react";
-import type { ReactNode } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { NotificationMenu } from "./NotificationMenu";
@@ -143,41 +142,6 @@ export function AppShell() {
   );
 }
 
-/** 흰 카드 한 장입니다. 내부 배치는 각 화면의 CSS가 정의합니다. */
-export function Card({ children }: { children: ReactNode }) {
-  return <div className="card">{children}</div>;
-}
-
-/** 카드의 제목 줄입니다. 제목, 설명, 오른쪽 부속(children — 필터·이전/다음 버튼)을 표시합니다. */
-export function SectionHead({ title, desc, children }: { title: string; desc: string; children?: ReactNode }) {
-  return (
-    <div className="sethead">
-      <b>{title}</b>
-      <span>{desc}</span>
-      {children}
-    </div>
-  );
-}
-
-export function Tabs<T extends string>(props: {
-  label: string;
-  items: readonly { key: T; text: string }[];
-  selected: T;
-  onSelect: (key: T) => void;
-}) {
-  const { label, items, selected, onSelect } = props;
-  return (
-    <div className="tabs" role="tablist" aria-label={label}>
-      {items.map((item) => (
-        <button key={item.key} className="tab" role="tab"
-          aria-selected={item.key === selected} onClick={() => onSelect(item.key)}>
-          {item.text}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 /** 상단바의 라이트·다크 전환 버튼입니다. 누를 때마다 반대 테마로 전환하고, 선택한 값은 브라우저에 저장합니다.
  *  아이콘은 누르면 전환될 테마를 표시합니다. */
 function ThemeButton() {
@@ -198,7 +162,7 @@ function ThemeButton() {
 
 /** 상단 오른쪽 프로필 버튼 + 프로필 카드입니다. 여러 화면에서 함께 씁니다.
  *  "프로필 설정"은 이 프로필 카드에서 `/profile`로 들어가는 유일한 입구입니다. */
-export function ProfileMenu() {
+function ProfileMenu() {
   const [open, setOpen] = useState(false);
   usePopoverRouteClose(PROFILE_POP_ID);
   const navigate = useNavigate();
@@ -276,20 +240,3 @@ export function ProfileMenu() {
 }
 
 /** 오른쪽 목록 한 칸입니다. onOpen 이 있으면 제목이 클릭할 수 있는 버튼이 됩니다. */
-export function Panel(props: {
-  title: string;
-  hint?: string;
-  onOpen?: () => void;
-  children: ReactNode;
-}) {
-  const { title, hint, onOpen, children } = props;
-  const head = <>{title}{hint === undefined ? null : <span>{hint}</span>}</>;
-  return (
-    <section className="panel">
-      {onOpen === undefined
-        ? <div className="ph">{head}</div>
-        : <button className="ph" onClick={onOpen}>{head}</button>}
-      {children}
-    </section>
-  );
-}
