@@ -4,14 +4,14 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.services.input import (
+from backend.services.validation.pipeline import (
     parse_calendar_date,
     parse_clock,
     require_ends_not_before_starts,
     require_valid_kind,
 )
 from backend.db.models import Period
-from backend.services.reservation_service import cancel_reservations_in_focus
+from backend.services.reservation.pipeline import cancel_reservations_in_focus
 from backend.db.pipeline import commit_translating
 
 # 위반될 수 있는 제약과 그때 표시할 문장입니다. 제약 이름은 migration b5e1d9a37c42·d9a4c6e1f207 이 지정했습니다.

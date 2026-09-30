@@ -8,14 +8,14 @@ from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account, require_permission
 from backend.api.job_runner import Job, JobRunner, max_concurrent_jobs_from_env
-from backend.services.notification_service import notify_assignment_updated
-from backend.services.settings_service import slot_minutes
-from backend.services.period_service import (
+from backend.services.notification.pipeline import notify_assignment_updated
+from backend.services.settings.pipeline import slot_minutes
+from backend.services.period.pipeline import (
     PeriodAssignResult,
     assign_period,
     open_slots_in_period,
 )
-from backend.services.schedule_service import (
+from backend.services.period.pipeline import (
     ScheduleRow,
     get_period_or_raise,
     list_backup_round,

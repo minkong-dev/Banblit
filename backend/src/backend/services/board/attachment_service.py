@@ -8,7 +8,7 @@ from typing import BinaryIO
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from backend.services.board_service import require_post_author, require_post_readable
+from backend.services.board.board_service import require_post_author, require_post_readable
 from backend.db.models import Attachment, Member, Post
 
 # 첨부 규칙 값입니다. 다른 파일에서 다시 정의하지 않습니다.

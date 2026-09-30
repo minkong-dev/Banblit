@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account, require_permission
 from backend.api.schemas import SettingsOut, SettingsUpdateIn
-from backend.services.settings_service import (
+from backend.services.settings.pipeline import (
     daily_max_hours,
     session_minutes,
     set_settings,

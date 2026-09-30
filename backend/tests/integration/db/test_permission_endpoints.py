@@ -5,7 +5,7 @@ from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 from backend.db.models import PERMISSIONS, PermissionSet
-from backend.services.permission_service import delete_permission_set
+from backend.services.permission.pipeline import delete_permission_set
 from conftest import AccountFactory
 
 

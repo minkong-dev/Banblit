@@ -1,0 +1,15 @@
+# notification 모듈의 시퀀스 파일이자 공개 interface(다른 모듈에서 접근하는 진입점)입니다.
+# api·jobs와 다른 service 모듈은 이 모듈 안의 다른 파일을 직접 import 하지 않고
+# 이 파일만 참조합니다.
+
+from backend.services.notification.notification_service import (
+    list_notifications,
+    mark_all_read,
+    notify_assignment_updated,
+)
+
+__all__ = [
+    "list_notifications",
+    "mark_all_read",
+    "notify_assignment_updated",
+]

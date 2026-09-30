@@ -1,4 +1,4 @@
-from backend.services.auth_service import hash_password, verify_password
+from backend.services.auth.auth_service import hash_password, verify_password
 
 
 def test_hash_password_returns_the_labeled_new_format() -> None:

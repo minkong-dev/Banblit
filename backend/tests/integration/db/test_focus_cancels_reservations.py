@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from conftest import AccountFactory
 
 from backend.db.models import Member, Period, Reservation, Room
-from backend.services.ensemble_service import delete_ensemble, delete_ensemble_day, set_ensemble_day
+from backend.services.period.pipeline import delete_ensemble, delete_ensemble_day, set_ensemble_day
 from test_reservation_endpoints import _reserve, _room
 
 INSIDE = "2027-03-10"

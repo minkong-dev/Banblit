@@ -3,8 +3,8 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, aliased
 
-from backend.services.input import require_non_empty
-from backend.services.permission_service import account_permissions
+from backend.services.validation.pipeline import require_non_empty
+from backend.services.permission.pipeline import account_permissions
 from backend.db.models import Comment, Member, Post, Team, TeamSlot
 
 # 글, 작성자 이름, 댓글 수, 가린 사람 이름(가려지지 않았으면 None)입니다.

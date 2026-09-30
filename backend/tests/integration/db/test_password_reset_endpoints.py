@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.services.password_reset import RESEND_INTERVAL, RESET_TTL, issue_reset_token
+from backend.services.auth.pipeline import RESEND_INTERVAL, RESET_TTL, issue_reset_token
 from backend.db.models import PasswordResetToken
 from conftest import AccountFactory
 
@@ -162,7 +162,7 @@ def test_find_id_mails_the_registered_address_only_when_the_pair_matches(
     # 본문(로그인 아이디가 담긴 내용)을 확인하려면 개발 환경처럼 로그에 본문을 남기게 합니다.
     monkeypatch.setenv("MAIL_LOG_BODY", "true")
 
-    with caplog.at_level(logging.INFO, logger="backend.services.mailer"):
+    with caplog.at_level(logging.INFO, logger="backend.services.auth.mailer"):
         api_client.post("/find-id", json={"name": HEAD[0], "email": HEAD[1]})
         api_client.post("/find-id", json={"name": OTHER[0], "email": HEAD[1]})
 
@@ -177,7 +177,7 @@ def _mail_reasons(caplog: pytest.LogCaptureFixture) -> list[str]:
     return [
         record.getMessage()
         for record in caplog.records
-        if record.name == "backend.services.password_reset"
+        if record.name == "backend.services.auth.password_reset"
     ]
 
 

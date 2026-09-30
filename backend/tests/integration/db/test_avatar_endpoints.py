@@ -16,7 +16,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from backend.db.models import Member
-from backend.services import avatar_service
+from backend.services.roster import avatar_service
 from conftest import AccountFactory
 
 Cookies = dict[str, str]

@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.db.models import Member
-from backend.services.attachment_service import (
+from backend.services.board.pipeline import (
     display_name,
     stored_path,
     write_stream,

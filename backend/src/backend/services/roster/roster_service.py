@@ -1,8 +1,8 @@
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
-from backend.services.input import require_non_empty
-from backend.services.permission_service import require_another_full_set_holder
+from backend.services.validation.pipeline import require_non_empty
+from backend.services.permission.pipeline import require_another_full_set_holder
 from backend.db.models import (
     INSTRUMENTS,
     TEAM_COLORS,

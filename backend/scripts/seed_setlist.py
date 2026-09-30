@@ -15,8 +15,8 @@ from collections import defaultdict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.services.auth_service import hash_password
-from backend.services.permission_service import grant_full_permissions
+from backend.services.auth.pipeline import hash_password
+from backend.services.permission.pipeline import grant_full_permissions
 from backend.db.pipeline import get_engine
 from backend.db.models import Member, Team, TeamSlot
 

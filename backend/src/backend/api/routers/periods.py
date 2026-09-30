@@ -4,16 +4,16 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account, require_permission
-from backend.services.input import format_calendar_date
-from backend.services.input import format_clock
-from backend.services.period_crud_service import create_period as create_period_row
-from backend.services.period_crud_service import (
+from backend.services.validation.pipeline import format_calendar_date
+from backend.services.validation.pipeline import format_clock
+from backend.services.period.pipeline import create_period as create_period_row
+from backend.services.period.pipeline import (
     WindowIn,
     delete_period,
     list_periods,
     update_period,
 )
-from backend.services.ensemble_service import (
+from backend.services.period.pipeline import (
     days_by_period,
     delete_ensemble,
     delete_ensemble_day,
