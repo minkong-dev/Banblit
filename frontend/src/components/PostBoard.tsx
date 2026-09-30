@@ -12,7 +12,7 @@ import { loadState, stateText } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { boardActions, boardListKey, getJSON, stampLabel } from "../lib/pipeline";
-import { Card, SectionHead } from "./AppShell";
+import { Card, SectionHead } from "./Layout";
 import { useReturnFocus } from "./hooks";
 import { PencilIcon } from "./icons";
 import { Pager } from "./Pager";

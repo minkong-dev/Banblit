@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import type { RefObject } from "react";
 
-import { Card, SectionHead } from "../components/AppShell";
+import { Card, SectionHead } from "../components/Layout";
 import { CheckMark } from "../components/CheckMark";
 import { Dropdown } from "../components/Dropdown";
 import { useReturnFocus } from "../components/hooks";

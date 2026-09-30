@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Tabs } from "../components/AppShell";
+import { Tabs } from "../components/Layout";
 import { PostBoard } from "../components/PostBoard";
 import { can } from "../lib/account";
 import { loadState, stateText } from "../lib/loading";

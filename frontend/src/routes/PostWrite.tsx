@@ -4,7 +4,7 @@
 
 import { useNavigate, useParams } from "react-router-dom";
 
-import { SectionHead } from "../components/AppShell";
+import { SectionHead } from "../components/Layout";
 import { WriteForm } from "../components/PostWriteForm";
 import { can } from "../lib/account";
 import { boardListKey } from "../lib/pipeline";
