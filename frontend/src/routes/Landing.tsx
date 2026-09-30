@@ -127,12 +127,6 @@ export function Landing() {
         <span className="cue">SCROLL</span>
       </section>
 
-      {/* 코랄 띠에 동아리 이름이 흐릅니다. 장식이라 화면을 읽어 주는 도구(스크린 리더)는 지나갑니다.
-          같은 글을 두 번 이어 붙여야 끝이 화면을 벗어나는 순간 처음이 이어져 끊기지 않습니다(landing.css). */}
-      <div className="ticker" aria-hidden="true">
-        <span>{Array.from({ length: 2 }, () => "IN SIX STRINGS  ✦  SINCE 1981  ✦  유일무이 버스킹 동아리 여섯줄  ✦  ").join("")}</span>
-      </div>
-
       <section className="sec" id="how">
         <div className="wrap stack">
           {/* 세로 한 장에 정사각형 한 장을 걸쳐 둡니다. 배경으로만 넣은 장식이라 읽을
