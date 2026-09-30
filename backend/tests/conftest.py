@@ -28,6 +28,8 @@ from backend.scheduling.resolution import resolve as resolve_sessions
 # 테스트 하나가 검사 전체를 운영 상한만큼 멈추지 않게 하기 위해서입니다.
 TEST_SOLVER_TIME_LIMIT_SECONDS = 10.0
 TEST_RESOLUTION_TIME_LIMIT_SECONDS = 30.0
+# 첫 배정안 뒤 이어 붙임을 더 찾는 시간입니다. 검사는 배정안의 성질만 확인하므로 운영 값(3초)보다 짧게 둡니다.
+TEST_IMPROVE_SECONDS_AFTER_FIRST = 1.0
 
 
 def assign(
@@ -45,6 +47,7 @@ def assign(
         slot_minutes,
         session_minutes,
         TEST_SOLVER_TIME_LIMIT_SECONDS,
+        TEST_IMPROVE_SECONDS_AFTER_FIRST,
     )
 
 
@@ -65,6 +68,7 @@ def resolve(
         session_minutes,
         TEST_SOLVER_TIME_LIMIT_SECONDS,
         resolution_time_limit_seconds,
+        TEST_IMPROVE_SECONDS_AFTER_FIRST,
     )
 
 

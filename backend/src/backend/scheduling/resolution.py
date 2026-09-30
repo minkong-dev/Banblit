@@ -25,17 +25,18 @@ def resolve(
     session_minutes: int,
     solver_time_limit_seconds: float,
     resolution_time_limit_seconds: float,
+    improve_seconds_after_first: float,
     daily_max_minutes: int | None = None,
 ) -> Resolution:
     """배정이 불가능하면 멤버 1명씩 제외한 계산을 멤버 수만큼 반복해 조율안을 만듭니다.
 
-    resolution_time_limit_seconds 는 반복 전체의 상한이고, solver_time_limit_seconds 는 계산
-    1회의 상한입니다. 두 값 모두 pipeline.py 가 전달합니다.
+    resolution_time_limit_seconds 는 반복 전체의 상한이고, solver_time_limit_seconds 는 계산 1회의 상한,
+    improve_seconds_after_first 는 계산 1회 안에서 첫 배정안을 찾은 뒤 더 쓰는 시간입니다. 세 값 모두 pipeline.py 가 전달합니다.
     """
     deadline = monotonic() + resolution_time_limit_seconds
     base = assign(
         teams, rooms, sessions_per_team, slot_minutes, session_minutes,
-        solver_time_limit_seconds, daily_max_minutes,
+        solver_time_limit_seconds, improve_seconds_after_first, daily_max_minutes,
     )
     if base.feasible:
         return Resolution(assignment=base, proposals=[])
@@ -52,7 +53,7 @@ def resolve(
             continue
         trial = assign(
             reduced, rooms, sessions_per_team, slot_minutes, session_minutes,
-            solver_time_limit_seconds, daily_max_minutes,
+            solver_time_limit_seconds, improve_seconds_after_first, daily_max_minutes,
         )
         if trial.feasible:
             proposals.append(
