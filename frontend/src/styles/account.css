@@ -11,8 +11,8 @@
 
   body[data-page="account"] {
     margin: 0; background: var(--paper); color: var(--ink);
-    font-family: "Noto Sans KR", -apple-system, "Malgun Gothic", sans-serif;
-    font-size: 15px; line-height: 1.6; letter-spacing: -.025em;
+    font-family: var(--font);
+    font-size: 15px; line-height: 1.6; letter-spacing: -.02em;
     -webkit-text-size-adjust: 100%;
   }
   body[data-page="account"] :where(button, input) { font: inherit; color: inherit; letter-spacing: inherit; }
@@ -32,14 +32,15 @@ body[data-page="account"] {
     background-image: linear-gradient(160deg, rgba(8,9,11,.30), rgba(8,9,11,.86)), url("/images/in_six_strings.webp");
     color: #fff;
   }
-  .stage .mark { font-size: 17px; font-weight: 900; letter-spacing: .16em; }
+  .stage .mark { font-size: 18px; font-weight: 800; letter-spacing: .18em; }
+  /* 랜딩의 히어로와 같은 포스터 제목입니다. 왼쪽 아래에 큰 글자로 놓입니다. */
   .stage .say { margin-top: auto; }
   .stage .say h1 {
-    margin: 0; font-size: clamp(24px, 2.4vw, 34px); font-weight: 700;
-    line-height: 1.5; letter-spacing: -.045em;
+    margin: 0; font-size: clamp(28px, 3.6vw, 56px); font-weight: 800;
+    line-height: 1.1; letter-spacing: -.05em; text-wrap: balance;
   }
-  .stage .say h1 em { font-style: normal; color: var(--brand); font-weight: 900; letter-spacing: .04em; }
-  .stage .say p { margin: 16px 0 0; font-size: 14.5px; font-weight: 300; color: #C6CAD0; }
+  .stage .say h1 em { font-style: normal; color: var(--brand); letter-spacing: -.02em; }
+  .stage .say p { margin: 18px 0 0; font-size: 15px; font-weight: 400; color: rgba(255,255,255,.7); }
 
   /* ===== 오른쪽 form ===== */
   .form {
@@ -57,32 +58,35 @@ body[data-page="account"] {
   .legal button:disabled { cursor: default; }
   .inner { width: 100%; max-width: 388px; }
 
-  .head { margin-bottom: 30px; }
-  .head h2 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -.04em; }
-  .head p { margin: 8px 0 0; font-size: 14.5px; color: var(--ink-3); }
+  .head { margin-bottom: 34px; }
+  .head h2 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -.045em; line-height: 1.15; }
+  .head p { margin: 10px 0 0; font-size: 15px; color: var(--ink-3); }
 
-  .field { margin-bottom: 16px; }
-  .field label { display: block; font-size: 13px; font-weight: 500; color: var(--ink-2); margin-bottom: 7px; }
+  /* ===== 입력칸 =====
+     흰 바탕에 1px 선입니다. 마우스를 올리면 선이 진해지고, 입력 중에는 코랄 선과 옅은 코랄 고리가 붙습니다.
+     칸 모양이 상태를 말하므로 바탕색은 바꾸지 않습니다. */
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; color: var(--ink-2); margin-bottom: 8px; letter-spacing: 0; }
   .field input {
-    width: 100%; min-height: 52px; padding: 14px 16px;
-    background: var(--paper-2); border: 1px solid transparent; border-radius: 12px;
-    font-size: 15.5px;
-    transition: border-color .16s ease, background-color .16s ease;
+    width: 100%; min-height: 54px; padding: 14px 16px;
+    background: var(--paper); border: 1px solid var(--edge-2); border-radius: 12px;
+    font-size: 16px;
+    transition: border-color .16s ease, box-shadow .16s ease;
   }
   .hold { position: relative; }
   .peekable input { padding-right: 52px; }
   .peek {
-    position: absolute; top: 50%; right: 6px; transform: translateY(-50%);
+    position: absolute; top: 50%; right: 7px; transform: translateY(-50%);
     width: 40px; height: 40px; display: grid; place-items: center;
-    color: var(--ink-3); border-radius: 10px;
+    color: var(--ink-3); border-radius: 50%;
     transition: color .15s ease, background-color .15s ease;
   }
-  .peek:hover { color: var(--ink); background: #EDEEF0; }
+  .peek:hover { color: var(--ink); background: var(--paper-2); }
   .peek svg { width: 20px; height: 20px; }
   .field input::placeholder { color: var(--ink-3); }
-  .field input:hover { background: #F0F1F3; }
-  .field input:focus { background: var(--paper); border-color: var(--ink); outline: none; }
-  .field input[aria-invalid="true"] { border-color: var(--red); background: #FEF5F5; }
+  .field input:hover { border-color: var(--ink-3); }
+  .field input:focus { border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-tint); outline: none; }
+  .field input[aria-invalid="true"] { border-color: var(--red); box-shadow: 0 0 0 4px #FDECEC; }
   /* 비밀번호 칸 아래 규칙 목록입니다. 충족하기 전에는 포인트 색, 충족하면 초록색입니다. */
   .field .rules { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 5px; }
   .field .rules li { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; color: var(--brand); }
@@ -102,24 +106,28 @@ body[data-page="account"] {
 
   /* 밝은 코랄 위에 흰 글자는 명도 대비가 2.8:1 이라 읽히지 않습니다. 코랄을 유지하려고 글자를
      어두운 색으로 바꿨습니다. 같은 코랄에 6.3:1 입니다. */
+  /* 버튼은 랜딩의 시작하기와 같은 알약입니다. 누르면 살짝 눌립니다. */
   .go {
-    width: 100%; min-height: 54px; padding: 15px;
-    background: var(--brand); color: var(--brand-on); border-radius: 12px;
+    width: 100%; min-height: 56px; padding: 15px;
+    background: var(--brand); color: var(--brand-on); border-radius: 999px;
     font-size: 16px; font-weight: 700;
-    transition: background-color .16s ease;
+    transition: background-color .16s ease, transform .12s ease;
   }
-  .go:hover { background: var(--brand-press); }
+  .go:hover { background: var(--coral-lite); }
+  .go:active { transform: scale(.985); }
 
   .or { display: flex; align-items: center; gap: 14px; margin: 28px 0 18px; color: var(--ink-3); font-size: 12.5px; }
   .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--edge); }
 
-  .social { display: flex; flex-direction: column; gap: 9px; }
+  .social { display: flex; flex-direction: column; gap: 10px; }
   .social button {
     display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; min-height: 52px; border-radius: 12px;
-    font-size: 15px; font-weight: 500;
-    transition: background-color .16s ease, border-color .16s ease;
+    width: 100%; min-height: 54px; border-radius: 999px;
+    font-size: 15px; font-weight: 600;
+    transition: background-color .16s ease, border-color .16s ease, transform .12s ease;
   }
+  .social button:active { transform: scale(.985); }
+  .social button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
   .social .google { background: var(--paper); border: 1px solid var(--edge-2); }
   .social .google:hover { background: var(--paper-2); border-color: var(--ink-3); }
   .social .kakao { background: var(--kakao); color: var(--kakao-ink); }
@@ -150,7 +158,7 @@ body[data-page="account"] {
   @media (max-width: 940px) {
     .split { grid-template-columns: 1fr; min-height: 0; }
     .stage { position: relative; height: auto; min-height: 280px; padding: 28px; }
-    .stage .say h1 { font-size: 23px; }
+    .stage .say h1 { font-size: 26px; }
     .form { padding: 40px 24px 64px; }
     /* 한 열에서는 form 과 약관 줄을 위아래로 쌓습니다. 가로(flex 기본 방향)로 두면 약관 줄이 form 옆에 붙습니다. */
     .form { flex-direction: column; }
@@ -158,7 +166,7 @@ body[data-page="account"] {
   }
   @media (max-width: 680px) {
     .stage { min-height: 200px; padding: 20px; }
-    .stage .say h1 { font-size: 19px; line-height: 1.45; }
+    .stage .say h1 { font-size: 22px; line-height: 1.25; }
     .stage .say p { display: none; }
     .form { padding: 30px 18px 52px; }
     .head h2 { font-size: 24px; }

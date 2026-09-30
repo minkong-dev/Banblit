@@ -10,14 +10,14 @@ body[data-page="teams"] {
   .main > .card:only-child { flex: 1; display: flex; flex-direction: column; min-height: 0; }
   .main > .card:only-child > .rows { flex: 1; min-height: 0; overflow: hidden; }
   .main > .card:only-child > .listfoot { margin-top: auto; }
-  .rows li { padding: 4px 12px; }
+  .rows li { padding: 4px 0; }
 
   /* 팀 한 줄이 요소 2개입니다. 왼쪽은 클릭해서 포지션 목록을 여는 버튼, 오른쪽은 수정·삭제
      아이콘입니다. 버튼 안에 버튼을 넣을 수 없어 나란히 둡니다. */
   .teamline { display: flex; align-items: center; gap: 4px; }
   .teamline .teamrow2 { flex: 1; min-width: 0; }
   .teamline .acts { flex: none; align-items: center; gap: 2px; }
-  .teamrow2 { display: flex; align-items: center; gap: 10px; padding: 12px 8px; border-radius: 10px; }
+  .teamrow2 { display: flex; align-items: center; gap: 10px; padding: 12px 0; }
   .teamrow2:hover { background: var(--card-2); }
   .teamrow2.on { background: var(--brand-tint); }
   .teamrow2 b { font-size: 15px; font-weight: 700; }

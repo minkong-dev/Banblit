@@ -26,7 +26,7 @@ body[data-page="board"] {
 
   /* 작성 form 입니다. 목록 아래에 붙던 시절에는 목록과 구분하려고 회색 배경과 윗 테두리를 두었는데,
      자기 주소를 가진 화면(routes/PostWrite)으로 분리된 뒤에는 구분할 상대가 없습니다. 카드 배경을 그대로 씁니다. */
-  .addrow { padding: 16px 20px; }
+  .addrow { padding: 16px 0; }
   .addrow .why { margin-top: 10px; }
   .note { margin: 0 0 12px; font-size: 12.5px; color: var(--t3); line-height: 1.6; }
 
@@ -38,7 +38,7 @@ body[data-page="board"] {
   .cnt { font-size: 12.5px; color: var(--t3); white-space: nowrap; }
 
   /* 상세입니다. 목록의 영역을 그대로 사용합니다 */
-  .thread { padding: 20px 22px 24px; display: flex; flex-direction: column; gap: 10px; }
+  .thread { padding: 20px 0 24px; display: flex; flex-direction: column; gap: 10px; }
   .back { align-self: flex-start; font-size: 13.5px; color: var(--t2); padding: 8px 4px; border-radius: 8px; }
   .back:hover { color: var(--t1); }
   /* 목록으로 버튼은 왼쪽 끝, 글 수정·삭제 아이콘은 오른쪽 끝에 같은 세로 중심으로 배치합니다.
