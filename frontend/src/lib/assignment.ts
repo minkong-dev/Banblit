@@ -1,9 +1,10 @@
 // 배정 화면(routes/Assignment)의 순수 계산입니다. 화면이나 서버와 상호작용하지 않습니다.
 
 import { teamColorKey } from "./teamColors";
-import { mergeSessions } from "./slots";
+import { datesBetween, stampLabel } from "./calendar";
+import { dayOf, mergeSessions } from "./slots";
 import type { Session } from "./slots";
-import type { AssignOut, Slot } from "./contract";
+import type { AssignOut, ScheduleRow, Slot } from "./contract";
 
 const MINUTES_PER_HOUR = 60;
 
@@ -31,6 +32,39 @@ export function sessionsOf(byTeam: Record<string, Slot[]>): Session[] {
     }
   }
   return mergeSessions(flat);
+}
+
+/** 서버가 반환한 시간표 한 줄씩을 합주 목록으로 변환합니다. ScheduleRow 는 team_id·room_id 를
+ *  함께 담지만 달력은 이름만 쓰므로 네 필드만 남기고, 맞닿은 slot 을 합주 한 번으로 묶습니다.
+ *  확정된 시간표와 지난 배정기록이 같은 형식이라 두 곳이 이 함수를 씁니다. */
+export function sessionsOfRows(rows: readonly ScheduleRow[]): Session[] {
+  return mergeSessions(
+    rows.map((row) => ({ team: row.team, room: row.room, start: row.start, end: row.end })),
+  );
+}
+
+/** 합주 목록이 걸친 날짜 전부입니다. 첫 합주와 마지막 합주 사이에 합주가 없는 날짜도 들어갑니다 —
+ *  달력이 그 칸도 그려야 합니다. 합주가 없을 경우 빈 목록을 반환합니다.
+ *  sort 는 원본 배열을 수정하므로 map 으로 만든 사본을 정렬합니다. */
+export function dayRangeOf(sessions: readonly Session[]): string[] {
+  if (sessions.length === 0) return [];
+  const starts = sessions.map((session) => session.start).sort();
+  return datesBetween(dayOf(starts[0]), dayOf(starts[starts.length - 1]));
+}
+
+/** 배정 화면의 탭 목록입니다. 맨 앞은 현재 확정된 배정안이고, 그 뒤에 조율안이 A안·B안 순서로
+ *  오며, 배정기록을 선택했을 경우 그 시각 탭이 맨 뒤에 옵니다.
+ *  key 는 tabKey 가 만들므로 viewOf 가 되돌릴 수 있습니다. */
+export function tabsOf(proposalCount: number, roundAt: string | null): { key: string; text: string }[] {
+  const proposals = Array.from({ length: proposalCount }, (_, index) => ({
+    key: tabKey({ kind: "proposal", index }),
+    // 65 는 "A" 의 문자 번호입니다. 0번 조율안이 A안, 1번이 B안입니다.
+    text: `${String.fromCharCode(65 + index)}안`,
+  }));
+  const round = roundAt === null
+    ? []
+    : [{ key: tabKey({ kind: "round", at: roundAt }), text: stampLabel(roundAt) }];
+  return [{ key: tabKey(NOW), text: "현재 확정된 배정안" }, ...proposals, ...round];
 }
 
 function minutesOf(session: Session): number {
