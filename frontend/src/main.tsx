@@ -7,6 +7,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { App } from "./App";
 import { applyTheme, readSavedTheme } from "./lib/theme";
 import { teamColorCss } from "./lib/teamColors";
+import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./styles/base.css";
 
 // 선택한 테마를 첫 렌더링 전에 적용합니다. 이후에 적용하면 밝은 화면이 한 번 깜박입니다.

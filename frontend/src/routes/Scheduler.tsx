@@ -202,7 +202,10 @@ export function Scheduler() {
           <button className="navb" aria-label={week ? "저번 주" : "저번 달"} onClick={() => shift(-1)}>
             <ChevronLeftIcon />
           </button>
-          <span className="ml">{week ? weekLabel : `${cursor.year}년 ${cursor.month + 1}월`}</span>
+          {/* 달 이름은 화면에서 가장 큰 글자입니다(scheduler.css). 연도는 그 옆에 작게 둡니다. */}
+          <span className="ml">
+            {week ? <b>{weekLabel}</b> : <><b>{cursor.month + 1}월</b><small>{cursor.year}</small></>}
+          </span>
           <button className="navb" aria-label={week ? "다음 주" : "다음 달"} onClick={() => shift(1)}>
             <ChevronRightIcon />
           </button>

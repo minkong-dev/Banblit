@@ -44,11 +44,13 @@ body { margin: 0; word-break: keep-all; overflow-wrap: break-word; }
    사용하는 곳의 color-scheme 을 보고 하나를 고릅니다. 어느 쪽인지는 shell.css 가 body 에
    정합니다(main.tsx 가 첫 렌더링 전에 html 의 data-theme 을 설정합니다). */
 :root {
-  --bg: light-dark(#F2F4F6, #0E1013);
-  --card: light-dark(#FFFFFF, #191C20);
-  --card-2: light-dark(#F7F8FA, #212529);
-  --line: light-dark(#E9ECEF, #2A2F35);
-  --line-2: light-dark(#D6DBE0, #3A4148);
+  /* 화면은 상자(카드) 없이 한 장의 종이처럼 그립니다. 바탕이 곧 면이고, 구획은 1px 선(--line)이 나눕니다.
+     --card 는 바탕 위에 떠 있는 것(모달·팝업·드롭다운·입력칸)에만 씁니다. */
+  --bg: light-dark(#F6F6F7, #0A0B0D);
+  --card: light-dark(#FFFFFF, #14161A);
+  --card-2: light-dark(#ECEDEF, #1E2126);
+  --line: light-dark(#DDDFE3, #24272D);
+  --line-2: light-dark(#C9CCD2, #363A42);
   --t1: light-dark(#191F28, #E9EDF0);
   --t2: light-dark(#4E5968, #A0AAB4);
   --t3: light-dark(#8B95A1, #6E7882);
@@ -67,8 +69,12 @@ body { margin: 0; word-break: keep-all; overflow-wrap: break-word; }
 
   /* 모서리 반경 4단계입니다. 입력칸·일정 칩 sm, 버튼·목록 줄 md, 카드·모달 lg, 탭·배지 pill. */
   --r-sm: 8px; --r-md: 12px; --r-lg: 16px; --r-pill: 999px;
-  /* 글자 크기 7단계입니다. 본문은 base, 카드 제목은 lg, 달 이름은 xl, 큰 숫자는 2xl 입니다. */
+  /* 글자 크기 8단계입니다. 본문은 base, 구획 제목은 lg, 탭은 xl, 큰 숫자는 2xl, 달 이름은 display 입니다.
+     display 는 창 폭을 따라 44~88px 사이에서 움직입니다 — 화면에서 가장 큰 글자이고 하나뿐입니다. */
   --fs-xs: 12px; --fs-sm: 13px; --fs-md: 14px; --fs-base: 15px; --fs-lg: 17px; --fs-xl: 20px; --fs-2xl: 26px;
+  --fs-display: clamp(44px, 6.4vw, 88px);
+  /* 글꼴은 Pretendard 하나입니다(main.tsx 가 가변 글꼴 파일을 불러옵니다). 굵기 대비(300~800)로 위계를 만듭니다. */
+  --font: "Pretendard Variable", Pretendard, "Noto Sans KR", -apple-system, "Malgun Gothic", sans-serif;
 
   /* 왼쪽 메뉴 폭입니다. 창 폭 단계(shell.css)에서 1059px 이하가 되면 메뉴가 가로 줄로 바뀌어 이 값을 쓰지 않습니다. */
   --side: clamp(232px, 15%, 300px);
