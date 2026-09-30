@@ -149,7 +149,7 @@ def test_sessions_skip_only_the_unavailable_hour() -> None:
 
 def test_assignment_stops_improving_shortly_after_the_first_solution() -> None:
     # 연속 배정을 더 늘릴 수 있는지는 끝까지 증명하지 못해, 그대로 두면 상한(60초)을 다 씁니다. 첫 배정을 찾은 뒤
-    # 개선은 잠깐만 하고 멈춥니다(2026-09-28 사용자 결정). 12팀·40명·합주실 2개·7일 규모에서 잽니다.
+    # 개선은 improve_seconds_after_first(3초)만 하고 멈춥니다. 12팀·40명·합주실 2개·7일 규모에서 잽니다.
     import random
     import time
 
@@ -171,7 +171,7 @@ def test_assignment_stops_improving_shortly_after_the_first_solution() -> None:
     ]
 
     started = time.monotonic()
-    result = assign_sessions(teams, rooms, 7, 60, 60, 60.0)
+    result = assign_sessions(teams, rooms, 7, 60, 60, 60.0, 3.0)
 
     assert result.feasible is True
     # 상한 60초보다 충분히 짧은지만 봅니다. 첫 해를 찾는 시간은 CPU 부하에 따라 달라 좁게 잡지 않습니다.
@@ -188,7 +188,7 @@ def test_a_team_gets_no_more_than_the_daily_limit_on_one_day() -> None:
 
     from backend.scheduling.assignment import assign as assign_sessions
 
-    result = assign_sessions([team], rooms, 4, 60, 60, 10.0, daily_max_minutes=120)
+    result = assign_sessions([team], rooms, 4, 60, 60, 10.0, 1.0, daily_max_minutes=120)
 
     assert result.feasible is True
     by_day: dict[object, list[TimeInterval]] = {}
