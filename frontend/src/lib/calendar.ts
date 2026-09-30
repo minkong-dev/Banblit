@@ -248,6 +248,44 @@ export function dayLabel(key: string): string {
   return date === null ? key : MONTH_DAY.format(date);
 }
 
+/** 한 달의 첫날과 마지막 날입니다. 예약 조회가 기간 번호가 아니라 날짜 범위로 서버에 요청하므로
+ *  그 두 값을 만듭니다. month 는 0부터 세는 값이라 8 이 9월입니다.
+ *  new Date(year, month + 1, 0) 은 다음 달의 0일, 즉 이 달의 마지막 날입니다. 달마다 다른
+ *  마지막 날과 윤년의 2월 29일을 직접 계산하지 않습니다. */
+export function monthRange(year: number, month: number): { from: string; to: string } {
+  const monthText = String(month + 1).padStart(2, "0");
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return {
+    from: `${year}-${monthText}-01`,
+    to: `${year}-${monthText}-${String(lastDay).padStart(2, "0")}`,
+  };
+}
+
+/** 주 보기의 날짜 범위 문구입니다. 같은 달 안의 주는 뒤쪽 월 이름을 생략해 "9월 13일 – 19일" 이
+ *  되고, 달을 넘는 주는 "8월 30일 – 9월 5일" 이 됩니다.
+ *  keys 는 weekKeys 가 반환하는 일요일부터 7일치 날짜이므로 배열의 양 끝만 읽습니다. */
+export function weekLabel(keys: readonly string[]): string {
+  const [first] = keys;
+  const last = keys[keys.length - 1];
+  // 날짜 문자열 "2026-09-13" 에서 5~7 글자가 월, 8~10 글자가 일입니다.
+  const sameMonth = first.slice(5, 7) === last.slice(5, 7);
+  return sameMonth
+    ? `${dayLabel(first)} – ${Number(last.slice(8, 10))}일`
+    : `${dayLabel(first)} – ${dayLabel(last)}`;
+}
+
+/** slot 번호를 "18:00" 으로 변경하는 함수 2개를 반환합니다.
+ *  endLabel 은 마지막 칸을 넘어서는 번호에 닫는 시각을 반환합니다 — 마지막 칸의 끝은
+ *  여는 시각 + slotCount 가 아니라 합주실이 닫는 시각입니다. */
+export function slotLabels(openHour: number, closeHour: number, slotCount: number): {
+  label: (index: number) => string;
+  endLabel: (index: number) => string;
+} {
+  const label = (index: number): string => slotLabel(index, openHour);
+  const endLabel = (index: number): string => (index >= slotCount ? `${closeHour}:00` : label(index));
+  return { label, endLabel };
+}
+
 /** "2026-09-13" 을 "9월 13일 일요일" 로 변환합니다. */
 export function dayWithWeekday(key: string): string {
   const date = dayDate(key);

@@ -7,12 +7,12 @@ import { Dropdown } from "../components/Dropdown";
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from "../components/icons";
 import { getJSON } from "../lib/api";
 import { firstWhy } from "../lib/loading";
-import { currentMonth, slotSteps } from "../lib/calendar";
+import { currentMonth, monthRange, slotLabels, slotSteps, weekLabel } from "../lib/calendar";
 import { boardListKey, focusedRanges, inRanges, loadMyBookings, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
 import { MonthView, WeekView } from "./SchedulerViews";
 import {
-  allBookedEntries, allOffEntries, assignedByDay, bookedByDay, ensembleByDay, ensembleOn, listNote, memberCountLabel, offByDay, visibleDays,
+  allBookedEntries, allOffEntries, assignedByDay, bookedByDay, ensembleByDay, ensembleOn, listNote, memberCountLabel, mergeByDay, offByDay, visibleDays,
 } from "../lib/dayEntries";
 import { can } from "../lib/account";
 import type { DayTab, Entry } from "../lib/dayEntries";
@@ -20,7 +20,7 @@ import { teamsOf } from "../lib/roster";
 import { useMe, useMyTeams, usePeriods, useRooms, useSlotMinutes } from "../components/queries";
 import "../styles/scheduler.css";
 import type { Post, ScheduleRow } from "../lib/contract";
-import { dayLabel, slotCountOf, slotLabel, stampLabel, weekKeys } from "../lib/pipeline";
+import { slotCountOf, stampLabel, weekKeys } from "../lib/pipeline";
 
 // 오른쪽 공지 칸에 표시할 최대 줄 수입니다. 전체 목록은 공지 화면(routes/Notices)이 표시합니다.
 const RECENT_NOTICES = 3;
@@ -64,14 +64,12 @@ export function Scheduler() {
   const periodIds = periods.data?.periods.map((period) => period.id) ?? [];
   const roomIds = rooms.data?.rooms.map((room) => room.id) ?? [];
   // 달력 한 달치 범위입니다. 예약 조회는 기간이 아니라 날짜 범위로 서버에 요청합니다.
-  const monthFrom = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-01`;
-  const monthLastDay = new Date(cursor.year, cursor.month + 1, 0).getDate();
-  const monthTo = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${String(monthLastDay).padStart(2, "0")}`;
+  const month = monthRange(cursor.year, cursor.month);
   // 주 보기는 달을 벗어난 주로도 넘어갑니다. 그래서 예약은 달이 아니라 현재 보고 있는
   // 날짜 범위로 요청합니다. 범위가 queryKey 에 들어 있어 주를 옮기면 그 주의 예약을 다시 받습니다.
   const weekDayKeys = weekKeys(cursor.year, cursor.month, weekShift);
-  const rangeFrom = week ? weekDayKeys[0] : monthFrom;
-  const rangeTo = week ? weekDayKeys[6] : monthTo;
+  const rangeFrom = week ? weekDayKeys[0] : month.from;
+  const rangeTo = week ? weekDayKeys[6] : month.to;
 
   // 기간 목록이 오기 전에는 어느 기간의 시간표를 받을지 알 수 없어 query를 비활성화합니다.
   const query = useQuery({
@@ -157,17 +155,12 @@ export function Scheduler() {
     [periodList, roomList, open, days],
   );
 
-  // 배정·전체합주·불가능 일정·예약 네 가지를 날짜별로 합쳐 시작 시각 순으로 정렬합니다.
-  // 달력이 날짜마다 entriesOf 를 호출하므로 정렬을 렌더마다 반복하지 않도록 한 번에 계산합니다.
-  const entriesByDay = useMemo(() => {
-    const merged: Record<string, Entry[]> = {};
-    for (const source of [assigned, ensembleEntries, offEntries, bookEntries]) {
-      for (const [key, list] of Object.entries(source)) merged[key] = [...(merged[key] ?? []), ...list];
-    }
-    return Object.fromEntries(
-      Object.entries(merged).map(([key, list]) => [key, [...list].sort((x, y) => x.a - y.a)]),
-    );
-  }, [assigned, ensembleEntries, offEntries, bookEntries]);
+  // 배정·전체합주·불가능 일정·예약 네 가지를 날짜별로 합칩니다. 달력이 날짜마다 entriesOf 를
+  // 호출하므로 정렬을 렌더마다 반복하지 않도록 한 번에 계산합니다.
+  const entriesByDay = useMemo(
+    () => mergeByDay(assigned, ensembleEntries, offEntries, bookEntries),
+    [assigned, ensembleEntries, offEntries, bookEntries],
+  );
 
   const entriesOf = (key: string): Entry[] => entriesByDay[key] ?? [];
 
@@ -179,14 +172,10 @@ export function Scheduler() {
   };
 
   const inFocus = (key: string) => inRanges(focus, key);
-  const label = (index: number) => slotLabel(index, open);
-  const endLabel = (index: number) => (index >= slotCount ? `${close}:00` : label(index));
+  const { label, endLabel } = slotLabels(open, close, slotCount);
   const range = from !== null && to !== null ? { from, to } : null;
 
-  // weekKeys 가 일요일부터 7일치 날짜를 반환하므로, 배열의 index 가 곧 요일입니다.
-  const weekLabel = weekDayKeys[0].slice(5, 7) === weekDayKeys[6].slice(5, 7)
-    ? `${dayLabel(weekDayKeys[0])} – ${Number(weekDayKeys[6].slice(8, 10))}일`
-    : `${dayLabel(weekDayKeys[0])} – ${dayLabel(weekDayKeys[6])}`;
+  const weekText = weekLabel(weekDayKeys);
 
   // 오른쪽 "내 팀" 은 소속된 팀 전부입니다. teams 는 배정 일정에 나온 팀만 담고 있어, 아직 일정이 없는 팀이 빠집니다.
   const myTeams = useMyTeams();
@@ -235,7 +224,7 @@ export function Scheduler() {
           <button className="navb" aria-label={week ? "저번 주" : "저번 달"} onClick={() => shift(-1)}>
             <ChevronLeftIcon />
           </button>
-          <span className="ml">{week ? weekLabel : `${cursor.year}년 ${cursor.month + 1}월`}</span>
+          <span className="ml">{week ? weekText : `${cursor.year}년 ${cursor.month + 1}월`}</span>
           <button className="navb" aria-label={week ? "다음 주" : "다음 달"} onClick={() => shift(1)}>
             <ChevronRightIcon />
           </button>
