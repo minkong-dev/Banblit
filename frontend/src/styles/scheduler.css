@@ -69,10 +69,6 @@ body[data-page="scheduler"] {
   .cell:hover:not(:disabled) .ev { transform: translateX(2px); }
   .ev { transition: transform .18s cubic-bezier(.22,1,.36,1); }
   .cell.void { cursor: default; }
-  /* 집중 합주기간에 든 날짜 칸은 바탕을 코랄 12% → 5% 세로 그라데이션으로 채웁니다. 이어지는 날짜끼리 한 띠로 표시되어
-     기간의 시작일과 종료일이 달력에서 보입니다. 지난 날짜(disabled)도 같은 바탕입니다. */
-  .cell.focus { background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 12%, transparent), color-mix(in srgb, var(--brand) 5%, transparent)); }
-  .cell.focus:hover:not(:disabled) { background: color-mix(in srgb, var(--brand) 18%, transparent); }
   .cell .n { align-self: flex-start; line-height: 26px; font-size: var(--fs-sm); font-weight: 600; color: var(--t2); font-variant-numeric: tabular-nums; }
   .cell.sun .n { color: var(--red); }
   .cell:disabled { cursor: not-allowed; }
@@ -123,8 +119,8 @@ body[data-page="scheduler"] {
      채움이 아니라 테두리로 표시해, 그날에 이미 붙어 있는 색(예약·배정)을 가리지 않습니다.
      달 보기 칸은 오른쪽 위에 작은 TODAY 글자를 더합니다. 칸 폭이 약 46px 인 좁은 창에서는 날짜 숫자와 겹쳐 감춥니다(아래 @media). */
   .wh.today { box-shadow: inset 0 0 0 2px var(--brand); }
-  /* 달 보기의 외곽선은 칸 테두리보다 4px 안쪽에 그립니다. 안의 내용은 다른 칸과 같은 자리에 그대로 둡니다. */
-  .cell.today::before { content: ""; position: absolute; inset: 4px 4px 4px 0; border: 2px solid var(--brand); border-radius: var(--r-sm); pointer-events: none; }
+  /* 달 보기의 외곽선은 칸 테두리에 맞춘 2px 사각형입니다. 칸이 사각형이므로 모서리를 둥글리지 않습니다. */
+  .cell.today { box-shadow: inset 0 0 0 2px var(--brand); }
   .cell.today .n { color: var(--t1); }
   .cell.today::after { content: "TODAY"; position: absolute; top: 14px; right: 14px; font-size: 10px; font-weight: 800; letter-spacing: .1em; color: var(--brand); }
 
