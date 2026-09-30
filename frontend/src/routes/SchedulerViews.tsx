@@ -33,6 +33,7 @@ export function MonthView({
   onOpen: (key: string) => void;
 }) {
   const cells = monthCells(year, month);
+  const today = dayKey(new Date());
   const ymd = (day: number) =>
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   const label = (index: number) => slotLabel(index, openHour);
@@ -52,12 +53,16 @@ export function MonthView({
           const key = ymd(day);
           const weekday = index % 7;
           // 오늘 칸은 어느 탭에서나 테두리로 표시합니다. 날짜 문자열끼리 비교하므로 시각은 영향을 주지 않습니다.
-          const marks = [weekday === 0 ? "sun" : "", key === dayKey(new Date()) ? "today" : ""].filter(Boolean);
+          const marks = [weekday === 0 ? "sun" : "", key === today ? "today" : ""].filter(Boolean);
           let blocked = false;
           let inner = null;
 
           if (tab === "book") {
-            if (inFocus(key)) {
+            // 지난 날짜는 서버가 예약을 거절하므로 누를 수 없게 두고 남은 시간도 표시하지 않습니다.
+            // "YYYY-MM-DD" 문자열은 사전순 비교가 날짜순 비교와 같습니다.
+            if (key < today) {
+              blocked = true;
+            } else if (inFocus(key)) {
               blocked = true;
               inner = <div className="avail auto"><span className="big">자동 배정</span></div>;
             } else if (range !== null) {
