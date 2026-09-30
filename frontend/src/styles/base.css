@@ -46,11 +46,11 @@ body { margin: 0; word-break: keep-all; overflow-wrap: break-word; }
 :root {
   /* 화면은 상자(카드) 없이 한 장의 종이처럼 그립니다. 바탕이 곧 면이고, 구획은 1px 선(--line)이 나눕니다.
      --card 는 바탕 위에 떠 있는 것(모달·팝업·드롭다운·입력칸)에만 씁니다. */
-  --bg: light-dark(#F6F6F7, #0A0B0D);
-  --card: light-dark(#FFFFFF, #14161A);
-  --card-2: light-dark(#ECEDEF, #1E2126);
-  --line: light-dark(#DDDFE3, #24272D);
-  --line-2: light-dark(#C9CCD2, #363A42);
+  --bg: light-dark(#FFFFFF, #15181D);
+  --card: light-dark(#FFFFFF, #1D2127);
+  --card-2: light-dark(#F1F2F4, #262B32);
+  --line: light-dark(#E4E6EA, #2B3037);
+  --line-2: light-dark(#CFD3D9, #3D434C);
   --t1: light-dark(#191F28, #E9EDF0);
   --t2: light-dark(#4E5968, #A0AAB4);
   --t3: light-dark(#8B95A1, #6E7882);
