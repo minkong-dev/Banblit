@@ -4,6 +4,8 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { fetchMe, getJSON, myTeamIds } from "../lib/pipeline";
+import { loadState } from "../lib/loading";
+import type { LoadState } from "../lib/loading";
 import { teamColorKey } from "../lib/teamColors";
 import type { Account, Period, Room, Team } from "../lib/contract";
 
@@ -45,6 +47,12 @@ export function usePeriods() {
  *  아직 로드되지 않았으면 me는 null입니다. */
 export function useMe(): {
   me: Account | null;
+  /** /me 조회 상태입니다. Me 의 account 는 non-null 이므로 me 가 null 인 경우는 조회 중과
+   *  조회 실패 둘이고, 그 둘에 표시할 문구가 다릅니다(불러오는 중 / 실패 사유).
+   *  me 만으로는 구분할 수 없으므로 상태를 함께 반환합니다.
+   *  로그아웃 상태는 /me 가 401 을 반환해 failed 가 되고, lib/api.ts 의 401 처리가 로그인
+   *  화면으로 이동시킵니다. */
+  meState: LoadState;
   teamIds: number[];
   teams: Team[];
 } {
@@ -58,7 +66,7 @@ export function useMe(): {
   const teamIds = useMemo(() => myTeamIds(mine.data?.teams ?? []), [mine.data]);
   const teams = useMemo(() => teamList.data?.teams ?? [], [teamList.data]);
 
-  return { me: mine.data?.account ?? null, teamIds, teams };
+  return { me: mine.data?.account ?? null, meState: loadState(mine), teamIds, teams };
 }
 
 /** 프로필 카드에 표시하는 소속 팀입니다. 서버가 반환하는 배정 자리(lib/contract 의 MyTeam)와 다른 자료형입니다. */

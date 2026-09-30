@@ -60,11 +60,15 @@ export function WriteForm(props: {
           setStage(`${file.name} 업로드 중${nth} ${percent}%`);
         });
       } catch (error) {
-        // 이미 업로드된 파일은 글에 붙어 있습니다. 실패한 파일만 남겨두어,
+        // 이미 업로드된 파일은 초안에 붙어 있습니다. 실패한 파일부터 남겨두어,
         // 재시도 시 같은 파일을 두 번 업로드하지 않게 합니다.
+        // files 는 이 렌더 시점의 값입니다. 업로드 중에는 파일 선택 버튼과 입력칸이
+        // disabled={send.isPending} 이므로 그 사이 사용자가 목록을 수정할 수 없습니다.
         setFiles(files.slice(index));
+        // 발행(publish)은 이 함수가 끝난 뒤에 실행됩니다. 여기서 error 를 발생시키면 발행에
+        // 도달하지 못해 글은 초안으로 남습니다.
         throw new Error(
-          `글은 업로드 되었지만 "${file.name}" 을 업로드하지 못했어요 — ${reason(error)}`,
+          `"${file.name}" 을 업로드하지 못해 글을 발행하지 않았어요 — ${reason(error)}`,
         );
       }
     }

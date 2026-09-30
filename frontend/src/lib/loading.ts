@@ -19,6 +19,17 @@ export function loadState(query: { isPending: boolean; error: unknown }): LoadSt
   return { kind: "failed", why: reason(query.error) };
 }
 
+/** 화면 하나가 여러 조회를 함께 쓸 때, 그중 처음 실패한 조회의 사유입니다.
+ *  전부 성공했을 경우 빈 문자열을 반환합니다.
+ *
+ *  TanStack Query 는 실패하지 않은 조회의 error 를 null 로 두므로 null 과 undefined 를
+ *  성공으로 판정합니다. 조회 하나가 실패해도 그 자리에 ?? [] 가 빈 배열을 주어 화면이
+ *  "등록된 항목이 없음" 과 같아집니다. 실패를 표시하지 않으면 사용자가 그 둘을 구분할 수 없습니다. */
+export function firstWhy(errors: readonly unknown[]): string {
+  const failed = errors.find((error) => error !== null && error !== undefined);
+  return failed === undefined ? "" : reason(failed);
+}
+
 /** 목록을 표시할 수 없을 때 그 자리에 표시할 메시지입니다. 조회에 성공했으나 목록이 비어 있는
  *  경우에 표시할 메시지는 empty 로 받습니다. */
 export function stateText(state: LoadState, empty: string): string {

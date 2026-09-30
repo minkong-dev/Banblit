@@ -4,6 +4,7 @@
 // 아래쪽은 가입한 모든 멤버입니다. 아래로 스크롤하면 다음 page 를 불러옵니다.
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { Card, SectionHead } from "../components/AppShell";
@@ -31,6 +32,13 @@ import type { MemberRow, Permission, PermissionSet } from "../lib/contract";
 
 const SETS_KEY = ["permission-sets"];
 const MEMBERS_KEY = ["member-roster"];
+/** 멤버 구역이 수정하는 서버 자료입니다. 권한 집합을 수정·삭제하면 그 집합을 부여받은 멤버의 권한과
+ *  로그인 계정의 권한(["me"])이 함께 바뀝니다. 셋 중 하나를 빠뜨리면 사이드바 메뉴가 옛 권한으로 남습니다. */
+const MEMBER_AREA_KEYS: readonly (readonly string[])[] = [SETS_KEY, MEMBERS_KEY, ["me"]];
+
+function refreshMemberArea(client: QueryClient): void {
+  for (const queryKey of MEMBER_AREA_KEYS) void client.invalidateQueries({ queryKey });
+}
 /** 한 번에 불러오는 멤버 수입니다. 아래로 스크롤하면 이 크기만큼씩 다음 페이지를 불러옵니다. */
 const PAGE = 50;
 
@@ -61,9 +69,7 @@ function SetForm(props: {
         body: JSON.stringify(form),
       }),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: SETS_KEY });
-      void client.invalidateQueries({ queryKey: MEMBERS_KEY });
-      void client.invalidateQueries({ queryKey: ["me"] });
+      refreshMemberArea(client);
       onDone(method === "POST" ? "권한을 생성했어요." : "권한을 저장했어요.");
     },
     onError: (error) => setBad(reason(error)),
@@ -159,23 +165,17 @@ function GrantModal(props: {
   const { set, mode, onClose, onDone } = props;
   const client = useQueryClient();
 
-  const refresh = (): void => {
-    void client.invalidateQueries({ queryKey: SETS_KEY });
-    void client.invalidateQueries({ queryKey: MEMBERS_KEY });
-    void client.invalidateQueries({ queryKey: ["me"] });
-  };
-
   const grant = useMutation({
     mutationFn: (memberId: number) =>
       getJSON<null>(`/members/${memberId}/permission-sets/${set.id}`, { method: "POST" }),
-    onSuccess: () => { refresh(); onDone("권한을 부여했어요"); },
+    onSuccess: () => { refreshMemberArea(client); onDone("권한을 부여했어요"); },
     onError: (error) => onDone(reason(error)),
   });
 
   const revoke = useMutation({
     mutationFn: (memberId: number) =>
       getJSON<null>(`/members/${memberId}/permission-sets/${set.id}`, { method: "DELETE" }),
-    onSuccess: () => { refresh(); onDone("권한을 제거했어요"); },
+    onSuccess: () => { refreshMemberArea(client); onDone("권한을 제거했어요"); },
     onError: (error) => onDone(reason(error)),
   });
 
@@ -270,8 +270,7 @@ function SetRail() {
   const list = sets.data?.permission_sets ?? [];
 
   const saved = (text: string): void => {
-    void client.invalidateQueries({ queryKey: SETS_KEY });
-    void client.invalidateQueries({ queryKey: MEMBERS_KEY });
+    refreshMemberArea(client);
     say(text);
   };
 
@@ -475,8 +474,7 @@ export function MemberCards() {
     mutationFn: (row: MemberRow) => expelMember(row.id),
     onSuccess: (_result, row) => {
       say(`${row.name} 님을 추방했어요.`);
-      void client.invalidateQueries({ queryKey: MEMBERS_KEY });
-      void client.invalidateQueries({ queryKey: SETS_KEY });
+      refreshMemberArea(client);
     },
     onError: (error) => say(reason(error, "추방하지 못했어요.")),
   });

@@ -1,6 +1,34 @@
 import { describe, expect, it } from "vitest";
 
-import { loadState, stateText } from "./loading";
+import { firstWhy, loadState, stateText } from "./loading";
+
+describe("firstWhy — 조회 여러 개 중 처음 실패한 사유", () => {
+  it("전부 성공했을 경우 빈 문자열을 반환한다", () => {
+    expect(firstWhy([null, null, null])).toBe("");
+  });
+
+  it("조회가 하나도 없을 경우 빈 문자열을 반환한다", () => {
+    expect(firstWhy([])).toBe("");
+  });
+
+  it("실패가 하나면 그 사유를 반환한다", () => {
+    expect(firstWhy([null, new Error("합주실을 못 불러왔어요"), null])).toBe("합주실을 못 불러왔어요");
+  });
+
+  it("실패가 둘 이상이면 앞의 것을 반환한다", () => {
+    expect(firstWhy([new Error("먼저"), new Error("나중")])).toBe("먼저");
+  });
+
+  it("undefined 도 성공으로 취급한다", () => {
+    // TanStack Query 는 실패하지 않은 조회의 error 를 null 로 둡니다. 조회 결과를 직접
+    // 넘기는 호출부가 undefined 를 줄 수 있으므로 둘 다 실패가 아닌 것으로 판정합니다.
+    expect(firstWhy([undefined, null])).toBe("");
+  });
+
+  it("Error 가 아닌 값이 실패로 들어오면 reason 의 기본 문구를 반환한다", () => {
+    expect(firstWhy(["문자열 오류"])).toBe("알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해주세요.");
+  });
+});
 
 describe("loadState — 물어본 결과를 상태 값으로", () => {
   it("아직 오지 않았으면 loading", () => {
