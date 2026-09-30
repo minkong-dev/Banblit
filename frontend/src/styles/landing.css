@@ -76,34 +76,32 @@ body[data-page="landing"] {
   .sheet .x svg { width: 24px; height: 24px; }
 
   /* ===== 히어로 =====
-     사진을 코랄로 색보정하고(Hobro Digital 방식) 필름 입자를 얹습니다(The Tie-break 방식). 제목은 300 굵기로 가늘게,
-     BANBLIT 은 화면 아래에서 잘리는 거대 글자입니다(White Desert 방식). 사진·글자·입자 세 겹이 깊이를 만듭니다. */
+     사진 위에 필름 입자를 얹습니다(The Tie-break 방식). 제목은 300 굵기로 가늘게, 마지막 낱말 BANBLIT 만 800 굵기로
+     크게 씁니다(Cerebrium 방식). 글자는 화면 안에 다 들어갑니다. */
   .hero {
     position: relative; min-height: 100svh; overflow: hidden; isolation: isolate;
     display: grid; align-items: end;
     background: #0A0B0D center/cover no-repeat;
-    background-image: linear-gradient(180deg, rgba(8,9,11,.1) 0%, rgba(8,9,11,.2) 55%, rgba(8,9,11,.92) 100%), url("/images/in_six_strings.webp");
+    background-image: linear-gradient(180deg, rgba(8,9,11,.18) 0%, rgba(8,9,11,.22) 50%, rgba(8,9,11,.86) 100%), url("/images/in_six_strings.webp");
     color: #fff;
-    padding: 150px 40px 0;
+    padding: 150px 40px 56px;
   }
-  /* 코랄 색보정입니다. color 혼합은 사진의 명암은 두고 색만 코랄 계열로 바꿉니다. */
-  .hero::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--brand); mix-blend-mode: color; opacity: .42; pointer-events: none; }
   /* 필름 입자입니다. SVG 잡음(feTurbulence)을 타일로 깔고 overlay 로 섞습니다. */
   .hero::after {
     content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .22; mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .7 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
-  .hero > div { position: relative; max-width: var(--w); width: 100%; margin: 0 auto; padding-bottom: clamp(120px, 17vw, 260px); }
+  .hero > div { position: relative; max-width: var(--w); width: 100%; margin: 0 auto; }
   .hero h1 {
     margin: 0; font-size: clamp(26px, 3.2vw, 48px); font-weight: 300;
     line-height: 1.3; letter-spacing: -.02em; max-width: 24ch;
     text-wrap: balance;
   }
-  /* 거대한 BANBLIT 입니다. 제목의 마지막 낱말을 화면 폭만큼 키워 아래 가장자리에서 잘리게 둡니다. */
+  /* 마지막 낱말 BANBLIT 입니다. 한 줄로 크게, 화면 안에 다 들어오는 크기입니다. */
   .hero h1 .mark {
-    position: absolute; left: -.03em; bottom: -.16em; z-index: 1;
-    font-size: clamp(96px, 19.5vw, 290px); font-weight: 800; line-height: .8; letter-spacing: -.06em;
-    color: #fff; white-space: nowrap;
+    display: block; margin-top: .1em;
+    font-size: clamp(56px, 9.5vw, 144px); font-weight: 800; line-height: .95; letter-spacing: -.05em;
+    color: var(--brand); white-space: nowrap;
   }
   .hero .sub { margin: 22px 0 0; font-size: clamp(14px, 1.1vw, 17px); font-weight: 500; color: rgba(255,255,255,.7); }
   /* 모서리 메타입니다(Aspen·Hobro 방식). 왼쪽 위에 창단 연도, 오른쪽 아래에 SCROLL. */
@@ -122,12 +120,6 @@ body[data-page="landing"] {
   :is(.hero, .end) .go:hover { background: var(--coral-lite); }
   :is(.hero, .end) .go:hover svg { transform: translateX(4px); }
   .hero .cue { position: absolute; bottom: 30px; right: 40px; z-index: 2; }
-
-  /* ===== 흐르는 띠 =====
-     히어로 아래 코랄 띠에 동아리 이름과 창단 연도가 왼쪽으로 흐릅니다. 같은 글을 두 번 이어 붙여 끊김 없이 돕니다. */
-  .ticker { overflow: hidden; background: var(--brand); color: var(--coral-ink); padding: 14px 0; white-space: nowrap; }
-  .ticker span { display: inline-block; padding-right: 48px; font-size: 14px; font-weight: 700; letter-spacing: .18em; animation: flow 28s linear infinite; }
-  @keyframes flow { to { transform: translateX(-50%); } }
 
   /* ===== 공통 ===== */
   .sec { padding: clamp(96px, 12vw, 190px) 0; }
@@ -193,29 +185,26 @@ body[data-page="landing"] {
   .box .unit { display: block; font-size: 13.5px; font-weight: 500; color: #8C9199; margin-top: 14px; }
 
   /* ===== 세 걸음 =====
-     순서가 있는 내용이라 큰 번호(STEP 1·2·3)를 붙입니다. 세 칸을 1px 검정 선으로 붙인 격자이고(Aspen Search 방식),
-     가운데 칸만 코랄 색면입니다. */
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 64px; border: 1px solid var(--ink); }
-  .step { padding: 34px 30px 44px; border-right: 1px solid var(--ink); }
-  .step:last-child { border-right: none; }
-  .step:nth-child(2) { background: var(--brand); color: var(--coral-ink); }
-  .step:nth-child(2) p { color: var(--coral-ink); opacity: .78; }
-  .step .bar { display: none; }
-  .step .k { font-size: clamp(28px, 3vw, 40px); font-weight: 800; letter-spacing: -.05em; line-height: 1; }
-  .step h4 { margin: 44px 0 10px; font-size: 20px; font-weight: 700; letter-spacing: -.035em; }
-  .step p { margin: 0; font-size: 15px; line-height: 1.75; color: var(--ink-2); max-width: 34ch; }
+     처음 설계(진행 막대 34% → 67% → 100%, STEP 라벨, 제목, 설명)를 그대로 두고 글꼴·크기만 이 화면의 값에 맞춥니다. */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; margin-top: 64px; }
+  .step .k { font-size: 12px; font-weight: 700; letter-spacing: .16em; color: var(--brand); }
+  .step h4 { margin: 14px 0 10px; font-size: 20px; font-weight: 700; letter-spacing: -.035em; }
+  .step p { margin: 0; font-size: 15px; line-height: 1.75; color: var(--ink-2); }
+  .step .bar { height: 3px; background: var(--edge); margin-bottom: 22px; position: relative; }
+  .step .bar::after { content: ""; position: absolute; inset: 0 auto 0 0; width: 34%; background: var(--brand); }
+  .step:nth-child(2) .bar::after { width: 67%; }
+  .step:nth-child(3) .bar::after { width: 100%; }
 
-  /* ===== 운영하는 사람 =====
-     코랄 전면입니다(Aardvark Book Club 방식). 이 화면에서 코랄을 가장 크게 쓰는 곳입니다. */
-  .admin { background: var(--brand); color: var(--coral-ink); }
+  /* ===== 운영하는 사람 ===== */
+  .admin { background: var(--ink); color: #fff; }
   .admin .row { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
   .admin .quote { font-size: var(--lead); font-weight: 700; line-height: 1.3; letter-spacing: -.045em; margin: 0; text-wrap: balance; }
-  .admin .quote b { color: #fff; font-weight: 700; }
+  .admin .quote b { color: var(--brand); font-weight: 700; }
   .admin ul { list-style: none; margin: 0; padding: 0; }
-  .admin li { display: flex; gap: 20px; padding: 22px 0; border-top: 1px solid rgba(46,16,6,.28); font-size: 15px; }
-  .admin li:last-child { border-bottom: 1px solid rgba(46,16,6,.28); }
+  .admin li { display: flex; gap: 20px; padding: 22px 0; border-top: 1px solid rgba(255,255,255,.16); font-size: 15px; }
+  .admin li:last-child { border-bottom: 1px solid rgba(255,255,255,.16); }
   .admin li b { font-weight: 700; min-width: 96px; }
-  .admin li span { color: rgba(46,16,6,.78); font-size: 15px; line-height: 1.7; }
+  .admin li span { color: #A3A8B0; font-size: 15px; line-height: 1.7; }
 
   /* ===== 마지막 =====
      BANBLIT 이 화면 폭만큼 커집니다. 글자가 곧 장면입니다. */
@@ -262,13 +251,9 @@ body[data-page="landing"] {
   }
   @media (max-width: 760px) {
     .sec { padding: 80px 0; }
-    .hero { padding: 120px 24px 0; }
-    .hero > div { padding-bottom: 96px; }
-    .hero h1 .mark { font-size: 26vw; bottom: -.12em; }
+    .hero { padding: 120px 24px 48px; }
+    .hero h1 .mark { font-size: 15vw; }
     .hero .cue { display: none; }
-    .steps { grid-template-columns: 1fr; }
-    .step { border-right: none; border-bottom: 1px solid var(--ink); }
-    .step:last-child { border-bottom: none; }
     .shots { max-width: 100%; }
     .box { min-height: 400px; }
     .box .full { padding: 28px 24px; }
@@ -283,7 +268,6 @@ body[data-page="landing"] {
   }
   @media (prefers-reduced-motion: reduce) {
     .rise { opacity: 1; transform: none; transition: none; }
-    .ticker span { animation: none; }
     * { transition-duration: .01ms !important; }
   }
 
