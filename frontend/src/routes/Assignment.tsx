@@ -10,15 +10,25 @@ import { runAssignment } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
 import { useMe, usePeriods, useRooms, useTeams } from "../components/queries";
 import { can } from "../lib/account";
-import { NOW, colorsOf, runResultText, sessionsOf, tabKey, viewOf } from "../lib/assignment";
+import {
+  NOW, colorsOf, dayRangeOf, runResultText, sessionsOf, sessionsOfRows, tabKey, tabsOf, viewOf,
+} from "../lib/assignment";
 import type { View } from "../lib/assignment";
 import { AssignmentCalendar, AssignmentStatus, PastRunsPanel, RunTimesPanel } from "./AssignmentPanels";
 import "../styles/assignment.css";
 import type { AssignOut, ScheduleRow } from "../lib/contract";
-import { datesBetween, dayOf, mergeSessions, SCHEDULE_KEY, stampLabel } from "../lib/pipeline";
+import { SCHEDULE_KEY } from "../lib/pipeline";
 
 // 조회 결과가 아직 없을 때 사용하는 빈 목록입니다. 같은 배열을 계속 사용해야 useMemo 의 의존성이 변하지 않습니다.
 const NO_ROWS: ScheduleRow[] = [];
+
+/** 선택된 집중 합주기간의 번호입니다. 없을 경우 error 를 발생시킵니다.
+ *  조회·재계산·확정·되돌리기·배정기록 조회가 모두 기간 번호를 요구하고, enabled 조건으로 막아도
+ *  queryFn·mutationFn 의 타입에서는 null 이 남습니다. 문구를 한 곳에 두어 다섯 곳이 같게 합니다. */
+function requirePeriod(periodId: number | null): number {
+  if (periodId === null) throw new Error("선택할 집중 합주기간이 없어요");
+  return periodId;
+}
 
 export function Assignment() {
   const { me } = useMe();
@@ -39,10 +49,7 @@ export function Assignment() {
 
   const schedule = useQuery({
     queryKey: ["schedule", activePeriodId],
-    queryFn: () => {
-      if (activePeriodId === null) throw new Error("선택할 집중 합주기간이 없어요");
-      return getJSON<{ rows: ScheduleRow[] }>(`/periods/${activePeriodId}/schedule`);
-    },
+    queryFn: () => getJSON<{ rows: ScheduleRow[] }>(`/periods/${requirePeriod(activePeriodId)}/schedule`),
     enabled: activePeriodId !== null,
   });
   // schedule.data 가 없으면 NO_ROWS 를 사용합니다. 매 render 마다 새 빈 배열을 만들면 아래 useMemo 가 매번 다시 실행됩니다.
@@ -70,11 +77,8 @@ export function Assignment() {
   };
 
   const recompute = useMutation({
-    mutationFn: (body: AssignBody) => {
-      if (activePeriodId === null) throw new Error("선택할 집중 합주기간이 없어요");
-      // 서버는 접수만 하고 곧바로 답합니다. 끝날 때까지 polling(주기적으로 같은 요청을 다시 보내 변경을 확인하는 방식)하는 것은 runAssignment입니다.
-      return runAssignment<AssignOut>(activePeriodId, body);
-    },
+    // 서버는 접수만 하고 곧바로 답합니다. 끝날 때까지 polling(주기적으로 같은 요청을 다시 보내 변경을 확인하는 방식)하는 것은 runAssignment입니다.
+    mutationFn: (body: AssignBody) => runAssignment<AssignOut>(requirePeriod(activePeriodId), body),
     onSuccess: async (result) => {
       await refreshSchedule();
       say(runResultText(result));
@@ -85,10 +89,8 @@ export function Assignment() {
   // 조율안 확정입니다. 조율안이 지목한 멤버를 제외한 채로 같은 계산을 다시 실행해 저장합니다. 서버 경로가
   // 다를 뿐 결과를 받는 방식은 재계산과 같습니다.
   const confirm = useMutation({
-    mutationFn: (memberId: number) => {
-      if (activePeriodId === null) throw new Error("선택할 집중 합주기간이 없어요");
-      return runAssignment<AssignOut>(activePeriodId, { team_ids: teamIds, room_ids: roomIds }, memberId);
-    },
+    mutationFn: (memberId: number) =>
+      runAssignment<AssignOut>(requirePeriod(activePeriodId), { team_ids: teamIds, room_ids: roomIds }, memberId),
     onSuccess: async (result) => {
       await refreshSchedule();
       say(result.saved ? "선택한 배정으로 확정했어요" : "해당 배정을 선택하지 않았어요");
@@ -97,11 +99,9 @@ export function Assignment() {
   });
 
   const rollback = useMutation({
-    mutationFn: () => {
-      if (activePeriodId === null) throw new Error("선택할 집중 합주기간이 없어요");
-      // 배정기록을 받지 않는 endpoint 입니다. 언제나 바로 직전 배정기록으로만 되돌아갑니다.
-      return getJSON<{ rolled_back: boolean }>(`/periods/${activePeriodId}/rollback`, { method: "POST" });
-    },
+    // 배정기록을 받지 않는 endpoint 입니다. 언제나 바로 직전 배정기록으로만 되돌아갑니다.
+    mutationFn: () =>
+      getJSON<{ rolled_back: boolean }>(`/periods/${requirePeriod(activePeriodId)}/rollback`, { method: "POST" }),
     onSuccess: async (result) => {
       // 되돌린 배정기록은 목록에서 제거됩니다.
       await refreshSchedule();
@@ -124,10 +124,7 @@ export function Assignment() {
     enabled: activePeriodId !== null && roundAt !== null,
   });
 
-  const confirmed = useMemo(
-    () => mergeSessions(rows.map((row) => ({ team: row.team, room: row.room, start: row.start, end: row.end }))),
-    [rows],
-  );
+  const confirmed = useMemo(() => sessionsOfRows(rows), [rows]);
 
   // recompute.data 가 없을 때만 매번 새 빈 배열이 생깁니다. 재계산 전에는 proposals 를
   // 사용하는 곳도 없어 아래 useMemo 가 다시 실행되어도 비용이 없습니다.
@@ -135,10 +132,7 @@ export function Assignment() {
   const proposalIndex = view.kind === "proposal" ? view.index : null;
   const proposal = proposalIndex === null ? null : proposals[proposalIndex] ?? null;
   const roundRows = round.data?.rows ?? NO_ROWS;
-  const roundSessions = useMemo(
-    () => mergeSessions(roundRows.map((row) => ({ team: row.team, room: row.room, start: row.start, end: row.end }))),
-    [roundRows],
-  );
+  const roundSessions = useMemo(() => sessionsOfRows(roundRows), [roundRows]);
   const shown = useMemo(() => {
     if (roundAt !== null) return roundSessions;
     return proposal ? sessionsOf(proposal.assignment.slots_by_team) : confirmed;
@@ -150,21 +144,8 @@ export function Assignment() {
     [confirmed, shown, teamList],
   );
 
-  const tabs = [
-    { key: "now", text: "현재 확정된 배정안" },
-    ...proposals.map((_, index) => ({
-      key: `p${index}`,
-      text: `${String.fromCharCode(65 + index)}안`,
-    })),
-    ...(roundAt === null ? [] : [{ key: `r:${roundAt}`, text: stampLabel(roundAt) }]),
-  ];
-
-  const days = shown.length
-    ? datesBetween(
-        dayOf(shown.map((session) => session.start).sort()[0]),
-        dayOf(shown.map((session) => session.start).sort().reverse()[0]),
-      )
-    : [];
+  const tabs = tabsOf(proposals.length, roundAt);
+  const days = dayRangeOf(shown);
 
   // 버튼마다 필요한 권한이 다릅니다. 계산은 assign_run, 되돌리기는 rollback 입니다.
   // 둘 다 없으면 버튼 줄 자체를 표시하지 않습니다.
