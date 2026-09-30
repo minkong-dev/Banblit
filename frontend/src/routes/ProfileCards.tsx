@@ -76,6 +76,7 @@ function PhotoEdit({ me }: { me: Account }) {
     onError: (error) => say(reason(error)),
   });
 
+  const busy = upload.isPending || reset.isPending;
   return (
     <div className="photo">
       <button
@@ -84,7 +85,11 @@ function PhotoEdit({ me }: { me: Account }) {
         className="change"
         aria-controls={PHOTO_MENU_ID}
         aria-expanded={open}
-        disabled={upload.isPending || reset.isPending}
+        // 요청 중에는 disabled 가 아니라 aria-disabled 로 막습니다. 메뉴를 닫으면 초점이 이 버튼으로 돌아오는데,
+        // 초점을 가진 버튼이 disabled 가 되면 WebKit(Safari)은 초점을 body 로 옮깁니다(2026-09-30 WebKit e2e 로 발견).
+        // preventDefault 가 popoverTarget 의 기본 동작(메뉴 열기)을 막습니다.
+        aria-disabled={busy}
+        onClick={(event) => { if (busy) event.preventDefault(); }}
         popoverTarget={PHOTO_MENU_ID}
       >
         프로필 사진 변경

@@ -24,7 +24,8 @@ body[data-page="profile"] {
     anchor-name: --photo-trigger;
     min-height: 32px; padding: 4px 10px; border-radius: 8px; font-size: 13.5px; color: var(--t3); transition: color .15s ease;
   }
-  .photo .change:hover:not(:disabled) { color: var(--t1); }
+  .photo .change:hover:not([aria-disabled="true"]) { color: var(--t1); }
+  .photo .change[aria-disabled="true"] { cursor: default; }
   .photo .change:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
   .photo .big { width: 128px; height: 128px; border-radius: 50%; background: var(--brand); color: var(--brand-on); display: grid; place-items: center; font-size: 36px; font-weight: 700; object-fit: cover; }
   .photo .pop {
