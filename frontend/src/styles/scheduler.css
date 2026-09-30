@@ -18,18 +18,15 @@ body[data-page="scheduler"] {
   .cardfoot { flex: none; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 0 0; border-top: 1px solid var(--line); }
 
   /* ===== 달 이름 줄 =====
-     높이는 오른쪽 목록의 제목줄과 같은 --head-h 이고 아래 선도 같은 높이에 놓입니다. 달 이름은 제목 크기(2xl)이고
-     연도는 옆에 작게, 넘김 버튼은 이름 뒤에, 월·주 전환은 오른쪽 끝입니다. DOM 순서는 넘김·이름·넘김이라 order 로
-     이름을 맨 앞에 둡니다. */
-  .calbar { flex: none; display: flex; align-items: center; gap: 8px; height: var(--head-h); border-bottom: 1px solid var(--line); }
-  .calbar .ml { order: 1; display: flex; align-items: baseline; gap: 10px; margin-right: 10px; }
-  .calbar .ml b { font-size: var(--fs-2xl); font-weight: 800; line-height: 1; letter-spacing: -.04em; }
-  .calbar .ml small { font-size: var(--fs-sm); font-weight: 500; letter-spacing: .08em; color: var(--t3); }
-  .navb { order: 2; width: 32px; height: 32px; display: grid; place-items: center; color: var(--t2); border: 1px solid var(--line-2); border-radius: 50%; transition: border-color .15s ease, color .15s ease; }
-  .navb:hover { border-color: var(--t1); color: var(--t1); }
-  .navb svg { width: 14px; height: 14px; }
-  /* 월·주 전환도 탭과 같은 규칙입니다. 고른 쪽은 본문색, 나머지는 흐린 글자입니다. */
-  .seg { order: 3; margin-left: auto; display: flex; gap: 16px; }
+     높이는 오른쪽 목록의 제목줄과 같은 --head-h 이고 아래 선도 같은 높이에 놓입니다.
+     "‹ 2026년 10월 ›" 순서로, 넘김 버튼 2개 사이에 달 이름을 둡니다. 월·주 전환은 오른쪽 끝입니다. */
+  .calbar { flex: none; display: flex; align-items: center; gap: 6px; height: var(--head-h); border-bottom: 1px solid var(--line); }
+  .calbar .ml { font-size: var(--fs-xl); font-weight: 700; min-width: 124px; text-align: center; letter-spacing: -.02em; }
+  .navb { width: 38px; height: 38px; display: grid; place-items: center; color: var(--t2); border-radius: var(--r-md); transition: background-color .15s ease, color .15s ease; }
+  .navb:hover { background: var(--card-2); color: var(--t1); }
+  .navb svg { width: 16px; height: 16px; }
+  /* 월·주 전환은 고른 쪽만 본문색 굵은 글자이고, 나머지는 흐린 글자입니다. */
+  .seg { margin-left: auto; display: flex; gap: 16px; }
   .seg button { padding: 0; min-height: 36px; font-size: var(--fs-base); font-weight: 500; color: var(--t3); transition: color .15s ease; }
   .seg button:hover { color: var(--t2); }
   .seg button[aria-pressed="true"] { color: var(--t1); font-weight: 700; }
