@@ -76,50 +76,46 @@ body[data-page="landing"] {
   .sheet .x svg { width: 24px; height: 24px; }
 
   /* ===== 히어로 =====
-     사진 위에 필름 입자를 얹습니다(The Tie-break 방식). 제목은 300 굵기로 가늘게, 마지막 낱말 BANBLIT 만 800 굵기로
-     크게 씁니다(Cerebrium 방식). 글자는 화면 안에 다 들어갑니다. */
+     처음 설계 그대로입니다. 사진 가운데에 제목·부제·시작하기 링크를 세로로 놓고, 아래 가운데에 SCROLL 을 둡니다. */
   .hero {
-    position: relative; min-height: 100svh; overflow: hidden; isolation: isolate;
-    display: grid; align-items: end;
+    position: relative; min-height: 100vh;
+    display: grid; place-items: center;
     background: #0A0B0D center/cover no-repeat;
-    background-image: linear-gradient(180deg, rgba(8,9,11,.18) 0%, rgba(8,9,11,.22) 50%, rgba(8,9,11,.86) 100%), url("/images/in_six_strings.webp");
-    color: #fff;
-    padding: 150px 40px 56px;
+    background-image: linear-gradient(rgba(8,9,11,.34), rgba(8,9,11,.62)), url("/images/in_six_strings.webp");
+    text-align: center; color: #fff;
+    padding: 120px 24px;
   }
-  /* 필름 입자입니다. SVG 잡음(feTurbulence)을 타일로 깔고 overlay 로 섞습니다. */
-  .hero::after {
-    content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .22; mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .7 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  }
-  .hero > div { position: relative; max-width: var(--w); width: 100%; margin: 0 auto; }
   .hero h1 {
-    margin: 0; font-size: clamp(26px, 3.2vw, 48px); font-weight: 300;
-    line-height: 1.3; letter-spacing: -.02em; max-width: 24ch;
-    text-wrap: balance;
+    margin: 0; font-size: clamp(26px, 3.4vw, 44px); font-weight: 700;
+    line-height: 1.5; letter-spacing: -.045em;
+    text-shadow: 0 2px 24px rgba(0,0,0,.45);
   }
-  /* 마지막 낱말 BANBLIT 입니다. 한 줄로 크게, 화면 안에 다 들어오는 크기입니다. */
-  .hero h1 .mark {
-    display: block; margin-top: .1em;
-    font-size: clamp(56px, 9.5vw, 144px); font-weight: 800; line-height: .95; letter-spacing: -.05em;
-    color: var(--brand); white-space: nowrap;
+  .hero h1 .mark { color: var(--brand); font-weight: 900; letter-spacing: .04em; }
+  .hero .sub { margin: 22px 0 0; font-size: clamp(14px, 1.3vw, 17px); font-weight: 300; opacity: .82; }
+  .hero .go {
+    margin-top: 80px; display: inline-flex; align-items: center; gap: 10px;
+    min-height: 44px; color: var(--brand);
+    font-size: 17px; font-weight: 700;
+    transition: color .18s ease;
   }
-  .hero .sub { margin: 22px 0 0; font-size: clamp(14px, 1.1vw, 17px); font-weight: 500; color: rgba(255,255,255,.7); }
-  /* 모서리 메타입니다(Aspen·Hobro 방식). 왼쪽 위에 창단 연도, 오른쪽 아래에 SCROLL. */
-  .hero .nav-meta, .hero .cue { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; opacity: .7; }
-  .hero .nav-meta { margin: 0 0 22px; }
-  /* 시작하기는 이 화면의 유일한 코랄 면입니다. */
-  .hero .go, .end .go {
+  .hero .go svg { width: 18px; height: 18px; transition: transform .18s ease; }
+  .hero .go:hover { color: var(--coral-lite); }
+  .hero .go:hover svg { transform: translateX(4px); }
+  .hero .cue {
+    position: absolute; bottom: 34px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; letter-spacing: .22em; opacity: .6;
+  }
+  /* 마지막 구간의 시작하기 버튼은 코랄 알약입니다. */
+  .end .go {
     display: inline-flex; align-items: center; gap: 12px;
     min-height: 56px; padding: 0 28px;
     background: var(--brand); color: var(--coral-ink); border-radius: 999px;
     font-size: 16px; font-weight: 700; letter-spacing: -.01em;
-    transition: background-color .18s ease, transform .18s ease;
+    transition: background-color .18s ease;
   }
-  .hero .go { margin-top: 34px; position: relative; z-index: 2; }
-  :is(.hero, .end) .go svg { width: 18px; height: 18px; transition: transform .18s ease; }
-  :is(.hero, .end) .go:hover { background: var(--coral-lite); }
-  :is(.hero, .end) .go:hover svg { transform: translateX(4px); }
-  .hero .cue { position: absolute; bottom: 30px; right: 40px; z-index: 2; }
+  .end .go svg { width: 18px; height: 18px; transition: transform .18s ease; }
+  .end .go:hover { background: var(--coral-lite); }
+  .end .go:hover svg { transform: translateX(4px); }
 
   /* ===== 공통 ===== */
   .sec { padding: clamp(96px, 12vw, 190px) 0; }
@@ -251,9 +247,6 @@ body[data-page="landing"] {
   }
   @media (max-width: 760px) {
     .sec { padding: 80px 0; }
-    .hero { padding: 120px 24px 48px; }
-    .hero h1 .mark { font-size: 15vw; }
-    .hero .cue { display: none; }
     .shots { max-width: 100%; }
     .box { min-height: 400px; }
     .box .full { padding: 28px 24px; }
@@ -265,6 +258,7 @@ body[data-page="landing"] {
     .wrap { padding: 0 20px; }
     .nav { padding: 18px 20px; }
     .nav .brand { font-size: 15px; }
+    .hero { min-height: 92vh; }
   }
   @media (prefers-reduced-motion: reduce) {
     .rise { opacity: 1; transform: none; transition: none; }
