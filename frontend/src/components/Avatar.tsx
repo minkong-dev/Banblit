@@ -2,7 +2,7 @@
 // 표시합니다. 사진이 있는지는 서버에 따로 묻지 않고 주소를 그대로 표시해 봅니다 — 없으면 404 가
 // 오고 그때 이름으로 바꿉니다. 응답마다 있음·없음을 싣는 것보다 고치는 곳이 적습니다.
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { apiUrl } from "../lib/api";
 
@@ -16,20 +16,21 @@ export function Avatar({ id, name, className = "face", photo }: {
    *  번호로 고정이라, 이 값이 없으면 올린 뒤에도 브라우저가 옛 사진이나 빈 자리를 계속 표시합니다. */
   photo?: string | null;
 }) {
-  const [missing, setMissing] = useState(false);
+  // "없음" 판정은 판정 당시의 계정 번호·파일명(src)에만 적용합니다. 사진이 바뀌어 src 가 달라지면
+  // 판정이 자동으로 취소되어 다시 불러옵니다. effect 로 상태를 초기화하지 않습니다(react-hooks/set-state-in-effect).
+  // 사진을 올렸다가 삭제해 src 가 판정 당시의 값으로 돌아오면 다시 "없음"으로 표시합니다. 그 src 는 실제로 404 였으므로 의도한 동작입니다.
+  const src = id === null ? null : apiUrl(`/members/${id}/avatar`) + (photo ? `?v=${photo}` : "");
+  const [missingSrc, setMissingSrc] = useState<string | null>(null);
 
-  // 사진이 바뀌면 "없음"으로 판정했던 것을 취소하고 다시 불러옵니다.
-  useEffect(() => { setMissing(false); }, [id, photo]);
-
-  if (id === null || missing) {
+  if (src === null || missingSrc === src) {
     return <span className={className} aria-hidden="true">{name.slice(0, 2)}</span>;
   }
   return (
     <img
       className={className}
-      src={apiUrl(`/members/${id}/avatar`) + (photo ? `?v=${photo}` : "")}
+      src={src}
       alt=""
-      onError={() => setMissing(true)}
+      onError={() => setMissingSrc(src)}
     />
   );
 }

@@ -217,11 +217,6 @@ export function Assignment() {
                 onChange={(next) => { setPeriodId(next); setView(NOW); }}
               />
             </span>
-            <div className="keys">
-              {[...colors.entries()].map(([name, tone]) => (
-                <i key={name}><em style={{ background: `var(--${tone})` }} />{name}</i>
-              ))}
-            </div>
           </div>
 
           {/* 요일 머리글과 날짜 칸을 한 요소로 묶습니다. 휴대폰 폭에서 달력만 가로로 스크롤할 때

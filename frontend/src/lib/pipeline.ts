@@ -13,6 +13,7 @@ import {
   hoursLabel,
   inRanges,
   isRangeFree,
+  MINUTES_PER_HOUR,
   monthCells,
   roomBounds,
   slotCountOf,
@@ -21,6 +22,7 @@ import {
   takenGrid,
   WEEKDAY_NAMES,
   weekKeys,
+  withPastTaken,
 } from "./calendar";
 import {
   capacity,
@@ -409,7 +411,7 @@ export {
   upcomingBookings,
 } from "./slots";
 export type { Booking, Session } from "./slots";
-export { dayKey, datesBetween, isRangeFree, monthCells, slotCountOf, slotLabel, takenGrid, weekKeys };
+export { dayKey, datesBetween, isRangeFree, MINUTES_PER_HOUR, monthCells, slotCountOf, slotLabel, takenGrid, weekKeys, withPastTaken };
 export { dayLabel, dayWithWeekday, stampLabel, WEEKDAY_NAMES };
 export { hoursLabel };
 export {

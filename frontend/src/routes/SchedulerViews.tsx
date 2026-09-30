@@ -1,13 +1,14 @@
 // 달력 화면(routes/Scheduler)의 달 보기와 주 보기입니다. 값을 보유하지 않으며, 표시할 항목은 부모가 entriesOf 로 넘깁니다.
 
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
 import { visible } from "../lib/dayEntries";
 import type { DayTab, Entry } from "../lib/dayEntries";
 import type { DayTeam } from "../lib/roster";
 import {
-  dayKey, dayWithWeekday, hoursLabel, isRangeFree, monthCells, slotLabel, takenGrid, WEEKDAY_NAMES,
+  dayKey, dayWithWeekday, hoursLabel, isRangeFree, MINUTES_PER_HOUR, monthCells, slotLabel, takenGrid, WEEKDAY_NAMES,
+  withPastTaken,
 } from "../lib/pipeline";
 import { entryClass, entryName } from "./DayDialogParts";
 
@@ -21,6 +22,20 @@ type ViewProps = {
   slotMinutes: number;
 };
 
+const NOW_REFRESH_MS = 60_000;
+
+/** 현재 시각입니다. 1분마다 갱신해, 화면을 열어 둔 채 정각이나 자정을 넘겨도 오늘 표시와 지난 칸 판정이 따라갑니다.
+ *  브라우저 시계와 시간대를 그대로 씁니다. 서버는 시간대 없는 값을 서버 시계로 비교하므로, 사용자 PC 의 시간대가
+ *  서버와 다르면 지난 칸 판정이 어긋납니다. 시간대 지원은 미구현입니다(CLAUDE.md 6장). */
+function useNow(): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), NOW_REFRESH_MS);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
 /** 달 보기입니다. 예약 탭에서는 날짜마다 남은 시간을, 다른 탭에서는 그날 항목 3개까지를 표시합니다. */
 export function MonthView({
   year, month, range, inFocus, onOpen, tab, teams, entriesOf, openHour, slotCount, slotMinutes,
@@ -33,12 +48,16 @@ export function MonthView({
   onOpen: (key: string) => void;
 }) {
   const cells = monthCells(year, month);
-  const today = dayKey(new Date());
+  const now = useNow();
+  const today = dayKey(now);
   const ymd = (day: number) =>
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   const label = (index: number) => slotLabel(index, openHour);
-  const gridOf = (key: string) =>
-    takenGrid(entriesOf(key).filter((entry) => entry.kind !== "off"), slotCount, slotMinutes);
+  // 오늘 날짜는 시작 시각이 지난 칸을 찬 칸으로 계산합니다. 서버가 그 시각의 예약을 거절하므로 남은 시간에서 제외합니다.
+  const gridOf = (key: string, minutes: number = slotMinutes) => {
+    const grid = takenGrid(entriesOf(key).filter((entry) => entry.kind !== "off"), slotCount, minutes);
+    return key === today ? withPastTaken(grid, now, openHour, minutes) : grid;
+  };
 
   return (
     <>
@@ -79,7 +98,7 @@ export function MonthView({
               // 남은 시간과 마감 판정은 점유 단위 칸으로 계산하고, meter 막대는 1시간 칸으로 그립니다.
               // 막대까지 점유 단위로 그리면 5분 단위에서 날짜 하나에 막대가 144개가 됩니다.
               const left = gridOf(key).filter((taken) => !taken).length;
-              const grid = takenGrid(entriesOf(key).filter((entry) => entry.kind !== "off"), slotCount);
+              const grid = gridOf(key, MINUTES_PER_HOUR);
               blocked = left === 0;
               inner = (
                 <div className={left === 0 ? "avail none" : "avail"}>
@@ -113,7 +132,8 @@ export function MonthView({
               key={key}
               className={["cell", ...marks].join(" ")}
               disabled={blocked}
-              aria-label={dayWithWeekday(key)}
+              // 지난 날짜는 누를 수 없는 이유를 스크린 리더에 알립니다. 화면에는 표시하지 않습니다.
+              aria-label={tab === "book" && key < today ? `${dayWithWeekday(key)}, 지난 날짜라 예약할 수 없습니다` : dayWithWeekday(key)}
               onClick={() => onOpen(key)}
             >
               <span className="n">{day}</span>
