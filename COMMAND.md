@@ -966,6 +966,9 @@ docker compose --profile e2e run --rm e2e sh -c "npx playwright test profile-car
     실패합니다(2026-09-30, Pretendard 추가 뒤 71개 중 60개 실패). 그때는
     `sh -c "npm install --no-audit --no-fund; npx playwright test <경로>"` 로 실행합니다.
     - `--no-audit --no-fund` — 취약점 보고서와 후원 안내 출력을 생략합니다. 설치 결과는 같습니다.
+  - `--project=webkit` — Safari 엔진(WebKit)으로만 실행합니다. `frontend/playwright.config.ts` 의 `webkit` 프로젝트는
+    `popovers.spec.ts`·`profile-card.spec.ts` 2개만 대상이라(팝업 4종의 CSS anchor positioning 확인) 다른 파일을 적으면
+    `No tests found` 입니다. `--project` 를 생략하면 chromium 과 webkit 을 둘 다 실행합니다(2026-09-30).
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
 - **용도**: `frontend/e2e/` 의 Playwright 검사 18개를 전부 실행합니다. 로그인·가입, 배정 다시
