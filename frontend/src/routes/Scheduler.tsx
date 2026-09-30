@@ -5,7 +5,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, Panel, Tabs } from "../components/AppShell";
 import { Dropdown } from "../components/Dropdown";
 import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from "../components/icons";
-import { getJSON, reason } from "../lib/api";
+import { getJSON } from "../lib/api";
+import { firstWhy } from "../lib/loading";
 import { currentMonth, slotSteps } from "../lib/calendar";
 import { boardListKey, focusedRanges, inRanges, loadMyBookings, loadReservationRows, loadUnavailable, roomBounds } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
@@ -46,7 +47,7 @@ const TABS: readonly { key: DayTab; text: string }[] = [
 ];
 
 export function Scheduler() {
-  const { me, teamIds, teams: allTeams } = useMe();
+  const { me, meState, teamIds, teams: allTeams } = useMe();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [tab, setTab] = useState<DayTab>("me");
@@ -112,6 +113,27 @@ export function Scheduler() {
   const periodList = useMemo(() => periods.data?.periods ?? [], [periods.data]);
   const offList = useMemo(() => unavailableQuery.data ?? [], [unavailableQuery.data]);
   const bookRows = useMemo(() => reservationQuery.data?.rows ?? [], [reservationQuery.data]);
+
+  // /me 가 실패하면 불가능 일정·예약 조회가 enabled 조건에 걸려 영구히 대기하므로 그 사유를
+  // 먼저 표시합니다. 나머지 여섯 조회는 실패해도 위 ?? 가 빈 배열을 주어 화면이 "등록된 일정이
+  // 없음" 과 같아지므로, firstWhy 로 처음 실패한 사유를 찾습니다.
+  const loadWhy = meState.kind === "failed"
+    ? meState.why
+    : firstWhy([
+      rooms.error, periods.error, query.error,
+      unavailableQuery.error, reservationQuery.error, myBookingsQuery.error,
+    ]);
+  const failures = query.data?.failures ?? [];
+  // refetch 가 아니라 invalidateQueries 를 씁니다. refetch 는 enabled 를 무시하고 queryFn 을
+  // 실행하므로 /me 나 목록 조회가 실패한 상태에서도 멤버 0번·빈 배열로 요청이 나갑니다.
+  // invalidateQueries 는 enabled 가 false 인 조회를 다시 받지 않고, 선행 조회가 성공한 뒤에
+  // 받습니다. queryKey 는 앞부분만 같아도 함께 무효화되므로 ["reservations"] 하나가
+  // 달력 예약과 "내 예약" 둘을 포함합니다.
+  const refreshAll = (): void => {
+    for (const queryKey of [["me"], ["rooms"], ["periods"], ["schedule"], ["unavailable"], ["reservations"]]) {
+      void queryClient.invalidateQueries({ queryKey });
+    }
+  };
 
   const teams = useMemo(() => teamsOf(rows, teamIds, allTeams), [rows, teamIds, allTeams]);
   const { open, close } = useMemo(() => roomBounds(roomList), [roomList]);
@@ -186,16 +208,27 @@ export function Scheduler() {
     <>
       <Tabs label="레이아웃" items={TABS} selected={tab} onSelect={setTab} />
 
-      {/* 합주실·기간·시간표 중 하나라도 실패하면 성공한 것만 표시하고 첫 실패 사유를
-          알립니다. 다시 불러오기는 셋을 한 번에 다시 조회합니다. */}
-      {rooms.isError || periods.isError || query.isError ? (
+      {/* 조회 일곱 개 중 하나라도 실패하면 성공한 것만 표시하고 첫 실패 사유를
+          알립니다. 다시 불러오기는 일곱을 한 번에 다시 조회합니다. */}
+      {loadWhy === "" ? null : (
         <div className="cut">
-          <p><b>스케줄을 불러오지 못했어요</b>{reason(rooms.error ?? periods.error ?? query.error)}</p>
-          <button className="btn warn" onClick={() => { void rooms.refetch(); void periods.refetch(); void query.refetch(); }}>
+          <p><b>스케줄을 불러오지 못했어요</b>{loadWhy}</p>
+          <button className="btn warn" onClick={refreshAll}>
             다시 불러오기
           </button>
         </div>
-      ) : null}
+      )}
+
+      {/* loadRows 는 기간 하나의 조회가 실패해도 나머지 기간의 시간표를 반환합니다. 그 기간만
+          달력에서 빠지므로 빠진 사실을 따로 알립니다. 위 안내는 조회 자체가 실패한 경우입니다. */}
+      {failures.length === 0 ? null : (
+        <div className="cut">
+          <p><b>일부 기간의 배정을 불러오지 못했어요</b> {failures.join(", ")}</p>
+          <button className="btn warn" onClick={() => { void queryClient.invalidateQueries({ queryKey: ["schedule"] }); }}>
+            다시 불러오기
+          </button>
+        </div>
+      )}
 
       <Card>
         <div className="calbar">
@@ -319,7 +352,6 @@ export function Scheduler() {
           inFocus={inFocus(openDay)}
           ensemble={ensembleOn(periodList, openDay)}
           canEditEnsemble={can(me, "period_edit")}
-          memberId={me?.id ?? null}
           myName={me?.name ?? ""}
           rooms={rooms.data?.rooms ?? []}
           onSaved={onSaved}

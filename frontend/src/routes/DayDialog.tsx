@@ -19,7 +19,7 @@ import {
 } from "../lib/pipeline";
 import type { Repeat } from "../lib/pipeline";
 import { firstTaken, unitLabel } from "../lib/calendar";
-import { useSlotMinutes } from "../components/queries";
+import { useMe, useSlotMinutes } from "../components/queries";
 import type { Room } from "../lib/contract";
 import { offWhenLabel } from "../lib/dayEntries";
 import type { DayTab, EnsembleOn, Entry } from "../lib/dayEntries";
@@ -37,9 +37,9 @@ function hourText(hour: number): string {
 
 export function DayDialog({
   dayKey, tab, teams, entries, myOff, myBookings, openHour, closeHour, slotCount, fixed, inFocus, ensemble, canEditEnsemble,
-  memberId, myName, rooms, onSaved, onClose,
+  myName, rooms, onSaved, onClose,
 }: {
-  /** 선택한 날짜의이 전체합주 날짜면 그 시각입니다. 아니면 null 입니다. */
+  /** 선택한 날짜가 전체합주 날짜면 그 시각입니다. 아니면 null 입니다. */
   ensemble: EnsembleOn | null;
   /** 날짜별 전체합주 시각을 변경할 수 있는지입니다. 서버 권한 항목 period_edit 과 같습니다. */
   canEditEnsemble: boolean;
@@ -47,7 +47,7 @@ export function DayDialog({
   tab: DayTab;
   teams: DayTeam[];
   entries: Entry[];
-  /** 로그인한 사용자가 등록한 불가능 일정 전부입니다(lib/dayEntries 의 allOffEntries). 선택한 날짜의의 항목만이 아닙니다. */
+  /** 로그인한 사용자가 등록한 불가능 일정 전부입니다(lib/dayEntries 의 allOffEntries). 선택한 날짜의 항목만이 아닙니다. */
   myOff: Entry[];
   /** 로그인한 사용자가 잡은 예약 중 아직 끝나지 않은 것 전부입니다(lib/dayEntries 의 allBookedEntries). 선택한 날짜의 항목만이 아닙니다. */
   myBookings: Entry[];
@@ -57,8 +57,6 @@ export function DayDialog({
   /** 위쪽 시간 선택에서 이미 시간을 지정했으면 그 시간으로 바로 예약합니다. */
   fixed: { from: number; to: number } | null;
   inFocus: boolean;
-  /** 로그인한 사용자 id입니다. 아직 받지 못했으면 null이고, 그동안은 등록·예약을 차단합니다. */
-  memberId: number | null;
   myName: string;
   /** 예약 가능한 합주실을 표시합니다. */
   rooms: Room[];
@@ -78,6 +76,14 @@ export function DayDialog({
   const [range, setRange] = useState<SlotRange | null>(null);
   // 시각 선택지의 간격과 머리글의 단위 문구는 저장소 설정(slot_minutes)을 따릅니다.
   const slotMinutes = useSlotMinutes();
+  // queryKey 가 ["me"] 로 같아 Scheduler 가 받아 둔 응답을 그대로 씁니다.
+  const { me, meState } = useMe();
+  const memberId = me?.id ?? null;
+  // memberId 가 null 인 경우는 조회 중과 조회 실패 둘입니다. 조회 중이면 잠시 후 해결되지만
+  // 실패는 다시 눌러도 같은 결과이므로 사유를 그대로 표시합니다. 등록과 예약이 같은 문구를 씁니다.
+  const noMemberWhy = meState.kind === "failed"
+    ? meState.why
+    : "요청이 많아 지연되고 있어요. 잠시 후 다시 시도해 주세요.";
 
   // 아직 아무것도 선택하지 않았으면 목록의 첫 합주실입니다. dialog(화면 위에 뜨는 대화 상자)를 열자마자 합주실 하나는 선택되어 있어야 합니다.
   const room = rooms.find((item) => item.id === roomId) ?? rooms[0] ?? null;
@@ -101,7 +107,7 @@ export function DayDialog({
     (entry) => entry.removeIds !== undefined || entry.bookingId !== undefined
       || (entry.team !== null && teams.some((t) => t.key === entry.team && t.mine)),
   );
-  // 오른쪽 목록입니다. 내 일정 탭은 선택한 날짜의의 항목이 아니라 내가 등록한 불가능 일정 전부(myOff)를 나열합니다.
+  // 오른쪽 목록입니다. 내 일정 탭은 선택한 날짜의 항목이 아니라 내가 등록한 불가능 일정 전부(myOff)를 나열합니다.
   // 예약 탭도 선택한 날짜가 아니라 내가 잡은 예약 전부(myBookings)를 나열합니다. 끝난 예약은 서버가 빼고 줍니다.
   const removable = tab === "me" ? myOff : myBookings;
 
@@ -178,7 +184,7 @@ export function DayDialog({
   const addOff = async () => {
     const { a, b } = picked;
     if (b <= a) { setError("끝 시간을 시작 시간 이후로 설정해주세요."); return; }
-    if (memberId === null) { setError("요청이 많아 지연되고 있어요. 잠시 후 다시 시도해 주세요."); return; }
+    if (memberId === null) { setError(noMemberWhy); return; }
     const conflict = repeatConflict(repeat);
     if (conflict !== "") { setError(conflict); return; }
     try {
@@ -215,7 +221,7 @@ export function DayDialog({
     // 두 경우 모두 다시 시도해도 해결되지 않으므로 "잠시 후 다시 시도" 로 안내하지 않습니다.
     if (room === null) { setError("예약할 합주실이 없어요. 설정에 합주실이 등록되어 있는지 확인해주세요."); return; }
     if (memberId === null) {
-      setError("요청이 많아 지연되고 있어요. 잠시 후 다시 시도해 주세요.");
+      setError(noMemberWhy);
       return;
     }
     const teamId = who === "me" ? null : teams.find((team) => team.key === who)?.id ?? null;
