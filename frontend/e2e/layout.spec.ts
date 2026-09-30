@@ -88,7 +88,7 @@ test("창 폭 세 단계에서 가로로 잘리지 않고 단계마다 배치가
   }
 });
 
-// 좁은 창(휴대폰)의 달력 칸 높이는 칸 너비의 0.75 배이고 56~137px 사이입니다. 오른쪽 칸이 달력 아래에 붙어
+// 좁은 창(휴대폰)의 달력 칸 높이는 칸 너비의 0.75 배이고 64~137px 사이입니다. 오른쪽 칸이 달력 아래에 붙어
 // 페이지 전체가 스크롤합니다. 넓은 창은 창 높이에 맞춰 줄어듭니다(아래 "스크롤 없이 한 화면" 검사).
 // 달력 안쪽(#body)은 어느 폭에서도 따로 스크롤하지 않습니다.
 test("좁은 창의 달력 칸 높이가 너비에 비례하고 달력 안쪽은 따로 스크롤하지 않는다", async ({ page }) => {
@@ -101,7 +101,7 @@ test("좁은 창의 달력 칸 높이가 너비에 비례하고 달력 안쪽은
       const body = document.querySelector("#body")!;
       return { w: cell.width, h: cell.height, inner: body.scrollHeight - body.clientHeight };
     });
-    const expected = Math.min(137, Math.max(56, m.w * 0.75));
+    const expected = Math.min(137, Math.max(64, m.w * 0.75));
     expect(Math.abs(m.h - expected), `창 ${size.width}px 칸 ${m.w}x${m.h}`).toBeLessThanOrEqual(2);
     expect(m.inner, `창 ${size.width}px 달력 안쪽 스크롤`).toBeLessThanOrEqual(1);
     // 달력 아래 "집중합주 기간" 띠가 카드 밖으로 넘치지 않아야 합니다. 좁은 창에서는 줄바꿈합니다.
