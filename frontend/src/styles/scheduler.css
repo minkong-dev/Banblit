@@ -103,13 +103,11 @@ body[data-page="scheduler"] {
   /* 아이콘은 글자 크기에 맞춰 고정합니다. 띠가 줄바꿈되면 크기가 없는 svg 가 남는 폭만큼 커집니다. */
   .band svg { width: 14px; height: 14px; flex: none; }
 
-  /* 오늘 칸입니다. 날짜 숫자를 코랄 원으로 채우고, 칸 왼쪽 위에서 옅은 코랄 빛이 번지게 합니다(무대 조명).
-     빛은 옅어서 그날에 붙어 있는 일정 색(예약·배정)을 가리지 않습니다. 이 화면에서 코랄을 가장 크게 쓰는 곳입니다.
-     주 보기는 요일 머리글의 날짜 숫자만 같은 원으로 표시합니다. */
-  .cell.today { --glow: radial-gradient(130% 90% at 0% 0%, color-mix(in srgb, var(--brand) 18%, transparent), transparent 62%); background: var(--glow); }
-  .cell.today:hover:not(:disabled) { background: var(--glow), var(--card-2); }
-  :is(.cell.today .n, .wh.today b) { background: var(--brand); color: var(--brand-on); font-weight: 700; }
-  .wh.today b { width: fit-content; min-width: 30px; height: 30px; margin: 2px auto 0; padding: 0 7px; display: grid; place-items: center; border-radius: var(--r-pill); }
+  /* 오늘 칸입니다. 달 보기의 칸과 주 보기의 요일 머리글이 같은 표시를 씁니다(사용자 결정).
+     채움이 아니라 테두리로 표시해, 그날에 이미 붙어 있는 색(예약·배정)을 가리지 않습니다.
+     달 보기 칸은 오른쪽 위에 작은 TODAY 글자를 더합니다. 칸 폭이 약 46px 인 좁은 창에서는 날짜 숫자와 겹쳐 감춥니다(아래 @media). */
+  .cell.today, .wh.today { box-shadow: inset 0 0 0 2px var(--brand); }
+  .cell.today::after { content: "TODAY"; position: absolute; top: 12px; right: 11px; font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--brand); }
 
   .weekscroll { flex: 1; overflow: auto; min-height: 0; }
   /* 한 칸의 세로 길이를 이 규칙 하나가 정합니다. 최솟값은 막대가 이름과 시각 2줄을 담는 높이고,
@@ -284,6 +282,7 @@ body[data-page="scheduler"] {
     .ev { height: 6px; padding: 0; gap: 0; font-size: 0; border-radius: 3px; background: var(--tc, var(--t3)); box-shadow: none; }
     /* 시각은 글자 크기를 따로 가져 font-size: 0 으로 숨겨지지 않습니다. 막대 위에 겹쳐 그려지므로 감춥니다. */
     .ev time { display: none; }
+    .cell.today::after { display: none; }
     .ev.off { background: var(--t3); }
     .ev.ens { background: var(--green); }
     .cell { gap: 3px; padding: 6px 5px 8px; }

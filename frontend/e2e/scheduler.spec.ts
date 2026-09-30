@@ -134,3 +134,16 @@ test("프로필 카드로 명단을 받아 둔 뒤에도 전체 일정의 날짜
   expect(errors).toEqual([]);
   await expect(page.locator("dialog[open]")).toBeVisible();
 });
+
+// 오늘 이전 날짜는 예약할 수 없습니다(서버가 지난 시각의 예약을 거절합니다). 예약 탭에서 지난 날짜에 남은 시간을
+// 표시하면 예약할 수 있는 것처럼 보이므로, 칸을 누를 수 없게 두고 남은 시간·마감 표시를 하지 않습니다.
+test("예약 탭에서 지난 달의 날짜는 누를 수 없고 남은 시간을 표시하지 않는다", async ({ page }) => {
+  await page.goto("/scheduler");
+  await page.getByRole("tab", { name: "예약" }).click();
+  await page.getByRole("button", { name: "저번 달" }).click();
+  const cells = page.locator(".grid button.cell");
+  await expect(cells.first()).toBeVisible();
+  await expect(page.locator(".grid .cell .avail")).toHaveCount(0);
+  const enabled = await cells.evaluateAll((all) => all.filter((cell) => !(cell as HTMLButtonElement).disabled).length);
+  expect(enabled, "누를 수 있는 지난 날짜 칸").toBe(0);
+});
