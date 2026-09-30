@@ -377,3 +377,26 @@ test("멤버 표는 휴대폰 묶음 배치에서도 표 구조를 화면 읽기
   await expect(page.getByRole("columnheader", { name: "학과" })).toHaveCount(1);
   await expect(page.getByRole("cell", { name: "검사학과" }).first()).toBeVisible();
 });
+
+// 배정 결과 화면 오른쪽 칸의 시각 입력칸 2개는 카드 안에 들어가야 합니다. 입력칸은 글자 폭보다 좁아지지 않는
+// 것이 브라우저 기본값이라, 칸 폭이 좁으면 두 번째 칸이 카드 오른쪽 밖으로 잘렸습니다(2026-09-30 캡처로 발견).
+// 오른쪽 칸 제목("이전 배정기록")도 설명 문구에 밀려 두 줄로 꺾이지 않아야 합니다.
+test("배정 결과 화면 오른쪽 칸의 시각 입력칸이 카드 안에 들어가고 제목이 한 줄이다", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/admin");
+  await expect(page.locator(".times input[type='time']").first()).toBeVisible();
+  const m = await page.evaluate(() => {
+    const times = document.querySelector(".times")!.getBoundingClientRect();
+    const inputs = [...document.querySelectorAll(".times input[type='time']")].map((el) => el.getBoundingClientRect());
+    const head = document.querySelector(".rail .panel > .ph")!;
+    const lineHeight = parseFloat(getComputedStyle(head).lineHeight);
+    const title = document.createRange();
+    title.selectNodeContents(head.firstChild!);
+    return {
+      overflow: Math.max(...inputs.map((rect) => rect.right)) - times.right,
+      titleLines: Math.round(title.getBoundingClientRect().height / lineHeight),
+    };
+  });
+  expect(m.overflow, "시각 입력칸이 카드 오른쪽 밖으로 나감").toBeLessThanOrEqual(0);
+  expect(m.titleLines, "오른쪽 칸 제목 줄 수").toBe(1);
+});

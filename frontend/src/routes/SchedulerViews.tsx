@@ -44,7 +44,8 @@ export function MonthView({
       <div className="dow">
         {WEEKDAY_NAMES.map((name) => <span key={name}>{name}</span>)}
       </div>
-      <div className="grid">
+      {/* key 로 달이 바뀔 때 칸 묶음을 새로 그려 scheduler.css 의 넘김 움직임이 다시 재생되게 합니다. */}
+      <div className="grid" key={`${year}-${month}`}>
         {cells.map((day, index) => {
           if (day === null) return <div className="cell void" key={`void-${index}`} />;
 
