@@ -2,7 +2,7 @@
 
 import { getJSON, isSignedIn, sendFile } from "./api";
 import type {
-  Account, Ensemble, Me, Member, Notification, Period, Reservation, Unavailable,
+  Account, Ensemble, Me, Member, Notification, Period, Reservation, ScheduleRow, Unavailable,
 } from "./contract";
 import {
   dayKey,
@@ -209,6 +209,13 @@ export { ATTACHMENT_ACCEPT, ATTACHMENT_HINT, BLINDED_KEY, BOARD_KEY, boardAction
 // ["schedule", periodIds](배열 하나)를 queryKey 로 씁니다. invalidateQueries 는 첫 원소가 같으면
 // 나머지 모양이 달라도 무효화하므로, 이 접두사 하나로 두 화면의 schedule 캐시를 함께 무효화합니다.
 export const SCHEDULE_KEY = ["schedule"] as const;
+
+/** 기간 하나의 확정 시간표입니다. 달력 화면(routes/Scheduler)과 배정 결과 화면(routes/Assignment)이 같은
+ *  endpoint 를 조회하므로 주소를 적는 곳을 이 함수 하나로 유지합니다. */
+export async function loadSchedule(periodId: number): Promise<ScheduleRow[]> {
+  const body = await getJSON<{ rows: ScheduleRow[] }>(`/periods/${periodId}/schedule`);
+  return body.rows;
+}
 
 // backend/src/backend/db/models.py 의 ON DELETE CASCADE 기준입니다. 기간을 삭제하면 서버가
 // assignments·assignment_runs·assignment_backups 를 함께 삭제합니다. reservations 는 기간을

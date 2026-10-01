@@ -20,7 +20,7 @@ import { teamsOf } from "../lib/roster";
 import { useMe, useMyTeams, usePeriods, useRooms, useSlotMinutes } from "../components/queries";
 import "../styles/scheduler.css";
 import type { Post, ScheduleRow } from "../lib/contract";
-import { slotCountOf, stampLabel, weekKeys } from "../lib/pipeline";
+import { loadSchedule, slotCountOf, stampLabel, weekKeys } from "../lib/pipeline";
 
 // 오른쪽 공지 칸에 표시할 최대 줄 수입니다. 전체 목록은 공지 화면(routes/Notices)이 표시합니다.
 const RECENT_NOTICES = 3;
@@ -31,8 +31,7 @@ async function loadRows(periodIds: number[]): Promise<{ rows: ScheduleRow[]; fai
   const failures: string[] = [];
   for (const id of periodIds) {
     try {
-      const schedule = await getJSON<{ rows: ScheduleRow[] }>(`/periods/${id}/schedule`);
-      rows.push(...schedule.rows);
+      rows.push(...(await loadSchedule(id)));
     } catch (error) {
       failures.push(`기간 ${id}: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
     }
