@@ -22,6 +22,8 @@ MAX_POST_BYTES = 300 * 1024 * 1024
 DEFAULT_CONTENT_TYPE = "application/octet-stream"
 
 # 업로드할 수 있는 파일 확장자입니다. 이 목록에 없는 확장자는 전부 거절합니다.
+# 이 목록이 정본입니다. 화면 쪽 사본은 frontend/src/lib/boards.ts 의 ALLOWED_EXTENSIONS 이고, 파일 선택창의
+# accept 와 업로드 전 검증에 사용합니다. 여기를 수정하면 그 사본도 같은 작업 안에서 수정합니다.
 ALLOWED_EXTENSIONS = frozenset(
     {
         "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic",
@@ -194,6 +196,8 @@ def attachment_for_download(
 # 본문에 넣은 첨부를 브라우저가 표시할 때 사용하는 content type 입니다. 확장자로만 판정합니다 —
 # 업로드할 때 받은 MIME 은 보내는 쪽이 정하는 값이라 믿지 않습니다.
 # HTML·SVG·XML 은 넣지 않습니다. 그 안의 스크립트가 이 서비스 화면의 권한으로 실행됩니다.
+# 이 목록은 inline endpoint 가 내보낼 수 있는 형식이고, 화면 editor 가 본문에 넣는 형식 목록과는 다릅니다.
+# flac 은 Safari 가 재생하지 못해 화면 쪽(frontend/src/lib/richText.ts 의 AUDIO)에서 의도적으로 제외합니다.
 INLINE_TYPES: dict[str, str] = {
     "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
     "gif": "image/gif", "webp": "image/webp",
