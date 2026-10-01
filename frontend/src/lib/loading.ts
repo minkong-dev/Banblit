@@ -43,3 +43,14 @@ export function formError(touched: boolean, why: string, error: unknown): string
   if (touched && why !== "") return why;
   return error === null || error === undefined ? "" : reason(error);
 }
+
+/** 조회가 한 번 이상 실패했고 아직 받아 둔 값이 없으면 true 를 반환합니다. 다시 조회하는 동안에도 유지됩니다.
+ *
+ *  받아 둔 값이 없는 조회를 다시 조회하면 TanStack Query 는 error 를 null 로, status 를 pending 으로
+ *  되돌립니다(query-core 의 fetchState). error 나 LoadState 로 판정하면 재조회마다 안내가 사라졌다가
+ *  실패하면 다시 나타나, 화면이 흔들리고 role="alert" 이 폴링 주기마다 다시 읽힙니다.
+ *  errorUpdateCount 는 실패할 때마다 1 증가하고 성공해도 줄지 않으므로, 받아 둔 값의 유무와 함께 쓰면
+ *  "한 번 실패한 뒤 아직 성공하지 못함" 을 재조회 중에도 같은 값으로 판정합니다. */
+export function stillUnresolved(query: { data: unknown; errorUpdateCount: number }): boolean {
+  return query.data === undefined && query.errorUpdateCount > 0;
+}

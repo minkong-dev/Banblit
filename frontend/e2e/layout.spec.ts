@@ -401,3 +401,29 @@ test("배정 결과 화면 오른쪽 칸의 시각 입력칸이 카드 안에 �
   expect(m.overflow, "시각 입력칸이 카드 오른쪽 밖으로 나감").toBeLessThanOrEqual(0);
   expect(m.titleLines, "오른쪽 칸 제목 줄 수").toBe(1);
 });
+
+// /me 조회가 실패하면 me 가 null 이 되어 권한 판정이 전부 "권한 없음" 과 같아집니다. 안내가 없으면
+// 사용자는 관리자·설정 메뉴가 사라진 것을 권한이 회수된 것으로 읽습니다. 안내를 상단바 아래 한 곳에 두어
+// 모든 화면이 함께 씁니다(호출부 9곳을 각각 고치지 않습니다).
+test("계정 정보를 불러오지 못하면 안내가 표시되고, 다시 불러오기가 메뉴를 되살린다", async ({ page }) => {
+  let failMe = true;
+  await page.route("**/api/me", async (route) => {
+    if (!failMe) return route.continue();
+    return route.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({ detail: "계정 정보를 불러오지 못했습니다" }),
+    });
+  });
+
+  await page.goto("/scheduler");
+  const notice = page.getByRole("alert", { name: "계정 조회 실패" });
+  await expect(notice).toContainText("계정 정보를 불러오지 못했어요");
+  await expect(notice).toContainText("계정 정보를 불러오지 못했습니다");
+  await expect(page.locator(".side").getByRole("link", { name: "설정" })).toHaveCount(0);
+
+  failMe = false;
+  await notice.getByRole("button", { name: "다시 불러오기" }).click();
+  await expect(page.locator(".side").getByRole("link", { name: "설정" })).toBeVisible();
+  await expect(notice).toBeHidden();
+});

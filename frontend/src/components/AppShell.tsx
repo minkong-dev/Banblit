@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
@@ -6,6 +7,7 @@ import { CloseIcon, MoonIcon, SunIcon, WideMenuIcon } from "./icons";
 import { usePage, usePopoverRouteClose } from "./hooks";
 import { useMe, useMyTeamCohorts } from "./queries";
 import { useToast } from "../lib/toast";
+import { LOADING_TEXT } from "../lib/loading";
 import { Avatar } from "./Avatar";
 import { can, canOpenSettings, roleLabel, teamNavLabel } from "../lib/account";
 import { cohortLabel } from "../lib/roster";
@@ -44,6 +46,9 @@ type NavItem = { key: string; label: string; to: string };
 
 // 휴대폰 메뉴 판의 id 입니다. 상단바의 햄버거 버튼이 popoverTarget 으로 이 판을 엽니다.
 const MENU_ID = "shellmenu";
+
+// 본문 상자의 id 입니다. 계정 조회 실패 안내가 사라진 뒤 초점을 이 상자로 옮깁니다.
+const PAGE_ID = "shellpage";
 
 // 프로필 popover 의 id 입니다. 프로필 버튼이 popoverTarget 으로 이 판을 엽니다.
 const PROFILE_POP_ID = "profileMenuPop";
@@ -85,7 +90,38 @@ export function AppShell() {
     document.body.dataset.shell = "";
     return () => { delete document.body.dataset.shell; };
   }, []);
-  const { me } = useMe();
+  const { me, meState, meUnresolved } = useMe();
+  const client = useQueryClient();
+  // 사용자가 누른 재조회가 진행 중인지입니다. 20초 간격 폴링(main.tsx)의 재조회와 구분합니다 — 폴링까지
+  // 표시하면 안내 문구가 20초마다 바뀌고 role="alert" 이 그때마다 다시 읽힙니다.
+  const [retrying, setRetrying] = useState(false);
+
+  // 마지막으로 받은 실패 사유를 보관합니다. 받아 둔 값이 없는 조회를 다시 조회하면 TanStack Query 가
+  // error 를 null 로 되돌리므로(query-core 의 fetchState), meState 를 그대로 표시하면 20초 간격
+  // 폴링(main.tsx)마다 사유가 사라졌다 다시 나타나고 role="alert" 이 그때마다 다시 읽힙니다.
+  // 렌더 중에 state 를 변경하는 것은 값이 바뀐 즉시 같은 렌더에 반영하는 React 의 방식입니다.
+  const failedWhy = meState.kind === "failed" ? meState.why : "";
+  const [meWhy, setMeWhy] = useState("");
+  if (failedWhy !== "" && failedWhy !== meWhy) setMeWhy(failedWhy);
+
+  /** 계정과 팀 목록을 함께 다시 조회합니다. 계정 조회가 성공하고 팀 목록만 실패한 상태는 안내가 뜨지 않아
+   *  이 버튼에 닿지 않지만, 계정 조회와 함께 실패했을 때 두 번 누르지 않게 같이 무효화합니다.
+   *  refetch 대신 invalidateQueries 를 쓰는 이유는 이 자리에 두 조회의 query 객체가 없기 때문입니다. */
+  async function retryMe(): Promise<void> {
+    if (retrying) return;
+    setRetrying(true);
+    const pressed = document.activeElement;
+    await Promise.all([
+      client.invalidateQueries({ queryKey: ["me"] }),
+      client.invalidateQueries({ queryKey: ["teams"], exact: true }),
+    ]);
+    setRetrying(false);
+    // 조회가 성공하면 안내 줄이 DOM 에서 삭제되어 초점이 body 로 이동합니다. 본문으로 옮겨, 키보드 사용자가
+    // 화면 맨 위부터 다시 탐색하지 않게 합니다. 기다리는 동안 사용자가 초점을 다른 요소로 옮겼으면
+    // 그 초점을 빼앗지 않습니다. 다시 실패했으면 안내 줄이 남아 초점이 버튼에 그대로 있습니다.
+    const kept = document.activeElement === pressed || document.activeElement === document.body;
+    if (kept && client.getQueryData(["me"]) !== undefined) document.getElementById(PAGE_ID)?.focus();
+  }
 
   // 가진 권한으로 필터링합니다. 계정을 아직 받지 못했으면 아무것도 표시되지 않습니다.
   const managerNav = MANAGER_NAV.filter((item) => item.needs.some((need) => can(me, need)));
@@ -109,12 +145,37 @@ export function AppShell() {
         </div>
       </header>
 
+      {/* /me 조회가 실패하고 받아 둔 값도 없으면 me 가 null 이 되어 권한 판정 9곳이 전부 "권한 없음" 과 같아집니다.
+          사유를 이 한 곳에서 알립니다 — AppShell 은 로그인 후 7개 화면을 모두 감싸므로 호출부마다 안내를 넣지
+          않아도 됩니다. 판정이 meState 가 아닌 이유는 lib/loading 의 stillUnresolved 에 있습니다.
+          영향을 사유보다 앞에 두는 이유는, 서버가 detail 을 주지 않으면 사유가 "500 Internal Server Error"
+          처럼 마침표 없이 끝나(lib/api.ts 의 기본 문구) 뒤 문장과 한 문장으로 붙기 때문입니다. */}
+      {!meUnresolved ? null : (
+        <div className="mecut" role="alert" aria-label="계정 조회 실패">
+          <p>
+            <b>계정 정보를 불러오지 못했어요</b>{" "}
+            권한이 필요한 메뉴는 표시되지 않습니다.{meWhy === "" ? "" : ` 사유: ${meWhy}`}
+          </p>
+          {/* disabled 가 아니라 aria-disabled 입니다. 초점을 가진 버튼이 disabled 가 되면 브라우저가 초점을
+              body 로 옮겨, 재조회가 다시 실패했을 때 키보드 사용자가 버튼으로 되돌아올 수 없습니다. */}
+          <button
+            className="btn warn"
+            type="button"
+            aria-disabled={retrying}
+            onClick={() => void retryMe()}
+          >
+            {retrying ? LOADING_TEXT : "다시 불러오기"}
+          </button>
+        </div>
+      )}
+
       <div className="shell">
         <aside className="side" aria-label="메뉴">
           <div className="inner"><MenuItems nav={nav} managerNav={managerNav} /></div>
         </aside>
 
-        <div className="page"><Outlet /></div>
+        {/* tabIndex -1 은 키보드 Tab 순서에 넣지 않고 코드로만 초점을 옮길 수 있게 합니다(retryMe). */}
+        <div className="page" id={PAGE_ID} tabIndex={-1}><Outlet /></div>
       </div>
 
       {/* 휴대폰 메뉴 판입니다(Material Design 모달 드로어). popover="auto" 라 바깥을 누르거나 Esc 를 누르면 브라우저가 닫습니다.

@@ -5,7 +5,7 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 
 import { fetchMe, getJSON, loadTeamMembers, myTeamIds } from "../lib/pipeline";
-import { loadState } from "../lib/loading";
+import { loadState, stillUnresolved } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { teamColorKey } from "../lib/teamColors";
 import type { Account, Period, Room, Team } from "../lib/contract";
@@ -54,6 +54,9 @@ export function useMe(): {
    *  로그아웃 상태는 /me 가 401 을 반환해 failed 가 되고, lib/api.ts 의 401 처리가 로그인
    *  화면으로 이동시킵니다. */
   meState: LoadState;
+  /** 계정 조회가 한 번 실패한 뒤 아직 성공하지 못했는지입니다. 안내를 표시할지 판정하는 값입니다.
+   *  meState 로 판정하지 않는 이유는 lib/loading 의 stillUnresolved 에 있습니다. */
+  meUnresolved: boolean;
   teamIds: number[];
   teams: Team[];
 } {
@@ -67,7 +70,13 @@ export function useMe(): {
   const teamIds = useMemo(() => myTeamIds(mine.data?.teams ?? []), [mine.data]);
   const teams = useMemo(() => teamList.data?.teams ?? [], [teamList.data]);
 
-  return { me: mine.data?.account ?? null, meState: loadState(mine), teamIds, teams };
+  return {
+    me: mine.data?.account ?? null,
+    meState: loadState(mine),
+    meUnresolved: stillUnresolved(mine),
+    teamIds,
+    teams,
+  };
 }
 
 /** 프로필 카드에 표시하는 소속 팀입니다. 서버가 반환하는 배정 자리(lib/contract 의 MyTeam)와 다른 자료형입니다. */
