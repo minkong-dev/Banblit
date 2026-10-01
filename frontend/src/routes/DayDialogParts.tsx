@@ -75,6 +75,7 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
     // button 0 이 왼쪽 버튼입니다. 오른쪽·가운데 버튼으로는 드래그를 시작하지 않습니다.
     if (pick === undefined || event.button !== 0) return;
     // 포인터가 띠 밖으로 나가도 move·up 이 이 요소로 계속 옵니다.
+    // 이 줄이 없으면 띠 밖에서 버튼을 뗄 때 pointerup 을 받지 못해 드래그 상태가 남습니다.
     event.currentTarget.setPointerCapture(event.pointerId);
     pressed.current = slotAt(event);
     apply(pick, dragRange(pressed.current, pressed.current, pick.slotMinutes, slotCount));
@@ -99,6 +100,7 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
       {list.map((entry, index) => (
         <span
           className={`evb ${entryClass(entry)}`}
+          // "--from" 은 CSS 사용자 지정 속성(custom property)이라 React 의 CSSProperties 타입에 없으므로 as 로 타입을 단언합니다.
           style={{ "--from": entry.a, "--span": entry.b - entry.a } as CSSProperties}
           key={index}
         >
@@ -140,6 +142,7 @@ export function SlotPicker({ prefix, range, onChange, grid, lock, slotMinutes, o
           value={range.a}
           choices={steps.slice(0, -1).map((slot) => ({
             value: slot,
+            // slot 은 한 시간 단위 위치이고 grid 는 slotMinutes 간격이라, cellAt 으로 grid 의 index 로 변환합니다.
             label: `${label(slot)}${lock && grid[cellAt(slot, slotMinutes)] ? " (찼어요)" : ""}`,
             disabled: lock && grid[cellAt(slot, slotMinutes)],
           }))}
@@ -255,6 +258,7 @@ export function RepeatFields({ dayKey, value, onChange }: {
   onChange: (next: Repeat) => void;
 }) {
   const on = value.weekdays !== 0;
+  const conflict = repeatConflict(value);
   return (
     <div className="rep">
       {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- CheckMark 컴포넌트 안에 input 이 있습니다. eslint 는 컴포넌트 내부를 확인하지 못합니다. */}
@@ -263,6 +267,7 @@ export function RepeatFields({ dayKey, value, onChange }: {
           id="offRepeatOn"
           checked={on}
           onChange={(next) => onChange(next
+            // << 는 비트 이동 연산자입니다. 요일 7개를 숫자 하나의 비트 7개로 담으며, 월요일이 0번 비트이고 일요일이 6번 비트입니다.
             ? { weekdays: 1 << weekdayIndex(dayKey), count: null, until: null }
             : NO_REPEAT)}
         />
@@ -310,7 +315,7 @@ export function RepeatFields({ dayKey, value, onChange }: {
             />
           </label>
           <p className="sub">고른 요일 전부가 한 세트입니다. 4 를 넣으면 그 요일들이 4주 동안 반복합니다.</p>
-          {repeatConflict(value) === "" ? null : <p className="why">{repeatConflict(value)}</p>}
+          {conflict === "" ? null : <p className="why">{conflict}</p>}
         </div>
       )}
     </div>
