@@ -89,7 +89,7 @@ def update_unavailable(
     _require_self(member_id, requester)
     row = session.get(UnavailableTime, time_id)
     if row is None or row.member_id != member_id:
-        raise ValueError("그런 일정이 없습니다")
+        raise ValueError("존재하지 않는 일정입니다")
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_repeat_weekdays(repeat_weekdays)
     require_repeat_end(repeat_weekdays, repeat_count, repeat_until)
@@ -112,6 +112,6 @@ def delete_unavailable(
     _require_self(member_id, requester)
     row = session.get(UnavailableTime, time_id)
     if row is None or row.member_id != member_id:
-        raise ValueError("그런 일정이 없습니다")
+        raise ValueError("존재하지 않는 일정입니다")
     session.delete(row)
     session.commit()

@@ -241,7 +241,7 @@ def _get_own_reservation(
         .with_for_update()
     ).first()
     if reservation is None:
-        raise ValueError("그런 예약이 없습니다")
+        raise ValueError("존재하지 않는 예약입니다")
     # reservation_manage 권한을 가진 멤버는 다른 사용자의 예약도 취소·이동할 수 있습니다. 이 권한이
     # 없으면 합주실 관리자가 다른 사용자의 예약을 취소할 방법이 없습니다.
     if reservation.member_id != requester.id and (

@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import date, datetime, time
 
 from sqlalchemy import select
@@ -186,7 +186,7 @@ def _load_rooms(session: Session, room_ids: list[int]) -> list[Room]:
     missing = set(room_ids) - {room.id for room in rooms}
     if missing:
         raise ValueError(
-            f"그런 합주실이 없습니다: {', '.join(str(i) for i in sorted(missing))}"
+            f"존재하지 않는 합주실입니다: {', '.join(str(i) for i in sorted(missing))}"
         )
     return list(rooms)
 
@@ -199,7 +199,7 @@ def _load_team_names(session: Session, team_ids: list[int]) -> dict[int, str]:
     missing = set(team_ids) - set(names)
     if missing:
         raise ValueError(
-            f"그런 팀이 없습니다: {', '.join(str(i) for i in sorted(missing))}"
+            f"존재하지 않는 팀입니다: {', '.join(str(i) for i in sorted(missing))}"
         )
     return names
 

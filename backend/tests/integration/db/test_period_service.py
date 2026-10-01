@@ -168,7 +168,7 @@ def test_unknown_team_is_rejected(db_session: Session) -> None:
     period_id = _period(db_session)
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
-    with pytest.raises(ValueError, match="그런 팀이 없습니다"):
+    with pytest.raises(ValueError, match="존재하지 않는 팀입니다"):
         assign_period(db_session, period_id, [999999], [room_id], saved_at=SAVED_AT)
 
 
@@ -176,7 +176,7 @@ def test_unknown_room_is_rejected(db_session: Session) -> None:
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
 
-    with pytest.raises(ValueError, match="그런 합주실이 없습니다"):
+    with pytest.raises(ValueError, match="존재하지 않는 합주실입니다"):
         assign_period(db_session, period_id, [team_id], [999999], saved_at=SAVED_AT)
 
 

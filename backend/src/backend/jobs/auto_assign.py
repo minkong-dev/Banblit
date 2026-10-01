@@ -7,8 +7,8 @@ assign_period 를 직접 호출하므로 서버가 실행 중이 아니어도 �
 
 import logging
 import os
-from dataclasses import dataclass
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from time import sleep
 from typing import Literal

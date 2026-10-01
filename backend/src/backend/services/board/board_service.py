@@ -38,7 +38,7 @@ def require_team_member(session: Session, team_id: int, member_id: int) -> None:
 def _get_post_or_raise(session: Session, post_id: int) -> Post:
     post = session.get(Post, post_id)
     if post is None:
-        raise ValueError("그런 글이 없습니다")
+        raise ValueError("존재하지 않는 글입니다")
     return post
 
 
@@ -50,10 +50,10 @@ def require_post_readable(session: Session, post_id: int, requester: Member) -> 
     post = session.get(Post, post_id)
     if post is None or post.blinded_at is not None:
         # 가려진 글과 없는 글을 같은 문장으로 거절합니다. 문장을 나누면 글이 있다는 사실이 드러납니다.
-        raise ValueError("그런 글이 없습니다")
+        raise ValueError("존재하지 않는 글입니다")
     if post.published_at is None and post.author_id != requester.id:
         # 아직 쓰는 중인 초안입니다. 쓰는 사람만 봅니다.
-        raise PermissionError("그런 글이 없습니다")
+        raise PermissionError("존재하지 않는 글입니다")
     if post.team_id is not None:
         require_team_member(session, post.team_id, requester.id)
     return post
@@ -215,7 +215,7 @@ def publish_post(
     """
     post = session.get(Post, post_id)
     if post is None or post.author_id != requester.id or post.published_at is not None:
-        raise ValueError("그런 초안이 없습니다")
+        raise ValueError("존재하지 않는 초안입니다")
     post.title = require_non_empty(title, "제목")
     post.body = require_non_empty(body, "내용")
     post.published_at = published_at
@@ -308,7 +308,7 @@ def require_comment_author(
     """
     comment = session.get(Comment, comment_id)
     if comment is None:
-        raise ValueError("그런 댓글이 없습니다")
+        raise ValueError("존재하지 않는 댓글입니다")
     if allow_moderator and _moderates(session, requester):
         return comment
     require_post_readable(session, comment.post_id, requester)
