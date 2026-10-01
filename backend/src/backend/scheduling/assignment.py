@@ -339,7 +339,7 @@ def _picked_indices(solver: cp_model.CpSolver, chosen: Chosen, team_id: int) -> 
 
 def _limit_per_day(
     model: cp_model.CpModel,
-    chosen: dict[tuple[int, int], cp_model.IntVar],
+    chosen: Chosen,
     room_sessions: list[RoomInterval],
     most: int,
 ) -> None:
@@ -355,7 +355,7 @@ def _limit_per_day(
 
 def _prefer_back_to_back(
     model: cp_model.CpModel,
-    chosen: dict[tuple[int, int], cp_model.IntVar],
+    chosen: Chosen,
     room_sessions: list[RoomInterval],
 ) -> None:
     """같은 팀이 같은 합주실에서 바로 이어 쓰는 session 쌍의 수를 최대화하는 목적을 model 에 둡니다.

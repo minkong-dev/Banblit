@@ -136,7 +136,7 @@ def expel_member(session: Session, member_id: int, requester: Member) -> None:
         raise ValueError("자기 자신은 추방할 수 없습니다")
     member = session.get(Member, member_id)
     if member is None:
-        raise ValueError("그런 사람이 없습니다")
+        raise ValueError("존재하지 않는 사람입니다")
     require_another_full_set_holder(session, member_id)
     session.delete(member)
     session.commit()
@@ -186,7 +186,7 @@ def _get_slot_or_raise(session: Session, team_id: int, slot_id: int) -> TeamSlot
     slot = session.get(TeamSlot, slot_id)
     # slot_id 만 맞고 팀이 다르면 없는 포지션으로 처리합니다. 다른 팀의 포지션을 번호만으로 수정할 수 없습니다.
     if slot is None or slot.team_id != team_id:
-        raise ValueError("그런 포지션이 없습니다")
+        raise ValueError("존재하지 않는 포지션입니다")
     return slot
 
 
@@ -290,7 +290,7 @@ def assign_slot(session: Session, team_id: int, slot_id: int, member_id: int) ->
     """포지션에 멤버를 배정합니다. 기존에 배정된 멤버가 있으면 그 멤버는 제거됩니다."""
     slot = _get_slot_or_raise(session, team_id, slot_id)
     if session.get(Member, member_id) is None:
-        raise ValueError("그런 사람이 없습니다")
+        raise ValueError("존재하지 않는 사람입니다")
     slot.member_id = member_id
     commit_translating(session, ROSTER_MESSAGES)
     return slot
@@ -356,7 +356,7 @@ def _require_may_seat(session: Session, member_id: int, may_seat: bool) -> None:
     if not may_seat:
         raise PermissionError("관련된 권한을 가지고 있지 않습니다")
     if session.get(Member, member_id) is None:
-        raise ValueError("그런 사람이 없습니다")
+        raise ValueError("존재하지 않는 사람입니다")
 
 
 def clear_slot(session: Session, team_id: int, slot_id: int) -> TeamSlot:

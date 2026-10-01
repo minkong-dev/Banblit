@@ -810,8 +810,8 @@ def test_a_cancelled_reservation_cannot_be_moved_or_cancelled_again(
     )
     cancelled = api_client.delete(f"/reservations/{created['id']}", cookies=owner)
 
-    assert moved.status_code == 422 and "그런 예약" in moved.json()["detail"]
-    assert cancelled.status_code == 422 and "그런 예약" in cancelled.json()["detail"]
+    assert moved.status_code == 422 and "존재하지 않는 예약" in moved.json()["detail"]
+    assert cancelled.status_code == 422 and "존재하지 않는 예약" in cancelled.json()["detail"]
 
 
 def test_an_everyday_focused_period_blocks_reservations_after_its_end_date(

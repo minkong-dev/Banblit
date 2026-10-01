@@ -82,3 +82,14 @@ def test_an_action_other_than_commit_is_translated_too() -> None:
             cast(Session, session), {"members_email_key": "이미 가입된 이메일입니다"}, action=flush
         )
     assert session.rolled_back == 1
+
+
+def test_an_error_that_is_not_a_violation_rolls_back_and_propagates() -> None:
+    # action 이 commit 전에 flush·SELECT 를 실행하다 실패하면(연결 끊김 등) rollback 하지 않은 session 이
+    # 호출부로 전달됩니다. 그 session 의 다음 사용은 PendingRollbackError 로 실패합니다.
+    session = _Session(RuntimeError("연결이 끊겼습니다"))
+
+    with pytest.raises(RuntimeError, match="연결이 끊겼습니다"):
+        commit_translating(cast(Session, session), {})
+
+    assert session.rolled_back == 1

@@ -177,7 +177,7 @@ def list_attachments(
 def _get_or_raise(session: Session, attachment_id: int) -> Attachment:
     attachment = session.get(Attachment, attachment_id)
     if attachment is None:
-        raise ValueError("그런 파일이 없습니다")
+        raise ValueError("존재하지 않는 파일입니다")
     return attachment
 
 

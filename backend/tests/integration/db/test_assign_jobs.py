@@ -127,7 +127,7 @@ def test_a_rejected_assignment_becomes_a_failed_job_with_the_reason(
 
     assert job["status"] == "failed"
     assert job["result"] is None
-    assert "그런 팀이 없습니다" in job["error"]
+    assert "존재하지 않는 팀입니다" in job["error"]
 
 
 def test_assign_on_an_unknown_period_is_rejected_immediately(
@@ -148,7 +148,7 @@ def test_unknown_job_id_is_rejected(
     response = api_client.get("/jobs/no-such-job")
 
     assert response.status_code == 422
-    assert "그런 작업이 없습니다" in response.json()["detail"]
+    assert "존재하지 않는 작업입니다" in response.json()["detail"]
 
 
 def test_health_responds_while_an_assignment_job_is_running(

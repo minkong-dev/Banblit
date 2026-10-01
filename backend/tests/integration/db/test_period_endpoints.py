@@ -732,7 +732,7 @@ def test_backup_round_that_never_happened_is_rejected(
     )
 
     assert response.status_code == 422
-    assert "그런 배정기록이 없습니다" in response.json()["detail"]
+    assert "존재하지 않는 배정기록입니다" in response.json()["detail"]
 
 
 def test_backup_round_needs_rollback(

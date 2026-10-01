@@ -25,7 +25,12 @@ def commit_translating(
     action: Callable[[], object] | None = None,
     error_type: type[ValueError] = ValueError,
 ) -> None:
-    """action(기본값: session.commit)을 실행합니다. 제약을 위반하면 rollback 하고 messages 의 문장으로 변환합니다."""
+    """action(기본값: session.commit)을 실행합니다. 제약을 위반하면 rollback 하고 messages 의 문장으로 변환합니다.
+
+    IntegrityError 가 아닌 예외도 rollback 한 뒤 그대로 다시 발생시킵니다. action 이 commit 전에 flush·SELECT 를
+    실행하는 경우(기간 수정의 예약 취소) 그 단계의 예외가 session 을 rollback 하지 않은 상태로 호출부에 전달되면,
+    같은 session 의 다음 사용이 PendingRollbackError 로 실패합니다.
+    """
     try:
         (session.commit if action is None else action)()
     except IntegrityError as error:
@@ -34,3 +39,6 @@ def commit_translating(
         if message is None:
             raise
         raise error_type(message) from error
+    except Exception:
+        session.rollback()
+        raise

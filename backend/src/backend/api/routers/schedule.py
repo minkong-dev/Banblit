@@ -207,7 +207,7 @@ def confirm_period_proposal(
 def read_job(job_id: str) -> JobEnvelopeOut:
     job = job_runner.get(job_id)
     if job is None:
-        raise ValueError("그런 작업이 없습니다")
+        raise ValueError("존재하지 않는 작업입니다")
     return JobEnvelopeOut(job=_job_out(job))
 
 

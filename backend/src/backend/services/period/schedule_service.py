@@ -48,7 +48,7 @@ def list_backup_round(session: Session, period_id: int, saved_at: datetime) -> l
         .order_by(AssignmentBackup.starts_at, Room.name)
     ).all()
     if not rows:
-        raise ValueError("그런 배정기록이 없습니다")
+        raise ValueError("존재하지 않는 배정기록입니다")
     return [
         (b.team_id, team_name, b.room_id, room_name, b.starts_at, b.ends_at)
         for b, team_name, room_name in rows
