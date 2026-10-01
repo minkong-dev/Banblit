@@ -969,9 +969,14 @@ docker compose --profile e2e run --rm e2e sh -c "npx playwright test profile-car
   - `--project=webkit` — Safari 엔진(WebKit)으로만 실행합니다. `frontend/playwright.config.ts` 의 `webkit` 프로젝트는
     `popovers.spec.ts`·`profile-card.spec.ts` 2개만 대상이라(팝업 4종의 CSS anchor positioning 확인) 다른 파일을 적으면
     `No tests found` 입니다. `--project` 를 생략하면 chromium 과 webkit 을 둘 다 실행합니다(2026-09-30).
+  - `--project=chromium` — Chromium 으로만 실행합니다. webkit 대상 2개 파일을 함께 돌리지 않아, 화면 파일 하나를
+    고친 직후 확인에 씁니다(2026-10-01).
+  - `-g <문구>` — 검사 이름에 그 문구가 포함된 것만 실행합니다(grep 의 약자). 파일 경로로 좁힌 뒤 그 안에서
+    검사 하나만 돌릴 때 씁니다. 공백이 있으면 작은따옴표로 묶습니다 — `-g '계정 정보를'`. 일치하는 검사가
+    없으면 `No tests found` 이고, 생략하면 그 파일의 검사를 전부 실행합니다(2026-10-01).
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: `frontend/e2e/` 의 Playwright 검사 18개를 전부 실행합니다. 로그인·가입, 배정 다시
+- **용도**: `frontend/e2e/` 의 Playwright 검사를 전부 실행합니다(2026-10-01 기준 84개 — chromium 과 webkit 합계). 로그인·가입, 배정 다시
   계산과 조율안, 팀 게시판 권한·첨부, 공지 글·댓글, 달력·알림, 합주실 수정, 전체합주 지정, 팀 명단을 브라우저로
   재현해 화면·서버·DB 가 연결되어 동작하는지 확인합니다. dev DB 는 건드리지 않습니다.
 - **옵션**

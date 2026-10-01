@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { firstWhy, loadState, stateText } from "./loading";
+import { firstWhy, loadState, stateText, stillUnresolved } from "./loading";
 
 describe("firstWhy — 조회 여러 개 중 처음 실패한 사유", () => {
   it("전부 성공했을 경우 빈 문자열을 반환한다", () => {
@@ -75,5 +75,25 @@ describe("stateText — 목록 대신 넣을 한 줄", () => {
   it("사유가 loading 이라는 글자여도 불러오는 중으로 읽지 않는다", () => {
     // 문자열 값 하나에 상태 3가지를 담았을 때 오류 메시지와 상태가 충돌하던 경우입니다.
     expect(stateText({ kind: "failed", why: "loading" }, "아직 없습니다")).toBe("loading");
+  });
+});
+
+describe("stillUnresolved — 한 번 실패한 뒤 아직 받아 둔 값이 없는 조회", () => {
+  it("실패한 적이 있고 받아 둔 값이 없으면 true 를 반환한다", () => {
+    expect(stillUnresolved({ data: undefined, errorUpdateCount: 1 })).toBe(true);
+  });
+
+  it("다시 조회하는 중에도 true 를 유지한다", () => {
+    // 받아 둔 값이 없는 조회를 다시 조회하면 TanStack Query 가 error 를 null 로, status 를 pending 으로
+    // 되돌립니다(query-core 의 fetchState). error 로 판정하면 재조회마다 안내가 사라졌다가 다시 나타납니다.
+    expect(stillUnresolved({ data: undefined, errorUpdateCount: 2 })).toBe(true);
+  });
+
+  it("받아 둔 값이 있으면 false 를 반환한다", () => {
+    expect(stillUnresolved({ data: { account: { id: 1 } }, errorUpdateCount: 3 })).toBe(false);
+  });
+
+  it("한 번도 실패하지 않았으면 false 를 반환한다", () => {
+    expect(stillUnresolved({ data: undefined, errorUpdateCount: 0 })).toBe(false);
   });
 });

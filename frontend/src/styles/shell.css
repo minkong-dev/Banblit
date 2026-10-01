@@ -116,6 +116,19 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .drawer .x { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px; color: var(--t2); }
   .drawer .x svg { width: 22px; height: 22px; }
 
+  /* 로그인 계정 조회가 실패했을 때 상단바 아래에 걸치는 안내 줄입니다(components/AppShell).
+     달력 화면의 .cut 과 달리 창 폭 전체를 쓰므로 라운드를 두지 않고, 아래 1px 선으로 본문과 구획합니다.
+     왼쪽 여백은 .top .in 과 같은 28px 이라 로고와 글자의 왼쪽 끝이 맞습니다.
+     이 줄이 표시되는 동안에는 --bar(63px)에 이 줄의 높이가 더해지지 않아, 창 높이에 맞추는 대시보드 화면과
+     사이드바가 이 줄 높이만큼 아래로 넘쳐 세로 스크롤이 생깁니다. 안내가 사라지면 원래 배치로 돌아갑니다. */
+  .mecut {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 12px 28px; background: var(--red-tint); border-bottom: 1px solid var(--line);
+  }
+  .mecut p { margin: 0; font-size: 13.5px; color: var(--t2); }
+  .mecut p b { display: block; font-size: 15.5px; color: var(--t1); font-weight: 700; }
+  .mecut button { margin-left: auto; }
+
   /* 본문입니다. 탭 한 줄이 위, 본문과 오른쪽 칸이 아래입니다. 사이드바를 뺀 폭을 전부 씁니다.
      높이는 내용만큼입니다. 창 바닥까지 채우는 화면은 대시보드 하나이고 scheduler.css 가 따로 정합니다(사용자 결정).
      목록은 한 쪽에 10줄(lib/paging 의 PER_PAGE)이고 쪽 넘김 줄은 목록 바로 아래에 옵니다. */
@@ -125,6 +138,9 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
     display: grid; grid-template-columns: minmax(0, 1fr) clamp(260px, 22%, 360px);
     grid-template-rows: auto minmax(0, 1fr); column-gap: 48px;
   }
+  /* 계정 조회 실패 안내가 사라진 뒤 초점이 이 상자로 옮겨집니다(AppShell 의 retryMe). 공통 초점 규칙([tabindex]:focus-visible)의
+     outline-offset 3px 은 본문 상자에서는 창 바깥으로 나가므로, 선을 상자 안쪽에 그립니다. */
+  .page:focus-visible { outline-offset: -3px; border-radius: 0; }
   /* 탭은 면 없이 글자만 두고, 고른 탭은 본문색 글자 아래에 2px 코랄 가로선을 긋습니다. 나머지는 흐린 글자입니다.
      탭 줄은 사이드바 첫 메뉴 항목과 같은 높이(44px)라 두 글자의 세로 중심이 맞습니다. */
   .tabs { grid-column: 1; grid-row: 1; display: flex; gap: 26px; margin-bottom: 24px; flex-wrap: wrap; }
@@ -178,7 +194,8 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   /* 되돌릴 수 없는 동작입니다. 강조 버튼과 같은 크기를 쓰고 색만 다릅니다. */
   .btn.warn { border-color: transparent; background: var(--red); color: var(--red-on); }
   .btn.warn:hover { background: var(--red); color: var(--red-on); filter: brightness(.94); }
-  .btn[disabled] { opacity: .45; cursor: default; }
+  /* aria-disabled 로 비활성을 표시하는 버튼도 같은 모양입니다 — 초점을 유지해야 하는 버튼이 disabled 대신 씁니다. */
+  .btn[disabled], .btn[aria-disabled="true"] { opacity: .45; cursor: default; }
   .acts { display: flex; gap: 8px; }
   .why { margin: 8px 0 0; font-size: 13px; color: var(--red); }
   .empty { padding: 34px 0; text-align: center; font-size: var(--fs-md); color: var(--t3); }
@@ -238,6 +255,7 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
     .tab { flex: none; font-size: var(--fs-lg); }
 
     .top .in { height: 56px; padding: 0 16px; }
+    .mecut { padding: 12px 16px; }
     .logo span { display: none; }
     .profbtn .nm { display: none; }
     .pop { right: 14px; top: 60px; width: min(280px, calc(100vw - 28px)); }
