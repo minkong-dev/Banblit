@@ -24,11 +24,12 @@ const NAV = [
   { key: "board", label: "팀 게시판", to: "/board" },
   // 관리 권한이 있는 사람에게만 표시합니다. 자기 계정에 대한 설정은 프로필 화면에 있습니다.
   { key: "settings", label: "설정", to: "/settings" },
-] as const;
+] as const; // as const 는 값을 리터럴 타입(string 이 아니라 "board" 같은 값 자체)으로 고정합니다.
 
 // 필요 권한을 가진 사람만 배정 결과를 확인할 수 있습니다.
 const MANAGER_NAV = [
   { key: "assign", label: "배정 결과 확인", to: "/admin", needs: ["assign_read"] },
+// satisfies 는 리터럴 타입을 유지한 채, 구조가 오른쪽에 적은 타입에 맞는지만 검사합니다.
 ] as const satisfies readonly { key: string; label: string; to: string; needs: readonly Permission[] }[];
 
 // 주소의 첫 구간 → 화면 CSS 가 격리되는 이름(body[data-page])입니다. 공지사항과 팀 게시판은 board.css 를 함께 씁니다.
@@ -86,6 +87,7 @@ export function AppShell() {
   usePage(PAGE_BY_PATH[pathname.split("/")[1]] ?? "");
   // shell.css 가 이 속성으로 공통 layout(상단바·사이드바·탭·카드)의 스타일을 적용합니다. 계정·랜딩 화면에는 없습니다.
   // AppShell 이 유지되므로 로그인 뒤 화면 사이를 이동하는 동안에는 삭제되지 않습니다.
+  // useEffect 는 화면을 그린 뒤 실행되어 shell.css 가 적용되지 않은 화면이 한 번 그려집니다. useLayoutEffect 는 그리기 전에 실행되어 이를 막습니다.
   useLayoutEffect(() => {
     document.body.dataset.shell = "";
     return () => { delete document.body.dataset.shell; };

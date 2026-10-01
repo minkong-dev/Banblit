@@ -6,7 +6,7 @@ import { Dropdown } from "../components/Dropdown";
 import { getJSON, reason } from "../lib/api";
 import { askRollback } from "../lib/confirm";
 import { say } from "../lib/toast";
-import { runAssignment } from "../lib/pipeline";
+import { loadSchedule, runAssignment, SCHEDULE_KEY } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
 import { useMe, usePeriods, useRooms, useTeams } from "../components/queries";
 import { can } from "../lib/account";
@@ -17,8 +17,6 @@ import type { View } from "../lib/assignment";
 import { AssignmentCalendar, AssignmentStatus, PastRunsPanel, RunTimesPanel } from "./AssignmentPanels";
 import "../styles/assignment.css";
 import type { AssignOut, ScheduleRow } from "../lib/contract";
-import { loadSchedule, SCHEDULE_KEY } from "../lib/pipeline";
-
 // 조회 결과가 아직 없을 때 사용하는 빈 목록입니다. 같은 배열을 계속 사용해야 useMemo 의 의존성이 변하지 않습니다.
 const NO_ROWS: ScheduleRow[] = [];
 
