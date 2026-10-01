@@ -17,7 +17,7 @@ import type { View } from "../lib/assignment";
 import { AssignmentCalendar, AssignmentStatus, PastRunsPanel, RunTimesPanel } from "./AssignmentPanels";
 import "../styles/assignment.css";
 import type { AssignOut, ScheduleRow } from "../lib/contract";
-import { SCHEDULE_KEY } from "../lib/pipeline";
+import { loadSchedule, SCHEDULE_KEY } from "../lib/pipeline";
 
 // 조회 결과가 아직 없을 때 사용하는 빈 목록입니다. 같은 배열을 계속 사용해야 useMemo 의 의존성이 변하지 않습니다.
 const NO_ROWS: ScheduleRow[] = [];
@@ -49,11 +49,11 @@ export function Assignment() {
 
   const schedule = useQuery({
     queryKey: ["schedule", activePeriodId],
-    queryFn: () => getJSON<{ rows: ScheduleRow[] }>(`/periods/${requirePeriod(activePeriodId)}/schedule`),
+    queryFn: () => loadSchedule(requirePeriod(activePeriodId)),
     enabled: activePeriodId !== null,
   });
   // schedule.data 가 없으면 NO_ROWS 를 사용합니다. 매 render 마다 새 빈 배열을 만들면 아래 useMemo 가 매번 다시 실행됩니다.
-  const rows = schedule.data?.rows ?? NO_ROWS;
+  const rows = schedule.data ?? NO_ROWS;
 
   // 확정된 시간표에 나온 id를 재계산에 그대로 넘깁니다. 아직 아무것도 확정되지 않았으면
   // 목록 endpoint(API의 요청 주소 단위)가 준 전체를 사용합니다.
