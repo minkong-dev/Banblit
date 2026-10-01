@@ -286,6 +286,27 @@ return x > 5
 - `if 조건: return True / else: return False` 형태가 있는 경우
 - 언어에 enumerate 계열 구문이 있음에도 index range를 직접 만들어 배열을 순회하는 경우
 
+### 함수 크기 — JSX 를 반환하는 함수의 예외
+
+프로젝트 공통 규칙의 "함수 50줄 미만" 은 **JSX 외에 담당하는 일이 2개 이상인 함수**에만 적용한다.
+JSX 외 담당이 1개 이하이면 50줄을 넘어도 위반이 아니다. 화면 한 구역을 그리는 함수는 본문 대부분이
+JSX 이고, 나누면 경계가 JSX 중간이 되어 props 타입 선언만 늘어난다.
+
+담당은 이렇게 센다 — 서버 조회 1개, mutation 1개, 지역 state 묶음 1개, DOM 측정·제어 1개,
+조건에 따라 다른 화면을 반환하는 분기 1개.
+
+| 예 | 줄 수 | JSX 외 담당 | 판정 |
+|---|---|---|---|
+| `routes/DayDialogParts.tsx RepeatFields` | 70 | 0 — 계산은 `lib/calendar` 에 있다 | 통과 |
+| `routes/SettingsMembers.tsx SetForm` | 100 | 1 — 저장 mutation | 통과 |
+| `routes/SettingsMembers.tsx SetRail`(수정 전) | 101 | 4 — 조회·삭제 mutation·modal state 3개·가로 스크롤 제어 | 위반 |
+
+### 위반 판정
+
+- JSX 를 반환하는 함수가 50줄을 넘고, JSX 외에 담당하는 일이 2개 이상인 경우
+- 한 함수가 조건에 따라 성격이 다른 화면 2개를 반환하는 경우(줄 수와 무관)
+
+
 ---
 
 ## 9. 문서

@@ -23,6 +23,9 @@ sources:
   - frontend/src/lib/account.test.ts     # 역할 문구 시나리오
   - frontend/src/lib/pipeline.test.ts    # 매일 기간의 저장값과 멤버 추방 호출 시나리오
   - frontend/src/components/AppShell.tsx # 사이드바 관리 구역을 권한 항목으로 표시·숨김하는 컴포넌트
+  - frontend/src/components/queries.ts   # 여러 화면이 함께 쓰는 서버 조회 훅과 무효화 대상 queryKey
+  - frontend/src/components/Layout.tsx   # 모든 화면이 함께 쓰는 Card · SectionHead · Tabs · Panel
+  - frontend/src/components/richTextEditor.ts # 글쓰기 editor 의 확장과 본문에 넣을 수 있는 파일 형식
   - frontend/src/lib/pipeline.ts         # lib 모듈의 호출 순서를 정하는 파일
   - frontend/src/lib/jobs.ts             # 접수한 계산이 끝날 때까지 polling 하는 함수
   - frontend/src/lib/notifications.ts    # 알림 종류를 문장으로 변환하는 함수
@@ -38,7 +41,7 @@ sources:
   - docker-compose.yml                   # web 컨테이너가 화면을 제공합니다
 ---
 
-> 문서 버전: 3.3.0 draft
+> 문서 버전: 3.4.0 draft
 
 ```mermaid
 flowchart LR
@@ -298,6 +301,36 @@ flowchart LR
 **Dialog 본문의 맨 위에는 초점 테두리가 들어갈 여백을 둡니다.** 본문은 내용이 넘칠 때 스크롤하는 영역인데, 스크롤하는 영역은 스크롤하지 않을 때도 자기 밖으로 나가는 것을 잘라냅니다. 초점 테두리는 입력칸의 바깥쪽에 그려지므로, 본문의 위쪽 여백이 0이면 맨 위 입력칸의 테두리가 윗변만 잘려 아래쪽만 그려집니다. 좌우는 여백이 넉넉해 이 현상이 보이지 않아, 테두리가 한쪽만 어긋나 보입니다. 그래서 본문 위쪽에 여백을 두고, 같은 크기만큼을 제목 줄의 아래 여백에서 가져와 제목과 본문 사이 간격은 그대로 둡니다. 3단 카드 dialog 도 2026-09-15 에 같은 이유로 여백을 스크롤 영역 안쪽으로 옮겼습니다.
 
 **멤버 검색 창의 입력칸은 본문 맨 위에 고정됩니다.** 검색어 없이도 명단 전체가 나오므로 목록이 화면보다 길어집니다. 입력칸이 함께 스크롤되어 사라지면 검색어를 넣으려고 매번 맨 위로 돌아가야 합니다.
+
+### 조회와 창을 공용 자리로 옮겼습니다 (2026-10-01)
+
+화면 파일이 직접 들고 있던 세 가지를 공용 파일로 옮겼습니다.
+
+`components/queries.ts` 는 여러 화면이 함께 쓰는 서버 조회 훅을 담습니다. 여기에 `useMyTeamCohorts` 가
+추가됐습니다 — 소속 팀 목록에 그 팀 명단에서 찾은 내 기수를 붙여 반환합니다. 상단바 프로필 메뉴가 직접
+팀별 명단을 조회하던 것을 옮긴 것입니다. 명단에서 자신을 찾는 기준은 이름이 아니라 번호입니다(동명이인 규칙).
+같은 파일에 설정 화면 멤버 구역의 queryKey 2개(`SETS_KEY`·`MEMBERS_KEY`)와 무효화 함수
+`refreshMemberArea` 도 들어갔습니다. 이 함수는 권한 집합·멤버 명단·로그인 계정 권한 셋을 함께 무효화하고,
+셋 중 하나를 빠뜨리면 권한을 수정한 뒤에도 사이드바 메뉴가 옛 권한으로 남습니다.
+
+`lib/pipeline.ts` 의 `loadSchedule(periodId)` 가 기간 하나의 확정 시간표를 조회합니다. 달력 화면과 배정
+결과 화면이 같은 주소를 각자 적고 있던 것을 이 함수 하나로 모았습니다. 달력 화면은 기간 수만큼 이 함수를
+호출하고 실패한 기간의 사유만 모아 둡니다.
+
+설정 화면 멤버 탭의 창 4종(새 권한·권한 수정·권한 부여·보유 멤버)은 `SetModals` 한 함수가 `open.kind` 로
+구분해 렌더합니다. 이전에는 창마다 지역 state 가 하나씩 있어 셋이었고, 권한 부여 창은 `mode` prop 으로
+두 화면을 한 함수가 반환했습니다. 생성·수정 창은 저장이 끝나면 닫히고, 부여·회수 창은 여러 멤버를 연달아
+처리하므로 닫히지 않습니다.
+
+본문에 넣을 수 있는 파일 형식은 목록 세 곳이 함께 결정합니다 — `components/richTextEditor.ts` 의
+`ACCEPTED_MIME` 이 붙여넣기·drop·파일 선택창의 입력 필터이고, `lib/richText.ts` 의 `IMAGE`·`AUDIO` 가
+확장자로 image·audio·pdf 중 무엇으로 넣을지 판정하며, 서버 `INLINE_TYPES` 가 그 파일을 내보낼 때의
+content type 을 정합니다. 세 목록이 같지 않습니다 — flac 은 서버가 내보낼 수 있지만 Safari 가 재생하지
+못해 화면이 본문 삽입에서 제외합니다. 각 목록 주석에 정본 위치를 적었습니다.
+
+검증은 `docker compose run --rm --no-deps web sh -c "npm run typecheck && npm test && npm run lint"` 로
+실행했습니다. 단위테스트 496개가 통과하고 타입 오류와 lint 경고는 0개입니다. 화면 동작은 바뀌지 않는
+수정이므로, 바뀐 동작이 있는지는 `react-reviewer` 로 `git diff` 를 검토해 확인했습니다(통과율 86%).
 
 ### 상자 없이 선으로 구획합니다 (2026-09-30)
 
