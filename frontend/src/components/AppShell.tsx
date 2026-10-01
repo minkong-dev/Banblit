@@ -1,16 +1,15 @@
-import { useQueries } from "@tanstack/react-query";
 import { useLayoutEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { NotificationMenu } from "./NotificationMenu";
 import { CloseIcon, MoonIcon, SunIcon, WideMenuIcon } from "./icons";
 import { usePage, usePopoverRouteClose } from "./hooks";
-import { useMe, useMyTeams } from "./queries";
+import { useMe, useMyTeamCohorts } from "./queries";
 import { useToast } from "../lib/toast";
 import { Avatar } from "./Avatar";
 import { can, canOpenSettings, roleLabel, teamNavLabel } from "../lib/account";
 import { cohortLabel } from "../lib/roster";
-import { loadTeamMembers, logOut } from "../lib/pipeline";
+import { logOut } from "../lib/pipeline";
 import type { Permission } from "../lib/contract";
 import { applyTheme, readSavedTheme, type Theme } from "../lib/theme";
 import "../styles/shell.css";
@@ -167,20 +166,9 @@ function ProfileMenu() {
   usePopoverRouteClose(PROFILE_POP_ID);
   const navigate = useNavigate();
   const { me } = useMe();
-  const teams = useMyTeams();
+  const teams = useMyTeamCohorts();
   const name = me?.name ?? "";
   const sub = roleLabel(me);
-
-  // 팀마다 그 팀의 명단을 받습니다. 명단에서 내 번호와 같은 사람을 찾으면 그 사람이
-  // 그 팀에서 맡은 포지션입니다. 이름이 아니라 번호로 구분합니다(동명이인 규칙).
-  // queryKey(TanStack Query가 관리하는 조회 식별자)는 hooks 의 queryKey 와 같아서 이미 받아 둔 명단이 있으면 다시 요청하지 않습니다.
-  const rosters = useQueries({
-    queries: teams.map((team) => ({
-      queryKey: ["members", team.id],
-      // 같은 query key 를 날짜 dialog·프로필 화면도 씁니다. 저장하는 값의 모양이 같아야 하므로 셋 다 loadTeamMembers(배열)를 씁니다.
-      queryFn: () => loadTeamMembers(team.id),
-    })),
-  });
 
   // 서버 호출이 실패해도 로그인 화면으로 이동합니다. 표시용 cookie(브라우저가 저장해 요청마다 함께 보내는 값)가 남아 있어도
   // 다음 요청은 401 로 거절되므로 현재 화면을 유지할 이유가 없습니다.
@@ -216,16 +204,13 @@ function ProfileMenu() {
         </div>
         <hr />
         <div className="cap">소속 팀 {teams.length}개</div>
-        {teams.map((team, index) => {
-          const mine = rosters[index]?.data?.find((member) => member.id === me?.id);
-          return (
-            <div className="tm" key={team.id}>
-              <i style={{ background: `var(--${team.colorKey})` }} />{team.name}
-              {/* 명단이 아직 오지 않았으면 아무것도 표시하지 않습니다. 없는 값을 생성하지 않습니다. */}
-              <small>{cohortLabel(mine?.cohort ?? null)}</small>
-            </div>
-          );
-        })}
+        {teams.map((team) => (
+          <div className="tm" key={team.id}>
+            <i style={{ background: `var(--${team.colorKey})` }} />{team.name}
+            {/* 명단이 아직 오지 않았으면 아무것도 표시하지 않습니다. 없는 값을 생성하지 않습니다. */}
+            <small>{cohortLabel(team.cohort)}</small>
+          </div>
+        ))}
         <hr />
         <button
           className="act"

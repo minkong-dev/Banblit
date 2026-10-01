@@ -1,9 +1,10 @@
 // 여러 화면에서 공유하는 서버 조회 훅입니다. DOM·화면 상태 훅은 hooks.ts 에 있습니다.
 
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 
-import { fetchMe, getJSON, myTeamIds } from "../lib/pipeline";
+import { fetchMe, getJSON, loadTeamMembers, myTeamIds } from "../lib/pipeline";
 import { loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { teamColorKey } from "../lib/teamColors";
@@ -80,4 +81,33 @@ export function useMyTeams(): ProfileTeam[] {
   return teams
     .filter((team) => teamIds.includes(team.id))
     .map((team) => ({ ...team, colorKey: teamColorKey(team.color) }));
+}
+
+/** 소속 팀 목록에, 그 팀 명단에서 찾은 내 기수를 붙입니다. 이름이 아니라 번호로 자신을 찾습니다(동명이인 규칙).
+ *  명단이 아직 오지 않았거나 조회가 실패하면 cohort 는 null 입니다. queryKey 는 날짜 dialog·프로필 화면과
+ *  같아서 이미 받아 둔 명단이 있으면 다시 요청하지 않습니다. 저장하는 값의 모양이 같아야 하므로 셋 다
+ *  loadTeamMembers(배열)를 씁니다. */
+export function useMyTeamCohorts(): (ProfileTeam & { cohort: number | null })[] {
+  const { me } = useMe();
+  const teams = useMyTeams();
+  const rosters = useQueries({
+    queries: teams.map((team) => ({
+      queryKey: ["members", team.id],
+      queryFn: () => loadTeamMembers(team.id),
+    })),
+  });
+  return teams.map((team, index) => ({
+    ...team,
+    cohort: rosters[index]?.data?.find((member) => member.id === me?.id)?.cohort ?? null,
+  }));
+}
+
+export const SETS_KEY = ["permission-sets"] as const;
+export const MEMBERS_KEY = ["member-roster"] as const;
+/** 설정 화면의 멤버 구역이 수정하는 서버 자료입니다. 권한 집합을 수정·삭제하면 그 집합을 부여받은 멤버의 권한과
+ *  로그인 계정의 권한(["me"])이 함께 바뀝니다. 셋 중 하나를 빠뜨리면 사이드바 메뉴가 옛 권한으로 남습니다. */
+const MEMBER_AREA_KEYS: readonly (readonly string[])[] = [SETS_KEY, MEMBERS_KEY, ["me"]];
+
+export function refreshMemberArea(client: QueryClient): void {
+  for (const queryKey of MEMBER_AREA_KEYS) void client.invalidateQueries({ queryKey });
 }

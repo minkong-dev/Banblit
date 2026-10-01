@@ -4,7 +4,6 @@
 // 아래쪽은 가입한 모든 멤버입니다. 아래로 스크롤하면 다음 page 를 불러옵니다.
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { QueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { Card, SectionHead } from "../components/Layout";
@@ -26,23 +25,13 @@ import { cohortLabel } from "../lib/roster";
 import { PERMISSION_ITEMS, can } from "../lib/account";
 import { permissionSetProblem } from "../lib/validate";
 import { askDelete, askExpel } from "../lib/confirm";
-import { useMe } from "../components/queries";
+import { MEMBERS_KEY, SETS_KEY, refreshMemberArea, useMe } from "../components/queries";
 import { expelMember } from "../lib/pipeline";
 import { LOADING_TEXT } from "../lib/loading";
 import type { MemberRow, Permission, PermissionSet } from "../lib/contract";
 
-const SETS_KEY = ["permission-sets"];
-const MEMBERS_KEY = ["member-roster"];
-/** 멤버 구역이 수정하는 서버 자료입니다. 권한 집합을 수정·삭제하면 그 집합을 부여받은 멤버의 권한과
- *  로그인 계정의 권한(["me"])이 함께 바뀝니다. 셋 중 하나를 빠뜨리면 사이드바 메뉴가 옛 권한으로 남습니다. */
-const MEMBER_AREA_KEYS: readonly (readonly string[])[] = [SETS_KEY, MEMBERS_KEY, ["me"]];
-
-function refreshMemberArea(client: QueryClient): void {
-  for (const queryKey of MEMBER_AREA_KEYS) void client.invalidateQueries({ queryKey });
-}
 /** 한 번에 불러오는 멤버 수입니다. 아래로 스크롤하면 이 크기만큼씩 다음 페이지를 불러옵니다. */
 const PAGE = 50;
-
 
 type Draft = { name: string; description: string; permissions: Permission[] };
 
@@ -145,17 +134,13 @@ function SetForm(props: {
   );
 }
 
-/** 권한 카드의 두 창입니다. holders 는 권한을 가진 멤버 목록과 회수, add 는 멤버 검색과 부여입니다. */
-type GrantMode = "holders" | "add";
-
-/** 멤버에게 permission set 을 부여하거나 회수합니다. */
-function GrantModal(props: {
+/** 멤버 검색 창에서 고른 멤버에게 permission set 을 부여합니다. */
+function GrantAdd(props: {
   set: PermissionSet;
-  mode: GrantMode;
   onClose: () => void;
   onDone: (text: string) => void;
 }) {
-  const { set, mode, onClose, onDone } = props;
+  const { set, onClose, onDone } = props;
   const client = useQueryClient();
 
   const grant = useMutation({
@@ -165,26 +150,32 @@ function GrantModal(props: {
     onError: (error) => onDone(reason(error)),
   });
 
+  return (
+    <MemberPicker
+      title={set.name}
+      hint="권한을 부여할 멤버를 검색해요"
+      exclude={set.members.map((person) => person.id)}
+      onPick={(one) => grant.mutate(one.id)}
+      onClose={onClose}
+    />
+  );
+}
+
+/** permission set 을 가진 멤버 목록입니다. 각 줄에서 그 멤버의 권한을 회수합니다. */
+function GrantHolders(props: {
+  set: PermissionSet;
+  onClose: () => void;
+  onDone: (text: string) => void;
+}) {
+  const { set, onClose, onDone } = props;
+  const client = useQueryClient();
+
   const revoke = useMutation({
     mutationFn: (memberId: number) =>
       getJSON<null>(`/members/${memberId}/permission-sets/${set.id}`, { method: "DELETE" }),
     onSuccess: () => { refreshMemberArea(client); onDone("권한을 제거했어요"); },
     onError: (error) => onDone(reason(error)),
   });
-
-  const busy = grant.isPending || revoke.isPending;
-
-  if (mode === "add") {
-    return (
-      <MemberPicker
-        title={set.name}
-        hint="권한을 부여할 멤버를 검색해요"
-        exclude={set.members.map((person) => person.id)}
-        onPick={(one) => grant.mutate(one.id)}
-        onClose={onClose}
-      />
-    );
-  }
 
   return (
     <Modal title={set.name} hint="해당 권한을 가진 멤버" onClose={onClose}>
@@ -199,7 +190,7 @@ function GrantModal(props: {
               actions={
                 <button
                   className="ic danger"
-                  disabled={busy}
+                  disabled={revoke.isPending}
                   aria-label={`${person.name} 에게서 권한 제거하기`}
                   onClick={() => revoke.mutate(person.id)}
                 >
@@ -248,13 +239,66 @@ function SetTile(props: {
   );
 }
 
+/** 권한 카드가 여는 창입니다. 동시에 하나만 열립니다. */
+type SetModal =
+  | { kind: "new" }
+  | { kind: "edit"; set: PermissionSet }
+  | { kind: "holders"; set: PermissionSet }
+  | { kind: "add"; set: PermissionSet };
+
+/** 권한 카드가 여는 창 네 종류를 open.kind 로 구분해 렌더합니다. */
+function SetModals(props: {
+  open: SetModal;
+  list: PermissionSet[];
+  onClose: () => void;
+  onDone: (text: string) => void;
+}) {
+  const { open, list, onClose, onDone } = props;
+  // 생성·수정 창은 저장이 끝나면 닫습니다. 부여·회수 창은 여러 멤버를 연달아 처리하므로 닫지 않습니다.
+  const closeAndTell = (text: string): void => { onClose(); onDone(text); };
+
+  if (open.kind === "new") {
+    return (
+      <SetForm
+        start={BLANK}
+        taken={list.map((set) => set.name)}
+        path="/permission-sets"
+        method="POST"
+        title="새 권한"
+        onClose={onClose}
+        onDone={closeAndTell}
+      />
+    );
+  }
+  if (open.kind === "edit") {
+    return (
+      <SetForm
+        start={{
+          name: open.set.name,
+          description: open.set.description,
+          permissions: open.set.permissions,
+        }}
+        taken={list.filter((one) => one.id !== open.set.id).map((one) => one.name)}
+        path={`/permission-sets/${open.set.id}`}
+        method="PATCH"
+        title="권한 수정"
+        onClose={onClose}
+        onDone={closeAndTell}
+      />
+    );
+  }
+  // 창을 열어 둔 동안 권한을 부여·회수하면 목록을 다시 조회합니다. open 이 보유한 값은 창을 열 때의
+  // 값이므로, 같은 id 의 최신 값을 목록에서 찾아 넘깁니다.
+  const set = list.find((one) => one.id === open.set.id) ?? open.set;
+  if (open.kind === "add") return <GrantAdd set={set} onClose={onClose} onDone={onDone} />;
+  return <GrantHolders set={set} onClose={onClose} onDone={onDone} />;
+}
+
 /** permission set 카드 행입니다. 카드가 수평으로 배치되며, 한 화면에 모두 보이지 않으면 < > 버튼으로 넘깁니다. */
 function SetRail() {
   const client = useQueryClient();
   const track = useRef<HTMLUListElement | null>(null);
-  const [making, setMaking] = useState(false);
-  const [editing, setEditing] = useState<PermissionSet | null>(null);
-  const [granting, setGranting] = useState<{ set: PermissionSet; mode: GrantMode } | null>(null);
+  const [open, setOpen] = useState<SetModal | null>(null);
 
   const sets = useQuery({
     queryKey: SETS_KEY,
@@ -300,50 +344,19 @@ function SetRail() {
           <SetTile
             key={set.id}
             set={set}
-            onHolders={() => setGranting({ set, mode: "holders" })}
-            onGrant={() => setGranting({ set, mode: "add" })}
-            onEdit={() => setEditing(set)}
+            onHolders={() => setOpen({ kind: "holders", set })}
+            onGrant={() => setOpen({ kind: "add", set })}
+            onEdit={() => setOpen({ kind: "edit", set })}
             onDelete={() => { if (askDelete(set.name)) drop.mutate(set); }}
           />
         ))}
         <li className="tile add">
-          <button onClick={() => setMaking(true)}>+ 새 권한</button>
+          <button onClick={() => setOpen({ kind: "new" })}>+ 새 권한</button>
         </li>
       </ul>
 
-      {!making ? null : (
-        <SetForm
-          start={BLANK}
-          taken={list.map((set) => set.name)}
-          path="/permission-sets"
-          method="POST"
-          title="새 권한"
-          onClose={() => setMaking(false)}
-          onDone={(text) => { setMaking(false); saved(text); }}
-        />
-      )}
-      {editing === null ? null : (
-        <SetForm
-          start={{
-            name: editing.name,
-            description: editing.description,
-            permissions: editing.permissions,
-          }}
-          taken={list.filter((one) => one.id !== editing.id).map((one) => one.name)}
-          path={`/permission-sets/${editing.id}`}
-          method="PATCH"
-          title="권한 수정"
-          onClose={() => setEditing(null)}
-          onDone={(text) => { setEditing(null); saved(text); }}
-        />
-      )}
-      {granting === null ? null : (
-        <GrantModal
-          set={list.find((one) => one.id === granting.set.id) ?? granting.set}
-          mode={granting.mode}
-          onClose={() => setGranting(null)}
-          onDone={saved}
-        />
+      {open === null ? null : (
+        <SetModals open={open} list={list} onClose={() => setOpen(null)} onDone={saved} />
       )}
     </Card>
   );
