@@ -6,25 +6,25 @@ sources:
   - backend/src/backend/scheduling/availability.py   # 멤버·팀 가능 여부
   - backend/src/backend/scheduling/slots.py          # 운영시간 → 시간 칸과 session 후보
   - backend/src/backend/scheduling/interval.py       # 시간 구간과 그 유효성
-  - backend/src/backend/scheduling/pipeline.py       # 모듈 진입점. solver 상한 2개를 정의해 기능 파일에 전달
+  - backend/src/backend/scheduling/pipeline.py       # 모듈 진입점. solver 시간 상수 3개를 정의해 기능 파일에 전달
   - backend/src/backend/contract.py                  # 칸 크기·합주 1회 길이. 모듈 2개 이상이 참조하는 값
   - backend/src/backend/api/auth_dependency.py       # 계산 실행·결과 조회·되돌리기 endpoint의 권한 항목 확인
   - backend/src/backend/api/routers/schedule.py      # 그 4개 endpoint에 어떤 항목을 요구하는지 선언한 위치, 사람이 다시 계산하거나 되돌렸을 때 알림을 저장하는 위치
   - backend/src/backend/jobs/auto_assign.py           # 정해진 시각이 지나면 자동으로 실행되는 별도 서비스
-  - backend/src/backend/services/notification_service.py  # 시간표가 저장된 뒤 누구에게 알림을 저장하는지
+  - backend/src/backend/services/notification/notification_service.py  # 시간표가 저장된 뒤 누구에게 알림을 저장하는지
   - backend/src/backend/db/models.py                 # 자동 실행 기록 table(assignment_runs)과 알림 table(notifications)
   - backend/migrations/versions/0e65e95acef3_assignment_runs.py  # 그 table을 추가하는 마이그레이션
   - backend/migrations/versions/f6e0b91a7c48_notifications.py    # 알림 table
   - backend/tests/integration/db/test_notifications.py           # 누구에게 저장되고 누구에게 저장되지 않는지의 시나리오
   - docker-compose.yml                               # 배포에서 auto-assign 서비스를 시작하는 위치
   - docker-compose.override.yml                      # 개발에서 그 서비스를 비활성화하는 위치
-  - backend/src/backend/services/period_service.py         # 매일 기간은 실행한 날 하루만 배정하고 전체합주 날짜를 제외하는 period_days
+  - backend/src/backend/services/period/period_service.py         # 매일 기간은 실행한 날 하루만 배정하고 전체합주 날짜를 제외하는 period_days
   - backend/tests/integration/db/test_auto_assign.py       # 언제 실행되고 언제 실행되지 않는지, 매일 기간이 저장된 종료일 뒤에도 실행되는지의 시나리오
   - backend/tests/integration/db/test_period_endpoints.py  # 배정·되돌리기·조회의 권한 시나리오
   - backend/tests/integration/db/test_assign_jobs.py       # 계산 결과를 조회하는 endpoint의 권한 시나리오
 ---
 
-> 문서 버전: 3.7.0 draft
+> 문서 버전: 3.8.0 draft
 
 ```mermaid
 flowchart TD
@@ -352,6 +352,20 @@ session 1회를 채우지 못하고 남는 칸은 자동 배정 대상에서 빠
 공유 규격 파일을 모듈 진입점이 아니라 별도 파일로 둔 이유는 OR-Tools 입니다. 진입점을 참조하면 table 정의를 import 하는 migration 까지 OR-Tools 를 로드합니다.
 
 **어떻게 확인했나.** table 정의만 import 했을 때 OR-Tools 가 로드되지 않는지를 container 안에서 직접 확인했고, `alembic upgrade head` 를 실행해 migration 이 통과하는 것을 확인했습니다. 서버 테스트 전체 650개가 통과하고 타입 검사는 106개 파일에서 이상이 없습니다.
+
+### 배정 계산을 제약별 함수로 분해했습니다 (2026-09-30)
+
+`scheduling/assignment.py` 의 `assign` 이 모델 구성 전체를 한 함수에서 하던 것을 제약별 함수로 분해했습니다. `assign` 은 입력 검증, 칸·session 후보 생성, 아래 함수 호출, `_solve` 실행, 결과 조립의 순서만 수행합니다.
+
+| 함수 | 담당하는 제약 |
+| --- | --- |
+| `_one_team_per_slot` | 칸 하나에 팀 하나 |
+| `_one_room_per_team` | 한 팀은 같은 시간에 한 합주실만 사용 |
+| `_one_place_per_member` | 여러 팀에 속한 멤버는 같은 시간에 한 곳에만 있음 |
+| `_limit_per_day` | `daily_max_minutes` 가 있을 때 팀의 하루 상한 |
+| `_prefer_back_to_back` | 같은 팀 session 을 이어 붙이는 목적 함수 |
+
+`assign` 은 매개변수 `improve_seconds_after_first` 를 받습니다. 첫 배정안을 찾은 뒤 이어 붙임을 더 찾는 데 쓰는 시간(초)이고, 이 시간이 지나면 `_StopAfterFirst` 가 계산을 멈춥니다. 값 3초(`IMPROVE_SECONDS_AFTER_FIRST = 3.0`)는 `scheduling/pipeline.py` 가 정의해 `assign`·`resolve` 에 전달합니다. 배정 가능 여부를 찾는 시간은 이 값과 관계없이 `SOLVER_TIME_LIMIT_SECONDS`(60초)까지 씁니다. 따라서 `pipeline.py` 의 시간 상수는 3개입니다(계산 1회 상한, 첫 해 이후 시간, 작업 전체 상한).
 
 ## Conclusion
 

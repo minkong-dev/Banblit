@@ -2,7 +2,7 @@
 title: 팀과 포지션
 sources:
   - backend/src/backend/db/models.py           # Team·TeamSlot table, 포지션 목록, 팀 색 20가지(TEAM_COLORS)
-  - backend/src/backend/services/roster_service.py  # 팀과 포지션을 조회·저장하는 파일
+  - backend/src/backend/services/roster/roster_service.py  # 팀과 포지션을 조회·저장하는 파일
   - backend/src/backend/api/routers/roster.py  # endpoint마다 요청한 사용자와 그 권한을 확인하는 파일
   - backend/src/backend/api/auth_dependency.py # 요청을 보낸 사용자를 확인하는 파일
   - backend/src/backend/api/schemas.py         # 팀·포지션 응답 서식
@@ -16,7 +16,7 @@ sources:
   - frontend/src/routes/Profile.tsx            # 내가 맡은 포지션을 표시하는 화면
 ---
 
-> 문서 버전: 2.1.0 draft
+> 문서 버전: 2.2.0 draft
 
 ```mermaid
 erDiagram
@@ -166,6 +166,19 @@ erDiagram
 색을 고르는 일을 앱 코드가 아니라 저장소 트리거에 둔 이유는, 팀을 INSERT 하는 곳이 서비스 외에도 스크립트와 테스트까지 31곳이라 전부 색을 알게 할 수 없어서입니다. 저장 전에 남은 색을 세지 않는 이유는 동시에 들어온 두 요청이 둘 다 통과하기 때문입니다. 판정은 저장소가 1번만 합니다.
 
 `backend/tests/integration/db/test_roster_endpoints.py` 가 고른 색 저장, 고르지 않으면 첫 빈 색, 겹치는 색 422, 모르는 색 422, 20색 소진 422, 색 수정을 확인하고, `frontend/src/lib/teamColors.test.ts` 가 20색 순서와 Radix 값으로 만든 CSS 를 확인합니다.
+
+### 조회 헬퍼의 위치 (2026-09-30)
+
+"없는 대상" 을 ValueError("존재하지 않는 X입니다")로 바꾸는 조회 함수 4개를 공개 함수로 둡니다. 다른 모듈은 각 모듈의 `pipeline.py` 를 통해 호출합니다.
+
+| 함수 | 정의 위치 | 용도 |
+| --- | --- | --- |
+| `get_room_or_raise` | `services/room/room_service.py` | 합주실 조회, 없으면 ValueError |
+| `get_team_or_raise` | `services/roster/roster_service.py` | 팀 조회, 없으면 ValueError |
+| `require_team_member` | `services/roster/roster_service.py` | 팀 소속 확인, 소속이 아니면 PermissionError(403) |
+| `get_period_or_raise` | `services/period/schedule_service.py` | 기간 조회, 없으면 ValueError |
+
+`services/board/board_service.py` 에는 `get_team_or_raise`·`require_team_member` 의 같은 내용 사본이 있습니다. roster 가 board 의 파일 저장 함수를 import 하므로 board 가 roster 를 import 하면 순환 import 가 되기 때문입니다.
 
 ## Conclusion
 

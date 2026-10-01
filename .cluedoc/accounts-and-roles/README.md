@@ -2,10 +2,10 @@
 title: 계정과 역할
 sources:
   - backend/src/backend/api/routers/auth.py      # 가입·로그인·로그아웃·내 계정 endpoint와 cookie를 응답에 추가하는 위치
-  - backend/src/backend/services/auth_session.py      # session을 생성·검증·종료하는 위치
-  - backend/src/backend/services/auth_service.py      # 가입·로그인 판정과 비밀번호 보관 형식
+  - backend/src/backend/services/auth/auth_session.py      # session을 생성·검증·종료하는 위치
+  - backend/src/backend/services/auth/auth_service.py      # 가입·로그인 판정과 비밀번호 보관 형식
   - backend/src/backend/api/auth_dependency.py   # 요청을 보낸 사람이 누구인지 확인하고, 해당 endpoint가 요구하는 항목이 활성화되었는지 판정하는 단일 위치
-  - backend/src/backend/services/permission_service.py # permission set 생성·수정·삭제·부여·회수와 합집합 계산
+  - backend/src/backend/services/permission/permission_service.py # permission set 생성·수정·삭제·부여·회수와 합집합 계산
   - backend/src/backend/api/routers/permissions.py # permission set을 다루는 6개 endpoint
   - backend/migrations/versions/b7f1a92c4d31_permission_sets.py # permission set table 추가와 역할 열 삭제 마이그레이션
   - backend/tests/integration/db/test_permission_endpoints.py   # 합집합·자기 permission set 회수·마지막 full set 보호·/me 의 permission set 이름 시나리오
@@ -16,11 +16,11 @@ sources:
   - frontend/src/routes/SettingsAccount.tsx       # 설정 화면의 계정 탭. 내 정보·비밀번호·탈퇴
   - frontend/src/lib/account.ts                   # 항목 21가지의 한국어 이름, 내가 가졌는지 판단, 프로필 카드의 역할 문구(permission set 이름)
   - frontend/src/lib/account.test.ts              # 역할 문구가 permission set 이름을 표시하는지의 시나리오
-  - backend/src/backend/services/input.py             # 서버가 다시 검증하는 이름·이메일·비밀번호를 비롯한 모든 입력 규칙
-  - backend/src/backend/services/password_reset.py    # 재설정 token 발급·사용 처리와 아이디 안내
-  - backend/src/backend/services/mailer.py            # 메일 1통을 보내는 위치, 설정이 없을 때의 처리
+  - backend/src/backend/services/validation/input.py             # 서버가 다시 검증하는 이름·이메일·비밀번호를 비롯한 모든 입력 규칙
+  - backend/src/backend/services/auth/password_reset.py    # 재설정 token 발급·사용 처리와 아이디 안내
+  - backend/src/backend/services/auth/mailer.py            # 메일 1통을 보내는 위치, 설정이 없을 때의 처리
   - backend/src/backend/api/app.py                    # 서비스 계층의 기록을 container 기록으로 내보내는 설정
-  - backend/src/backend/services/avatar_service.py    # 프로필 사진 1장을 저장·삭제하는 위치
+  - backend/src/backend/services/roster/avatar_service.py    # 프로필 사진 1장을 저장·삭제하는 위치
   - backend/tests/integration/db/test_avatar_endpoints.py # 사진 업로드·표시·삭제·동시 업로드 시나리오
   - docker-compose.override.yml                  # 개발에서만 메일 본문을 log에 저장하도록 활성화하는 위치
   - backend/migrations/versions/a3f8c50d1b64_password_reset_tokens.py  # 재설정 token table
@@ -29,13 +29,13 @@ sources:
   - backend/src/backend/api/routers/rooms.py     # 합주실 endpoint의 로그인·항목 구분
   - backend/src/backend/api/routers/periods.py   # 기간 endpoint의 로그인·항목 구분
   - backend/src/backend/api/routers/roster.py    # 팀·명단 endpoint의 로그인·항목 구분, 멤버 추방 endpoint
-  - backend/src/backend/services/roster_service.py    # 팀에서 삭제할 수 있는 사람 판정, 멤버 추방(계정 삭제)
+  - backend/src/backend/services/roster/roster_service.py    # 팀에서 삭제할 수 있는 사람 판정, 멤버 추방(계정 삭제)
   - backend/tests/integration/db/test_member_expel_endpoints.py # 멤버 추방의 403·204·자기 자신·없는 번호 시나리오
   - backend/migrations/versions/e5b7c2a94d18_member_expel_permission.py # 항목 "멤버 추방"을 추가해 18개를 19개로 만든 마이그레이션
   - backend/migrations/versions/a8d3e61f5c27_period_delete_permission.py # 항목 "집중합주 기간 삭제"를 추가해 19개를 20개로 만든 마이그레이션
   - backend/migrations/versions/7e1a4c93d6f0_room_delete_permission.py # 항목 "합주실 삭제"를 추가해 20개를 21개로 만든 마이그레이션
-  - backend/src/backend/services/unavailable_service.py  # 불가능 시간은 본인만이라는 판정
-  - backend/src/backend/services/reservation_service.py  # 예약에 적은 팀의 소속인지 확인
+  - backend/src/backend/services/unavailable/unavailable_service.py  # 불가능 시간은 본인만이라는 판정
+  - backend/src/backend/services/reservation/reservation_service.py  # 예약에 적은 팀의 소속인지 확인
   - backend/tests/integration/db/                # endpoint마다 401·403 구분을 확인하는 테스트
   - backend/src/backend/db/models.py             # 계정 table과 session table
   - backend/migrations/versions/a1c7e5f3b9d2_accounts_and_roles.py  # 계정·포지션 table
@@ -52,7 +52,7 @@ sources:
   - docker-compose.override.yml      # 개발용 cookie 설정
 ---
 
-> 문서 버전: 3.1.0 draft
+> 문서 버전: 3.1.1 draft
 
 ```mermaid
 flowchart TD
@@ -327,7 +327,7 @@ commit 하기 전의 파일명을 읽어, 각자 새 파일을 남긴 채 같은
 
 **계정 번호만 남기고 이메일 주소와 token은 남기지 않습니다.** 이 log는 서버 운영자가 보는 기록이고, 누구인지는 번호로 DB를 조회하면 확인됩니다. 주소를 적어 두면 기록을 보는 것만으로 가입자 주소를 읽게 됩니다.
 
-**log의 수준(level)은 이 기록이 필요한 모듈이 직접 올립니다.** `backend` 아래 전체를 INFO로 올리면 개발용 메일 본문 기록(재설정 token이 들어 있습니다)까지 함께 출력됩니다. 출력 경로만 `api/app.py`가 만들고, 수준은 `services/password_reset.py`가 자기 것만 올립니다. 확인 명령은 `COMMAND.md` 의 `3-1-3` 입니다.
+**log의 수준(level)은 이 기록이 필요한 모듈이 직접 올립니다.** `backend` 아래 전체를 INFO로 올리면 개발용 메일 본문 기록(재설정 token이 들어 있습니다)까지 함께 출력됩니다. 출력 경로만 `api/app.py`가 만들고, 수준은 `services/auth/password_reset.py`가 자기 것만 올립니다. 확인 명령은 `COMMAND.md` 의 `3-1-3` 입니다.
 
 이 구분은 환경 이름이 아니라 **개발 설정이 활성화하는 환경변수 1개**가 정합니다. 기본값은 비활성화라, 환경변수를 활성화하지 않은 환경은 전부 배포와 같이 동작합니다. 개발용 설정 파일에만 활성화되어 있다는 사실이 곧 "배포에는 적용되지 않는다"는 보장입니다. 조건문으로 환경 이름을 비교하면 그 이름이 잘못 설정된 환경에서 본문이 유출되기 때문입니다.
 
@@ -451,7 +451,7 @@ flowchart LR
 
 **모든 항목이 활성화된 마지막 permission set 은 삭제하거나 항목을 비활성화할 수 없습니다(사용자 결정 2026-09-11).** 기준은 사람이 아니라 permission set 입니다. 21개가 모두 활성화된 permission set 이 DB 에 1개뿐일 경우, 그 permission set 의 삭제 요청과 항목을 1개라도 비활성화하는 수정 요청을 거절(422)합니다. 이름과 설명만 수정하는 요청은 허용합니다. 21개가 모두 활성화된 permission set 이 2개 이상이면 그중 1개를 삭제하거나 항목을 비활성화할 수 있습니다. 사람에게서 permission set 을 회수하는 동작은 이 규칙과 무관하게 허용되므로, 위 ②와 ④는 그대로 실행됩니다.
 
-**추방과 "남의 권한 회수" 는 별도의 검사를 1개 더 수행합니다.** 위 규칙은 permission set 이 남는지만 확인합니다. 추방은 계정을 삭제하므로 permission set 은 남고 가진 사람만 0명이 될 수 있습니다. 그래서 21개가 모두 활성화된 permission set 의 보유자가 1명뿐일 경우 그 사람의 추방 요청을 거절(422)합니다(`services/roster_service.py` 의 `expel_member` 가 `permission_service.require_another_full_set_holder` 를 호출). 보유자가 2명 이상이면 1명은 추방됩니다. 이 검사가 없으면 "멤버 추방" 항목만 가진 사람이 마지막 보유자를 추방해 권한을 부여할 사람이 0명이 되고, 되돌릴 방법이 없습니다.
+**추방과 "남의 권한 회수" 는 별도의 검사를 1개 더 수행합니다.** 위 규칙은 permission set 이 남는지만 확인합니다. 추방은 계정을 삭제하므로 permission set 은 남고 가진 사람만 0명이 될 수 있습니다. 그래서 21개가 모두 활성화된 permission set 의 보유자가 1명뿐일 경우 그 사람의 추방 요청을 거절(422)합니다(`services/roster/roster_service.py` 의 `expel_member` 가 `permission_service.require_another_full_set_holder` 를 호출). 보유자가 2명 이상이면 1명은 추방됩니다. 이 검사가 없으면 "멤버 추방" 항목만 가진 사람이 마지막 보유자를 추방해 권한을 부여할 사람이 0명이 되고, 되돌릴 방법이 없습니다.
 
 **같은 검사를 권한 회수에도 적용합니다. 단 남의 것을 회수할 때만입니다**(`permission_service.revoke_permission_set`). "권한 부여" 항목만 가진 사람이 마지막 보유자에게서 회수하는 경로가 추방과 같은 결과를 만듭니다. 자기 자신에게서 permission set 을 회수하는 요청(`member_id` 와 요청한 사람이 같은 요청)은 확인하지 않습니다 — 본인의 결정이고, 위 ④가 그 경로이며 그 시점에는 다음 사람이 이미 받았으므로 보유자가 0명이 되지 않습니다.
 
