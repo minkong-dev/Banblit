@@ -37,6 +37,8 @@ export function commentMessage(body: string): string {
 
 // ===== 첨부파일 =====
 // 크기 상한과 허용 확장자를 정의하는 곳은 이 파일 하나입니다. 화면은 이 값을 다시 적지 않습니다.
+// 서버 정본은 backend 의 services/board/attachment_service.py 의 ALLOWED_EXTENSIONS 이고, 지금 두 목록의
+// 확장자 31개가 같습니다. 한쪽만 수정하면 accept 에는 있는데 서버가 거절하거나 그 반대가 되므로 함께 수정합니다.
 
 export const MAX_ATTACHMENT_BYTES = 300 * 1024 * 1024;
 
