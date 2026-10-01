@@ -5,17 +5,17 @@ sources:
   - backend/src/backend/contract.py               # slot 길이·합주 1회 길이의 기본값과 선택 가능한 값
   - backend/src/backend/scheduling/assignment.py  # 합주실(이름 + 운영 시간) 정의
   - backend/src/backend/db/models.py              # Room·Period table
-  - backend/src/backend/services/input.py              # 개방 시각·폐쇄 시각·이름·기간 날짜를 비롯한 모든 입력의 경계 검증
-  - backend/src/backend/services/room_service.py       # 합주실 조회·생성·수정
-  - backend/src/backend/services/period_crud_service.py # 기간 조회·생성·수정·삭제
-  - backend/src/backend/services/ensemble_service.py # 집중 합주기간의 전체합주 설정·날짜별 시각 저장
+  - backend/src/backend/services/validation/input.py              # 개방 시각·폐쇄 시각·이름·기간 날짜를 비롯한 모든 입력의 경계 검증
+  - backend/src/backend/services/room/room_service.py       # 합주실 조회·생성·수정
+  - backend/src/backend/services/period/period_crud_service.py # 기간 조회·생성·수정·삭제
+  - backend/src/backend/services/period/ensemble_service.py # 집중 합주기간의 전체합주 설정·날짜별 시각 저장
   - backend/migrations/versions/d9a4c6e1f207_period_ensemble.py # 전체합주 열·CHECK 제약·ensemble_days table
   - backend/tests/integration/db/test_period_ensemble_endpoints.py # 전체합주 설정 저장·거절 시나리오
   - backend/src/backend/api/routers/rooms.py      # 합주실 endpoint마다 권한을 확인하는 파일
   - backend/src/backend/api/routers/periods.py    # 기간 endpoint마다 권한을 확인하는 파일
-  - backend/src/backend/services/reservation_service.py # 예약 생성·취소 권한 확인
+  - backend/src/backend/services/reservation/reservation_service.py # 예약 생성·취소 권한 확인
   - backend/src/backend/api/routers/reservations.py # 예약 endpoint마다 요청한 사용자를 확인하는 파일
-  - backend/src/backend/services/unavailable_service.py # 불가능 일정을 본인만 조회·추가·삭제하게 하는 확인
+  - backend/src/backend/services/unavailable/unavailable_service.py # 불가능 일정을 본인만 조회·추가·삭제하게 하는 확인
   - backend/src/backend/api/routers/unavailable.py # 불가능 일정 endpoint의 본인 확인
   - backend/src/backend/api/auth_dependency.py    # 요청을 보낸 사용자를 확인하는 파일
   - backend/tests/integration/db/                 # 합주실·기간·예약·불가능 일정 endpoint의 권한 분기를 확인하는 테스트
@@ -23,8 +23,8 @@ sources:
   - frontend/src/routes/SettingsPeriods.tsx       # 기간 권한 항목을 가진 사용자가 기간 값을 입력하는 화면. 매일 기간은 종료일 입력을 숨깁니다
   - frontend/src/lib/pipeline.ts                  # 매일 기간을 저장할 때 ends_on 에 starts_on 을 넣어 보내는 periodBody
   - frontend/src/lib/pipeline.test.ts             # periodBody 시나리오
-  - backend/src/backend/services/period_service.py     # 매일 기간은 계산을 실행한 날 하루만 배정하고 전체합주 날짜를 제외하는 period_days
-  - backend/src/backend/services/reservation_service.py # 집중 합주기간 예약 거절, 전체합주 날짜는 전체합주 시간만 거절
+  - backend/src/backend/services/period/period_service.py     # 매일 기간은 계산을 실행한 날 하루만 배정하고 전체합주 날짜를 제외하는 period_days
+  - backend/src/backend/services/reservation/reservation_service.py # 집중 합주기간 예약 거절, 전체합주 날짜는 전체합주 시간만 거절
   - backend/tests/integration/db/test_reservation_endpoints.py # 매일 기간의 종료일 뒤 예약 거절, 전체합주 날짜의 예약 허용·거절 시나리오
   - backend/migrations/versions/d4a71c96e2b8_hourly_slots.py # slot을 30분에서 1시간으로 변경한 마이그레이션
   - frontend/src/lib/settings.ts                  # 같은 규칙을 화면에서 먼저 검증하는 코드. 전체합주 검증(ensembleMessage) 포함
@@ -32,7 +32,7 @@ sources:
   - frontend/e2e/settings.spec.ts                 # 전체합주 지정·날짜별 시각 저장을 브라우저로 확인하는 검사
 ---
 
-> 문서 버전: 3.4.2 draft
+> 문서 버전: 3.5.0 draft
 
 ```
 합주실마다 운영 시간을 따로 지정 ─ slot 단위는 1시간 고정
@@ -142,7 +142,7 @@ slot 길이는 설정의 점유 단위(`settings.slot_minutes`, 5·10·12·15·2
 
 이전 규칙은 매일 옵션이 켜진 기간이 예약을 차단하지 않는 것이었습니다. 지금은 매일 옵션이 켜진 기간도 예약을 거절합니다.
 
-팀이 할당받은 slot 외에 남은 slot도 집중 합주기간 안에 있으므로 예약할 수 없습니다. 서버가 그 기간의 예약 요청을 전부 거절합니다(`services/reservation_service.py` 의 `_require_not_in_focused_period`). 예외는 전체합주 날짜뿐이고, 그날은 전체합주에 지정한 합주실의 전체합주 시각만 거절합니다.
+팀이 할당받은 slot 외에 남은 slot도 집중 합주기간 안에 있으므로 예약할 수 없습니다. 서버가 그 기간의 예약 요청을 전부 거절합니다(`services/reservation/reservation_service.py` 의 `_require_not_in_focused_period`). 예외는 전체합주 날짜뿐이고, 그날은 전체합주에 지정한 합주실의 전체합주 시각만 거절합니다.
 
 ### 같은 규칙을 3곳에서 검증합니다
 
@@ -231,6 +231,12 @@ slot 길이는 설정의 점유 단위(`settings.slot_minutes`, 5·10·12·15·2
 불가능 일정은 권한 항목을 모두 가진 사용자도 다른 사용자의 불가능 일정을 조회할 수 없습니다. 기획 문서에서 일반 멤버의 역할은 "자신의 불가능 일정 관리"로만 정의되며, 배정 계산은 서버가 데이터베이스를 직접 읽으므로 endpoint로 다른 사용자의 불가능 일정을 조회할 필요가 없습니다. endpoint를 개방하지 않으면 다른 사용자의 불가능 일정이 노출될 경로가 없으므로, 조회가 필요한 경우가 생기면 그때 용도와 접근 규칙을 먼저 정합니다.
 
 검증은 서버 테스트 504개 전부와 화면 테스트 237개, 타입 검사 모두가 통과하는 것으로 확인했습니다. 위 표의 권한 분기는 합주실·기간·예약·불가능 일정마다 별도의 테스트 파일이 담당하며, 로그인하지 않은 요청은 401, 로그인했지만 권한이 없는 요청은 403으로 서로 다른 응답을 받는지까지 함께 검증합니다. 매일 옵션이 켜진 기간이 저장된 종료일 뒤의 날짜에도 예약을 거절하는지는 `backend/tests/integration/db/test_reservation_endpoints.py` 가, 화면이 종료일에 시작일을 넣어 보내는지는 `frontend/src/lib/pipeline.test.ts` 가 확인합니다.
+
+### 조회 헬퍼와 남는 칸 계산의 날짜 (2026-09-30)
+
+`open_slots_in_period(session, period, on)` 은 날짜 `on` 을 매개변수로 받습니다. 매일 기간은 계산을 실행한 날 하루만 배정하므로(`period_days`), `on` 이 그 대상 날짜입니다.
+
+합주실 조회 `get_room_or_raise`(`services/room/room_service.py`)와 기간 조회 `get_period_or_raise`(`services/period/schedule_service.py`)는 없는 대상에 ValueError 를 발생시키는 공개 함수입니다. 팀 쪽 `get_team_or_raise`·`require_team_member`(`services/roster/roster_service.py`)는 팀과 포지션 문서에 있습니다. 예약·기간 서비스는 각 모듈의 `pipeline.py` 를 통해 호출합니다.
 
 ## Conclusion
 

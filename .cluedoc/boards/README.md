@@ -2,9 +2,9 @@
 title: 게시판과 공지
 sources:
   - backend/src/backend/db/models.py            # Post·Comment·Attachment table
-  - backend/src/backend/services/input.py            # 제목·본문을 비롯한 모든 입력의 경계 검증
-  - backend/src/backend/services/board_service.py    # 글·댓글 읽기와 쓰기, 소속·권한 확인
-  - backend/src/backend/services/attachment_service.py  # 파일을 디스크에 저장·조회·삭제하는 위치, 허용 확장자 목록
+  - backend/src/backend/services/validation/input.py            # 제목·본문을 비롯한 모든 입력의 경계 검증
+  - backend/src/backend/services/board/board_service.py    # 글·댓글 읽기와 쓰기, 소속·권한 확인
+  - backend/src/backend/services/board/attachment_service.py  # 파일을 디스크에 저장·조회·삭제하는 위치, 허용 확장자 목록
   - backend/src/backend/api/routers/boards.py   # endpoint마다 요청한 사람을 확인하는 위치, 업로드·다운로드·삭제
   - backend/migrations/versions/d5c1a83b7e02_attachments.py  # 첨부 table
   - backend/tests/integration/db/test_attachment_endpoints.py  # 업로드·다운로드·삭제의 권한과 거절 시나리오
@@ -20,7 +20,7 @@ sources:
   - docker-compose.yml                          # 파일이 저장되는 위치와 그 위치를 지정하는 환경변수
 ---
 
-> 문서 버전: 2.3.0 draft
+> 문서 버전: 2.3.1 draft
 
 ```mermaid
 flowchart TD
