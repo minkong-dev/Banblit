@@ -103,8 +103,8 @@
     </li>
     <li>8. 계정과 프로필
       <ol>
-        <li>8-1 계정</li>
-        <li>8-2 프로필</li>
+        <li>8-1 프로필</li>
+        <li>8-2 프로필 편집</li>
       </ol>
     </li>
   </ol>
@@ -123,14 +123,15 @@
         <figcaption><b>그림 1-1</b> 회원가입</figcaption>
       </figure>
       <div class="says">
-        <p class="lead">이름·학과·학번·이메일·비밀번호·기수를 입력해 계정을 만들어요.</p>
+        <p class="lead">아이디·이름·학과·학번·이메일·비밀번호·기수를 입력해 계정을 만들어요.</p>
         <table>
           <thead><tr><th>항목</th><th>설명</th></tr></thead>
           <tbody>
+            <tr><td class="k">아이디</td><td>로그인할 때 입력하는 값이에요. 영어 소문자와 숫자로 4~20자를 입력해요.</td></tr>
             <tr><td class="k">이름 · 학과 · 학번</td><td>동명이인을 구분하는 값이에요. 학번은 숫자만 입력해요.</td></tr>
-            <tr><td class="k">이메일</td><td>아이디 찾기와 비밀번호 재설정 링크를 받는 주소예요.</td></tr>
+            <tr><td class="k">이메일</td><td>아이디 안내와 비밀번호 재설정 링크를 받는 주소예요. 로그인에는 쓰지 않아요.</td></tr>
             <tr><td class="k">기수</td><td>숫자만 입력해요. 명단과 프로필에 "44기" 형식으로 표시돼요.</td></tr>
-            <tr><td class="k">관리자코드</td><td>운영진이 받는 값이에요. 입력하면 권한 22개를 전부 받아요.</td></tr>
+            <tr><td class="k">관리자코드</td><td>운영진이 받는 값이에요. 입력하면 권한 23개를 전부 받아요.</td></tr>
           </tbody>
         </table>
         <p class="note"><b>관리자코드</b>를 입력하지 않거나 틀려도 가입은 돼요. 권한 0개인 일반멤버로 가입돼요.</p>
@@ -147,12 +148,12 @@
         <figcaption><b>그림 1-2</b> 로그인</figcaption>
       </figure>
       <div class="says">
-        <p class="lead">이메일과 비밀번호로 로그인해요.</p>
+        <p class="lead">아이디와 비밀번호로 로그인해요.</p>
         <table>
           <thead><tr><th>항목</th><th>설명</th></tr></thead>
           <tbody>
             <tr><td class="k">로그인 상태 유지</td><td>켜 두면 브라우저를 닫아도 로그인이 유지돼요.</td></tr>
-            <tr><td class="k">아이디 찾기</td><td>이름과 이메일로 가입한 이메일을 안내받아요.</td></tr>
+            <tr><td class="k">아이디 찾기</td><td>이름과 이메일을 입력하면 가입한 아이디를 메일로 안내받아요.</td></tr>
             <tr><td class="k">비밀번호 찾기</td><td>이메일로 재설정 링크를 받아요.</td></tr>
           </tbody>
         </table>
@@ -170,7 +171,7 @@
         <figcaption><b>그림 1-3</b> 아이디 찾기</figcaption>
       </figure>
       <div class="says">
-        <p class="lead">이름과 이메일을 입력하면 가입한 이메일을 메일로 안내받아요.</p>
+        <p class="lead">이름과 이메일을 입력하면 가입한 아이디를 메일로 안내받아요.</p>
         <p class="note">메일이 오지 않으면 가입할 때 사용한 이름과 이메일이 맞는지 확인해주세요.</p>
       </div>
     </div>
@@ -180,7 +181,7 @@
         <figcaption><b>그림 1-4</b> 비밀번호 찾기</figcaption>
       </figure>
       <div class="says">
-        <p class="lead">이메일만 입력하면 비밀번호 재설정 링크를 메일로 받아요.</p>
+        <p class="lead">가입한 이메일을 입력하면 비밀번호 재설정 링크를 메일로 받아요.</p>
         <p>링크를 누르면 새 비밀번호를 입력하는 화면이 열려요. 링크에 담긴 값으로 본인을 확인하므로
           따로 입력할 값은 없어요.</p>
       </div>
@@ -202,7 +203,7 @@
       <div class="says">
         <p class="lead">로그인하면 모든 화면이 같은 배치를 써요.</p>
         <ol class="keys">
-          <li><b>상단바</b> 로고, 알림 아이콘, 프로필 버튼이 있어요.</li>
+          <li><b>상단바</b> 로고, 라이트·다크 전환 버튼, 알림 아이콘, 프로필 버튼이 있어요. 휴대폰에서는 왼쪽에 메뉴 버튼이 붙어요.</li>
           <li><b>사이드바</b> 화면을 이동해요. 권한이 있으면 아래에 관리자 메뉴가 붙어요.</li>
           <li><b>탭</b> 화면 안에서 보는 관점을 전환해요.</li>
           <li><b>본문</b> 화면의 주 내용이에요.</li>
@@ -221,8 +222,7 @@
             <tr><td class="k">공지사항</td><td>전체에게 보이는 글이에요.</td></tr>
             <tr><td class="k">팀 관리</td><td>팀과 포지션을 관리해요. 권한이 없으면 <kbd>내 팀</kbd>으로 표시돼요.</td></tr>
             <tr><td class="k">팀 게시판</td><td>내가 속한 팀의 글이에요.</td></tr>
-            <tr><td class="k">계정</td><td>내 정보·비밀번호·테마·탈퇴예요. 권한이 필요 없어요.</td></tr>
-            <tr><td class="k">관리자 메뉴</td><td>배정 결과 확인·합주실·기간·멤버·예약·블라인드·불가능 일정이에요. 항목마다 필요한 권한이 달라요.</td></tr>
+            <tr><td class="k">관리자 메뉴</td><td>배정 결과 확인·합주실·기간·멤버·예약·블라인드·불가능 일정이에요. 항목마다 필요한 권한이 달라 가진 권한의 항목만 표시돼요.</td></tr>
           </tbody>
         </table>
       </div>
@@ -244,7 +244,7 @@
           <tbody>
             <tr><td class="k">이름 아래 문구</td><td>가진 권한 묶음의 이름이에요. 0개이면 <kbd>일반멤버</kbd>로 표시돼요.</td></tr>
             <tr><td class="k">소속 팀</td><td>내가 자리를 가진 팀과 포지션이에요.</td></tr>
-            <tr><td class="k">프로필 설정</td><td>프로필 화면으로 이동해요.</td></tr>
+            <tr><td class="k">프로필 설정</td><td>프로필 화면으로 이동해요. 내 정보·사진·비밀번호 변경과 탈퇴가 이 화면에 있어요.</td></tr>
             <tr><td class="k">로그아웃</td><td>로그인 화면으로 이동해요.</td></tr>
           </tbody>
         </table>
@@ -261,7 +261,7 @@
         <figcaption><b>그림 2-3</b> 알림 목록</figcaption>
       </figure>
       <div class="says">
-        <p class="lead">배정이 변경되면 알림이 생겨요. 아이콘의 숫자가 안 읽은 개수예요.</p>
+        <p class="lead">배정이 변경되거나, 내 예약·불가능 일정이 반려되면 알림이 생겨요. 아이콘의 숫자가 안 읽은 개수예요.</p>
         <table>
           <thead><tr><th>상태</th><th>표시</th></tr></thead>
           <tbody>
@@ -270,6 +270,9 @@
             <tr><td class="k">알림이 없어요</td><td><kbd>새 알림이 없어요</kbd>로 표시돼요.</td></tr>
           </tbody>
         </table>
+        <p>반려 알림은 두 줄이에요. 첫 줄에 무엇이 반려되었는지, 둘째 줄에 관리자가 적은 사유가 표시돼요.</p>
+        <p><kbd>10월 14일 수요일 20:00 예약이 반려되었어요. 사유는 다음과 같아요.</kbd><br>
+          <kbd>동아리방 바닥 공사가 있는 날이라 이용할 수 없어요.</kbd></p>
         <p class="note"><b>모두 읽음</b>을 누르면 목록 전체가 읽음으로 변경돼요.
           알림을 1개씩 읽는 기능은 미구현이에요.</p>
       </div>
@@ -370,7 +373,7 @@
       <div class="says">
         <p class="lead">합주에 나올 수 없는 시간을 등록해요. 배정 계산이 이 시간을 피해서 합주를 배치해요.</p>
         <ol class="keys">
-          <li><b>반복</b> 반복 없음 · 매일 · 매주 그 요일 중에서 선택해요.</li>
+          <li><b>반복</b> 켜면 반복할 요일을 고르는 칸이 열려요. 일곱 요일을 전부 고르면 매일이에요. 끝은 <b>반복 종료일</b>이나 <b>반복 횟수(주)</b> 중 하나로 정하고, 둘 다 비우면 계속 반복돼요.</li>
           <li><b>일정 이름</b> 달력에 표시되는 이름이에요. 입력하지 않으면 <kbd>불가능 일정</kbd>으로 표시돼요.</li>
           <li><b>사유</b> 타임라인 막대의 작은 글씨로만 표시돼요.</li>
         </ol>
@@ -405,8 +408,8 @@
       </figure>
       <div class="says">
         <p class="lead">오른쪽 목록은 날짜와 무관하게 내가 등록한 불가능 일정 전부를 시작시간 순으로 표시해요.</p>
-        <p>반복 일정은 1줄로 표시하고 날짜 뒤에 <kbd>· 매주</kbd>나 <kbd>· 매일</kbd>을 붙여요.
-          줄 오른쪽의 삭제 아이콘을 누르면 1번 확인한 뒤 삭제해요.</p>
+        <p>반복 일정은 1줄로 표시하고 날짜 뒤에 <kbd>· 매주 월·수</kbd>나 <kbd>· 매일</kbd>처럼 반복 요일을 붙여요.
+          줄 오른쪽의 수정 아이콘으로 시간·반복·이름·사유를 고치고, 삭제 아이콘을 누르면 1번 확인한 뒤 삭제해요.</p>
       </div>
     </div>
   </section>
@@ -524,7 +527,7 @@
           <thead><tr><th>버튼</th><th>표시되는 조건</th></tr></thead>
           <tbody>
             <tr><td class="k">수정</td><td>작성자 본인에게만 표시돼요.</td></tr>
-            <tr><td class="k">블라인드</td><td>글 관리 권한이 있을 때 표시돼요. 가린 글은 설정의 블라인드 탭에서 되돌려요.</td></tr>
+            <tr><td class="k">블라인드</td><td>글 관리 권한이 있을 때 표시돼요. 가린 글은 관리자 메뉴의 블라인드에서 되돌려요.</td></tr>
             <tr><td class="k">삭제</td><td>작성자 본인이거나 글 관리 권한이 있을 때 표시돼요.</td></tr>
           </tbody>
         </table>
@@ -578,7 +581,7 @@
       </figure>
       <div class="says">
         <p class="lead">목록·글 읽기·글쓰기의 사용법은 공지사항과 같아요. 조회 범위만 달라요.</p>
-        <p>블라인드로 가린 글은 목록에서 사라져요. 되돌리는 자리는 설정의 블라인드 탭이에요.</p>
+        <p>블라인드로 가린 글은 목록에서 사라져요. 되돌리는 자리는 관리자 메뉴의 블라인드예요.</p>
       </div>
     </div>
   </section>
@@ -829,10 +832,29 @@
         <figcaption><b>그림 7-7</b> 예약</figcaption>
       </figure>
       <div class="says">
-        <p class="lead">모든 멤버의 예약을 확인하고 취소해요. 예약 관리 권한이 있어야 표시돼요.</p>
+        <p class="lead">모든 멤버의 예약을 확인하고, 다른 멤버의 예약은 반려해요. 예약 관리 권한이 있어야 표시돼요.</p>
         <p>줄마다 날짜·시간·합주실·예약자가 표시돼요. 팀으로 한 예약은 <kbd>새벽 네시 (김반블)</kbd>처럼
-          팀 이름과 예약자가 함께 표시돼요. <kbd>취소</kbd>를 누르면 그 예약이 삭제되고 달력도 함께 갱신돼요.</p>
+          팀 이름과 예약자가 함께 표시돼요.</p>
+        <table>
+          <thead><tr><th>버튼</th><th>표시되는 줄</th><th>누르면</th></tr></thead>
+          <tbody>
+            <tr><td class="k">취소</td><td>내 예약</td><td>1번 확인한 뒤 취소해요.</td></tr>
+            <tr><td class="k">반려</td><td>다른 멤버의 예약</td><td>반려 사유를 적는 창이 열려요(그림 7-8).</td></tr>
+          </tbody>
+        </table>
         <p class="note">오늘부터 <b>90일 이내</b>의 예약만 표시돼요.</p>
+      </div>
+    </div>
+    <div class="row">
+      <figure>
+        <img src="shots/66-reservation-reject.png" alt="예약 반려 창">
+        <figcaption><b>그림 7-8</b> 예약 반려</figcaption>
+      </figure>
+      <div class="says">
+        <p class="lead">다른 멤버의 예약은 사유를 적어야만 취소할 수 있어요.</p>
+        <p>사유를 적고 <kbd>반려하기</kbd>를 누르면 예약이 취소되고, 예약한 멤버에게 사유가 담긴 알림이 가요(2-3 알림).
+          사유는 300자까지 적을 수 있어요. 달력도 함께 갱신돼요.</p>
+        <p class="note">예약 관리 권한이 있어도 다른 멤버의 예약을 사유 없이 지울 수는 없어요.</p>
       </div>
     </div>
   </section>
@@ -843,7 +865,7 @@
     <div class="row">
       <figure>
         <img src="shots/67-settings-blinded.png" alt="블라인드 화면">
-        <figcaption><b>그림 7-8</b> 블라인드</figcaption>
+        <figcaption><b>그림 7-9</b> 블라인드</figcaption>
       </figure>
       <div class="says">
         <p class="lead">가려 둔 글을 확인하고 되돌려요. 글 관리 권한이 있어야 표시돼요.</p>
@@ -859,14 +881,30 @@
     <div class="row">
       <figure>
         <img src="shots/69-settings-unavailable.png" alt="불가능 일정 화면">
-        <figcaption><b>그림 7-9</b> 불가능 일정</figcaption>
+        <figcaption><b>그림 7-10</b> 불가능 일정</figcaption>
       </figure>
       <div class="says">
         <p class="lead">전체 멤버가 등록한 불가능 일정을 한 표에서 확인해요. 타 멤버 불가능 일정 조회 권한이 있어야 표시돼요.</p>
         <p>줄마다 멤버·날짜·시간·반복·일정 이름·사유가 표시돼요. 위쪽 입력칸에 이름을 넣으면 그 멤버의
           일정만 남아요.</p>
-        <p class="note"><b>조회만 할 수 있어요.</b> 등록과 삭제는 본인만 해요. 권한을 전부 가진 사람도
-          다른 멤버의 불가능 일정을 등록하거나 삭제할 수 없어요.</p>
+        <table>
+          <thead><tr><th>버튼</th><th>표시되는 줄</th><th>누르면</th></tr></thead>
+          <tbody>
+            <tr><td class="k">삭제</td><td>내 일정</td><td>1번 확인한 뒤 삭제해요.</td></tr>
+            <tr><td class="k">반려</td><td>다른 멤버의 일정. 타 멤버 불가능 일정 반려 권한이 있을 때만 표시돼요</td><td>반려 사유를 적는 창이 열려요(그림 7-11).</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="row">
+      <figure>
+        <img src="shots/69-unavailable-reject.png" alt="불가능 일정 반려 창">
+        <figcaption><b>그림 7-11</b> 불가능 일정 반려</figcaption>
+      </figure>
+      <div class="says">
+        <p class="lead">예약 반려와 같은 창이에요. 사유를 적고 <kbd>반려하기</kbd>를 누르면 일정이 삭제되고 그 멤버에게 사유가 알림으로 가요.</p>
+        <p class="note">다른 멤버의 불가능 일정을 <b>대신 등록하거나 수정할 수는 없어요.</b> 권한을 전부 가진 사람도
+          마찬가지예요. 다른 사람이 대신 등록하면 본인이 모르는 채로 배정에 반영되기 때문이에요.</p>
       </div>
     </div>
   </section>
@@ -877,41 +915,42 @@
   <h1><span class="no">8</span> 계정과 프로필</h1>
 
   <section class="topic">
-    <h2>8-1 계정</h2>
-    <p class="path">사이드바 &rsaquo; <b>계정</b></p>
+    <h2>8-1 프로필</h2>
+    <p class="path">프로필 카드 &rsaquo; <b>프로필 설정</b></p>
     <div class="row">
       <figure>
-        <img src="shots/68-settings-account.png" alt="계정 화면">
-        <figcaption><b>그림 8-1</b> 계정</figcaption>
+        <img src="shots/70-profile.png" alt="프로필 화면">
+        <figcaption><b>그림 8-1</b> 프로필</figcaption>
       </figure>
       <div class="says">
-        <p class="lead">내 정보와 비밀번호를 수정하고, 테마를 고르고, 탈퇴해요. 모든 멤버에게 표시돼요.</p>
-        <table>
-          <thead><tr><th>카드</th><th>내용</th></tr></thead>
-          <tbody>
-            <tr><td class="k">내 정보</td><td>이름과 기수를 수정해요. 가입한 이메일은 수정할 수 없어요.</td></tr>
-            <tr><td class="k">비밀번호</td><td>현재 비밀번호를 확인한 뒤 새 비밀번호로 변경해요.</td></tr>
-            <tr><td class="k">테마</td><td>라이트와 다크 중에서 선택해요. 현재 브라우저에만 적용돼요.</td></tr>
-            <tr><td class="k">회원 탈퇴</td><td>확인을 위해 이름을 그대로 입력해야 진행돼요.</td></tr>
-          </tbody>
-        </table>
-        <p class="note"><b>회원 탈퇴</b>는 계정과 함께 작성한 글·댓글·예약을 모두 삭제해요. 되돌릴 수 없어요.</p>
+        <p class="lead">내 사진·역할·이름·학과와 아이디·이메일·기수, 소속 팀별 기수를 확인해요.</p>
+        <p>역할은 가진 권한 묶음의 이름이에요. 소속 팀은 내가 자리를 가진 팀만 표시돼요.
+          오른쪽 위 <b>프로필 편집</b>을 누르면 수정 화면으로 바뀌어요.</p>
+        <p class="note">라이트·다크 테마는 상단바의 전환 버튼으로 바꿔요. 현재 브라우저에만 적용돼요.</p>
       </div>
     </div>
   </section>
 
   <section class="topic">
-    <h2>8-2 프로필</h2>
-    <p class="path">프로필 카드 &rsaquo; <b>프로필 설정</b></p>
+    <h2>8-2 프로필 편집</h2>
+    <p class="path">프로필 &rsaquo; <b>프로필 편집</b></p>
     <div class="row">
       <figure>
-        <img src="shots/70-profile.png" alt="프로필 화면">
-        <figcaption><b>그림 8-2</b> 프로필</figcaption>
+        <img src="shots/71-profile-edit.png" alt="프로필 편집 화면">
+        <figcaption><b>그림 8-2</b> 프로필 편집</figcaption>
       </figure>
       <div class="says">
-        <p class="lead">내 이름·역할·소속 팀과 기수를 확인해요.</p>
-        <p>역할은 가진 권한 묶음의 이름이에요. 소속 팀은 내가 자리를 가진 팀만 표시돼요.</p>
-        <p class="note">이 화면은 조회 전용이에요. 정보 수정은 계정 화면에서 해요.</p>
+        <p class="lead">사진·이름·기수·비밀번호를 수정하고, 탈퇴해요.</p>
+        <table>
+          <thead><tr><th>항목</th><th>내용</th></tr></thead>
+          <tbody>
+            <tr><td class="k">프로필 사진</td><td>사진 위를 눌러 새 사진을 올려요. 없으면 이름 앞 두 글자로 표시돼요.</td></tr>
+            <tr><td class="k">이름 · 기수</td><td>수정할 수 있어요. 아이디·이메일·학과는 표시만 해요.</td></tr>
+            <tr><td class="k">비밀번호</td><td>변경할 때만 현재 비밀번호와 새 비밀번호를 입력해요. 비워 두면 그대로예요.</td></tr>
+            <tr><td class="k">회원 탈퇴</td><td>확인을 위해 이름을 그대로 입력해야 진행돼요.</td></tr>
+          </tbody>
+        </table>
+        <p class="note"><b>회원 탈퇴</b>는 계정과 함께 작성한 글·댓글·예약을 모두 삭제해요. 되돌릴 수 없어요.</p>
       </div>
     </div>
   </section>

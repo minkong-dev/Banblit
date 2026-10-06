@@ -114,10 +114,17 @@
     { "name": "65-permission-dialog", "continue": true,
       "steps": [{ "click": "button:has-text('새 권한')" }, { "wait": 800 }] },
     { "name": "66-settings-reservations", "steps": [{ "goto": "/reservations" }, { "wait": 1100 }] },
+    { "name": "66-reservation-reject", "continue": true,
+      "steps": [{ "click": "button[aria-label$='반려']" }, { "wait": 600 }, { "fill": ["dialog textarea", "동아리방 바닥 공사가 있는 날이라 이용할 수 없어요."] }, { "wait": 300 }] },
     { "name": "67-settings-blinded", "steps": [{ "goto": "/blinded" }, { "wait": 900 }] },
-    { "name": "69-settings-unavailable", "steps": [{ "goto": "/unavailable" }, { "wait": 1000 }] },
-    { "name": "68-settings-account", "fullPage": true, "steps": [{ "goto": "/account" }, { "wait": 900 }] },
+    { "name": "69-settings-unavailable", "steps": [{ "goto": "/unavailable" }, { "wait": 1000 }],
+      "annotate": [{ "type": "box", "target": "button[aria-label$='반려']", "label": "반려", "nth": 0, "place": "left" }] },
+    { "name": "69-unavailable-reject", "continue": true,
+      "steps": [{ "click": "button[aria-label$='반려']" }, { "wait": 600 }, { "fill": ["dialog textarea", "정기 공연 리허설 날이라 전원 참석이 필요해요."] }, { "wait": 300 }] },
 
-    { "name": "70-profile", "steps": [{ "goto": "/profile" }, { "wait": 500 }] }
+    { "name": "70-profile", "steps": [{ "goto": "/profile" }, { "wait": 500 }],
+      "annotate": [{ "type": "box", "target": "button[aria-label='프로필 편집']", "label": "프로필 편집" }] },
+    { "name": "71-profile-edit", "fullPage": true, "continue": true,
+      "steps": [{ "click": "button[aria-label='프로필 편집']" }, { "wait": 700 }] }
   ]
 }
