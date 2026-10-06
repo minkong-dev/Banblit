@@ -1,0 +1,123 @@
+{
+  "shots": [
+    { "name": "01-signup", "auth": "none", "fullPage": true, "steps": [{ "goto": "/signup" }],
+      "annotate": [{ "type": "box", "target": ".field:has(#admincode)", "label": "관리자코드 (선택)" }] },
+
+    { "name": "02-login", "auth": "none", "steps": [{ "goto": "/login" }],
+      "annotate": [
+        { "type": "box", "target": ".keep", "label": "로그인 상태 유지" },
+        { "type": "box", "target": ".links", "label": "아이디 찾기 · 비밀번호 찾기", "place": "bottom" }
+      ] },
+
+    { "name": "03-find-id", "auth": "none", "steps": [{ "goto": "/find-id" }] },
+    { "name": "04-find-password", "auth": "none", "steps": [{ "goto": "/find-password" }] },
+
+    { "name": "05-shell", "steps": [{ "goto": "/scheduler" }],
+      "annotate": [
+        { "type": "badge", "target": "header", "label": "1", "place": "bottom-right" },
+        { "type": "badge", "target": "aside", "label": "2" },
+        { "type": "badge", "target": "[role=tablist]", "label": "3" },
+        { "type": "badge", "target": ".card", "label": "4" },
+        { "type": "badge", "target": ".rail", "label": "5" }
+      ] },
+    { "name": "06-profile-card", "steps": [{ "goto": "/scheduler" }, { "click": "button.profbtn" }, { "wait": 400 }],
+      "annotate": [{ "type": "spotlight", "target": ".pop", "pad": 10 }] },
+    { "name": "07-notifications", "steps": [{ "goto": "/scheduler" }, { "click": "button.ic.bell" }, { "wait": 400 }],
+      "annotate": [{ "type": "spotlight", "target": ".notepop", "pad": 10 }] },
+
+    { "name": "10-month-me", "steps": [{ "goto": "/scheduler" }],
+      "annotate": [
+        { "type": "badge", "target": ".calbar", "label": "1" },
+        { "type": "badge", "target": ".seg", "label": "2" },
+        { "type": "badge", "target": ".legend", "label": "3" },
+        { "type": "badge", "target": ".band", "label": "4" }
+      ] },
+    { "name": "11-month-cell", "steps": [{ "goto": "/scheduler" }],
+      "clip": { "target": "button.cell:has(span.n:text-is('{{d+2}}'))", "pad": 14 } },
+    { "name": "12-week", "steps": [{ "goto": "/scheduler" }, { "click": ".seg button:text-is('주')" }, { "wait": 700 }] },
+
+    { "name": "13-day-dialog", "steps": [{ "goto": "/scheduler" }, { "click": "button.cell:has(span.n:text-is('{{d+1}}'))" }, { "wait": 900 }],
+      "annotate": [
+        { "type": "badge", "target": "dialog.panes section.pane", "nth": 0, "label": "1" },
+        { "type": "badge", "target": "dialog.panes section.pane", "nth": 1, "label": "2" },
+        { "type": "badge", "target": "dialog.panes section.pane", "nth": 2, "label": "3" }
+      ] },
+    { "name": "14-day-form", "continue": true,
+      "clip": { "target": "dialog.panes section.pane .col", "to": "label[for='offReason']", "nth": 0, "pad": 14 },
+      "annotate": [
+        { "type": "badge", "target": "label[for='offRepeat']", "label": "1" },
+        { "type": "badge", "target": "label[for='offName']", "label": "2" },
+        { "type": "badge", "target": "label[for='offReason']", "label": "3" }
+      ] },
+    { "name": "15-day-timeline", "continue": true,
+      "steps": [{ "drag": [".tl", 0.1, 0.45] }, { "wait": 400 }],
+      "clip": { "target": "dialog.panes section.pane .tlscroll", "nth": 0, "pad": 14 },
+      "annotate": [{ "type": "box", "target": ".evb.sel", "label": "드래그한 구간", "place": "right" }] },
+    { "name": "16-day-list", "continue": true,
+      "clip": { "target": "dialog.panes section.pane .people", "to": "dialog.panes .mlist", "nth": 0, "pad": 14 } },
+
+    { "name": "20-book-tab", "steps": [{ "goto": "/scheduler" }, { "click": "[role=tab]:text-is('예약')" }, { "wait": 900 }],
+      "annotate": [{ "type": "box", "target": ".timebar", "label": "시간을 먼저 선택하면 그 시간이 비어 있는 날짜만 표시돼요" }] },
+    { "name": "21-book-cell", "continue": true,
+      "clip": { "target": "button.cell:has(span.n:text-is('{{d+1}}'))", "pad": 14 } },
+    { "name": "22-book-dialog", "continue": true,
+      "steps": [{ "click": "button.cell:has(span.n:text-is('{{d+1}}'))" }, { "wait": 900 }],
+      "clip": { "target": "dialog.panes section.pane .col", "to": "label[for='bookWho']", "nth": 0, "pad": 14 } },
+
+    { "name": "25-all-tab", "steps": [{ "goto": "/scheduler" }, { "click": "[role=tab]:text-is('전체 일정')" }, { "wait": 900 }] },
+    { "name": "26-all-dialog", "continue": true,
+      "steps": [{ "click": "button.cell:has(span.n:text-is('{{d+2}}'))" }, { "wait": 900 }],
+      "annotate": [{ "type": "box", "target": ".people", "label": "참여 멤버" }] },
+
+    { "name": "30-notices", "steps": [{ "goto": "/notices" }, { "wait": 500 }],
+      "annotate": [{ "type": "box", "target": ".listfoot", "label": "쪽 이동과 글쓰기" }] },
+    { "name": "31-notice-detail", "continue": true,
+      "steps": [{ "click": "text=2학기 정기공연 일정 안내" }, { "wait": 900 },
+                { "type": [".commentform [contenteditable=true]", "공연 준비 일정 확인했어요."] }, { "wait": 400 }],
+      "annotate": [{ "type": "box", "target": ".acts", "label": "수정 · 블라인드 · 삭제", "nth": 0 }] },
+    { "name": "32-notice-write", "fullPage": true, "steps": [{ "goto": "/notices" }, { "click": "text=글쓰기" }, { "wait": 1500 },
+                { "fill": ["#postTitle", "11월 합주실 점검 안내"] },
+                { "type": [".rt [contenteditable=true]", "11월 3일 월요일 하루 동안 합주실 방음 공사를 진행합니다. 그날은 예약을 받지 않아요."] },
+                { "wait": 400 }],
+      "annotate": [{ "type": "box", "target": "label[for='postFiles']", "label": "첨부파일 300MB 이하" }] },
+
+    { "name": "35-board", "steps": [{ "goto": "/board" }, { "wait": 500 }],
+      "annotate": [{ "type": "box", "target": "[role=tablist]", "label": "내가 속한 팀만 표시돼요" }] },
+    { "name": "36-board-detail", "continue": true,
+      "steps": [{ "click": "text=이번 주 합주 곡 순서" }, { "wait": 900 },
+                { "type": [".commentform [contenteditable=true]", "확인했습니다."] }, { "wait": 400 }],
+      "annotate": [{ "type": "box", "target": ".comments", "label": "댓글" }] },
+
+    { "name": "40-teams", "steps": [{ "goto": "/teams" }, { "wait": 500 }],
+      "annotate": [{ "type": "box", "target": "button[aria-label='새벽 네시 수정']", "label": "수정", "place": "left" }] },
+    { "name": "41-team-edit", "continue": true,
+      "steps": [{ "click": "button[aria-label='새벽 네시 수정']" }, { "wait": 800 }] },
+    { "name": "42-team-seats", "continue": true,
+      "steps": [{ "scroll": ["dialog .mbody", 600] }, { "wait": 400 }] },
+    { "name": "43-member-search", "continue": true,
+      "steps": [{ "click": "button[aria-label*='지정할 멤버 찾기']" }, { "wait": 800 }] },
+
+    { "name": "50-assignment", "steps": [{ "goto": "/admin" }, { "wait": 1500 }],
+      "annotate": [{ "type": "box", "target": ".dd", "label": "기간 선택", "nth": 0 }] },
+    { "name": "51-assignment-empty", "continue": true,
+      "steps": [{ "click": ".dd button.ddbtn" }, { "wait": 400 }, { "click": ".ddlist [role=option]", "nth": 1 }, { "wait": 1500 }] },
+
+    { "name": "60-settings-rooms", "steps": [{ "goto": "/rooms" }, { "wait": 700 }],
+      "annotate": [{ "type": "spotlight", "target": ".rail", "pad": 10 }] },
+    { "name": "61-room-dialog", "continue": true,
+      "steps": [{ "click": "button[aria-label*='수정']" }, { "wait": 800 }] },
+    { "name": "62-settings-periods", "steps": [{ "goto": "/periods" }, { "wait": 900 }] },
+    { "name": "63-period-dialog", "continue": true,
+      "steps": [{ "click": "button:has-text('새 집중합주 기간')" }, { "wait": 800 }] },
+    { "name": "64-settings-members", "steps": [{ "goto": "/members" }, { "wait": 1100 }],
+      "annotate": [{ "type": "box", "target": ".card", "label": "권한 묶음", "nth": 0 }] },
+    { "name": "65-permission-dialog", "continue": true,
+      "steps": [{ "click": "button:has-text('새 권한')" }, { "wait": 800 }] },
+    { "name": "66-settings-reservations", "steps": [{ "goto": "/reservations" }, { "wait": 1100 }] },
+    { "name": "67-settings-blinded", "steps": [{ "goto": "/blinded" }, { "wait": 900 }] },
+    { "name": "69-settings-unavailable", "steps": [{ "goto": "/unavailable" }, { "wait": 1000 }] },
+    { "name": "68-settings-account", "fullPage": true, "steps": [{ "goto": "/account" }, { "wait": 900 }] },
+
+    { "name": "70-profile", "steps": [{ "goto": "/profile" }, { "wait": 500 }] }
+  ]
+}
