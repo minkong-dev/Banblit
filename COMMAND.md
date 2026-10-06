@@ -1270,3 +1270,57 @@ banblit help
   - `-Follow` — `logs` 를 실시간으로 계속 출력합니다. 생략하면 1번 출력하고 종료합니다.
 - **주의점**
   - 명령을 적지 않으면 `up` 이 기본값입니다.
+
+## 15. 사용자 매뉴얼
+
+### 15-1. 매뉴얼 PDF 만들기
+
+```
+docker compose --profile manual up -d --force-recreate --wait e2e-api
+docker compose --profile manual run --rm manual
+```
+
+- **실행 경로**: 저장소 루트
+- **용도**: 화면을 캡쳐해 `docs/manual/shots/` 에 넣고, 원고(`docs/manual/manual.html`)를
+  `docs/manual/Banblit-사용자-매뉴얼.pdf` 로 출력합니다. 두 단계가 `manual` 서비스의 기본 명령에
+  이어져 있어 둘째 줄 하나로 전부 실행됩니다.
+- **옵션**
+  - `--profile manual` — `docker-compose.override.yml` 에서 `profiles` 에 `manual` 이 있는
+    `manual`·`e2e-api` 2개를 활성화합니다. 생략하면 두 서비스를 찾지 못합니다.
+  - 첫 줄 `up -d --force-recreate --wait e2e-api`
+    - `-d` — 배경에서 실행합니다.
+    - `--force-recreate` — container 를 새로 만듭니다. `e2e-api` 는 뜰 때마다 `banblit_e2e` DB 를
+      비우고 migration 을 적용하므로, 이 옵션이 곧 매뉴얼 데이터를 처음부터 다시 만드는 수단입니다.
+      생략하면 이미 만들어 둔 데이터를 그대로 사용합니다(원고만 고칠 때는 생략하는 편이 빠릅니다).
+    - `--wait e2e-api` — healthcheck 가 통과할 때까지 기다립니다. DB 를 비우고 migration 을
+      적용하는 데 시간이 걸려, 기다리지 않으면 다음 줄이 연결에 실패합니다.
+  - 둘째 줄 `run --rm manual` — 일회성 container 로 캡쳐와 PDF 출력을 실행하고 끝나면 삭제합니다.
+- **무엇이 도는가**
+  1. `frontend/manual/seed.ts` 가 계정 10개·합주실 1개·팀 5개·집중 합주기간 2개·예약 2건·
+     불가능 일정 6건(본인 4건·다른 멤버 2건)·공지 3건·팀 글 3건·블라인드 1건을 만들고,
+     전체 권한 계정의 로그인 cookie 를
+     `frontend/manual/.auth/` 에 저장합니다.
+  2. `frontend/manual/capture.spec.ts` 가 `docs/manual/shots.json` 을 읽어 그림을 1장씩 캡쳐합니다.
+     강조 표시(사각형·확대·번호·spotlight)는 캡쳐 직전에 화면 위에 그립니다.
+  3. `frontend/manual/pdf.spec.ts` 가 `manual.html` 을 브라우저 인쇄 기능으로 PDF 로 출력합니다.
+- **주의점**
+  - **dev DB 는 변경되지 않습니다.** 이 명령이 쓰는 DB 는 `banblit_e2e` 1개이고, E2E 검사와 같은
+    DB 입니다. 매뉴얼을 만든 뒤 E2E 를 실행하면 12-1 의 첫 줄이 DB 를 다시 비웁니다.
+  - image 는 `deploy/manual.Dockerfile` 로 만듭니다. 공식 Playwright image 에 한글 글꼴
+    (`fonts-noto-cjk`)을 추가한 것이고, 태그는 `e2e` 서비스와 같은 값이어야 합니다.
+  - 그림이 1장도 바뀌지 않았으면 15-2 로 PDF 만 다시 출력하는 편이 빠릅니다.
+
+### 15-2. 원고만 고쳐 PDF 다시 출력하기
+
+```
+docker compose --profile manual run --rm manual npx playwright test --config manual/pdf.config.ts
+```
+
+- **실행 경로**: 저장소 루트
+- **용도**: 캡쳐를 건너뛰고 `manual.html` 만 다시 PDF 로 출력합니다. 글을 고쳤을 때 사용합니다.
+- **옵션**
+  - `--config manual/pdf.config.ts` — PDF 출력만 담는 설정입니다. 이 설정에는 화면 개발 서버와
+    데이터 생성이 없어 `e2e-api` 가 떠 있지 않아도 실행됩니다.
+- **주의점**
+  - `manual.html` 은 브라우저로 열어 그대로 확인할 수 있습니다. 글만 고칠 때는 브라우저에서
+    새로고침해 확인한 뒤 이 명령을 1번 실행하면 됩니다.
