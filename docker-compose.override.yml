@@ -83,7 +83,9 @@ services:
       context: ./backend
       target: dev
     image: banblit-backend:dev
-    profiles: ["e2e"]
+    # manual 도 이 서버와 DB 를 씁니다(아래 manual 서비스). profile 을 둘 다 적지 않으면
+    # `--profile manual` 로 띄울 때 이 서비스가 활성화되지 않습니다.
+    profiles: ["e2e", "manual"]
     working_dir: /app
     volumes:
       - ./backend:/app
@@ -126,6 +128,31 @@ services:
       # Vite 개발 서버가 /api 요청을 넘길 곳입니다(frontend/vite.config.ts).
       API_ORIGIN: http://e2e-api:8000
       # 링크 미리보기 태그의 절대 주소입니다. 검사는 이 값이 교체되었는지만 확인합니다.
+      VITE_APP_ORIGIN: http://localhost:5173
+    depends_on:
+      e2e-api:
+        condition: service_healthy
+
+  # 사용자 매뉴얼 — 화면을 캡쳐하고 PDF 로 출력합니다(COMMAND.md 15-1).
+  # e2e 와 같은 Playwright image 에 한글 글꼴만 추가한 image 를 씁니다(deploy/manual.Dockerfile).
+  # 검사 전용 서버(e2e-api)와 그 DB 를 함께 쓰므로, 캡쳐를 실행하면 banblit_e2e DB 가 비워지고
+  # frontend/manual/seed.ts 가 매뉴얼용 데이터를 새로 만듭니다. dev DB 는 변경되지 않습니다.
+  manual:
+    build:
+      context: ./deploy
+      dockerfile: manual.Dockerfile
+    image: banblit-manual:dev
+    profiles: ["manual"]
+    working_dir: /app
+    command: sh -c "npm install && npx playwright test --config manual/playwright.config.ts && npx playwright test --config manual/pdf.config.ts"
+    volumes:
+      - ./frontend:/app
+      # e2e 와 같은 volume 입니다. image 바탕이 같아(둘 다 공식 Playwright image) 섞이지 않습니다.
+      - banblit-e2e-modules:/app/node_modules
+      # 캡쳐한 그림과 PDF 가 나가는 자리입니다. 매뉴얼 원고도 이 폴더에 있습니다.
+      - ./docs:/docs
+    environment:
+      API_ORIGIN: http://e2e-api:8000
       VITE_APP_ORIGIN: http://localhost:5173
     depends_on:
       e2e-api:

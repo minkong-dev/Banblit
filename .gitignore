@@ -41,3 +41,10 @@ frontend/playwright/.auth/
 # 백업 파일. docker-compose.yml 의 BACKUP_DIR 기본값이 ./backups 라 .env 에 값이 없으면
 # 저장소 안에 생성됩니다. DB 전체와 첨부 파일이 들어 있습니다.
 backups/
+
+# 매뉴얼 캡쳐 계정의 로그인 cookie (frontend/manual/seed.ts 가 실행마다 새로 씀)
+frontend/manual/.auth/
+
+# 매뉴얼 결과물. docker compose --profile manual run --rm manual 이 원고에서 다시 만듭니다(COMMAND.md 15-1).
+docs/manual/shots/
+docs/manual/*.pdf
