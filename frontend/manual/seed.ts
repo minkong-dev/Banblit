@@ -292,6 +292,13 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
           name: index === 0 ? "교양 수업" : "학과 MT",
           reason: index === 0 ? "화요일마다" : "1박 2일",
         });
+        // 관리자 메뉴의 예약 화면에서 다른 멤버의 예약에 붙는 반려 버튼을 보이려고, 첫 멤버가 개인 연습을 1건 예약합니다.
+        if (index === 0) {
+          await call(asMember, "POST", "/api/reservations", {
+            room_id: rooms[0].id, team_id: null, name: "개인 연습",
+            starts_at: `${day(11)}T20:00:00`, ends_at: `${day(11)}T21:00:00`,
+          });
+        }
       } finally {
         await asMember.dispose();
       }
@@ -321,7 +328,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
         await call(context, "POST", `/api/posts/${created.id}/comments`, { body: comment });
       }
     }
-    // 글 1개를 가립니다. 설정의 블라인드 탭이 빈 목록이 아니라 실제 줄을 표시하게 하기 위해서입니다.
+    // 글 1개를 가립니다. 관리자 메뉴의 블라인드 화면이 빈 목록이 아니라 실제 줄을 표시하게 하기 위해서입니다.
     await call(context, "PUT", `/api/posts/${lastPostId}/blind`, {});
 
     mkdirSync(dirname(STATE_PATH), { recursive: true });
