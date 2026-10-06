@@ -14,7 +14,7 @@ export const SHOTS_DIR = `${MANUAL_DIR}/shots`;
 export const SOURCE_HTML = `${MANUAL_DIR}/manual.html`;
 
 /** 출력하는 PDF 입니다. */
-export const OUTPUT_PDF = `${MANUAL_DIR}/Banblit-사용자-매뉴얼.pdf`;
+export const OUTPUT_PDF = `${MANUAL_DIR}/banblit_manual.pdf`;
 
 /** 전체 권한 계정의 로그인 cookie 파일입니다. seed.ts 가 저장하고 캡쳐가 사용합니다. */
 export const STATE_PATH = "manual/.auth/manual-account.json";

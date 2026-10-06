@@ -1282,7 +1282,7 @@ docker compose --profile manual run --rm manual
 
 - **실행 경로**: 저장소 루트
 - **용도**: 화면을 캡쳐해 `docs/manual/shots/` 에 넣고, 원고(`docs/manual/manual.html`)를
-  `docs/manual/Banblit-사용자-매뉴얼.pdf` 로 출력합니다. 두 단계가 `manual` 서비스의 기본 명령에
+  `docs/manual/banblit_manual.pdf` 로 출력합니다. 두 단계가 `manual` 서비스의 기본 명령에
   이어져 있어 둘째 줄 하나로 전부 실행됩니다.
 - **옵션**
   - `--profile manual` — `docker-compose.override.yml` 에서 `profiles` 에 `manual` 이 있는
