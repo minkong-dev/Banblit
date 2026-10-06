@@ -33,6 +33,7 @@ from backend.contract import (
     DEFAULT_SESSION_MINUTES,
     DEFAULT_SLOT_MINUTES,
     MAX_SESSION_MINUTES,
+    REJECT_TARGETS,
     SLOT_MINUTE_CHOICES,
 )
 
@@ -55,7 +56,9 @@ Permission = Literal[
     "member_expel",  # 멤버 추방(계정 삭제)
     "notice_write",  # 공지 작성
     "board_moderate",  # 다른 사용자의 글·댓글 삭제와 글 블라인드(수정은 작성자만 가능)
-    "reservation_manage",  # 다른 사용자의 예약 수정·취소
+    "reservation_manage",  # 다른 사용자의 예약 수정과 반려(사유를 담은 알림과 함께 취소)
+    "unavailable_read",  # 다른 사용자의 불가능 일정 조회
+    "unavailable_manage",  # 다른 사용자의 불가능 일정 반려(사유를 담은 알림과 함께 삭제. 등록·수정은 본인만 가능)
     "assign_run",  # 배정 계산 실행
     "assign_read",  # 계산 결과·조율안 조회
     "proposal_confirm",  # 조율안 확정
@@ -675,7 +678,8 @@ class AssignmentBackup(Base):
 # 문장은 화면이 만듭니다. 그래서 문구를 수정하면 이미 저장된 알림에도 적용되고, table 을
 # 수정할 필요가 없습니다.
 # reservation_cancelled: 집중 합주기간이 생기거나 넓어져 예약이 취소되었습니다(services/reservation_service.py).
-NotificationKind = Literal["assignment_updated", "reservation_cancelled"]
+# rejected: 관리 권한자가 예약이나 불가능 일정을 사유와 함께 반려했습니다(services/notification/notification_service.py).
+NotificationKind = Literal["assignment_updated", "reservation_cancelled", "rejected"]
 NOTIFICATION_KINDS: tuple[NotificationKind, ...] = get_args(NotificationKind)
 
 
@@ -696,7 +700,26 @@ class Notification(Base):
     kind: Mapped[NotificationKind] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime)
 
-    __table_args__ = (CheckConstraint(_in_sql("kind", NOTIFICATION_KINDS)),)
+    # 아래 3개는 kind 가 rejected 일 때만 값을 가집니다. 무엇을(target), 언제 것을(target_starts_at),
+    # 왜(reason) 반려했는지입니다. 화면이 이 값으로 "<언제> <무엇>이 반려되었어요" 문장을 만듭니다.
+    # 반려된 불가능 일정은 행이 삭제되므로 대상의 번호가 아니라 시작 시각을 그대로 보관합니다.
+    target: Mapped[str | None] = mapped_column(Text, nullable=True)
+    target_starts_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (
+        CheckConstraint(_in_sql("kind", NOTIFICATION_KINDS)),
+        CheckConstraint(
+            f"target IS NULL OR {_in_sql('target', REJECT_TARGETS)}",
+            name="notifications_target_valid",
+        ),
+        # 반려 알림은 3개 값을 전부 가지고, 다른 알림은 전부 비워 둡니다. 하나만 빠진 반려 알림은
+        # 화면이 문장을 만들 수 없습니다.
+        CheckConstraint(
+            "(kind = 'rejected') = (target IS NOT NULL AND target_starts_at IS NOT NULL AND reason IS NOT NULL)",
+            name="notifications_rejected_fields",
+        ),
+    )
 
 
 class PasswordResetToken(Base):

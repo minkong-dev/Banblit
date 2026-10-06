@@ -11,9 +11,11 @@ from backend.services.reservation.pipeline import (
     create_reservation,
     list_my_reservations,
     list_reservations,
+    reject_reservation,
     update_reservation,
 )
 from backend.api.schemas import (
+    RejectIn,
     ReservationCreateIn,
     ReservationOut,
     ReservationsOut,
@@ -132,3 +134,16 @@ def cancel_reservation_endpoint(
     session: Session = Depends(get_session),
 ) -> None:
     cancel_reservation(session, reservation_id, requester, datetime.now())
+
+
+# 다른 멤버의 예약 취소는 이 주소로만 합니다. DELETE 는 본문을 받지 않는 클라이언트·proxy 가 있어,
+# 반려 사유를 받아야 하는 동작을 별도의 POST 로 둡니다.
+@router.post("/reservations/{reservation_id}/reject", status_code=204)
+def reject_reservation_endpoint(
+    reservation_id: int,
+    req: RejectIn,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+    now: datetime = Depends(current_time),
+) -> None:
+    reject_reservation(session, reservation_id, requester, req.reason, now)

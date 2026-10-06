@@ -34,3 +34,12 @@ MAX_SESSION_MINUTES = 240
 # API(api/schemas.py), DB CHECK 제약(db/models.py), 화면(frontend/src/lib/settings.ts)이 같은 값을 씁니다.
 DAILY_MAX_HOUR_CHOICES: tuple[int, ...] = (1, 2, 3)
 DEFAULT_DAILY_MAX_HOURS = 3
+
+# 반려할 수 있는 대상입니다. 관리 권한자가 다른 멤버의 예약을 취소하거나 불가능 일정을 삭제하면
+# 사유를 담은 알림이 원래 등록한 멤버에게 갑니다. 알림 table 의 CHECK 제약(db/models.py), 알림 응답
+# (api/schemas.py), 화면(frontend/src/lib/contract.ts 의 RejectTarget)이 같은 값을 씁니다.
+REJECT_TARGETS: tuple[str, ...] = ("reservation", "unavailable")
+
+# 반려 사유의 최대 글자 수입니다. 알림 한 칸에 표시하므로 문단 하나 분량으로 제한합니다.
+# 요청 검증(api/schemas.py)과 화면의 입력칸(frontend/src/lib/contract.ts)이 같은 값을 씁니다.
+REJECT_REASON_MAX_LENGTH = 300

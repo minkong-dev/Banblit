@@ -3,7 +3,9 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
+from backend.services.notification.pipeline import notify_rejected
 from backend.services.validation.pipeline import (
+    require_reject_reason,
     require_same_day,
     require_valid_slot_bounds,
     require_within_room_hours,
@@ -254,12 +256,36 @@ def _get_own_reservation(
 def cancel_reservation(
     session: Session, reservation_id: int, requester: Member, cancelled_at: datetime
 ) -> None:
-    """예약 한 건을 취소합니다. 예약한 멤버 본인 또는 reservation_manage 권한을 가진 멤버만 취소할 수 있습니다.
+    """본인의 예약 한 건을 취소합니다. 다른 멤버의 예약은 reservation_manage 권한이 있어도 PermissionError 이고,
+    reject_reservation 으로 사유와 함께 취소합니다.
 
     행을 삭제하지 않고 cancelled_at 만 기록합니다. 취소된 행은 조회·이동·취소 대상에서 빠지고 겹침 금지
     제약도 보지 않으므로, 그 시간은 다시 예약할 수 있습니다.
     """
-    _get_own_reservation(session, reservation_id, requester, "취소할").cancelled_at = cancelled_at
+    reservation = _get_own_reservation(session, reservation_id, requester, "취소할")
+    if reservation.member_id != requester.id:
+        raise PermissionError("다른 멤버의 예약은 반려(사유 입력)로만 취소할 수 있습니다")
+    reservation.cancelled_at = cancelled_at
+    session.commit()
+
+
+def reject_reservation(
+    session: Session, reservation_id: int, requester: Member, reason: str, rejected_at: datetime
+) -> None:
+    """reservation_manage 권한자가 예약 한 건을 취소하고, 예약한 멤버에게 reason 을 담은 반려 알림을 보냅니다.
+
+    권한이 없으면 PermissionError, 사유가 비었거나 길면 ValueError 입니다. 취소는 cancel_reservation 과 같이
+    cancelled_at 만 기록합니다. 본인의 예약을 반려하면 알림은 만들지 않습니다.
+    """
+    if "reservation_manage" not in account_permissions(session, requester.id):
+        raise PermissionError("다른 멤버의 예약을 반려할 권한이 없습니다")
+    trimmed = require_reject_reason(reason)
+    reservation = _get_own_reservation(session, reservation_id, requester, "반려할")
+    reservation.cancelled_at = rejected_at
+    if reservation.member_id != requester.id:
+        notify_rejected(
+            session, reservation.member_id, "reservation", reservation.starts_at, trimmed, rejected_at
+        )
     session.commit()
 
 

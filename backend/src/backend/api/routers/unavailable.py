@@ -1,8 +1,13 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from backend.api.auth_dependency import require_account
+from backend.api.auth_dependency import require_account, require_permission
 from backend.api.schemas import (
+    AllUnavailableOut,
+    MemberUnavailableOut,
+    RejectIn,
     UnavailableCreateIn,
     UnavailableEnvelopeOut,
     UnavailableOut,
@@ -11,8 +16,10 @@ from backend.api.schemas import (
 from backend.services.unavailable.pipeline import (
     create_unavailable,
     delete_unavailable,
-    update_unavailable,
+    list_all_unavailable,
     list_unavailable,
+    reject_unavailable,
+    update_unavailable,
 )
 from backend.db.models import Member, UnavailableTime
 from backend.db.pipeline import get_session
@@ -31,6 +38,22 @@ def _unavailable_out(row: UnavailableTime) -> UnavailableOut:
         repeat_until=row.repeat_until,
         reason=row.reason,
         name=row.name,
+    )
+
+
+# 요청자의 신원을 사용하지 않고 권한만 검증하는 endpoint 는 dependencies 에 검증을 추가합니다.
+@router.get(
+    "/unavailable",
+    response_model=AllUnavailableOut,
+    dependencies=[Depends(require_permission("unavailable_read"))],
+)
+def read_all_unavailable(session: Session = Depends(get_session)) -> AllUnavailableOut:
+    rows = list_all_unavailable(session)
+    return AllUnavailableOut(
+        times=[
+            MemberUnavailableOut(**_unavailable_out(row).model_dump(), member=name)
+            for row, name in rows
+        ]
     )
 
 
@@ -97,6 +120,18 @@ def update_unavailable_endpoint(
         req.name,
     )
     return UnavailableEnvelopeOut(time=_unavailable_out(row))
+
+
+# 다른 멤버의 불가능 일정 삭제는 이 주소로만 합니다. 예약 반려(routers/reservations.py)와 같은 본문을 받습니다.
+@router.post("/members/{member_id}/unavailable/{time_id}/reject", status_code=204)
+def reject_unavailable_endpoint(
+    member_id: int,
+    time_id: int,
+    req: RejectIn,
+    requester: Member = Depends(require_account),
+    session: Session = Depends(get_session),
+) -> None:
+    reject_unavailable(session, member_id, requester, time_id, req.reason, datetime.now())
 
 
 @router.delete("/members/{member_id}/unavailable/{time_id}", status_code=204)

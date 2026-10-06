@@ -8,6 +8,7 @@ from backend.services.reservation.reservation_service import (
     create_reservation,
     list_my_reservations,
     list_reservations,
+    reject_reservation,
     update_reservation,
 )
 
@@ -18,5 +19,6 @@ __all__ = [
     "create_reservation",
     "list_my_reservations",
     "list_reservations",
+    "reject_reservation",
     "update_reservation",
 ]
