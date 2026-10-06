@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cluedoc: document your codebase as interlinked visual papers</title>
+<meta name="description" content="Cluedoc is an Agent Skill that documents a codebase as a set of interlinked, visual papers, one per feature, organized as a capability tree and cross-referenced like a citation graph. This page is itself one of those papers.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  /* ---- This landing page is rendered as a Cluedoc paper ---- */
+  .paper { max-width: 860px; margin: 0 auto; padding: var(--space-2xl) var(--space-lg) var(--space-3xl); min-width: 0; }
+
+  /* front matter block: the paper's own YAML, shown as a plate */
+  .paper .eyebrow { margin-bottom: var(--space-md); }
+  .paper-title {
+    font-family: var(--display); font-optical-sizing: auto; font-weight: 600;
+    font-size: clamp(46px, 7vw, 82px); line-height: 1.0; letter-spacing: -0.02em; margin: 0;
+  }
+  .paper-dek { font-size: 21px; line-height: 1.5; color: var(--color-muted); max-width: 52ch; margin: var(--space-md) 0 var(--space-xl); }
+  .paper-dek strong { color: var(--color-ink); font-weight: 600; }
+
+  .cta-row { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin: 0 0 var(--space-2xl); }
+
+  /* paper body: mirrors the .cluedoc viewer so the page reads like a real paper */
+  .paper-body { font-family: var(--serif); font-size: 18px; line-height: 1.72; color: var(--color-ink); }
+  .paper-body h2 {
+    font-family: var(--mono); font-size: 13px; text-transform: uppercase; letter-spacing: .1em;
+    color: var(--color-accent); margin: var(--space-2xl) 0 var(--space-md);
+    padding-bottom: 6px; border-bottom: 1px solid var(--color-rule);
+  }
+  .paper-body h3 { font-family: var(--display); font-weight: 600; font-size: 21px; margin: var(--space-xl) 0 var(--space-sm); }
+  .paper-body p, .paper-body li { color: var(--color-ink); }
+  .paper-body ul, .paper-body ol { padding-left: 22px; }
+  .paper-body li { margin: var(--space-2xs) 0; }
+  .paper-body strong { font-weight: 600; }
+  .paper-body a { color: var(--color-accent); }
+  .paper-body code {
+    font-family: var(--mono); font-size: .82em; background: var(--color-blue-soft);
+    color: color-mix(in srgb, var(--color-blue) 70%, var(--color-ink)); padding: 1px 5px; border-radius: 3px;
+  }
+  .paper-body pre {
+    background: var(--color-paper-3); color: var(--color-ink); font-family: var(--mono);
+    font-size: 12.5px; line-height: 1.6; padding: var(--space-md) var(--space-lg);
+    border-radius: var(--radius); border: 1px solid var(--color-rule); overflow-x: auto;
+  }
+  .paper-body pre code { background: none; padding: 0; color: inherit; font-size: inherit; }
+  .paper-body .mermaid {
+    background: var(--color-paper-2); border: 1px solid var(--color-rule);
+    border-radius: var(--radius); padding: var(--space-lg); text-align: center; overflow-x: auto;
+    margin: var(--space-lg) 0;
+  }
+  .paper-body .hero { margin-top: 0; }
+  .paper-body figcaption { font-family: var(--mono); font-size: 11px; letter-spacing: .04em; color: var(--color-neutral); text-align: center; margin-top: var(--space-xs); }
+
+  /* the install command, woven into the paper */
+  .paper-body .setcmd { margin: var(--space-md) 0 var(--space-xs); }
+
+  @media (max-width: 860px) {
+    .paper { padding: var(--space-xl) var(--space-md) var(--space-2xl); }
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap running-head">
+    <a class="wordmark" href="index.html">cluedoc</a>
+    <span class="spacer"></span>
+    <nav class="masthead-links">
+      <a class="hide-sm" href="#description">How it works</a>
+      <a href="examples.html">Examples</a>
+      <a href="https://github.com/KeunwooPark/cluedoc">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="paper">
+
+  <!-- ============ front matter ============ -->
+  <p class="eyebrow">An Agent Skill · a paper about itself</p>
+  <h1 class="paper-title">Cluedoc</h1>
+  <p class="paper-dek">
+    Coding agents write software faster than any human can read it. Cluedoc has your agent
+    document as it builds, one human-readable paper per feature, so the system stays
+    <span class="hl">understandable to the people who own it</span>. Fittingly, this page is one such paper.
+  </p>
+
+  <div class="cta-row">
+    <a class="btn primary" href="#getting-started">Install the skill</a>
+    <a class="btn" href="examples.html">Browse example docs →</a>
+  </div>
+
+  <!-- ============ paper body ============ -->
+  <article class="paper-body">
+
+    <!-- Hero visual -->
+    <figure class="hero">
+      <div class="mermaid">
+flowchart TD
+    ROOT["&#9670; Cluedoc&lt;br/&gt;document a codebase as papers"]
+    ROOT --> CT["Capability tree&lt;br/&gt;one paper per feature"]
+    ROOT --> PS["Progressive sync&lt;br/&gt;driven by code changes"]
+    ROOT --> CG["Citation graph&lt;br/&gt;papers cite papers"]
+    ROOT --> RG["Reading guide&lt;br/&gt;points you at the right papers"]
+    PS -. maintains .-> CT
+    CG -. links .-> CT
+    RG -. walks .-> CG
+      </div>
+      <figcaption>Figure 1 · Cluedoc's own capability tree. Solid edges nest features; dashed edges are citations.</figcaption>
+    </figure>
+
+    <h2>Abstract</h2>
+    <p>
+      Cluedoc is an <a href="https://agentskills.io">Agent Skill</a> that <span class="hl">keeps a codebase
+      understandable to humans</span> while coding agents rapidly change it. It treats a software system as a group of features and
+      writes one document per feature, in the style of an academic paper, a format
+      long established for explaining complex ideas, which is what a system's features usually are. The papers are
+      visual, organized as a capability tree, and cross-referenced like citations; Cluedoc writes and maintains them
+      as the code changes, so people can keep track of a system that now grows faster than they could read it line
+      by line.
+    </p>
+
+    <h2>Introduction</h2>
+    <p>
+      Coding agents have changed who writes software. Increasingly the human does not type the code; they direct
+      agents that do, and codebases grow far faster than before. The scarce resource shifts from writing to
+      <span class="hl">understanding</span>: when you did not write a line of it, and it changed again this morning,
+      how do you know what the system does, or whether the next change is safe?
+    </p>
+    <p>
+      Hand-written documentation cannot keep that pace, and a README rots the moment the agent moves on. Cluedoc closes
+      the loop by putting the docs in the same hands as the code: the agent writes and maintains human-readable
+      documentation as it builds. Cluedoc defines a software system as a group of features and gives
+      each feature one document. It writes those documents as academic papers
+      (abstract, introduction, figures, related work) because that is a well-established way to explain a complex
+      idea, and a nontrivial feature usually is one. The reader needs a single mental model to begin: a system is a
+      hierarchy of features, each explained by one visual paper that links to the ones around it.
+    </p>
+
+    <h2>Related Work</h2>
+    <p>
+      Cluedoc's closest relative is the
+      <a href="https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f">LLM-wiki</a> pattern: an LLM
+      incrementally builds and maintains a persistent, interlinked wiki instead of re-reading raw sources at query
+      time. Cluedoc shares that bet (documentation as a living artifact an agent keeps current) and is best read as
+      that pattern <span class="hl">specialized for source code</span>. Where LLM-wiki is domain-agnostic, leaving structure,
+      format, and workflow to you, Cluedoc fixes them for a codebase: it is driven by code changes rather than a
+      curated corpus, following callers and callees to revise the right papers; it prescribes one shape: a capability
+      tree, one paper per feature, the six-section academic form; and it stays in the loop, the same agent updating
+      docs as it edits code.
+    </p>
+    <p>
+      Nearer in tooling is <a href="https://github.com/AsyncFuncAI/deepwiki-open">DeepWiki-Open</a>, an open-source AI
+      wiki generator that clones a repo, indexes it into a vector database, and serves a browsable wiki (with diagrams
+      and a RAG-backed "Ask" chat) from its own web app. It shares Cluedoc's aim but sits on the other side of the
+      tooling boundary: its wiki lives in an external app you host and regenerate on demand, drifting in between,
+      whereas Cluedoc's papers are plain Markdown under <code>.cluedoc/</code>, versioned with the code and kept
+      current in the loop: no server, no vector store.
+    </p>
+    <p>
+      It also contrasts with classic generators (Doxygen, Sphinx, JSDoc) that extract a reference from source and
+      comments. Those describe <em>symbols</em>, one entry per function; Cluedoc explains <em>features</em>, one paper
+      per capability, in language a designer would recognize. The skill itself is defined in
+      <a href="https://github.com/KeunwooPark/cluedoc/blob/main/SKILL.md"><code>SKILL.md</code></a>, built on the open
+      <a href="https://agentskills.io/specification">Agent Skills specification</a>.
+    </p>
+
+    <h2>Description</h2>
+
+    <h3>One paper per feature, organized as a hierarchy</h3>
+    <p>
+      The unit of documentation is one feature. Features form a hierarchy (large features contain
+      smaller sub-features), and Cluedoc mirrors that hierarchy in the folder structure: higher-level features live
+      in higher folders, finer detail lives deeper. Everything sits in a <code>.cluedoc/</code> folder at the
+      repository root, where every feature is a folder and its paper is the <code>README.md</code> inside it.
+    </p>
+    <pre><code>.cluedoc/
+├── README.md                  ← root paper: the whole system
+├── authentication/
+│   ├── README.md              ← the "Authentication" feature
+│   ├── login/
+│   │   └── README.md          ← sub-feature: "Login"
+│   └── session-management/
+│       ├── README.md          ← sub-feature: "Session Management"
+│       └── token-refresh/
+│           └── README.md      ← deeper still: "Token Refresh"
+└── billing/
+    └── README.md</code></pre>
+    <p>
+      Splitting stops at the <span class="hl">one-paper rule</span>: divide a feature only when it has distinct
+      sub-capabilities that each deserve their own hero visual; stop when a single focused paper says it all. It is a
+      judgment about <em>capability</em>, never a mirror of the code's directory layout, so the "monorepo vs.
+      single-package" question never comes up. One package or twenty, the docs are the same kind of capability tree.
+    </p>
+
+    <h3>It builds progressively, driven by your code, in both directions</h3>
+    <p>
+      Cluedoc does not document the whole repository in one pass. It works progressively: when code
+      changes, a single change can ripple <em>up and down</em> the feature hierarchy, so it updates parent and child
+      papers alike. Upward, it scans where the changed code is <em>used</em> (its callers) to find the larger feature
+      it belongs to; downward, it scans what the code <em>uses</em> (its callees) to find the collaborators worth
+      documenting.
+    </p>
+    <div class="mermaid">
+flowchart TD
+    CC["&#9679; changed code"]
+    PF["parent feature"]
+    RC["root paper"]
+    CF["child collaborators"]
+    CC -->|"upward &middot; who calls this?"| PF
+    PF -->|"does the big picture shift?"| RC
+    CC -->|"downward &middot; what does this call?"| CF
+    </div>
+    <p>
+      Over many changes the tree fills in and sharpens from every direction. Early on it may be shallow; it deepens as
+      features reveal both the structures that contain them and the collaborators they rely on. As features appear,
+      move, and disappear, Cluedoc creates, splits, renames, and deletes folders to match, and re-checks that every
+      cross-link still resolves.
+    </p>
+
+    <h3>Abstract prose, anchored to code</h3>
+    <p>
+      Papers are <span class="hl">about</span> the code but never <span class="hl">contain</span> it. The prose stays abstract and
+      human, with no snippets, no symbols, no file paths. Concepts are named the way a user or designer would (the
+      option's <em>value source</em>, the <em>parse loop</em>), not the way the compiler would. The link to the
+      implementation lives in structured metadata instead: a <code>sources</code> list in the frontmatter, kept at the
+      granularity of files so it survives ordinary refactors.
+    </p>
+    <pre><code>title: Option Parsing
+sources:
+  - lib/option.js
+  - lib/command.js   # the parse loop</code></pre>
+    <p>
+      That is the only place raw paths appear, which is exactly why the prose rarely changes when code moves.
+    </p>
+
+    <h3>Every paper has the same shape</h3>
+    <p>
+      Each paper is exactly what you are reading: YAML frontmatter followed by six sections, always in order, opening
+      with a hero visual and leaning on diagrams throughout: Mermaid for structure and flow, terminal graphics for
+      trees and layouts. Never a wall of prose where a picture is clearer.
+    </p>
+    <pre><code>┌─ a Cluedoc paper ──────────────────────────┐
+│  frontmatter    title · sources             │
+│  1  Hero visual  a diagram, before any prose │
+│  2  Abstract     what it is, and why         │
+│  3  Introduction the problem it solves       │
+│  4  Related Work links to other papers       │
+│  5  Description  how it works · visual-heavy  │
+│  6  Conclusion   the takeaway; where to go    │
+└────────────────────────────────────────────┘</code></pre>
+    <p>
+      "Related Work" is the connective tissue. Every cross-paper link lives there (the parent above, the children
+      below, and any non-adjacent paper that adds context), turning the docs into a citation graph you can traverse.
+      One rule holds it together: link only papers that already exist, never a dead link to a planned one.
+    </p>
+
+    <h3>It also guides your reading</h3>
+    <p>
+      The papers are a map for reading, not only writing. Ask how something works (a feature, a flow, "where does X
+      happen") and Cluedoc answers, then appends a short <span class="hl">Reading Guide</span>: the two-to-five papers most
+      worth reading, in a suggested order, each with a clause on why it matters to your question. (It kicks in only
+      once a <code>.cluedoc/</code> folder exists, and never invents a paper that isn't there.)
+    </p>
+
+    <h3 id="getting-started">Getting started</h3>
+    <p>
+      One command. The <a href="https://github.com/vercel-labs/skills">skills</a> CLI auto-detects your agent and
+      installs Cluedoc for it:
+    </p>
+    <div class="setcmd">
+      <span class="cmd"><span class="prompt">$ </span>npx skills add KeunwooPark/cluedoc</span>
+      <span class="spacer"></span>
+      <button id="copyBtn" type="button">Copy</button>
+    </div>
+    <p style="font-size:15px; color:var(--color-muted);">
+      Prefer to do it by hand? See the <a href="https://github.com/KeunwooPark/cluedoc#install">manual install</a>.
+    </p>
+    <p>
+      Cluedoc is an Agent Skill, so it runs <em>through</em> your coding agent rather than as a background daemon;
+      there is no file watcher or git hook. Bootstrap a new repository with <code>init</code>:
+    </p>
+    <div class="setcmd">
+      <span class="cmd"><span class="prompt">$ </span>/cluedoc init</span>
+    </div>
+    <p>
+      <code>init</code> does two things. It writes a shallow starter tree (a root paper plus one paper per
+      top-level feature) so you begin with a real skeleton instead of an empty folder, and it wires a short
+      sync-trigger block into your repo's agent-instructions file (<code>AGENTS.md</code>, or whichever your agent
+      already uses) so future sessions are reminded to keep the docs in sync. To bootstrap without touching those
+      files, run the skill plainly instead, with <code>/cluedoc</code>.
+    </p>
+    <p>
+      After that, the agent will often update the affected papers on its own as it edits code in a session; that is
+      what the skill asks it to do. But that proactive pass is best-effort, not a guarantee: changes you make outside
+      the agent, or turns where it simply doesn't reach for the skill, won't be picked up. When you want a sure sync
+      (before a commit, or a full pass over the repository), call <code>/cluedoc</code> by name.
+    </p>
+    <p>
+      For hands-off updates, run it in CI. Papers are a generated artifact derived from the code, so automate them the
+      way you already automate a lockfile or a generated API client: let a bot write them into the pull request branch,
+      so the docs are reviewed and merged atomically with the change that caused them. There is a GitHub Action for
+      exactly that &mdash; add an API key and it syncs the papers a pull request affects, working out the diff range
+      from the event and bootstrapping the tree if the repository has none yet:
+    </p>
+    <div class="setcmd" style="overflow-x:auto">
+      <span class="cmd" style="white-space:nowrap">uses: KeunwooPark/cluedoc/.github/workflows/cluedoc.yml@v1</span>
+    </div>
+    <p style="font-size:15px; color:var(--color-muted);">
+      The action carries its own agent and speaks OpenAI chat completions, so it runs on any endpoint that does &mdash;
+      a vendor, a server of your own, or a gateway you already route through. The
+      <a href="https://github.com/KeunwooPark/cluedoc#github-action">setup notes</a> cover that, what it decides for you
+      &mdash; the re-trigger loop, and conflicts in generated prose &mdash; and the one thing you still decide, which
+      is what to do about pull requests from forks.
+    </p>
+
+    <h2>Conclusion</h2>
+    <p>
+      Cluedoc turns a codebase into a navigable body of knowledge: one visual paper per capability, organized as a
+      tree, cross-linked like a bibliography, and kept honest by the code it tracks. Read it the way you would a
+      research corpus: start at the root, follow the citations, stop when you understand. The natural next stop is a
+      real one: browse the <a href="examples.html">example docs →</a> and see the format on projects you already know.
+    </p>
+
+  </article>
+</main>
+
+<footer class="colophon">
+  <div class="wrap">
+    <div class="imprint">
+      <a class="wordmark" href="index.html">cluedoc</a>
+      <p>An MIT-licensed Agent Skill that documents a codebase as interlinked, visual papers.</p>
+    </div>
+    <nav class="links">
+      <a href="https://github.com/KeunwooPark/cluedoc">GitHub</a>
+      <a href="examples.html">Examples</a>
+      <a href="https://agentskills.io">Agent Skills</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+  // render the hero + inline diagrams exactly as the paper viewer does
+  if (window.mermaid) {
+    mermaid.initialize({ startOnLoad: false, theme: 'neutral', securityLevel: 'strict' });
+    try { mermaid.run({ nodes: document.querySelectorAll('.mermaid') }); } catch (e) {}
+  }
+
+  // copy install command
+  const btn = document.getElementById('copyBtn');
+  btn && btn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText('npx skills add KeunwooPark/cluedoc');
+      btn.textContent = 'Copied ✓';
+      setTimeout(() => (btn.textContent = 'Copy'), 1600);
+    } catch { btn.textContent = 'Copy failed'; }
+  });
+</script>
+</body>
+</html>
