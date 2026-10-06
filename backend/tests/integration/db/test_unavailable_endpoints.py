@@ -336,3 +336,102 @@ def test_editing_someone_elses_unavailable_time_is_refused(
     )
 
     assert response.status_code == 422
+
+
+# ===== 다른 멤버의 불가능 일정 조회 (권한 항목 unavailable_read) =====
+#
+# 이 권한은 조회만 엽니다. 등록·수정·삭제는 권한과 무관하게 본인만 할 수 있습니다 — 다른 사람이
+# 대신 등록한 불가능 일정은 그 사람이 왜 못 나오는지를 본인이 모르는 채로 배정에 반영됩니다.
+
+
+def test_all_members_unavailable_requires_login(api_client: TestClient) -> None:
+    assert api_client.get("/unavailable").status_code == 401
+
+
+def test_all_members_unavailable_rejects_a_member_without_the_permission(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    account("이도현", "dohyun@example.com")
+    _, plain = account("박서연", "seoyeon@example.com")
+
+    assert api_client.get("/unavailable", cookies=plain).status_code == 403
+
+
+def test_all_members_unavailable_lists_every_member_in_time_order(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    manager_id, manager = account("이도현", "dohyun@example.com")
+    member_id, _ = account("박서연", "seoyeon@example.com")
+    _unavailable(
+        db_session, manager_id, datetime(2026, 9, 20, 18, 0), datetime(2026, 9, 20, 19, 0)
+    )
+    _unavailable(
+        db_session, member_id, datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 19, 0)
+    )
+    db_session.commit()
+
+    response = api_client.get("/unavailable", cookies=manager)
+
+    assert response.status_code == 200
+    rows = response.json()["times"]
+    assert [row["starts_at"] for row in rows] == [
+        "2026-09-14T18:00:00",
+        "2026-09-20T18:00:00",
+    ]
+    # 화면이 누구의 일정인지 표시하려면 이름이 함께 와야 합니다. 번호만으로는 명단을 또 조회해야 합니다.
+    assert [(row["member_id"], row["member"]) for row in rows] == [
+        (member_id, "박서연"),
+        (manager_id, "이도현"),
+    ]
+
+
+def test_the_permission_opens_another_members_unavailable_list(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, manager = account("이도현", "dohyun@example.com")
+    member_id, _ = account("박서연", "seoyeon@example.com")
+    _unavailable(
+        db_session, member_id, datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 19, 0)
+    )
+    db_session.commit()
+
+    response = api_client.get(f"/members/{member_id}/unavailable", cookies=manager)
+
+    assert response.status_code == 200
+    assert [row["starts_at"] for row in response.json()["times"]] == [
+        "2026-09-14T18:00:00"
+    ]
+
+
+def test_the_permission_does_not_open_changing_another_members_times(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, manager = account("이도현", "dohyun@example.com")
+    member_id, _ = account("박서연", "seoyeon@example.com")
+    row = _unavailable(
+        db_session, member_id, datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 19, 0)
+    )
+    db_session.commit()
+
+    assert (
+        api_client.post(
+            f"/members/{member_id}/unavailable",
+            json={"starts_at": "2026-09-14T20:00:00", "ends_at": "2026-09-14T21:00:00"},
+            cookies=manager,
+        ).status_code
+        == 403
+    )
+    assert (
+        api_client.patch(
+            f"/members/{member_id}/unavailable/{row.id}",
+            json={"starts_at": "2026-09-14T20:00:00", "ends_at": "2026-09-14T21:00:00"},
+            cookies=manager,
+        ).status_code
+        == 403
+    )
+    assert (
+        api_client.delete(
+            f"/members/{member_id}/unavailable/{row.id}", cookies=manager
+        ).status_code
+        == 403
+    )

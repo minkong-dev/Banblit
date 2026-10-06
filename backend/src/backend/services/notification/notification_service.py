@@ -35,6 +35,31 @@ def notify_assignment_updated(
     return len(member_ids)
 
 
+def notify_rejected(
+    session: Session,
+    member_id: int,
+    target: str,
+    target_starts_at: datetime,
+    reason: str,
+    created_at: datetime,
+) -> None:
+    """member_id 에게 반려 알림 1개를 추가합니다. commit 은 부르는 쪽이 합니다.
+
+    target 은 contract.REJECT_TARGETS 중 하나이고, target_starts_at 은 반려된 예약·불가능 일정의 시작 시각,
+    reason 은 검증을 마친 반려 사유입니다. 반려와 알림 추가를 한 transaction 으로 묶기 위해 commit 하지 않습니다.
+    """
+    session.add(
+        Notification(
+            member_id=member_id,
+            kind="rejected",
+            target=target,
+            target_starts_at=target_starts_at,
+            reason=reason,
+            created_at=created_at,
+        )
+    )
+
+
 def list_notifications(session: Session, member_id: int) -> list[Notification]:
     """해당 멤버에게 온 알림을 최신순으로 반환합니다. 다른 멤버의 알림은 조회되지 않습니다."""
     return list(

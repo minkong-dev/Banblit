@@ -16,6 +16,9 @@ def _notification_out(notification: Notification) -> NotificationOut:
         id=notification.id,
         kind=notification.kind,
         created_at=format_created_at(notification.created_at),
+        target=notification.target,
+        target_starts_at=notification.target_starts_at,
+        reason=notification.reason,
     )
 
 

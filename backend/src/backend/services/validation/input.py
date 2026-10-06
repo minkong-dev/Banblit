@@ -7,6 +7,7 @@ table(데이터베이스의 행과 열로 이루어진 데이터 구조)마다 �
 import re
 from datetime import date, datetime, time
 
+from backend.contract import REJECT_REASON_MAX_LENGTH
 from backend.db.models import PERIOD_KINDS
 from backend.scheduling.pipeline import TimeInterval, generate_slots
 
@@ -71,6 +72,14 @@ def require_email(value: str) -> str:
         raise ValueError("이메일은 영문·숫자·기호만 사용할 수 있습니다")
     if not EMAIL_PATTERN.match(trimmed):
         raise ValueError("이메일 형식이 올바르지 않습니다")
+    return trimmed
+
+
+def require_reject_reason(value: str) -> str:
+    """반려 사유입니다. 앞뒤 공백을 제거하고, 비었거나 REJECT_REASON_MAX_LENGTH 자를 넘으면 거부합니다."""
+    trimmed = require_non_empty(value, "반려 사유")
+    if len(trimmed) > REJECT_REASON_MAX_LENGTH:
+        raise ValueError(f"반려 사유는 {REJECT_REASON_MAX_LENGTH}자 이하로 입력해주세요")
     return trimmed
 
 

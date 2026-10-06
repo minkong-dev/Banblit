@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, NaiveDatetime, model_validator
 
 from backend.db.models import PERMISSIONS, Instrument, Permission
 from backend.db.models import NotificationKind
-from backend.contract import MAX_SESSION_MINUTES
+from backend.contract import MAX_SESSION_MINUTES, REJECT_REASON_MAX_LENGTH
 
 class RoomSlotOut(BaseModel):
     # 배정의 slot(점유 단위 길이의 시간 칸)입니다. 합주실은 DB의 번호와 이름을 함께 반환합니다.
@@ -531,6 +531,19 @@ class UnavailableTimesOut(BaseModel):
     times: list[UnavailableOut]
 
 
+class MemberUnavailableOut(UnavailableOut):
+    """멤버 전체의 불가능 일정 1건입니다. 누구의 일정인지 표시해야 하므로 이름이 함께 옵니다.
+
+    번호만 반환하면 화면이 명단을 한 번 더 조회해 번호를 이름으로 바꿔야 합니다.
+    """
+
+    member: str
+
+
+class AllUnavailableOut(BaseModel):
+    times: list[MemberUnavailableOut]
+
+
 class UnavailableEnvelopeOut(BaseModel):
     time: UnavailableOut
 
@@ -623,6 +636,18 @@ class NotificationOut(BaseModel):
     # 알림의 종류만 포함합니다. 사람이 읽을 문장은 화면이 이 값으로 만듭니다.
     kind: NotificationKind
     created_at: str
+    # kind 가 rejected 일 때만 값이 있고 그 밖에는 null 입니다. 반려된 대상(contract.REJECT_TARGETS 중 하나),
+    # 그 대상의 시작 시각, 반려 사유입니다.
+    target: str | None
+    target_starts_at: datetime | None
+    reason: str | None
+
+
+class RejectIn(BaseModel):
+    """다른 멤버의 예약·불가능 일정을 반려할 때 받는 본문입니다. 두 대상이 같은 본문을 씁니다."""
+
+    # 앞뒤 공백 제거와 빈 사유 거부는 service 가 합니다(validation 의 require_reject_reason).
+    reason: str = Field(max_length=REJECT_REASON_MAX_LENGTH)
 
 
 class NotificationsOut(BaseModel):
