@@ -51,8 +51,7 @@ test("공지를 블라인드하면 목록에서 사라지고 설정에서 되돌
 
   await expect(postButton).toHaveCount(0);
 
-  await page.goto("/settings");
-  await page.getByRole("tab", { name: "블라인드" }).click();
+  await page.goto("/blinded");
   const listed = page.locator("tr").filter({ hasText: title });
   await expect(listed).toBeVisible();
   await listed.getByRole("button", { name: "해제" }).click();

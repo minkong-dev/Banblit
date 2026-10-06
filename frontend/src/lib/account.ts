@@ -91,7 +91,17 @@ export const PERMISSION_ITEMS: readonly {
   {
     key: "reservation_manage",
     label: "타 멤버 예약 수정 및 취소",
-    note: "본인의 예약은 기본적으로 수정 및 삭제가 가능하고, 이 권한이 있다면 타 멤버의 예약을 수정하거나 취소가 가능해요.",
+    note: "본인의 예약은 기본적으로 수정 및 삭제가 가능하고, 이 권한이 있다면 타 멤버의 예약을 수정하거나 반려 사유를 적어 취소할 수 있어요.",
+  },
+  {
+    key: "unavailable_read",
+    label: "타 멤버 불가능 일정 조회",
+    note: "이 권한이 있다면 전체 멤버가 등록한 불가능 일정을 한 곳에서 확인할 수 있어요.",
+  },
+  {
+    key: "unavailable_manage",
+    label: "타 멤버 불가능 일정 반려",
+    note: "이 권한이 있다면 타 멤버의 불가능 일정을 반려 사유를 적어 삭제할 수 있어요. 사유는 그 멤버에게 알림으로 가요. 타 멤버의 불가능 일정을 대신 등록하거나 수정할 수는 없어요.",
   },
   {
     key: "assign_run",
@@ -130,19 +140,6 @@ export const PERMISSION_ITEMS: readonly {
  *  화면이 버튼을 감추는 것일 뿐 실제 권한 판정은 서버가 합니다. */
 export function can(me: Account | null, item: Permission): boolean {
   return me?.permissions?.includes(item) ?? false;
-}
-
-/** 설정 화면에 표시할 탭이 하나라도 있으면 true 를 반환합니다. 사이드바의 설정 메뉴가 이 값을 따릅니다.
- *  자기 계정에 대한 설정은 2026-09-23 에 프로필 화면으로 옮겼으므로, 관리 권한이 없는 사람에게
- *  설정 화면은 빈 화면입니다. 항목 목록은 Settings.tsx 의 TABS 와 같습니다. */
-export function canOpenSettings(me: Account | null): boolean {
-  return ([
-    "room_create", "room_edit", "room_delete",
-    "period_create", "period_edit", "period_delete",
-    "permission_manage", "permission_grant",
-    "reservation_manage",
-    "board_moderate",
-  ] as const).some((item) => can(me, item));
 }
 
 /** 팀 생성·수정·삭제 권한 중 하나라도 있으면 true 를 반환합니다. 사이드바 팀 메뉴 이름과 팀 목록 범위가 이 값을 따릅니다. */

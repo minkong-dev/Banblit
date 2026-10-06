@@ -38,10 +38,17 @@ body[data-page="landing"] {
     display: flex; align-items: center; padding: 26px 40px;
     color: #fff;
   }
+  /* 로고입니다. 어두운 사진 위이므로 CI 가이드 05 VARIATIONS 의 2(REVERSE / ON INK)를 씁니다. */
   .nav .brand {
     position: absolute; left: 50%; transform: translateX(-50%);
-    font-weight: 800; font-size: 18px; letter-spacing: .18em;
+    display: flex; align-items: center; gap: 11px;
   }
+  .nav .brand .mark { width: 36px; height: 30px; flex: none; }
+  .nav .brand .wordmark {
+    font-family: "Fredoka"; font-weight: 600; font-size: 19px;
+    letter-spacing: -.015em; line-height: 1; color: #F6F1E7;
+  }
+  .nav .brand .wordmark .dot { color: #FD6D3E; }
   .nav .menu { margin-right: auto; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; transition: background-color .18s ease; }
   .nav .menu:hover { background: rgba(255,255,255,.12); }
   .nav .menu svg { width: 24px; height: 24px; }

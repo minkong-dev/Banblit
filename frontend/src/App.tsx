@@ -17,9 +17,10 @@ import { Notices } from "./routes/Notices";
 import { BoardWrite, NoticeWrite } from "./routes/PostWrite";
 import { Profile } from "./routes/Profile";
 import { Scheduler } from "./routes/Scheduler";
-import { Settings } from "./routes/Settings";
+import { SettingsIndex, SettingsPage } from "./routes/Settings";
 import { Teams } from "./routes/Teams";
 import { AppShell } from "./components/AppShell";
+import { ADMIN_MENU } from "./lib/adminMenu";
 import { isSignedIn } from "./lib/pipeline";
 
 /** 로그인 뒤 화면들을 감쌉니다. 로그인 표시 cookie(브라우저가 저장해 요청마다 함께 보내는 값)가 없으면 감싼 화면을
@@ -58,7 +59,15 @@ export function App() {
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route path="/scheduler" element={<Scheduler />} />
         <Route path="/admin" element={<Assignment />} />
-        <Route path="/settings" element={<Settings />} />
+        {/* 관리자 메뉴 6개입니다. 주소와 필요 권한은 lib/adminMenu.ts 가 정본이고, 권한이 없는
+            사람이 주소로 바로 들어오면 SettingsPage 가 /settings 로 돌려보냅니다. */}
+        {ADMIN_MENU.map((item) => (
+          // element 의 key 는 구역을 옮길 때 화면을 새로 마운트합니다. 모두 같은 SettingsPage 라 key 가 없으면
+          // React 가 같은 자리의 같은 컴포넌트로 보고 이전 구역의 state(검색어 등)를 그대로 넘깁니다.
+          <Route key={item.key} path={item.to} element={<SettingsPage key={item.key} section={item.key} />} />
+        ))}
+        {/* 관리자 메뉴를 구역별 주소로 분리하기 전의 주소입니다. 저장해 둔 링크가 끊기지 않게 둡니다. */}
+        <Route path="/settings" element={<SettingsIndex />} />
         <Route path="/notices" element={<Notices />} />
         <Route path="/notices/new" element={<NoticeWrite />} />
         <Route path="/board" element={<Board />} />

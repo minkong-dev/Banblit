@@ -32,7 +32,15 @@ body[data-page="account"] {
     background-image: linear-gradient(160deg, rgba(8,9,11,.30), rgba(8,9,11,.86)), url("/images/in_six_strings.webp");
     color: #fff;
   }
-  .stage .mark { font-size: 18px; font-weight: 800; letter-spacing: .18em; }
+  /* 로고입니다. 어두운 사진 위이므로 CI 가이드 05 VARIATIONS 의 2(REVERSE / ON INK)를 씁니다 —
+     워드마크가 크림(#F6F1E7)이고 i 만 Blit Orange 입니다. 심볼은 기본형 그대로입니다. */
+  .stage .logo { display: flex; align-items: center; gap: 12px; }
+  .stage .logo .mark { width: 40px; height: 33px; flex: none; }
+  .stage .logo .wordmark {
+    font-family: "Fredoka"; font-weight: 600; font-size: 21px;
+    letter-spacing: -.015em; line-height: 1; color: #F6F1E7;
+  }
+  .stage .logo .wordmark .dot { color: #FD6D3E; }
   /* 랜딩 화면의 히어로 제목과 같은 크기·굵기입니다. 사진의 왼쪽 아래에 둡니다. */
   .stage .say { margin-top: auto; }
   .stage .say h1 {

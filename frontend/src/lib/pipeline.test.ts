@@ -16,6 +16,8 @@ import {
   openingHours,
   PERIOD_DELETE_KEYS,
   periodBody,
+  rejectBooking,
+  rejectUnavailable,
   removeUnavailable,
   requestPasswordReset,
   ROOM_DELETE_KEYS,
@@ -492,5 +494,38 @@ describe("ROOM_DELETE_KEYS — 합주실 삭제로 CASCADE 삭제되는 캐시�
     expect(client.getQueryState(backupRound)?.isInvalidated).toBe(true);
     expect(client.getQueryState(reservations)?.isInvalidated).toBe(true);
     expect(client.getQueryState(periods)?.isInvalidated).toBe(false);
+  });
+});
+
+// 다른 멤버의 예약·불가능 일정 반려는 같은 본문({ reason })을 각 대상의 /reject 주소로 POST 합니다.
+describe("rejectBooking · rejectUnavailable", () => {
+  function stubFetch() {
+    const spy = vi.fn(
+      async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(null, { status: 204 }),
+    );
+    vi.stubGlobal("fetch", spy);
+    return spy;
+  }
+
+  it("예약 반려는 사유를 실어 예약의 reject 주소로 POST 한다", async () => {
+    const spy = stubFetch();
+
+    await rejectBooking(11, "점검 날이에요");
+
+    const [url, init] = spy.mock.calls[0];
+    expect(url).toBe("/api/reservations/11/reject");
+    expect(init?.method).toBe("POST");
+    expect(sentBody(init)).toEqual({ reason: "점검 날이에요" });
+  });
+
+  it("불가능 일정 반려는 멤버 번호와 일정 번호로 만든 reject 주소로 같은 본문을 보낸다", async () => {
+    const spy = stubFetch();
+
+    await rejectUnavailable(3, 7, "리허설이에요");
+
+    const [url, init] = spy.mock.calls[0];
+    expect(url).toBe("/api/members/3/unavailable/7/reject");
+    expect(init?.method).toBe("POST");
+    expect(sentBody(init)).toEqual({ reason: "리허설이에요" });
   });
 });

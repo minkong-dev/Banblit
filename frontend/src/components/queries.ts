@@ -10,12 +10,15 @@ import type { LoadState } from "../lib/loading";
 import { teamColorKey } from "../lib/teamColors";
 import type { Account, Period, Room, Team } from "../lib/contract";
 
-/** 팀·합주실·기간 목록입니다. 여러 화면에서 같은 조회를 다시 작성하지 않습니다. queryKey 가 같아 cache 도 하나입니다. */
-export function useTeams() {
-  return useQuery({ queryKey: ["teams"], queryFn: () => getJSON<{ teams: Team[] }>("/teams") });
+/** 팀·합주실·기간 목록입니다. 여러 화면에서 같은 조회를 다시 작성하지 않습니다. queryKey 가 같아 cache 도 하나입니다.
+ *
+ *  enabled 를 false 로 주면 요청을 보내지 않고 data 가 undefined 로 남습니다. hook 은 조건문 안에서
+ *  부를 수 없으므로, 화면의 어느 구역에서는 쓰고 어느 구역에서는 쓰지 않는 목록이 이 값을 사용합니다. */
+export function useTeams(enabled = true) {
+  return useQuery({ queryKey: ["teams"], queryFn: () => getJSON<{ teams: Team[] }>("/teams"), enabled });
 }
-export function useRooms() {
-  return useQuery({ queryKey: ["rooms"], queryFn: () => getJSON<{ rooms: Room[] }>("/rooms") });
+export function useRooms(enabled = true) {
+  return useQuery({ queryKey: ["rooms"], queryFn: () => getJSON<{ rooms: Room[] }>("/rooms"), enabled });
 }
 /** 저장소 전체 설정입니다. 칸 하나의 크기(slotMinutes)와 합주 1회 길이(sessionMinutes)입니다.
  *  칸은 합주를 시작할 수 있는 간격이고, 합주 길이는 한 번 시작하면 이어지는 시간입니다.
@@ -39,8 +42,8 @@ export function useSlotMinutes(): number {
   return useSettings().slotMinutes;
 }
 
-export function usePeriods() {
-  return useQuery({ queryKey: ["periods"], queryFn: () => getJSON<{ periods: Period[] }>("/periods") });
+export function usePeriods(enabled = true) {
+  return useQuery({ queryKey: ["periods"], queryFn: () => getJSON<{ periods: Period[] }>("/periods"), enabled });
 }
 
 /** 현재 로그인한 계정과, 그 계정이 소속된 팀 번호들입니다.

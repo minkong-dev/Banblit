@@ -2,7 +2,7 @@
 
 import { getJSON, isSignedIn, sendFile } from "./api";
 import type {
-  Account, Ensemble, Me, Member, Notification, Period, Reservation, ScheduleRow, Unavailable,
+  Account, Ensemble, Me, Member, MemberUnavailable, Notification, Period, Reservation, ScheduleRow, Unavailable,
 } from "./contract";
 import {
   dayKey,
@@ -256,6 +256,13 @@ export async function loadUnavailable(memberId: number): Promise<Unavailable[]> 
   return body.times;
 }
 
+/** 전체 멤버의 불가능 일정입니다. "타 멤버 불가능 일정 조회"(unavailable_read) 권한이 없으면 서버가 403 으로 거절합니다.
+ *  멤버마다 따로 조회하지 않고 한 번에 받습니다 — 멤버 수만큼 요청이 늘지 않습니다. */
+export async function loadAllUnavailable(): Promise<MemberUnavailable[]> {
+  const body = await getJSON<{ times: MemberUnavailable[] }>("/unavailable");
+  return body.times;
+}
+
 /** 반복 주기입니다. "none"이면 해당 날 한 번뿐입니다. */
 /** 불가능 일정의 반복 설정입니다. weekdays 가 0 이면 반복하지 않고, 127 이면 매일입니다.
  *  끝나는 조건은 count(횟수)나 until(종료일) 중 하나이고, 둘 다 값을 주면 서버가 422 로 거절합니다. */
@@ -362,6 +369,23 @@ export async function loadMyBookings(): Promise<Reservation[]> {
 
 export async function cancelBooking(reservationId: number): Promise<void> {
   await getJSON(`/reservations/${reservationId}`, { method: "DELETE" });
+}
+
+/** path 의 반려 주소로 사유를 보냅니다. 예약과 불가능 일정이 같은 본문({ reason })을 씁니다. */
+async function sendReject(path: string, reason: string): Promise<void> {
+  await getJSON(path, { method: "POST", body: JSON.stringify({ reason }) });
+}
+
+/** 다른 멤버의 예약 한 건을 사유와 함께 취소합니다. 예약한 멤버에게 사유를 담은 알림이 갑니다.
+ *  reservation_manage 권한이 필요합니다. 다른 멤버의 예약은 cancelBooking 으로는 취소되지 않습니다. */
+export async function rejectBooking(reservationId: number, reason: string): Promise<void> {
+  await sendReject(`/reservations/${reservationId}/reject`, reason);
+}
+
+/** 다른 멤버의 불가능 일정 하나를 사유와 함께 삭제합니다. 등록한 멤버에게 사유를 담은 알림이 갑니다.
+ *  unavailable_manage 권한이 필요합니다. */
+export async function rejectUnavailable(memberId: number, timeId: number, reason: string): Promise<void> {
+  await sendReject(`/members/${memberId}/unavailable/${timeId}/reject`, reason);
 }
 
 /** 자신이 등록한 불가능 일정 하나를 삭제합니다. 다른 사용자의 일정은 서버가 없는 일정과 같게 거절합니다. */

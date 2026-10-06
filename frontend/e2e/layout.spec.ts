@@ -113,27 +113,23 @@ test("좁은 창의 달력 칸 높이가 너비에 비례하고 달력 안쪽은
   }
 });
 
-// 좁은 창에서 탭은 한 줄로 두고 가로로 밉니다(사이드 메뉴 줄과 같은 방식). 줄어들지 않는 탭이 좁은 칸에 갇히면
-// 글자가 세로로 쪼개집니다. 오른쪽 칸은 본문 아래로 내려가고, 본문 카드는 본문 폭을 전부 씁니다.
-test("좁은 창의 설정 화면에서 탭이 한 줄이고 본문 카드가 폭을 전부 쓴다", async ({ page }) => {
+// 좁은 창에서 오른쪽 칸은 본문 아래로 내려가고, 본문 카드는 본문 폭을 전부 씁니다.
+// 관리자 메뉴는 2026-10-05 에 탭에서 구역별 주소로 바뀌어 이 화면에는 탭이 없습니다. 오른쪽 칸이 있는
+// 합주실 구역에서 잽니다. 본문 아래로 내려간 오른쪽 칸은 같은 1열에 놓이므로 두 폭이 같아야 합니다.
+test("좁은 창의 합주실 화면에서 본문 카드가 폭을 전부 쓰고 오른쪽 칸이 아래로 내려간다", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 800 });
-  await page.goto("/settings");
+  await page.goto("/rooms");
   await expect(page.locator(".rail")).toBeVisible();
   await expect(page.locator(".main .card").first()).toBeVisible();
   const m = await page.evaluate(() => {
-    const tabs = [...document.querySelectorAll(".tabs .tab")].map((tab) => tab.getBoundingClientRect());
     const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
     return {
-      tabTops: new Set(tabs.map((tab) => Math.round(tab.top))).size,
-      tabHeight: Math.max(...tabs.map((tab) => tab.height)),
-      mainWidth: rect(".main").width, tabsWidth: rect(".tabs").width,
+      mainWidth: rect(".main").width, railWidth: rect(".rail").width,
       mainBottom: rect(".main").bottom, railTop: rect(".rail").top,
       overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     };
   });
-  expect(m.tabTops, "탭이 한 줄").toBe(1);
-  expect(m.tabHeight, "탭 글자가 세로로 쪼개지지 않음").toBeLessThan(60);
-  expect(Math.abs(m.mainWidth - m.tabsWidth), "본문이 폭을 전부 씀").toBeLessThanOrEqual(2);
+  expect(Math.abs(m.mainWidth - m.railWidth), "본문이 폭을 전부 씀").toBeLessThanOrEqual(2);
   expect(m.railTop, "오른쪽 칸이 본문 아래").toBeGreaterThanOrEqual(m.mainBottom);
   expect(m.overflow, "화면 가로 잘림 없음").toBeLessThanOrEqual(1);
 });
@@ -314,11 +310,10 @@ test("기준 휴대폰 폭에서 랜딩 3단은 좌우로 넘기는 카드이고
   }
 });
 
-test("기준 휴대폰 폭에서 멤버 탭의 권한 카드와 멤버 목록이 잘리지 않는다", async ({ page }) => {
+test("기준 휴대폰 폭에서 멤버 화면의 권한 카드와 멤버 목록이 잘리지 않는다", async ({ page }) => {
   for (const size of PHONES) {
     await page.setViewportSize(size);
-    await page.goto("/settings");
-    await page.getByRole("tab", { name: "멤버" }).click();
+    await page.goto("/members");
     // 권한 목록이 도착한 뒤에 잽니다. 도착 전에는 "+ 새 권한" 카드만 있어 잘림이 드러나지 않습니다.
     await expect(page.locator(".tiles li:not(.add)").first()).toBeVisible();
     await page.waitForTimeout(300);
@@ -355,11 +350,10 @@ test("기준 휴대폰 폭에서 예약 달력의 날짜 칸 글씨와 막대가
 
 // 멤버 목록의 휴대폰 묶음 배치는 멤버 표에만 씁니다. 같은 .roster 를 쓰는 예약·블라인드 표는 열 구성이 달라
 // 표 모양을 유지하고 표 안에서만 가로로 스크롤합니다.
-test("기준 휴대폰 폭에서 설정의 예약·블라인드 표는 표 모양을 유지하고 화면을 밀지 않는다", async ({ page }) => {
+test("기준 휴대폰 폭에서 관리자 메뉴의 예약·블라인드 표는 표 모양을 유지하고 화면을 밀지 않는다", async ({ page }) => {
   await page.setViewportSize(PHONES[0]);
-  for (const tab of ["예약", "블라인드"]) {
-    await page.goto("/settings");
-    await page.getByRole("tab", { name: tab }).click();
+  for (const [tab, path] of [["예약", "/reservations"], ["블라인드", "/blinded"]]) {
+    await page.goto(path);
     await page.waitForLoadState("networkidle");
     const m = await page.evaluate(() => ({
       table: getComputedStyle(document.querySelector(".roster table")!).display,
@@ -372,8 +366,7 @@ test("기준 휴대폰 폭에서 설정의 예약·블라인드 표는 표 모�
 
 test("멤버 표는 휴대폰 묶음 배치에서도 표 구조를 화면 읽기에 전달한다", async ({ page }) => {
   await page.setViewportSize(PHONES[0]);
-  await page.goto("/settings");
-  await page.getByRole("tab", { name: "멤버" }).click();
+  await page.goto("/members");
   await expect(page.getByRole("table")).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "학과" })).toHaveCount(1);
   await expect(page.getByRole("cell", { name: "검사학과" }).first()).toBeVisible();
@@ -403,7 +396,7 @@ test("배정 결과 화면 오른쪽 칸의 시각 입력칸이 카드 안에 �
 });
 
 // /me 조회가 실패하면 me 가 null 이 되어 권한 판정이 전부 "권한 없음" 과 같아집니다. 안내가 없으면
-// 사용자는 관리자·설정 메뉴가 사라진 것을 권한이 회수된 것으로 읽습니다. 안내를 상단바 아래 한 곳에 두어
+// 사용자는 관리자 메뉴가 사라진 것을 권한이 회수된 것으로 읽습니다. 안내를 상단바 아래 한 곳에 두어
 // 모든 화면이 함께 씁니다(호출부 9곳을 각각 고치지 않습니다).
 test("계정 정보를 불러오지 못하면 안내가 표시되고, 다시 불러오기가 메뉴를 되살린다", async ({ page }) => {
   let failMe = true;
@@ -420,10 +413,10 @@ test("계정 정보를 불러오지 못하면 안내가 표시되고, 다시 불
   const notice = page.getByRole("alert", { name: "계정 조회 실패" });
   await expect(notice).toContainText("계정 정보를 불러오지 못했어요");
   await expect(notice).toContainText("계정 정보를 불러오지 못했습니다");
-  await expect(page.locator(".side").getByRole("link", { name: "설정" })).toHaveCount(0);
+  await expect(page.locator(".side").getByRole("link", { name: "합주실" })).toHaveCount(0);
 
   failMe = false;
   await notice.getByRole("button", { name: "다시 불러오기" }).click();
-  await expect(page.locator(".side").getByRole("link", { name: "설정" })).toBeVisible();
+  await expect(page.locator(".side").getByRole("link", { name: "합주실" })).toBeVisible();
   await expect(notice).toBeHidden();
 });
