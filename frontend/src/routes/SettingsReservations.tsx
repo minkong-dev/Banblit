@@ -1,12 +1,14 @@
-// 설정 화면의 예약 구역입니다. 모든 멤버의 다가오는 예약을 한 표에서 보고, 어느 예약이든 취소할 수 있습니다.
-// "타 멤버 예약 수정 및 취소"(reservation_manage) 권한자에게만 이 탭이 표시됩니다.
-// 서버도 같은 권한으로 다른 멤버의 예약 취소를 받으므로 권한 검증이 일관성 있게 작동합니다(reservation_service.py _get_own_reservation).
+// 관리자 메뉴의 예약 구역입니다. 모든 멤버의 다가오는 예약을 한 표에서 봅니다. 본인 예약은 바로 취소하고,
+// 다른 멤버의 예약은 반려 사유를 적어 취소합니다(그 멤버에게 사유가 알림으로 갑니다).
+// "타 멤버 예약 수정 및 취소"(reservation_manage) 권한자에게만 이 구역이 표시됩니다.
+// 서버도 같은 권한으로 반려를 받습니다(services/reservation/reservation_service.py 의 reject_reservation).
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Card, SectionHead } from "../components/Layout";
-import { useRooms } from "../components/queries";
+import { RejectDialog } from "../components/RejectDialog";
+import { useMe, useRooms } from "../components/queries";
 import { reason } from "../lib/api";
 import { askCancel } from "../lib/confirm";
 import {
@@ -15,6 +17,7 @@ import {
   dayWithWeekday,
   hhmm,
   loadReservationRows,
+  rejectBooking,
   upcomingBookings,
 } from "../lib/pipeline";
 import type { Booking } from "../lib/pipeline";
@@ -38,7 +41,10 @@ function bookingLabel(booking: Booking): string {
 
 export function ReservationCards() {
   const client = useQueryClient();
+  const { me } = useMe();
   const rooms = useRooms();
+  // 반려 사유 modal 을 연 예약입니다. null 이면 modal 이 닫혀 있습니다.
+  const [rejecting, setRejecting] = useState<Booking | null>(null);
   const roomIds = (rooms.data?.rooms ?? []).map((room) => room.id);
   // render 중에 현재 시각을 읽으면 render 마다 값이 달라집니다. 화면을 열 때 한 번만 읽어 고정합니다.
   const [openedAt] = useState(() => Date.now());
@@ -101,15 +107,25 @@ export function ReservationCards() {
                 <td>{whoLabel(booking)}</td>
                 <td className="fill" />
                 <td>
-                  <button
-                    className="btn"
-                    // 취소 중인 행만 비활성화합니다. 다른 행까지 비활성화하면 어느 예약이 삭제 진행 중인지 사용자가 알 수 없습니다.
-                    disabled={cancel.isPending && cancel.variables?.id === booking.id}
-                    aria-label={`${bookingLabel(booking)} 취소`}
-                    onClick={() => { if (askCancel(bookingLabel(booking))) cancel.mutate(booking); }}
-                  >
-                    취소
-                  </button>
+                  {booking.memberId === me?.id ? (
+                    <button
+                      className="btn"
+                      // 취소 중인 행만 비활성화합니다. 다른 행까지 비활성화하면 어느 예약이 삭제 진행 중인지 사용자가 알 수 없습니다.
+                      disabled={cancel.isPending && cancel.variables?.id === booking.id}
+                      aria-label={`${bookingLabel(booking)} 취소`}
+                      onClick={() => { if (askCancel(bookingLabel(booking))) cancel.mutate(booking); }}
+                    >
+                      취소
+                    </button>
+                  ) : (
+                    <button
+                      className="btn"
+                      aria-label={`${bookingLabel(booking)} 반려`}
+                      onClick={() => setRejecting(booking)}
+                    >
+                      반려
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}
@@ -119,6 +135,21 @@ export function ReservationCards() {
           <p className="empty">{stateText(state, "현재 예약이 없어요")}</p>
         ) : null}
       </div>
+
+      {rejecting === null ? null : (
+        <RejectDialog
+          target="reservation"
+          owner={rejecting.member}
+          subject={`${dayWithWeekday(rejecting.start.slice(0, 10))} ${hhmm(rejecting.start)}–${hhmm(rejecting.end)} · ${rejecting.room}`}
+          onReject={(text) => rejectBooking(rejecting.id, text)}
+          onDone={() => {
+            setRejecting(null);
+            void client.invalidateQueries({ queryKey: ["reservations"] });
+            say("예약을 반려했어요");
+          }}
+          onClose={() => setRejecting(null)}
+        />
+      )}
     </Card>
   );
 }

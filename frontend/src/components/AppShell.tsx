@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
+import { BrandLockup } from "./Brand";
 import { NotificationMenu } from "./NotificationMenu";
 import { CloseIcon, MoonIcon, SunIcon, WideMenuIcon } from "./icons";
 import { usePage, usePopoverRouteClose } from "./hooks";
@@ -9,7 +10,8 @@ import { useMe, useMyTeamCohorts } from "./queries";
 import { useToast } from "../lib/toast";
 import { LOADING_TEXT } from "../lib/loading";
 import { Avatar } from "./Avatar";
-import { can, canOpenSettings, roleLabel, teamNavLabel } from "../lib/account";
+import { can, roleLabel, teamNavLabel } from "../lib/account";
+import { ADMIN_MENU } from "../lib/adminMenu";
 import { cohortLabel } from "../lib/roster";
 import { logOut } from "../lib/pipeline";
 import type { Permission } from "../lib/contract";
@@ -22,18 +24,21 @@ const NAV = [
   { key: "notice", label: "공지사항", to: "/notices" },
   { key: "find-team", label: "팀 찾기", to: "/teams" },
   { key: "board", label: "팀 게시판", to: "/board" },
-  // 관리 권한이 있는 사람에게만 표시합니다. 자기 계정에 대한 설정은 프로필 화면에 있습니다.
-  { key: "settings", label: "설정", to: "/settings" },
+  // 자기 계정에 대한 설정은 프로필 화면에 있고, 관리 항목은 아래 관리자 메뉴에 구역별로 있습니다.
 ] as const; // as const 는 값을 리터럴 타입(string 이 아니라 "board" 같은 값 자체)으로 고정합니다.
 
-// 필요 권한을 가진 사람만 배정 결과를 확인할 수 있습니다.
+// 관리 권한을 요구하는 항목입니다. 배정 결과 뒤로는 lib/adminMenu.ts 의 목록이 그대로 이어집니다.
 const MANAGER_NAV = [
   { key: "assign", label: "배정 결과 확인", to: "/admin", needs: ["assign_read"] },
+  ...ADMIN_MENU,
 // satisfies 는 리터럴 타입을 유지한 채, 구조가 오른쪽에 적은 타입에 맞는지만 검사합니다.
 ] as const satisfies readonly { key: string; label: string; to: string; needs: readonly Permission[] }[];
 
 // 주소의 첫 구간 → 화면 CSS 가 격리되는 이름(body[data-page])입니다. 공지사항과 팀 게시판은 board.css 를 함께 씁니다.
+// 관리자 메뉴의 구역은 주소가 각각 다르지만 전부 settings.css 를 씁니다. 목록은 lib/adminMenu.ts 에서 가져와,
+// 구역을 추가할 때 이 표를 빠뜨리지 않게 합니다.
 const PAGE_BY_PATH: Record<string, string> = {
+  ...Object.fromEntries(ADMIN_MENU.map((item) => [item.to.slice(1), "settings"])),
   scheduler: "scheduler",
   admin: "admin",
   settings: "settings",
@@ -128,7 +133,7 @@ export function AppShell() {
   // 가진 권한으로 필터링합니다. 계정을 아직 받지 못했으면 아무것도 표시되지 않습니다.
   const managerNav = MANAGER_NAV.filter((item) => item.needs.some((need) => can(me, need)));
   // 팀 메뉴 이름만 권한에 따라 "팀 관리"·"내 팀"으로 변경됩니다. 주소와 key 는 같습니다.
-  const nav = NAV.filter((item) => item.key !== "settings" || canOpenSettings(me)).map((item) =>
+  const nav = NAV.map((item) =>
     item.key === "find-team" ? { ...item, label: teamNavLabel(me) } : item,
   );
 
@@ -140,7 +145,7 @@ export function AppShell() {
           <button className="menubtn" aria-label="메뉴 열기" popoverTarget={MENU_ID}>
             <WideMenuIcon />
           </button>
-          <div className="logo"><b>Banblit</b><span>IN SIX STRINGS</span></div>
+          <div className="logo"><BrandLockup /></div>
           <ThemeButton />
           <NotificationMenu />
           <ProfileMenu />

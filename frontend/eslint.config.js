@@ -6,7 +6,9 @@ import ts from "typescript-eslint";
 
 // eslint . 로 돈다. 검사 대상은 화면 소스뿐이다 — dist 와 꾸러미는 우리가 쓴 것이 아니다.
 export default [
-  { ignores: ["dist/**", "node_modules/**", "prototypes/**"] },
+  // manual/ 은 매뉴얼 캡쳐 도구입니다. e2e/ 와 같은 이유로 제외합니다 — 타입 인식 린트가
+  // tsconfig.json 의 include 에 없는 파일을 거부합니다.
+  { ignores: ["dist/**", "node_modules/**", "prototypes/**", "manual/**"] },
   js.configs.recommended,
   ...ts.configs.recommendedTypeChecked,
   {

@@ -117,7 +117,7 @@ export type MyTeam = {
 /** /me 응답 전체입니다. 현재 로그인한 계정과 그 계정이 배정된 자리 목록입니다. */
 export type Me = { account: Account; teams: MyTeam[] };
 
-/** 할 수 있는 일 21가지입니다. 서버 쪽 정본입니다: backend/src/backend/db/models.py의 Permission */
+/** 할 수 있는 일 23가지입니다. 서버 쪽 정본입니다: backend/src/backend/db/models.py의 Permission */
 export type Permission =
   | "room_create"
   | "room_edit"
@@ -134,6 +134,8 @@ export type Permission =
   | "notice_write"
   | "board_moderate"
   | "reservation_manage"
+  | "unavailable_read"
+  | "unavailable_manage"
   | "assign_run"
   | "assign_read"
   | "proposal_confirm"
@@ -255,6 +257,10 @@ export type Unavailable = {
   name: string | null;
 };
 
+/** 전체 멤버의 불가능 일정 1건입니다. 누구의 일정인지 표시해야 하므로 이름이 함께 옵니다.
+ *  서버 쪽 짝은 backend/src/backend/api/schemas.py 의 MemberUnavailableOut 입니다. */
+export type MemberUnavailable = Unavailable & { member: string };
+
 export type Reservation = {
   id: number;
   room_id: number;
@@ -270,11 +276,23 @@ export type Reservation = {
   end: string;
 };
 
+/** 반려할 수 있는 대상입니다. 서버 쪽 정본은 backend/src/backend/contract.py 의 REJECT_TARGETS 입니다. */
+export type RejectTarget = "reservation" | "unavailable";
+
+/** 반려 사유의 최대 글자 수입니다. 서버 쪽 정본은 backend/src/backend/contract.py 의 REJECT_REASON_MAX_LENGTH 입니다. */
+export const REJECT_REASON_MAX_LENGTH = 300;
+
 /** 화면 알림 하나입니다. 완성된 문구는 포함하지 않습니다. kind 로 화면이 문장을 작성합니다
- *  (lib/notifications.ts). read가 거짓이면 아직 읽지 않은 것입니다. */
+ *  (lib/notifications.ts). 목록에 있는 알림은 전부 읽지 않은 알림입니다. */
 export type Notification = {
   id: number;
-  kind: "assignment_updated" | "reservation_cancelled";
+  kind: "assignment_updated" | "reservation_cancelled" | "rejected";
   /** "2026-09-14T18:00:00" */
   created_at: string;
+  /** 아래 3개는 kind 가 rejected 일 때만 값이 있고 그 밖에는 null 입니다. 서버 쪽 짝은
+   *  backend/src/backend/api/schemas.py 의 NotificationOut 입니다. */
+  target: RejectTarget | null;
+  /** 반려된 예약·불가능 일정의 시작 시각입니다. "2026-09-14T18:00:00" */
+  target_starts_at: string | null;
+  reason: string | null;
 };

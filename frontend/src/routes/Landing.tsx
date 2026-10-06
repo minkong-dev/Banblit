@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { Link } from "react-router-dom";
 
+import { BrandLockup } from "../components/Brand";
 import { ArrowIcon, CloseIcon, WideMenuIcon } from "../components/icons";
 import { usePage } from "../components/hooks";
 import "../styles/landing.css";
@@ -90,7 +91,7 @@ export function Landing() {
         <button className="menu" aria-label="메뉴 열기" popoverTarget={MENU_ID}>
           <WideMenuIcon />
         </button>
-        <span className="brand">BANBLIT</span>
+        <span className="brand"><BrandLockup /></span>
         <Link className="login" to="/login">LOGIN</Link>
       </header>
 
@@ -195,7 +196,7 @@ export function Landing() {
 
       <section className="sec end">
         <div className="wrap">
-          <h2 className="rise">앞으로의 공연 시간표는<br /><span className="mark">BANBLIT</span>으로.</h2>
+          <h2 className="rise">밴드를 더 밴드답게,<br /><span className="mark">BANBLIT</span>으로.</h2>
           <p className="rise">복잡한 계산은 여기 두고, 더 좋은 무대를 만들어주세요.</p>
           <Link className="go rise" to="/login">시작하기<ArrowIcon /></Link>
         </div>

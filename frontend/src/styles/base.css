@@ -2,6 +2,18 @@
    화면 CSS 는 body[data-page="..."] 선택자 안에 격리되어 서로 영향을 주지 않습니다.
    스케줄러와 배정 화면은 같은 이름의 클래스 30개 이상을 서로 다른 규칙으로 사용합니다. */
 
+/* 워드마크 전용 글꼴입니다. CI 가이드(public/CI/BANBLIT_CI_GUIDE.pdf) 04 TYPOGRAPHY 가 Fredoka 를
+   "워드마크 전용 · 본문 사용 금지" 로 규정합니다. 그래서 이 글꼴은 .wordmark 1곳에서만 사용합니다.
+   파일은 latin 부분집합 1개(SemiBold)뿐입니다 — 워드마크에 쓰는 글자가 banblit 7자뿐입니다.
+   font-display: block 은 글꼴을 받기 전에 다른 글꼴로 로고를 먼저 그리지 않게 합니다. */
+@font-face {
+  font-family: "Fredoka";
+  src: url("/fonts/Fredoka-600-latin.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: block;
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 html { overflow: auto; }
 /* 한글은 낱말 단위로 줄바꿈합니다. 기본값은 글자마다 끊어 "집중합 / 주 기간" 처럼 낱말 중간에서 꺾입니다.

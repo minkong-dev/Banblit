@@ -58,7 +58,7 @@ export function NotificationMenu() {
             {/* 비어 있는 span 의 aria-label 은 스크린 리더가 읽지 않습니다.
                 role="img" 를 붙여야 색깔로만 표시하는 상태를 음성으로도 전달합니다. */}
             <span className="new" role="img" aria-label="안 읽음" />
-            <b>{notificationText(item.kind)}</b>
+            <b>{notificationText(item)}</b>
             <small>{stampLabel(item.created_at)}</small>
           </li>
         ))}

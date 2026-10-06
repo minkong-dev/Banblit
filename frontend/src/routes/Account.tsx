@@ -9,6 +9,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 
+import { BrandLockup } from "../components/Brand";
 import { Field, failures, fieldText } from "../components/Field";
 import type { Errors } from "../components/Field";
 import { CheckMark } from "../components/CheckMark";
@@ -56,7 +57,7 @@ export function AccountLayout() {
     <>
       <div className="split">
         <section className="stage">
-          <span className="mark">BANBLIT</span>
+          <span className="logo"><BrandLockup /></span>
           <div className="say">
             <h1>합주시간 배정,<br />어렵지 않을 때도 됐으니까.<br />지금, <em>BANBLIT.</em></h1>
             <p>IN SIX STRINGS, SINCE 1981.</p>

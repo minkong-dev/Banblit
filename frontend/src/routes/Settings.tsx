@@ -1,13 +1,19 @@
-// 설정 화면의 진입점입니다. 탭을 고르고, 고른 탭의 구역을 그리고, 오른쪽 계산 패널을 표시합니다.
-// 합주실·기간·멤버·예약·블라인드·계정 구역은 각각 Settings*.tsx 가 담당합니다.
+// 관리자 메뉴의 진입점입니다. 주소가 고른 구역 1개를 그리고, 합주실·기간 구역에는
+// 오른쪽 계산 패널을 함께 표시합니다.
+// 합주실·기간·멤버·예약·블라인드·불가능 일정 구역은 각각 Settings*.tsx 가 담당하고,
+// 구역 목록과 주소는 lib/adminMenu.ts 가 정본입니다.
+// 자기 계정에 대한 설정(이름·사진·비밀번호·테마·탈퇴)은 2026-09-23 에 프로필 화면(/profile)으로 옮겼습니다.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 
-import { Card, Panel, SectionHead, Tabs } from "../components/Layout";
+import { Card, Panel, SectionHead } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
 import { useMe, usePeriods, useRooms, useSettings, useSlotMinutes, useTeams } from "../components/queries";
 import { can } from "../lib/account";
+import { ADMIN_MENU } from "../lib/adminMenu";
+import type { AdminSection } from "../lib/adminMenu";
 import { reason } from "../lib/api";
 import type { Period, Room, Team } from "../lib/contract";
 import { LOADING_TEXT, loadState } from "../lib/loading";
@@ -27,40 +33,54 @@ import { MemberCards } from "./SettingsMembers";
 import { PeriodCard } from "./SettingsPeriods";
 import { ReservationCards } from "./SettingsReservations";
 import { RoomCard } from "./SettingsRooms";
+import { UnavailableCards } from "./SettingsUnavailable";
 import "../styles/settings.css";
 
 
-type Tab = "rooms" | "periods" | "members" | "reservations" | "blinded";
+/** /settings 주소입니다. 관리자 메뉴를 구역별 주소로 분리하기 전의 주소라, 저장해 둔 링크가 끊기지 않게
+ *  가진 권한으로 열 수 있는 첫 구역으로 보냅니다. 권한 없이 구역 주소로 바로 들어온 경우도 이곳으로 옵니다. */
+export function SettingsIndex() {
+  const { me } = useMe();
+  // 계정을 아직 받지 못했으면 판정하지 않습니다. 조회가 실패한 경우의 안내는 AppShell 이 표시합니다.
+  if (me === null) return null;
 
-// 탭마다 필요한 권한 항목이 다릅니다. 가진 권한의 탭만 표시되므로, 관리 권한이 하나도 없는
-// 사람에게는 표시할 탭이 없습니다. 자기 계정에 대한 설정(이름·사진·비밀번호·테마·탈퇴)은
-// 2026-09-23 에 프로필 화면(/profile)으로 옮겼습니다.
-const TABS = [
-  { key: "rooms" as const, text: "합주실", needs: ["room_create", "room_edit", "room_delete"] as const },
-  { key: "periods" as const, text: "기간", needs: ["period_create", "period_edit", "period_delete"] as const },
-  { key: "members" as const, text: "멤버", needs: ["permission_manage", "permission_grant"] as const },
-  { key: "reservations" as const, text: "예약", needs: ["reservation_manage"] as const },
-  { key: "blinded" as const, text: "블라인드", needs: ["board_moderate"] as const },
-];
+  // 권한 항목 하나만 있어도 그 구역을 엽니다. 생성만 할 수 있고 수정할 수 없는 사람도 목록은 봐야 하기 때문입니다.
+  const first = ADMIN_MENU.find((item) => item.needs.some((need) => can(me, need)));
+  if (first !== undefined) return <Navigate to={first.to} replace />;
 
-export function Settings() {
-  const [tab, setTab] = useState<Tab>("rooms");
+  // 관리 권한이 하나도 없으면 표시할 구역이 없습니다. 사이드바에도 관리자 메뉴가 없지만,
+  // 주소를 직접 입력해 들어올 수 있어 어디로 가야 하는지 안내합니다.
+  return (
+    <div className="main">
+      <Card>
+        <div className="empty">
+          설정할 수 있는 항목이 없어요. 내 계정은 프로필 화면에서 수정해요.
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/** 관리자 메뉴 1개입니다. 어느 구역을 그릴지는 주소가 정합니다(App.tsx). */
+export function SettingsPage({ section }: { section: AdminSection }) {
   const client = useQueryClient();
   const { me } = useMe();
 
-  // 권한 항목 하나만 있어도 그 탭을 엽니다. 생성만 할 수 있고 수정할 수 없는 사람도 목록은 봐야 하기 때문입니다.
-  const tabs = TABS.filter(
-    (item) => item.needs === null || item.needs.some((need) => can(me, need)),
-  );
-  // 권한을 잃은 채로 그 탭에 머물러 있지 않게, 없는 탭이면 남은 탭 중 첫 탭을 표시합니다.
-  // 관리 권한이 하나도 없으면 표시할 탭이 없습니다(shown 이 null).
-  const shown: Tab | null = tabs.some((item) => item.key === tab) ? tab : tabs[0]?.key ?? null;
+  const needs = ADMIN_MENU.find((item) => item.key === section)?.needs ?? [];
+  // me 가 null 인 동안은 판정하지 않습니다. 아직 받지 못한 것을 "권한 없음" 으로 읽으면
+  // 화면을 열 때마다 다른 화면으로 이동됩니다.
+  const blocked = me !== null && !needs.some((need) => can(me, need));
 
-  const rooms = useRooms();
-  const periods = usePeriods();
+  const shown = section;
+  // 합주실·기간 구역만 이 3개를 사용합니다. 구역마다 주소가 따로 있어 구역을 옮기면 이 화면이
+  // 다시 마운트되는데, 가드가 없으면 멤버·예약·블라인드·불가능 일정 구역을 열 때마다
+  // 쓰지 않는 목록 3건을 요청합니다. 권한이 없어 바로 되돌려보내는 경우에도 마찬가지입니다.
+  const needsSetup = !blocked && (shown === "rooms" || shown === "periods");
+  const rooms = useRooms(needsSetup);
+  const periods = usePeriods(needsSetup);
   // 팀 목록은 오른쪽 계산에만 사용합니다. queryKey 가 다른 화면에서 사용하는 것과 같아서,
   // 이미 받은 목록이 있으면 다시 조회하지 않습니다.
-  const teams = useTeams();
+  const teams = useTeams(needsSetup);
 
   const roomList = rooms.data?.rooms ?? [];
   const periodList = periods.data?.periods ?? [];
@@ -78,24 +98,12 @@ export function Settings() {
     };
   }
 
-  // 관리 권한이 하나도 없으면 이 화면에 표시할 것이 없습니다. 사이드바에도 설정 메뉴가 없지만,
-  // 주소를 직접 입력해 들어올 수 있어 어디로 가야 하는지 안내합니다.
-  if (shown === null) {
-    return (
-      <div className="main">
-        <Card>
-          <div className="empty">
-            설정할 수 있는 항목이 없어요. 내 계정은 프로필 화면에서 수정해요.
-          </div>
-        </Card>
-      </div>
-    );
-  }
+  // 권한 없이 주소로 바로 들어온 경우입니다. 빈 화면을 두지 않고, 열 수 있는 첫 구역이나
+  // 안내 문구로 보냅니다(SettingsIndex).
+  if (blocked) return <Navigate to="/settings" replace />;
 
   return (
     <>
-      <Tabs label="설정" items={tabs} selected={shown} onSelect={setTab} />
-
       <div className="main">
         {shown === "rooms" ? (
           <>
@@ -128,12 +136,15 @@ export function Settings() {
           <MemberCards />
         ) : shown === "reservations" ? (
           <ReservationCards />
-        ) : (
+        ) : shown === "blinded" ? (
           <BlindedCards />
+        ) : (
+          <UnavailableCards />
         )}
       </div>
 
-      {shown === "members" || shown === "reservations" || shown === "blinded" ? null : (
+      {/* 오른쪽 계산 패널은 합주실·기간 구역에만 붙습니다. 그 둘만 설정값이 배정에 미치는 영향을 미리 봐야 합니다. */}
+      {shown !== "rooms" && shown !== "periods" ? null : (
         <div className="rail">
           <Readout
             rooms={roomList}
@@ -236,7 +247,8 @@ function Readout(props: {
   periods: Period[];
   teams: Team[];
   teamsState: LoadState;
-  tab: Tab;
+  /** 합주실·기간 중 어느 구역에서 열렸는지입니다. 계산에 쓰는 값이 구역마다 다릅니다. */
+  tab: "rooms" | "periods";
 }) {
   const { rooms, periods, teams, teamsState, tab } = props;
   const slotMinutes = useSlotMinutes();

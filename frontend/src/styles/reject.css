@@ -1,0 +1,7 @@
+/* 반려 사유 modal(components/RejectDialog.tsx)입니다. 입력칸의 테두리·초점은 shell.css 의 .fields 를 그대로 씁니다.
+   modal 은 화면마다 다른 body[data-page] 아래에서 열리므로 페이지 선택자 없이 dialog 안으로만 한정합니다. */
+dialog .rejectsubject { margin: 0 0 14px; font-size: 14px; font-weight: 600; color: var(--t1); }
+dialog .fields.reject { flex-direction: column; align-items: stretch; gap: 6px; }
+dialog .fields.reject label { width: 100%; }
+dialog .fields.reject textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
+dialog .fields.reject .count { align-self: flex-end; font-size: 12px; color: var(--t3); font-variant-numeric: tabular-nums; }
