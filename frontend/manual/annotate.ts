@@ -40,7 +40,10 @@ export async function freeze(page: Page): Promise<void> {
       transition-duration: 0s !important;
       transition-delay: 0s !important;
       caret-color: transparent !important;
-    }`,
+    }
+    /* 비어 있는 toast(로그인 뒤 화면은 .toast, 계정 화면은 .ok)는 화면 아래 밖에 숨어 있다가,
+       fullPage 캡쳐가 창을 늘리면 검은 알약으로 찍힙니다. */
+    .toast:not(.on), body[data-page="account"] .ok:not(.on) { display: none !important; }`,
   });
 }
 
