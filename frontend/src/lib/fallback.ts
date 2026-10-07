@@ -24,7 +24,7 @@ export function crashDetail(error: unknown): string {
     }
   }
   // typeof 마다 분기합니다. unknown 에 String 을 그대로 적용하면 함수와 객체가
-  // "[object Object]" 로 변환되는 것을 검사 도구가 막습니다.
+  // "[object Object]" 로 변환되는 것을 lint 가 막습니다.
   switch (typeof error) {
     case "string":
       return error;
