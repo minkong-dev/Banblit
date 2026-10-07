@@ -2,7 +2,7 @@
 
 집중 합주기간을 만들거나 넓히면 그 안의 예약을 취소하고 예약자에게 이 종류의 알림을 남깁니다
 (services/reservation_service.py 의 cancel_reservations_in_focus). 허용 종류는 db/models.py 의
-NotificationKind 가 정본이고, 이 CHECK 는 그 목록과 같아야 합니다.
+NotificationKind 에 작성되어 있는 내용을 기준으로 하고, 이 CHECK 는 그 목록과 같아야 합니다.
 
 Revision ID: 5c3e8d1a7f20
 Revises: 11ab2762cdc9

@@ -11,7 +11,7 @@ import 하는 migration 까지 OR-Tools 를 로드하게 됩니다.
 # 점유 단위로 선택할 수 있는 값입니다. 전부 60 의 약수라 정시가 언제나 격자 위에 있습니다.
 # 6 은 60 의 약수지만 제외합니다 — 합주실을 6분 단위로 예약하는 경우가 없습니다.
 #
-# 이 목록이 정본입니다. API(api/schemas.py), DB CHECK 제약(db/models.py), 화면
+# 이 목록에 작성되어 있는 내용을 기준으로 합니다. API(api/schemas.py), DB CHECK 제약(db/models.py), 화면
 # (frontend/src/lib/settings.ts 의 SLOT_MINUTE_CHOICES)이 같은 값을 사용해야 합니다.
 SLOT_MINUTE_CHOICES: tuple[int, ...] = (5, 10, 12, 15, 20, 30, 60)
 

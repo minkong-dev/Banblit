@@ -58,8 +58,8 @@ describe("can", () => {
 
 describe("PERMISSION_ITEMS", () => {
   it("서버가 고정한 항목 23개를 그 순서대로 든다", () => {
-    // 생성·수정·삭제·부여를 따로 둡니다. 서버 쪽 정본은 backend/db/models.py 의
-    // Permission 이고, 이 목록이 정본과 개수가 어긋나면 화면에서 켤 수 없는 항목이 생깁니다.
+    // 생성·수정·삭제·부여를 따로 둡니다. 서버 쪽은 backend/db/models.py 의
+    // Permission 에 작성되어 있는 내용을 기준으로 하고, 이 목록이 서버 목록과 개수가 어긋나면 화면에서 켤 수 없는 항목이 생깁니다.
     expect(PERMISSION_ITEMS).toHaveLength(23);
     expect(PERMISSION_ITEMS.map((item) => item.key)).toContain("period_delete");
     expect(PERMISSION_ITEMS.map((item) => item.key)).toContain("room_delete");

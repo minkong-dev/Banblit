@@ -73,7 +73,7 @@ ECC 밖의 스킬은 다섯 가지를 씁니다 — 문서는 `cluedoc`(`Keunwoo
 
 ECC의 언어별 규칙 문서는 `.claude/rules/{common,python,react,typescript}/` 에 있습니다.
 스킬과 에이전트가 이 경로를 참조합니다. 주석·가독성 규칙이 `refactoring` 스킬과 어긋나면
-`refactoring` 이 정본입니다.
+`refactoring` 에 작성되어 있는 내용을 기준으로 합니다.
 
 `ui-ux-pro-max` 는 **자료를 찾아보는 용도로만 씁니다.** 색 짝·폰트 짝·차트 종류를 고를 때
 엽니다. 화면을 실제로 만드는 것은 6장이 정한 `example-skills:frontend-design` 입니다.
@@ -182,7 +182,7 @@ PDF·PPT·Word·Excel은 `document-skills` 스킬을 포맷에 맞게 씁니다.
 - 타입 표기를 반드시 붙입니다. 함수의 매개변수와 반환값 모두.
 - 이름 규칙은 언어의 표준을 따릅니다 — 파이썬은 함수·변수 `snake_case`, 클래스 `PascalCase`,
   화면 코드(TypeScript)는 변수·함수 `camelCase`, 컴포넌트·타입 `PascalCase`.
-- 그 밖의 가독성·주석 규칙은 `refactoring` 스킬 7·8절이 정본입니다.
+- 그 밖의 가독성·주석 규칙은 `refactoring` 스킬 7·8절 에 작성되어 있는 내용을 기준으로 합니다.
 
 ---
 ## 6. 이 프로젝트 고유 제약
@@ -190,13 +190,13 @@ PDF·PPT·Word·Excel은 `document-skills` 스킬을 포맷에 맞게 씁니다.
 - **화면은 직접 쓰지 않습니다.** 외형·배치·상호작용·디자인 체계는 `example-skills:frontend-design`
   같은 검증된 디자인 스킬로만 만듭니다. 로직·상태·서버 통신·테스트는 직접 써도 됩니다.
 - **모든 실행은 컨테이너 안입니다.** 호스트에 파이썬 환경이 없습니다. 테스트도 마이그레이션도
-  `docker compose run --rm dev ...` 로 돕니다. 명령은 `COMMAND.md` 가 정본입니다.
+  `docker compose run --rm dev ...` 로 돕니다. 명령은 `COMMAND.md` 에 작성되어 있는 내용을 기준으로 합니다.
 - **DB는 호스트 포트를 열지 않습니다.** 이 PC에 다른 프로덕트의 PostgreSQL이 떠 있어
   충돌을 피하려고 컨테이너 내부망(`db:5432`)만 씁니다. 확인은 `docker compose exec db` 로 합니다.
 - **시각에 시간대를 붙이지 않습니다.** 배정 엔진이 시간대 없는 값만 받습니다. 여름시간제까지
   같이 설계하기 전에는 시간대 지원을 열지 않습니다.
 - **점유 단위는 한 시간 칸 고정입니다.** 칸당 선착순 하나. 배정도 예약도 같은 구조를 씁니다.
-  서버 쪽 정본은 `backend/src/backend/scheduling/slots.py` 의 `SLOT_MINUTES` 입니다.
+  서버 쪽은 `backend/src/backend/scheduling/slots.py` 의 `SLOT_MINUTES` 에 작성되어 있는 내용을 기준으로 합니다.
 - **사람은 이름이 아니라 번호로 구분합니다.** 동명이인이 있습니다.
 
 ---

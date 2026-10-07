@@ -192,7 +192,7 @@ flush 한 뒤 배정합니다. `test_bulk_slot_members_can_swap_two_people` 이 
 | 항목 | 내용 |
 |---|---|
 | 수정 대상 | `backend/src/backend/db/models.py`, migration 1건 |
-| 상태 | 완료 (2026-09-19). migration `c4a8e70b52d9`. 허용 값 정본을 `scheduling/slots.py` 의 `SLOT_MINUTE_CHOICES` 로 두고 DB CHECK 를 거기서 생성합니다 |
+| 상태 | 완료 (2026-09-19). migration `c4a8e70b52d9`. 허용 값의 기준을 `scheduling/slots.py` 의 `SLOT_MINUTE_CHOICES` 로 두고 DB CHECK 를 거기서 생성합니다 |
 
 
 ## 4단계 — 화면 lint·표기

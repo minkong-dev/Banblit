@@ -3,7 +3,7 @@
 //
 // 한 세트만 두는 이유: 화면마다 같은 형태를 따로 적어 두면, 서버가 항목 하나를
 // 변경할 때 어느 화면이 어긋나는지 알 수 없는 상태로 오류 메시지 없이 동작이 깨집니다.
-// 서버 쪽 정본입니다: backend/src/backend/api/schemas.py
+// 서버 쪽은 backend/src/backend/api/schemas.py 에 작성되어 있는 내용을 기준으로 합니다
 
 export type Room = {
   id: number;
@@ -70,7 +70,7 @@ export type Backup = {
   slot_count: number;
 };
 
-/** 팀이 가질 수 있는 포지션 종류입니다. 서버 쪽 정본입니다: backend/src/backend/db/models.py의 Instrument */
+/** 팀이 가질 수 있는 포지션 종류입니다. 서버 쪽은 backend/src/backend/db/models.py 의 Instrument 에 작성되어 있는 내용을 기준으로 합니다 */
 export type Instrument = "보컬" | "일렉" | "통기타" | "베이스" | "신디" | "드럼";
 
 export const INSTRUMENTS: Instrument[] = [
@@ -86,7 +86,7 @@ export const INSTRUMENTS: Instrument[] = [
 export type Team = {
   id: number;
   name: string;
-  /** 팀 색 이름입니다. 서버 쪽 정본은 backend/src/backend/db/models.py 의 TEAM_COLORS 입니다. */
+  /** 팀 색 이름입니다. 서버 쪽은 backend/src/backend/db/models.py 의 TEAM_COLORS 에 작성되어 있는 내용을 기준으로 합니다. */
   color: string;
   slot_count: number;
   filled_count: number;
@@ -119,7 +119,7 @@ export type MyTeam = {
 /** /me 응답 전체입니다. 현재 로그인한 계정과 그 계정이 배정된 자리 목록입니다. */
 export type Me = { account: Account; teams: MyTeam[] };
 
-/** 할 수 있는 일 23가지입니다. 서버 쪽 정본입니다: backend/src/backend/db/models.py의 Permission */
+/** 할 수 있는 일 23가지입니다. 서버 쪽은 backend/src/backend/db/models.py 의 Permission 에 작성되어 있는 내용을 기준으로 합니다 */
 export type Permission =
   | "room_create"
   | "room_edit"
@@ -176,7 +176,7 @@ export type PermissionSet = {
 };
 
 /** 멤버 목록의 한 줄입니다. 사람을 구분하는 4개 값과 가진 permission set 이름이 함께 옵니다.
- *  서버 쪽 정본입니다: backend/src/backend/api/schemas.py의 MemberRowOut */
+ *  서버 쪽은 backend/src/backend/api/schemas.py 의 MemberRowOut 에 작성되어 있는 내용을 기준으로 합니다 */
 export type MemberRow = {
   id: number;
   name: string;
@@ -278,10 +278,10 @@ export type Reservation = {
   end: string;
 };
 
-/** 반려할 수 있는 대상입니다. 서버 쪽 정본은 backend/src/backend/contract.py 의 REJECT_TARGETS 입니다. */
+/** 반려할 수 있는 대상입니다. 서버 쪽은 backend/src/backend/contract.py 의 REJECT_TARGETS 에 작성되어 있는 내용을 기준으로 합니다. */
 export type RejectTarget = "reservation" | "unavailable";
 
-/** 반려 사유의 최대 글자 수입니다. 서버 쪽 정본은 backend/src/backend/contract.py 의 REJECT_REASON_MAX_LENGTH 입니다. */
+/** 반려 사유의 최대 글자 수입니다. 서버 쪽은 backend/src/backend/contract.py 의 REJECT_REASON_MAX_LENGTH 에 작성되어 있는 내용을 기준으로 합니다. */
 export const REJECT_REASON_MAX_LENGTH = 300;
 
 /** 화면 알림 하나입니다. 완성된 문구는 포함하지 않습니다. kind 로 화면이 문장을 작성합니다

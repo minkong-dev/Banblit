@@ -57,7 +57,7 @@ flowchart TD
 ## 실행
 
 모든 실행은 container(Docker 가 격리해 실행하는 환경) 안에서 이루어집니다. 호스트에는 Docker만 필요합니다.
-개별 `docker compose` 명령의 의미와 주의점은 `COMMAND.md`가 정본입니다.
+개별 `docker compose` 명령의 의미와 주의점은 `COMMAND.md` 에 작성되어 있는 내용을 기준으로 합니다.
 
 ### 개발 (Windows)
 

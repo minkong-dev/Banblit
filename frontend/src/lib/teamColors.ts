@@ -8,7 +8,7 @@ import {
   red, redDark, sky, skyDark, teal, tealDark, tomato, tomatoDark, yellow, yellowDark,
 } from "@radix-ui/colors";
 
-/** 팀 색 20가지입니다. 서버 쪽 정본은 backend/src/backend/db/models.py 의 TEAM_COLORS 이고, 순서가 곧 자동 배정 순서입니다. */
+/** 팀 색 20가지입니다. 서버 쪽은 backend/src/backend/db/models.py 의 TEAM_COLORS 에 작성되어 있는 내용을 기준으로 하고, 순서가 곧 자동 배정 순서입니다. */
 export const TEAM_COLORS = [
   "tomato", "red", "crimson", "pink", "plum", "purple", "iris", "indigo", "blue", "sky",
   "teal", "jade", "green", "mint", "lime", "yellow", "amber", "orange", "gold", "brown",

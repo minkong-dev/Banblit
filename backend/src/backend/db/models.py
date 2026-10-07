@@ -143,7 +143,7 @@ class Settings(Base):
 
     __table_args__ = (
         CheckConstraint("id = 1"),
-        # 허용 값은 contract.py 의 SLOT_MINUTE_CHOICES 가 정본입니다. 목록에서 생성해,
+        # 허용 값은 contract.py 의 SLOT_MINUTE_CHOICES 에 작성되어 있는 내용을 기준으로 합니다. 목록에서 생성해,
         # 값을 추가할 때 이 줄을 함께 수정하지 않아도 되게 합니다.
         CheckConstraint(_slot_minutes_sql()),
         # 합주 길이는 칸의 배수이고 칸보다 짧을 수 없습니다. 두 열을 함께 보는 조건이라
