@@ -152,10 +152,11 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
     display: grid; grid-template-columns: minmax(0, 1fr) clamp(260px, 22%, 360px);
     grid-template-rows: auto minmax(0, 1fr); column-gap: 48px;
   }
-  /* 본문 폭 상한(2026-10-07 사용자 결정). 본문(.main)과 탭 줄은 968px 안에서 가운데입니다 — 오른쪽 칸(.rail)이 있으면
-     사이드바와 오른쪽 칸을 뺀 남는 공간의 가운데, 없으면 사이드바를 뺀 공간의 가운데. 오른쪽 칸은 창 오른쪽에 그대로 있습니다.
-     입력칸·표가 창 폭을 따라 한없이 넓어지지 않습니다(Notion 과 같은 방식). 달력 화면(대시보드·배정 결과)은 요소가 많아 전체 폭을 씁니다. */
-  &:not([data-page="scheduler"]):not([data-page="admin"]) :is(.main, .tabs) { width: 100%; max-width: 968px; margin-inline: auto; }
+  /* 본문 폭 상한(2026-10-07 사용자 결정). 넓은 창에서 입력칸·표가 한없이 넓어지지 않도록 본문을 가운데 프레임 안에 둡니다 —
+     오른쪽 칸이 있는 화면 1280px, 없는 화면 1040px(둘 다 좌우 padding 포함). Notion(약 900px 본문)과 같은 방식입니다.
+     달력 화면(대시보드·배정 결과)은 요소가 많아 전체 폭을 그대로 씁니다. */
+  &:not([data-page="scheduler"]):not([data-page="admin"]) .page { width: 100%; max-width: 1280px; margin-inline: auto; }
+  &:not([data-page="scheduler"]):not([data-page="admin"]) .page:not(:has(.rail)) { max-width: 1040px; }
   /* 계정 조회 실패 안내가 사라진 뒤 초점이 이 상자로 옮겨집니다(AppShell 의 retryMe). 공통 초점 규칙([tabindex]:focus-visible)의
      outline-offset 3px 은 본문 상자에서는 창 바깥으로 나가므로, 선을 상자 안쪽에 그립니다. */
   .page:focus-visible { outline-offset: -3px; border-radius: 0; }
