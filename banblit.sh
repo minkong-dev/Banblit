@@ -65,7 +65,7 @@ for arg in "$@"; do
     --no-browser) NO_BROWSER=1 ;;
     --follow|-f)  FOLLOW=1 ;;
     --volumes|-v) VOLUMES=1 ;;
-    -*)           fail "모르는 switch 입니다 — $arg"; exit 1 ;;
+    -*)           fail "존재하지 않는 switch 입니다 — $arg"; exit 1 ;;
     *)
       if [ -z "$COMMAND" ]; then COMMAND="$arg"; else SERVICE="$arg"; fi ;;
   esac
@@ -168,7 +168,7 @@ assert_deploy_env() {
 }
 
 # migration 이 값을 삭제하면 되돌릴 지점이 필요합니다. backup service 는 6시간마다 실행되므로
-# 그 백업만으로는 되돌릴 지점이 최대 6시간 어긋납니다. migration 직전 상태를 1벌 더 백업합니다.
+# 그 백업만으로는 되돌릴 지점이 최대 6시간 어긋납니다. migration 직전 상태의 백업을 1회 더 진행합니다.
 #
 # 백업은 backup service 의 container 에서 실행합니다. host 의 backups 폴더는 그 container 가
 # root 로 생성한 것이라 로그인한 사용자가 직접 쓰면 Permission denied 가 발생합니다.
@@ -560,5 +560,5 @@ case "$COMMAND" in
   migrate) cmd_migrate ;;
   check)   cmd_check ;;
   help)    cmd_help ;;
-  *)       fail "모르는 명령입니다 — $COMMAND"; cmd_help; exit 1 ;;
+  *)       fail "존재하지 않는 명령어입니다 — $COMMAND"; cmd_help; exit 1 ;;
 esac

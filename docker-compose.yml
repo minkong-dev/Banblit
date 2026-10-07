@@ -115,7 +115,7 @@ services:
       - web
     restart: unless-stopped
 
-  # 정기 백업 — 데이터베이스와 첨부파일을 host 폴더에 한 벌씩 떠 둔다.
+  # 정기 백업 — 데이터베이스와 첨부파일을 host 폴더에 백업합니다.
   # db 와 같은 이미지를 쓰는 것은 pg_dump 판이 서버와 맞아야 하기 때문입니다.
   backup:
     image: postgres:17
