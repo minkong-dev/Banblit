@@ -23,6 +23,8 @@ body[data-page="board"] {
   .fields textarea { resize: vertical; min-height: 96px; line-height: 1.5; }
   .fields .wide { flex: 1 1 100%; }
   .acts { margin-top: 12px; }
+  /* 작성 form 과 댓글 form 의 취소·글쓰기 버튼은 다른 화면의 form 과 같이 오른쪽 끝에 둡니다. */
+  form .acts { justify-content: flex-end; }
 
   /* 작성 form 입니다. 목록 아래에 붙던 시절에는 목록과 구분하려고 회색 배경과 윗 테두리를 두었는데,
      자기 주소를 가진 화면(routes/PostWrite)으로 분리된 뒤에는 구분할 상대가 없습니다. 카드 배경을 그대로 씁니다. */

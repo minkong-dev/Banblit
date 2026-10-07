@@ -28,11 +28,39 @@ body[data-page="settings"] {
   /* 입력칸의 높이·테두리는 문자 입력칸의 값입니다. 체크박스에 적용하면 네모가 늘어납니다. */
   /* 체크 표시는 base.css 의 .chk 가 그립니다. 이 규칙에서는 위아래 여백만 정합니다. */
   .fields .chk { margin: 12px 0; }
+  /* 기간 form 은 줄 단위 grid 입니다. shell.css 의 .fields(flex-wrap)는 입력칸 폭이 제각각이라 창 폭에 따라 아무 자리에서 줄이 바뀝니다.
+     .frow 하나가 한 줄이고, 줄 안은 같은 폭의 열 4개입니다. 줄의 구성은 SettingsPeriods.tsx 의 PeriodFields 가 정합니다 —
+     분류·시작일·종료일·매일 / 1차·2차 스케줄링 시간 / 평일·주말 합주 시작·종료 / 전체합주 지정. 입력칸은 열 폭을 가득 채워 세로선이 맞습니다. */
+  .fields.period { flex-direction: column; align-items: stretch; gap: 14px; }
+  .fields.period .frow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; align-items: start; }
+  .fields.period .frow > label { min-width: 0; }
+  .fields.period .frow input, .fields.period .frow .dd { width: 100%; }
+  /* 체크 표시는 입력칸(44px)보다 낮습니다. 라벨 윗선을 맞추고, 체크 표시는 입력칸 높이의 가운데에 둡니다. */
+  .fields.period .frow .chk { margin: 10px 0; }
+  .fields.period .acts { justify-content: flex-end; }
   /* 전체합주 입력 묶음은 한 줄을 전부 차지하고, 왼쪽 세이지 선이 달력의 전체합주 막대와 같은 색으로 "기간 안의 설정"임을 표시합니다. */
-  .fields .ensemble { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; padding: 2px 0 2px 14px; border-left: 3px solid var(--green); }
-  .ensemble .teamdays { flex: 1 1 100%; margin: 2px 0 0; font-size: 13px; color: var(--t2); }
+  .fields .ensemble { display: flex; flex-direction: column; gap: 10px; padding: 2px 0 2px 14px; border-left: 3px solid var(--green); }
+  .ensemble .teamdays { margin: 2px 0 0; font-size: 13px; color: var(--t2); }
+  @media (max-width: 720px) {
+    .fields.period .frow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
   .ensdays { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
   .ensdays > b { display: block; margin-bottom: 8px; font-size: 13.5px; font-weight: 700; }
+  /* 전체합주 날짜 1개가 행 1개입니다. 열은 위 기간 form(.fields.period .frow)과 같은 4열 — 날짜 · 시작 시각 · 끝 시각 · 버튼. */
+  .ensdays .ensday { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; align-items: end; padding: 8px 0; }
+  .ensdays .ensday + .ensday { border-top: 1px solid var(--line); }
+  .ensdays .ensday input { width: 100%; }
+  .ensdays .ensdate { display: flex; align-items: center; gap: 8px; min-height: 44px; font-size: 14px; font-weight: 600; }
+  /* 날짜별로 지정한 시각이 있는 행의 표시입니다. 기본 시각을 쓰는 행에는 붙지 않습니다. */
+  .ensdays .enstag { padding: 2px 7px; border-radius: 999px; background: var(--brand-tint); color: var(--brand); font-size: 11px; font-weight: 700; }
+  .ensdays .acts { justify-content: flex-end; }
+  .ensdays .why { grid-column: 1 / -1; margin: 0; }
+  @media (max-width: 720px) {
+    /* 날짜 1줄 · 시작·끝 시각 1줄 · 버튼 1줄로 접습니다. */
+    .ensdays .ensday { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ensdays .ensdate { grid-column: 1 / -1; min-height: 0; }
+    .ensdays .acts { grid-column: 1 / -1; }
+  }
 
   /* 오른쪽 칸입니다. 현재 설정으로 실제로 몇 자리가 열리는지 표시합니다 */
   .read { padding: 16px 0 18px; display: flex; flex-direction: column; gap: 14px; }
@@ -112,22 +140,23 @@ body[data-page="settings"] {
 
   /* ===== 멤버 표 =====
      표가 길어지면 표 구역이 아니라 화면(.main)이 통째로 스크롤합니다. */
-  /* 표는 좌우 여백 없이 구역 제목(.sethead)과 같은 폭을 씁니다. 첫 열 글자는 제목 글자와 같은 세로선에서,
-     행 사이 선은 제목 아래 선과 같은 길이로 그려집니다. 그래서 첫 열과 끝 열은 바깥쪽 padding 을 두지 않습니다. */
+  /* 표는 구역 제목(.sethead)과 같은 폭을 씁니다. 행 사이 선은 제목 아래 선과 같은 길이입니다.
+     첫 열과 끝 열은 표 가장자리에서 80px 안쪽에 둡니다(2026-10-07, 가장자리에 붙어 있다는 지적). */
   .roster { padding: 0 0 18px; }
   .roster table { width: 100%; border-collapse: collapse; }
-  .roster :is(th, td):first-child { padding-left: 0; }
-  .roster :is(th, td):last-child { padding-right: 0; }
+  .roster :is(th, td):first-child { padding-left: 80px; }
+  .roster :is(th, td):last-child { padding-right: 80px; }
   .roster th {
     position: sticky; top: 0; background: var(--card); z-index: 1;
-    text-align: left; padding: 8px 10px; font-size: 12.5px; font-weight: 700;
+    text-align: left; padding: 8px 32px 8px 0; font-size: 12.5px; font-weight: 700;
     color: var(--t3); border-bottom: 1px solid var(--line);
   }
-  .roster td { padding: 11px 10px; font-size: 14px; border-bottom: 1px solid var(--line); }
-  /* 열은 값이 차지하는 만큼만 사용하고, 남는 가로 공간은 맨 끝의 빈 열이 전부 차지합니다.
-     그러지 않으면 넓은 화면에서 이름과 학과 사이가 크게 벌어집니다. */
-  .roster :is(th, td):not(.fill) { width: 1%; white-space: nowrap; }
-  .roster :is(th, td).fill { width: auto; }
+  .roster td { padding: 11px 32px 11px 0; font-size: 14px; border-bottom: 1px solid var(--line); }
+  /* 열은 표 폭 전체에 내용 길이 비율로 나뉩니다(브라우저 자동 배치). 빈 열(.fill)은 내용이 없어 폭을 거의 받지 않고,
+     끝 열(버튼)은 값 폭만 차지해 오른쪽 끝에 붙습니다. 전에는 열마다 width: 1% 로 왼쪽에 몰아넣고 .fill 이 남는 폭을
+     전부 차지해, 마지막 값 열과 버튼 사이가 크게 벌어졌습니다(2026-10-07 지적). */
+  .roster :is(th, td) { white-space: nowrap; }
+  .roster :is(th, td):last-child { width: 1%; }
   /* 열마다 최소 폭을 글자 수(ch)로 정합니다. 글자 크기가 바뀌면 같이 바뀝니다. */
   .roster :is(th, td):nth-child(1) { min-width: 7ch; }
   .roster :is(th, td):nth-child(2) { min-width: 14ch; }
@@ -180,8 +209,18 @@ body[data-page="settings"] {
     .roster.members tbody td:nth-child(5) { grid-area: sets; color: var(--t2); }
     .roster.members tbody td.fill { display: none; }
     .roster.members tbody td:nth-child(7) { grid-area: act; }
-    /* 예약·블라인드 표는 열 구성이 달라 표 모양을 유지하고, 표 안에서만 가로로 스크롤합니다. */
-    .roster:not(.members) { overflow-x: auto; }
-    .roster:not(.members) table { min-width: 520px; }
+    /* 예약·블라인드·불가능 일정 표는 한 행을 한 묶음으로 쌓습니다 — 값들이 왼쪽에서 줄바꿈하며 이어지고, 버튼은 오른쪽 끝입니다.
+       전에는 표 모양을 유지하고 가로로 스크롤했는데, 양끝 여백 80px 과 열 간격 32px 이 휴대폰 폭에서는 첫 열부터 잘라냈습니다(2026-10-07). */
+    .roster:not(.members) table, .roster:not(.members) tbody { display: block; }
+    .roster:not(.members) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .roster:not(.members) tbody tr {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px;
+      padding: 12px 0; border-bottom: 1px solid var(--line);
+    }
+    .roster:not(.members) tbody tr:last-child { border-bottom: none; }
+    .roster:not(.members) tbody td:nth-child(n) { width: auto; min-width: 0; white-space: normal; padding: 0; border: none; font-size: 14px; }
+    .roster:not(.members) tbody td:first-child { font-weight: 700; }
+    .roster:not(.members) tbody td:empty { display: none; }
+    .roster:not(.members) tbody td:last-child { margin-left: auto; }
   }
 }
