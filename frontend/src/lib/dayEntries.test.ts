@@ -193,9 +193,9 @@ describe("allOffEntries — 모달의 불가능 일정 목록", () => {
 
   it("줄에 적는 날짜에는 반복 주기를 함께 적는다", () => {
     expect(offWhenLabel(allOffEntries([once], 18)[0])).toBe("9월 2일 수요일");
-    expect(offWhenLabel(allOffEntries([weekly], 18)[0])).toBe("9월 14일 월요일 · 매주 월");
+    expect(offWhenLabel(allOffEntries([weekly], 18)[0])).toBe("9월 14일 월요일 매주 월");
     expect(offWhenLabel(allOffEntries([{ ...weekly, repeat_weekdays: 0b1111111 }], 18)[0]))
-      .toBe("9월 14일 월요일 · 매일");
+      .toBe("9월 14일 월요일 매일");
   });
 });
 

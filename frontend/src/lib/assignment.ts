@@ -79,7 +79,7 @@ export function hoursOf(sessions: Session[]): number {
 /** 계산이 끝난 뒤 알릴 한 줄입니다. 자리를 다 채웠는지, 채웠으면 저장까지 되었는지로 나뉩니다. */
 export function runResultText(result: AssignOut): string {
   if (!result.assignment.feasible) {
-    return `모든 시간을 다 사용하지는 못했어요 · 배정 제안 ${result.proposals.length}건`;
+    return `모든 시간을 다 사용하지는 못했어요. 배정 제안 ${result.proposals.length}건`;
   }
   return result.saved ? "선택한 배정으로 확정했어요" : "해당 배정을 선택하지 않았어요";
 }

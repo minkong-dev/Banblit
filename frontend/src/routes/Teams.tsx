@@ -93,11 +93,11 @@ function ColorPick(props: { value: string | null; taken: string[]; onChange: (ne
   const group = useId();
   return (
     <fieldset className="swatches">
-      <legend>팀 색{value === null ? " · 선택하지 않으면 남은 색 중 하나가 지정돼요" : ""}</legend>
+      <legend>팀 색{value === null ? " (선택하지 않으면 남은 색 중 하나가 지정돼요)" : ""}</legend>
       {TEAM_COLORS.map((color) => {
         const used = taken.includes(color);
         return (
-          <label key={color} className={`swatch ${teamColorKey(color)}`} title={used ? `${color} · 다른 팀이 쓰는 색` : color}>
+          <label key={color} className={`swatch ${teamColorKey(color)}`} title={used ? `${color}, 다른 팀이 쓰는 색` : color}>
             <input
               type="radio"
               name={group}
@@ -394,7 +394,7 @@ function TeamForm(props: TeamFormProps) {
   const keyOf = (seat: Seat): string => seatKey(seat.instrument, seat.ordinal);
 
   return (
-    <Modal title={isNew ? "새 팀" : "팀 수정"} hint="이름·색·포지션·멤버를 설정한 뒤 한 번에 저장해요" onClose={onClose}
+    <Modal title={isNew ? "새 팀" : "팀 수정"} hint="이름, 색, 포지션, 멤버를 설정한 뒤 한 번에 저장해요" onClose={onClose}
       foot={
         <ModalFormFoot
           extra={onDelete === undefined ? undefined : <button className="ghost drop" onClick={onDelete}>팀 삭제</button>}

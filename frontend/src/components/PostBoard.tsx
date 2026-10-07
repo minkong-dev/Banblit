@@ -41,7 +41,7 @@ function PostList(props: {
           <li key={post.id}>
             <button className="postrow" ref={buttonRef(post.id)} onClick={() => onOpen(post.id)}>
               <b>{post.title}</b>
-              <span className="meta">{post.author} · {stampLabel(post.created_at)}</span>
+              <span className="meta">{post.author} {stampLabel(post.created_at)}</span>
             </button>
             <span className="cnt">댓글 {post.comment_count}</span>
           </li>
@@ -98,7 +98,7 @@ function PostDetail(props: {
         )}
       </div>
       <h2 tabIndex={-1} ref={heading}>{post.title}</h2>
-      <p className="meta">{post.author} · {stampLabel(post.created_at)}</p>
+      <p className="meta">{post.author} {stampLabel(post.created_at)}</p>
       <div className="threadbody"><RichTextView html={post.body} /></div>
 
       <AttachmentList

@@ -236,7 +236,7 @@ export function PastRunsPanel({ periodId, canRollback, roundAt, onSelect }: {
             onClick={() => onSelect(backup.saved_at)}
           >
             <b>{stampLabel(backup.saved_at)}</b>
-            <small>{slotCountLabel(backup.slot_count)}{index === 0 ? " · 되돌린 배정안은 여기로" : ""}</small>
+            <small>{slotCountLabel(backup.slot_count)}{index === 0 ? " 되돌린 배정안은 여기로" : ""}</small>
           </button>
         </li>
       ));
@@ -287,7 +287,7 @@ export function RunTimesPanel({ period, canManage }: { period: Period | null; ca
         <div className="t">
           {period === null
             ? "집중 합주기간을 생성해주세요"
-            : `${period.first_run_at} · ${period.second_run_at}`}
+            : `${period.first_run_at} ${period.second_run_at}`}
         </div>
         {period === null ? null : (
           <>

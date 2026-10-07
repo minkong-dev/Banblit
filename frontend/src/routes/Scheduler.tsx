@@ -286,7 +286,7 @@ export function Scheduler() {
           </div>
           <div id="bandSlot">
             {focus.length === 0 ? null : (
-              <span className="band"><ClockIcon />집중합주 기간 <b>{focus.map((range) => `${range.from} ~ ${range.to ?? "매일"}`).join(", ")}</b> · 자동 스케줄링</span>
+              <span className="band"><ClockIcon />집중합주 기간 <b>{focus.map((range) => `${range.from} ~ ${range.to ?? "매일"}`).join(", ")}</b> 자동 스케줄링</span>
             )}
           </div>
         </div>
@@ -304,7 +304,7 @@ export function Scheduler() {
               <li key={post.id}>
                 <button type="button" onClick={() => void navigate("/notices")}>
                   <b>{post.title}</b>
-                  <small>{stampLabel(post.created_at)} · {post.author}</small>
+                  <small>{stampLabel(post.created_at)} {post.author}</small>
                 </button>
               </li>
             ))}

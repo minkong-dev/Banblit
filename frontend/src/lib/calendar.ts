@@ -340,5 +340,5 @@ export function repeatLabel(mask: number): string {
   if (mask === 0) return "";
   if (mask === ALL_WEEKDAYS) return "매일";
   const days = REPEAT_WEEKDAY_NAMES.filter((_, index) => hasWeekday(mask, index));
-  return `매주 ${days.join("·")}`;
+  return `매주 ${days.join(" ")}`;
 }

@@ -103,7 +103,7 @@ export function CommentRow(props: {
 
   return (
     <li className="comment">
-      <span className="meta">{comment.author} · {stampLabel(comment.created_at)}</span>
+      <span className="meta">{comment.author} {stampLabel(comment.created_at)}</span>
       <RichTextView html={comment.body} />
       {!canEdit && !canDelete ? null : (
         <span className="acts">

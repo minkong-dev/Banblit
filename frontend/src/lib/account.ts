@@ -26,7 +26,7 @@ export const PERMISSION_ITEMS: readonly {
   {
     key: "room_edit",
     label: "합주실 정보 수정",
-    note: "합주실 이름과 개방 및 마감시간을 수정할 수 있어요.",
+    note: "합주실명과 개방 및 마감시간을 수정할 수 있어요.",
   },
   {
     key: "room_delete",
@@ -76,7 +76,7 @@ export const PERMISSION_ITEMS: readonly {
   {
     key: "member_expel",
     label: "멤버 추방",
-    note: "멤버의 계정을 삭제해 서비스에서 내보낼 수 있어요. 글·댓글·예약도 함께 삭제돼요.",
+    note: "멤버의 계정을 삭제해 서비스에서 내보낼 수 있어요. 글, 댓글, 예약도 함께 삭제돼요.",
   },
   {
     key: "notice_write",

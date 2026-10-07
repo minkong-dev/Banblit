@@ -105,7 +105,7 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
           key={index}
         >
           {entryName(entry, teams)}
-          <small>{label(entry.a)}–{endLabel(entry.b)} · {kindLabel(entry)}{entry.note ? ` · ${entry.note}` : ""}</small>
+          <small>{label(entry.a)}–{endLabel(entry.b)} {kindLabel(entry)}{entry.note ? ` ${entry.note}` : ""}</small>
         </span>
       ))}
       {pick === undefined || pick.range === null ? null : (

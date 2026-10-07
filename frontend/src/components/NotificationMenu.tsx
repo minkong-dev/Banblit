@@ -71,7 +71,7 @@ export function NotificationMenu() {
       <button
         className="ic bell"
         aria-expanded={open}
-        aria-label={unread === 0 ? "알림" : `알림 · 안 읽음 ${unread}개`}
+        aria-label={unread === 0 ? "알림" : `알림, 안 읽음 ${unread}개`}
         popoverTarget={NOTES_POP_ID}
       >
         <BellIcon />

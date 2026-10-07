@@ -35,7 +35,7 @@ describe("영문·숫자·기호 밖의 글자", () => {
   it.each(["한글@example.com", "name@한글.com", "ａ@example.com"])(
     "이메일에서 거절한다 — %s",
     (bad) => {
-      expect(emailMessage(bad)).toBe("이메일은 영문·숫자·기호만 사용할 수 있습니다.");
+      expect(emailMessage(bad)).toBe("이메일은 영문, 숫자, 기호만 사용할 수 있습니다.");
     },
   );
 
@@ -43,10 +43,10 @@ describe("영문·숫자·기호 밖의 글자", () => {
     "새 비밀번호에서 거절한다 — %s",
     (bad) => {
       expect(signupPasswordMessage(bad)).toBe(
-        "비밀번호는 영문·숫자·기호만 사용할 수 있습니다.",
+        "비밀번호는 영문, 숫자, 기호만 사용할 수 있습니다.",
       );
       expect(strongPasswordMessage(bad)).toBe(
-        "비밀번호는 영문·숫자·기호만 사용할 수 있습니다.",
+        "비밀번호는 영문, 숫자, 기호만 사용할 수 있습니다.",
       );
     },
   );

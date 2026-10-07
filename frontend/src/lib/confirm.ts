@@ -18,7 +18,7 @@ export function askDelete(name: string): boolean {
 
 /** "김민수를 추방할까요?" 처럼 묻습니다. 추방은 계정 삭제라 글·댓글·예약이 함께 삭제되는 것을 문장에 적습니다. */
 export function askExpel(name: string): boolean {
-  return window.confirm(`${name}${objectParticle(name)} 추방할까요? 계정과 글·댓글·예약이 함께 삭제돼요.`);
+  return window.confirm(`${name}${objectParticle(name)} 추방할까요? 계정과 글, 댓글, 예약이 함께 삭제돼요.`);
 }
 
 /** "여섯줄 18:00–21:00 예약을 취소할까요?" 처럼 묻습니다. 예약에는 삭제가 아니라 취소라고

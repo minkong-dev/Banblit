@@ -189,7 +189,7 @@ function useSaveProfile(me: Account, onSaved: () => void) {
       } catch (error) {
         // 이름·기수가 이미 저장된 경우 그 사실을 함께 알립니다. 알리지 않으면 아무것도 저장되지 않은 것으로 읽힙니다.
         if (!infoChanged) throw error;
-        throw new Error(`이름·기수는 저장했지만 비밀번호는 변경하지 못했어요. ${reason(error)}`);
+        throw new Error(`이름과 기수는 저장했지만 비밀번호는 변경하지 못했어요. ${reason(error)}`);
       }
     },
     onSettled: () => { void client.invalidateQueries({ queryKey: ["me"] }); },
@@ -274,7 +274,7 @@ function Leave({ me }: { me: Account }) {
 
   return (
     <Card>
-      <SectionHead title="회원 탈퇴" desc="계정과 함께 작성한 글·댓글·예약이 모두 삭제되고, 이 작업은 되돌릴 수 없어요" />
+      <SectionHead title="회원 탈퇴" desc="계정과 함께 작성한 글, 댓글, 예약이 모두 삭제되고, 이 작업은 되돌릴 수 없어요" />
       <div className="fields">
         <label className="wide" htmlFor="leaveName">
           확인을 위해 이름을 정확히 적어주세요
