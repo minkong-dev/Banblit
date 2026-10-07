@@ -83,38 +83,10 @@ export function EnsembleFields(props: {
   const invalid = { "aria-invalid": bad !== "", "aria-describedby": bad === "" ? undefined : whyId };
   const teamDays = period.everyday ? "" : teamDaysText(period, draft);
 
+  if (!draft.on) return null;
   return (
-    <>
-      <div className="frow">
-      <Cell label="전체 합주기간 지정" htmlFor={at("ensemble")}>
-        <CheckMark id={at("ensemble")} checked={draft.on} onChange={(on) => setDraft({ ...draft, on })} />
-      </Cell>
-      </div>
-      {!draft.on ? null : (
         <div className="ensemble">
           <div className="frow">
-          <Cell label="전체합주 시작일" htmlFor={at("ens-starts")}>
-            <input
-              type="date"
-              id={at("ens-starts")}
-              value={draft.starts_on}
-              min={period.starts_on}
-              max={period.everyday ? undefined : period.ends_on}
-              {...invalid}
-              onChange={(event) => setDraft({ ...draft, starts_on: event.target.value })}
-            />
-          </Cell>
-          <Cell label="전체합주 종료일" htmlFor={at("ens-ends")}>
-            <input
-              type="date"
-              id={at("ens-ends")}
-              value={draft.ends_on}
-              min={draft.starts_on || period.starts_on}
-              max={period.everyday ? undefined : period.ends_on}
-              {...invalid}
-              onChange={(event) => setDraft({ ...draft, ends_on: event.target.value })}
-            />
-          </Cell>
           <Cell label="합주실" htmlFor={at("ens-room")}>
             <Dropdown
               id={at("ens-room")}
@@ -130,7 +102,31 @@ export function EnsembleFields(props: {
           </Cell>
           </div>
           <div className="frow">
-          <Cell label="시작 시각" htmlFor={at("ens-from")}>
+          <Cell label="시작일" htmlFor={at("ens-starts")}>
+            <input
+              type="date"
+              id={at("ens-starts")}
+              value={draft.starts_on}
+              min={period.starts_on}
+              max={period.everyday ? undefined : period.ends_on}
+              {...invalid}
+              onChange={(event) => setDraft({ ...draft, starts_on: event.target.value })}
+            />
+          </Cell>
+          <Cell label="종료일" htmlFor={at("ens-ends")}>
+            <input
+              type="date"
+              id={at("ens-ends")}
+              value={draft.ends_on}
+              min={draft.starts_on || period.starts_on}
+              max={period.everyday ? undefined : period.ends_on}
+              {...invalid}
+              onChange={(event) => setDraft({ ...draft, ends_on: event.target.value })}
+            />
+          </Cell>
+          </div>
+          <div className="frow">
+          <Cell label="시작 시간" htmlFor={at("ens-from")}>
             <input
               type="time"
               step={slotMinutes * 60}
@@ -140,7 +136,7 @@ export function EnsembleFields(props: {
               onChange={(event) => setDraft({ ...draft, starts_at: event.target.value })}
             />
           </Cell>
-          <Cell label="끝 시각" htmlFor={at("ens-to")}>
+          <Cell label="종료 시간" htmlFor={at("ens-to")}>
             <input
               type="time"
               step={slotMinutes * 60}
@@ -153,9 +149,26 @@ export function EnsembleFields(props: {
           </div>
           {teamDays === "" ? null : <p className="teamdays">{teamDays}</p>}
         </div>
-      )}
-    </>
   );
+}
+
+/** 전체합주를 지정할지 정하는 체크박스입니다. 기간 form 의 날짜 줄(시작일·종료일 옆)에 놓입니다(2026-10-07).
+ *  체크하면 form 아래 "전체 합주" 묶음(EnsembleFields)이 열립니다. */
+export function EnsembleToggle({ draft, setDraft, at }: {
+  draft: EnsembleDraft;
+  setDraft: (next: EnsembleDraft) => void;
+  at: (field: string) => string;
+}) {
+  return (
+    <Cell label="전체 합주기간 지정" htmlFor={at("ensemble")}>
+      <CheckMark id={at("ensemble")} checked={draft.on} onChange={(on) => setDraft({ ...draft, on })} />
+    </Cell>
+  );
+}
+
+/** "2026-10-11" → "일". 날짜별 시각 행에서 날짜 옆에 붙는 요일 한 글자입니다. */
+function weekdayLetter(day: string): string {
+  return "일월화수목금토"[new Date(`${day}T12:00:00`).getDay()];
 }
 
 /** 전체합주 날짜 하나의 시각을 저장하거나 기본 시각으로 되돌립니다. 저장하면 기간 목록을 다시 조회해
@@ -201,7 +214,7 @@ export function EnsembleDayEditor({ day, on, room, picker }: {
       }}
     >
       {picker}
-      <Cell label="시작 시각" htmlFor={at("from")}>
+      <Cell label="시작 시간" htmlFor={at("from")}>
         <input
           type="time"
           step={slotMinutes * 60}
@@ -211,7 +224,7 @@ export function EnsembleDayEditor({ day, on, room, picker }: {
           onChange={(event) => setTimes({ ...times, starts: event.target.value })}
         />
       </Cell>
-      <Cell label="끝 시각" htmlFor={at("to")}>
+      <Cell label="종료 시간" htmlFor={at("to")}>
         <input
           type="time"
           step={slotMinutes * 60}
@@ -228,7 +241,7 @@ export function EnsembleDayEditor({ day, on, room, picker }: {
           </button>
         ) : null}
         <button className="btn go" type="submit" disabled={pending || why !== ""}>
-          {save.isPending ? "저장하는 중…" : "시각 저장"}
+          {save.isPending ? "저장하는 중…" : "저장"}
         </button>
       </div>
       {bad === "" ? null : <p className="why" id={at("why")} role="alert">{bad}</p>}
@@ -244,7 +257,7 @@ export function EnsembleDays({ period, room }: { period: Period; room: Room | un
 
   return (
     <div className="ensdays">
-      <b>날짜별 전체합주 시각</b>
+      <h3 className="fsec">날짜별 전체합주 시각</h3>
       {datesBetween(starts_on, ends_on).map((day) => {
         const on = ensembleOn([period], day);
         if (on === null) return null;
@@ -256,7 +269,8 @@ export function EnsembleDays({ period, room }: { period: Period; room: Room | un
             room={room}
             picker={
               <div className="ensdate">
-                {dayLabel(day)}
+                <b className="d">{dayLabel(day)}</b>
+                <span className="w">{weekdayLetter(day)}</span>
                 {on.custom ? <span className="enstag">지정</span> : null}
               </div>
             }
