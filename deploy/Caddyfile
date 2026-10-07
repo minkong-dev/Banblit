@@ -1,17 +1,14 @@
-# 앞단. 인증서를 스스로 받고 갱신하며, http 로 온 요청을 https 로 돌린다.
-# 이것이 필요한 이유는 배포 설정이 로그인 쿠키에 Secure 를 붙이기 때문이다 —
-# http 로 띄우면 브라우저가 쿠키를 아예 저장하지 않아 로그인이 성립하지 않습니다.
-#
-# 주소는 코드에 박지 않습니다. .env 의 BANBLIT_DOMAIN 이 정본입니다.
+# reverse proxy 입니다. 인증서를 자동으로 받고 갱신하며, http 요청을 https 로 전환합니다.
+# 배포는 로그인 cookie 에 Secure 가 붙으므로 https 가 아니면 로그인이 되지 않습니다.
+# 도메인은 .env 의 BANBLIT_DOMAIN 에 작성되어 있는 값을 기준으로 합니다.
 
 {$BANBLIT_DOMAIN} {
 	encode zstd gzip
 
-	# 화면과 /api 는 web(nginx) 이 이미 가른다. 여기서는 통째로 넘긴다.
+	# 화면과 /api 의 분기는 web(nginx) 이 합니다. 여기서는 전부 web 으로 전달합니다.
 	reverse_proxy web:80
 
-	# 어느 주소가 몇 번 왔는지만 남긴다. 본문은 남기지 않는다 —
-	# 로그인 요청 본문에는 비밀번호가, 재설정 요청에는 토큰이 들어 있습니다.
+	# 접속 기록만 남깁니다. 요청 본문은 남기지 않습니다(비밀번호·재설정 token 포함).
 	log {
 		output file /var/log/caddy/access.log {
 			roll_size 10MiB
@@ -20,7 +17,7 @@
 	}
 
 	header {
-		# 브라우저가 다음부터 http 로 먼저 두드리지 않게 합니다.
+		# 브라우저가 이후 요청을 https 로만 보내게 합니다.
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "same-origin"
