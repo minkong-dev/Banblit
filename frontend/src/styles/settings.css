@@ -62,10 +62,10 @@ body[data-page="settings"] {
   .ensemble .teamdays { margin: 2px 0 0; font-size: 13px; color: var(--t2); }
 
   /* ===== 날짜별 전체합주 시각 (SettingsEnsemble.tsx 의 EnsembleDays) =====
-     날짜 1개가 행 1개입니다. 위 form 과 같은 4열 — 1열 날짜, 2·3열 시작·종료 시간, 4열 저장 버튼(왼쪽 정렬). */
+     날짜 1개가 행 1개입니다. 날짜가 왼쪽, 시작·종료 시간(위 form 의 1열 폭과 같음)과 저장 버튼이 오른쪽 끝에 모입니다. 시간 칸과 버튼 사이 40px. */
   .ensdays { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
   .ensdays > .fsec { margin-bottom: 10px; }
-  .ensdays .ensday { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; align-items: end; padding: 8px 0; }
+  .ensdays .ensday { display: grid; grid-template-columns: minmax(0, 1fr) calc((100% - 48px) / 4) calc((100% - 48px) / 4) auto; gap: 10px 16px; align-items: end; padding: 8px 0; }
   .ensdays .ensday + .ensday { border-top: 1px solid var(--line); }
   .ensdays .ensday input { width: 100%; }
   .ensdays .ensdate { display: flex; align-items: baseline; gap: 6px; min-height: 44px; }
@@ -74,7 +74,7 @@ body[data-page="settings"] {
   .ensdays .ensdate .w { font-size: 12.5px; color: var(--t3); }
   /* 날짜별로 지정한 시각이 있는 행의 표시입니다. 기본 시각을 쓰는 행에는 붙지 않습니다. */
   .ensdays .enstag { padding: 2px 7px; border-radius: 999px; background: var(--brand-tint); color: var(--brand); font-size: 11px; font-weight: 700; }
-  .ensdays .acts { justify-content: flex-end; }
+  .ensdays .acts { justify-content: flex-end; margin-left: 24px; }
   .ensdays .why { grid-column: 1 / -1; margin: 0; }
 
   /* 휴대폰 폭: 열 2개. 공연명은 한 줄 전체, 체크 2개는 한 줄, 날짜별 행은 날짜 1줄 · 시작·종료 시간 1줄 · 버튼 1줄. */
