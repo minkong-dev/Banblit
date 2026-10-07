@@ -4,7 +4,7 @@ import { TEAM_COLORS, teamColorCss, teamColorKey } from "./teamColors";
 
 describe("TEAM_COLORS", () => {
   it("서버와 같은 20색을 같은 순서로 든다", () => {
-    // 서버 쪽 정본은 backend/src/backend/db/models.py 의 TEAM_COLORS 입니다. 순서가 곧 자동 배정 순서입니다.
+    // 서버 쪽은 backend/src/backend/db/models.py 의 TEAM_COLORS 에 작성되어 있는 내용을 기준으로 합니다. 순서가 곧 자동 배정 순서입니다.
     expect(TEAM_COLORS).toHaveLength(20);
     expect(TEAM_COLORS[0]).toBe("tomato");
     expect(TEAM_COLORS[TEAM_COLORS.length - 1]).toBe("brown");

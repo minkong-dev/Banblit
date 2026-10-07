@@ -22,7 +22,7 @@ MAX_POST_BYTES = 300 * 1024 * 1024
 DEFAULT_CONTENT_TYPE = "application/octet-stream"
 
 # 업로드할 수 있는 파일 확장자입니다. 이 목록에 없는 확장자는 전부 거절합니다.
-# 이 목록이 정본입니다. 화면 쪽 사본은 frontend/src/lib/boards.ts 의 ALLOWED_EXTENSIONS 이고, 파일 선택창의
+# 이 목록에 작성되어 있는 내용을 기준으로 합니다. 화면 쪽 사본은 frontend/src/lib/boards.ts 의 ALLOWED_EXTENSIONS 이고, 파일 선택창의
 # accept 와 업로드 전 검증에 사용합니다. 여기를 수정하면 그 사본도 같은 작업 안에서 수정합니다.
 ALLOWED_EXTENSIONS = frozenset(
     {

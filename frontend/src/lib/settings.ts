@@ -6,16 +6,16 @@ import { uniqueNameMessage } from "./validate";
 
 // 칸 하나의 크기는 저장소 설정이 결정합니다(GET /settings 의 slot_minutes). 이 파일은 서버와
 // 상호작용하지 않으므로 값을 인자로 받습니다. 부르는 쪽이 설정에서 읽어 넘깁니다.
-// 서버 쪽 정본은 backend/src/backend/services/settings_service.py 입니다.
+// 서버 쪽은 backend/src/backend/services/settings_service.py 에 작성되어 있는 내용을 기준으로 합니다.
 const DEFAULT_SLOT_MINUTES = 60;
 const MINUTES_PER_HOUR = 60;
 
 /** 점유 단위로 선택할 수 있는 값(분)입니다. 한 시간을 나머지 없이 나누는 값만 둡니다.
- *  서버 정본은 backend/src/backend/api/schemas.py 의 SettingsUpdateIn 과 settings 의 CHECK 입니다. */
+ *  서버 쪽은 backend/src/backend/api/schemas.py 의 SettingsUpdateIn 과 settings 의 CHECK 에 작성되어 있는 내용을 기준으로 합니다. */
 export const SLOT_MINUTE_CHOICES = [5, 10, 12, 15, 20, 30, 60] as const;
 
 // 팀 하나가 하루에 배정받는 시간의 상한(시간)으로 고를 수 있는 값입니다.
-// 서버 쪽 정본은 backend/src/backend/contract.py 의 DAILY_MAX_HOUR_CHOICES 입니다.
+// 서버 쪽은 backend/src/backend/contract.py 의 DAILY_MAX_HOUR_CHOICES 에 작성되어 있는 내용을 기준으로 합니다.
 export const DAILY_MAX_HOUR_CHOICES = [1, 2, 3] as const;
 
 /** 선택지에 표시할 문구입니다. 60분은 "1시간" 이 자연스럽습니다. */
@@ -23,8 +23,8 @@ export function slotMinutesLabel(minutes: number): string {
   return minutes === MINUTES_PER_HOUR ? "1시간" : `${minutes}분`;
 }
 
-/** 합주 1회 길이의 상한(분)입니다. 서버 정본은 backend/src/backend/scheduling/slots.py 의
- *  MAX_SESSION_MINUTES 입니다. */
+/** 합주 1회 길이의 상한(분)입니다. 서버 쪽은 backend/src/backend/scheduling/slots.py 의
+ *  MAX_SESSION_MINUTES 에 작성되어 있는 내용을 기준으로 합니다. */
 export const MAX_SESSION_MINUTES = 240;
 
 /** 합주 길이로 흔히 쓰는 값(분)입니다. 이 중 칸의 배수만 선택지가 됩니다. */
@@ -87,8 +87,8 @@ function gridMessage(from: number | null, to: number | null, slotMinutes: number
  *  "정하지 않음" 이고, 그날은 합주실 개방시각 전체를 씁니다. */
 export type WindowPair = { starts_at: string; ends_at: string };
 
-/** 평일·주말 시간대를 검증합니다. 서버 쪽 정본은 periods 의 CHECK(periods_practice_window_pairs·
- *  periods_practice_window_order)와 services/period_crud_service.py 입니다.
+/** 평일·주말 시간대를 검증합니다. 서버 쪽은 periods 의 CHECK(periods_practice_window_pairs·
+ *  periods_practice_window_order)와 services/period_crud_service.py 에 작성되어 있는 내용을 기준으로 합니다.
  *
  *  격자를 함께 보는 이유는, 시간대가 격자에서 벗어나면 배정 구간도 벗어나 서버가 칸을 만들지
  *  못하기 때문입니다. 저장은 되고 배정만 실패하면 원인을 찾기 어렵습니다. */
@@ -127,7 +127,7 @@ export function dateRangeMessage(from: string, to: string): string {
 
 type Hours = { opens_at: string; closes_at: string };
 
-/** 전체 합주 설정을 검증합니다. 서버 쪽 정본은 backend/src/backend/services/ensemble_service.py 와
+/** 전체 합주 설정을 검증합니다. 서버 쪽은 backend/src/backend/services/ensemble_service.py 에 작성되어 있는 내용을 기준으로 합니다.
  *  periods 의 CHECK(날짜 범위가 기간 안인지)입니다. "매일" 기간은 종료일이 없어 시작일만 비교합니다. */
 export function ensembleMessage(
   form: { starts_on: string; ends_on: string; starts_at: string; ends_at: string },

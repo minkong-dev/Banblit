@@ -59,7 +59,7 @@ export function App() {
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route path="/scheduler" element={<Scheduler />} />
         <Route path="/admin" element={<Assignment />} />
-        {/* 관리자 메뉴 6개입니다. 주소와 필요 권한은 lib/adminMenu.ts 가 정본이고, 권한이 없는
+        {/* 관리자 메뉴 6개입니다. 주소와 필요 권한은 lib/adminMenu.ts 에 작성되어 있는 내용을 기준으로 하고, 권한이 없는
             사람이 주소로 바로 들어오면 SettingsPage 가 /settings 로 돌려보냅니다. */}
         {ADMIN_MENU.map((item) => (
           // element 의 key 는 구역을 옮길 때 화면을 새로 마운트합니다. 모두 같은 SettingsPage 라 key 가 없으면

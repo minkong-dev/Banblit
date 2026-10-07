@@ -84,7 +84,7 @@ function passwordRuleMessage(value: string): string {
 }
 
 /** 가입 화면이 비밀번호 칸 아래에 표시하는 체크리스트입니다. 규칙 하나가 한 줄입니다.
- *  문구와 순서가 화면에 그대로 나오므로 이 함수가 정본입니다. */
+ *  문구와 순서가 화면에 그대로 나오므로 이 함수 에 작성되어 있는 내용을 기준으로 합니다. */
 export function passwordChecks(value: string): { text: string; ok: boolean }[] {
   return [
     { text: "영어 대문자 및 소문자 1자 이상 포함", ok: /[a-z]/.test(value) && /[A-Z]/.test(value) },

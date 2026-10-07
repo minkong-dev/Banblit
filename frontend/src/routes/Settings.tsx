@@ -1,7 +1,7 @@
 // 관리자 메뉴의 진입점입니다. 주소가 고른 구역 1개를 그리고, 합주실·기간 구역에는
 // 오른쪽 계산 패널을 함께 표시합니다.
 // 합주실·기간·멤버·예약·블라인드·불가능 일정 구역은 각각 Settings*.tsx 가 담당하고,
-// 구역 목록과 주소는 lib/adminMenu.ts 가 정본입니다.
+// 구역 목록과 주소는 lib/adminMenu.ts 에 작성되어 있는 내용을 기준으로 합니다.
 // 자기 계정에 대한 설정(이름·사진·비밀번호·테마·탈퇴)은 2026-09-23 에 프로필 화면(/profile)으로 옮겼습니다.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";

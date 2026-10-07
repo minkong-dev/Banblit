@@ -100,7 +100,7 @@ docker compose run --rm dev pytest -q tests/integration/db
 - **용도**: 실제 PostgreSQL 에 접속해야 실행되는 검사만 실행합니다.
 - **주의점**
   - `--no-deps` 를 지정하면 안 됩니다. `db` 서비스가 실행 중이어야 합니다.
-  - marker 로 선택하는 `-m db` 도 같은 결과를 출력합니다. 폴더 지정이 더 명확해 폴더 지정을 정본으로 사용합니다.
+  - marker 로 선택하는 `-m db` 도 같은 결과를 출력합니다. 폴더 지정이 더 명확해 폴더 지정을 기준으로 사용합니다.
 
 ### 1-2-3. 타입 검사 실행하기
 
@@ -747,7 +747,7 @@ docker compose run --rm --no-deps web npm ci
 
 ## 11. 배포
 
-`docker-compose.yml` 이 **배포용 정본**입니다. 개발에서는 `docker-compose.override.yml` 이
+`docker-compose.yml` 이 **배포용 기준 파일**입니다. 개발에서는 `docker-compose.override.yml` 이
 자동으로 적용되어 `docker-compose.yml` 의 설정을 덮어씁니다. 그래서 배포에서는 `-f docker-compose.yml` 로 override 를
 제외하고 실행하고, 개발에서는 아무 옵션도 지정하지 않습니다.
 
@@ -1144,7 +1144,7 @@ docker compose rm -sf auto-assign
 ## 14. 관리 스크립트
 
 `banblit.sh` 1개가 위 13개 절(1~13장)의 명령을 순서대로 묶어 실행합니다. 개별 `docker compose`
-명령의 뜻과 주의점은 이 문서의 해당 절이 정본이고, 이 장은 묶음이 무엇을 어떤 순서로
+명령의 뜻과 주의점은 이 문서의 해당 절 에 작성되어 있는 내용을 기준으로 하고, 이 장은 묶음이 무엇을 어떤 순서로
 호출하는지를 적습니다.
 
 윈도우와 리눅스 서버가 같은 파일을 사용합니다. `banblit.ps1` 은 PowerShell 에서 `banblit up` 을

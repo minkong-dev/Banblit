@@ -122,7 +122,7 @@ export const YoutubeTyped = Youtube.extend({
  *
  *  이 목록은 붙여넣기·drop·본문용 파일 선택창(RichText.tsx:143·331)이 받을 파일을 거르는 입력 필터입니다.
  *  받은 파일을 본문의 image·audio·pdf 중 무엇으로 넣을지 판정하는 곳은 lib/richText.ts 의 embedKind 이고,
- *  그 IMAGE·AUDIO 집합이 확장자 기준의 정본입니다. 한쪽만 수정하면 선택창에는 표시되는데 본문에 들어가지 않고
+ *  그 IMAGE·AUDIO 집합이 확장자의 기준입니다. 한쪽만 수정하면 선택창에는 표시되는데 본문에 들어가지 않고
  *  첨부로만 올라가므로 두 곳을 함께 수정합니다. audio/x-wav 는 일부 브라우저가 .wav 파일을 이 MIME 으로
  *  보고하므로 넣어 둡니다. */
 export const ACCEPTED_MIME = [
