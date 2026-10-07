@@ -11,7 +11,7 @@ export type Session = {
 };
 
 export function mergeSessions(items: Session[]): Session[] {
-  // items 를 팀·합주실·시작시각 순으로 정렬한 후, 앞 slot(점유 단위 길이의 시간 칸)의 종료시각과 맞닿은 slot 을 연결해 연속된 slot 의 나열을 "합주 한 번"으로 변환합니다. 입력받은 목록은 수정하지 않습니다. localeCompare() 는 같으면 0 을 반환합니다. || 연산자는 앞이 0 일 때만 다음을 비교합니다.
+  // items 를 팀·합주실·시작 시간 순으로 정렬한 후, 앞 slot(점유 단위 길이의 시간 칸)의 종료 시간과 맞닿은 slot 을 연결해 연속된 slot 의 나열을 "합주 한 번"으로 변환합니다. 입력받은 목록은 수정하지 않습니다. localeCompare() 는 같으면 0 을 반환합니다. || 연산자는 앞이 0 일 때만 다음을 비교합니다.
   const sorted = [...items].sort((a, b) =>
     a.team.localeCompare(b.team)
     || a.room.localeCompare(b.room)

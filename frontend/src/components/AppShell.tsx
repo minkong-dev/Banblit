@@ -212,7 +212,7 @@ export function AppShell() {
 /** 상단바의 라이트·다크 전환 버튼입니다. 누를 때마다 반대 테마로 전환하고, 선택한 값은 브라우저에 저장합니다.
  *  아이콘은 누르면 전환될 테마를 표시합니다. */
 function ThemeButton() {
-  // 초기값을 한 번만 읽습니다. 이후 사용자가 선택한 값 에 작성되어 있는 내용을 기준으로 합니다.
+  // 초기값을 한 번만 읽습니다. 이후에는 사용자가 선택한 값을 씁니다.
   const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
   const next: Theme = theme === "dark" ? "light" : "dark";
   return (
