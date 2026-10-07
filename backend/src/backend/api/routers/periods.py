@@ -94,6 +94,7 @@ def _period_out(period: Period, days: list[EnsembleDay]) -> PeriodOut:
     return PeriodOut(
         id=period.id,
         kind=period.kind,
+        name=period.name,
         starts_on=format_calendar_date(period.starts_on),
         ends_on=format_calendar_date(period.ends_on),
         everyday=period.everyday,
@@ -133,6 +134,7 @@ def create_period(
     period = create_period_row(
         session,
         req.kind,
+        req.name,
         req.starts_on,
         req.ends_on,
         req.everyday,
@@ -157,6 +159,7 @@ def patch_period(
         session,
         period_id,
         req.kind,
+        req.name,
         req.starts_on,
         req.ends_on,
         req.everyday,

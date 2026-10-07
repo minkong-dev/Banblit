@@ -237,7 +237,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
 
     // 집중 합주기간 1 — 배정을 계산해 저장합니다. 달력과 배정 결과 화면에 시간표로 표시됩니다.
     const { period: focused } = await call<{ period: { id: number } }>(context, "POST", "/api/periods", {
-      kind: "focused", starts_on: day(2), ends_on: day(6), everyday: false, ...RUN_TIMES,
+      kind: "focused", name: "정기공연", starts_on: day(2), ends_on: day(6), everyday: false, ...RUN_TIMES,
     });
     // 기간 가운데 1일을 전체합주로 지정합니다. 그날은 팀별 배정에서 제외됩니다.
     await call(context, "PUT", `/api/periods/${focused.id}/ensemble`, {
@@ -253,7 +253,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     // 집중 합주기간 2 — 캡쳐 계정이 합주실이 여는 시간 전체에 불가능 일정을 두어, 계산하면
     // 조율안(그 계정을 제외한 배정안)이 출력됩니다. 배정 결과 화면의 조율안 설명에 사용합니다.
     const { period: tight } = await call<{ period: { id: number } }>(context, "POST", "/api/periods", {
-      kind: "focused", starts_on: day(9), ends_on: day(10), everyday: false, ...RUN_TIMES,
+      kind: "focused", name: "신입 환영회", starts_on: day(9), ends_on: day(10), everyday: false, ...RUN_TIMES,
     });
     for (const offset of [9, 10]) {
       await call(context, "POST", `/api/members/${admin.id}/unavailable`, {

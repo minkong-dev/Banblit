@@ -16,6 +16,8 @@ export type Room = {
 export type Period = {
   id: number;
   kind: "open" | "focused";
+  /** 공연명입니다. 비어 있으면 화면이 종류 이름을 대신 표시합니다. */
+  name: string;
   /** "2026-09-14" */
   starts_on: string;
   ends_on: string;

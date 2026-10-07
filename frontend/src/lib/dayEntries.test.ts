@@ -102,6 +102,7 @@ describe("mergeByDay — 날짜별 항목 여러 벌을 하나로", () => {
 const withEnsemble: Period = {
   id: 3,
   kind: "focused",
+  name: "",
   starts_on: "2026-09-01",
   ends_on: "2026-09-20",
   everyday: false,

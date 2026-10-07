@@ -93,6 +93,7 @@ def list_periods(session: Session) -> list[Period]:
 def create_period(
     session: Session,
     kind: str,
+    name: str,
     starts_on: str,
     ends_on: str,
     everyday: bool,
@@ -108,6 +109,7 @@ def create_period(
 
     period = Period(
         kind=kind,
+        name=name.strip(),
         starts_on=starts,
         ends_on=ends,
         everyday=everyday,
@@ -153,6 +155,7 @@ def update_period(
     session: Session,
     period_id: int,
     kind: str | None,
+    name: str | None,
     starts_on: str | None,
     ends_on: str | None,
     everyday: bool | None,
@@ -173,6 +176,8 @@ def update_period(
     changes = _validated_changes(
         period, kind, starts_on, ends_on, first_run_at, second_run_at
     )
+    if name is not None:
+        changes["name"] = name.strip()
     if everyday is not None:
         changes["everyday"] = everyday
     if window is not None:

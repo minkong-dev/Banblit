@@ -368,6 +368,8 @@ class Period(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     kind: Mapped[str] = mapped_column(Text)
+    # 공연명입니다. 화면의 기간 목록 제목이고, 빈 문자열이면 화면이 종류 이름을 대신 표시합니다(2026-10-07).
+    name: Mapped[str] = mapped_column(Text, default="", server_default="")
     starts_on: Mapped[date] = mapped_column(Date)
     ends_on: Mapped[date] = mapped_column(Date)
     everyday: Mapped[bool] = mapped_column(Boolean, default=False)
