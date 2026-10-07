@@ -64,8 +64,12 @@
 
 `coding-standards`는 주석 규칙이 아래 `refactoring` 스킬과 충돌합니다. 충돌 시 `refactoring`이 우선합니다.
 
-ECC 밖의 스킬은 네 가지를 씁니다 — 문서는 `cluedoc`(`KeunwooPark/cluedoc`, `.claude/skills/` 에 있습니다),
-외부 포맷 내보내기는 `document-skills`, Claude API 연동은 `claude-api`, 그리고 `ui-ux-pro-max`.
+ECC 밖의 스킬은 다섯 가지를 씁니다 — 문서는 `cluedoc`(`KeunwooPark/cluedoc`, `.claude/skills/` 에 있습니다),
+외부 포맷 내보내기는 `document-skills`, Claude API 연동은 `claude-api`, `ui-ux-pro-max`, 그리고 글쓰기 보충 `writing-style-local`.
+
+`writing-style-local`(`.claude/skills/writing-style-local/SKILL.md`)은 이 저장소에서 확정된 표기(집중 합주기간, 전체 합주,
+시작 시간/종료 시간, 권한 세트 등)와 문서별 규칙만 담습니다. 글쓰기 규칙 본문은 전역 `writing-style` 스킬에 있고,
+한국어 글을 쓸 때 두 스킬을 함께 invoke 합니다. 저장소에 있던 전역 스킬 사본은 2026-10-07 에 `trash/` 로 옮겼습니다.
 
 ECC의 언어별 규칙 문서는 `.claude/rules/{common,python,react,typescript}/` 에 있습니다.
 스킬과 에이전트가 이 경로를 참조합니다. 주석·가독성 규칙이 `refactoring` 스킬과 어긋나면
