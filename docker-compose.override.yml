@@ -1,9 +1,8 @@
-# 개발용 — base(docker-compose.yml, 배포용) 위에 덮어쓴다. `docker compose up` 이
-# 이 파일을 자동으로 얹으므로 따로 -f 를 붙이지 않습니다.
-# 여기 적힌 것이 곧 "개발에만 있는 것" 입니다.
+# 개발용 정의 파일입니다. docker-compose.yml(배포용) 위에 덮어씁니다.
+# `docker compose up` 이 이 파일을 자동으로 적용하므로 -f 를 지정하지 않습니다.
 
 services:
-  # 소스를 컨테이너에 걸고, 고치면 서버가 다시 뜬다.
+  # 소스 폴더를 container 에 연결합니다. 파일을 수정하면 서버가 다시 시작됩니다.
   api:
     build:
       target: dev
@@ -14,18 +13,16 @@ services:
     volumes:
       - ./backend:/app
     environment:
-      # 개발은 http라서 Secure 쿠키가 아예 안 붙는다. base(docker-compose.yml)의
-      # true를 여기서 false로 덮는다.
+      # 개발은 http 이므로 Secure cookie 를 끕니다.
       COOKIE_SECURE: "false"
-      # 개발에는 caddy 가 없어 api 앞의 reverse proxy 가 하나다. base 의 2를 1로 덮는다.
+      # 개발에는 caddy 가 없어 api 앞의 reverse proxy 가 1개입니다.
       TRUSTED_PROXY_COUNT: "1"
-      # SMTP 가 없을 때 메일 본문(재설정 링크)을 기록에 남긴다 — 개발에서만.
+      # SMTP 가 없을 때 메일 본문(재설정 링크)을 기록에 남깁니다. 개발 전용입니다.
       MAIL_LOG_BODY: "true"
     restart: "no"
 
-  # 자동 배정 — 개발에서는 기본으로 꺼 둔다. `docker compose up` 이 이것까지 함께
-  # 띄우는데, 켜져 있으면 검사가 심어 둔 기간을 이 서비스가 제멋대로 다시 계산해
-  # 결과가 흔들린다. 눈으로 볼 때만 AUTO_ASSIGN_ENABLED=true 로 띄운다(COMMAND.md 13-1).
+  # 자동 배정입니다. 개발에서는 기본값 false 입니다. 켜져 있으면 테스트가 생성한 기간을 이 service 가 다시 계산해 결과가 달라집니다.
+  # 화면으로 확인할 때만 AUTO_ASSIGN_ENABLED=true 로 실행합니다(COMMAND.md 13-1).
   auto-assign:
     build:
       target: dev
@@ -37,8 +34,8 @@ services:
       AUTO_ASSIGN_INTERVAL_SECONDS: "${AUTO_ASSIGN_INTERVAL_SECONDS:-10}"
     restart: "no"
 
-  # 화면 — nginx 대신 Vite 개발 서버가 돈다. node_modules 는 이름 붙은 저장소에
-  # 둔다: 윈도우 폴더에 그대로 두면 파일이 많아 눈에 띄게 느려진다.
+  # 화면입니다. nginx 대신 Vite 개발 서버를 실행합니다.
+  # node_modules 는 named volume 에 둡니다. 윈도우 폴더에 두면 파일 수가 많아 느려집니다.
   web:
     image: node:24-alpine
     build: !reset null
@@ -51,12 +48,11 @@ services:
       - banblit-web-modules:/app/node_modules
     environment:
       API_ORIGIN: http://api:8000
-      # 배포는 build arg 로 받지만(docker-compose.yml), 개발은 Vite 개발 서버가 그대로 돌아
-      # 여기서 주지 않으면 index.html 에 %VITE_APP_ORIGIN% 글자가 그대로 남는다.
+      # 개발은 build arg 가 없으므로 여기서 지정합니다. 없으면 index.html 에 %VITE_APP_ORIGIN% 문자열이 그대로 남습니다.
       VITE_APP_ORIGIN: http://localhost:5173
     restart: "no"
 
-  # 개발 작업용 — 검사와 마이그레이션을 여기서 돌린다.
+  # 개발 작업용입니다. 테스트와 migration 을 이 service 에서 실행합니다.
   dev:
     build:
       context: ./backend
@@ -67,24 +63,21 @@ services:
     working_dir: /app
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      # 검사도 배포와 같은 시간대에서 돌린다. 여기만 UTC 면 시각이 걸린 결함이 검사를
-      # 통과하고 배포에서만 드러난다.
+      # 테스트도 배포와 같은 시간대에서 실행합니다.
       TZ: ${TZ:-Asia/Seoul}
     depends_on:
       db:
         condition: service_healthy
 
-  # 종단(E2E) 검사 전용 서버 — dev DB 대신 banblit_e2e DB 를 씁니다. 컨테이너가 뜰 때마다
-  # 그 DB 를 비우고 migration 을 적용하므로 검사는 매번 빈 DB 에서 시작합니다. 첫 가입자가
-  # 전체 권한을 받는 규칙으로 frontend/e2e/global-setup.ts 가 검사 계정을 만듭니다.
-  # profile 이 있어 `docker compose up` 에는 뜨지 않습니다(COMMAND.md 12-1).
+  # E2E 테스트 전용 서버입니다. dev DB 대신 banblit_e2e DB 를 씁니다.
+  # 실행할 때마다 그 DB 를 비우고 migration 을 적용합니다. 테스트 계정은 frontend/e2e/global-setup.ts 가 생성합니다.
+  # profile 이 있어 `docker compose up` 에는 실행되지 않습니다(COMMAND.md 12-1).
   e2e-api:
     build:
       context: ./backend
       target: dev
     image: banblit-backend:dev
-    # manual 도 이 서버와 DB 를 씁니다(아래 manual 서비스). profile 을 둘 다 적지 않으면
-    # `--profile manual` 로 띄울 때 이 서비스가 활성화되지 않습니다.
+    # manual service 도 이 서버와 DB 를 씁니다. profile 2개를 모두 적어야 `--profile manual` 에서도 실행됩니다.
     profiles: ["e2e", "manual"]
     working_dir: /app
     volumes:
@@ -93,27 +86,24 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/banblit_e2e
       TZ: ${TZ:-Asia/Seoul}
-      # dev 서버의 첨부파일 volume 과 섞지 않습니다. 컨테이너를 다시 만들면 함께 사라집니다.
+      # dev 서버의 첨부파일 volume 과 분리합니다. container 를 다시 생성하면 함께 삭제됩니다.
       ATTACHMENT_DIR: /tmp/banblit-e2e-attachments
-      # 검사가 전체 권한 계정을 만들 때 사용하는 값입니다. 검사 전용 DB(banblit_e2e)에만
-      # 적용되므로 .env 의 값과 무관하고, 같은 값이 frontend/e2e/helpers.ts 에 있습니다.
+      # 테스트가 전체 권한 계정을 생성할 때 쓰는 값입니다. 같은 값이 frontend/e2e/helpers.ts 에 있습니다.
       ADMIN_SIGNUP_CODE: e2e-admin-code
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 2s
       timeout: 3s
       retries: 15
-      # DB 비우기와 migration 이 끝나기 전의 실패는 세지 않습니다.
+      # DB 초기화와 migration 이 끝나기 전의 실패는 세지 않습니다.
       start_period: 120s
     depends_on:
       db:
         condition: service_healthy
 
-  # 종단(E2E) 검사 — 화면·서버·저장소가 이어져 도는지 사람 흉내로 확인합니다.
-  # 공식 이미지에 브라우저가 들어 있습니다. @playwright/test 판 번호와 이미지 태그가
-  # 어긋나면 브라우저를 다시 받으려 하므로 맞춰서만 올린다.
-  # 화면(Vite 개발 서버)은 web 서비스가 아니라 이 컨테이너 안에서 Playwright 가 띄운다
-  # (frontend/playwright.config.ts 의 webServer). web 은 dev 서버로 요청을 넘기기 때문입니다.
+  # E2E 테스트입니다. 공식 Playwright image 에 브라우저가 포함되어 있습니다.
+  # @playwright/test 버전과 image 태그가 다르면 브라우저를 다시 내려받으므로 함께 올립니다.
+  # Vite 개발 서버는 이 container 안에서 Playwright 가 실행합니다(frontend/playwright.config.ts 의 webServer).
   e2e:
     image: mcr.microsoft.com/playwright:v1.62.1-noble
     profiles: ["e2e"]
@@ -121,22 +111,20 @@ services:
     command: sh -c "npm install && npx playwright test"
     volumes:
       - ./frontend:/app
-      # web 의 node_modules 와 따로 둔다 — 이미지 바탕(Ubuntu)이 web(Alpine)과 달라
-      # 같은 자리에 서로 다른 바탕의 네이티브 바이너리가 섞이면 안 됩니다.
+      # web(Alpine)과 base image 가 달라 node_modules 를 분리합니다.
       - banblit-e2e-modules:/app/node_modules
     environment:
-      # Vite 개발 서버가 /api 요청을 넘길 곳입니다(frontend/vite.config.ts).
+      # Vite 개발 서버가 /api 요청을 전달할 주소입니다(frontend/vite.config.ts).
       API_ORIGIN: http://e2e-api:8000
-      # 링크 미리보기 태그의 절대 주소입니다. 검사는 이 값이 교체되었는지만 확인합니다.
+      # 링크 미리보기 태그의 절대 주소입니다. 테스트는 이 값이 치환되었는지만 확인합니다.
       VITE_APP_ORIGIN: http://localhost:5173
     depends_on:
       e2e-api:
         condition: service_healthy
 
-  # 사용자 매뉴얼 — 화면을 캡쳐하고 PDF 로 출력합니다(COMMAND.md 15-1).
+  # 사용자 설명서입니다. 화면을 캡쳐하고 PDF 로 출력합니다(COMMAND.md 15-1).
   # e2e 와 같은 Playwright image 에 한글 글꼴만 추가한 image 를 씁니다(deploy/manual.Dockerfile).
-  # 검사 전용 서버(e2e-api)와 그 DB 를 함께 쓰므로, 캡쳐를 실행하면 banblit_e2e DB 가 비워지고
-  # frontend/manual/seed.ts 가 매뉴얼용 데이터를 새로 만듭니다. dev DB 는 변경되지 않습니다.
+  # e2e-api 와 banblit_e2e DB 를 쓰므로 실행하면 그 DB 가 초기화됩니다. dev DB 는 변경되지 않습니다.
   manual:
     build:
       context: ./deploy
@@ -147,9 +135,9 @@ services:
     command: sh -c "npm install && npx playwright test --config manual/playwright.config.ts && npx playwright test --config manual/pdf.config.ts"
     volumes:
       - ./frontend:/app
-      # e2e 와 같은 volume 입니다. image 바탕이 같아(둘 다 공식 Playwright image) 섞이지 않습니다.
+      # e2e 와 같은 volume 입니다. base image 가 같아 함께 써도 됩니다.
       - banblit-e2e-modules:/app/node_modules
-      # 캡쳐한 그림과 PDF 가 나가는 자리입니다. 매뉴얼 원고도 이 폴더에 있습니다.
+      # 캡쳐 결과와 PDF 가 저장되는 폴더입니다. 설명서 원고도 이 폴더에 있습니다.
       - ./docs:/docs
     environment:
       API_ORIGIN: http://e2e-api:8000
@@ -161,8 +149,7 @@ services:
   db:
     restart: "no"
 
-  # 앞단과 백업은 배포에만 있는 것입니다. profile 을 붙여 개발에서는 뜨지 않게 한다 —
-  # 지우면 base(배포용)에서도 사라지므로 여기서 끄기만 합니다.
+  # reverse proxy 와 백업은 배포 전용입니다. profile 로 개발에서는 실행되지 않게 합니다.
   caddy:
     profiles: ["deploy-only"]
 
