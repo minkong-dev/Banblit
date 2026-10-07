@@ -641,7 +641,7 @@ class NotificationOut(BaseModel):
     kind: NotificationKind
     created_at: str
     # kind 가 rejected 일 때만 값이 있고 그 밖에는 null 입니다. 반려된 대상(contract.REJECT_TARGETS 중 하나),
-    # 그 대상의 시작 시각, 반려 사유입니다.
+    # 그 대상의 시작 시간, 반려 사유입니다.
     target: str | None
     target_starts_at: datetime | None
     reason: str | None

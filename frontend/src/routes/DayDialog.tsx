@@ -203,7 +203,7 @@ export function DayDialog({
     setRepeat(NO_REPEAT);
     setEditing(null);
     onSaved();
-    say(edited ? "불가능 일정을 수정했어요" : "불가능 시간을 등록했어요");
+    say(edited ? "불가능 일정을 수정했어요" : "불가능 일정을 등록했어요");
   };
 
   /** 예약 하나를 만듭니다. 위쪽 시간 선택으로 열린 경우(fixed)에만 닫고, 아니면 이어서 예약할 수 있게 둡니다. */

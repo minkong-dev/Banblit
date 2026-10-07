@@ -180,7 +180,7 @@ def test_unavailable_time_straddling_the_window_end_is_kept() -> None:
 
 
 def test_multiple_unavailable_times_for_the_same_person_are_all_kept() -> None:
-    """한 멤버에게 불가능 시간이 둘 이상이면 둘 다 결과에 포함되어야 합니다.
+    """한 멤버에게 불가능 일정이 둘 이상이면 둘 다 결과에 포함되어야 합니다.
     rows의 첫 원소만 처리하도록 망가뜨리면 두 번째 행(매주 반복)이 통째로
     제거되지 않아야 합니다."""
     rows = [

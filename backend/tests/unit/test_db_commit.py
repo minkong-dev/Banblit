@@ -37,8 +37,8 @@ class _Conflict(ValueError):
 def test_a_known_constraint_becomes_the_given_message() -> None:
     session = _Session(_violation("rooms_name_key"))
 
-    with pytest.raises(ValueError, match="이미 있는 합주실 이름입니다"):
-        commit_translating(cast(Session, session), {"rooms_name_key": "이미 있는 합주실 이름입니다"})
+    with pytest.raises(ValueError, match="이미 있는 합주실명입니다"):
+        commit_translating(cast(Session, session), {"rooms_name_key": "이미 있는 합주실명입니다"})
 
     assert session.rolled_back == 1
 
@@ -48,7 +48,7 @@ def test_an_unknown_constraint_is_raised_as_is() -> None:
     session = _Session(_violation("something_else"))
 
     with pytest.raises(IntegrityError):
-        commit_translating(cast(Session, session), {"rooms_name_key": "이미 있는 합주실 이름입니다"})
+        commit_translating(cast(Session, session), {"rooms_name_key": "이미 있는 합주실명입니다"})
 
     assert session.rolled_back == 1
 

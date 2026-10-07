@@ -120,10 +120,10 @@ export function cohortMessage(value: string): string {
   return "";
 }
 
-/** name을 taken 목록과 비교해, 비었거나 겹치면 그 사유를 반환합니다. what은 "합주실"·"팀"처럼 오류 문장에 들어갈 제품 용어입니다. 앞뒤 공백을 제거한 후 비교하므로 공백만 다른 이름도 중복으로 판정합니다. */
-export function uniqueNameMessage(name: string, taken: string[], what: string): string {
+/** name을 taken 목록과 비교해, 비었거나 겹치면 그 사유를 반환합니다. what은 "합주실"·"팀"처럼 오류 문장에 들어갈 제품 용어이고, label 은 빈 이름 문구의 주어("합주실명")입니다. 앞뒤 공백을 제거한 후 비교하므로 공백만 다른 이름도 중복으로 판정합니다. */
+export function uniqueNameMessage(name: string, taken: string[], what: string, label = `${what} 이름`): string {
   const trimmed = name.trim();
-  if (!trimmed) return `${what} 이름을 입력해 주세요.`;
+  if (!trimmed) return `${label}을 입력해 주세요.`;
   const clash = taken.some((other) => other.trim() === trimmed);
   return clash ? `같은 이름의 ${what}이 이미 있습니다.` : "";
 }

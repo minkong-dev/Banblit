@@ -155,7 +155,7 @@ def practice_window(period: Period) -> PracticeWindow:
     """기간에 저장된 팀별 합주 시간대입니다. 정하지 않은 쌍은 None 이고, 그날은 합주실 개방시각 전체를 씁니다.
 
     두 열은 함께 채워지거나 함께 비어 있습니다(periods_practice_window_pairs). 한쪽만 있는 경우가
-    없으므로 시작 시각만 확인합니다.
+    없으므로 시작 시간만 확인합니다.
     """
 
     def pair(starts: time | None, ends: time | None) -> tuple[time, time] | None:
@@ -241,7 +241,7 @@ def _without_member(
 
 
 def open_slots_in_period(session: Session, period: Period, on: date) -> list[OpenSlot]:
-    """그 기간에서 어떤 팀도 배정받지 않은 칸을 시작 시각순으로 반환합니다. on 은 everyday 기간의 대상 날짜입니다(period_days).
+    """그 기간에서 어떤 팀도 배정받지 않은 칸을 시작 시간순으로 반환합니다. on 은 everyday 기간의 대상 날짜입니다(period_days).
 
     저장된 배정에 사용된 합주실의 운영시간을 기간의 날짜마다 칸으로 분할한 뒤, 배정 구간과
     겹치는 칸을 제외합니다. 배정은 구간 한 행으로 저장되므로(db/models.py 의 Assignment) 시작
@@ -260,7 +260,7 @@ def open_slots_in_period(session: Session, period: Period, on: date) -> list[Ope
         return []
 
     # ponytail: 칸마다 그 합주실의 배정 구간을 전부 훑습니다(칸 수 × 구간 수). 합주실 하나의
-    # 기간 전체가 대상이라 지금 규모에서는 문제가 없습니다. 느려지면 구간을 시작 시각순으로
+    # 기간 전체가 대상이라 지금 규모에서는 문제가 없습니다. 느려지면 구간을 시작 시간순으로
     # 정렬해 이분 탐색으로 변경합니다.
     occupied: dict[int, list[tuple[datetime, datetime]]] = defaultdict(list)
     for room_id, starts_at, ends_at in taken:

@@ -13,7 +13,7 @@ from backend.db.models import Room
 from backend.db.pipeline import commit_translating
 
 # 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 변경하는 단계별 기록)이 지정한 이름입니다.
-ROOM_MESSAGES = {"rooms_name_key": "이미 있는 합주실 이름입니다"}
+ROOM_MESSAGES = {"rooms_name_key": "이미 있는 합주실명입니다"}
 
 
 def list_rooms(session: Session) -> list[Room]:
@@ -22,7 +22,7 @@ def list_rooms(session: Session) -> list[Room]:
 
 def create_room(session: Session, name: str, opens_at: str, closes_at: str) -> Room:
     """새 합주실을 생성합니다. 이름이 비어 있는지, 시각이 HH:MM 형식이고 정시인지, 닫는 시각이 여는 시각보다 늦은지, 이름이 중복인지를 사람이 읽을 수 있는 문장으로 검증합니다."""
-    clean_name = require_non_empty(name, "합주실 이름")
+    clean_name = require_non_empty(name, "합주실명")
     opens = _parse_room_clock(opens_at, "여는 시각")
     closes = _parse_room_clock(closes_at, "닫는 시각")
     require_closes_after_opens(opens, closes)
@@ -54,7 +54,7 @@ def update_room(
     require_closes_after_opens(new_opens, new_closes)
 
     if name is not None:
-        room.name = require_non_empty(name, "합주실 이름")
+        room.name = require_non_empty(name, "합주실명")
     room.opens_at = new_opens
     room.closes_at = new_closes
     commit_translating(session, ROOM_MESSAGES)

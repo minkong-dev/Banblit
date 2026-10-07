@@ -73,7 +73,7 @@ done
 COMMAND="${COMMAND:-up}"
 
 if [ "$MODE" = 'deploy' ]; then
-  # 배포는 base 하나만 쓴다. -f 를 주면 docker compose 가 override 를 자동으로 얹지 않는다.
+  # 배포는 base 하나만 쓴다. -f 를 주면 docker compose 가 override 를 자동으로 얹지 않습니다.
   COMPOSE=(docker compose -f docker-compose.yml)
 else
   COMPOSE=(docker compose)
@@ -96,7 +96,7 @@ web_port() {
 
 health_url() {
   if [ "$MODE" = 'deploy' ]; then
-    # 배포에서 api 는 host 에 포트를 열지 않는다. nginx 를 거쳐 확인한다 —
+    # 배포에서 api 는 host 에 포트를 열지 않습니다. nginx 를 거쳐 확인한다 —
     # web·api·db 가 이어져 도는지까지 한 번에 본다.
     printf 'http://127.0.0.1:%s/api/health' "$(web_port)"
   else
@@ -130,14 +130,14 @@ assert_ready() {
   }
 }
 
-# .env 가 없으면 견본을 복사한다. 개발용 기본값이라 dev 는 그대로 띄울 수 있다.
+# .env 가 없으면 견본을 복사합니다. 개발용 기본값이라 dev 는 그대로 띄울 수 있습니다.
 ensure_env() {
   [ -f .env ] && return 0
   cp .env.example .env
   good "만들었습니다 — .env.example 을 복사했습니다."
 }
 
-# 배포에 반드시 필요한 값이 채워졌는지 확인한다. 하나라도 비면 여기서 멈춘다 —
+# 배포에 반드시 필요한 값이 채워졌는지 확인합니다. 하나라도 비면 여기서 멈춥니다 —
 # 도메인이 비면 caddy 가 인증서를 못 받고, 견본 비밀번호 그대로면 DB 가 열린 것과 같다.
 # 같은 주소로 인증서를 자주 요청하면 발급처가 한동안 거절하므로, 뜨기 전에 막는다.
 assert_deploy_env() {
@@ -172,13 +172,13 @@ assert_deploy_env() {
 #
 # 뜨는 일은 backup service 를 빌려 시킨다. host 의 backups 폴더는 그 container 가
 # root 로 만든 것이라 로그인한 사용자가 직접 쓰면 Permission denied 가 난다.
-# 접속 정보도 그 service 의 환경변수에 이미 들어 있다.
+# 접속 정보도 그 service 의 환경변수에 이미 들어 있습니다.
 backup_db() {
   local stamp
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 
   # 정기 백업과 같은 자리에 같은 방식으로 남긴다(deploy/backup.sh).
-  # 다 뜨기 전에 끊기면 .part 로 남아 온전한 백업과 구분된다.
+  # 다 뜨기 전에 끊기면 .part 로 남아 온전한 백업과 구분됩니다.
   "${COMPOSE[@]}" run --rm --no-deps -T -e "STAMP=$stamp" --entrypoint bash backup -c '
     set -euo pipefail
     out="/backups/pre-migrate-$STAMP.sql.gz"
@@ -191,14 +191,14 @@ backup_db() {
   good "pre-migrate-$stamp.sql.gz"
 }
 
-# migration 을 적용하기 전에, 데이터베이스가 서 있는 revision 의 파일이 저장소에 있는지 확인한다.
+# migration 을 적용하기 전에, 데이터베이스가 서 있는 revision 의 파일이 저장소에 있는지 확인합니다.
 #
 # alembic 은 자기가 선 지점의 파일이 없으면 "Can't locate revision" 만 내고 멈춘다. 그 문구만
-# 보면 무엇을 해야 하는지 알 수 없다. 2026-09-16 에 migration 36개를 1개로 합치면서 옛 파일을
+# 보면 무엇을 해야 하는지 알 수 없습니다. 2026-09-16 에 migration 36개를 1개로 합치면서 옛 파일을
 # 삭제했는데, 그때 배포 데이터베이스가 옛 체인 중간에 있어 2026-09-19 배포가 이 지점에서 막혔다.
 #
-# 합치기 전에 배포 데이터베이스를 먼저 head 로 올렸다면 생기지 않았을 상황이다. 다음에 같은 일이
-# 생겼을 때 원인과 할 일이 바로 보이도록 여기서 먼저 검사한다.
+# 합치기 전에 배포 데이터베이스를 먼저 head 로 올렸다면 생기지 않았을 상황입니다. 다음에 같은 일이
+# 생겼을 때 원인과 할 일이 바로 보이도록 여기서 먼저 검사합니다.
 assert_revision_known() {
   local service="$1"
   if "${COMPOSE[@]}" run --rm --no-deps -T "$service" alembic current >/dev/null 2>&1; then
@@ -256,16 +256,16 @@ show_account_hint() {
 }
 
 # 리눅스는 현재 폴더를 명령 검색 경로에 넣지 않는다 — 아무 폴더에 들어갔다가 거기 있는
-# 가짜 파일이 실행되는 것을 막으려는 기본 설정이다. 그래서 갓 클론한 자리에서는 ./ 가
-# 필요하고, 그것을 없애려면 이름을 어딘가에 등록해야 한다.
+# 가짜 파일이 실행되는 것을 막으려는 기본 설정입니다. 그래서 갓 클론한 자리에서는 ./ 가
+# 필요하고, 그것을 없애려면 이름을 어딘가에 등록해야 합니다.
 #
-# ~/.bashrc 에 function 으로 넣는다. alias 는 뒤따르는 인자를 넘기지 못하는 경우가 있다.
-# 표시 두 줄 사이에만 쓰므로 여러 번 실행해도 쌓이지 않고, 저장소를 옮기면 경로가 갱신된다.
+# ~/.bashrc 에 function 으로 넣는다. alias 는 뒤따르는 인자를 넘기지 못하는 경우가 있습니다.
+# 표시 두 줄 사이에만 쓰므로 여러 번 실행해도 쌓이지 않고, 저장소를 옮기면 경로가 갱신됩니다.
 BASHRC_BEGIN='# >>> banblit >>>'
 BASHRC_END='# <<< banblit <<<'
 
 register_command() {
-  # 윈도우에서는 setup.ps1 이 PowerShell profile 에 이미 넣는다. 여기서 또 넣지 않는다.
+  # 윈도우에서는 setup.ps1 이 PowerShell profile 에 이미 넣는다. 여기서 또 넣지 않습니다.
   case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) return 0 ;; esac
 
   local rc="$HOME/.bashrc" here had
@@ -274,7 +274,7 @@ register_command() {
   had=0
   grep -qF "$BASHRC_BEGIN" "$rc" 2>/dev/null && had=1
 
-  # 있던 것은 표시째로 걷어내고 다시 넣는다 — 저장소를 옮겼을 때 옛 경로가 남지 않는다.
+  # 있던 것은 표시째로 걷어내고 다시 넣는다 — 저장소를 옮겼을 때 옛 경로가 남지 않습니다.
   [ "$had" -eq 0 ] || sed -i "\|$BASHRC_BEGIN|,\|$BASHRC_END|d" "$rc"
   {
     printf '%s\n' "$BASHRC_BEGIN"
@@ -290,7 +290,7 @@ register_command() {
 
 open_browser() {
   [ "$NO_BROWSER" -eq 0 ] || return 0
-  # 윈도우에서만 연다. 서버에는 열 화면이 없다.
+  # 윈도우에서만 연다. 서버에는 열 화면이 없습니다.
   case "$(uname -s)" in
     MINGW*|MSYS*|CYGWIN*) cmd.exe //c start "" "$1" >/dev/null 2>&1 || true ;;
   esac
@@ -300,7 +300,7 @@ open_browser() {
 
 # dependency 를 추가하고 image 를 다시 만들지 않으면 uvicorn 이 import 단계에서 죽는다.
 # python-multipart 가 빠져 실제로 죽은 적이 있다(COMMAND.md 1-1-1).
-# lock 파일이 image 보다 새로우면 낡은 것으로 판단한다.
+# lock 파일이 image 보다 새로우면 낡은 것으로 판단합니다.
 image_stale() {
   local created built_at file_at
   created="$(docker image inspect "$DEV_IMAGE" --format '{{.Created}}' 2>/dev/null || true)"
@@ -395,12 +395,12 @@ cmd_up() {
   assert_ready
   ensure_env
   if [ "$MODE" = 'deploy' ]; then up_deploy; else up_dev; fi
-  # 뜬 뒤에 등록한다. 띄우다 실패한 자리에 이름만 남기지 않으려는 것이다.
+  # 뜬 뒤에 등록합니다. 띄우다 실패한 자리에 이름만 남기지 않으려는 것입니다.
   register_command
 }
 
-# 서버를 새 버전으로 갱신한다. git pull 이 이 파일 자체를 바꾸지만, bash 는 함수를
-# 정의할 때 본문을 전부 읽어 두므로 실행 중에 바뀌어도 어긋나지 않는다.
+# 서버를 새 버전으로 갱신합니다. git pull 이 이 파일 자체를 바꾸지만, bash 는 함수를
+# 정의할 때 본문을 전부 읽어 두므로 실행 중에 바뀌어도 어긋나지 않습니다.
 cmd_update() {
   assert_ready
   step "코드를 가져옵니다"
@@ -429,7 +429,7 @@ cmd_restart() {
   local targets=(api web)
   [ -z "$SERVICE" ] || targets=("$SERVICE")
   step "다시 띄웁니다 — ${targets[*]}"
-  # docker compose restart 를 쓰지 않는다. 그것은 있던 container 를 껐다 켤 뿐이라
+  # docker compose restart 를 쓰지 않습니다. 그것은 있던 container 를 껐다 켤 뿐이라
   # 환경변수는 만들 때 굳은 값 그대로다 — .env 를 고치고 restart 하면 조용히 옛 값으로 돈다.
   # up --force-recreate 는 container 를 다시 만들어 .env 를 다시 읽는다.
   "${COMPOSE[@]}" up -d --force-recreate "${targets[@]}"
@@ -483,7 +483,7 @@ cmd_migrate() {
 }
 
 # 전체 출력을 파일로 받고 화면에는 판정과 실패 항목만 낸다.
-# pytest 한 번이 수백 줄을 내는데 필요한 것은 통과 여부와 실패한 이름뿐이다.
+# pytest 한 번이 수백 줄을 내는데 필요한 것은 통과 여부와 실패한 이름뿐입니다.
 check_step() {
   local label="$1" log_path="$2" pattern="$3"; shift 3
   step "$label"

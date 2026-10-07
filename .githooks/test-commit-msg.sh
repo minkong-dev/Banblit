@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# commit-msg 훅이 커밋 메시지를 제대로 걸러내는지 검사한다.
+# commit-msg 훅이 커밋 메시지를 제대로 걸러내는지 검사합니다.
 #
 # 실행: bash .githooks/test-commit-msg.sh   (저장소 루트에서)
 

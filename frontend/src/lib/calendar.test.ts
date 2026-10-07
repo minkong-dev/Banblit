@@ -162,8 +162,8 @@ describe("hoursLabel — 칸 개수를 사람이 읽는 시간으로", () => {
   });
 });
 
-describe("withPastTaken — 오늘은 시작 시각이 지난 칸을 찬 칸으로 표시한다", () => {
-  it("서버 규칙(starts_at <= now 거절)과 같이, 시작 시각이 now 와 같거나 이른 칸을 true 로 바꾼다", () => {
+describe("withPastTaken — 오늘은 시작 시간이 지난 칸을 찬 칸으로 표시한다", () => {
+  it("서버 규칙(starts_at <= now 거절)과 같이, 시작 시간이 now 와 같거나 이른 칸을 true 로 바꾼다", () => {
     // 09시 개장, 60분 칸 4개(09·10·11·12시 시작). now 는 10:00 → 09시·10시 칸은 시작이 now 이하입니다.
     const now = new Date(2026, 8, 30, 10, 0);
     expect(withPastTaken([false, false, true, false], now, 9, 60)).toEqual([true, true, true, false]);
@@ -174,11 +174,11 @@ describe("withPastTaken — 오늘은 시작 시각이 지난 칸을 찬 칸으�
     expect(withPastTaken([false, false], now, 9, 60)).toEqual([false, false]);
   });
 
-  it("자정 직후(00:00)에 0시 개장이면 첫 칸만 시작 시각이 now 와 같아 true 이다", () => {
+  it("자정 직후(00:00)에 0시 개장이면 첫 칸만 시작 시간이 now 와 같아 true 이다", () => {
     expect(withPastTaken([false, false], new Date(2026, 8, 30, 0, 0), 0, 60)).toEqual([true, false]);
   });
 
-  it("마지막 칸의 시작 시각도 지났으면 전부 true 이다", () => {
+  it("마지막 칸의 시작 시간도 지났으면 전부 true 이다", () => {
     expect(withPastTaken([false, false, false], new Date(2026, 8, 30, 23, 30), 9, 60)).toEqual([true, true, true]);
   });
 

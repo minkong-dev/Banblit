@@ -53,7 +53,7 @@ export function MonthView({
   const ymd = (day: number) =>
     `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   const label = (index: number) => slotLabel(index, openHour);
-  // 오늘 날짜는 시작 시각이 지난 칸을 찬 칸으로 계산합니다. 서버가 그 시각의 예약을 거절하므로 남은 시간에서 제외합니다.
+  // 오늘 날짜는 시작 시간이 지난 칸을 찬 칸으로 계산합니다. 서버가 그 시각의 예약을 거절하므로 남은 시간에서 제외합니다.
   const gridOf = (key: string, minutes: number = slotMinutes) => {
     const grid = takenGrid(entriesOf(key).filter((entry) => entry.kind !== "off"), slotCount, minutes);
     return key === today ? withPastTaken(grid, now, openHour, minutes) : grid;
@@ -199,7 +199,7 @@ export function WeekView({
           <Fragment key={hour}>
             <div className="wt" data-hour={hour}>{hourLabel(hour)}</div>
             {dayKeys.map((key) => {
-              // 막대는 시작 시각이 속한 시간 줄에 두고, 줄 안에서는 --offset(0~1) 만큼 내려 그립니다.
+              // 막대는 시작 시간이 속한 시간 줄에 두고, 줄 안에서는 --offset(0~1) 만큼 내려 그립니다.
               // 18:10 시작이면 18시 줄에 1/6 만큼 내려간 자리입니다.
               const entry = visible(entriesOf(key), tab, teams)
                 .find((item) => Math.floor(item.a) + openHour === hour);
@@ -209,7 +209,7 @@ export function WeekView({
                     <span className={`blk ${entryClass(entry)}`}
                       style={{ "--offset": entry.a - Math.floor(entry.a), "--span": entry.b - entry.a } as CSSProperties}>
                       {entryName(entry, teams)}
-                      {/* 합주실 이름을 함께 표시합니다. 맞닿은 두 slot 이 따로 렌더링되는 유일한 이유가
+                      {/* 합주실명을 함께 표시합니다. 맞닿은 두 slot 이 따로 렌더링되는 유일한 이유가
                           합주실이 다른 것인데, 합주실을 표시하지 않으면 왜 나뉘었는지 알 수 없습니다. */}
                       <small>
                         {label(entry.a)}–{endLabel(entry.b)}

@@ -340,7 +340,7 @@ def test_closes_after_opens_accepts_a_later_close() -> None:
 
 def test_require_room_name_trims_surrounding_whitespace() -> None:
 
-    assert require_non_empty("  1번방  ", "합주실 이름") == "1번방"
+    assert require_non_empty("  1번방  ", "합주실명") == "1번방"
 
 
 
@@ -348,9 +348,9 @@ def test_require_room_name_trims_surrounding_whitespace() -> None:
 
 def test_require_room_name_rejects_an_empty_string() -> None:
 
-    with pytest.raises(ValueError, match="합주실 이름"):
+    with pytest.raises(ValueError, match="합주실명"):
 
-        require_non_empty("", "합주실 이름")
+        require_non_empty("", "합주실명")
 
 
 
@@ -358,9 +358,9 @@ def test_require_room_name_rejects_an_empty_string() -> None:
 
 def test_require_room_name_rejects_a_whitespace_only_string() -> None:
 
-    with pytest.raises(ValueError, match="합주실 이름"):
+    with pytest.raises(ValueError, match="합주실명"):
 
-        require_non_empty("   ", "합주실 이름")
+        require_non_empty("   ", "합주실명")
 
 
 

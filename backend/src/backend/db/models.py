@@ -296,7 +296,7 @@ class TeamSlot(Base):
 
 
 class UnavailableTime(Base):
-    """멤버의 불가능 시간입니다. 반복이 켜지면 고른 요일마다 반복합니다.
+    """멤버의 불가능 일정입니다. 반복이 켜지면 고른 요일마다 반복합니다.
 
     시각은 tzinfo(시간대 정보)가 없는 값으로 저장합니다. 엔진의 TimeInterval 과 같은 규칙입니다.
 
@@ -356,7 +356,7 @@ class Period(Base):
 
     everyday 는 집중 합주기간의 "매일" 옵션입니다. first_run_at 과 second_run_at 은 하루 2회 계산하는 시각입니다.
 
-    ensemble_* 다섯 열은 전체 합주 설정입니다. 날짜 범위·합주실·기본 시작/끝 시각을 함께 채우거나
+    ensemble_* 다섯 열은 전체 합주 설정입니다. 날짜 범위·합주실·기본 시작/종료 시간을 함께 채우거나
     함께 null 로 변경합니다. null 이면 전체 합주가 없는 기간입니다. 날짜마다 다른 시각은 ensemble_days 가 저장합니다.
 
     practice_* 네 열은 팀별 합주를 배정할 수 있는 하루 중의 시간대입니다. 합주실 개방시각과는 다른
@@ -408,7 +408,7 @@ class Period(Base):
         CheckConstraint(
             "ensemble_ends_at > ensemble_starts_at", name="periods_ensemble_times_order"
         ),
-        # 평일·주말은 각각 한 쌍입니다. 한쪽만 채우면 끝 시각 없는 시간대가 되어 배정 구간을
+        # 평일·주말은 각각 한 쌍입니다. 한쪽만 채우면 종료 시간 없는 시간대가 되어 배정 구간을
         # 정할 수 없습니다. 두 쌍은 서로 독립입니다 — 평일만 정하고 주말은 개방시각 전체로 둘 수 있습니다.
         CheckConstraint(
             "num_nulls(practice_weekday_starts_at, practice_weekday_ends_at) IN (0, 2)"
@@ -704,7 +704,7 @@ class Notification(Base):
 
     # 아래 3개는 kind 가 rejected 일 때만 값을 가집니다. 무엇을(target), 언제 것을(target_starts_at),
     # 왜(reason) 반려했는지입니다. 화면이 이 값으로 "<언제> <무엇>이 반려되었어요" 문장을 만듭니다.
-    # 반려된 불가능 일정은 행이 삭제되므로 대상의 번호가 아니라 시작 시각을 그대로 보관합니다.
+    # 반려된 불가능 일정은 행이 삭제되므로 대상의 번호가 아니라 시작 시간을 그대로 보관합니다.
     target: Mapped[str | None] = mapped_column(Text, nullable=True)
     target_starts_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -118,7 +118,7 @@ export function isRangeFree(
   return firstTaken(grid, from, to, slotMinutes) === null;
 }
 
-/** 오늘 날짜의 grid 에서 시작 시각이 now 와 같거나 이른 칸을 찬 칸(true)으로 바꾼 새 배열을 반환합니다.
+/** 오늘 날짜의 grid 에서 시작 시간이 now 와 같거나 이른 칸을 찬 칸(true)으로 바꾼 새 배열을 반환합니다.
  *  서버(reservation_service._require_not_started)가 starts_at <= now 인 예약을 거절하는 것과 같은 규칙입니다. */
 export function withPastTaken(
   grid: boolean[], now: Date, openHour: number, slotMinutes: number = MINUTES_PER_HOUR,
@@ -140,7 +140,7 @@ export function roomBounds(rooms: { opens_at: string; closes_at: string }[]): {
   open: number;
   close: number;
 } {
-  // 합주실 여닫는 시각 중 가장 이른 것과 가장 늦은 것으로 달력의 시작과 끝 시각을 결정합니다.
+  // 합주실 여닫는 시각 중 가장 이른 것과 가장 늦은 것으로 달력의 시작과 종료 시간을 결정합니다.
   // 배정이 있든 없든 합주실 설정만 있으면 결정됩니다.
   if (rooms.length === 0) return { open: FALLBACK_OPEN_HOUR, close: FALLBACK_CLOSE_HOUR };
 

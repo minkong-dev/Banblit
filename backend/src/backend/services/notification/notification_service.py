@@ -45,7 +45,7 @@ def notify_rejected(
 ) -> None:
     """member_id 에게 반려 알림 1개를 추가합니다. commit 은 부르는 쪽이 합니다.
 
-    target 은 contract.REJECT_TARGETS 중 하나이고, target_starts_at 은 반려된 예약·불가능 일정의 시작 시각,
+    target 은 contract.REJECT_TARGETS 중 하나이고, target_starts_at 은 반려된 예약·불가능 일정의 시작 시간,
     reason 은 검증을 마친 반려 사유입니다. 반려와 알림 추가를 한 transaction 으로 묶기 위해 commit 하지 않습니다.
     """
     session.add(

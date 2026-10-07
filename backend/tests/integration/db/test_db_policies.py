@@ -26,7 +26,7 @@ def test_deleting_a_member_empties_their_slot_but_keeps_it(
     db_session: Session,
 ) -> None:
     """자리는 팀의 구성입니다. 멤버가 삭제되어도 팀의 자리 수가 줄면 안 됩니다.
-    반면 그 멤버가 등록한 불가능 시간은 함께 삭제됩니다."""
+    반면 그 멤버가 등록한 불가능 일정은 함께 삭제됩니다."""
     member = Member(name="김민수")
     team = Team(name="A")
     db_session.add_all([member, team])

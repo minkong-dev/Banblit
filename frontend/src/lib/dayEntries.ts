@@ -56,7 +56,7 @@ export function mergeByDay(...sources: readonly DayEntries[]): DayEntries {
 /** 달력 화면의 탭입니다. 내 일정, 예약, 전체 일정 순서입니다. */
 export type DayTab = "me" | "book" | "all";
 
-/** 그날 화면에 표시할 항목만 선택합니다. 내 일정 탭은 내 팀의 배정·전체 합주·내 불가능 시간,
+/** 그날 화면에 표시할 항목만 선택합니다. 내 일정 탭은 내 팀의 배정·전체 합주·내 불가능 일정,
  *  전체 일정 탭은 배정·전체 합주·예약 전부입니다. 전체 합주는 모든 멤버의 일정이라 두 탭 모두에 있습니다. */
 export function visible(entries: Entry[], tab: DayTab, teams: DayTeam[]): Entry[] {
   const mine = new Set(teams.filter((team) => team.mine).map((team) => team.key));
@@ -171,7 +171,7 @@ export function offByDay(times: Unavailable[], openHour: number, days: string[])
 }
 
 /** 날짜 모달의 "불가능 일정 목록"에 나열할 항목입니다. 모달을 연 날짜와 무관하게 로그인한 사용자가 등록한
- *  불가능 일정 전부를 시작 시각 순으로 반환합니다. 반복 일정은 전개하지 않고 저장된 1건을 1줄로 나열합니다.
+ *  불가능 일정 전부를 시작 시간 순으로 반환합니다. 반복 일정은 전개하지 않고 저장된 1건을 1줄로 나열합니다.
  *  전부 저장된 행이므로 모든 항목에 removeIds 가 있어 목록에서 삭제할 수 있습니다. */
 export function allOffEntries(times: Unavailable[], openHour: number): Entry[] {
   return [...times]

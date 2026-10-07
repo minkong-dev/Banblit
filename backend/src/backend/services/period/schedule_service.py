@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team
 
 ScheduleRow = tuple[int, str, int, str, datetime, datetime]
-"""(팀 id, 팀 이름, 합주실 id, 합주실 이름, 시작 시각, 종료 시각)"""
+"""(팀 id, 팀 이름, 합주실 id, 합주실명, 시작 시간, 종료 시간)"""
 
 
 def get_period_or_raise(session: Session, period_id: int) -> Period:
@@ -19,7 +19,7 @@ def get_period_or_raise(session: Session, period_id: int) -> Period:
 
 
 def list_schedule(session: Session, period_id: int) -> list[ScheduleRow]:
-    """그 기간의 확정 배정을 시작 시각과 합주실 이름 순으로 반환합니다."""
+    """그 기간의 확정 배정을 시작 시간과 합주실명 순으로 반환합니다."""
     rows = session.execute(
         select(Assignment, Team.name, Room.name)
         .join(Team, Team.id == Assignment.team_id)

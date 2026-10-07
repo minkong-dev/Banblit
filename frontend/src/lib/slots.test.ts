@@ -125,7 +125,7 @@ describe("upcomingBookings — 설정의 예약 탭이 보는 목록", () => {
     id, room, teamId: null, team: null, memberId: 7, member: "고윤서", name: null, start, end,
   });
 
-  it("합주실과 무관하게 시작 시각 순으로 세운다", () => {
+  it("합주실과 무관하게 시작 시간 순으로 세운다", () => {
     const rows = [
       booking(3, "합주실 B", "2026-09-21T18:00:00", "2026-09-21T20:00:00"),
       booking(1, "합주실 A", "2026-09-20T20:00:00", "2026-09-20T21:00:00"),

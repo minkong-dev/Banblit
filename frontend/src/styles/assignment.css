@@ -84,7 +84,7 @@ body[data-page="admin"] {
 @media (max-width: 767px) {
   body[data-page="admin"] {
     /* 7열이 화면 폭 안에 들어갑니다. 전에는 620px 로 두고 가로 스크롤했는데, 보이지 않는 금·토 칸의 일정 때문에
-       보이는 빈 칸이 세로로 길어져 달력이 비어 보였습니다(2026-10-07). 칸이 좁아 합주실 이름은 숨기고 팀 이름은 글자 단위로 줄바꿈합니다. */
+       보이는 빈 칸이 세로로 길어져 달력이 비어 보였습니다(2026-10-07). 칸이 좁아 합주실명은 숨기고 팀 이름은 글자 단위로 줄바꿈합니다. */
     .dow span { font-size: 11px; }
     .day { min-height: 64px; padding: 5px 3px 6px; gap: 3px; }
     .day .n { font-size: 12px; }
