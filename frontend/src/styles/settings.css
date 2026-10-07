@@ -50,7 +50,8 @@ body[data-page="settings"] {
   .fields.period .frow > .checks { grid-column: span 2; }
   .fields.period .frow input, .fields.period .frow .dd { width: 100%; }
   /* 체크 2개를 담는 칸입니다. 체크 표시는 입력칸(44px)보다 낮아 라벨 윗선을 맞추고 입력칸 높이의 가운데에 둡니다. */
-  .fields.period .checks { display: flex; gap: 40px; align-items: flex-start; }
+  .fields.period .checks { display: flex; gap: 40px; align-items: flex-start; margin-left: 8px; }
+  /* 체크 칸은 종료일에서 24px(열 간격 16 + 8) 떨어집니다. */
   .fields.period .frow .chk { margin: 10px 0; }
   /* 취소·저장 버튼은 오른쪽 끝이고, 마지막 묶음과는 묶음 간격보다 가깝습니다. */
   .fields.period .acts { justify-content: flex-end; margin-top: -10px; }
