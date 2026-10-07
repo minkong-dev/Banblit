@@ -92,7 +92,7 @@ services:
       - api
     restart: unless-stopped
 
-  # 앞단 — 인증서를 스스로 받고 갱신하며 https 로 받는다. 설정은 deploy/Caddyfile.
+  # reverse proxy — 인증서를 스스로 받고 갱신하며 https 로 받는다. 설정은 deploy/Caddyfile.
   # 이것이 없으면 로그인이 성립하지 않는다: 위 api 가 쿠키에 Secure 를 붙이는데
   # 브라우저는 http 로 온 Secure 쿠키를 저장하지 않습니다.
   caddy:
