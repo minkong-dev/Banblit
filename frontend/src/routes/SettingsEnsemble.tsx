@@ -85,11 +85,14 @@ export function EnsembleFields(props: {
 
   return (
     <>
+      <div className="frow">
       <Cell label="전체 합주기간 지정" htmlFor={at("ensemble")}>
         <CheckMark id={at("ensemble")} checked={draft.on} onChange={(on) => setDraft({ ...draft, on })} />
       </Cell>
+      </div>
       {!draft.on ? null : (
         <div className="ensemble">
+          <div className="frow">
           <Cell label="전체합주 시작일" htmlFor={at("ens-starts")}>
             <input
               type="date"
@@ -125,6 +128,8 @@ export function EnsembleFields(props: {
               onChange={(next) => setDraft({ ...draft, room_id: next === "" ? null : next })}
             />
           </Cell>
+          </div>
+          <div className="frow">
           <Cell label="시작 시각" htmlFor={at("ens-from")}>
             <input
               type="time"
@@ -145,6 +150,7 @@ export function EnsembleFields(props: {
               onChange={(event) => setDraft({ ...draft, ends_at: event.target.value })}
             />
           </Cell>
+          </div>
           {teamDays === "" ? null : <p className="teamdays">{teamDays}</p>}
         </div>
       )}
@@ -230,38 +236,33 @@ export function EnsembleDayEditor({ day, on, room, picker }: {
   );
 }
 
-/** 설정 화면 기간 편집 행 아래에 붙는 날짜별 시각 구역입니다. 날짜를 선택하면 그 날짜의 편집기가 새로 열립니다.
- *  선택지에는 기본 시각과 다르게 지정한 날짜의 시각을 함께 표시합니다. */
+/** 설정 화면 기간 편집 행 아래에 붙는 날짜별 시각 구역입니다. 전체합주 날짜 범위의 날짜를 전부 행으로 나열하고,
+ *  행마다 그 날짜의 시각을 저장하거나 기본 시각으로 되돌립니다. 날짜별로 지정한 행은 "지정" 표시가 붙습니다. */
 export function EnsembleDays({ period, room }: { period: Period; room: Room | undefined }) {
-  const [day, setDay] = useState(period.ensemble?.starts_on ?? "");
-  const on = ensembleOn([period], day);
-  if (period.ensemble === null || on === null) return null;
-  const { days } = period.ensemble;
-  const pickerId = `ensday-${period.id}-day`;
+  if (period.ensemble === null) return null;
+  const { starts_on, ends_on } = period.ensemble;
 
   return (
     <div className="ensdays">
       <b>날짜별 전체합주 시각</b>
-      <EnsembleDayEditor
-        key={day}
-        day={day}
-        on={on}
-        room={room}
-        picker={
-          <Cell label="날짜" htmlFor={pickerId}>
-            <Dropdown
-              id={pickerId}
-              value={day}
-              choices={datesBetween(period.ensemble.starts_on, period.ensemble.ends_on).map((key) => {
-                const own = days.find((item) => item.day === key);
-                const when = own === undefined ? "" : ` (${own.starts_at}–${own.ends_at})`;
-                return { value: key, label: `${dayLabel(key)}${when}` };
-              })}
-              onChange={setDay}
-            />
-          </Cell>
-        }
-      />
+      {datesBetween(starts_on, ends_on).map((day) => {
+        const on = ensembleOn([period], day);
+        if (on === null) return null;
+        return (
+          <EnsembleDayEditor
+            key={`${day}-${on.startsAt}-${on.endsAt}`}
+            day={day}
+            on={on}
+            room={room}
+            picker={
+              <div className="ensdate">
+                {dayLabel(day)}
+                {on.custom ? <span className="enstag">지정</span> : null}
+              </div>
+            }
+          />
+        );
+      })}
     </div>
   );
 }

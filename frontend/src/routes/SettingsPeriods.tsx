@@ -67,12 +67,12 @@ function windowValue(pair: WindowPair): ClockRange | null {
 /** 목록 줄 오른쪽에 붙는 한 줄입니다. 집중 합주기간(스케줄링을 자동으로 진행할 기간)일 때만 계산 시각 두 개가 더 붙고,
  *  전체합주를 지정했으면 그 날짜 범위가 붙습니다. */
 function periodSpan(period: Period): string {
-  const days = ` · ${daysBetween(period.starts_on, period.ends_on)}일`;
+  const days = ` ${daysBetween(period.starts_on, period.ends_on)}일`;
   if (period.kind !== "focused") return days;
   const ensemble = period.ensemble === null
     ? ""
-    : ` · 전체합주 ${dayLabel(period.ensemble.starts_on)}–${dayLabel(period.ensemble.ends_on)}`;
-  return `${days} · 계산 ${period.first_run_at} · ${period.second_run_at}${ensemble}`;
+    : `, 전체합주 ${dayLabel(period.ensemble.starts_on)}–${dayLabel(period.ensemble.ends_on)}`;
+  return `${days}, 계산 ${period.first_run_at} ${period.second_run_at}${ensemble}`;
 }
 
 /** 기간 form 의 입력칸입니다. 집중 합주기간일 때만 계산 시각 입력칸 2개가 더 표시됩니다. */
@@ -87,6 +87,7 @@ function PeriodFields(props: {
   const { form, setForm, at, bad, whyId, first } = props;
   return (
     <>
+      <div className="frow">
       <Cell label="분류" htmlFor={at("kind")}>
         <Dropdown
           buttonRef={first}
@@ -125,14 +126,18 @@ function PeriodFields(props: {
         </Cell>
       )}
       {form.kind === "focused" ? (
+        <Cell label="매일" htmlFor={at("everyday")}>
+          <CheckMark
+            id={at("everyday")}
+            checked={form.everyday}
+            onChange={(on) => setForm({ ...form, everyday: on })}
+          />
+        </Cell>
+      ) : null}
+      </div>
+      {form.kind === "focused" ? (
         <>
-          <Cell label="매일" htmlFor={at("everyday")}>
-            <CheckMark
-              id={at("everyday")}
-              checked={form.everyday}
-              onChange={(on) => setForm({ ...form, everyday: on })}
-            />
-          </Cell>
+          <div className="frow">
           <Cell label="1차 스케줄링 시간" htmlFor={at("first")}>
             <input
               id={at("first")}
@@ -149,6 +154,8 @@ function PeriodFields(props: {
               onChange={(event) => setForm({ ...form, second_run_at: event.target.value })}
             />
           </Cell>
+          </div>
+          <div className="frow">
           {/* 합주실 개방시각과는 다른 값입니다. 합주실이 09시에 열어도 팀별합주는 17시부터만
               배정할 수 있고, 남는 시간은 선착순 예약으로 열립니다. 비워 두면 개방시각 전체를 씁니다. */}
           <WindowFields
@@ -171,6 +178,7 @@ function PeriodFields(props: {
               practice_window: { ...form.practice_window, weekend: windowValue(next) },
             })}
           />
+          </div>
         </>
       ) : null}
     </>
@@ -249,7 +257,7 @@ export function PeriodCard(props: {
               // 목록만 표시됩니다.
               <Row
                 key={period.id}
-                title={KIND_TEXT[period.kind] + (period.everyday ? " · 매일" : "")}
+                title={KIND_TEXT[period.kind] + (period.everyday ? " 매일" : "")}
                 when={
                   period.everyday
                     ? <><b>{period.starts_on}</b> 부터 매일</>
@@ -345,7 +353,7 @@ function PeriodForm(props: {
           if (why === "") send.mutate();
         }}
       >
-        <div className="fields">
+        <div className="fields period">
           <PeriodFields form={form} setForm={setForm} at={at} bad={bad} whyId={whyId} first={first} />
           {form.kind === "focused" ? (
             <EnsembleFields draft={draft} setDraft={setDraft} period={periodBody(form)} rooms={rooms}
