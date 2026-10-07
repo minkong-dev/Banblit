@@ -110,7 +110,7 @@
     { "name": "63-period-dialog", "continue": true,
       "steps": [{ "click": "button:has-text('새 집중합주 기간')" }, { "wait": 800 }] },
     { "name": "64-settings-members", "steps": [{ "goto": "/members" }, { "wait": 1100 }],
-      "annotate": [{ "type": "box", "target": ".card", "label": "권한 묶음", "nth": 0 }] },
+      "annotate": [{ "type": "box", "target": ".card", "label": "권한 세트", "nth": 0 }] },
     { "name": "65-permission-dialog", "continue": true,
       "steps": [{ "click": "button:has-text('새 권한')" }, { "wait": 800 }] },
     { "name": "66-settings-reservations", "steps": [{ "goto": "/reservations" }, { "wait": 1100 }] },
