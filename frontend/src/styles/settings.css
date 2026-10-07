@@ -74,7 +74,7 @@ body[data-page="settings"] {
   .ensdays .ensdate .w { font-size: 12.5px; color: var(--t3); }
   /* 날짜별로 지정한 시각이 있는 행의 표시입니다. 기본 시각을 쓰는 행에는 붙지 않습니다. */
   .ensdays .enstag { padding: 2px 7px; border-radius: 999px; background: var(--brand-tint); color: var(--brand); font-size: 11px; font-weight: 700; }
-  .ensdays .acts { justify-content: flex-start; }
+  .ensdays .acts { justify-content: flex-end; }
   .ensdays .why { grid-column: 1 / -1; margin: 0; }
 
   /* 휴대폰 폭: 열 2개. 공연명은 한 줄 전체, 체크 2개는 한 줄, 날짜별 행은 날짜 1줄 · 시작·종료 시간 1줄 · 버튼 1줄. */
