@@ -182,7 +182,7 @@ PDF·PPT·Word·Excel은 `document-skills` 스킬을 포맷에 맞게 씁니다.
 - 타입 표기를 반드시 붙입니다. 함수의 매개변수와 반환값 모두.
 - 이름 규칙은 언어의 표준을 따릅니다 — 파이썬은 함수·변수 `snake_case`, 클래스 `PascalCase`,
   화면 코드(TypeScript)는 변수·함수 `camelCase`, 컴포넌트·타입 `PascalCase`.
-- 그 밖의 가독성·주석 규칙은 `refactoring` 스킬 7·8절 에 작성되어 있는 내용을 기준으로 합니다.
+- 그 밖의 가독성·주석 규칙은 `refactoring` 스킬 7·8절에 작성되어 있는 내용을 기준으로 합니다.
 
 ---
 ## 6. 이 프로젝트 고유 제약
