@@ -140,7 +140,7 @@ export function ReservationCards() {
         <RejectDialog
           target="reservation"
           owner={rejecting.member}
-          subject={`${dayWithWeekday(rejecting.start.slice(0, 10))} ${hhmm(rejecting.start)}–${hhmm(rejecting.end)} · ${rejecting.room}`}
+          subject={`${dayWithWeekday(rejecting.start.slice(0, 10))} ${hhmm(rejecting.start)}–${hhmm(rejecting.end)} ${rejecting.room}`}
           onReject={(text) => rejectBooking(rejecting.id, text)}
           onDone={() => {
             setRejecting(null);

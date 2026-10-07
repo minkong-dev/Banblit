@@ -238,7 +238,7 @@ function teamLine(teams: Team[], state: LoadState): string {
   if (state.kind === "failed") return state.why;
   const filled = teams.reduce((sum, team) => sum + team.filled_count, 0);
   const slots = teams.reduce((sum, team) => sum + team.slot_count, 0);
-  return `팀 ${teams.length}개 · 포지션 ${slots}개 중 ${filled}명 배정됨`;
+  return `팀 ${teams.length}개, 포지션 ${slots}개 중 ${filled}명 배정됨`;
 }
 
 /** 현재 설정에서 실제로 얼마가 개방되는지를 표시합니다. 집중 합주기간은 모든 팀이 같은 배정을 받아야 합니다. */

@@ -83,7 +83,7 @@ export function UnavailableCards() {
         <RejectDialog
           target="unavailable"
           owner={rejecting.member}
-          subject={`${whenLabel(rejecting)} · ${rejecting.name ?? "불가능 일정"}`}
+          subject={`${whenLabel(rejecting)} ${rejecting.name ?? "불가능 일정"}`}
           onReject={(text) => rejectUnavailable(rejecting.member_id, rejecting.id, text)}
           onDone={() => {
             setRejecting(null);
@@ -124,7 +124,7 @@ function UnavailableTable({ rows, meId, canReject, onReject }: {
             <td>{row.member}</td>
             <td>{dayWithWeekday(row.starts_at.slice(0, 10))}</td>
             <td>{hhmm(row.starts_at)}–{hhmm(row.ends_at)}</td>
-            <td>{[repeatLabel(row.repeat_weekdays ?? 0), repeatEndLabel(row)].filter(Boolean).join(" · ")}</td>
+            <td>{[repeatLabel(row.repeat_weekdays ?? 0), repeatEndLabel(row)].filter(Boolean).join(" ")}</td>
             {/* 이름을 입력하지 않은 일정은 달력과 같은 문구로 표시합니다. */}
             <td>{row.name ?? "불가능 일정"}</td>
             <td>{row.reason ?? ""}</td>

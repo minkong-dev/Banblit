@@ -213,7 +213,7 @@ export function WeekView({
                           합주실이 다른 것인데, 합주실을 표시하지 않으면 왜 나뉘었는지 알 수 없습니다. */}
                       <small>
                         {label(entry.a)}–{endLabel(entry.b)}
-                        {entry.room === undefined ? "" : ` · ${entry.room}`}
+                        {entry.room === undefined ? "" : ` ${entry.room}`}
                       </small>
                     </span>
                   )}

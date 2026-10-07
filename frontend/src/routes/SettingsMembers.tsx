@@ -427,7 +427,7 @@ function MemberRoster(props: {
                 <td role="cell">{row.department ?? "—"}</td>
                 <td role="cell">{row.student_no ?? "—"}</td>
                 <td role="cell">{cohortLabel(row.cohort)}</td>
-                <td role="cell">{row.permission_sets.join(" · ") || "—"}</td>
+                <td role="cell">{row.permission_sets.join(", ") || "—"}</td>
                 <td className="fill" />
                 {onExpel === null ? null : (
                   <td role="cell">

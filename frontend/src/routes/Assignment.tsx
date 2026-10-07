@@ -183,9 +183,8 @@ export function Assignment() {
           <div className="calhead">
             <b>집중 합주기간</b>
             <span>
-              {days.length ? `${days[0]} – ${days[days.length - 1]}` : "일정이 없어요"}
-              {" · 기간 "}
-              {/* id 가 아니라 날짜 범위로 표시합니다. 화면에서 기간을 번호로 표시하지 않습니다. */}
+              {/* 선택한 기간의 날짜 범위는 드롭다운의 항목 글자가 보여 주므로 따로 적지 않습니다(2026-10-07).
+                  id 가 아니라 날짜 범위로 표시합니다. 화면에서 기간을 번호로 표시하지 않습니다. */}
               <Dropdown
                 ariaLabel="기간 선택"
                 value={activePeriodId ?? 0}

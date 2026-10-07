@@ -31,7 +31,7 @@ const STRONG_MAX = 20;
 export function emailMessage(value: string): string {
   // @ 기호 앞뒤에 공백이 없고 마지막 점 뒤가 두 글자 이상이어야 합니다.
   if (!value) return "이메일을 입력해 주세요.";
-  if (!ASCII_ONLY.test(value)) return "이메일은 영문·숫자·기호만 사용할 수 있습니다.";
+  if (!ASCII_ONLY.test(value)) return "이메일은 영문, 숫자, 기호만 사용할 수 있습니다.";
   return EMAIL.test(value) ? "" : "이메일 형식이 맞는지 확인해주세요.";
 }
 
@@ -69,7 +69,7 @@ export function passwordMessage(value: string): string {
 
 /** 새로 설정하는 비밀번호가 충족해야 할 규칙입니다. 가입과 재설정이 이 함수를 공유합니다. 화면마다 따로 정의하면 규칙이 어긋납니다. 서버의 같은 규칙은 input.py 의 require_password() 입니다. 빈 값은 호출자가 먼저 검증합니다. 화면마다 표시하는 문구가 다르기 때문입니다. */
 function passwordRuleMessage(value: string): string {
-  if (!ASCII_ONLY.test(value)) return "비밀번호는 영문·숫자·기호만 사용할 수 있습니다.";
+  if (!ASCII_ONLY.test(value)) return "비밀번호는 영문, 숫자, 기호만 사용할 수 있습니다.";
   if (!ONLY_ALLOWED.test(value)) {
     return `특수문자는 ${PASSWORD_SYMBOLS.split("").join(" ")} 만 사용 가능해요.`;
   }

@@ -282,7 +282,7 @@ export function SignUp() {
 
 // 계정이 있든 없든 같은 문구를 표시합니다. 다르게 표시하면 그 이메일이 가입되어 있는지를
 // 드러냅니다. 서버도 같은 이유로 같은 응답을 반환합니다.
-const MAIL_SENT = "메일을 보냈어요 · 전송된 메일을 확인해주세요";
+const MAIL_SENT = "메일을 보냈어요. 전송된 메일을 확인해주세요";
 
 export function FindId() {
   const { errors, onSubmit, isPending } = useFormAction(
@@ -310,7 +310,7 @@ export function FindId() {
         {isPending ? "찾는 중…" : "아이디 찾기"}
       </button>
       <p className="foot">
-        <Link to="/find-password">비밀번호 찾기</Link> · <Link to="/login">로그인</Link>
+        <Link to="/find-password">비밀번호 찾기</Link> <Link to="/login">로그인</Link>
       </p>
     </form>
   );
@@ -341,7 +341,7 @@ export function FindPassword() {
         {isPending ? "보내는 중…" : "재설정 메일 받기"}
       </button>
       <p className="foot">
-        <Link to="/find-id">아이디 찾기</Link> · <Link to="/login">로그인</Link>
+        <Link to="/find-id">아이디 찾기</Link> <Link to="/login">로그인</Link>
       </p>
     </form>
   );
@@ -368,12 +368,12 @@ export function ResetPassword() {
     },
     async (data) => {
       if (!token) {
-        say("재설정 메일 링크에 문제가 있는 것 같아요 · 비밀번호 찾기를 다시 시도해주세요");
+        say("재설정 메일 링크에 문제가 있는 것 같아요. 비밀번호 찾기를 다시 시도해주세요");
         return;
       }
       try {
         await resetPassword(token, fieldText(data, "rpwNew"));
-        say("비밀번호를 변경했어요 · 새 비밀번호로 로그인해주세요");
+        say("비밀번호를 변경했어요. 새 비밀번호로 로그인해주세요");
         // navigate 는 viewTransition 옵션을 줄 때만 Promise 를 반환합니다. 이 화면은
         // 그 옵션을 사용하지 않아 실제로는 항상 void 라 명시적으로 무시합니다.
         void navigate("/login");

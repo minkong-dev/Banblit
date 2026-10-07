@@ -106,7 +106,7 @@ export function DayDialog({
   // 예약 탭도 선택한 날짜가 아니라 내가 잡은 예약 전부(myBookings)를 나열합니다. 끝난 예약은 서버가 빼고 줍니다.
   const removable = tab === "me" ? myOff : myBookings;
 
-  const roomsLabel = [...new Set(booked.map((entry) => entry.room).filter(Boolean))].join(" · ");
+  const roomsLabel = [...new Set(booked.map((entry) => entry.room).filter(Boolean))].join(", ");
 
   // 그날 뭔가 놓인 팀만 명단을 조회합니다. 프로필·권한 구역과 같은 query key(["members", team id])를
   // 써서, 이미 받아 둔 명단이 있으면 서버를 다시 조회하지 않습니다.
@@ -327,8 +327,8 @@ export function DayDialog({
     </div>
   );
 
-  const hint = `${roomsLabel || "합주실"} · ${hourText(openHour)}–${hourText(closeHour)}`
-    + ` · ${unitLabel(slotMinutes)} · ${inFocus ? "배정된 기간" : "배정 없음"}`;
+  const hint = `${roomsLabel || "합주실"} ${hourText(openHour)}–${hourText(closeHour)}`
+    + ` ${unitLabel(slotMinutes)} ${inFocus ? "배정된 기간" : "배정 없음"}`;
 
   // 조회 전용 탭(all)은 카드 하나짜리 일반 modal 입니다. 버튼 줄이 없습니다.
   if (tab === "all") {

@@ -198,7 +198,7 @@ export function allOffEntries(times: Unavailable[], openHour: number): Entry[] {
 export function offWhenLabel(entry: Entry): string {
   if (entry.day === undefined) return "";
   const day = dayWithWeekday(entry.day);
-  return entry.repeat === undefined ? day : day + " · " + entry.repeat;
+  return entry.repeat === undefined ? day : day + " " + entry.repeat;
 }
 
 /** 이 불가능 일정이 적용되는 날짜들입니다. 반복이 아니면 시작 날짜 하나뿐입니다. */

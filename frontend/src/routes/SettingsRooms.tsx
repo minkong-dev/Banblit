@@ -123,7 +123,7 @@ export function RoomCard(props: {
                 key={room.id}
                 title={room.name}
                 when={<><b>{room.opens_at}</b> 부터 <b>{room.closes_at}</b> 까지</>}
-                span={` · 하루 ${openingHours({ rooms: [room], days: 1, teams: 0, slotMinutes }).perDay}`}
+                span={` 하루 ${openingHours({ rooms: [room], days: 1, teams: 0, slotMinutes }).perDay}`}
                 editLabel={canEdit ? `${room.name} 수정` : undefined}
                 buttonRef={canEdit ? register(room.id) : undefined}
                 onEdit={canEdit ? () => open(room.id) : undefined}
@@ -151,7 +151,7 @@ export function RoomCard(props: {
       )}
 
       {!making ? null : (
-        <Modal title="새 합주실" hint="합주실 이름과 개방 및 마감시간을 지정해주세요"
+        <Modal title="새 합주실" hint="합주실명과 개방 및 마감시간을 지정해주세요"
           onClose={() => setMaking(false)}>
           <RoomForm
             start={BLANK_ROOM}
