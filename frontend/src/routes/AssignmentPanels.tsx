@@ -284,28 +284,30 @@ export function RunTimesPanel({ period, canManage }: { period: Period | null; ca
     <section className="panel">
       <div className="times">
         <div className="k">스케줄링 시간</div>
-        <div className="t">
-          {period === null
-            ? "집중 합주기간을 생성해주세요"
-            : `${period.first_run_at} ${period.second_run_at}`}
-        </div>
-        {period === null ? null : (
+        {/* 큰 시각 표시는 두지 않습니다(2026-10-07). 입력칸이 저장된 값을 보여 주고, 칸 위에 1차·2차를 작게 적습니다. */}
+        {period === null ? <div className="t">집중 합주기간을 생성해주세요</div> : (
           <>
             <div className="rows">
-              <input
-                type="time"
-                aria-label="1차 스케줄링 시간"
-                disabled={!canManage || save.isPending}
-                value={shown.first}
-                onChange={(event) => setForm({ id: period.id, first: event.target.value, second: shown.second })}
-              />
-              <input
-                type="time"
-                aria-label="2차 스케줄링 시간"
-                disabled={!canManage || save.isPending}
-                value={shown.second}
-                onChange={(event) => setForm({ id: period.id, first: shown.first, second: event.target.value })}
-              />
+              <label className="run">
+                1차
+                <input
+                  type="time"
+                  aria-label="1차 스케줄링 시간"
+                  disabled={!canManage || save.isPending}
+                  value={shown.first}
+                  onChange={(event) => setForm({ id: period.id, first: event.target.value, second: shown.second })}
+                />
+              </label>
+              <label className="run">
+                2차
+                <input
+                  type="time"
+                  aria-label="2차 스케줄링 시간"
+                  disabled={!canManage || save.isPending}
+                  value={shown.second}
+                  onChange={(event) => setForm({ id: period.id, first: shown.first, second: event.target.value })}
+                />
+              </label>
             </div>
             {!canManage ? null : (
               <button
