@@ -83,7 +83,7 @@ function gridMessage(from: number | null, to: number | null, slotMinutes: number
   return "";
 }
 
-/** 팀별합주 시간대 한 쌍입니다. 화면의 입력칸 두 개를 그대로 담습니다. 둘 다 빈 문자열이면
+/** 팀별 합주 시간대 한 쌍입니다. 화면의 입력칸 두 개를 그대로 담습니다. 둘 다 빈 문자열이면
  *  "정하지 않음" 이고, 그날은 합주실 개방시각 전체를 씁니다. */
 export type WindowPair = { starts_at: string; ends_at: string };
 
@@ -127,7 +127,7 @@ export function dateRangeMessage(from: string, to: string): string {
 
 type Hours = { opens_at: string; closes_at: string };
 
-/** 전체합주 설정을 검증합니다. 서버 쪽 정본은 backend/src/backend/services/ensemble_service.py 와
+/** 전체 합주 설정을 검증합니다. 서버 쪽 정본은 backend/src/backend/services/ensemble_service.py 와
  *  periods 의 CHECK(날짜 범위가 기간 안인지)입니다. "매일" 기간은 종료일이 없어 시작일만 비교합니다. */
 export function ensembleMessage(
   form: { starts_on: string; ends_on: string; starts_at: string; ends_at: string },
@@ -138,26 +138,26 @@ export function ensembleMessage(
   const dates = dateRangeMessage(form.starts_on, form.ends_on);
   if (dates !== "") return dates;
   if (form.starts_on < period.starts_on || (!period.everyday && form.ends_on > period.ends_on)) {
-    return "전체합주 날짜는 집중합주 기간 안이어야 해요.";
+    return "전체 합주 날짜는 집중 합주기간 안이어야 해요.";
   }
   if (room === undefined) return "합주실을 선택해주세요.";
   return ensembleTimeMessage(form.starts_at, form.ends_at, room, slotMinutes);
 }
 
-/** 전체합주 시각 한 쌍을 검증합니다. 기본 시각과 날짜별 시각이 같은 규칙입니다. */
+/** 전체 합주 시각 한 쌍을 검증합니다. 기본 시각과 날짜별 시각이 같은 규칙입니다. */
 export function ensembleTimeMessage(
   starts: string, ends: string, room: Hours, slotMinutes: number,
 ): string {
   const from = minutesOf(starts);
   const to = minutesOf(ends);
   if (from === null || to === null || !onGrid(from, slotMinutes) || !onGrid(to, slotMinutes)) {
-    return `전체합주 시각은 ${unitText(slotMinutes)} 기준으로 지정해주세요.`;
+    return `전체 합주 시각은 ${unitText(slotMinutes)} 기준으로 지정해주세요.`;
   }
   if (to <= from) return "종료 시간은 시작 시간보다 늦어야 해요.";
   const opens = minutesOf(room.opens_at);
   const closes = minutesOf(room.closes_at);
   if (opens === null || closes === null || from < opens || to > closes) {
-    return "전체합주 시각은 합주실 운영 시간 안이어야 해요.";
+    return "전체 합주 시각은 합주실 운영 시간 안이어야 해요.";
   }
   return "";
 }

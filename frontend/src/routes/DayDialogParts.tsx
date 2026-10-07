@@ -26,7 +26,7 @@ export function entryName(entry: Entry, teams: DayTeam[]): string {
     : teams.find((team) => team.key === entry.team)?.name ?? entry.who ?? "개인";
 }
 
-/** 막대·항목의 색 class 입니다. 전체합주는 팀이 아니라 전원의 일정이라 팀 색 대신 ens, 팀이 없는 항목은 off 입니다. */
+/** 막대·항목의 색 class 입니다. 전체 합주는 팀이 아니라 전원의 일정이라 팀 색 대신 ens, 팀이 없는 항목은 off 입니다. */
 export function entryClass(entry: Entry): string {
   if (entry.kind === "ensemble") return "ens";
   return entry.team ?? "off";
@@ -34,7 +34,7 @@ export function entryClass(entry: Entry): string {
 
 function kindLabel(entry: Entry): string {
   if (entry.kind === "assign") return "자동 배정";
-  if (entry.kind === "ensemble") return "전체합주";
+  if (entry.kind === "ensemble") return "전체 합주";
   return entry.kind === "book" ? "예약" : "불가능 일정";
 }
 

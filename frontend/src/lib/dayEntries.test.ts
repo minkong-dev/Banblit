@@ -43,8 +43,8 @@ describe("myEntries — 내 타임라인에 그릴 항목", () => {
     expect(myEntries(list, teams)).toEqual([]);
   });
 
-  it("전체합주는 뺀다 — visible 과 다른 판정이다", () => {
-    // visible(tab="me") 은 전체합주를 남기지만 이 목록은 내가 삭제·취소할 수 있는 항목만 담습니다.
+  it("전체 합주는 뺀다 — visible 과 다른 판정이다", () => {
+    // visible(tab="me") 은 전체 합주를 남기지만 이 목록은 내가 삭제·취소할 수 있는 항목만 담습니다.
     const list: Entry[] = [{ kind: "ensemble", team: null, a: 1, b: 2 }];
     expect(myEntries(list, teams)).toEqual([]);
   });
@@ -132,18 +132,18 @@ describe("ensembleOn", () => {
     });
   });
 
-  it("범위 밖이거나 전체합주가 없는 기간이면 null 이다", () => {
+  it("범위 밖이거나 전체 합주가 없는 기간이면 null 이다", () => {
     expect(ensembleOn([withEnsemble], "2026-09-14")).toBeNull();
     expect(ensembleOn([{ ...withEnsemble, ensemble: null }], "2026-09-11")).toBeNull();
   });
 });
 
 describe("ensembleByDay", () => {
-  it("전체합주 날짜에 합주실 이름과 시각을 담은 항목 하나를 둔다", () => {
+  it("전체 합주 날짜에 합주실 이름과 시각을 담은 항목 하나를 둔다", () => {
     const rooms = [{ id: 1, name: "합주실 A", opens_at: "18:00", closes_at: "23:00" }];
     const byDay = ensembleByDay([withEnsemble], rooms, 18, ["2026-09-12", "2026-09-14"]);
     expect(byDay).toEqual({
-      "2026-09-12": [{ kind: "ensemble", team: null, room: "합주실 A", who: "전체합주", a: 0, b: 2.5 }],
+      "2026-09-12": [{ kind: "ensemble", team: null, room: "합주실 A", who: "전체 합주", a: 0, b: 2.5 }],
     });
   });
 });
@@ -233,7 +233,7 @@ describe("visible", () => {
     expect(visible(entries, "all", teams)).toHaveLength(2);
   });
 
-  it("전체합주는 모든 멤버의 일정이라 내 일정 탭과 전체 일정 탭 둘 다 반환한다", () => {
+  it("전체 합주는 모든 멤버의 일정이라 내 일정 탭과 전체 일정 탭 둘 다 반환한다", () => {
     const withOne: Entry[] = [...entries, { kind: "ensemble", team: null, a: 3, b: 4 }];
     expect(visible(withOne, "me", teams).map((entry) => entry.kind)).toContain("ensemble");
     expect(visible(withOne, "all", teams).map((entry) => entry.kind)).toContain("ensemble");

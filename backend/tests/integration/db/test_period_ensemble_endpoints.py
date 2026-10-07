@@ -1,4 +1,4 @@
-"""집중 합주기간의 전체합주 설정 저장(patch_note 8번 B단계)을 검사합니다."""
+"""집중 합주기간의 전체 합주 설정 저장(patch_note 8번 B단계)을 검사합니다."""
 
 from datetime import date, time
 
@@ -215,7 +215,7 @@ def test_ensemble_day_is_rejected_without_an_ensemble(
     )
 
     assert response.status_code == 422
-    assert "전체합주" in response.json()["detail"]
+    assert "전체 합주" in response.json()["detail"]
 
 
 def test_narrowing_the_ensemble_drops_day_times_outside_the_new_range(

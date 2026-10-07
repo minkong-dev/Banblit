@@ -239,7 +239,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     const { period: focused } = await call<{ period: { id: number } }>(context, "POST", "/api/periods", {
       kind: "focused", name: "정기공연", starts_on: day(2), ends_on: day(6), everyday: false, ...RUN_TIMES,
     });
-    // 기간 가운데 1일을 전체합주로 지정합니다. 그날은 팀별 배정에서 제외됩니다.
+    // 기간 가운데 1일을 전체 합주로 지정합니다. 그날은 팀별 배정에서 제외됩니다.
     await call(context, "PUT", `/api/periods/${focused.id}/ensemble`, {
       starts_on: day(4), ends_on: day(4), room_id: rooms[0].id, starts_at: "19:00", ends_at: "21:00",
     });

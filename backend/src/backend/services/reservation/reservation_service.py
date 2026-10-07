@@ -38,8 +38,8 @@ def cancel_reservations_in_focus(session: Session, period: Period, now: datetime
     """집중 합주기간 안에 남은 앞으로의 예약을 취소하고 예약자에게 알림을 만듭니다. commit 은 부르는 쪽이 합니다.
 
     기간을 만들거나 넓힐 때 부릅니다(기간을 막지 않고 예약을 밀어냅니다). 취소 기준은
-    "지금 새로 예약하면 거절되는가"이고, 예약을 받을 때와 같은 focus_refusal 로 판정합니다. 그래서 전체합주 날짜의
-    전체합주 외 시간 예약은 남습니다. 이미 시작한 예약은 기록으로 남기고 취소하지 않습니다.
+    "지금 새로 예약하면 거절되는가"이고, 예약을 받을 때와 같은 focus_refusal 로 판정합니다. 그래서 전체 합주 날짜의
+    전체 합주 외 시간 예약은 남습니다. 이미 시작한 예약은 기록으로 남기고 취소하지 않습니다.
     """
     if period.kind != "focused":
         return 0
@@ -79,7 +79,7 @@ def focus_refusal(
     "매일"(everyday) 이 켜진 집중 합주기간은 종료일이 없습니다. 시작일이
     지난 모든 날에 자동 배정이 실행되므로, 저장된 종료일 뒤의 날짜도 차단합니다.
 
-    전체합주 날짜는 팀별 배정이 없어 예약을 허용하고, 전체합주에 지정한 합주실의 전체합주 시각과
+    전체 합주 날짜는 팀별 배정이 없어 예약을 허용하고, 전체 합주에 지정한 합주실의 전체 합주 시각과
     겹치는 구간만 거절합니다. 시각은 날짜별 지정(ensemble_days)이 기본 시각보다 우선합니다.
     집중 합주기간끼리는 겹칠 수 없으므로(periods_focused_no_overlap) 그날의 기간은 하나뿐입니다.
     """
@@ -105,7 +105,7 @@ def focus_refusal(
     ).first()
     start, end = (own.starts_at, own.ends_at) if own else (period.ensemble_starts_at, period.ensemble_ends_at)
     if start is not None and end is not None and starts_at.time() < end and start < ends_at.time():
-        return "전체합주 시간에는 예약할 수 없습니다"
+        return "전체 합주 시간에는 예약할 수 없습니다"
     return None
 
 

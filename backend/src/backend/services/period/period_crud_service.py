@@ -16,13 +16,13 @@ from backend.services.reservation.pipeline import cancel_reservations_in_focus
 from backend.db.pipeline import commit_translating
 
 # 위반될 수 있는 제약과 그때 표시할 문장입니다. 제약 이름은 migration b5e1d9a37c42·d9a4c6e1f207 이 지정했습니다.
-# 전체합주 설정(services/ensemble_service.py)도 이 문장을 씁니다.
+# 전체 합주 설정(services/ensemble_service.py)도 이 문장을 씁니다.
 PERIOD_MESSAGES = {
     "periods_focused_no_overlap": (
         "다른 집중 합주기간과 날짜가 겹칩니다. \"매일\" 기간은 종료일 없이 계속되는 것으로 봅니다"
     ),
-    "periods_ensemble_within_period": "전체합주 날짜는 집중 합주기간 안이어야 합니다",
-    "periods_ensemble_focused_only": "전체합주는 집중 합주기간에만 지정할 수 있습니다",
+    "periods_ensemble_within_period": "전체 합주 날짜는 집중 합주기간 안이어야 합니다",
+    "periods_ensemble_focused_only": "전체 합주는 집중 합주기간에만 지정할 수 있습니다",
 }
 
 
@@ -42,14 +42,14 @@ def commit_with_cancellations(session: Session, period: Period) -> None:
     commit_translating(session, PERIOD_MESSAGES, action)
 
 
-# 팀별합주 시간대 한 쌍입니다. 시각 두 개를 "HH:MM" 문자열로 받습니다. None 이면 그 쌍을 정하지
+# 팀별 합주 시간대 한 쌍입니다. 시각 두 개를 "HH:MM" 문자열로 받습니다. None 이면 그 쌍을 정하지
 # 않았다는 뜻이고, 그날은 합주실 개방시각 전체를 씁니다.
 ClockPair = tuple[str, str] | None
 
 
 @dataclass(frozen=True)
 class WindowIn:
-    """팀별합주를 배정할 수 있는 하루 중의 시간대입니다. 평일(월~금)과 주말(토·일)이 서로 독립입니다.
+    """팀별 합주를 배정할 수 있는 하루 중의 시간대입니다. 평일(월~금)과 주말(토·일)이 서로 독립입니다.
 
     시각 네 개를 매개변수로 따로 받지 않고 값 하나로 묶습니다. 기간을 만들고 고치는 함수는 이미
     매개변수가 일곱 개라, 네 개를 더하면 호출부에서 어느 자리가 무엇인지 읽히지 않습니다.

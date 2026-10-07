@@ -71,7 +71,7 @@ def test_widening_a_focused_period_cancels_the_reservations_it_now_covers(
 
 
 def _ensemble_setup(db_session: Session) -> tuple[Period, Room, Member]:
-    """2027-03-08~14 집중 합주기간, 03-13 하루를 전체합주 날짜로(1번방 18~22시) 둡니다."""
+    """2027-03-08~14 집중 합주기간, 03-13 하루를 전체 합주 날짜로(1번방 18~22시) 둡니다."""
     member = Member(name="예약자")
     room = Room(name="1번방", opens_at=time(9, 0), closes_at=time(23, 0))
     db_session.add_all([member, room])
@@ -98,7 +98,7 @@ def _booking(db_session: Session, room: Room, member: Member, start: int, end: i
 
 
 def test_removing_the_ensemble_cancels_the_reservations_it_used_to_allow(db_session: Session) -> None:
-    # 전체합주 날짜의 전체합주 외 시간(10~12시)은 예약할 수 있었습니다. 전체합주를 지우면 그날은 일반 집중 합주일입니다.
+    # 전체 합주 날짜의 전체 합주 외 시간(10~12시)은 예약할 수 있었습니다. 전체 합주를 지우면 그날은 일반 집중 합주일입니다.
     period, room, member = _ensemble_setup(db_session)
     row = _booking(db_session, room, member, 10, 12)
 

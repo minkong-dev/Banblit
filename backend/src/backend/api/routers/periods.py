@@ -181,7 +181,7 @@ def delete_period_endpoint(
     delete_period(session, period_id)
 
 
-# 전체합주 설정은 기간 수정(PATCH)과 같은 권한입니다. 응답은 설정이 반영된 기간 전체입니다.
+# 전체 합주 설정은 기간 수정(PATCH)과 같은 권한입니다. 응답은 설정이 반영된 기간 전체입니다.
 @router.put(
     "/periods/{period_id}/ensemble",
     response_model=PeriodEnvelopeOut,

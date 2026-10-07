@@ -977,7 +977,7 @@ docker compose --profile e2e run --rm e2e sh -c "npx playwright test profile-car
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
 - **용도**: `frontend/e2e/` 의 Playwright 검사를 전부 실행합니다(2026-10-01 기준 84개 — chromium 과 webkit 합계). 로그인·가입, 배정 다시
-  계산과 조율안, 팀 게시판 권한·첨부, 공지 글·댓글, 달력·알림, 합주실 수정, 전체합주 지정, 팀 명단을 브라우저로
+  계산과 조율안, 팀 게시판 권한·첨부, 공지 글·댓글, 달력·알림, 합주실 수정, 전체 합주 지정, 팀 명단을 브라우저로
   재현해 화면·서버·DB 가 연결되어 동작하는지 확인합니다. dev DB 는 건드리지 않습니다.
 - **옵션**
   - `--profile e2e` — `docker-compose.override.yml` 에서 `profiles: ["e2e"]` 가 붙은 `e2e-api`·`e2e`

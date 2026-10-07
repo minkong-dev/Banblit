@@ -36,7 +36,7 @@ body[data-page="settings"] {
   /* 체크 표시는 base.css 의 .chk 가 그립니다. 이 규칙에서는 위아래 여백만 정합니다. */
   .fields .chk { margin: 12px 0; }
   /* ===== 기간 form (SettingsPeriods.tsx) =====
-     본문 폭을 같은 폭 4열로 나눕니다. form 의 모든 줄과 아래 "날짜별 전체합주 시각" 행이 같은 4열을 쓰므로 세로선이 맞습니다.
+     본문 폭을 같은 폭 4열로 나눕니다. form 의 모든 줄과 아래 "날짜별 전체 합주 시각" 행이 같은 4열을 쓰므로 세로선이 맞습니다.
      입력칸은 열 폭을 가득 채우고, 체크(매일·전체 합주기간 지정)는 3번째 열 한 칸 안에 40px 간격으로 나란히 둡니다. */
   .fields.period { flex-direction: column; align-items: stretch; gap: 28px; }
   /* 묶음 4개(일반·스케줄링·팀별 합주·전체 합주)는 소제목(h4) 1개와 줄(.frow) 1개 이상입니다. 묶음 사이 28px, 묶음 안 10px. */
@@ -55,14 +55,14 @@ body[data-page="settings"] {
   .fields.period .frow .chk { margin: 10px 0; }
   /* 취소·저장 버튼은 오른쪽 끝이고, 마지막 묶음과는 묶음 간격보다 가깝습니다. */
   .fields.period .acts { justify-content: flex-end; margin-top: -10px; }
-  /* 섹션 제목입니다. 기간 form 의 "기간 기본설정" 과 아래 "날짜별 전체합주 시각" 이 같은 크기입니다. */
+  /* 섹션 제목입니다. 기간 form 의 "기간 기본설정" 과 아래 "날짜별 전체 합주 시각" 이 같은 크기입니다. */
   .fsec { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
-  /* 전체합주 입력 묶음의 왼쪽 세이지 선은 달력의 전체합주 막대와 같은 색으로 "기간 안의 설정"임을 표시합니다. */
+  /* 전체 합주 입력 묶음의 왼쪽 세이지 선은 달력의 전체 합주 막대와 같은 색으로 "기간 안의 설정"임을 표시합니다. */
   .fields .ensemble { display: flex; flex-direction: column; gap: 10px; margin-left: -17px; padding: 2px 0 2px 14px; border-left: 3px solid var(--green); }
   /* 선 3px + 안쪽 여백 14px 만큼 왼쪽으로 내보내, 묶음 안 입력칸의 왼쪽선이 다른 줄의 1열과 같습니다(2026-10-07). */
   .ensemble .teamdays { margin: 2px 0 0; font-size: 13px; color: var(--t2); }
 
-  /* ===== 날짜별 전체합주 시각 (SettingsEnsemble.tsx 의 EnsembleDays) =====
+  /* ===== 날짜별 전체 합주 시각 (SettingsEnsemble.tsx 의 EnsembleDays) =====
      날짜 1개가 행 1개입니다. 날짜가 왼쪽, 시작·종료 시간(위 form 의 1열 폭과 같음)과 저장 버튼이 오른쪽 끝에 모입니다. 시간 칸과 버튼 사이 40px. */
   .ensdays { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
   .ensdays > .fsec { margin-bottom: 10px; }

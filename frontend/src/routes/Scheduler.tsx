@@ -148,13 +148,13 @@ export function Scheduler() {
     () => bookedByDay(bookRows, teams, open, me?.id ?? null),
     [bookRows, teams, open, me?.id],
   );
-  // 전체합주는 예약 탭에서도 항목에 들어가 그 합주실의 해당 시간을 찬 칸으로 계산합니다. 서버도 그 시간의 예약을 거절합니다.
+  // 전체 합주는 예약 탭에서도 항목에 들어가 그 합주실의 해당 시간을 찬 칸으로 계산합니다. 서버도 그 시간의 예약을 거절합니다.
   const ensembleEntries = useMemo(
     () => ensembleByDay(periodList, roomList, open, days),
     [periodList, roomList, open, days],
   );
 
-  // 배정·전체합주·불가능 일정·예약 네 가지를 날짜별로 합칩니다. 달력이 날짜마다 entriesOf 를
+  // 배정·전체 합주·불가능 일정·예약 네 가지를 날짜별로 합칩니다. 달력이 날짜마다 entriesOf 를
   // 호출하므로 정렬을 렌더마다 반복하지 않도록 한 번에 계산합니다.
   const entriesByDay = useMemo(
     () => mergeByDay(assigned, ensembleEntries, offEntries, bookEntries),
@@ -280,13 +280,13 @@ export function Scheduler() {
               <span key={team.id}><i style={{ background: `var(--${team.key})` }} />{team.name}</span>
             ))}
             {periodList.some((period) => period.ensemble !== null)
-              ? <span><i className="ens" />전체합주</span>
+              ? <span><i className="ens" />전체 합주</span>
               : null}
             {tab === "me" ? <span><i style={{ background: "var(--off)" }} />나의 불가능 일정</span> : null}
           </div>
           <div id="bandSlot">
             {focus.length === 0 ? null : (
-              <span className="band"><ClockIcon />집중합주 기간 <b>{focus.map((range) => `${range.from} ~ ${range.to ?? "매일"}`).join(", ")}</b> 자동 스케줄링</span>
+              <span className="band"><ClockIcon />집중 합주기간 <b>{focus.map((range) => `${range.from} ~ ${range.to ?? "매일"}`).join(", ")}</b> 자동 스케줄링</span>
             )}
           </div>
         </div>

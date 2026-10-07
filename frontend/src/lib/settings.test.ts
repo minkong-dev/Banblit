@@ -28,16 +28,16 @@ describe("ensembleMessage", () => {
       .toBe("종료일은 시작일보다 빠를 수 없어요.");
   });
 
-  it("집중합주 기간 밖의 날짜는 받지 않는다", () => {
+  it("집중 합주기간 밖의 날짜는 받지 않는다", () => {
     expect(ensembleMessage({ ...form, ends_on: "2026-09-21" }, period, room, 60))
-      .toBe("전체합주 날짜는 집중합주 기간 안이어야 해요.");
+      .toBe("전체 합주 날짜는 집중 합주기간 안이어야 해요.");
   });
 
   it("매일 기간은 시작일만 기간 시작일 이후면 된다", () => {
     const everyday = { ...period, ends_on: "2026-09-01", everyday: true };
     expect(ensembleMessage({ ...form, ends_on: "2027-01-01" }, everyday, room, 60)).toBe("");
     expect(ensembleMessage({ ...form, starts_on: "2026-08-31" }, everyday, room, 60))
-      .toBe("전체합주 날짜는 집중합주 기간 안이어야 해요.");
+      .toBe("전체 합주 날짜는 집중 합주기간 안이어야 해요.");
   });
 
   it("합주실을 선택하지 않으면 받지 않는다", () => {
@@ -46,7 +46,7 @@ describe("ensembleMessage", () => {
 
   it("점유 단위 격자 밖의 시각은 받지 않는다", () => {
     expect(ensembleMessage({ ...form, starts_at: "19:30" }, period, room, 60))
-      .toBe("전체합주 시각은 정각 기준으로 지정해주세요.");
+      .toBe("전체 합주 시각은 정각 기준으로 지정해주세요.");
     expect(ensembleMessage({ ...form, starts_at: "19:30" }, period, room, 30)).toBe("");
   });
 
@@ -57,9 +57,9 @@ describe("ensembleMessage", () => {
 
   it("합주실 운영 시간 밖의 시각은 받지 않는다", () => {
     expect(ensembleMessage({ ...form, starts_at: "17:00" }, period, room, 60))
-      .toBe("전체합주 시각은 합주실 운영 시간 안이어야 해요.");
+      .toBe("전체 합주 시각은 합주실 운영 시간 안이어야 해요.");
     expect(ensembleMessage({ ...form, ends_at: "23:30" }, period, room, 30))
-      .toBe("전체합주 시각은 합주실 운영 시간 안이어야 해요.");
+      .toBe("전체 합주 시각은 합주실 운영 시간 안이어야 해요.");
   });
 });
 

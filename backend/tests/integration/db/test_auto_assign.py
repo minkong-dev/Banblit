@@ -105,7 +105,7 @@ def test_does_not_run_before_the_time(db_session: Session) -> None:
 
 
 def test_an_everyday_period_does_not_run_on_an_ensemble_day(db_session: Session) -> None:
-    """"매일" 기간은 오늘 하루만 배정합니다. 오늘이 전체합주 날짜면 배정할 날이 없어 실행하지 않습니다."""
+    """"매일" 기간은 오늘 하루만 배정합니다. 오늘이 전체 합주 날짜면 배정할 날이 없어 실행하지 않습니다."""
     period_id = _period(db_session, starts_on=TODAY - timedelta(days=3))
     _team_with_member(db_session, "A", "김민수")
     room_id = _room(db_session, "1번방")

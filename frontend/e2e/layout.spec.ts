@@ -104,7 +104,7 @@ test("좁은 창의 달력 칸 높이가 너비에 비례하고 달력 안쪽은
     const expected = Math.min(137, Math.max(64, m.w * 0.75));
     expect(Math.abs(m.h - expected), `창 ${size.width}px 칸 ${m.w}x${m.h}`).toBeLessThanOrEqual(2);
     expect(m.inner, `창 ${size.width}px 달력 안쪽 스크롤`).toBeLessThanOrEqual(1);
-    // 달력 아래 "집중합주 기간" 띠가 카드 밖으로 넘치지 않아야 합니다. 좁은 창에서는 줄바꿈합니다.
+    // 달력 아래 "집중 합주기간" 띠가 카드 밖으로 넘치지 않아야 합니다. 좁은 창에서는 줄바꿈합니다.
     const band = await page.evaluate(() => {
       const el = document.querySelector(".band");
       return el === null ? 0 : el.getBoundingClientRect().right - document.querySelector(".page > .card")!.getBoundingClientRect().right;
@@ -176,8 +176,8 @@ test("휴대폰의 목록은 한 쪽에 여러 줄이 나오고 버튼이 꺾이
   expect(button?.height ?? 0, "+ 새 팀 버튼 한 줄").toBeLessThan(50);
 });
 
-// 휴대폰에서 집중합주 기간 띠가 줄바꿈되어도 시계 아이콘은 글자 크기를 유지합니다.
-test("휴대폰의 집중합주 기간 띠 아이콘이 커지지 않는다", async ({ page }) => {
+// 휴대폰에서 집중 합주기간 띠가 줄바꿈되어도 시계 아이콘은 글자 크기를 유지합니다.
+test("휴대폰의 집중 합주기간 띠 아이콘이 커지지 않는다", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/scheduler");
   const icon = await page.locator(".band svg").boundingBox();
