@@ -35,11 +35,11 @@ ENSEMBLE_FIELDS = (
 def _ensemble_times(
     session: Session, room: Room, starts_at: str, ends_at: str
 ) -> tuple[time, time]:
-    """전체 합주 시작·끝 시각을 변환하고, 순서·합주실 운영 시간·점유 단위 격자를 검사합니다."""
-    start = parse_clock(starts_at, "전체 합주 시작 시각")
-    end = parse_clock(ends_at, "전체 합주 끝 시각")
+    """전체 합주 시작·종료 시간을 변환하고, 순서·합주실 운영 시간·점유 단위 격자를 검사합니다."""
+    start = parse_clock(starts_at, "전체 합주 시작 시간")
+    end = parse_clock(ends_at, "전체 합주 종료 시간")
     if end <= start:
-        raise ValueError("전체 합주 끝 시각은 시작 시각보다 늦어야 합니다")
+        raise ValueError("전체 합주 종료 시간은 시작 시간보다 늦어야 합니다")
     if start < room.opens_at or end > room.closes_at:
         raise ValueError("전체 합주 시각은 합주실 운영 시간 안이어야 합니다")
     # 점유 단위는 60 의 약수라(settings CHECK) 분만 나누어 보면 격자 위인지 알 수 있습니다.

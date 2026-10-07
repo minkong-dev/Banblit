@@ -73,7 +73,7 @@ export function isoAt(dayKey: string, index: number, openHour: number): string {
   return `${dayKey}T${slotLabel(index, openHour)}:00`;
 }
 
-/** 설정의 예약 탭이 표시하는 목록입니다. 합주실과 무관하게 시작 시각 순으로 세웁니다.
+/** 설정의 예약 탭이 표시하는 목록입니다. 합주실과 무관하게 시작 시간 순으로 세웁니다.
  *  사용자가 보려는 것이 "다음 예약이 무엇인지"라서 합주실보다 시각이 먼저입니다. */
 export function upcomingBookings(rows: readonly Booking[]): Booking[] {
   return [...rows].sort((a, b) => a.start.localeCompare(b.start));

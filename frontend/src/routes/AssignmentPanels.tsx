@@ -140,7 +140,7 @@ export function AssignmentStatus({
       <>
         <h2>{who.name} 멤버를 제외하고 진행하는건 어떨까요?</h2>
         <p className="sub">
-          해당 인원의 불가능 시간으로 인해 이상적인 배정안을 찾지 못했어요.
+          해당 인원의 불가능 일정으로 인해 이상적인 배정안을 찾지 못했어요.
         </p>
         {counts}
         <div className="note">

@@ -106,7 +106,7 @@ def test_rejecting_a_reservation_cancels_it_and_tells_the_owner_why(
     assert response.status_code == 204
     assert api_client.get("/reservations/mine", cookies=owner).json()["reservations"] == []
     [notice] = _notifications(api_client, owner)
-    # 화면이 "<언제> 예약이 반려되었어요" 를 만들려면 대상의 종류와 시작 시각이 함께 와야 합니다.
+    # 화면이 "<언제> 예약이 반려되었어요" 를 만들려면 대상의 종류와 시작 시간이 함께 와야 합니다.
     # 사유의 앞뒤 공백은 저장하지 않습니다.
     assert notice["kind"] == "rejected"
     assert notice["target"] == "reservation"

@@ -89,7 +89,7 @@ def test_period_without_ensemble_lists_null(
         ({"starts_at": "17:00"}, "운영 시간"),
         ({"ends_at": "23:30"}, "운영 시간"),
         ({"starts_at": "19:30"}, "단위"),
-        ({"starts_at": "22:00", "ends_at": "19:00"}, "끝 시각"),
+        ({"starts_at": "22:00", "ends_at": "19:00"}, "종료 시간"),
         ({"room_id": 999999}, "합주실"),
     ],
 )

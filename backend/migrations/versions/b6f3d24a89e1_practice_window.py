@@ -38,7 +38,7 @@ _ORDER = "periods_practice_window_order"
 def upgrade() -> None:
     for column in _COLUMNS:
         op.add_column("periods", sa.Column(column, sa.Time(), nullable=True))
-    # 한쪽만 채우면 끝 시각 없는 시간대가 되어 배정 구간을 정할 수 없습니다.
+    # 한쪽만 채우면 종료 시간 없는 시간대가 되어 배정 구간을 정할 수 없습니다.
     # 두 쌍은 서로 독립입니다 — 평일만 정하고 주말은 개방시각 전체로 둘 수 있습니다.
     op.create_check_constraint(
         _PAIRS,

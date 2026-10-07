@@ -101,7 +101,7 @@ describe("roomNameMessage", () => {
   });
 
   it("비어 있으면 채워 달라고 한다", () => {
-    expect(roomNameMessage("   ", [])).toBe("합주실 이름을 입력해 주세요.");
+    expect(roomNameMessage("   ", [])).toBe("합주실명을 입력해 주세요.");
   });
 });
 
@@ -220,7 +220,7 @@ describe("practiceWindowMessage", () => {
 
   it("한쪽만 채우면 종료 시간 없는 시간대가 되므로 거절한다", () => {
     expect(practiceWindowMessage({ starts_at: "17:00", ends_at: "" }, empty, 30))
-      .toBe("평일 합주 종료 시각을 입력해주세요.");
+      .toBe("평일 합주 종료 시간을 입력해주세요.");
   });
 
   it("끝이 시작보다 빠르면 거절한다", () => {
@@ -236,7 +236,7 @@ describe("practiceWindowMessage", () => {
 
   it("평일이 올바르면 주말도 검사한다", () => {
     expect(practiceWindowMessage({ starts_at: "17:00", ends_at: "23:00" }, { starts_at: "09:00", ends_at: "" }, 30))
-      .toBe("주말 합주 종료 시각을 입력해주세요.");
+      .toBe("주말 합주 종료 시간을 입력해주세요.");
   });
 
   it("둘 다 올바르면 통과시킨다", () => {

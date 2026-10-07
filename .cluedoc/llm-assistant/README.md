@@ -7,7 +7,7 @@ sources: []  # v1 기획 단계입니다. 구현 시 LLM 연동 코드 앵커를
 
 ```mermaid
 flowchart LR
-    subgraph R1[역할 1 · 자연어 불가능 시간]
+    subgraph R1[역할 1 · 자연어 불가능 일정]
         A["멤버 발화<br/>예: 다음 주 화요일 저녁은 안 돼"] --> B[불가능 일정<br/>등록 · 수정 · 삭제]
     end
     subgraph R2[역할 2 · 충돌 조율]

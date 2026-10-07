@@ -20,7 +20,7 @@ class Team:
 
 
 def is_member_available(member: Member, slot: TimeInterval) -> bool:
-    """slot(점유 단위 길이의 시간 칸)이 사용자의 사용 불가능 시간 중 어느 하나와도 겹치지
+    """slot(점유 단위 길이의 시간 칸)이 사용자의 사용 불가능 일정 중 어느 하나와도 겹치지
     않을 경우 True를 반환합니다.
     """
     for interval in member.unavailable:

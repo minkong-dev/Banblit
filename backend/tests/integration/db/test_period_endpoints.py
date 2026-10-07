@@ -237,7 +237,7 @@ def test_assign_reports_open_slots_with_real_room_names(
     assert len(open_slots) == 1  # 전체 5개 slot - 팀당 2개 slot × 2팀 = 1개 slot 남음
     room_id_by_name = {"1번방": room_1.id, "2번방": room_2.id}
     slot = open_slots[0]
-    # 엔진 내부 식별자는 "1번방 (2026-08-01)" 형태입니다. 응답에는 합주실 이름만 반환되어야 합니다.
+    # 엔진 내부 식별자는 "1번방 (2026-08-01)" 형태입니다. 응답에는 합주실명만 반환되어야 합니다.
     assert slot["room"] in room_id_by_name
     assert slot["room_id"] == room_id_by_name[slot["room"]]
 

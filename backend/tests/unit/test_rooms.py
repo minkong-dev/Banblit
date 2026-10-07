@@ -14,7 +14,7 @@ def test_team_is_assigned_to_a_room_that_is_open_when_it_can_play() -> None:
     # 1번 합주실은 18~19시, 2번 합주실은 20~21시에 개방합니다.
     room_a = Room(id=1, open_period=TimeInterval(_at(18), _at(19)))
     room_b = Room(id=2, open_period=TimeInterval(_at(20), _at(21)))
-    # 팀은 18~19시에 불가능 시간이 있으므로, 2번 합주실에만 배정 가능합니다.
+    # 팀은 18~19시에 불가능 일정이 있으므로, 2번 합주실에만 배정 가능합니다.
     team = Team(id=10, members=[Member(id=1, unavailable=[TimeInterval(_at(18), _at(19))])])
 
     result = assign(teams=[team], rooms=[room_a, room_b], sessions_per_team=1)

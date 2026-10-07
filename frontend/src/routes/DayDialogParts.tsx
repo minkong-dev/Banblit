@@ -121,8 +121,8 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
   );
 }
 
-/** 시작 시각과 종료 시각을 선택하는 입력입니다. 선택지는 설정의 slotMinutes 간격이고, lock 이면 이미 예약된
- *  칸의 시작 시각은 선택할 수 없게 차단합니다. 드래그를 못 쓰는 키보드 사용자의 입력 수단이기도 합니다. */
+/** 시작 시간과 종료 시간을 선택하는 입력입니다. 선택지는 설정의 slotMinutes 간격이고, lock 이면 이미 예약된
+ *  칸의 시작 시간은 선택할 수 없게 차단합니다. 드래그를 못 쓰는 키보드 사용자의 입력 수단이기도 합니다. */
 export function SlotPicker({ prefix, range, onChange, grid, lock, slotMinutes, openHour, closeHour, slotCount }: HoursProps & {
   prefix: string;
   range: SlotRange;

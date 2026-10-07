@@ -136,7 +136,7 @@ def test_a_reservation_that_partly_overlaps_another_is_refused(
     """앞 예약과 일부만 겹쳐도 거절해야 합니다.
 
     예전에는 1시간 칸마다 행을 두고 (room_id, starts_at) 중복 금지로 선착순을 정했기 때문에,
-    시작 시각이 다르면서 뒷부분만 겹치는 구간은 걸러내지 못했습니다. 지금은 구간 자체가
+    시작 시간이 다르면서 뒷부분만 겹치는 구간은 걸러내지 못했습니다. 지금은 구간 자체가
     겹치는지를 DB 가 봅니다.
     """
     _, first = account("이도현", "dohyun@example.com")
@@ -154,7 +154,7 @@ def test_a_reservation_that_partly_overlaps_another_is_refused(
         cookies=first,
     )
 
-    # 19시에 시작해 21시에 끝납니다. 시작 시각은 다르지만 19~20 시가 겹칩니다.
+    # 19시에 시작해 21시에 끝납니다. 시작 시간은 다르지만 19~20 시가 겹칩니다.
     response = api_client.post(
         "/reservations",
         json={

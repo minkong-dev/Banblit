@@ -26,7 +26,7 @@ def test_successful_assignment_returns_no_proposals() -> None:
 
 
 def test_proposes_excluding_the_member_who_blocks_the_team() -> None:
-    # slot(1시간 단위 시간 칸)이 유일한 것에 불가능 시간이 있으므로, 팀 전원 가능 조건을 충족하지 못합니다.
+    # slot(1시간 단위 시간 칸)이 유일한 것에 불가능 일정이 있으므로, 팀 전원 가능 조건을 충족하지 못합니다.
     blocker = Member(id=1, unavailable=[TimeInterval(_at(18), _at(19))])
     free = Member(id=2, unavailable=[])
     team = Team(id=10, members=[blocker, free])
@@ -39,7 +39,7 @@ def test_proposes_excluding_the_member_who_blocks_the_team() -> None:
 
 
 def test_does_not_propose_excluding_a_member_when_it_would_empty_their_team() -> None:
-    # 팀에 한 명뿐이고 그 사람이 유일한 slot에 불가능 시간이 있으면, 제거하면 팀이 없어집니다.
+    # 팀에 한 명뿐이고 그 사람이 유일한 slot에 불가능 일정이 있으면, 제거하면 팀이 없어집니다.
     blocker = Member(id=1, unavailable=[TimeInterval(_at(18), _at(19))])
     team = Team(id=10, members=[blocker])
 

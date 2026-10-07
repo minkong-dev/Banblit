@@ -139,7 +139,7 @@ describe("ensembleOn", () => {
 });
 
 describe("ensembleByDay", () => {
-  it("전체 합주 날짜에 합주실 이름과 시각을 담은 항목 하나를 둔다", () => {
+  it("전체 합주 날짜에 합주실명과 시각을 담은 항목 하나를 둔다", () => {
     const rooms = [{ id: 1, name: "합주실 A", opens_at: "18:00", closes_at: "23:00" }];
     const byDay = ensembleByDay([withEnsemble], rooms, 18, ["2026-09-12", "2026-09-14"]);
     expect(byDay).toEqual({
@@ -175,7 +175,7 @@ describe("allOffEntries — 모달의 불가능 일정 목록", () => {
     repeat_weekdays: null, repeat_until: null, name: "시험", reason: "중간고사",
   };
 
-  it("어느 날짜의 모달이든 내가 등록한 불가능 일정 전부를 시작 시각 순으로 나열한다", () => {
+  it("어느 날짜의 모달이든 내가 등록한 불가능 일정 전부를 시작 시간 순으로 나열한다", () => {
     const list = allOffEntries([weekly, once], 18);
 
     expect(list.map((entry) => entry.removeIds)).toEqual([[3], [7]]);

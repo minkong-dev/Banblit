@@ -18,12 +18,12 @@ from backend.db.models import Member, UnavailableTime
 def _require_self(member_id: int, requester: Member) -> None:
     """member_id 가 requester 본인의 번호인지 검증하고, 아니면 PermissionError 를 발생시킵니다.
 
-    다른 사용자의 번호든 없는 번호든 같게 거부합니다. 권한을 확인하지 않습니다. 불가능 시간의
+    다른 사용자의 번호든 없는 번호든 같게 거부합니다. 권한을 확인하지 않습니다. 불가능 일정의
     등록·수정·삭제는 본인만 할 수 있으며 헤드매니저도 예외가 아닙니다 — 다른 사람이 대신
     등록한 불가능 일정은 본인이 모르는 채로 배정에 반영됩니다. 조회는 _require_read 가 따로 봅니다.
     """
     if member_id != requester.id:
-        raise PermissionError("본인의 불가능 시간만 관리할 수 있습니다")
+        raise PermissionError("본인의 불가능 일정만 관리할 수 있습니다")
 
 
 def _require_read(session: Session, member_id: int, requester: Member) -> None:
@@ -31,7 +31,7 @@ def _require_read(session: Session, member_id: int, requester: Member) -> None:
     if member_id == requester.id:
         return
     if "unavailable_read" not in account_permissions(session, requester.id):
-        raise PermissionError("다른 멤버의 불가능 시간을 조회할 권한이 없습니다")
+        raise PermissionError("다른 멤버의 불가능 일정을 조회할 권한이 없습니다")
 
 
 def list_unavailable(
@@ -73,7 +73,7 @@ def create_unavailable(
     reason: str | None,
     name: str | None,
 ) -> UnavailableTime:
-    """불가능 시간 하나를 생성합니다. 본인 여부, 시작시간과 종료시간의 순서, slot(점유 단위 길이의 시간 칸) 격자, 반복 조건을 검증합니다."""
+    """불가능 일정 하나를 생성합니다. 본인 여부, 시작시간과 종료시간의 순서, slot(점유 단위 길이의 시간 칸) 격자, 반복 조건을 검증합니다."""
     _require_self(member_id, requester)
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_repeat_weekdays(repeat_weekdays)
@@ -108,9 +108,9 @@ def update_unavailable(
     reason: str | None,
     name: str | None,
 ) -> UnavailableTime:
-    """member_id 본인의 불가능 시간 하나를 수정합니다. 검증 항목은 생성과 같습니다.
+    """member_id 본인의 불가능 일정 하나를 수정합니다. 검증 항목은 생성과 같습니다.
 
-    다른 사용자의 불가능 시간을 지정하면 삭제와 같게 없는 일정으로 처리합니다.
+    다른 사용자의 불가능 일정을 지정하면 삭제와 같게 없는 일정으로 처리합니다.
     """
     _require_self(member_id, requester)
     row = session.get(UnavailableTime, time_id)
@@ -139,7 +139,7 @@ def reject_unavailable(
     reason: str,
     rejected_at: datetime,
 ) -> None:
-    """unavailable_manage 권한자가 member_id 의 불가능 시간 하나를 삭제하고, 그 멤버에게 reason 을 담은 반려 알림을 보냅니다.
+    """unavailable_manage 권한자가 member_id 의 불가능 일정 하나를 삭제하고, 그 멤버에게 reason 을 담은 반려 알림을 보냅니다.
 
     권한이 없으면 PermissionError, 사유가 비었거나 길거나 member_id 의 일정이 아니면 ValueError 입니다.
     본인의 일정을 반려하면 알림은 만들지 않습니다.
@@ -160,7 +160,7 @@ def reject_unavailable(
 def delete_unavailable(
     session: Session, member_id: int, requester: Member, time_id: int
 ) -> None:
-    """member_id 본인의 불가능 시간만 삭제합니다. 다른 사용자의 불가능 시간을 지정하면 없는 시간으로 처리합니다."""
+    """member_id 본인의 불가능 일정만 삭제합니다. 다른 사용자의 불가능 일정을 지정하면 없는 시간으로 처리합니다."""
     _require_self(member_id, requester)
     row = session.get(UnavailableTime, time_id)
     if row is None or row.member_id != member_id:

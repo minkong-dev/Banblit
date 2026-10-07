@@ -103,7 +103,7 @@ function windowPairMessage(pair: WindowPair, label: string, slotMinutes: number)
   // 둘 다 비어 있으면 그 쌍을 정하지 않은 것입니다. 오류가 아닙니다.
   if (pair.starts_at === "" && pair.ends_at === "") return "";
   if (pair.starts_at === "") return `${label} 합주 시작 시간을 입력해주세요.`;
-  if (pair.ends_at === "") return `${label} 합주 종료 시각을 입력해주세요.`;
+  if (pair.ends_at === "") return `${label} 합주 종료 시간을 입력해주세요.`;
   const from = minutesOf(pair.starts_at);
   const to = minutesOf(pair.ends_at);
   if (from === null || to === null || !onGrid(from, slotMinutes) || !onGrid(to, slotMinutes)) {
@@ -114,7 +114,7 @@ function windowPairMessage(pair: WindowPair, label: string, slotMinutes: number)
 }
 
 export function roomNameMessage(name: string, taken: string[]): string {
-  return uniqueNameMessage(name, taken, "합주실");
+  return uniqueNameMessage(name, taken, "합주실", "합주실명");
 }
 
 export function dateRangeMessage(from: string, to: string): string {

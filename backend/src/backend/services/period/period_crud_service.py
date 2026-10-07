@@ -73,11 +73,11 @@ def _pair_columns(part: str, pair: ClockPair) -> dict[str, object]:
             f"practice_{part}_ends_at": None,
         }
     label = "평일" if part == "weekday" else "주말"
-    starts = parse_clock(pair[0], f"{label} 합주 시작 시각")
-    ends = parse_clock(pair[1], f"{label} 합주 종료 시각")
+    starts = parse_clock(pair[0], f"{label} 합주 시작 시간")
+    ends = parse_clock(pair[1], f"{label} 합주 종료 시간")
     # DB 의 CHECK 도 같은 조건을 봅니다. 여기서 먼저 보는 것은 어느 쪽이 잘못됐는지 알리기 위해서입니다.
     if ends <= starts:
-        raise ValueError(f"{label} 합주 종료 시각은 시작 시각보다 늦어야 합니다")
+        raise ValueError(f"{label} 합주 종료 시간은 시작 시간보다 늦어야 합니다")
     return {
         f"practice_{part}_starts_at": starts,
         f"practice_{part}_ends_at": ends,

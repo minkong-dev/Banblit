@@ -7,7 +7,7 @@ sources: []  # v1 기획 단계입니다. 구현 코드가 확정되면 각 기�
 
 ```mermaid
 flowchart TD
-    M[멤버: 불가능 시간 등록<br/>직접 입력 또는 자연어] --> S[스케줄러에 반영]
+    M[멤버: 불가능 일정 등록<br/>직접 입력 또는 자연어] --> S[스케줄러에 반영]
     M --> AA[집중 합주기간 자동 배정<br/>정해둔 시각이 지나면 자동으로 실행]
     AA --> Q{조건을 충족하는<br/>배정을 찾았는가}
     Q -->|찾음| C[즉시 확정]
@@ -35,7 +35,7 @@ Banblit은 하나의 합주실을 2개 이상 밴드 팀이 함께 사용할 때
 - [스케줄러](./scheduler/README.md) — 메인 캘린더의 조회와 상호작용
 - [자동 배정](./auto-assignment/README.md) — 집중 합주기간의 배정과 실패 시 조율안 생성
 - [스케줄링 API](./scheduling-api/README.md) — 서버 endpoint(API의 요청 주소 단위) 전체가 따르는 공통 규칙과 기간 자동 배정 endpoint
-- [데이터 저장소](./database-layer/README.md) — 팀·소속·불가능 시간·합주실·기간·배정 정보를 보존하면서 규칙을 적용하는 계층
+- [데이터 저장소](./database-layer/README.md) — 팀·소속·불가능 일정·합주실·기간·배정 정보를 보존하면서 규칙을 적용하는 계층
 - [LLM 도우미](./llm-assistant/README.md) — 자연어 입력과 충돌 조율
 - [게시판과 공지](./boards/README.md) — 팀 게시판과 전체 공지
 - [화면](./screens/README.md) — 사람이 실제로 사용하는 앱과 화면들이 공유하는 구성·계산

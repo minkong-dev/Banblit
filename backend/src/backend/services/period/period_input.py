@@ -25,7 +25,7 @@ def expand_unavailable(
     window_start: datetime,
     window_end: datetime,
 ) -> list[TimeInterval]:
-    """불가능 시간을 기간과 겹치는 구간 목록으로 확장합니다.
+    """불가능 일정을 기간과 겹치는 구간 목록으로 확장합니다.
 
     매일 반복하면 1일, 매주 반복하면 7일 간격으로 되풀이하되, 반복 종료일이 있으면
     그 날짜까지만 생성합니다.

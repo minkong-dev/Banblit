@@ -8,7 +8,7 @@
 // - 팀 2개 — E2E_TEAM(E2E 계정·E2E 멤버), E2E_OTHER_TEAM(E2E 멤버). 배정 엔진은 멤버 없는 팀을 거절합니다
 // - 오늘 하루짜리 집중 합주기간 — 배정을 계산해 저장합니다. 팀마다 2칸이라 계산이 성공합니다
 // - 내일 하루짜리 집중 합주기간 — 저장하지 않습니다. E2E 계정이 합주실이 여는 시간 전체에
-//   불가능 시간을 두어, 이 기간을 계산하면 조율안(E2E 계정을 제외한 배정안)이 나옵니다
+//   불가능 일정을 두어, 이 기간을 계산하면 조율안(E2E 계정을 제외한 배정안)이 나옵니다
 
 import { request } from "@playwright/test";
 import type { APIRequestContext, FullConfig } from "@playwright/test";

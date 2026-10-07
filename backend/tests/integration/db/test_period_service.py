@@ -369,10 +369,10 @@ def test_two_week_schedule_for_four_teams_finishes(db_session: Session) -> None:
 def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
     db_session: Session,
 ) -> None:
-    """기간 마지막 날(둘째 날)에 있는 불가능 시간도 첫날과 같게 배정을 막아야 합니다.
+    """기간 마지막 날(둘째 날)에 있는 불가능 일정도 첫날과 같게 배정을 막아야 합니다.
 
     기간의 끝을 시작일 기준으로 계산하면(예: window_end 를 starts_on 으로 잡으면)
-    둘째 날의 불가능 시간이 기간 밖으로 판정되어 전부 제외됩니다. 그러면 이영희가
+    둘째 날의 불가능 일정이 기간 밖으로 판정되어 전부 제외됩니다. 그러면 이영희가
     항상 가능한 것으로 처리되어, 조율안 없이 배정에 성공합니다.
     """
     period_id = _period(db_session, days=2)  # 8/1 ~ 8/2
@@ -381,7 +381,7 @@ def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
     db_session.add(other)
     db_session.flush()
     seat(db_session, team_id, other.id)
-    # 마지막 날(8/2)에만 있는 불가능 시간입니다. 첫날(8/1)에는 제약이 없습니다.
+    # 마지막 날(8/2)에만 있는 불가능 일정입니다. 첫날(8/1)에는 제약이 없습니다.
     db_session.add(
         UnavailableTime(
             member_id=other.id,
@@ -409,9 +409,9 @@ def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
 def test_multiple_unavailable_times_for_the_same_person_all_block_assignment(
     db_session: Session,
 ) -> None:
-    """한 사람에게 불가능 시간이 2개 이상이면 전부 반영되어야 합니다.
+    """한 사람에게 불가능 일정이 2개 이상이면 전부 반영되어야 합니다.
 
-    첫 번째 불가능 시간만 반영하면(예: expand_unavailable 이 rows 의 첫 원소만 사용하면) 두 번째
+    첫 번째 불가능 일정만 반영하면(예: expand_unavailable 이 rows 의 첫 원소만 사용하면) 두 번째
     구간이 가능한 시간으로 처리되어, 실제로는 불가능한 배정을 가능하다고 잘못 판정합니다.
 
     설계: 합주실은 하루 2칸(18:00~20:00, 1시간 격자). 팀 A(김민수, 항상 가능)와

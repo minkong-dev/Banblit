@@ -180,9 +180,9 @@ def create_reservation(
 def list_reservations(
     session: Session, room_id: int, from_date: date, to_date: date
 ) -> list[ReservationRow]:
-    """room_id의 [from_date, to_date] 범위 예약을 시작 시각 순으로 반환합니다.
+    """room_id의 [from_date, to_date] 범위 예약을 시작 시간 순으로 반환합니다.
 
-    각 행마다 합주실 이름·팀 이름(팀 예약이 아니면 None)·예약한 멤버 이름을 함께 포함합니다.
+    각 행마다 합주실명·팀 이름(팀 예약이 아니면 None)·예약한 멤버 이름을 함께 포함합니다.
     """
     room = get_room_or_raise(session, room_id)
     range_start = datetime.combine(from_date, time.min)
@@ -204,7 +204,7 @@ def list_reservations(
 
 
 def list_my_reservations(session: Session, member_id: int, now: datetime) -> list[ReservationRow]:
-    """member_id 가 잡은 예약 중 아직 끝나지 않은 것을 시작 시각 순으로 반환합니다. 모든 합주실에 걸칩니다.
+    """member_id 가 잡은 예약 중 아직 끝나지 않은 것을 시작 시간 순으로 반환합니다. 모든 합주실에 걸칩니다.
 
     끝난 예약은 소멸한 것으로 보고 빼며, 달력에는 기록으로 남습니다(list_reservations).
     """
