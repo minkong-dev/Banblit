@@ -55,7 +55,8 @@ body[data-page="settings"] {
   /* 섹션 제목입니다. 기간 form 의 "기간 기본설정" 과 아래 "날짜별 전체합주 시각" 이 같은 크기입니다. */
   .fsec { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
   /* 전체합주 입력 묶음의 왼쪽 세이지 선은 달력의 전체합주 막대와 같은 색으로 "기간 안의 설정"임을 표시합니다. */
-  .fields .ensemble { display: flex; flex-direction: column; gap: 10px; padding: 2px 0 2px 14px; border-left: 3px solid var(--green); }
+  .fields .ensemble { display: flex; flex-direction: column; gap: 10px; margin-left: -17px; padding: 2px 0 2px 14px; border-left: 3px solid var(--green); }
+  /* 선 3px + 안쪽 여백 14px 만큼 왼쪽으로 내보내, 묶음 안 입력칸의 왼쪽선이 다른 줄의 1열과 같습니다(2026-10-07). */
   .ensemble .teamdays { margin: 2px 0 0; font-size: 13px; color: var(--t2); }
 
   /* ===== 날짜별 전체합주 시각 (SettingsEnsemble.tsx 의 EnsembleDays) =====
