@@ -168,6 +168,8 @@ class PracticeWindowIn(BaseModel):
 class PeriodOut(BaseModel):
     id: int
     kind: str
+    # 공연명입니다. 비어 있을 수 있습니다.
+    name: str
     starts_on: str
     ends_on: str
     everyday: bool
@@ -202,6 +204,7 @@ class PeriodEnvelopeOut(BaseModel):
 
 class PeriodCreateIn(BaseModel):
     kind: str
+    name: str = ""
     starts_on: str
     ends_on: str
     everyday: bool
@@ -213,6 +216,7 @@ class PeriodCreateIn(BaseModel):
 
 class PeriodUpdateIn(BaseModel):
     kind: str | None = None
+    name: str | None = None
     starts_on: str | None = None
     ends_on: str | None = None
     everyday: bool | None = None

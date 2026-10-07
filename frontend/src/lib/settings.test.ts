@@ -10,6 +10,7 @@ import {
   sessionMinuteChoices,
   sessionMinutesLabel,
   slotsBetween,
+  periodTitle,
 } from "./settings";
 
 describe("ensembleMessage", () => {
@@ -49,9 +50,9 @@ describe("ensembleMessage", () => {
     expect(ensembleMessage({ ...form, starts_at: "19:30" }, period, room, 30)).toBe("");
   });
 
-  it("끝 시각이 시작 시각보다 늦어야 한다", () => {
+  it("종료 시간이 시작 시간보다 늦어야 한다", () => {
     expect(ensembleMessage({ ...form, starts_at: "21:00", ends_at: "20:00" }, period, room, 60))
-      .toBe("끝 시각은 시작 시각보다 늦어야 해요.");
+      .toBe("종료 시간은 시작 시간보다 늦어야 해요.");
   });
 
   it("합주실 운영 시간 밖의 시각은 받지 않는다", () => {
@@ -217,14 +218,14 @@ describe("practiceWindowMessage", () => {
     expect(practiceWindowMessage(empty, empty, 30)).toBe("");
   });
 
-  it("한쪽만 채우면 끝 시각 없는 시간대가 되므로 거절한다", () => {
+  it("한쪽만 채우면 종료 시간 없는 시간대가 되므로 거절한다", () => {
     expect(practiceWindowMessage({ starts_at: "17:00", ends_at: "" }, empty, 30))
       .toBe("평일 합주 종료 시각을 입력해주세요.");
   });
 
   it("끝이 시작보다 빠르면 거절한다", () => {
     expect(practiceWindowMessage({ starts_at: "23:00", ends_at: "17:00" }, empty, 30))
-      .toBe("평일 합주 종료 시각은 시작 시각보다 늦어야 해요.");
+      .toBe("평일 합주 종료 시간은 시작 시간보다 늦어야 해요.");
   });
 
   it("격자 위가 아니면 거절한다", () => {
@@ -242,5 +243,14 @@ describe("practiceWindowMessage", () => {
     expect(practiceWindowMessage(
       { starts_at: "17:00", ends_at: "23:00" }, { starts_at: "09:00", ends_at: "23:00" }, 30,
     )).toBe("");
+  });
+});
+
+describe("periodTitle — 기간 목록의 제목", () => {
+  it("공연명이 있으면 공연명, 비어 있으면 종류 이름이고 매일 기간은 ' 매일' 이 붙는다", () => {
+    expect(periodTitle({ name: "정기공연", kind: "focused", everyday: false })).toBe("정기공연");
+    expect(periodTitle({ name: "  ", kind: "focused", everyday: false })).toBe("집중 합주");
+    expect(periodTitle({ name: "", kind: "focused", everyday: true })).toBe("집중 합주 매일");
+    expect(periodTitle({ name: "", kind: "open", everyday: false })).toBe("상시 개방");
   });
 });

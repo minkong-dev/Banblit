@@ -102,14 +102,14 @@ export function practiceWindowMessage(
 function windowPairMessage(pair: WindowPair, label: string, slotMinutes: number): string {
   // 둘 다 비어 있으면 그 쌍을 정하지 않은 것입니다. 오류가 아닙니다.
   if (pair.starts_at === "" && pair.ends_at === "") return "";
-  if (pair.starts_at === "") return `${label} 합주 시작 시각을 입력해주세요.`;
+  if (pair.starts_at === "") return `${label} 합주 시작 시간을 입력해주세요.`;
   if (pair.ends_at === "") return `${label} 합주 종료 시각을 입력해주세요.`;
   const from = minutesOf(pair.starts_at);
   const to = minutesOf(pair.ends_at);
   if (from === null || to === null || !onGrid(from, slotMinutes) || !onGrid(to, slotMinutes)) {
     return `${label} 합주 시간은 ${unitText(slotMinutes)} 기준으로 지정해주세요.`;
   }
-  if (to <= from) return `${label} 합주 종료 시각은 시작 시각보다 늦어야 해요.`;
+  if (to <= from) return `${label} 합주 종료 시간은 시작 시간보다 늦어야 해요.`;
   return "";
 }
 
@@ -153,7 +153,7 @@ export function ensembleTimeMessage(
   if (from === null || to === null || !onGrid(from, slotMinutes) || !onGrid(to, slotMinutes)) {
     return `전체합주 시각은 ${unitText(slotMinutes)} 기준으로 지정해주세요.`;
   }
-  if (to <= from) return "끝 시각은 시작 시각보다 늦어야 해요.";
+  if (to <= from) return "종료 시간은 시작 시간보다 늦어야 해요.";
   const opens = minutesOf(room.opens_at);
   const closes = minutesOf(room.closes_at);
   if (opens === null || closes === null || from < opens || to > closes) {
@@ -199,4 +199,14 @@ export function capacity(input: {
   // teams 가 0 이면 나누지 않고 total 을 그대로 leftover 에 담습니다.
   const perTeam = teams > 0 ? Math.floor(total / teams) : 0;
   return { perDay, total, perTeam, leftover: total - perTeam * teams };
+}
+
+/** 기간 종류의 화면 이름입니다. open 은 서버가 아무 동작도 하지 않는 옛 값이라 새로 만들 수 없고, 저장된 기간의 제목에만 쓰입니다. */
+export const KIND_TEXT = { open: "상시 개방", focused: "집중 합주" } as const;
+
+/** 기간 목록의 제목입니다. 공연명(name)이 있으면 공연명, 비어 있으면 종류 이름이고 매일 기간은 " 매일" 이 붙습니다(2026-10-07). */
+export function periodTitle(period: { name: string; kind: "open" | "focused"; everyday: boolean }): string {
+  const name = period.name.trim();
+  if (name !== "") return name;
+  return KIND_TEXT[period.kind] + (period.everyday ? " 매일" : "");
 }

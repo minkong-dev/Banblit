@@ -557,3 +557,29 @@ def test_the_practice_window_is_cleared_by_sending_empty_pairs(
 
     kept = api_client.get("/periods", cookies=head).json()["periods"][0]
     assert kept["practice_window"] == {"weekday": None, "weekend": None}
+
+
+def test_period_name_is_saved_on_create_and_patch_and_defaults_to_empty(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """공연명(name)은 생성·수정 요청으로 저장되고, 보내지 않으면 빈 문자열입니다(2026-10-07)."""
+    _, head = account(*HEAD)
+    base = {
+        "kind": "focused", "starts_on": "2026-09-14", "ends_on": "2026-09-27",
+        "everyday": False, "first_run_at": "09:00", "second_run_at": "21:00",
+    }
+
+    created = api_client.post("/periods", json={**base, "name": "정기공연"}, cookies=head)
+    assert created.status_code == 201
+    assert created.json()["period"]["name"] == "정기공연"
+
+    period_id = created.json()["period"]["id"]
+    patched = api_client.patch(f"/periods/{period_id}", json={"name": "가을 공연"}, cookies=head)
+    assert patched.status_code == 200
+    assert patched.json()["period"]["name"] == "가을 공연"
+
+    unnamed = api_client.post(
+        "/periods", json={**base, "starts_on": "2026-10-01", "ends_on": "2026-10-02"}, cookies=head,
+    )
+    assert unnamed.status_code == 201
+    assert unnamed.json()["period"]["name"] == ""
