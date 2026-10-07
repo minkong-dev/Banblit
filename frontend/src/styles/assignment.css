@@ -63,8 +63,7 @@ body[data-page="admin"] {
   .panel li.empty { padding: 12px 0; font-size: 13.5px; color: var(--t3); line-height: 1.7; }
 
   /* 오른쪽 칸의 계산 시각. 여백은 설정 화면 오른쪽 칸(settings.css .read)과 같은 값입니다. */
-  .times { padding: 16px 0 18px; }
-  .times .k { font-size: 12.5px; color: var(--t3); }
+  .times { padding: 14px 0 18px; }
   .times .t { font-size: 22px; font-weight: 700; letter-spacing: -.04em; margin: 4px 0 14px; }
   /* 두 칸이 나란히 들어가지 않는 폭이면 아래로 내려갑니다. */
   .times .rows { display: flex; flex-wrap: wrap; gap: 10px; }
