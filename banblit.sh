@@ -249,7 +249,7 @@ show_account_hint() {
     | tr -d '[:space:]')" || return 0
   [ -n "$count" ] || return 0
   if [ "$count" = "0" ]; then
-    note "가입된 계정이 없습니다. /signup 에서 생성하는 첫 계정이 권한 항목 전부를 받습니다."
+    note "가입된 계정이 존재하지 않습니다. /signup 에서 생성하는 첫 계정이 권한 항목 전부를 받습니다."
   else
     note "가입된 계정 $count 개"
   fi
@@ -290,7 +290,7 @@ register_command() {
 
 open_browser() {
   [ "$NO_BROWSER" -eq 0 ] || return 0
-  # 윈도우에서만 엽니다. 서버에는 열 화면이 없습니다.
+  # 윈도우에서만 엽니다. 서버에는 열 화면이 존재하지 않습니다.
   case "$(uname -s)" in
     MINGW*|MSYS*|CYGWIN*) cmd.exe //c start "" "$1" >/dev/null 2>&1 || true ;;
   esac
@@ -498,7 +498,7 @@ check_step() {
 }
 
 cmd_check() {
-  [ "$MODE" = 'dev' ] || { fail "check 는 개발용입니다. 배포용 image 에는 검사 도구가 없습니다."; exit 1; }
+  [ "$MODE" = 'dev' ] || { fail "check 는 개발용입니다. 배포용 image 에는 pytest·mypy 같은 테스트 도구가 존재하지 않습니다."; exit 1; }
   assert_ready
   ensure_env
   mkdir -p .logs
