@@ -43,9 +43,11 @@ body[data-page="settings"] {
   .fields.period .fgroup { display: flex; flex-direction: column; gap: 10px; }
   .fields.period h4 { margin: 0 0 2px; font-size: 13px; font-weight: 700; color: var(--t2); }
   .fields.period .frow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; align-items: start; }
-  .fields.period .frow > label { min-width: 0; }
-  /* 공연명 칸은 열 2개 폭입니다. */
-  .fields.period .frow > .wide { grid-column: span 2; }
+  /* 입력칸 하나는 열 2개 폭(본문의 절반)이라 줄마다 4열 전체를 채웁니다. 날짜 줄(시작일·종료일·체크)만 1열씩이고 공연명은 4열 전체입니다. */
+  .fields.period .frow > label { min-width: 0; grid-column: span 2; }
+  .fields.period .frow:has(.checks) > label { grid-column: span 1; }
+  .fields.period .frow > .wide { grid-column: 1 / -1; }
+  .fields.period .frow > .checks { grid-column: span 2; }
   .fields.period .frow input, .fields.period .frow .dd { width: 100%; }
   /* 체크 2개를 담는 칸입니다. 체크 표시는 입력칸(44px)보다 낮아 라벨 윗선을 맞추고 입력칸 높이의 가운데에 둡니다. */
   .fields.period .checks { display: flex; gap: 40px; align-items: flex-start; }
@@ -78,6 +80,7 @@ body[data-page="settings"] {
   /* 휴대폰 폭: 열 2개. 공연명은 한 줄 전체, 체크 2개는 한 줄, 날짜별 행은 날짜 1줄 · 시작·종료 시간 1줄 · 버튼 1줄. */
   @media (max-width: 720px) {
     .fields.period .frow, .ensdays .ensday { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .fields.period .frow > label { grid-column: span 1; }
     .fields.period .frow > .wide, .fields.period .frow > .checks { grid-column: 1 / -1; }
     .ensdays .ensdate { grid-column: 1 / -1; min-height: 0; }
     .ensdays .acts { grid-column: 1 / -1; }
