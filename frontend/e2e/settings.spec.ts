@@ -70,7 +70,7 @@ test("집중합주 기간에 전체합주를 지정하고 날짜별 시각을 �
   await dialog.getByText("전체 합주기간 지정").click();
   await dialog.getByLabel("전체합주 시작일").fill(ensembleDay);
   await dialog.getByLabel("전체합주 종료일").fill(ensembleDay);
-  await dialog.getByLabel("시작 시각").fill("19:00");
+  await dialog.getByLabel("시작 시간").fill("19:00");
   await expect(dialog.getByText("팀별합주 날짜:")).toBeVisible();
   await dialog.getByRole("button", { name: "기간 추가" }).click();
   await expect(dialog).toHaveCount(0);
@@ -79,8 +79,8 @@ test("집중합주 기간에 전체합주를 지정하고 날짜별 시각을 �
 
   await page.getByRole("button", { name: `${starts} 부터의 기간을 수정` }).click();
   const days = page.locator(".ensdays");
-  await days.getByLabel("시작 시각").fill("20:00");
-  await days.getByRole("button", { name: "시각 저장" }).click();
+  await days.getByLabel("시작 시간").fill("20:00");
+  await days.getByRole("button", { name: "저장" }).click();
   await expect.poll(async () => (await saved())?.ensemble?.days)
     .toEqual([{ day: ensembleDay, starts_at: "20:00", ends_at: "22:00" }]);
 

@@ -150,7 +150,7 @@ export function SlotPicker({ prefix, range, onChange, grid, lock, slotMinutes, o
         />
       </div>
       <div className="fld">
-        <label htmlFor={`${prefix}-to`}>끝</label>
+        <label htmlFor={`${prefix}-to`}>종료</label>
         <Dropdown
           id={`${prefix}-to`}
           value={range.b}
