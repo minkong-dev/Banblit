@@ -36,24 +36,21 @@ body[data-page="settings"] {
   /* 체크 표시는 base.css 의 .chk 가 그립니다. 이 규칙에서는 위아래 여백만 정합니다. */
   .fields .chk { margin: 12px 0; }
   /* ===== 기간 form (SettingsPeriods.tsx) =====
-     열 폭은 창 폭 비율이 아니라 고정값(--col: 240px)입니다. 비율로 두면 넓은 창에서 입력칸이 한없이 넓어지고 좁은 창에서는
-     한 줄에 들어가지 못해 아무 자리에서 줄이 바뀝니다. 모든 줄이 같은 폭의 열을 왼쪽부터 채우므로 세로선이 맞고,
-     form 과 아래 "날짜별 전체합주 시각" 행이 같은 열을 씁니다. form 전체 폭은 열 4개(--form-w)이고 버튼은 그 오른쪽 끝입니다. */
-  .fields.period, .ensdays { --gap: 16px; --col: min(240px, calc((100% - var(--gap) * 3) / 4)); max-width: calc(240px * 4 + var(--gap) * 3); }
+     본문 폭을 같은 폭 4열로 나눕니다. form 의 모든 줄과 아래 "날짜별 전체합주 시각" 행이 같은 4열을 쓰므로 세로선이 맞습니다.
+     입력칸은 열 폭을 가득 채우고, 체크(매일·전체 합주기간 지정)는 3번째 열 한 칸 안에 40px 간격으로 나란히 둡니다. */
   .fields.period { flex-direction: column; align-items: stretch; gap: 28px; }
   /* 묶음 4개(일반·스케줄링·팀별 합주·전체 합주)는 소제목(h4) 1개와 줄(.frow) 1개 이상입니다. 묶음 사이 28px, 묶음 안 10px. */
   .fields.period .fgroup { display: flex; flex-direction: column; gap: 10px; }
   .fields.period h4 { margin: 0 0 2px; font-size: 13px; font-weight: 700; color: var(--t2); }
-  .fields.period .frow { display: flex; flex-wrap: wrap; gap: 10px var(--gap); align-items: flex-start; }
-  .fields.period .frow > label { flex: none; width: var(--col); min-width: 0; }
+  .fields.period .frow { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; align-items: start; }
+  .fields.period .frow > label { min-width: 0; }
   /* 공연명 칸은 열 2개 폭입니다. */
-  .fields.period .frow > .wide { flex: none; width: calc(var(--col) * 2 + var(--gap)); }
-  /* 체크(매일·전체 합주기간 지정)는 내용 폭이고 앞 칸과 40px(gap 16 + 24) 떨어집니다. */
-  .fields.period .frow > label:has(.chk) { width: auto; margin-left: 24px; }
+  .fields.period .frow > .wide { grid-column: span 2; }
   .fields.period .frow input, .fields.period .frow .dd { width: 100%; }
-  /* 체크 표시는 입력칸(44px)보다 낮습니다. 라벨 윗선을 맞추고, 체크 표시는 입력칸 높이의 가운데에 둡니다. */
+  /* 체크 2개를 담는 칸입니다. 체크 표시는 입력칸(44px)보다 낮아 라벨 윗선을 맞추고 입력칸 높이의 가운데에 둡니다. */
+  .fields.period .checks { display: flex; gap: 40px; align-items: flex-start; }
   .fields.period .frow .chk { margin: 10px 0; }
-  /* 취소·저장 버튼은 form 폭의 오른쪽 끝(4번째 열 끝)이고, 마지막 묶음과는 묶음 간격보다 가깝습니다. */
+  /* 취소·저장 버튼은 오른쪽 끝이고, 마지막 묶음과는 묶음 간격보다 가깝습니다. */
   .fields.period .acts { justify-content: flex-end; margin-top: -10px; }
   /* 섹션 제목입니다. 기간 form 의 "기간 기본설정" 과 아래 "날짜별 전체합주 시각" 이 같은 크기입니다. */
   .fsec { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
@@ -62,10 +59,10 @@ body[data-page="settings"] {
   .ensemble .teamdays { margin: 2px 0 0; font-size: 13px; color: var(--t2); }
 
   /* ===== 날짜별 전체합주 시각 (SettingsEnsemble.tsx 의 EnsembleDays) =====
-     날짜 1개가 행 1개입니다. 열은 위 form 과 같은 폭 — 1열 날짜, 2·3열 시작·종료 시간, 4열 저장 버튼. */
+     날짜 1개가 행 1개입니다. 위 form 과 같은 4열 — 1열 날짜, 2·3열 시작·종료 시간, 4열 저장 버튼(왼쪽 정렬). */
   .ensdays { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
   .ensdays > .fsec { margin-bottom: 10px; }
-  .ensdays .ensday { display: grid; grid-template-columns: repeat(3, var(--col)) minmax(0, 1fr); gap: 10px var(--gap); align-items: end; padding: 8px 0; }
+  .ensdays .ensday { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 16px; align-items: end; padding: 8px 0; }
   .ensdays .ensday + .ensday { border-top: 1px solid var(--line); }
   .ensdays .ensday input { width: 100%; }
   .ensdays .ensdate { display: flex; align-items: baseline; gap: 6px; min-height: 44px; }
@@ -74,15 +71,13 @@ body[data-page="settings"] {
   .ensdays .ensdate .w { font-size: 12.5px; color: var(--t3); }
   /* 날짜별로 지정한 시각이 있는 행의 표시입니다. 기본 시각을 쓰는 행에는 붙지 않습니다. */
   .ensdays .enstag { padding: 2px 7px; border-radius: 999px; background: var(--brand-tint); color: var(--brand); font-size: 11px; font-weight: 700; }
-  .ensdays .acts { justify-content: flex-end; }
+  .ensdays .acts { justify-content: flex-start; }
   .ensdays .why { grid-column: 1 / -1; margin: 0; }
 
-  /* 휴대폰 폭: 열 2개. 공연명은 한 줄 전체, 날짜별 행은 날짜 1줄 · 시작·종료 시간 1줄 · 버튼 1줄. */
+  /* 휴대폰 폭: 열 2개. 공연명은 한 줄 전체, 체크 2개는 한 줄, 날짜별 행은 날짜 1줄 · 시작·종료 시간 1줄 · 버튼 1줄. */
   @media (max-width: 720px) {
-    .fields.period, .ensdays { --col: calc((100% - var(--gap)) / 2); max-width: none; }
-    .fields.period .frow > .wide { width: 100%; }
-    .fields.period .frow > label:has(.chk) { margin-left: 0; }
-    .ensdays .ensday { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .fields.period .frow, .ensdays .ensday { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .fields.period .frow > .wide, .fields.period .frow > .checks { grid-column: 1 / -1; }
     .ensdays .ensdate { grid-column: 1 / -1; min-height: 0; }
     .ensdays .acts { grid-column: 1 / -1; }
   }

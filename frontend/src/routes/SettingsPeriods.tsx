@@ -150,16 +150,19 @@ function PeriodFields(props: {
           />
         </Cell>
       )}
+      {/* 체크 2개는 3번째 열 한 칸 안에 나란히 둡니다(styles/settings.css 의 .checks). */}
       {form.kind === "focused" ? (
-        <Cell label="매일" htmlFor={at("everyday")}>
-          <CheckMark
-            id={at("everyday")}
-            checked={form.everyday}
-            onChange={(on) => setForm({ ...form, everyday: on })}
-          />
-        </Cell>
+        <div className="checks">
+          <Cell label="매일" htmlFor={at("everyday")}>
+            <CheckMark
+              id={at("everyday")}
+              checked={form.everyday}
+              onChange={(on) => setForm({ ...form, everyday: on })}
+            />
+          </Cell>
+          {ensembleToggle}
+        </div>
       ) : null}
-      {form.kind === "focused" ? ensembleToggle : null}
       </div>
       </div>
       {form.kind === "focused" ? (
