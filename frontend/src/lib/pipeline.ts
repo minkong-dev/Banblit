@@ -79,17 +79,17 @@ export function periodBody<T extends PeriodForm & { kind?: string; everyday?: bo
 
 export type SaveStep = "period" | "ensemble" | "clearEnsemble";
 
-/** 기간 저장(POST·PATCH)과 전체합주 저장(PUT·DELETE)의 요청 순서입니다. 서버는 전체합주 날짜 범위가
+/** 기간 저장(POST·PATCH)과 전체 합주 저장(PUT·DELETE)의 요청 순서입니다. 서버는 전체 합주 날짜 범위가
  *  기간 안인지를 요청마다 DB CHECK 로 검사하므로, 매 요청 직후의 저장 상태가 그 조건을 지키는 순서로 보냅니다.
- *  before 는 저장된 기간이고, 새 기간이면 null 입니다. ensemble 이 null 이면 전체합주를 해제합니다. */
+ *  before 는 저장된 기간이고, 새 기간이면 null 입니다. ensemble 이 null 이면 전체 합주를 해제합니다. */
 export function ensembleSaveOrder(
   before: (PeriodForm & { everyday: boolean; ensemble: PeriodForm | null }) | null,
   ensemble: PeriodForm | null,
 ): SaveStep[] {
   if (before === null) return ensemble === null ? ["period"] : ["period", "ensemble"];
   if (ensemble === null) return before.ensemble === null ? ["period"] : ["clearEnsemble", "period"];
-  // ponytail: 새 전체합주가 저장된 기간 밖이고 옛 전체합주도 새 기간 밖이면 어느 순서든 첫 요청이 거절됩니다.
-  // 서버 사유를 그대로 표시합니다. 막으려면 기간과 전체합주를 한 transaction 으로 받는 endpoint 가 필요합니다.
+  // ponytail: 새 전체 합주가 저장된 기간 밖이고 옛 전체 합주도 새 기간 밖이면 어느 순서든 첫 요청이 거절됩니다.
+  // 서버 사유를 그대로 표시합니다. 막으려면 기간과 전체 합주를 한 transaction 으로 받는 endpoint 가 필요합니다.
   const inside = ensemble.starts_on >= before.starts_on
     && (before.everyday || ensemble.ends_on <= before.ends_on);
   return inside ? ["ensemble", "period"] : ["period", "ensemble"];
@@ -98,7 +98,7 @@ export function ensembleSaveOrder(
 export type PeriodBody = Omit<Period, "id" | "ensemble">;
 export type EnsembleBody = Omit<Ensemble, "days">;
 
-/** 기간과 전체합주를 ensembleSaveOrder 순서로 저장합니다. 요청 사이에 실패하면 앞 요청은 저장된 채로 남고,
+/** 기간과 전체 합주를 ensembleSaveOrder 순서로 저장합니다. 요청 사이에 실패하면 앞 요청은 저장된 채로 남고,
  *  서버 사유를 담은 오류를 그대로 던집니다. */
 export async function savePeriod(
   before: Period | null, period: PeriodBody, ensemble: EnsembleBody | null,
@@ -119,7 +119,7 @@ export async function savePeriod(
   }
 }
 
-/** 전체합주 날짜 하나의 시각을 지정합니다. 이미 지정한 날짜면 서버가 덮어씁니다. */
+/** 전체 합주 날짜 하나의 시각을 지정합니다. 이미 지정한 날짜면 서버가 덮어씁니다. */
 export async function saveEnsembleDay(
   periodId: number, day: string, startsAt: string, endsAt: string,
 ): Promise<void> {
@@ -173,7 +173,7 @@ type PostForm = { title: string; body: string };
 
 export { commentMessage as checkComment };
 export { ensembleMessage as checkEnsemble, ensembleTimeMessage as checkEnsembleTime } from "./settings";
-// 팀별합주 시간대 검증입니다. 순서 의존이 없어 그대로 export 합니다.
+// 팀별 합주 시간대 검증입니다. 순서 의존이 없어 그대로 export 합니다.
 export { practiceWindowMessage as checkPracticeWindow } from "./settings";
 export type { WindowPair } from "./settings";
 

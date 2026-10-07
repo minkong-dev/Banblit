@@ -1,4 +1,4 @@
-// 집중 합주기간의 전체합주 설정 부품입니다. 설정 화면의 기간 form 과 달력의 하루 dialog 가 사용합니다.
+// 집중 합주기간의 전체 합주 설정 부품입니다. 설정 화면의 기간 form 과 달력의 하루 dialog 가 사용합니다.
 
 import { useState } from "react";
 import type { ReactNode } from "react";
@@ -23,7 +23,7 @@ import type { EnsembleBody, PeriodBody } from "../lib/pipeline";
 import { say } from "../lib/toast";
 import { Cell } from "./SettingsForm";
 
-/** 기간 form 이 보유하는 전체합주 입력값입니다. on 이 false 면 저장할 때 전체합주를 해제합니다. */
+/** 기간 form 이 보유하는 전체 합주 입력값입니다. on 이 false 면 저장할 때 전체 합주를 해제합니다. */
 export type EnsembleDraft = {
   on: boolean;
   starts_on: string;
@@ -33,7 +33,7 @@ export type EnsembleDraft = {
   ends_at: string;
 };
 
-/** 저장된 전체합주가 있으면 그 값, 없으면 첫 합주실과 그 운영 시간으로 채운 꺼진 입력값입니다. */
+/** 저장된 전체 합주가 있으면 그 값, 없으면 첫 합주실과 그 운영 시간으로 채운 꺼진 입력값입니다. */
 export function ensembleDraft(period: Period | null, rooms: Room[]): EnsembleDraft {
   const saved = period?.ensemble ?? null;
   if (saved !== null) {
@@ -51,24 +51,24 @@ export function ensembleDraft(period: Period | null, rooms: Room[]): EnsembleDra
   };
 }
 
-/** 서버에 보낼 전체합주 값입니다. 합주실을 선택하지 않은 입력은 검증(checkEnsemble)이 저장 전에 거절합니다. */
+/** 서버에 보낼 전체 합주 값입니다. 합주실을 선택하지 않은 입력은 검증(checkEnsemble)이 저장 전에 거절합니다. */
 export function ensembleBody(draft: EnsembleDraft): EnsembleBody {
   const { starts_on, ends_on, room_id, starts_at, ends_at } = draft;
   return { starts_on, ends_on, room_id: room_id ?? 0, starts_at, ends_at };
 }
 
-/** 팀별합주 날짜를 한 줄로 표시합니다. 전체합주 날짜 범위가 아직 성립하지 않으면 빈 문자열입니다. */
+/** 팀별 합주 날짜를 한 줄로 표시합니다. 전체 합주 날짜 범위가 아직 성립하지 않으면 빈 문자열입니다. */
 function teamDaysText(period: PeriodBody, draft: EnsembleDraft): string {
   if (draft.starts_on === "" || draft.ends_on === "" || draft.ends_on < draft.starts_on) return "";
   const ranges = focusedRanges([{ ...period, ensemble: draft }]);
-  if (ranges.length === 0) return "팀별합주 날짜가 없어요. 모든 날짜가 전체합주예요.";
+  if (ranges.length === 0) return "팀별 합주 날짜가 없어요. 모든 날짜가 전체 합주예요.";
   const parts = ranges.map((range) =>
     range.from === range.to ? dayLabel(range.from) : `${dayLabel(range.from)}–${dayLabel(range.to ?? "")}`);
-  return `팀별합주 날짜: ${parts.join(", ")}`;
+  return `팀별 합주 날짜: ${parts.join(", ")}`;
 }
 
-/** 기간 form 안의 전체합주 입력칸입니다. 체크했을 때만 날짜 범위·합주실·기본 시각을 받습니다.
- *  "매일" 기간은 팀별합주 날짜가 끝없이 이어지므로 계산 결과 줄을 표시하지 않습니다. */
+/** 기간 form 안의 전체 합주 입력칸입니다. 체크했을 때만 날짜 범위·합주실·기본 시각을 받습니다.
+ *  "매일" 기간은 팀별 합주 날짜가 끝없이 이어지므로 계산 결과 줄을 표시하지 않습니다. */
 export function EnsembleFields(props: {
   draft: EnsembleDraft;
   setDraft: (next: EnsembleDraft) => void;
@@ -152,7 +152,7 @@ export function EnsembleFields(props: {
   );
 }
 
-/** 전체합주를 지정할지 정하는 체크박스입니다. 기간 form 의 날짜 줄(시작일·종료일 옆)에 놓입니다(2026-10-07).
+/** 전체 합주를 지정할지 정하는 체크박스입니다. 기간 form 의 날짜 줄(시작일·종료일 옆)에 놓입니다(2026-10-07).
  *  체크하면 form 아래 "전체 합주" 묶음(EnsembleFields)이 열립니다. */
 export function EnsembleToggle({ draft, setDraft, at }: {
   draft: EnsembleDraft;
@@ -171,7 +171,7 @@ function weekdayLetter(day: string): string {
   return "일월화수목금토"[new Date(`${day}T12:00:00`).getDay()];
 }
 
-/** 전체합주 날짜 하나의 시각을 저장하거나 기본 시각으로 되돌립니다. 저장하면 기간 목록을 다시 조회해
+/** 전체 합주 날짜 하나의 시각을 저장하거나 기본 시각으로 되돌립니다. 저장하면 기간 목록을 다시 조회해
  *  설정 화면과 달력이 같은 값을 표시합니다. picker 는 입력칸 앞에 붙는 날짜 선택입니다(설정 화면만 사용). */
 export function EnsembleDayEditor({ day, on, room, picker }: {
   day: string;
@@ -189,15 +189,15 @@ export function EnsembleDayEditor({ day, on, room, picker }: {
   };
   const save = useMutation({
     mutationFn: () => saveEnsembleDay(on.periodId, day, times.starts, times.ends),
-    onSuccess: done(`${dayLabel(day)} 전체합주 시각을 저장했어요.`),
+    onSuccess: done(`${dayLabel(day)} 전체 합주 시각을 저장했어요.`),
   });
   const reset = useMutation({
     mutationFn: () => clearEnsembleDay(on.periodId, day),
-    onSuccess: done(`${dayLabel(day)} 전체합주 시각을 기본 시각으로 되돌렸어요.`),
+    onSuccess: done(`${dayLabel(day)} 전체 합주 시각을 기본 시각으로 되돌렸어요.`),
   });
 
   const why = room === undefined
-    ? "전체합주에 지정한 합주실을 찾을 수 없어요."
+    ? "전체 합주에 지정한 합주실을 찾을 수 없어요."
     : checkEnsembleTime(times.starts, times.ends, room, slotMinutes);
   const touched = times.starts !== on.startsAt || times.ends !== on.endsAt;
   const bad = formError(touched, why, save.error ?? reset.error);
@@ -249,7 +249,7 @@ export function EnsembleDayEditor({ day, on, room, picker }: {
   );
 }
 
-/** 설정 화면 기간 편집 행 아래에 붙는 날짜별 시각 구역입니다. 전체합주 날짜 범위의 날짜를 전부 행으로 나열하고,
+/** 설정 화면 기간 편집 행 아래에 붙는 날짜별 시각 구역입니다. 전체 합주 날짜 범위의 날짜를 전부 행으로 나열하고,
  *  행마다 그 날짜의 시각을 저장하거나 기본 시각으로 되돌립니다. 날짜별로 지정한 행은 "지정" 표시가 붙습니다. */
 export function EnsembleDays({ period, room }: { period: Period; room: Room | undefined }) {
   if (period.ensemble === null) return null;
@@ -257,7 +257,7 @@ export function EnsembleDays({ period, room }: { period: Period; room: Room | un
 
   return (
     <div className="ensdays">
-      <h3 className="fsec">날짜별 전체합주 시각</h3>
+      <h3 className="fsec">날짜별 전체 합주 시각</h3>
       {datesBetween(starts_on, ends_on).map((day) => {
         const on = ensembleOn([period], day);
         if (on === null) return null;

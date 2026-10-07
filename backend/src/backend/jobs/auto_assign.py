@@ -97,7 +97,7 @@ def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
 
     results: list[AutoRun] = []
     for period in periods:
-        # 배정할 날짜가 전체합주 날짜뿐이면 assign_period 가 거절하므로 실행하지 않습니다.
+        # 배정할 날짜가 전체 합주 날짜뿐이면 assign_period 가 거절하므로 실행하지 않습니다.
         # 실행하면 실패는 기록되지 않아 확인할 때마다 다시 실패합니다.
         slots = due_slots(period, now, ran_by_period.get(period.id, set()))
         if not slots or not period_days(period, today):

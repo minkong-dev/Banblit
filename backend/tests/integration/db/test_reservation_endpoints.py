@@ -839,7 +839,7 @@ def test_an_everyday_focused_period_blocks_reservations_after_its_end_date(
 
 
 def _with_ensemble(session: Session, room: Room) -> Period:
-    # 집중 합주기간 9/21~9/27 중 9/26~9/27 을 전체합주 날짜로, 기본 시각을 18~20시로 지정합니다.
+    # 집중 합주기간 9/21~9/27 중 9/26~9/27 을 전체 합주 날짜로, 기본 시각을 18~20시로 지정합니다.
     period = _focused_period(session)
     period.ensemble_starts_on, period.ensemble_ends_on = date(2026, 9, 26), date(2026, 9, 27)
     period.ensemble_room_id = room.id
@@ -866,7 +866,7 @@ def _reserve(
 def test_an_ensemble_day_takes_reservations_outside_the_ensemble_room_and_time(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
-    """전체합주 날짜의 전체합주 외 시간은 선착순 예약입니다. 전체합주는 지정한 합주실 1개만 점유합니다."""
+    """전체 합주 날짜의 전체 합주 외 시간은 선착순 예약입니다. 전체 합주는 지정한 합주실 1개만 점유합니다."""
     _, owner = account("이도현", "dohyun@example.com")
     ensemble_room = _room(db_session)
     other_room = _room(db_session, "2번방")
@@ -877,7 +877,7 @@ def test_an_ensemble_day_takes_reservations_outside_the_ensemble_room_and_time(
     assert _reserve(api_client, owner, ensemble_room, "2026-09-26", 20, 21)["status"] == 201
     overlapping = _reserve(api_client, owner, ensemble_room, "2026-09-26", 19, 20)
     assert overlapping["status"] == 422
-    assert "전체합주" in overlapping["body"]["detail"]
+    assert "전체 합주" in overlapping["body"]["detail"]
 
 
 def test_an_ensemble_day_with_its_own_time_blocks_that_time_instead_of_the_default(
@@ -911,7 +911,7 @@ def test_a_reservation_cannot_be_moved_into_the_ensemble_time(
     )
 
     assert moved.status_code == 422
-    assert "전체합주" in moved.json()["detail"]
+    assert "전체 합주" in moved.json()["detail"]
 
 
 def _now_is(moment: datetime) -> None:

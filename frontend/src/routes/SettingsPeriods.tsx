@@ -1,5 +1,5 @@
-// 설정 화면의 집중합주 기간 구역입니다. 기간 목록·추가·수정·삭제와, 기간에 딸린 전체합주 설정을 담당합니다.
-// 전체합주 입력칸 자체는 SettingsEnsemble 이 제공합니다. 달력의 하루 dialog 도 같은 부품을 사용합니다.
+// 설정 화면의 집중 합주기간 구역입니다. 기간 목록·추가·수정·삭제와, 기간에 딸린 전체 합주 설정을 담당합니다.
+// 전체 합주 입력칸 자체는 SettingsEnsemble 이 제공합니다. 달력의 하루 dialog 도 같은 부품을 사용합니다.
 
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
@@ -71,7 +71,7 @@ function clockText(hhmm: string): string {
 }
 
 /** 목록 줄의 제목 아래 줄들입니다(2026-10-07 개발자님이 정한 구성).
- *  총 합주기간 → 전체합주기간(지정한 경우만) → 스케줄링 시간(집중 합주기간만) 순서입니다. */
+ *  총 합주기간 → 전체 합주기간(지정한 경우만) → 스케줄링 시간(집중 합주기간만) 순서입니다. */
 function PeriodLines({ period }: { period: Period }) {
   const { starts_on, ends_on, everyday, ensemble } = period;
   return (
@@ -84,7 +84,7 @@ function PeriodLines({ period }: { period: Period }) {
       </div>
       {ensemble === null ? null : (
         <div>
-          전체합주기간 <b>{ensemble.starts_on}</b> ~ <b>{ensemble.ends_on}</b>,
+          전체 합주기간 <b>{ensemble.starts_on}</b> ~ <b>{ensemble.ends_on}</b>,
           총 {daysBetween(ensemble.starts_on, ensemble.ends_on)}일
         </div>
       )}
@@ -105,7 +105,7 @@ function PeriodFields(props: {
   bad: string;
   whyId: string;
   first: RefObject<HTMLInputElement | null>;
-  /** 전체합주 체크박스(EnsembleToggle). 날짜 줄의 "매일" 옆에 놓입니다 — 둘 다 날짜에 딸린 옵션입니다. */
+  /** 전체 합주 체크박스(EnsembleToggle). 날짜 줄의 "매일" 옆에 놓입니다 — 둘 다 날짜에 딸린 옵션입니다. */
   ensembleToggle: ReactNode;
 }) {
   const { form, setForm, at, bad, whyId, first, ensembleToggle } = props;
@@ -190,7 +190,7 @@ function PeriodFields(props: {
           </div>
           <div className="fgroup">
           <h4>팀별 합주</h4>
-          {/* 합주실 개방시각과는 다른 값입니다. 합주실이 09시에 열어도 팀별합주는 17시부터만
+          {/* 합주실 개방시각과는 다른 값입니다. 합주실이 09시에 열어도 팀별 합주는 17시부터만
               배정할 수 있고, 남는 시간은 선착순 예약으로 열립니다. 비워 두면 개방시각 전체를 씁니다. */}
           <div className="frow">
           <WindowFields
@@ -223,7 +223,7 @@ function PeriodFields(props: {
   );
 }
 
-/** 팀별합주 시간대 한 쌍의 입력칸입니다. 두 칸을 모두 비우면 그날 합주실 개방시각 전체를 씁니다. */
+/** 팀별 합주 시간대 한 쌍의 입력칸입니다. 두 칸을 모두 비우면 그날 합주실 개방시각 전체를 씁니다. */
 function WindowFields(props: {
   label: string;
   pair: WindowPair;
@@ -270,10 +270,10 @@ export function PeriodCard(props: {
 
   return (
     <Card>
-      <SectionHead title="집중합주 기간" desc="자동 스케줄링을 진행할 기간을 설정해요" />
+      <SectionHead title="집중 합주기간" desc="자동 스케줄링을 진행할 기간을 설정해요" />
 
       {state.kind !== "ready" || periods.length === 0 ? (
-        <CardState state={state} empty="아직 등록된 집중합주 기간이 없어요." />
+        <CardState state={state} empty="아직 등록된 집중 합주기간이 없어요." />
       ) : (
         <ul className="rows">
           {periods.map((period) =>
@@ -306,7 +306,7 @@ export function PeriodCard(props: {
                 onDelete={canDelete
                   ? () => {
                     if (drop.isPending) return;
-                    if (askDelete(`${period.starts_on} 부터의 집중합주 기간과 그 배정 결과`)) drop.mutate(period.id);
+                    if (askDelete(`${period.starts_on} 부터의 집중 합주기간과 그 배정 결과`)) drop.mutate(period.id);
                   }
                   : undefined}
               />
@@ -317,12 +317,12 @@ export function PeriodCard(props: {
 
       {!canCreate ? null : (
         <div className="listfoot">
-          <button className="new" onClick={() => setMaking(true)}>+ 새 집중합주 기간</button>
+          <button className="new" onClick={() => setMaking(true)}>+ 새 집중 합주기간</button>
         </div>
       )}
 
       {!making ? null : (
-        <Modal title="새 집중합주 기간" hint="집중합주 기간을 설정해요"
+        <Modal title="새 집중 합주기간" hint="집중 합주기간을 설정해요"
           onClose={() => setMaking(false)}>
           <PeriodForm
             before={null}
@@ -338,8 +338,8 @@ export function PeriodCard(props: {
 }
 
 /** 기간 form 입니다. before 가 null 이면 새 기간을 만들고, 아니면 그 기간을 수정합니다.
- *  집중 합주기간이면 전체합주 입력칸이 함께 표시되고, 저장은 savePeriod 가 기간·전체합주 요청을 순서대로 보냅니다.
- *  날짜별 전체합주 시각은 저장된 전체합주가 있을 때만 form 아래에 별도 form 으로 표시합니다. form 안에 두면 그 버튼이 기간 form 을 제출합니다. */
+ *  집중 합주기간이면 전체 합주 입력칸이 함께 표시되고, 저장은 savePeriod 가 기간·전체 합주 요청을 순서대로 보냅니다.
+ *  날짜별 전체 합주 시각은 저장된 전체 합주가 있을 때만 form 아래에 별도 form 으로 표시합니다. form 안에 두면 그 버튼이 기간 form 을 제출합니다. */
 function PeriodForm(props: {
   before: Period | null;
   rooms: Room[];

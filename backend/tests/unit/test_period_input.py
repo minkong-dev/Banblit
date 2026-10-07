@@ -320,9 +320,9 @@ def test_unavailable_times_follow_the_person_into_every_team() -> None:
     assert engine_teams[1].members[0].unavailable == blocked
 
 
-# ── 팀별합주 시간대 ────────────────────────────────────────────────────────
+# ── 팀별 합주 시간대 ────────────────────────────────────────────────────────
 #
-# 합주실 개방시각과는 다른 값입니다. 합주실이 09시에 열어도 팀별합주는 17시부터만 배정합니다.
+# 합주실 개방시각과는 다른 값입니다. 합주실이 09시에 열어도 팀별 합주는 17시부터만 배정합니다.
 # 평일(월~금)과 주말(토·일)에 서로 다른 시간대를 둘 수 있습니다.
 
 MONDAY = date(2026, 8, 3)
@@ -330,7 +330,7 @@ SATURDAY = date(2026, 8, 1)
 
 
 def test_the_window_narrows_the_room_hours() -> None:
-    """합주실은 09~23시를 열어도 팀별합주는 17시부터입니다."""
+    """합주실은 09~23시를 열어도 팀별 합주는 17시부터입니다."""
     rooms = [_room(1, "1번방", time(9, 0), time(23, 0))]
 
     engine_rooms = build_engine_rooms(

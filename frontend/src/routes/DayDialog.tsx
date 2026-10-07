@@ -39,9 +39,9 @@ export function DayDialog({
   dayKey, tab, teams, entries, myOff, myBookings, openHour, closeHour, slotCount, fixed, inFocus, ensemble, canEditEnsemble,
   myName, rooms, onSaved, onClose,
 }: {
-  /** 선택한 날짜가 전체합주 날짜면 그 시각입니다. 아니면 null 입니다. */
+  /** 선택한 날짜가 전체 합주 날짜면 그 시각입니다. 아니면 null 입니다. */
   ensemble: EnsembleOn | null;
-  /** 날짜별 전체합주 시각을 변경할 수 있는지입니다. 서버 권한 항목 period_edit 과 같습니다. */
+  /** 날짜별 전체 합주 시각을 변경할 수 있는지입니다. 서버 권한 항목 period_edit 과 같습니다. */
   canEditEnsemble: boolean;
   dayKey: string;
   tab: DayTab;
@@ -314,10 +314,10 @@ export function DayDialog({
     </div>
   );
 
-  // 전체합주 날짜에서 권한이 있는 사람에게만 표시합니다. 다른 사람은 타임라인의 전체합주 막대로 시각을 봅니다.
+  // 전체 합주 날짜에서 권한이 있는 사람에게만 표시합니다. 다른 사람은 타임라인의 전체 합주 막대로 시각을 봅니다.
   const ensembleEditor = ensemble === null || !canEditEnsemble ? null : (
     <div className="ensday">
-      <p className="cap2">선택한 날짜의 전체합주 시각</p>
+      <p className="cap2">선택한 날짜의 전체 합주 시각</p>
       <EnsembleDayEditor
         key={`${ensemble.startsAt}-${ensemble.endsAt}`}
         day={dayKey}

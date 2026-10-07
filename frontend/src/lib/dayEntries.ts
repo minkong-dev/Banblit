@@ -9,7 +9,7 @@ import type { Period, Reservation, Room, ScheduleRow, Team, Unavailable } from "
 
 const DAYS_PER_WEEK = 7;
 
-/** 하루에 표시하는 항목 하나입니다. 배정은 서버가 계산한 항목, 전체합주는 기간 설정에서 온 항목이고,
+/** 하루에 표시하는 항목 하나입니다. 배정은 서버가 계산한 항목, 전체 합주는 기간 설정에서 온 항목이고,
  *  예약과 불가능 일정은 사용자가 등록한 항목입니다. */
 export type Entry = {
   kind: "assign" | "book" | "off" | "ensemble";
@@ -39,7 +39,7 @@ export type Entry = {
 export type DayEntries = Record<string, Entry[]>;
 
 /** 날짜별 항목 여러 벌을 한 벌로 합치고, 각 날짜의 목록을 시작 slot 번호(a) 순서로 정렬합니다.
- *  달력은 배정·전체합주·불가능 일정·예약 네 가지를 한 칸에 함께 표시하고 칸마다 목록을 다시
+ *  달력은 배정·전체 합주·불가능 일정·예약 네 가지를 한 칸에 함께 표시하고 칸마다 목록을 다시
  *  꺼내므로, 정렬을 한 번만 해 둡니다.
  *  넘긴 객체와 그 안의 배열은 수정하지 않습니다 — 각 벌은 useMemo 가 보유한 값이고, 그것을
  *  수정하면 다음 렌더에서 항목이 중복됩니다. */
@@ -56,8 +56,8 @@ export function mergeByDay(...sources: readonly DayEntries[]): DayEntries {
 /** 달력 화면의 탭입니다. 내 일정, 예약, 전체 일정 순서입니다. */
 export type DayTab = "me" | "book" | "all";
 
-/** 그날 화면에 표시할 항목만 선택합니다. 내 일정 탭은 내 팀의 배정·전체합주·내 불가능 시간,
- *  전체 일정 탭은 배정·전체합주·예약 전부입니다. 전체합주는 모든 멤버의 일정이라 두 탭 모두에 있습니다. */
+/** 그날 화면에 표시할 항목만 선택합니다. 내 일정 탭은 내 팀의 배정·전체 합주·내 불가능 시간,
+ *  전체 일정 탭은 배정·전체 합주·예약 전부입니다. 전체 합주는 모든 멤버의 일정이라 두 탭 모두에 있습니다. */
 export function visible(entries: Entry[], tab: DayTab, teams: DayTeam[]): Entry[] {
   const mine = new Set(teams.filter((team) => team.mine).map((team) => team.key));
   return tab === "me"
@@ -70,9 +70,9 @@ export function visible(entries: Entry[], tab: DayTab, teams: DayTeam[]): Entry[
  *  (removeIds 가 있는 항목), 내가 잡은 예약(bookingId 가 있는 항목)입니다.
  *  개인 이름으로 한 예약은 team 이 null 이라 팀만 보고는 구분할 수 없어 bookingId 로 판정합니다.
  *
- *  visible 과 판정이 다릅니다 — visible 은 탭에 표시할 항목이라 전체합주를 남기지만, 이 목록은
- *  내가 삭제·취소할 수 있는 항목만 담아 전체합주를 뺍니다. 두 판정을 한 함수로 합치면
- *  타임라인에 남의 전체합주가 내 항목으로 나타납니다. */
+ *  visible 과 판정이 다릅니다 — visible 은 탭에 표시할 항목이라 전체 합주를 남기지만, 이 목록은
+ *  내가 삭제·취소할 수 있는 항목만 담아 전체 합주를 뺍니다. 두 판정을 한 함수로 합치면
+ *  타임라인에 남의 전체 합주가 내 항목으로 나타납니다. */
 export function myEntries(entries: readonly Entry[], teams: readonly DayTeam[]): Entry[] {
   const mineKeys = new Set(teams.filter((team) => team.mine).map((team) => team.key));
   return entries.filter(
@@ -82,12 +82,12 @@ export function myEntries(entries: readonly Entry[], teams: readonly DayTeam[]):
   );
 }
 
-/** 그날의 전체합주입니다. custom 이 true 면 날짜별로 지정한 시각이고, false 면 기본 시각입니다. */
+/** 그날의 전체 합주입니다. custom 이 true 면 날짜별로 지정한 시각이고, false 면 기본 시각입니다. */
 export type EnsembleOn = {
   periodId: number; roomId: number; startsAt: string; endsAt: string; custom: boolean;
 };
 
-/** day 가 어느 기간의 전체합주 날짜 범위에 속하면 그 시각을, 아니면 null 을 반환합니다.
+/** day 가 어느 기간의 전체 합주 날짜 범위에 속하면 그 시각을, 아니면 null 을 반환합니다.
  *  서버가 집중 합주기간끼리의 겹침을 거절하므로 속하는 기간은 하나뿐입니다. */
 export function ensembleOn(periods: Period[], day: string): EnsembleOn | null {
   const period = periods.find((item) =>
@@ -104,7 +104,7 @@ export function ensembleOn(periods: Period[], day: string): EnsembleOn | null {
   };
 }
 
-/** days 중 전체합주 날짜마다 항목 하나를 담습니다. 서버는 기간마다 날짜 범위 하나만 주므로 표시 중인 날짜 위에 전개합니다. */
+/** days 중 전체 합주 날짜마다 항목 하나를 담습니다. 서버는 기간마다 날짜 범위 하나만 주므로 표시 중인 날짜 위에 전개합니다. */
 export function ensembleByDay(
   periods: Period[], rooms: Room[], openHour: number, days: string[],
 ): DayEntries {
@@ -116,7 +116,7 @@ export function ensembleByDay(
       kind: "ensemble",
       team: null,
       room: rooms.find((room) => room.id === on.roomId)?.name,
-      who: "전체합주",
+      who: "전체 합주",
       a: slotIndex(`${day}T${on.startsAt}`, openHour),
       b: slotIndex(`${day}T${on.endsAt}`, openHour),
     }];

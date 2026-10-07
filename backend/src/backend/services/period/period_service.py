@@ -82,7 +82,7 @@ def assign_period(
 
     days = period_days(period, saved_at.date())
     if not days:
-        raise ValueError("전체합주 날짜뿐이라 팀별로 배정할 날짜가 없습니다")
+        raise ValueError("전체 합주 날짜뿐이라 팀별로 배정할 날짜가 없습니다")
     window_start = datetime.combine(days[0], time())
     window_end = datetime.combine(days[-1], time.max)
     unavailable_by_member = _load_unavailable(
@@ -152,7 +152,7 @@ def _engine_limits(
 
 
 def practice_window(period: Period) -> PracticeWindow:
-    """기간에 저장된 팀별합주 시간대입니다. 정하지 않은 쌍은 None 이고, 그날은 합주실 개방시각 전체를 씁니다.
+    """기간에 저장된 팀별 합주 시간대입니다. 정하지 않은 쌍은 None 이고, 그날은 합주실 개방시각 전체를 씁니다.
 
     두 열은 함께 채워지거나 함께 비어 있습니다(periods_practice_window_pairs). 한쪽만 있는 경우가
     없으므로 시작 시각만 확인합니다.
@@ -171,8 +171,8 @@ def period_days(period: Period, on: date) -> list[date]:
     """배정을 계산할 날짜 목록을 반환합니다.
 
     everyday 가 켜진 기간은 종료일이 없으므로 계산을 실행한 날 on 하루만 반환합니다.
-    그 외에는 시작일부터 종료일까지 전부 반환합니다. 전체합주(모든 팀이 함께 하는 합주) 날짜는 팀별 배정 대상이
-    아니므로 제외합니다. 전부 전체합주 날짜면 빈 목록입니다.
+    그 외에는 시작일부터 종료일까지 전부 반환합니다. 전체 합주(모든 팀이 함께 하는 합주) 날짜는 팀별 배정 대상이
+    아니므로 제외합니다. 전부 전체 합주 날짜면 빈 목록입니다.
     """
     days = [on] if period.everyday else dates_in_period(period.starts_on, period.ends_on)
     first, last = period.ensemble_starts_on, period.ensemble_ends_on
@@ -272,8 +272,8 @@ def open_slots_in_period(session: Session, period: Period, on: date) -> list[Ope
 
     days = period_days(period, on)
     open_slots: list[OpenSlot] = []
-    # 팀별합주 시간대(practice_window)를 넘기지 않습니다. 시간대 밖의 시간은 자동 배정만 하지
-    # 않을 뿐 선착순 예약은 열려 있어야 하기 때문입니다. 합주실이 10시에 열고 팀별합주가 17시부터면
+    # 팀별 합주 시간대(practice_window)를 넘기지 않습니다. 시간대 밖의 시간은 자동 배정만 하지
+    # 않을 뿐 선착순 예약은 열려 있어야 하기 때문입니다. 합주실이 10시에 열고 팀별 합주가 17시부터면
     # 10~17시는 전부 예약할 수 있는 칸입니다.
     for engine_room in build_engine_rooms(list(rooms), days):
         ranges = occupied.get(engine_room.id, [])

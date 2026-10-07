@@ -158,7 +158,7 @@ export type DayRange = { from: string; to: string | null };
 
 /** 집중 합주기간 전부의 팀별 배정 날짜 범위를 시작일 순서로 반환합니다. 서버가 집중 합주기간끼리의 겹침을
  *  거절하므로 범위끼리 겹치지 않습니다. "매일" 기간은 종료일이 없어 to 가 null 입니다.
- *  전체합주 날짜 범위는 팀별 배정에서 제외되므로, 전체합주가 기간 중간에 있으면 범위가 앞뒤 두 개로 나뉩니다. */
+ *  전체 합주 날짜 범위는 팀별 배정에서 제외되므로, 전체 합주가 기간 중간에 있으면 범위가 앞뒤 두 개로 나뉩니다. */
 export function focusedRanges(
   periods: {
     kind: string; starts_on: string; ends_on: string; everyday: boolean;
@@ -172,7 +172,7 @@ export function focusedRanges(
       if (!period.ensemble) return [{ from: period.starts_on, to }];
       const before = { from: period.starts_on, to: shiftDay(period.ensemble.starts_on, -1) };
       const after = { from: shiftDay(period.ensemble.ends_on, 1), to };
-      // 전체합주가 기간 끝에 붙으면 그쪽 범위는 시작일이 종료일보다 늦어 제외됩니다.
+      // 전체 합주가 기간 끝에 붙으면 그쪽 범위는 시작일이 종료일보다 늦어 제외됩니다.
       return [before, after].filter((range) => range.to === null || range.from <= range.to);
     })
     .sort((a, b) => a.from.localeCompare(b.from));

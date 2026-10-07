@@ -575,7 +575,7 @@ def test_an_everyday_period_assigns_only_the_day_of_the_run(db_session: Session)
 
 
 def test_ensemble_days_are_left_out_of_team_assignment(db_session: Session) -> None:
-    """전체합주 날짜는 팀별 배정에서 제외합니다. 한 날짜는 팀별·전체 중 한쪽에만 속합니다."""
+    """전체 합주 날짜는 팀별 배정에서 제외합니다. 한 날짜는 팀별·전체 중 한쪽에만 속합니다."""
     period_id = _period(db_session, days=2)  # 8/1 ~ 8/2
     team_id = _team_with_member(db_session, "A", "김민수")
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))

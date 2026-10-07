@@ -144,7 +144,7 @@ class ClockRangeOut(BaseModel):
 
 
 class PracticeWindowOut(BaseModel):
-    """팀별합주를 배정할 수 있는 하루 중의 시간대입니다. 합주실 개방시각과는 다른 값입니다.
+    """팀별 합주를 배정할 수 있는 하루 중의 시간대입니다. 합주실 개방시각과는 다른 값입니다.
 
     null 인 쪽은 시간대를 정하지 않았다는 뜻이고, 그날은 합주실 개방시각 전체를 씁니다.
     두 쌍은 서로 독립입니다 — 평일만 좁히고 주말은 열어 둘 수 있습니다.
@@ -177,7 +177,7 @@ class PeriodOut(BaseModel):
     second_run_at: str
     # 정하지 않은 쌍은 null 입니다. 껍데기는 언제나 있습니다 — 화면이 null 검사를 두 번 하지 않습니다.
     practice_window: PracticeWindowOut
-    # 전체합주를 지정하지 않은 기간은 null 입니다.
+    # 전체 합주를 지정하지 않은 기간은 null 입니다.
     ensemble: EnsembleOut | None
 
 

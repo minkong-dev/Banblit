@@ -35,7 +35,7 @@ export const PERMISSION_ITEMS: readonly {
   },
   {
     key: "period_create",
-    label: "집중합주 기간 추가",
+    label: "집중 합주기간 추가",
     note: "집중 합주기간을 새로 추가할 수 있어요.",
   },
   {
@@ -45,8 +45,8 @@ export const PERMISSION_ITEMS: readonly {
   },
   {
     key: "period_delete",
-    label: "집중합주 기간 삭제",
-    note: "집중합주 기간을 삭제할 수 있어요. 그 기간의 배정 결과와 이전 배정기록도 함께 삭제돼요.",
+    label: "집중 합주기간 삭제",
+    note: "집중 합주기간을 삭제할 수 있어요. 그 기간의 배정 결과와 이전 배정기록도 함께 삭제돼요.",
   },
   {
     key: "team_create",
@@ -106,7 +106,7 @@ export const PERMISSION_ITEMS: readonly {
   {
     key: "assign_run",
     label: "스케줄링",
-    note: "집중합주 기간 배정안을 수동으로 생성할 수 있어요.",
+    note: "집중 합주기간 배정안을 수동으로 생성할 수 있어요.",
   },
   {
     key: "assign_read",
