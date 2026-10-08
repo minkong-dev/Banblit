@@ -3,7 +3,8 @@ import type { RefObject } from "react";
 import { Link } from "react-router-dom";
 
 import { BrandLockup } from "../components/Brand";
-import { ArrowIcon, CloseIcon, WideMenuIcon } from "../components/icons";
+import { Button, CloseButton, IconButton } from "../components/controls";
+import { ArrowIcon, WideMenuIcon } from "../components/icons";
 import { usePage } from "../components/hooks";
 import "../styles/landing.css";
 
@@ -88,9 +89,7 @@ export function Landing() {
   return (
     <div ref={scope}>
       <header className="nav">
-        <button className="menu" aria-label="메뉴 열기" popoverTarget={MENU_ID}>
-          <WideMenuIcon />
-        </button>
+        <IconButton className="menu" label="메뉴 열기" icon={<WideMenuIcon />} popoverTarget={MENU_ID} />
         <span className="brand"><BrandLockup /></span>
         <Link className="login" to="/login">LOGIN</Link>
       </header>
@@ -105,9 +104,7 @@ export function Landing() {
         aria-label="전체 메뉴"
         onClick={(event) => event.currentTarget.hidePopover()}
       >
-        <button className="x" aria-label="메뉴 닫기" popoverTarget={MENU_ID} popoverTargetAction="hide">
-          <CloseIcon />
-        </button>
+        <CloseButton className="x" label="메뉴 닫기" popoverTarget={MENU_ID} popoverTargetAction="hide" />
         <a href="#how">BANBLIT</a>
         <a href="#auto">HOW IT WORKS</a>
         <a href="#admin">FOR MANAGERS</a>
@@ -121,7 +118,7 @@ export function Landing() {
             지금, <span className="mark">BANBLIT.</span>
           </h1>
           <p className="sub">세상 쉬운 합주 일정 관리, Banblit</p>
-          <Link className="go" to="/login">시작하기<ArrowIcon /></Link>
+          <Button kind="go" to="/login">시작하기<ArrowIcon /></Button>
         </div>
         <span className="cue">SCROLL</span>
       </section>
@@ -198,7 +195,7 @@ export function Landing() {
         <div className="wrap">
           <h2 className="rise">밴드를 더 밴드답게,<br /><span className="mark">BANBLIT</span>으로.</h2>
           <p className="rise">복잡한 계산은 여기 두고, 더 좋은 무대를 만들어주세요.</p>
-          <Link className="go rise" to="/login">시작하기<ArrowIcon /></Link>
+          <Button kind="go" className="rise" to="/login">시작하기<ArrowIcon /></Button>
         </div>
       </section>
 

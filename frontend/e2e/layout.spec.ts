@@ -22,7 +22,7 @@ test("긴 글쓰기 화면은 페이지 전체가 스크롤하고 상단바·사
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/notices/new");
   // 임시 저장본이 만들어져야 파일 넣기가 활성화됩니다. 그 전에 넣으면 무시됩니다.
-  const picker = page.locator(".rttools .rtpick[aria-label='그림 넣기'] input");
+  const picker = page.locator(".rttools .rtpick[aria-label='그림 넣기'] + input");
   await expect(picker).toBeEnabled();
   await picker.setInputFiles({
     name: "긴 악보.pdf",
@@ -350,7 +350,8 @@ test("기준 휴대폰 폭에서 예약 달력의 날짜 칸 글씨와 막대가
 
 // 멤버 목록의 휴대폰 묶음 배치는 멤버 표에만 씁니다. 같은 .roster 를 쓰는 예약·블라인드 표는 열 구성이 달라
 // 표 모양을 유지하고 표 안에서만 가로로 스크롤합니다.
-test("기준 휴대폰 폭에서 관리자 메뉴의 예약·블라인드 표는 표 모양을 유지하고 화면을 밀지 않는다", async ({ page }) => {
+// 휴대폰 폭에서는 settings.css 가 예약·블라인드 표를 행마다 한 묶음으로 쌓습니다(display: block). 화면을 가로로 밀지 않아야 합니다.
+test("기준 휴대폰 폭에서 관리자 메뉴의 예약·블라인드 표는 묶음으로 쌓이고 화면을 밀지 않는다", async ({ page }) => {
   await page.setViewportSize(PHONES[0]);
   for (const [tab, path] of [["예약", "/reservations"], ["블라인드", "/blinded"]]) {
     await page.goto(path);
@@ -359,7 +360,7 @@ test("기준 휴대폰 폭에서 관리자 메뉴의 예약·블라인드 표는
       table: getComputedStyle(document.querySelector(".roster table")!).display,
       page: document.documentElement.scrollWidth - document.documentElement.clientWidth,
     }));
-    expect(m.table, tab).toBe("table");
+    expect(m.table, tab).toBe("block");
     expect(m.page, tab).toBeLessThanOrEqual(1);
   }
 });

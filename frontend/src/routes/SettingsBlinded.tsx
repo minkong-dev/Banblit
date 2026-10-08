@@ -5,11 +5,12 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { Button, Empty } from "../components/controls";
 import { Card, SectionHead } from "../components/Layout";
 import { reason } from "../lib/api";
 import { BLINDED_KEY, BOARD_KEY, getJSON, stampLabel } from "../lib/pipeline";
 import { say } from "../lib/toast";
-import { loadState, stateText } from "../lib/loading";
+import { loadState } from "../lib/loading";
 import type { Post } from "../lib/contract";
 
 export function BlindedCards() {
@@ -40,7 +41,7 @@ export function BlindedCards() {
       <SectionHead title="블라인드" desc="가려 둔 글이에요. 해제하면 원래 게시판으로 돌아가요." />
 
       <div className="roster">
-        {state.kind === "failed" ? <p className="empty">{state.why}</p> : null}
+        {state.kind === "failed" ? <Empty text={state.why} /> : null}
         <table>
           <thead>
             <tr>
@@ -62,23 +63,22 @@ export function BlindedCards() {
                 <td>{post.blinded_by ?? "—"}</td>
                 <td className="fill" />
                 <td>
-                  <button
-                    className="btn"
-                    type="button"
+                  <Button
+                    kind="ghost"
                     // 해제 중인 행만 비활성화합니다. 전부 막으면 어느 글을 처리 중인지 알 수 없습니다.
                     disabled={lift.isPending && lift.variables?.id === post.id}
                     aria-label={`${post.title} 블라인드 해제`}
                     onClick={() => lift.mutate(post)}
                   >
                     해제
-                  </button>
+                  </Button>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
         {state.kind !== "failed" && posts.length === 0 ? (
-          <p className="empty">{stateText(state, "가려 둔 글이 없어요")}</p>
+          <Empty state={state} text="가려 둔 글이 없어요" />
         ) : null}
       </div>
     </Card>

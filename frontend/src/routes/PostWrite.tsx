@@ -4,6 +4,7 @@
 
 import { useNavigate, useParams } from "react-router-dom";
 
+import { Empty } from "../components/controls";
 import { SectionHead } from "../components/Layout";
 import { WriteForm } from "../components/PostWriteForm";
 import { can } from "../lib/account";
@@ -83,7 +84,7 @@ function WritePage({ title, hint, draftPath, listPath, listKey, allowed, denied 
         <div className="card">
           <SectionHead title={title} desc={hint} />
           {why !== "" ? (
-            <div className="empty">{why}</div>
+            <Empty as="div" text={why} />
           ) : (
             <WriteForm
               draftPath={draftPath}

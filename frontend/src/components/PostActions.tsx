@@ -6,10 +6,12 @@ import { useState } from "react";
 import { reason } from "../lib/api";
 import { askBlind, askDeletePost } from "../lib/confirm";
 import type { Post } from "../lib/contract";
+import { firstWhy } from "../lib/loading";
 import { BLINDED_KEY, checkPost, getJSON } from "../lib/pipeline";
 import { say } from "../lib/toast";
-import { EyeOffIcon, TrashIcon } from "./icons";
-import { Modal, ModalFormFoot } from "./Modal";
+import { DeleteButton, FormFoot, IconButton, Why } from "./controls";
+import { EyeOffIcon } from "./icons";
+import { Modal } from "./Modal";
 import { RichText } from "./RichText";
 
 /** board_moderate 권한자에게만 표시되는 블라인드 버튼입니다. 글을 삭제하지 않고 목록·상세에서 가립니다.
@@ -35,20 +37,13 @@ export function BlindPost(props: {
 
   return (
     <>
-      <button
-        className="ic"
-        type="button"
-        aria-label="글 블라인드"
+      <IconButton
+        label="글 블라인드"
+        icon={<EyeOffIcon />}
         disabled={blind.isPending}
-        onClick={() => {
-          if (askBlind()) {
-            blind.mutate();
-          }
-        }}
-      >
-        <EyeOffIcon />
-      </button>
-      {blind.error ? <p className="why" role="alert">{reason(blind.error)}</p> : null}
+        onClick={() => { if (askBlind()) blind.mutate(); }}
+      />
+      <Why text={firstWhy([blind.error])} />
     </>
   );
 }
@@ -76,20 +71,12 @@ export function RemovePost(props: {
 
   return (
     <>
-      <button
-        className="ic danger"
-        type="button"
-        aria-label="글 삭제"
+      <DeleteButton
+        label="글 삭제"
         disabled={remove.isPending}
-        onClick={() => {
-          if (askDeletePost()) {
-            remove.mutate();
-          }
-        }}
-      >
-        <TrashIcon />
-      </button>
-      {remove.error ? <p className="why" role="alert">{reason(remove.error)}</p> : null}
+        onClick={() => { if (askDeletePost()) remove.mutate(); }}
+      />
+      <Why text={firstWhy([remove.error])} />
     </>
   );
 }
@@ -124,7 +111,7 @@ export function EditPost(props: {
   return (
     <Modal title="글 수정" onClose={onClose}
       foot={
-        <ModalFormFoot
+        <FormFoot
           onCancel={onClose}
           pending={send.isPending}
           submitLabel="저장"
@@ -148,7 +135,7 @@ export function EditPost(props: {
           <RichText id="editBody" label="내용" postId={post.id} value={body} onChange={setBody} />
         </label>
       </div>
-      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+      <Why text={bad} />
     </Modal>
   );
 }

@@ -19,6 +19,9 @@ test("공지에 글을 쓰고 댓글을 달 수 있다", async ({ page }) => {
   await expect(row).toContainText("댓글 0");
 
   await postButton.click();
+  // 글 상세는 자기 주소를 가집니다. 새로 고쳐도 같은 글이 열려 있어야 합니다.
+  await expect(page).toHaveURL(/\/notices\/\d+$/);
+  await page.reload();
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
   await expect(page.getByText("아직 댓글이 없습니다")).toBeVisible();
 
@@ -28,7 +31,8 @@ test("공지에 글을 쓰고 댓글을 달 수 있다", async ({ page }) => {
   await expect(page.getByText(comment)).toBeVisible();
   await expect(page.getByText("댓글 1개")).toBeVisible();
 
-  await page.getByRole("button", { name: "‹ 목록으로" }).click();
+  await page.getByRole("button", { name: "목록으로" }).click();
+  await expect(page).toHaveURL(/\/notices$/);
   await expect(row).toContainText("댓글 1");
 });
 
@@ -67,7 +71,7 @@ test("본문의 PDF 뷰어는 창 크기가 달라도 A4 비율을 유지한다"
   await page.goto("/notices");
   await page.getByRole("link", { name: "글쓰기" }).click();
   // 임시 저장본이 만들어져야 파일 넣기가 활성화됩니다. 그 전에 넣으면 무시됩니다.
-  const picker = page.locator(".rttools .rtpick[aria-label='그림 넣기'] input");
+  const picker = page.locator(".rttools .rtpick[aria-label='그림 넣기'] + input");
   await expect(picker).toBeEnabled();
   await picker.setInputFiles({
     name: "악보.pdf",
@@ -102,7 +106,7 @@ test("본문에 그림을 넣으면 미리보기로 보인다", async ({ page })
   // 도구 막대의 그림 버튼은 떨구기·붙여넣기와 같은 경로입니다(components/RichText.tsx 의 attach).
   // 곁의 클립 버튼은 본문에 넣지 않고 첨부로만 올리므로 구분해서 지정합니다.
   // 1x1 png 한 장을 올려, 본문에 <img> 가 들어가고 그 주소가 첨부 주소인지 확인합니다.
-  await page.locator(".rttools .rtpick[aria-label='그림 넣기'] input").setInputFiles({
+  await page.locator(".rttools .rtpick[aria-label='그림 넣기'] + input").setInputFiles({
     name: "점.png",
     mimeType: "image/png",
     buffer: Buffer.from(

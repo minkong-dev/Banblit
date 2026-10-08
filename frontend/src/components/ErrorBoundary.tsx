@@ -6,11 +6,13 @@
 //
 // 이 컴포넌트는 조회도 router 도 사용하지 않습니다. AppShell 안에서 발생한 error 도 잡아야 하므로,
 // 대체 화면이 의존하는 것이 많을수록 그 대체 화면마저 렌더링하지 못할 가능성이 커집니다.
+// Button 은 to 를 주지 않으면 router 의 Link 를 그리지 않으므로 router 없이 렌더링됩니다.
 
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 
 import { crashDetail } from "../lib/fallback";
+import { Button } from "./controls";
 import "../styles/fallback.css";
 
 type Props = { children: ReactNode };
@@ -38,9 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
           <h1>화면을 표시하지 못했어요</h1>
           <p>새로고침하면 대부분 다시 열려요. 같은 화면이 계속 나오면 운영진에게 알려주세요.</p>
           <div className="act">
-            <button type="button" className="go" onClick={() => { window.location.reload(); }}>
-              새로고침
-            </button>
+            <Button kind="go" onClick={() => { window.location.reload(); }}>새로고침</Button>
           </div>
           {detail === "" ? null : (
             <details>

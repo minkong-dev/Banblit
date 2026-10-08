@@ -3,10 +3,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import { apiUrl, reason } from "../lib/api";
+import { apiUrl } from "../lib/api";
 import type { Attachment } from "../lib/contract";
+import { firstWhy } from "../lib/loading";
 import { fileSizeLabel, getJSON } from "../lib/pipeline";
 import { say } from "../lib/toast";
+import { Button, Why } from "./controls";
 
 /** 첨부파일 목록의 한 줄입니다. 등록 전(선택한 파일)과 등록 후(저장된 파일)가 같은 모양을 씁니다.
  *  href 가 있으면 이름이 다운로드 링크가 됩니다. 등록 전에는 받을 주소가 없어 넘기지 않습니다. */
@@ -61,9 +63,8 @@ export function AttachmentList(props: {
             // 이 주소는 받을 권한이 있는 사람에게만 표시합니다.
             href={apiUrl(`/attachments/${file.id}`)}
             action={!canRemove ? undefined : (
-              <button
-                className="btn"
-                type="button"
+              <Button
+                kind="ghost"
                 // 각 줄의 버튼 텍스트가 모두 "삭제"로 같으므로, 스크린 리더 사용자를 위해
                 // aria-label 에 파일명을 붙여 어느 파일의 삭제 버튼인지 명확하게 합니다.
                 aria-label={`${file.name} 삭제`}
@@ -71,12 +72,12 @@ export function AttachmentList(props: {
                 onClick={() => remove.mutate(file.id)}
               >
                 삭제
-              </button>
+              </Button>
             )}
           />
         ))}
       </ul>
-      {remove.error ? <p className="why" role="alert">{reason(remove.error)}</p> : null}
+      <Why text={firstWhy([remove.error])} />
     </div>
   );
 }

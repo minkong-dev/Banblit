@@ -9,8 +9,8 @@ import type { PostComment } from "../lib/contract";
 import { formError } from "../lib/loading";
 import { checkComment, getJSON, stampLabel } from "../lib/pipeline";
 import { say } from "../lib/toast";
-import { PencilIcon, TrashIcon } from "./icons";
-import { Modal, ModalFormFoot } from "./Modal";
+import { DeleteButton, EditButton, FormFoot, Why } from "./controls";
+import { Modal } from "./Modal";
 import { RichText, RichTextView } from "./RichText";
 
 /** 댓글을 새로 다는 form 입니다. 로그인하지 않았으면(authorId 가 null) 버튼이 비활성화됩니다. */
@@ -57,12 +57,14 @@ export function CommentForm(props: { postId: number; authorId: number | null }) 
         describedBy={bad === "" ? undefined : "commentWhy"}
         onChange={(next) => { setTouched(true); setBody(next); }}
       />
-      <div className="acts">
-        <button className="btn go" type="submit" disabled={send.isPending || authorId === null}>
-          {send.isPending ? "올리는 중…" : "댓글 달기"}
-        </button>
-      </div>
-      {bad === "" ? null : <p className="why" id="commentWhy" role="alert">{bad}</p>}
+      <FormFoot
+        submitLabel="댓글 달기"
+        pendingLabel="올리는 중…"
+        pending={send.isPending}
+        blocked={authorId === null}
+        bad={bad}
+        whyId="commentWhy"
+      />
     </form>
   );
 }
@@ -108,16 +110,11 @@ export function CommentRow(props: {
       {!canEdit && !canDelete ? null : (
         <span className="acts">
           {!canEdit ? null : (
-            <button className="ic" aria-label="댓글 수정"
-              onClick={() => { setBody(comment.body); setBad(""); setEditing(true); }}>
-              <PencilIcon />
-            </button>
+            <EditButton label="댓글 수정" onClick={() => { setBody(comment.body); setBad(""); setEditing(true); }} />
           )}
           {!canDelete ? null : (
-            <button className="ic danger" aria-label="댓글 삭제" disabled={remove.isPending}
-              onClick={() => { if (askDelete("댓글")) remove.mutate(); }}>
-              <TrashIcon />
-            </button>
+            <DeleteButton label="댓글 삭제" disabled={remove.isPending}
+              onClick={() => { if (askDelete("댓글")) remove.mutate(); }} />
           )}
         </span>
       )}
@@ -125,7 +122,7 @@ export function CommentRow(props: {
       {!editing ? null : (
         <Modal title="댓글 수정" onClose={() => setEditing(false)}
           foot={
-            <ModalFormFoot
+            <FormFoot
               onCancel={() => setEditing(false)}
               pending={save.isPending}
               submitLabel="저장"
@@ -143,7 +140,7 @@ export function CommentRow(props: {
               <RichText id="editComment" label="댓글" postId={comment.post_id ?? null} value={body} onChange={setBody} />
             </label>
           </div>
-          {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+          <Why text={bad} />
         </Modal>
       )}
     </li>

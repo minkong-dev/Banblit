@@ -16,6 +16,7 @@ export function Notices() {
           hint="전체 공개"
           listPath="/notices"
           newPath="/notices/new"
+          basePath="/notices"
           authorId={me?.id ?? null}
           canWrite={can(me, "notice_write")}
           canModerate={can(me, "board_moderate")}

@@ -4,9 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode, RefObject } from "react";
 
-import { stateText } from "../lib/loading";
-import type { LoadState } from "../lib/loading";
-import { PencilIcon, TrashIcon } from "../components/icons";
+import { DeleteButton, EditButton } from "../components/controls";
 
 /** 편집 모드에 진입한 form 의 첫 입력칸으로 초점을 이동합니다. autoFocus 속성이 이 화면에서 동작하지 않아 직접 이동합니다.
  *  추가 form(editing 이 false 인 경우)에는 적용하지 않습니다. 화면이 열린 직후 아래쪽 form 으로 초점이 이동하면 안 됩니다. */
@@ -31,20 +29,6 @@ export function useForm<T>(start: T): [T, (next: T) => void, boolean, () => void
     write(start);
   };
   return [value, set, touched, reset];
-}
-
-/** form 입력칸입니다. 계정 화면의 Field 는 그 화면의 CSS 에 종속되어 있어 이 화면에서는 사용하지 않습니다. */
-export function Cell(props: { label: string; htmlFor: string; wide?: boolean; children: ReactNode }) {
-  return (
-    <label className={props.wide ? "wide" : undefined} htmlFor={props.htmlFor}>
-      {props.label}
-      {props.children}
-    </label>
-  );
-}
-
-export function CardState({ state, empty }: { state: LoadState; empty: string }) {
-  return <div className="empty">{stateText(state, empty)}</div>;
 }
 
 /** 목록의 한 행입니다. 보기 모드에서는 데이터를 표시하고, 편집 모드이면 form 이 대신 표시됩니다.
@@ -73,44 +57,10 @@ export function Row(props: {
       </div>
       {onEdit === undefined && onDelete === undefined ? null : (
         <div className="acts">
-          {onEdit === undefined ? null : (
-            <button className="ic" ref={buttonRef} aria-label={editLabel} onClick={onEdit}>
-              <PencilIcon />
-            </button>
-          )}
-          {onDelete === undefined ? null : (
-            <button className="ic danger" aria-label={deleteLabel} onClick={onDelete}>
-              <TrashIcon />
-            </button>
-          )}
+          {onEdit === undefined ? null : <EditButton ref={buttonRef} label={editLabel ?? ""} onClick={onEdit} />}
+          {onDelete === undefined ? null : <DeleteButton label={deleteLabel ?? ""} onClick={onDelete} />}
         </div>
       )}
     </li>
-  );
-}
-
-/** form 아래 줄입니다. 취소·저장 버튼과 오류 메시지를 표시합니다. form 3개가 같은 부품을 사용합니다. */
-export function FormTail(props: {
-  submit: string;
-  pending: boolean;
-  blocked: boolean;
-  bad: string;
-  whyId: string;
-  onCancel?: () => void;
-}) {
-  const { submit, pending, blocked, bad, whyId, onCancel } = props;
-  return (
-    <>
-      <div className="acts">
-        {onCancel === undefined ? null : (
-          <button className="btn" type="button" onClick={onCancel}>취소</button>
-        )}
-        <button className="btn go" type="submit" disabled={blocked || pending}>
-          {pending ? "저장하는 중…" : submit}
-        </button>
-      </div>
-      {/* role="alert"를 지정해야 스크린 리더 사용자에게도 오류가 전달됩니다. */}
-      {bad === "" ? null : <p className="why" id={whyId} role="alert">{bad}</p>}
-    </>
   );
 }

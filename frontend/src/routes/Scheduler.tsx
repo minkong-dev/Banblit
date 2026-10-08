@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 
 import { Card, Panel, Tabs } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
-import { ChevronLeftIcon, ChevronRightIcon, ClockIcon } from "../components/icons";
+import { Button, NavButton } from "../components/controls";
+import { ClockIcon } from "../components/icons";
 import { getJSON } from "../lib/api";
 import { firstWhy } from "../lib/loading";
 import { currentMonth, monthRange, slotLabels, slotSteps, weekLabel } from "../lib/calendar";
@@ -201,9 +202,7 @@ export function Scheduler() {
       {loadWhy === "" ? null : (
         <div className="cut">
           <p><b>스케줄을 불러오지 못했어요</b>{loadWhy}</p>
-          <button className="btn warn" onClick={refreshAll}>
-            다시 불러오기
-          </button>
+          <Button kind="danger" onClick={refreshAll}>다시 불러오기</Button>
         </div>
       )}
 
@@ -212,21 +211,17 @@ export function Scheduler() {
       {failures.length === 0 ? null : (
         <div className="cut">
           <p><b>일부 기간의 배정을 불러오지 못했어요</b> {failures.join(", ")}</p>
-          <button className="btn warn" onClick={() => { void queryClient.invalidateQueries({ queryKey: ["schedule"] }); }}>
+          <Button kind="danger" onClick={() => { void queryClient.invalidateQueries({ queryKey: ["schedule"] }); }}>
             다시 불러오기
-          </button>
+          </Button>
         </div>
       )}
 
       <Card>
         <div className="calbar">
-          <button className="navb" aria-label={week ? "저번 주" : "저번 달"} onClick={() => shift(-1)}>
-            <ChevronLeftIcon />
-          </button>
+          <NavButton dir="prev" className="navb" label={week ? "저번 주" : "저번 달"} onClick={() => shift(-1)} />
           <span className="ml">{week ? weekText : `${cursor.year}년 ${cursor.month + 1}월`}</span>
-          <button className="navb" aria-label={week ? "다음 주" : "다음 달"} onClick={() => shift(1)}>
-            <ChevronRightIcon />
-          </button>
+          <NavButton dir="next" className="navb" label={week ? "다음 주" : "다음 달"} onClick={() => shift(1)} />
           <div className="seg" role="group" aria-label="레이아웃 변경">
             <button aria-pressed={!week} onClick={() => setWeek(false)}>월</button>
             <button aria-pressed={week} onClick={() => setWeek(true)}>주</button>
@@ -302,7 +297,7 @@ export function Scheduler() {
               <li><button type="button" disabled><b>{noticeState}</b></button></li>
             ) : recentNotices.map((post) => (
               <li key={post.id}>
-                <button type="button" onClick={() => void navigate("/notices")}>
+                <button type="button" onClick={() => void navigate(`/notices/${post.id}`)}>
                   <b>{post.title}</b>
                   <small>{stampLabel(post.created_at)} {post.author}</small>
                 </button>
@@ -314,7 +309,7 @@ export function Scheduler() {
           <ul>
             {myTeams.map((team) => (
               <li key={team.id}>
-                <button className="teamrow" onClick={() => void navigate("/teams")}>
+                <button className="teamrow" onClick={() => void navigate(`/teams/${team.id}`)}>
                   <i style={{ background: `var(--${team.colorKey})` }} />
                   <b>{team.name}</b>
                   <small>{memberCountLabel(allTeams, team.id)}</small>

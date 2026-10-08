@@ -14,8 +14,8 @@ import { useNavigate } from "react-router-dom";
 
 import { Avatar } from "../components/Avatar";
 import { Card, SectionHead } from "../components/Layout";
+import { BackButton, Button, EditButton, FilePicker, MenuItem, Why } from "../components/controls";
 import { usePopoverRouteClose } from "../components/hooks";
-import { ChevronLeftIcon, PencilIcon } from "../components/icons";
 import { getJSON, reason, sendFile } from "../lib/api";
 import { roleLabel } from "../lib/account";
 import { personNameMessage } from "../lib/validate";
@@ -110,25 +110,15 @@ function PhotoEdit({ me }: { me: Account }) {
           if (event.newState === "closed") requestAnimationFrame(() => trigger.current?.focus());
         }}
       >
-        <button type="button" className="act" onClick={() => { close(); pick.current?.click(); }}>
-          프로필 사진 업로드
-        </button>
-        <button type="button" className="act" onClick={() => { close(); reset.mutate(); }}>
-          기본 이미지 적용
-        </button>
+        <MenuItem onClick={() => { close(); pick.current?.click(); }}>프로필 사진 업로드</MenuItem>
+        <MenuItem onClick={() => { close(); reset.mutate(); }}>기본 이미지 적용</MenuItem>
       </div>
       <Avatar id={me.id} name={me.name} className="big" photo={me.avatar} />
-      <input
+      <FilePicker
         ref={pick}
         id="myPhoto"
-        type="file"
         accept="image/jpeg,image/png,image/gif,image/webp"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          // 같은 파일을 다시 선택해도 변경으로 감지되도록 입력칸을 비웁니다.
-          event.target.value = "";
-          if (file !== undefined) upload.mutate(file);
-        }}
+        onFiles={([file]) => upload.mutate(file)}
       />
     </div>
   );
@@ -225,11 +215,11 @@ export function ProfileCard({ me, rows }: { me: Account; rows: InfoRow[] }) {
       <Card>
         <div className="probar">
           {editing
-            ? <button type="button" className="btn" onClick={() => setEditing(false)}>취소</button>
-            : <button type="button" className="ic" aria-label="뒤로 가기" onClick={() => void navigate(-1)}><ChevronLeftIcon /></button>}
+            ? <Button kind="ghost" onClick={() => setEditing(false)}>취소</Button>
+            : <BackButton onClick={() => void navigate(-1)} />}
           {editing
-            ? <button type="button" className="btn go" disabled={save.isPending} onClick={submit}>{save.isPending ? "저장하는 중…" : "저장"}</button>
-            : <button type="button" className="ic" aria-label="프로필 편집" onClick={startEdit}><PencilIcon /></button>}
+            ? <Button kind="go" pending={save.isPending} onClick={submit}>저장</Button>
+            : <EditButton label="프로필 편집" onClick={startEdit} />}
         </div>
         <div className="prohead">
           <PhotoEdit me={me} />
@@ -238,7 +228,7 @@ export function ProfileCard({ me, rows }: { me: Account; rows: InfoRow[] }) {
           {me.department === null ? null : <p className="dept">{me.department}</p>}
         </div>
         {editing ? <DraftFields draft={draft} onChange={setDraft} /> : <InfoList rows={rows} />}
-        {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+        <Why text={bad} />
       </Card>
       {editing ? <Leave me={me} /> : null}
     </>
@@ -287,9 +277,9 @@ function Leave({ me }: { me: Account }) {
         </label>
       </div>
       <div className="listfoot">
-        <button className="new danger" disabled={!matched || leave.isPending} onClick={() => leave.mutate()}>
-          {leave.isPending ? "회원 탈퇴 중…" : "탈퇴하기"}
-        </button>
+        <Button kind="danger" pending={leave.isPending} pendingLabel="회원 탈퇴 중…" disabled={!matched} onClick={() => leave.mutate()}>
+          탈퇴하기
+        </Button>
       </div>
     </Card>
   );

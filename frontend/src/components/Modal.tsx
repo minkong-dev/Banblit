@@ -6,7 +6,7 @@
 // 요소 상태) 관리, Esc 닫기는 모두 브라우저가 자동으로 처리하므로 따로 구현하지 않습니다.
 
 import { useEffect, useId, useRef } from "react";
-import { CloseIcon } from "./icons";
+import { CloseButton } from "./controls";
 
 export function Modal({ title, hint, foot, panes, children, onClose }: {
   title: string;
@@ -74,36 +74,13 @@ export function Modal({ title, hint, foot, panes, children, onClose }: {
           <h2 id={titleId}>{title}</h2>
           {hint === undefined ? null : <p>{hint}</p>}
         </div>
-        <button aria-label="닫기" onClick={() => dialog.current?.close()}>
-          <CloseIcon />
-        </button>
+        <CloseButton onClick={() => dialog.current?.close()} />
       </div>
 
       <div className="mbody">{children}</div>
 
       {foot === undefined ? null : <div className="mfoot">{foot}</div>}
     </dialog>
-  );
-}
-
-/** Modal.foot 에 넣는 취소·저장 버튼 줄입니다. form 4개가 같은 줄을 사용합니다.
- *  extra 는 삭제처럼 왼쪽에 추가로 붙는 버튼입니다(Teams.tsx 의 팀 삭제). */
-export function ModalFormFoot({ onCancel, onSubmit, pending, submitLabel, pendingLabel = "저장하는 중…", extra }: {
-  onCancel: () => void;
-  onSubmit: () => void;
-  pending: boolean;
-  submitLabel: string;
-  pendingLabel?: string;
-  extra?: React.ReactNode;
-}) {
-  return (
-    <>
-      {extra}
-      <button className="ghost" onClick={onCancel}>취소</button>
-      <button className="primary" disabled={pending} onClick={onSubmit}>
-        {pending ? pendingLabel : submitLabel}
-      </button>
-    </>
   );
 }
 

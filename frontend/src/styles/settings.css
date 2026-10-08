@@ -159,8 +159,9 @@ body[data-page="settings"] {
   /* "+ 새 권한" 카드는 멈춤 위치에서 제외합니다. 목록을 받기 전에는 이 카드만 있어 브라우저가 이 카드를 멈춤 위치로
      기억하고, 목록이 도착해 앞에 카드가 생기면 이 카드를 따라 끝까지 스크롤해 첫 카드가 잘립니다. */
   .tile.add { display: grid; place-items: center; border-style: dashed; background: none; scroll-snap-align: none; }
-  .tile.add button { width: 100%; height: 100%; color: var(--t2); font-size: 14.5px; font-weight: 700; }
-  .tile.add button:hover { color: var(--brand); }
+  /* 카드 전체가 버튼입니다. 공용 .btn 의 테두리·배경·모서리를 없애고 카드의 점선 테두리만 남깁니다. */
+  .tile.add .btn { width: 100%; height: 100%; border: 0; border-radius: 0; background: none; color: var(--t2); font-size: 14.5px; font-weight: 700; }
+  .tile.add .btn:hover { background: none; color: var(--brand); }
 
   /* ===== 멤버 표 =====
      표가 길어지면 표 구역이 아니라 화면(.main)이 통째로 스크롤합니다. */

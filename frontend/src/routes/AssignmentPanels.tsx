@@ -4,12 +4,13 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { Button, Empty } from "../components/controls";
 import { Panel } from "../components/Layout";
 import { getJSON, reason } from "../lib/api";
 import { hoursOf } from "../lib/assignment";
 import { checkRunTimes, slotCountLabel } from "../lib/runs";
 import { say } from "../lib/toast";
-import { LOADING_TEXT } from "../lib/loading";
+import { LOADING_TEXT, loadState } from "../lib/loading";
 import { dayOf, hhmm, stampLabel, WEEKDAY_NAMES } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
 import type { AssignOut, Backup, Period } from "../lib/contract";
@@ -129,7 +130,7 @@ export function AssignmentStatus({
         </p>
         {counts}
         <div className="act">
-          <button className="btn" onClick={onBack}>현재 배정안으로 돌아가기</button>
+          <Button kind="ghost" onClick={onBack}>현재 배정안으로 돌아가기</Button>
         </div>
       </>
     );
@@ -149,11 +150,11 @@ export function AssignmentStatus({
         </div>
         <div className="act">
           {!canConfirm ? null : (
-            <button className="btn go" disabled={confirmPending} onClick={() => onConfirm(who.id)}>
-              {confirmPending ? "배정안 확정 중…" : "해당 배정안으로 확정"}
-            </button>
+            <Button kind="go" pending={confirmPending} pendingLabel="배정안 확정 중…" onClick={() => onConfirm(who.id)}>
+              해당 배정안으로 확정
+            </Button>
           )}
-          <button className="btn" onClick={onBack}>현재 배정안으로 돌아가기</button>
+          <Button kind="ghost" onClick={onBack}>현재 배정안으로 돌아가기</Button>
         </div>
       </>
     );
@@ -217,13 +218,9 @@ export function PastRunsPanel({ periodId, canRollback, roundAt, onSelect }: {
 
   let list;
   if (!canRollback) {
-    list = <li className="empty">이전 배정 되돌리기 권한이 있어야 확인이 가능해요.</li>;
-  } else if (backups.isPending) {
-    list = <li className="empty">{LOADING_TEXT}</li>;
-  } else if (backups.isError) {
-    list = <li className="empty">이전 배정기록을 불러오지 못했어요.</li>;
-  } else if (rounds.length === 0) {
-    list = <li className="empty">이전 배정기록이 없어요.</li>;
+    list = <Empty as="li" text="이전 배정 되돌리기 권한이 있어야 확인이 가능해요." />;
+  } else if (!backups.isSuccess || rounds.length === 0) {
+    list = <Empty as="li" state={loadState(backups)} text="이전 배정기록이 없어요." />;
   } else {
     // 최근 배정기록이 위로 오게 순서를 뒤집습니다. 되돌리기는 언제나 맨 위 배정기록으로만 복원합니다.
     list = [...rounds]

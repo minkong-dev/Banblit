@@ -6,6 +6,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { Button, Empty } from "../components/controls";
 import { Card, SectionHead } from "../components/Layout";
 import { RejectDialog } from "../components/RejectDialog";
 import { useMe, useRooms } from "../components/queries";
@@ -22,7 +23,7 @@ import {
 } from "../lib/pipeline";
 import type { Booking } from "../lib/pipeline";
 import { say } from "../lib/toast";
-import { loadState, stateText } from "../lib/loading";
+import { loadState } from "../lib/loading";
 
 // ponytail: 현재 기준 지정한 일수 범위 내의 예약만 표시합니다. 예약 목록 endpoint(API의 요청 주소 단위)가 합주실·날짜 범위 조건으로만 받으므로,
 // 합주실마다 요청을 하나씩 동시에 보냅니다(loadReservationRows). 합주실 수가 증가하여 성능 저하가 발생하거나 더 먼 범위의
@@ -85,8 +86,8 @@ export function ReservationCards() {
       <SectionHead title="예약" desc={`${WINDOW_DAYS}일 내에 발생한 모든 예약을 불러왔어요.`} />
 
       <div className="roster">
-        {rooms.isError ? <p className="empty">{reason(rooms.error)}</p> : null}
-        {failures.map((text) => <p className="empty" key={text}>{text}</p>)}
+        {rooms.isError ? <Empty text={reason(rooms.error)} /> : null}
+        {failures.map((text) => <Empty key={text} text={text} />)}
         <table>
           <thead>
             <tr>
@@ -108,23 +109,19 @@ export function ReservationCards() {
                 <td className="fill" />
                 <td>
                   {booking.memberId === me?.id ? (
-                    <button
-                      className="btn"
+                    <Button
+                      kind="ghost"
                       // 취소 중인 행만 비활성화합니다. 다른 행까지 비활성화하면 어느 예약이 삭제 진행 중인지 사용자가 알 수 없습니다.
                       disabled={cancel.isPending && cancel.variables?.id === booking.id}
                       aria-label={`${bookingLabel(booking)} 취소`}
                       onClick={() => { if (askCancel(bookingLabel(booking))) cancel.mutate(booking); }}
                     >
                       취소
-                    </button>
+                    </Button>
                   ) : (
-                    <button
-                      className="btn"
-                      aria-label={`${bookingLabel(booking)} 반려`}
-                      onClick={() => setRejecting(booking)}
-                    >
+                    <Button kind="ghost" aria-label={`${bookingLabel(booking)} 반려`} onClick={() => setRejecting(booking)}>
                       반려
-                    </button>
+                    </Button>
                   )}
                 </td>
               </tr>
@@ -132,7 +129,7 @@ export function ReservationCards() {
           </tbody>
         </table>
         {rooms.data !== undefined && (state.kind === "loading" || (state.kind === "ready" && bookings.length === 0)) ? (
-          <p className="empty">{stateText(state, "현재 예약이 없어요")}</p>
+          <Empty state={state} text="현재 예약이 없어요" />
         ) : null}
       </div>
 
