@@ -512,3 +512,11 @@ async def list_items(db: AsyncSession = Depends(get_db)):
 - Parse JWT parameters defensively, expecting potential string/integer cast mismatches from modern payload variations.
 - Enforce deterministic sorting (e.g., `.order_by(Model.id)`) on all offset/limit paginated endpoints to avoid data skips.
 - Isolate authorization checks from core authentication dependencies to provide precise REST status signals (`401` vs `403`).
+
+## ECC rules 에서 흡수 (2026-10-08)
+
+- 응답 schema 에 password, password hash, access token, refresh token, 인증 내부 상태를 넣지 않습니다.
+- CORS 의 `allow_origins=["*"]` 와 `allow_credentials=True` 를 함께 설정하지 않습니다. origin 목록은 환경마다 설정값으로 둡니다.
+- JWT 를 검증할 때 expiry, issuer, audience, algorithm 4개를 전부 검증합니다.
+- 테스트에서 `app.dependency_overrides` 에 넣은 항목은 테스트가 끝날 때 삭제합니다. 삭제하지 않을 경우 다음 테스트가 같은 override 를 받습니다.
+- async endpoint 의 테스트는 `httpx.AsyncClient` 로 합니다.
