@@ -23,7 +23,7 @@ from backend.db.models import (
     Team,
     UnavailableTime,
 )
-from backend.services.period.schedule_service import get_period_or_raise
+from backend.services.period.period_crud_service import get_period_or_raise
 from backend.services.settings.pipeline import daily_max_hours, session_minutes, slot_minutes
 from backend.db.pipeline import AssignmentRow, save_schedule
 from backend.scheduling.pipeline import Assignment as EngineAssignment

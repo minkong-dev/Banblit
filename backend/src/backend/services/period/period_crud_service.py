@@ -10,8 +10,7 @@ from backend.services.validation.pipeline import (
     require_ends_not_before_starts,
     require_valid_kind,
 )
-from backend.db.models import Period
-from backend.services.period.schedule_service import get_period_or_raise
+from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team
 from backend.services.reservation.pipeline import cancel_reservations_in_focus
 from backend.db.pipeline import commit_translating
 
@@ -197,3 +196,52 @@ def delete_period(session: Session, period_id: int) -> None:
     period = get_period_or_raise(session, period_id)
     session.delete(period)
     session.commit()
+
+
+# ── 조회 ─────────────────────────────────────────────────────────────────────
+
+ScheduleRow = tuple[int, str, int, str, datetime, datetime]
+"""(팀 id, 팀 이름, 합주실 id, 합주실명, 시작 시간, 종료 시간)"""
+
+
+def get_period_or_raise(session: Session, period_id: int) -> Period:
+    period = session.get(Period, period_id)
+    if period is None:
+        raise ValueError("존재하지 않는 기간입니다")
+    return period
+
+
+def list_schedule(session: Session, period_id: int) -> list[ScheduleRow]:
+    """그 기간의 확정 배정을 시작 시간과 합주실명 순으로 반환합니다."""
+    rows = session.execute(
+        select(Assignment, Team.name, Room.name)
+        .join(Team, Team.id == Assignment.team_id)
+        .join(Room, Room.id == Assignment.room_id)
+        .where(Assignment.period_id == period_id)
+        .order_by(Assignment.starts_at, Room.name)
+    ).all()
+    return [
+        (a.team_id, team_name, a.room_id, room_name, a.starts_at, a.ends_at)
+        for a, team_name, room_name in rows
+    ]
+
+
+def list_backup_round(session: Session, period_id: int, saved_at: datetime) -> list[ScheduleRow]:
+    """밀려난 배정기록(backup round) 1개의 스케줄을 반환합니다. 배정기록을 식별하는 값은 저장 시각입니다.
+
+    배정이 1개도 없는 배정기록은 저장되지 않으므로, 빈 결과일 경우 ValueError 를 발생시킵니다.
+    """
+    rows = session.execute(
+        select(AssignmentBackup, Team.name, Room.name)
+        .join(Team, Team.id == AssignmentBackup.team_id)
+        .join(Room, Room.id == AssignmentBackup.room_id)
+        .where(AssignmentBackup.period_id == period_id)
+        .where(AssignmentBackup.saved_at == saved_at)
+        .order_by(AssignmentBackup.starts_at, Room.name)
+    ).all()
+    if not rows:
+        raise ValueError("존재하지 않는 배정기록입니다")
+    return [
+        (b.team_id, team_name, b.room_id, room_name, b.starts_at, b.ends_at)
+        for b, team_name, room_name in rows
+    ]
