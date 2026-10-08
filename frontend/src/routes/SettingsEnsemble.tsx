@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { CheckMark } from "../components/CheckMark";
+import { Button, Cell, DateRange, FormFoot, TimeRange, Toggle } from "../components/controls";
 import { Dropdown } from "../components/Dropdown";
 import { useSlotMinutes } from "../components/queries";
 import type { Period, Room } from "../lib/contract";
@@ -21,7 +21,6 @@ import {
 } from "../lib/pipeline";
 import type { EnsembleBody, PeriodBody } from "../lib/pipeline";
 import { say } from "../lib/toast";
-import { Cell } from "./SettingsForm";
 
 /** 기간 form 이 보유하는 전체 합주 입력값입니다. on 이 false 면 저장할 때 전체 합주를 해제합니다. */
 export type EnsembleDraft = {
@@ -102,50 +101,25 @@ export function EnsembleFields(props: {
           </Cell>
           </div>
           <div className="frow">
-          <Cell label="시작일" htmlFor={at("ens-starts")}>
-            <input
-              type="date"
-              id={at("ens-starts")}
-              value={draft.starts_on}
-              min={period.starts_on}
-              max={period.everyday ? undefined : period.ends_on}
-              {...invalid}
-              onChange={(event) => setDraft({ ...draft, starts_on: event.target.value })}
-            />
-          </Cell>
-          <Cell label="종료일" htmlFor={at("ens-ends")}>
-            <input
-              type="date"
-              id={at("ens-ends")}
-              value={draft.ends_on}
-              min={draft.starts_on || period.starts_on}
-              max={period.everyday ? undefined : period.ends_on}
-              {...invalid}
-              onChange={(event) => setDraft({ ...draft, ends_on: event.target.value })}
-            />
-          </Cell>
+          <DateRange
+            id={at("ens-days")}
+            labels={["시작일", "종료일"]}
+            value={[draft.starts_on, draft.ends_on]}
+            min={period.starts_on}
+            max={period.everyday ? undefined : period.ends_on}
+            invalid={invalid}
+            onChange={([starts_on, ends_on]) => setDraft({ ...draft, starts_on, ends_on })}
+          />
           </div>
           <div className="frow">
-          <Cell label="시작 시간" htmlFor={at("ens-from")}>
-            <input
-              type="time"
-              step={slotMinutes * 60}
-              id={at("ens-from")}
-              value={draft.starts_at}
-              {...invalid}
-              onChange={(event) => setDraft({ ...draft, starts_at: event.target.value })}
-            />
-          </Cell>
-          <Cell label="종료 시간" htmlFor={at("ens-to")}>
-            <input
-              type="time"
-              step={slotMinutes * 60}
-              id={at("ens-to")}
-              value={draft.ends_at}
-              {...invalid}
-              onChange={(event) => setDraft({ ...draft, ends_at: event.target.value })}
-            />
-          </Cell>
+          <TimeRange
+            id={at("ens")}
+            labels={["시작 시간", "종료 시간"]}
+            value={[draft.starts_at, draft.ends_at]}
+            step={slotMinutes * 60}
+            invalid={invalid}
+            onChange={([starts_at, ends_at]) => setDraft({ ...draft, starts_at, ends_at })}
+          />
           </div>
           {teamDays === "" ? null : <p className="teamdays">{teamDays}</p>}
         </div>
@@ -161,7 +135,7 @@ export function EnsembleToggle({ draft, setDraft, at }: {
 }) {
   return (
     <Cell label="전체 합주기간 지정" htmlFor={at("ensemble")}>
-      <CheckMark id={at("ensemble")} checked={draft.on} onChange={(on) => setDraft({ ...draft, on })} />
+      <Toggle kind="check" id={at("ensemble")} checked={draft.on} onChange={(on) => setDraft({ ...draft, on })} />
     </Cell>
   );
 }
@@ -214,37 +188,24 @@ export function EnsembleDayEditor({ day, on, room, picker }: {
       }}
     >
       {picker}
-      <Cell label="시작 시간" htmlFor={at("from")}>
-        <input
-          type="time"
-          step={slotMinutes * 60}
-          id={at("from")}
-          value={times.starts}
-          {...invalid}
-          onChange={(event) => setTimes({ ...times, starts: event.target.value })}
-        />
-      </Cell>
-      <Cell label="종료 시간" htmlFor={at("to")}>
-        <input
-          type="time"
-          step={slotMinutes * 60}
-          id={at("to")}
-          value={times.ends}
-          {...invalid}
-          onChange={(event) => setTimes({ ...times, ends: event.target.value })}
-        />
-      </Cell>
-      <div className="acts">
-        {on.custom ? (
-          <button className="btn" type="button" disabled={pending} onClick={() => reset.mutate()}>
-            기본 시각으로 되돌리기
-          </button>
-        ) : null}
-        <button className="btn go" type="submit" disabled={pending || why !== ""}>
-          {save.isPending ? "저장하는 중…" : "저장"}
-        </button>
-      </div>
-      {bad === "" ? null : <p className="why" id={at("why")} role="alert">{bad}</p>}
+      <TimeRange
+        id={`ensday-${on.periodId}-${day}`}
+        labels={["시작 시간", "종료 시간"]}
+        value={[times.starts, times.ends]}
+        step={slotMinutes * 60}
+        invalid={invalid}
+        onChange={([starts, ends]) => setTimes({ starts, ends })}
+      />
+      <FormFoot
+        submitLabel="저장"
+        pending={save.isPending}
+        blocked={pending || why !== ""}
+        bad={bad}
+        whyId={at("why")}
+        extra={!on.custom ? undefined : (
+          <Button kind="ghost" disabled={pending} onClick={() => reset.mutate()}>기본 시각으로 되돌리기</Button>
+        )}
+      />
     </form>
   );
 }

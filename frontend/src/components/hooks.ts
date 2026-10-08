@@ -9,14 +9,18 @@ import { useLocation } from "react-router-dom";
  *  전환(components/PostBoard.tsx)이 같은 구조라 이 훅 하나를 공유합니다.
  *  openFocus 는 열릴 때 초점을 옮길 대상의 ref 입니다 — 아무 요소에도 연결하지 않으면
  *  focus() 호출이 아무 일도 하지 않으므로, 열 때 초점을 옮기지 않는 화면은 그대로 무시하면 됩니다. */
-export function useReturnFocus<Focus extends HTMLElement = HTMLElement>(): {
+export function useReturnFocus<Focus extends HTMLElement = HTMLElement>(
+  /** 열림 상태를 바깥(주소 등)이 보유할 때 넘깁니다. 없으면 이 훅이 state 로 보유합니다. */
+  controlled?: { openId: number | null; setOpenId: (id: number | null) => void },
+): {
   openId: number | null;
   open: (id: number) => void;
   close: () => void;
   register: (id: number) => (el: HTMLButtonElement | null) => void;
   openFocus: RefObject<Focus | null>;
 } {
-  const [openId, setOpenId] = useState<number | null>(null);
+  const own = useState<number | null>(null);
+  const [openId, setOpenId] = controlled === undefined ? own : [controlled.openId, controlled.setOpenId];
   const buttons = useRef(new Map<number, HTMLButtonElement>());
   // 돌아갈 버튼 ID를 state가 아닌 ref로 보유합니다. state로 보유하면 초점 이동 후 값을 초기화하는 과정에서 불필요한 재생성이 발생합니다.
   const back = useRef<number | null>(null);

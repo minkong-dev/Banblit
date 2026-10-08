@@ -68,9 +68,11 @@ test("집중 합주기간에 전체 합주를 지정하고 날짜별 시각을 �
   await dialog.getByLabel("종료일", { exact: true }).fill(ends);
   // 체크박스 input 은 시각적으로 감춰져 있어 label 문구를 눌러 켭니다.
   await dialog.getByText("전체 합주기간 지정").click();
-  await dialog.getByLabel("전체 합주 시작일").fill(ensembleDay);
-  await dialog.getByLabel("전체 합주 종료일").fill(ensembleDay);
-  await dialog.getByLabel("시작 시간").fill("19:00");
+  // 전체 합주 묶음(.ensemble)의 날짜·시각 칸은 기간 칸과 label 이 같아 묶음 안에서 찾습니다(c2922f7 에서 relabel).
+  const ensemble = dialog.locator(".ensemble");
+  await ensemble.getByLabel("시작일", { exact: true }).fill(ensembleDay);
+  await ensemble.getByLabel("종료일", { exact: true }).fill(ensembleDay);
+  await ensemble.getByLabel("시작 시간").fill("19:00");
   await expect(dialog.getByText("팀별 합주 날짜:")).toBeVisible();
   await dialog.getByRole("button", { name: "기간 추가" }).click();
   await expect(dialog).toHaveCount(0);

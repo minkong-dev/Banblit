@@ -12,7 +12,7 @@ import {
 import { BrandLockup } from "../components/Brand";
 import { Field, failures, fieldText } from "../components/Field";
 import type { Errors } from "../components/Field";
-import { CheckMark } from "../components/CheckMark";
+import { Button, Toggle } from "../components/controls";
 import { CheckIcon, CrossIcon, GoogleIcon, KakaoIcon } from "../components/icons";
 
 import { usePage } from "../components/hooks";
@@ -142,16 +142,14 @@ export function SignIn() {
       <Field name="pw" label="비밀번호" type="password"
         autoComplete="current-password" placeholder="비밀번호를 입력해주세요" error={errors.pw} />
       <div className="row">
-        {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- CheckMark 컴포넌트 안에 input 이 있습니다. eslint 는 컴포넌트 내부를 확인하지 못합니다. */}
-        <label className="keep"><CheckMark name="keep" /> 로그인 상태 유지</label>
+        {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Toggle 컴포넌트 안에 input 이 있습니다. eslint 는 컴포넌트 내부를 확인하지 못합니다. */}
+        <label className="keep"><Toggle kind="check" name="keep" /> 로그인 상태 유지</label>
         <span className="links">
           <Link to="/find-id">아이디 찾기</Link>
           <Link to="/find-password">비밀번호 찾기</Link>
         </span>
       </div>
-      <button className="go" type="submit" disabled={isPending}>
-        {isPending ? "로그인 중…" : "로그인"}
-      </button>
+      <Button kind="go" type="submit" pending={isPending} pendingLabel="로그인 중…">로그인</Button>
 
       <div className="or">또는</div>
       <div className="social">
@@ -272,9 +270,7 @@ export function SignUp() {
       <Field name="admincode" label="관리자코드(선택)" type="password"
         autoComplete="off" placeholder="관리자 코드를 보유하신 경우 입력해주세요" error="" />
 
-      <button className="go" type="submit" style={{ marginTop: 22 }} disabled={isPending}>
-        {isPending ? "가입 중…" : "가입하기"}
-      </button>
+      <Button kind="go" type="submit" style={{ marginTop: 22 }} pending={isPending} pendingLabel="가입 중…">가입하기</Button>
       <p className="foot">이미 계정이 있으신가요? <Link to="/login">로그인</Link></p>
     </form>
   );
@@ -306,9 +302,7 @@ export function FindId() {
         autoComplete="name" placeholder="이름을 입력해주세요." error={errors.fidName} />
       <Field name="fidMail" label="이메일" type="email" inputMode="email"
         autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.fidMail} />
-      <button className="go" type="submit" style={{ marginTop: 22 }} disabled={isPending}>
-        {isPending ? "찾는 중…" : "아이디 찾기"}
-      </button>
+      <Button kind="go" type="submit" style={{ marginTop: 22 }} pending={isPending} pendingLabel="찾는 중…">아이디 찾기</Button>
       <p className="foot">
         <Link to="/find-password">비밀번호 찾기</Link> <Link to="/login">로그인</Link>
       </p>
@@ -337,9 +331,7 @@ export function FindPassword() {
     <form aria-label="비밀번호 찾기" noValidate onSubmit={onSubmit}>
       <Field name="fpwMail" label="이메일" type="email" inputMode="email"
         autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.fpwMail} />
-      <button className="go" type="submit" style={{ marginTop: 22 }} disabled={isPending}>
-        {isPending ? "보내는 중…" : "재설정 메일 받기"}
-      </button>
+      <Button kind="go" type="submit" style={{ marginTop: 22 }} pending={isPending} pendingLabel="보내는 중…">재설정 메일 받기</Button>
       <p className="foot">
         <Link to="/find-id">아이디 찾기</Link> <Link to="/login">로그인</Link>
       </p>
@@ -391,9 +383,7 @@ export function ResetPassword() {
         placeholder="새 비밀번호를 입력해주세요." error={errors.rpwNew} />
       <Field name="rpwAgain" label="비밀번호 확인" type="password" autoComplete="new-password"
         placeholder="비밀번호를 다시 한 번 입력해주세요." error={errors.rpwAgain} />
-      <button className="go" type="submit" style={{ marginTop: 22 }} disabled={isPending}>
-        {isPending ? "변경하는 중…" : "비밀번호 재설정"}
-      </button>
+      <Button kind="go" type="submit" style={{ marginTop: 22 }} pending={isPending} pendingLabel="변경하는 중…">비밀번호 재설정</Button>
       <p className="foot"><Link to="/login">로그인으로 돌아가기</Link></p>
     </form>
   );

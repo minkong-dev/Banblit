@@ -6,7 +6,7 @@ import { useState } from "react";
 import type { ReactNode, RefObject } from "react";
 
 import { Card, SectionHead } from "../components/Layout";
-import { CheckMark } from "../components/CheckMark";
+import { Button, Cell, Empty, FormFoot, TimeRange, Toggle } from "../components/controls";
 import { useReturnFocus } from "../components/hooks";
 import { Modal } from "../components/Modal";
 import { useSlotMinutes } from "../components/queries";
@@ -24,14 +24,7 @@ import { periodTitle } from "../lib/settings";
 import type { WindowPair } from "../lib/settings";
 import { say } from "../lib/toast";
 import { EnsembleDays, EnsembleFields, EnsembleToggle, ensembleBody, ensembleDraft } from "./SettingsEnsemble";
-import {
-  Cell,
-  CardState,
-  FormTail,
-  Row,
-  useFirstField,
-  useForm,
-} from "./SettingsForm";
+import { Row, useFirstField, useForm } from "./SettingsForm";
 
 const NO_WINDOW: PracticeWindow = { weekday: null, weekend: null };
 
@@ -154,7 +147,8 @@ function PeriodFields(props: {
       {form.kind === "focused" ? (
         <div className="checks">
           <Cell label="매일" htmlFor={at("everyday")}>
-            <CheckMark
+            <Toggle
+              kind="check"
               id={at("everyday")}
               checked={form.everyday}
               onChange={(on) => setForm({ ...form, everyday: on })}
@@ -233,24 +227,12 @@ function WindowFields(props: {
 }) {
   const { label, pair, field, at, onChange } = props;
   return (
-    <>
-      <Cell label={`${label} 시작`} htmlFor={at(`${field}From`)}>
-        <input
-          id={at(`${field}From`)}
-          type="time"
-          value={pair.starts_at}
-          onChange={(event) => onChange({ ...pair, starts_at: event.target.value })}
-        />
-      </Cell>
-      <Cell label={`${label} 종료`} htmlFor={at(`${field}To`)}>
-        <input
-          id={at(`${field}To`)}
-          type="time"
-          value={pair.ends_at}
-          onChange={(event) => onChange({ ...pair, ends_at: event.target.value })}
-        />
-      </Cell>
-    </>
+    <TimeRange
+      id={at(field)}
+      labels={[`${label} 시작`, `${label} 종료`]}
+      value={[pair.starts_at, pair.ends_at]}
+      onChange={([starts_at, ends_at]) => onChange({ starts_at, ends_at })}
+    />
   );
 }
 
@@ -273,7 +255,7 @@ export function PeriodCard(props: {
       <SectionHead title="집중 합주기간" desc="자동 스케줄링을 진행할 기간을 설정해요" />
 
       {state.kind !== "ready" || periods.length === 0 ? (
-        <CardState state={state} empty="아직 등록된 집중 합주기간이 없어요." />
+        <Empty as="div" state={state} text="아직 등록된 집중 합주기간이 없어요." />
       ) : (
         <ul className="rows">
           {periods.map((period) =>
@@ -317,7 +299,7 @@ export function PeriodCard(props: {
 
       {!canCreate ? null : (
         <div className="listfoot">
-          <button className="new" onClick={() => setMaking(true)}>+ 새 집중 합주기간</button>
+          <Button kind="go" onClick={() => setMaking(true)}>+ 새 집중 합주기간</Button>
         </div>
       )}
 
@@ -398,7 +380,7 @@ function PeriodForm(props: {
                 at={at} bad={bad} whyId={whyId} />
             </div>
           ) : null}
-          <FormTail submit={submit} pending={send.isPending} blocked={why !== ""}
+          <FormFoot submitLabel={submit} pending={send.isPending} blocked={why !== ""}
               bad={bad} whyId={whyId} onCancel={onCancel} />
         </div>
       </form>

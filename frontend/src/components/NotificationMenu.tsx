@@ -1,9 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { Empty, IconButton, MenuItem } from "./controls";
 import { BellIcon } from "./icons";
 import { usePopoverRouteClose } from "./hooks";
-import { LOADING_TEXT } from "../lib/loading";
+import { loadState } from "../lib/loading";
 import {
   loadNotifications,
   markNotificationsRead,
@@ -43,12 +44,8 @@ export function NotificationMenu() {
   }
 
   let body;
-  if (notifications.isPending) {
-    body = <p className="quiet">{LOADING_TEXT}</p>;
-  } else if (notifications.isError) {
-    body = <p className="quiet">알림을 불러오는데 실패했어요</p>;
-  } else if (rows.length === 0) {
-    body = <p className="quiet">새 알림이 없어요</p>;
+  if (!notifications.isSuccess || rows.length === 0) {
+    body = <Empty state={loadState(notifications)} text="새 알림이 없어요" />;
   } else {
     body = (
       <ul>
@@ -68,17 +65,20 @@ export function NotificationMenu() {
 
   return (
     <div className="notes">
-      <button
-        className="ic bell"
+      <IconButton
+        className="bell"
         aria-expanded={open}
-        aria-label={unread === 0 ? "알림" : `알림, 안 읽음 ${unread}개`}
+        label={unread === 0 ? "알림" : `알림, 안 읽음 ${unread}개`}
         popoverTarget={NOTES_POP_ID}
-      >
-        <BellIcon />
-        {unread === 0 ? null : (
-          <span className="count" aria-hidden="true">{unread > 99 ? "99+" : unread}</span>
+        icon={(
+          <>
+            <BellIcon />
+            {unread === 0 ? null : (
+              <span className="count" aria-hidden="true">{unread > 99 ? "99+" : unread}</span>
+            )}
+          </>
         )}
-      </button>
+      />
 
       <div
         id={NOTES_POP_ID}
@@ -91,7 +91,7 @@ export function NotificationMenu() {
         <div className="nhead">
           <b>알림</b>
           {unread === 0 ? null : (
-            <button className="readall" onClick={() => void readAll()}>모두 읽음</button>
+            <MenuItem className="readall" onClick={() => void readAll()}>모두 읽음</MenuItem>
           )}
         </div>
         {body}

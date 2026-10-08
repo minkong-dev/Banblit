@@ -15,6 +15,7 @@ import {
   sendFile,
 } from "../lib/pipeline";
 import { say } from "../lib/toast";
+import { Button, FilePicker, FormFoot } from "./controls";
 import { AttachmentRow } from "./PostAttachments";
 import { RichText } from "./RichText";
 
@@ -164,23 +165,16 @@ export function WriteForm(props: {
         <div className="wide">
           <span id="postFilesLabel">첨부파일</span> <span className="meta">{ATTACHMENT_HINT}</span>
           <div className="filepick">
-            <button
-              type="button"
-              className="btn"
-              disabled={send.isPending}
-              onClick={() => picker.current?.click()}
-            >
+            <Button kind="ghost" disabled={send.isPending} onClick={() => picker.current?.click()}>
               파일 선택
-            </button>
+            </Button>
             <span className="meta">
               {files.length === 0 ? "선택한 파일 없음" : `${files.length}개 선택함`}
             </span>
           </div>
-          <input
+          <FilePicker
             id="postFiles"
-            className="filehidden"
             aria-labelledby="postFilesLabel"
-            type="file"
             multiple
             tabIndex={-1}
             accept={ATTACHMENT_ACCEPT}
@@ -188,10 +182,7 @@ export function WriteForm(props: {
             disabled={send.isPending}
             aria-invalid={bad !== ""}
             aria-describedby={bad === "" ? undefined : "postWhy"}
-            onChange={(event) => {
-              setTouched(true);
-              setFiles([...(event.target.files ?? [])]);
-            }}
+            onFiles={(picked) => { setTouched(true); setFiles(picked); }}
           />
         </div>
       </div>
@@ -205,15 +196,16 @@ export function WriteForm(props: {
           </ul>
         </div>
       )}
-      <div className="acts">
-        <button className="btn" type="button" onClick={onCancel}>취소</button>
-        <button className="btn go" type="submit"
-          disabled={send.isPending || authorId === null || draftId === null}>
-          {send.isPending ? "업로드 중…" : "글쓰기"}
-        </button>
-      </div>
       {stage === "" ? null : <p className="note" role="status">{stage}</p>}
-      {bad === "" ? null : <p className="why" id="postWhy" role="alert">{bad}</p>}
+      <FormFoot
+        submitLabel="글쓰기"
+        pendingLabel="업로드 중…"
+        pending={send.isPending}
+        blocked={authorId === null || draftId === null}
+        onCancel={onCancel}
+        bad={bad}
+        whyId="postWhy"
+      />
     </form>
   );
 }

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { Button } from "../components/controls";
 import { Card, Tabs } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
 import { getJSON, reason } from "../lib/api";
@@ -152,22 +153,18 @@ export function Assignment() {
   const actions = !canRun && !canRollback ? null : (
     <div className="act">
       {!canRun ? null : (
-        <button className="btn go" disabled={recompute.isPending || activePeriodId === null}
+        <Button kind="go" pending={recompute.isPending} pendingLabel="스케줄링 진행 중…" disabled={activePeriodId === null}
           onClick={() => recompute.mutate({ team_ids: teamIds, room_ids: roomIds })}>
-          {recompute.isPending ? "스케줄링 진행 중…" : "스케줄링"}
-        </button>
+          스케줄링
+        </Button>
       )}
       {/* ponytail: 되돌리기는 취소할 수 없어 확인을 한 번 요청합니다. 이 화면에는 확인 dialog(화면 위에 뜨는 대화 상자)가
           없어 브라우저 기본 대화상자를 사용합니다. 화면 자체의 dialog 가 생기면 그 dialog 로 교체합니다. */}
       {!canRollback ? null : (
-        <button className="btn" disabled={rollback.isPending || activePeriodId === null}
-          onClick={() => {
-            if (askRollback()) {
-              rollback.mutate();
-            }
-          }}>
-          {rollback.isPending ? "되돌리는 중…" : "이전 배정안으로 되돌리기"}
-        </button>
+        <Button kind="ghost" pending={rollback.isPending} pendingLabel="되돌리는 중…" disabled={activePeriodId === null}
+          onClick={() => { if (askRollback()) rollback.mutate(); }}>
+          이전 배정안으로 되돌리기
+        </Button>
       )}
     </div>
   );

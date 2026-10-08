@@ -28,7 +28,7 @@ import {
 } from "../lib/settings";
 import { say } from "../lib/toast";
 import { BlindedCards } from "./SettingsBlinded";
-import { Cell } from "./SettingsForm";
+import { Cell, Why } from "../components/controls";
 import { MemberCards } from "./SettingsMembers";
 import { PeriodCard } from "./SettingsPeriods";
 import { ReservationCards } from "./SettingsReservations";
@@ -226,7 +226,7 @@ function SlotUnitCard({ canEdit, onSaved }: { canEdit: boolean; onSaved: () => v
             onChange={(next) => save.mutate({ dailyMaxHours: next })}
           />
         </Cell>
-        {why === "" ? null : <p className="why" id="slotUnitWhy" role="alert">{why}</p>}
+        <Why text={why} id="slotUnitWhy" />
       </div>
     </Card>
   );

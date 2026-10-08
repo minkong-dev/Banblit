@@ -27,5 +27,7 @@ test("팀 관리에서 팀을 누르면 포지션에 지정된 멤버가 나온�
   await page.goto("/teams");
   await page.locator(".teamrow2", { hasText: E2E_TEAM }).click();
 
+  // 팀 상세(포지션 구성)는 자기 주소를 가집니다.
+  await expect(page).toHaveURL(/\/teams\/\d+$/);
   await expect(page.locator(".lineup").getByText(E2E_ACCOUNT.name)).toBeVisible();
 });

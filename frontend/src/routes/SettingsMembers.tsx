@@ -9,16 +9,10 @@ import { useEffect, useRef, useState } from "react";
 import { Card, SectionHead } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
 import { MemberPicker } from "../components/MemberPicker";
-import { Modal, ModalFormFoot } from "../components/Modal";
+import { Button, DeleteButton, EditButton, Empty, FormFoot, IconButton, NavButton, Toggle, Why } from "../components/controls";
+import { Modal } from "../components/Modal";
 import { SeatRow } from "../components/SeatRow";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  PencilIcon,
-  PersonIcon,
-  PlusIcon,
-  TrashIcon,
-} from "../components/icons";
+import { PersonIcon, PlusIcon } from "../components/icons";
 import { getJSON, reason } from "../lib/api";
 import { say } from "../lib/toast";
 import { cohortLabel } from "../lib/roster";
@@ -76,7 +70,7 @@ function SetForm(props: {
   return (
     <Modal title={title} hint="부여할 권한을 설정해 커스텀 권한을 만들 수 있어요." onClose={onClose}
       foot={
-        <ModalFormFoot
+        <FormFoot
           onCancel={onClose}
           pending={send.isPending}
           submitLabel="저장"
@@ -118,18 +112,16 @@ function SetForm(props: {
               <b>{item.label}</b>
               <small>{item.note}</small>
             </label>
-            <input
-              className="sw"
+            <Toggle
+              kind="switch"
               id={`sw-${item.key}`}
-              type="checkbox"
-              role="switch"
               checked={form.permissions.includes(item.key)}
-              onChange={(event) => toggle(item.key, event.target.checked)}
+              onChange={(on) => toggle(item.key, on)}
             />
           </li>
         ))}
       </ul>
-      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+      <Why text={bad} />
     </Modal>
   );
 }
@@ -181,21 +173,18 @@ function GrantHolders(props: {
     <Modal title={set.name} hint="해당 권한을 가진 멤버" onClose={onClose}>
       <ul className="lineup">
         {set.members.length === 0 ? (
-          <li className="empty">아직 해당 권한을 가진 멤버가 없어요</li>
+          <Empty as="li" text="아직 해당 권한을 가진 멤버가 없어요" />
         ) : (
           set.members.map((person) => (
             <SeatRow
               key={person.id}
               name={person.name}
               actions={
-                <button
-                  className="ic danger"
+                <DeleteButton
                   disabled={revoke.isPending}
-                  aria-label={`${person.name} 에게서 권한 제거하기`}
+                  label={`${person.name} 에게서 권한 제거하기`}
                   onClick={() => revoke.mutate(person.id)}
-                >
-                  <TrashIcon />
-                </button>
+                />
               }
             />
           ))
@@ -222,18 +211,10 @@ function SetTile(props: {
       </div>
       <p className="tilenote">{set.description || "권한 설명을 작성해주세요"}</p>
       <div className="tileacts">
-        <button className="ic" aria-label={`${set.name} 권한을 가진 멤버 보기`} onClick={onHolders}>
-          <PersonIcon />
-        </button>
-        <button className="ic" aria-label={`${set.name} 멤버 추가`} onClick={onGrant}>
-          <PlusIcon />
-        </button>
-        <button className="ic" aria-label={`${set.name} 수정`} onClick={onEdit}>
-          <PencilIcon />
-        </button>
-        <button className="ic danger" aria-label={`${set.name} 삭제`} onClick={onDelete}>
-          <TrashIcon />
-        </button>
+        <IconButton label={`${set.name} 권한을 가진 멤버 보기`} icon={<PersonIcon />} onClick={onHolders} />
+        <IconButton label={`${set.name} 멤버 추가`} icon={<PlusIcon />} onClick={onGrant} />
+        <EditButton label={`${set.name} 수정`} onClick={onEdit} />
+        <DeleteButton label={`${set.name} 삭제`} onClick={onDelete} />
       </div>
     </li>
   );
@@ -330,12 +311,8 @@ function SetRail() {
     <Card>
       <SectionHead title="권한" desc="부여할 권한을 설정해 커스텀 권한을 만들 수 있어요">
         <span className="railnav">
-          <button className="ic" aria-label="이전 권한" onClick={() => slide(-1)}>
-            <ChevronLeftIcon />
-          </button>
-          <button className="ic" aria-label="다음 권한" onClick={() => slide(1)}>
-            <ChevronRightIcon />
-          </button>
+          <NavButton dir="prev" label="이전 권한" onClick={() => slide(-1)} />
+          <NavButton dir="next" label="다음 권한" onClick={() => slide(1)} />
         </span>
       </SectionHead>
 
@@ -351,7 +328,7 @@ function SetRail() {
           />
         ))}
         <li className="tile add">
-          <button onClick={() => setOpen({ kind: "new" })}>+ 새 권한</button>
+          <Button kind="ghost" onClick={() => setOpen({ kind: "new" })}>+ 새 권한</Button>
         </li>
       </ul>
 
@@ -433,13 +410,7 @@ function MemberRoster(props: {
                   <td role="cell">
                     {/* 자기 계정은 탈퇴로만 삭제합니다. 서버도 자기 자신의 추방을 거부합니다. */}
                     {row.id === meId ? null : (
-                      <button
-                        className="ic danger"
-                        aria-label={`${row.name} 추방`}
-                        onClick={() => onExpel(row)}
-                      >
-                        <TrashIcon />
-                      </button>
+                      <DeleteButton label={`${row.name} 추방`} onClick={() => onExpel(row)} />
                     )}
                   </td>
                 )}
@@ -448,7 +419,7 @@ function MemberRoster(props: {
           </tbody>
           {/* eslint-enable jsx-a11y/no-interactive-element-to-noninteractive-role */}
         </table>
-        {shown.length === 0 ? <p className="empty">표시할 멤버가 없어요</p> : null}
+        {shown.length === 0 ? <Empty text="표시할 멤버가 없어요" /> : null}
         {/* 이 요소가 화면에 들어오면 다음 페이지를 불러옵니다. */}
         <div ref={foot} className="rosterfoot">{done ? "" : LOADING_TEXT}</div>
       </div>

@@ -323,7 +323,7 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
 }
 .notes .nhead .readall:hover { background: var(--card-2); color: var(--t1); }
 
-.notes .notepop .quiet { margin: 0; padding: 4px 18px 14px; font-size: 13.5px; color: var(--t3); }
+.notes .notepop .empty { margin: 0; padding: 4px 18px 14px; font-size: 13.5px; color: var(--t3); }
 
 .notes .notepop ul { list-style: none; margin: 0; padding: 0 8px; max-height: 340px; overflow-y: auto; }
 .notes .note { padding: 10px 10px; border-radius: 10px; }
@@ -389,11 +389,10 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
    제목 줄(.mhead)의 아래 여백에서 4px 을 가져와 제목과 본문 사이 간격은 그대로 14px 입니다. */
 .mbody { padding: 4px 24px 22px; flex: 1; min-height: 0; overflow-y: auto; }
 .mfoot { padding: 16px 24px 22px; border-top: 1px solid var(--line); display: flex; gap: 10px; }
-.primary { flex: 1; min-height: 54px; padding: 15px; background: var(--brand); color: var(--brand-on); border-radius: var(--r-pill); font-size: 16px; font-weight: 700; transition: background-color .15s ease, transform .12s ease; }
-.primary:hover { background: var(--coral-lite); }
-.primary:active:not(:disabled) { transform: scale(.985); }
-.ghost { min-height: 54px; padding: 15px 24px; background: var(--card-2); color: var(--t2); border-radius: var(--r-pill); font-size: 16px; font-weight: 700; }
-.ghost:hover { color: var(--t1); }
+/* modal 아래 줄의 버튼은 공용 .btn(위)보다 한 단계 큽니다. 저장(.go)이 남는 폭을 전부 차지합니다. */
+.mfoot .acts { flex: 1; gap: 10px; }
+.mfoot .btn { min-height: 54px; padding: 15px 24px; border-color: transparent; font-size: 16px; }
+.mfoot .btn.go { flex: 1; padding: 15px; }
 
 /* 숫자 조절입니다. 왼쪽에 이름, 오른쪽에 `− 2 +` 를 표시합니다. modal 안에서만 사용하므로 이 파일에 둡니다. */
 .stepper { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); }
@@ -426,22 +425,10 @@ dialog[open] { animation: mpop .2s cubic-bezier(.22,1,.36,1); }
 .pager button[aria-current="page"] { background: var(--card-2); color: var(--t1); font-weight: 700; }
 .pager button:disabled { opacity: .35; cursor: default; }
 
-/* 목록 아래 버튼(+ 새 팀 등)은 좁은 화면에서도 한 줄입니다. */
-.listfoot .new {
-  white-space: nowrap;
-  grid-column: 3; justify-self: end;
-  min-height: 44px; padding: 11px 20px; border-radius: var(--r-pill);
-  background: var(--brand); color: var(--brand-on);
-  font-size: 14px; font-weight: 700;
-  transition: background-color .15s ease, transform .12s ease;
-}
-.listfoot .new:hover { background: var(--coral-lite); }
-.listfoot .new:active:not(:disabled) { transform: scale(.985); }
+/* 목록 아래 버튼(+ 새 팀 등)은 오른쪽 끝이고 좁은 화면에서도 한 줄입니다. 색·크기는 공용 .btn 이 정합니다. */
+.listfoot .btn { white-space: nowrap; grid-column: 3; justify-self: end; }
 /* 글쓰기처럼 주소로 이동하는 버튼은 링크(a)라 밑줄이 붙습니다. 버튼 모양이므로 밑줄을 없앱니다. */
-.listfoot a.new { text-decoration: none; }
-/* 되돌릴 수 없는 동작의 버튼입니다. 색으로도 다른 동작임을 표시합니다. */
-.listfoot .new.danger { background: var(--red); }
-.listfoot .new[disabled] { opacity: .45; cursor: default; }
+.listfoot a.btn { text-decoration: none; }
 
 /* ===== 멤버 검색 =====
    팀 생성 modal 위에 한 겹 더 표시되는 modal 의 내용입니다. 빈 검색어에는 명단 전체를 표시합니다.

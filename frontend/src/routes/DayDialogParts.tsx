@@ -4,8 +4,7 @@ import { useRef } from "react";
 import type { CSSProperties, PointerEvent } from "react";
 
 import { Dropdown } from "../components/Dropdown";
-import { CheckMark } from "../components/CheckMark";
-import { PencilIcon, TrashIcon } from "../components/icons";
+import { DeleteButton, EditButton, Toggle, Why } from "../components/controls";
 import {
   acceptsDrag, cellAt, dragRange, hasWeekday, REPEAT_WEEKDAY_NAMES, repeatLabel, slotLabels, slotSteps,
   toggleWeekday, weekdayIndex,
@@ -193,21 +192,12 @@ export function MyEntriesList({ title, empty, entries, teams, onRemove, onEdit, 
                   <span className="ps">{when}</span>
                 </span>
                 {onEdit === undefined || entry.kind !== "off" ? null : (
-                  <button
-                    className="ic"
-                    aria-label={`${entryName(entry, teams)} ${when} 수정`}
-                    onClick={() => onEdit(entry)}
-                  >
-                    <PencilIcon />
-                  </button>
+                  <EditButton label={`${entryName(entry, teams)} ${when} 수정`} onClick={() => onEdit(entry)} />
                 )}
-                <button
-                  className="ic danger"
-                  aria-label={`${entryName(entry, teams)} ${when} ${entry.kind === "book" ? "예약 취소" : "불가능 일정 삭제"}`}
+                <DeleteButton
+                  label={`${entryName(entry, teams)} ${when} ${entry.kind === "book" ? "예약 취소" : "불가능 일정 삭제"}`}
                   onClick={() => onRemove(entry)}
-                >
-                  <TrashIcon />
-                </button>
+                />
               </li>
             );
           })}
@@ -261,9 +251,10 @@ export function RepeatFields({ dayKey, value, onChange }: {
   const conflict = repeatConflict(value);
   return (
     <div className="rep">
-      {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- CheckMark 컴포넌트 안에 input 이 있습니다. eslint 는 컴포넌트 내부를 확인하지 못합니다. */}
+      {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Toggle 컴포넌트 안에 input 이 있습니다. eslint 는 컴포넌트 내부를 확인하지 못합니다. */}
       <label className="repon">
-        <CheckMark
+        <Toggle
+          kind="check"
           id="offRepeatOn"
           checked={on}
           onChange={(next) => onChange(next
@@ -315,7 +306,7 @@ export function RepeatFields({ dayKey, value, onChange }: {
             />
           </label>
           <p className="sub">고른 요일 전부가 한 세트입니다. 4 를 넣으면 그 요일들이 4주 동안 반복합니다.</p>
-          {conflict === "" ? null : <p className="why">{conflict}</p>}
+          <Why text={conflict} />
         </div>
       )}
     </div>

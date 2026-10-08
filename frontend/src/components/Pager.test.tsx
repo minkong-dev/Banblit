@@ -12,15 +12,15 @@ describe("Pager — 이전·다음 버튼과 현재 쪽", () => {
   it("첫 쪽에서는 이전 버튼만 disabled 이다", () => {
     const html = render(1, 3);
 
-    expect(html).toMatch(/<button aria-label="이전 목록" disabled="">/);
-    expect(html).not.toMatch(/<button aria-label="다음 목록" disabled/);
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-label="이전 목록"/);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*aria-label="다음 목록"/);
   });
 
   it("마지막 쪽에서는 다음 버튼만 disabled 이다", () => {
     const html = render(3, 3);
 
-    expect(html).toMatch(/<button aria-label="다음 목록" disabled="">/);
-    expect(html).not.toMatch(/<button aria-label="이전 목록" disabled/);
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-label="다음 목록"/);
+    expect(html).not.toMatch(/<button[^>]*disabled=""[^>]*aria-label="이전 목록"/);
   });
 
   it("현재 쪽 번호에만 aria-current=page 가 붙는다", () => {

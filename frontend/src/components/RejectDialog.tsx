@@ -4,8 +4,9 @@
 import { useMutation } from "@tanstack/react-query";
 import { useId, useState } from "react";
 
-import { Modal, ModalFormFoot } from "./Modal";
-import { reason as failureReason } from "../lib/api";
+import { FormFoot, Why } from "./controls";
+import { Modal } from "./Modal";
+import { firstWhy } from "../lib/loading";
 import { REJECT_REASON_MAX_LENGTH } from "../lib/contract";
 import type { RejectTarget } from "../lib/contract";
 import { REJECT_TARGET_LABEL } from "../lib/notifications";
@@ -38,7 +39,7 @@ export function RejectDialog({ target, owner, subject, onReject, onDone, onClose
       hint={`${owner}님의 ${label}을 반려할게요.`}
       onClose={onClose}
       foot={
-        <ModalFormFoot
+        <FormFoot
           onCancel={onClose}
           onSubmit={() => { if (trimmed !== "") reject.mutate(); }}
           pending={reject.isPending}
@@ -62,7 +63,7 @@ export function RejectDialog({ target, owner, subject, onReject, onDone, onClose
         </label>
         <span className="count" aria-live="polite">{text.length}/{REJECT_REASON_MAX_LENGTH}</span>
       </div>
-      {reject.isError ? <p className="why" role="alert">{failureReason(reject.error)}</p> : null}
+      <Why text={firstWhy([reject.error])} />
     </Modal>
   );
 }

@@ -3,7 +3,7 @@ import { useQueries } from "@tanstack/react-query";
 
 import { Modal } from "../components/Modal";
 import { Dropdown } from "../components/Dropdown";
-import { CloseIcon } from "../components/icons";
+import { Button, CloseButton } from "../components/controls";
 import { askCancel, askDelete } from "../lib/confirm";
 import {
   addReservation,
@@ -354,7 +354,7 @@ export function DayDialog({
             <h2>{dayName}</h2>
             <p>{hint}</p>
           </div>
-          <button aria-label="닫기" onClick={onClose}><CloseIcon /></button>
+          <CloseButton onClick={onClose} />
         </div>
         {tab === "me"
           ? <DayTimeline list={mine} teams={teams} pick={pick} {...hours} />
@@ -364,15 +364,12 @@ export function DayDialog({
       <section className="pane">
         {tab === "me" ? offForm : bookForm}
         <div className="mfoot">
-          <button className="ghost" onClick={editing === null ? onClose : cancelEdit}>
+          <Button kind="ghost" onClick={editing === null ? onClose : cancelEdit}>
             {editing === null ? "닫기" : "수정 취소"}
-          </button>
-          <button
-            className="primary"
-            onClick={() => { void (tab === "me" ? addOff() : addBooking()); }}
-          >
+          </Button>
+          <Button kind="go" onClick={() => { void (tab === "me" ? addOff() : addBooking()); }}>
             {tab !== "me" ? "예약하기" : editing === null ? "등록하기" : "수정 저장"}
-          </button>
+          </Button>
         </div>
       </section>
       <section className="pane">

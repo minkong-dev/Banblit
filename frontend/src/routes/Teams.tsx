@@ -1,18 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import { Card, SectionHead } from "../components/Layout";
 import { Pager } from "../components/Pager";
 import { MemberPicker } from "../components/MemberPicker";
-import { Modal, ModalFormFoot, Stepper } from "../components/Modal";
-import { PencilIcon, SearchIcon, TrashIcon } from "../components/icons";
+import { Button, DeleteButton, EditButton, Empty, FormFoot, IconButton, Why } from "../components/controls";
+import { Modal, Stepper } from "../components/Modal";
+import { SearchIcon } from "../components/icons";
 import { SeatRow } from "../components/SeatRow";
 import { useMe, useTeams } from "../components/queries";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { say } from "../lib/toast";
 import { askDelete } from "../lib/confirm";
 import { getJSON, reason } from "../lib/api";
-import { loadState, stateText } from "../lib/loading";
+import { loadState } from "../lib/loading";
 import { can, canManageTeams, teamNavLabel } from "../lib/account";
 import { checkSlotCounts, checkTeamName, memberLabel, slotName } from "../lib/pipeline";
 import { INSTRUMENTS } from "../lib/contract";
@@ -73,12 +75,8 @@ function TeamRow(props: {
       </button>
       {onRename === undefined ? null : (
         <span className="acts">
-          <button className="ic" aria-label={`${team.name} 수정`} onClick={onRename}>
-            <PencilIcon />
-          </button>
-          <button className="ic danger" aria-label={`${team.name} 삭제`} onClick={onDelete}>
-            <TrashIcon />
-          </button>
+          <EditButton label={`${team.name} 수정`} onClick={onRename} />
+          <DeleteButton label={`${team.name} 삭제`} onClick={onDelete} />
         </span>
       )}
     </div>
@@ -160,7 +158,7 @@ function Lineup(props: {
   });
 
   // isSuccess 로 분기해야 TypeScript 가 아래에서 slots.data 를 undefined 없이 좁혀줍니다.
-  if (!slots.isSuccess) return <div className="empty">{stateText(loadState(slots), "")}</div>;
+  if (!slots.isSuccess) return <Empty as="div" state={loadState(slots)} text="" />;
 
   return (
     <ul className="lineup">
@@ -172,22 +170,10 @@ function Lineup(props: {
           actions={!canAdd && !canRemove ? undefined : (
             <>
               {!canAdd ? null : (
-                <button
-                  className="ic"
-                  aria-label={`${label} 지정할 멤버 찾기`}
-                  onClick={() => setSeeking(slot.id)}
-                >
-                  <SearchIcon />
-                </button>
+                <IconButton label={`${label} 지정할 멤버 찾기`} icon={<SearchIcon />} onClick={() => setSeeking(slot.id)} />
               )}
               {slot.member_id === null || !canRemove ? null : (
-                <button
-                  className="btn"
-                  disabled={clear.isPending}
-                  onClick={() => clear.mutate(slot.id)}
-                >
-                  삭제
-                </button>
+                <Button kind="ghost" disabled={clear.isPending} onClick={() => clear.mutate(slot.id)}>삭제</Button>
               )}
             </>
           )}
@@ -301,7 +287,7 @@ function SeatRows(props: {
 }) {
   const { seats, canAdd, canRemove, onPick, onRemove } = props;
   const [seeking, setSeeking] = useState<Seat | null>(null);
-  if (seats.length === 0) return <p className="empty">포지션 인원을 설정하면 자리가 추가돼요</p>;
+  if (seats.length === 0) return <Empty text="포지션 인원을 설정하면 자리가 추가돼요" />;
   return (
     <>
       <ul className="lineup">
@@ -313,12 +299,10 @@ function SeatRows(props: {
             actions={(
               <>
                 {!canAdd ? null : (
-                  <button className="ic" type="button" aria-label={`${seat.label} 지정할 멤버 찾기`} onClick={() => setSeeking(seat)}>
-                    <SearchIcon />
-                  </button>
+                  <IconButton label={`${seat.label} 지정할 멤버 찾기`} icon={<SearchIcon />} onClick={() => setSeeking(seat)} />
                 )}
                 {seat.member === null || !canRemove ? null : (
-                  <button className="btn" type="button" onClick={() => onRemove(seat)}>삭제</button>
+                  <Button kind="ghost" onClick={() => onRemove(seat)}>삭제</Button>
                 )}
               </>
             )}
@@ -396,8 +380,8 @@ function TeamForm(props: TeamFormProps) {
   return (
     <Modal title={isNew ? "새 팀" : "팀 수정"} hint="이름, 색, 포지션, 멤버를 설정한 뒤 한 번에 저장해요" onClose={onClose}
       foot={
-        <ModalFormFoot
-          extra={onDelete === undefined ? undefined : <button className="ghost drop" onClick={onDelete}>팀 삭제</button>}
+        <FormFoot
+          extra={onDelete === undefined ? undefined : <Button kind="ghost" className="drop" onClick={onDelete}>팀 삭제</Button>}
           onCancel={onClose}
           pending={save.isPending}
           submitLabel={idle}
@@ -416,7 +400,7 @@ function TeamForm(props: TeamFormProps) {
         onPick={(seat, member) => setMembers((now) => new Map(now).set(keyOf(seat), member))}
         onRemove={(seat) => setMembers((now) => new Map([...now].filter(([key]) => key !== keyOf(seat))))}
       />
-      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+      <Why text={bad} />
     </Modal>
   );
 }
@@ -433,16 +417,23 @@ function EditTeam(props: Omit<TeamFormProps, "team" | "start"> & { team: Team })
   if (!slots.isSuccess) {
     return (
       <Modal title="팀 수정" onClose={onClose}>
-        <p className="empty">{stateText(loadState(slots), "")}</p>
+        <Empty state={loadState(slots)} text="" />
       </Modal>
     );
   }
   return <TeamForm {...props} start={startOf(team, slots.data.slots)} />;
 }
 
+/** 팀 목록입니다. 열린 팀(포지션 구성 modal)은 주소의 :teamId 가 정합니다(/teams/:teamId). */
 export function Teams() {
   const { me, teamIds } = useMe();
-  const [openId, setOpenId] = useState<number | null>(null);
+  const navigate = useNavigate();
+  const { teamId } = useParams();
+  const openId = teamId === undefined ? null : Number(teamId);
+  const setOpenId = (next: number | null | ((now: number | null) => number | null)): void => {
+    const id = typeof next === "function" ? next(openId) : next;
+    void navigate(id === null ? "/teams" : `/teams/${id}`);
+  };
   const [making, setMaking] = useState(false);
   const [renaming, setRenaming] = useState<Team | null>(null);
   const [page, setPage] = useState(1);
@@ -489,7 +480,7 @@ export function Teams() {
               컨테이너가 사라지면 측정할 대상이 없어집니다. */}
           <ul className="rows">
             {noList ? (
-              <li className="empty">{stateText(state, manages ? "아직 생성된 팀이 없어요." : "소속된 팀이 없어요.")}</li>
+              <Empty as="li" state={state} text={manages ? "아직 생성된 팀이 없어요." : "소속된 팀이 없어요."} />
             ) : (
               pageSlice(list, shownPage).map((team) => (
                 <li key={team.id}>
@@ -511,7 +502,7 @@ export function Teams() {
               <Pager page={shownPage} pages={pages} onPage={setPage} />
             )}
             {!canCreate ? null : (
-              <button className="new" onClick={() => setMaking(true)}>+ 새 팀</button>
+              <Button kind="go" onClick={() => setMaking(true)}>+ 새 팀</Button>
             )}
           </div>
         </Card>

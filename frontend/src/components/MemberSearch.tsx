@@ -7,11 +7,11 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { getJSON, reason } from "../lib/api";
+import { getJSON } from "../lib/api";
 import { memberLabel, noMembersMessage } from "../lib/pipeline";
-import { LOADING_TEXT } from "../lib/loading";
+import { loadState } from "../lib/loading";
 import type { Member } from "../lib/contract";
-
+import { Empty, SearchInput } from "./controls";
 
 export function MemberSearch(props: {
   onPick: (member: Member) => void;
@@ -34,12 +34,8 @@ export function MemberSearch(props: {
   const members = (found.data?.members ?? []).filter((member) => !skip.has(member.id));
 
   let body;
-  if (found.isPending) {
-    body = <p className="empty">{LOADING_TEXT}</p>;
-  } else if (found.isError) {
-    body = <p className="empty">{reason(found.error)}</p>;
-  } else if (members.length === 0) {
-    body = <p className="empty">{noMembersMessage(query)}</p>;
+  if (!found.isSuccess || members.length === 0) {
+    body = <Empty state={loadState(found)} text={noMembersMessage(query)} />;
   } else {
     body = (
       <ul className="found">
@@ -58,14 +54,13 @@ export function MemberSearch(props: {
     <div className="seek">
       {/* 목록이 길어 본문이 스크롤해도 입력 칸은 제자리에 남습니다(shell.css 의 .seekbar). */}
       <div className="seekbar">
-        <input
+        <SearchInput
           // eslint-disable-next-line jsx-a11y/no-autofocus -- 검색 컴포넌트가 열릴 때 검색어 입력칸으로 초점을 이동합니다. 페이지 최초 로드가 아닙니다.
           autoFocus
-          type="search"
+          label="검색어"
           value={text}
-          aria-label="검색어"
           placeholder="이름을 입력해주세요"
-          onChange={(event) => setText(event.target.value)}
+          onChange={setText}
         />
       </div>
       {body}

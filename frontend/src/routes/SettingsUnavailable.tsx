@@ -9,6 +9,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
+import { Button, Empty, SearchInput } from "../components/controls";
 import { Card, SectionHead } from "../components/Layout";
 import { RejectDialog } from "../components/RejectDialog";
 import { useMe } from "../components/queries";
@@ -55,27 +56,22 @@ export function UnavailableCards() {
       <SectionHead title="불가능 일정" desc="전체 멤버가 등록한 불가능 일정이에요." />
 
       <div className="roster">
-        <label className="find">
+        <label className="find" htmlFor="findMember">
           <span>멤버 이름</span>
-          <input
-            type="search"
-            value={keyword}
-            placeholder="이름으로 찾기"
-            onChange={(event) => setKeyword(event.target.value)}
-          />
+          <SearchInput id="findMember" label="멤버 이름" value={keyword} placeholder="이름으로 찾기" onChange={setKeyword} />
         </label>
 
-        {list.isError ? <p className="empty">{reason(list.error)}</p> : null}
+        {list.isError ? <Empty text={reason(list.error)} /> : null}
         <UnavailableTable
           rows={shown}
           meId={me?.id ?? null}
           canReject={can(me, "unavailable_manage")}
           onReject={setRejecting}
         />
-        {list.isPending ? <p className="empty">불가능 일정을 불러오고 있어요.</p> : null}
-        {list.isSuccess && rows.length === 0 ? <p className="empty">등록된 불가능 일정이 없어요</p> : null}
+        {list.isPending ? <Empty text="불가능 일정을 불러오고 있어요." /> : null}
+        {list.isSuccess && rows.length === 0 ? <Empty text="등록된 불가능 일정이 없어요" /> : null}
         {list.isSuccess && rows.length > 0 && shown.length === 0 ? (
-          <p className="empty">{needle} 님이 등록한 불가능 일정이 없어요</p>
+          <Empty text={`${needle} 님이 등록한 불가능 일정이 없어요`} />
         ) : null}
       </div>
 
@@ -133,9 +129,9 @@ function UnavailableTable({ rows, meId, canReject, onReject }: {
               {row.member_id === meId ? (
                 <DeleteOwnButton row={row} />
               ) : canReject ? (
-                <button className="btn" aria-label={`${row.member} ${whenLabel(row)} 반려`} onClick={() => onReject(row)}>
+                <Button kind="ghost" aria-label={`${row.member} ${whenLabel(row)} 반려`} onClick={() => onReject(row)}>
                   반려
-                </button>
+                </Button>
               ) : null}
             </td>
           </tr>
@@ -156,13 +152,13 @@ function DeleteOwnButton({ row }: { row: MemberUnavailable }) {
   });
   const label = `${whenLabel(row)} 불가능 일정`;
   return (
-    <button
-      className="btn"
+    <Button
+      kind="ghost"
       disabled={remove.isPending}
       aria-label={`${label} 삭제`}
       onClick={() => { if (askDelete(label)) remove.mutate(); }}
     >
       삭제
-    </button>
+    </Button>
   );
 }

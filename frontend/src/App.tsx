@@ -68,11 +68,13 @@ export function App() {
         ))}
         {/* 관리자 메뉴를 구역별 주소로 분리하기 전의 주소입니다. 저장해 둔 링크가 끊기지 않게 둡니다. */}
         <Route path="/settings" element={<SettingsIndex />} />
-        <Route path="/notices" element={<Notices />} />
+        {/* 글·팀 상세는 주소로 엽니다. :postId?·:teamId? 의 ? 는 그 자리가 없어도 같은 화면이라는 뜻이고,
+            정적인 /new 가 :postId 보다 먼저 맞습니다(React Router 의 순위). */}
+        <Route path="/notices/:postId?" element={<Notices />} />
         <Route path="/notices/new" element={<NoticeWrite />} />
-        <Route path="/board" element={<Board />} />
+        <Route path="/board/:teamId?/:postId?" element={<Board />} />
         <Route path="/board/:teamId/new" element={<BoardWrite />} />
-        <Route path="/teams" element={<Teams />} />
+        <Route path="/teams/:teamId?" element={<Teams />} />
         <Route path="/profile" element={<Profile />} />
       </Route>
       {/* 등록된 주소가 아니면 여기로 옵니다. 이 route 가 없으면 아무것도 렌더링되지 않아 빈 화면이 표시됩니다. */}

@@ -32,7 +32,7 @@ test("알림 버튼이 서버가 준 내 알림을 보여주고 모두 읽음으
   expect(unread).toBeGreaterThan(0);
 
   await page.goto("/scheduler");
-  await page.getByRole("button", { name: `알림 · 안 읽음 ${unread}개` }).click();
+  await page.getByRole("button", { name: `알림, 안 읽음 ${unread}개` }).click();
 
   const popup = page.getByRole("dialog", { name: "알림" });
   await expect(popup.locator("li")).toHaveCount(notifications.length);

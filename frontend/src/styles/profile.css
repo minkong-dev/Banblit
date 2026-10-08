@@ -36,8 +36,6 @@ body[data-page="profile"] {
   .photo .pop::before { left: calc(50% - 7px); right: auto; }
   /* 카드는 기본으로 넘치는 내용을 자릅니다. 말풍선이 카드 밖으로 나갈 수 있으므로 프로필 카드는 자르지 않습니다. */
   .card:has(.prohead) { overflow: visible; }
-  /* 파일 선택 칸은 브라우저마다 모양이 달라 숨기고, 말풍선의 업로드 메뉴가 대신 누릅니다. */
-  .photo input[type="file"] { display: none; }
 
   /* 여백은 설정 화면 오른쪽 칸(settings.css .read)과 같은 값입니다. */
   .read { padding: 16px 0 18px; display: flex; flex-direction: column; gap: 14px; }

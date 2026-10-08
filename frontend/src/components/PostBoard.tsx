@@ -4,17 +4,16 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { RefObject } from "react";
-
-import { Link } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import type { Attachment, Post, PostComment } from "../lib/contract";
-import { loadState, stateText } from "../lib/loading";
+import { loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { boardActions, boardListKey, getJSON, stampLabel } from "../lib/pipeline";
+import { BackButton, Button, EditButton, Empty } from "./controls";
 import { Card, SectionHead } from "./Layout";
 import { useReturnFocus } from "./hooks";
-import { PencilIcon } from "./icons";
 import { Pager } from "./Pager";
 import { AttachmentList } from "./PostAttachments";
 import { BlindPost, EditPost, RemovePost } from "./PostActions";
@@ -35,7 +34,7 @@ function PostList(props: {
   return (
     <ul className="rows">
       {state.kind !== "ready" || posts.length === 0 ? (
-        <li className="empty">{stateText(state, emptyText)}</li>
+        <Empty as="li" state={state} text={emptyText} />
       ) : (
         posts.map((post) => (
           <li key={post.id}>
@@ -76,7 +75,7 @@ function PostDetail(props: {
 
   // isSuccess 로 분기해야 TypeScript 가 아래에서 detail.data 를 undefined 없이 좁혀줍니다.
   // loadState(detail).kind === "ready" 는 같은 조건이지만 별개 값이라 좁히지 못합니다.
-  if (!detail.isSuccess) return <div className="empty">{stateText(loadState(detail), "")}</div>;
+  if (!detail.isSuccess) return <Empty as="div" state={loadState(detail)} text="" />;
 
   const { post, comments, attachments } = detail.data;
   const { canEdit, canDelete } = boardActions(post.author_id, authorId, canModerate);
@@ -84,14 +83,10 @@ function PostDetail(props: {
   return (
     <div className="thread">
       <div className="threadtop">
-        <button className="back" onClick={onBack}>‹ 목록으로</button>
+        <BackButton label="목록으로" onClick={onBack} />
         {!canEdit && !canDelete && !canModerate ? null : (
           <span className="acts">
-            {!canEdit ? null : (
-              <button className="ic" aria-label="글 수정" onClick={() => setEditing(true)}>
-                <PencilIcon />
-              </button>
-            )}
+            {!canEdit ? null : <EditButton label="글 수정" onClick={() => setEditing(true)} />}
             {!canModerate ? null : <BlindPost postId={post.id} listKey={listKey} onDone={onBack} />}
             {!canDelete ? null : <RemovePost postId={post.id} listKey={listKey} onDone={onBack} />}
           </span>
@@ -110,7 +105,7 @@ function PostDetail(props: {
       <div className="comments">
         <p className="cap2">댓글 {comments.length}개</p>
         {comments.length === 0 ? (
-          <p className="empty">아직 댓글이 없습니다</p>
+          <Empty text="아직 댓글이 없습니다" />
         ) : (
           <ul>
             {comments.map((comment) => (
@@ -135,13 +130,17 @@ function PostDetail(props: {
 }
 
 /** 글 목록, 상세 보기, 작성 폼, 댓글 작성을 통합한 게시판 컴포넌트입니다.
- *  공지사항 화면과 팀별 게시판이 이 컴포넌트를 재사용하며, listPath 와 writePath 만 달라집니다. */
+ *  공지사항 화면과 팀별 게시판이 이 컴포넌트를 재사용하며, listPath 와 writePath 만 달라집니다.
+ *  열린 글은 주소의 :postId 가 정합니다(/notices/:postId, /board/:teamId/:postId). 글을 누르면 그 주소로
+ *  이동하고, 목록으로 돌아가면 basePath 로 이동합니다. */
 export function PostBoard(props: {
   title: string;
   hint: string;
   listPath: string;
   /** 글쓰기 버튼이 여는 작성 페이지의 주소입니다. */
   newPath: string;
+  /** 목록 화면의 주소입니다. 글 상세는 `${basePath}/${postId}` 입니다. */
+  basePath: string;
   /** 현재 사용자의 id. 미인증(로그인 전)이면 null이므로 글과 댓글을 작성할 수 없습니다. */
   authorId: number | null;
   /** 글쓰기 버튼을 표시할지 여부입니다. 공지사항은 notice_write 권한이 있는 사람만,
@@ -151,9 +150,14 @@ export function PostBoard(props: {
   canModerate: boolean;
   emptyText: string;
 }) {
-  const { title, hint, listPath, newPath, authorId, canWrite, canModerate, emptyText } = props;
+  const { title, hint, listPath, newPath, basePath, authorId, canWrite, canModerate, emptyText } = props;
   const queryKey = boardListKey(listPath);
-  const focus = useReturnFocus<HTMLHeadingElement>();
+  const navigate = useNavigate();
+  const { postId } = useParams();
+  const focus = useReturnFocus<HTMLHeadingElement>({
+    openId: postId === undefined ? null : Number(postId),
+    setOpenId: (id) => void navigate(id === null ? basePath : `${basePath}/${id}`),
+  });
   const client = useQueryClient();
   const [page, setPage] = useState(1);
 
@@ -200,7 +204,7 @@ export function PostBoard(props: {
 
             {/* 작성은 이 목록이 아니라 자기 주소를 가진 화면이 맡습니다(routes/PostWrite). */}
             {!canWrite ? null : (
-              <Link className="new" to={newPath}>글쓰기</Link>
+              <Button kind="go" to={newPath}>글쓰기</Button>
             )}
           </div>
         </>

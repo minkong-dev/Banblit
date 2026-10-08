@@ -16,14 +16,8 @@ import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { checkRoom, openingHours } from "../lib/pipeline";
 import { say } from "../lib/toast";
-import {
-  Cell,
-  CardState,
-  FormTail,
-  Row,
-  useFirstField,
-  useForm,
-} from "./SettingsForm";
+import { Button, Cell, Empty, FormFoot, TimeRange } from "../components/controls";
+import { Row, useFirstField, useForm } from "./SettingsForm";
 
 const BLANK_ROOM = { name: "", opens_at: "18:00", closes_at: "23:00" };
 
@@ -50,28 +44,14 @@ function RoomFields(props: {
           onChange={(event) => setForm({ ...form, name: event.target.value })}
         />
       </Cell>
-      <Cell label="개방 시간" htmlFor={at("opens")}>
-        <input
-          type="time"
-          step={3600}
-          value={form.opens_at}
-          id={at("opens")}
-          aria-invalid={bad !== ""}
-          aria-describedby={bad === "" ? undefined : whyId}
-          onChange={(event) => setForm({ ...form, opens_at: event.target.value })}
-        />
-      </Cell>
-      <Cell label="마감 시간" htmlFor={at("closes")}>
-        <input
-          type="time"
-          step={3600}
-          value={form.closes_at}
-          id={at("closes")}
-          aria-invalid={bad !== ""}
-          aria-describedby={bad === "" ? undefined : whyId}
-          onChange={(event) => setForm({ ...form, closes_at: event.target.value })}
-        />
-      </Cell>
+      <TimeRange
+        id={at("hours")}
+        labels={["개방 시간", "마감 시간"]}
+        value={[form.opens_at, form.closes_at]}
+        step={3600}
+        invalid={{ "aria-invalid": bad !== "", "aria-describedby": bad === "" ? undefined : whyId }}
+        onChange={([opens_at, closes_at]) => setForm({ ...form, opens_at, closes_at })}
+      />
     </>
   );
 }
@@ -96,7 +76,7 @@ export function RoomCard(props: {
       <SectionHead title="합주실" desc="개방 및 마감시간은 정각으로만 설정이 가능해요" />
 
       {state.kind !== "ready" || rooms.length === 0 ? (
-        <CardState state={state} empty="아직 등록된 합주실이 없어요" />
+        <Empty as="div" state={state} text="아직 등록된 합주실이 없어요" />
       ) : (
         <ul className="rows">
           {rooms.map((room) =>
@@ -146,7 +126,7 @@ export function RoomCard(props: {
           여러 합주실을 다시 쓸 일이 생기면 이 조건 하나를 제거하면 됩니다. */}
       {!canCreate || rooms.length > 0 ? null : (
         <div className="listfoot">
-          <button className="new" onClick={() => setMaking(true)}>+ 새 합주실</button>
+          <Button kind="go" onClick={() => setMaking(true)}>+ 새 합주실</Button>
         </div>
       )}
 
@@ -212,7 +192,7 @@ function RoomForm(props: {
     >
       <div className="fields">
         <RoomFields form={form} setForm={setForm} at={at} bad={bad} whyId={whyId} first={first} />
-        <FormTail submit={submit} pending={send.isPending} blocked={why !== ""}
+        <FormFoot submitLabel={submit} pending={send.isPending} blocked={why !== ""}
             bad={bad} whyId={whyId} onCancel={onCancel} />
       </div>
     </form>

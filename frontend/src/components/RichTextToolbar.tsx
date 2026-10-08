@@ -1,8 +1,9 @@
 // RichText 의 도구 줄(서식 버튼·글꼴 선택·파일 넣기)과 링크 입력 modal 입니다.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 
+import { FilePicker, FormFoot, IconButton, Why } from "./controls";
 import { Dropdown } from "./Dropdown";
 import {
   AlignCenterIcon, AlignJustifyIcon, AlignLeftIcon, AlignRightIcon, BulletListIcon, ClipIcon,
@@ -73,6 +74,9 @@ export function RichTextToolbar({ editor, used, disabled, postId, onLink }: {
   postId: number | null;
   onLink: () => void;
 }) {
+  // 숨긴 파일 input 입니다. 도구 줄의 버튼이 click() 으로 엽니다.
+  const mediaPick = useRef<HTMLInputElement>(null);
+  const filePick = useRef<HTMLInputElement>(null);
   return (
     <div className="rttools">
       <Tool editor={editor} label="실행취소" on={() => editor.chain().focus().undo().run()}><UndoIcon /></Tool>
@@ -173,35 +177,15 @@ export function RichTextToolbar({ editor, used, disabled, postId, onLink }: {
         <LinkIcon />
       </Tool>
       {/* 그림·소리·PDF 는 본문에 들어갑니다. drop 하거나 붙여넣어도 같습니다. */}
-      <label className="rtpick" aria-label="그림 넣기">
-        <ImageIcon />
-        <input
-          type="file"
-          multiple
-          accept={ACCEPTED_MIME.join(",")}
-          disabled={disabled}
-          onChange={(event) => {
-            const picked = [...(event.target.files ?? [])];
-            event.target.value = "";
-            void attach(editor, picked, null, postId);
-          }}
-        />
-      </label>
+      <IconButton label="그림 넣기" className="rtpick" icon={<ImageIcon />} disabled={disabled}
+        onClick={() => mediaPick.current?.click()} />
+      <FilePicker ref={mediaPick} multiple accept={ACCEPTED_MIME.join(",")} disabled={disabled}
+        onFiles={(picked) => void attach(editor, picked, null, postId)} />
       {/* 본문에 넣지 않고 첨부 목록에만 올립니다. 형식 제한은 서버의 허용 목록과 같습니다. */}
-      <label className="rtpick" aria-label="파일 첨부">
-        <ClipIcon />
-        <input
-          type="file"
-          multiple
-          accept={ATTACHMENT_ACCEPT}
-          disabled={disabled}
-          onChange={(event) => {
-            const picked = [...(event.target.files ?? [])];
-            event.target.value = "";
-            void attach(editor, picked, null, postId, false);
-          }}
-        />
-      </label>
+      <IconButton label="파일 첨부" className="rtpick" icon={<ClipIcon />} disabled={disabled}
+        onClick={() => filePick.current?.click()} />
+      <FilePicker ref={filePick} multiple accept={ATTACHMENT_ACCEPT} disabled={disabled}
+        onFiles={(picked) => void attach(editor, picked, null, postId, false)} />
     </div>
   );
 }
@@ -265,17 +249,13 @@ export function LinkDialog({ nowText, nowUrl, onClose, onSave }: {
       hint="주소를 입력하지 않고 저장하면 링크를 해제합니다."
       onClose={onClose}
       foot={(
-        <>
-          <button className="btn" type="button" onClick={onClose}>취소</button>
-          <button
-            className="btn go"
-            type="button"
-            disabled={bad !== ""}
-            onClick={() => onSave(text.trim(), url.trim())}
-          >
-            저장
-          </button>
-        </>
+        <FormFoot
+          submitLabel="저장"
+          pending={false}
+          blocked={bad !== ""}
+          onCancel={onClose}
+          onSubmit={() => onSave(text.trim(), url.trim())}
+        />
       )}
     >
       <label className="fld3" htmlFor="rtLinkText">
@@ -297,7 +277,7 @@ export function LinkDialog({ nowText, nowUrl, onClose, onSave }: {
           onChange={(event) => setUrl(event.target.value)}
         />
       </label>
-      {bad === "" ? null : <p className="why" role="alert">{bad}</p>}
+      <Why text={bad} />
     </Modal>
   );
 }

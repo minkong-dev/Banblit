@@ -41,12 +41,9 @@ body[data-page="board"] {
 
   /* 상세입니다. 목록의 영역을 그대로 사용합니다 */
   .thread { padding: 20px 0 24px; display: flex; flex-direction: column; gap: 10px; }
-  .back { align-self: flex-start; font-size: 13.5px; color: var(--t2); padding: 8px 4px; border-radius: 8px; }
-  .back:hover { color: var(--t1); }
   /* 목록으로 버튼은 왼쪽 끝, 글 수정·삭제 아이콘은 오른쪽 끝에 같은 세로 중심으로 배치합니다.
      위의 .acts margin-top(글쓰기 버튼 줄 간격)이 아이콘만 아래로 이동시키므로 0 으로 설정합니다. */
   .threadtop { display: flex; align-items: center; gap: 12px; }
-  .threadtop .back { align-self: center; }
   .threadtop .acts { margin: 0 0 0 auto; align-items: center; gap: 2px; }
   .thread h2 { margin: 4px 0 0; font-size: 20px; font-weight: 700; }
   .threadbody { margin: 6px 0 4px; white-space: pre-wrap; line-height: 1.7; }
@@ -116,6 +113,9 @@ body[data-page="board"] {
 .rtview { font-size: 14px; line-height: 1.7; color: var(--t1); overflow-wrap: anywhere; }
 .rtview p { margin: 0 0 10px; }
 .rtview p:last-child { margin-bottom: 0; }
+/* 편집기는 빈 줄을 <p></p> 로 저장하고 편집 중에만 <br> 을 끼워 보여 줍니다. 읽기 화면에서는 빈 p 가 높이 0 이 되어
+   빈 줄이 사라지므로 한 줄 높이(1lh)를 보장합니다. 저장 형식은 그대로입니다. */
+.rtview p:empty { min-height: 1lh; }
 .rtview a { color: var(--brand-press); text-decoration: underline; }
 .rtview blockquote { margin: 0 0 10px; padding-left: 12px; border-left: 3px solid var(--line-2); color: var(--t2); }
 .rtview pre, .rtbody pre { padding: 10px; border-radius: 8px; background: var(--card-2); overflow-x: auto; }
@@ -240,11 +240,6 @@ body[data-page="board"] {
    선택자를 두 단계로 두는 이유는 shell.css 의 .fields input 이 더 강해 크기가 밀리기 때문입니다. */
 .rtcolorpop .rtcol .rthidden { position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; border: none; opacity: 0; pointer-events: none; }
 
-/* 첨부 파일 선택입니다. 브라우저가 그리는 입력칸은 모양을 정할 수 없어 감추고,
-   같은 동작의 버튼을 둡니다. display:none 은 click() 이 동작하지 않아 크기만 줄입니다. */
+/* 첨부 파일 선택입니다. 입력칸은 FilePicker(controls.tsx)가 hidden 으로 감추고, 같은 동작의 버튼을 둡니다. */
 .filepick { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
 .filepick .meta { font-size: 13px; color: var(--t3); }
-.fields .wide .filehidden {
-  position: absolute; width: 1px; height: 1px; min-height: 0; padding: 0; border: none;
-  opacity: 0; pointer-events: none;
-}

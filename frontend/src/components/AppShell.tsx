@@ -3,8 +3,9 @@ import { useLayoutEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { BrandLockup } from "./Brand";
+import { Button, CloseButton, IconButton, MenuItem } from "./controls";
 import { NotificationMenu } from "./NotificationMenu";
-import { CloseIcon, MoonIcon, SunIcon, WideMenuIcon } from "./icons";
+import { MoonIcon, SunIcon, WideMenuIcon } from "./icons";
 import { usePage, usePopoverRouteClose } from "./hooks";
 import { useMe, useMyTeamCohorts } from "./queries";
 import { useToast } from "../lib/toast";
@@ -142,9 +143,7 @@ export function AppShell() {
       <header className="top">
         <div className="in">
           {/* 휴대폰(767px 이하)에서만 보입니다. 넓은 창에서는 사이드바가 늘 보이므로 CSS 가 숨깁니다. */}
-          <button className="menubtn" aria-label="메뉴 열기" popoverTarget={MENU_ID}>
-            <WideMenuIcon />
-          </button>
+          <IconButton className="menubtn" label="메뉴 열기" icon={<WideMenuIcon />} popoverTarget={MENU_ID} />
           <div className="logo"><BrandLockup /></div>
           <ThemeButton />
           <NotificationMenu />
@@ -165,14 +164,9 @@ export function AppShell() {
           </p>
           {/* disabled 가 아니라 aria-disabled 입니다. 초점을 가진 버튼이 disabled 가 되면 브라우저가 초점을
               body 로 옮겨, 재조회가 다시 실패했을 때 키보드 사용자가 버튼으로 되돌아올 수 없습니다. */}
-          <button
-            className="btn warn"
-            type="button"
-            aria-disabled={retrying}
-            onClick={() => void retryMe()}
-          >
+          <Button kind="danger" aria-disabled={retrying} onClick={() => void retryMe()}>
             {retrying ? LOADING_TEXT : "다시 불러오기"}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -196,9 +190,7 @@ export function AppShell() {
         aria-label="메뉴"
         onClick={(event) => { if ((event.target as HTMLElement).closest("a")) event.currentTarget.hidePopover(); }}
       >
-        <button className="x" aria-label="메뉴 닫기" popoverTarget={MENU_ID} popoverTargetAction="hide">
-          <CloseIcon />
-        </button>
+        <CloseButton className="x" label="메뉴 닫기" popoverTarget={MENU_ID} popoverTargetAction="hide" />
         <MenuItems nav={nav} managerNav={managerNav} />
       </div>
 
@@ -216,14 +208,12 @@ function ThemeButton() {
   const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
   const next: Theme = theme === "dark" ? "light" : "dark";
   return (
-    <button
-      type="button"
-      className="ic theme"
-      aria-label={next === "dark" ? "다크 모드로 전환" : "라이트 모드로 전환"}
+    <IconButton
+      className="theme"
+      label={next === "dark" ? "다크 모드로 전환" : "라이트 모드로 전환"}
+      icon={next === "dark" ? <MoonIcon /> : <SunIcon />}
       onClick={() => setTheme(applyTheme(next))}
-    >
-      {next === "dark" ? <MoonIcon /> : <SunIcon />}
-    </button>
+    />
   );
 }
 
@@ -280,13 +270,10 @@ function ProfileMenu() {
           </div>
         ))}
         <hr />
-        <button
-          className="act"
-          onClick={() => { document.getElementById(PROFILE_POP_ID)?.hidePopover(); void navigate("/profile"); }}
-        >
+        <MenuItem onClick={() => { document.getElementById(PROFILE_POP_ID)?.hidePopover(); void navigate("/profile"); }}>
           프로필 설정<span>›</span>
-        </button>
-        <button className="act quit" onClick={() => void handleLogOut()}>로그아웃</button>
+        </MenuItem>
+        <MenuItem className="quit" onClick={() => void handleLogOut()}>로그아웃</MenuItem>
       </div>
     </div>
   );
