@@ -9,6 +9,7 @@ import { Button, DeleteButton, EditButton, Empty, FormFoot, IconButton, Why } fr
 import { Modal, Stepper } from "../components/Modal";
 import { SearchIcon } from "../components/icons";
 import { SeatRow } from "../components/SeatRow";
+import { idParam } from "../components/hooks";
 import { useMe, useTeams } from "../components/queries";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { say } from "../lib/toast";
@@ -429,10 +430,10 @@ export function Teams() {
   const { me, teamIds } = useMe();
   const navigate = useNavigate();
   const { teamId } = useParams();
-  const openId = teamId === undefined ? null : Number(teamId);
-  const setOpenId = (next: number | null | ((now: number | null) => number | null)): void => {
-    const id = typeof next === "function" ? next(openId) : next;
-    void navigate(id === null ? "/teams" : `/teams/${id}`);
+  const openId = idParam(teamId);
+  // 열 때는 기록을 쌓고 닫을 때는 바꿔 끼웁니다(replace). 닫은 뒤 뒤로 가기가 닫은 팀을 다시 열지 않게 합니다.
+  const setOpenId = (id: number | null): void => {
+    void (id === null ? navigate("/teams", { replace: true }) : navigate(`/teams/${id}`));
   };
   const [making, setMaking] = useState(false);
   const [renaming, setRenaming] = useState<Team | null>(null);
@@ -443,7 +444,7 @@ export function Teams() {
     mutationFn: (team: Team) => getJSON<null>(`/teams/${team.id}`, { method: "DELETE" }),
     onSuccess: (_body, team) => {
       // 삭제된 팀의 포지션 구성이나 수정 창이 열려 있으면 함께 닫습니다.
-      setOpenId((now) => (now === team.id ? null : now));
+      if (openId === team.id) setOpenId(null);
       setRenaming((now) => (now?.id === team.id ? null : now));
       void client.invalidateQueries({ queryKey: ["teams"] });
       say(`${team.name} 팀을 삭제했어요.`);

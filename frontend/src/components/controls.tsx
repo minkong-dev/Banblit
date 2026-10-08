@@ -2,7 +2,7 @@
 // 값을 보유하지 않고 서버도 호출하지 않습니다. 무엇을 할지는 호출하는 화면이 결정합니다.
 // 외형(class 이름)은 styles/controls.css 가 담당합니다.
 
-import type { ChangeEvent, ComponentProps, ReactNode, Ref } from "react";
+import type { ChangeEvent, ComponentProps, ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { stateText } from "../lib/loading";
@@ -37,7 +37,6 @@ export function IconButton({ label, icon, danger = false, pressed, className, ..
   icon: ReactNode;
   danger?: boolean;
   pressed?: boolean;
-  ref?: Ref<HTMLButtonElement>;
 } & Omit<ComponentProps<"button">, "children">) {
   const cls = ["ic", danger ? "danger" : "", className ?? ""].filter((part) => part !== "").join(" ");
   return (
@@ -167,7 +166,6 @@ export function SearchInput({ label, onChange, ...rest }: {
  *  변경으로 감지되도록 선택 뒤에 값을 비웁니다. */
 export function FilePicker({ onFiles, ...rest }: {
   onFiles: (files: File[]) => void;
-  ref?: Ref<HTMLInputElement>;
 } & Omit<ComponentProps<"input">, "type" | "onChange" | "hidden">) {
   const onChange = (event: ChangeEvent<HTMLInputElement>): void => {
     const files = Array.from(event.target.files ?? []);
@@ -187,7 +185,9 @@ export function Why({ text, id }: { text: string; id?: string }) {
 
 /** 목록이 비었거나 불러오는 중·실패일 때 그 자리에 표시하는 문구입니다. state 가 있으면 stateText 가 문구를 정합니다. */
 export function Empty({ state, text, as: Tag = "p" }: { state?: LoadState; text: string; as?: "p" | "li" | "div" }) {
-  return <Tag className="empty">{state === undefined ? text : stateText(state, text)}</Tag>;
+  // 실패는 alert, 불러오는 중은 status 로 스크린 리더에 전달합니다. 비어 있음은 일반 문구입니다.
+  const role = state?.kind === "failed" ? "alert" : state?.kind === "loading" ? "status" : undefined;
+  return <Tag className="empty" role={role}>{state === undefined ? text : stateText(state, text)}</Tag>;
 }
 
 // ===== form 아래 줄 =====
