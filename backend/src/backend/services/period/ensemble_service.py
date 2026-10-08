@@ -19,7 +19,7 @@ from backend.services.validation.pipeline import (
     require_ends_not_before_starts,
 )
 from backend.services.period.period_crud_service import commit_with_cancellations
-from backend.services.period.schedule_service import get_period_or_raise
+from backend.services.period.period_crud_service import get_period_or_raise
 from backend.services.room.pipeline import get_room_or_raise
 from backend.services.settings.pipeline import slot_minutes
 
