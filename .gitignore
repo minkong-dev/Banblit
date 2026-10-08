@@ -48,3 +48,6 @@ frontend/manual/.auth/
 # 매뉴얼 결과물. docker compose --profile manual run --rm manual 이 원고에서 다시 만듭니다(COMMAND.md 15-1).
 docs/manual/shots/
 docs/manual/*.pdf
+
+# Obsidian 이 .cluedoc/ 를 vault 로 열 때 만드는 설정 폴더입니다.
+.cluedoc/.obsidian/

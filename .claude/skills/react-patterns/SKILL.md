@@ -53,7 +53,7 @@ React has no inheritance model for components. Compose with `children`, render p
 
 ## Hooks Discipline
 
-See [rules/react/hooks.md](../../rules/react/hooks.md) for the full ruleset. Highlights:
+아래 "ECC rules 에서 흡수" 절의 Hook 항목이 전체 규칙입니다. 요약:
 
 - Top-level only, never conditional
 - Cleanup every subscription, interval, listener
@@ -265,7 +265,7 @@ This skill is router-agnostic. The patterns above work with React Router, TanSta
 
 ## Related
 
-- Rules: [rules/react/](../../rules/react/) — coding-style, hooks, patterns, security, testing
+- Rules: 아래 "ECC rules 에서 흡수 (2026-10-08)" 절
 - Skills: [react-performance](../react-performance/SKILL.md) for the Vercel-derived performance ruleset, [frontend-patterns](../frontend-patterns/SKILL.md) for cross-framework UI concerns, [accessibility](../accessibility/SKILL.md), [angular-developer](../angular-developer/SKILL.md) for framework comparison
 - Agents: `react-reviewer` for code review, `react-build-resolver` for build/bundler errors
 - Commands: `/react-review`, `/react-build`, `/react-test`
@@ -340,3 +340,48 @@ const NotificationsContext = createContext<Notification[]>([]);
 
 // A component that only consumes ThemeContext does NOT re-render when notifications change
 ```
+
+## ECC rules 에서 흡수 (2026-10-08)
+
+### 파일과 이름
+
+- JSX 가 1줄이라도 있는 파일은 `.tsx`, 로직·타입·JSX 없는 hook 은 `.ts`, 테스트는 원본 파일 이름에 `.test.tsx` / `.test.ts` 를 붙입니다.
+- Context 는 `<Domain>Context`, provider 컴포넌트는 `<Domain>Provider`, 소비 hook 은 `use<Domain>` 으로 이름을 붙입니다.
+- 컴포넌트 안의 이벤트 처리 함수는 `handleClick`, `handleSubmit`, 그 함수를 받는 prop 은 `onClick`, `onSubmit` 으로 이름을 붙입니다.
+- boolean prop 은 `isLoading`, `hasError`, `canSubmit` 처럼 `is`·`has`·`can` 을 앞에 붙입니다. `loading`, `error` 만으로 boolean 을 표현하지 않습니다.
+- `enum` 대신 문자열 리터럴 union(`type Role = 'admin' | 'member'`)을 씁니다.
+- 외부에서 들어오는 값(API 응답, 오류 객체)은 `any` 가 아니라 `unknown` 으로 받고 `instanceof`·타입 가드로 좁힌 뒤 씁니다.
+- `console.log` 를 production 코드에 남기지 않습니다.
+
+### 컴포넌트 형태
+
+- prop 타입은 `type Props = { ... }` 로 선언하고, 매개변수에서 구조 분해합니다. 본문에서 `props.user` 로 접근하지 않습니다. `React.FC` 는 쓰지 않습니다.
+- 자식이 없는 태그는 self-close(`<img />`)하고, DOM 요소가 필요 없는 묶음은 `<>...</>` 를 씁니다.
+- JSX 안의 식이 2줄 이상이 될 경우 return 위에서 const 로 계산한 뒤 넣습니다.
+
+```tsx
+const greeting = user.isAdmin ? "Welcome, admin" : `Hello ${user.name}`;
+return <h1>{greeting}</h1>;
+```
+
+- import 순서는 react, 외부 라이브러리, 절대 경로, 상대 경로입니다. 타입만 쓰는 import 는 `import type { ReactNode } from "react"` 로 분리합니다.
+- 데이터 조회·상태·부수효과는 container 컴포넌트가 갖고, presentational 컴포넌트는 prop 만 받아 렌더링합니다.
+- modal, tooltip, toast 처럼 부모의 `overflow: hidden`·`z-index` 밖으로 나가야 하는 요소는 `createPortal` 로 `index.html` 의 고정 DOM 노드에 렌더링합니다.
+- React 19 부터 함수 컴포넌트는 `ref` 를 일반 prop 으로 받습니다. `forwardRef` 는 React 18 이하에서만 씁니다.
+
+### Hook
+
+- `useEffect` 를 다음 용도로 쓰지 않습니다. 파생 상태와 렌더링용 데이터 변환은 렌더 중에 계산하고, prop 변경 시 상태 초기화는 부모의 `key` 로 하고, 부모에게 상태 변경을 알리는 것은 이벤트 핸들러에서 콜백을 호출하고, 앱 전역 1회 초기화는 `main.tsx` 에서 합니다.
+- 의존성 배열에는 effect·callback 안에서 참조하는 반응형 값을 전부 넣습니다. `react-hooks/exhaustive-deps` 경고를 주석 없이 끄지 않습니다. 배열이 길어질 경우 effect 를 분리합니다.
+- `useMemo`·`useCallback` 은 값이 `React.memo` 자식의 prop 이거나, 다른 hook 의 의존성이거나, 계산 비용을 측정해 확인한 경우에만 씁니다.
+- 초기 상태 계산 비용이 클 경우 `useState(() => computeInitial(prop))` 로 함수를 전달합니다. 이전 상태에 의존하는 갱신은 `setCount(c => c + 1)` 로 합니다. 상태 전이가 이전 상태에 따라 분기하거나 관련 값이 3개 이상이면 `useReducer` 를 씁니다.
+- `useRef` 는 DOM 참조와 재렌더링을 일으키지 않는 값(timer id, 이전 값)에 씁니다. `ref.current` 를 렌더 중에 읽거나 쓰지 않습니다.
+- 비동기 핸들러와 interval 은 생성된 렌더의 값을 캡처합니다(stale closure). 함수형 updater 를 쓰거나, 값을 의존성 배열에 넣어 핸들러를 다시 만들거나, ref 에서 읽습니다.
+
+### 보안
+
+- `href`·`src` 에 사용자 값이 들어갈 경우 `new URL()` 로 파싱해 protocol 이 `http:`·`https:`·`mailto:` 일 때만 씁니다. `javascript:`·`data:` URL 은 코드를 실행합니다.
+- `target="_blank"` 에는 `rel="noopener noreferrer"` 를 붙입니다.
+- `VITE_` 접두사가 붙은 환경변수는 client 번들에 포함됩니다. 비밀값에 이 접두사를 붙이지 않습니다.
+- 신뢰하지 않는 JSON 을 `setState({ ...state, ...update })` 로 직접 펼치지 않습니다. 허용 키만 골라낸 뒤 펼칩니다. `__proto__` 키가 들어올 수 있습니다.
+- production 빌드는 source map 을 공개 번들에 포함하지 않습니다.

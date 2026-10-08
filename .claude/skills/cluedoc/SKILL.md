@@ -20,24 +20,24 @@ The unit of documentation is **one feature**. Features form a hierarchy: large f
 
 **Where splitting stops (the one-paper rule).** Split a feature into sub-features when it has distinct sub-capabilities that each deserve their own hero visual and description. Stop when a feature can be fully explained in a single focused paper. This is a judgment about *capability*, not a mirror of the code's directory structure.
 
-**Layout.** Everything lives in a `.cluedoc/` folder at the repository root. Every feature — leaf or parent — is a **folder**, and its paper is a `README.md` inside that folder. Sub-features are subfolders.
+**Layout.** Everything lives in a `.cluedoc/` folder at the repository root. Every feature — leaf or parent — is a **folder**, and its paper is a markdown file **named after the folder** (`<slug>/<slug>.md`), never `README.md` (사용자 결정 2026-10-08: Obsidian's graph and explorer show file names, so every paper needs a distinct name). The root paper is `<project name>.md` at the top of `.cluedoc/`. The repository's own `README.md` (GitHub landing page) is a different file and is not a paper. Sub-features are subfolders.
 
 ```
 .cluedoc/
-├── README.md                  ← ROOT paper: the whole repository/app
+├── Banblit.md                             ← ROOT paper: the whole repository/app
 ├── authentication/
-│   ├── README.md              ← the "Authentication" feature paper
+│   ├── authentication.md                  ← the "Authentication" feature paper
 │   ├── login/
-│   │   └── README.md          ← sub-feature: "Login"
+│   │   └── login.md                       ← sub-feature: "Login"
 │   └── session-management/
-│       ├── README.md          ← sub-feature: "Session Management"
+│       ├── session-management.md          ← sub-feature: "Session Management"
 │       └── token-refresh/
-│           └── README.md      ← deeper sub-feature: "Token Refresh"
+│           └── token-refresh.md           ← deeper sub-feature: "Token Refresh"
 └── billing/
-    └── README.md
+    └── billing.md
 ```
 
-The **root paper** (`.cluedoc/README.md`) is the entry point for the whole repository. It follows the same paper structure as any other, and its Related Work lists the top-level features as children.
+The **root paper** (`.cluedoc/Banblit.md`) is the entry point for the whole repository. It follows the same paper structure as any other, and its Related Work lists the top-level features as children.
 
 Making every feature a folder (even leaves) keeps the structure uniform and lets a leaf grow sub-features later without any rename. Folder names are slugs: lowercase the feature title, replace spaces with hyphens, strip non-alphanumeric characters.
 
@@ -88,8 +88,8 @@ Create a starter skeleton, then let the progressive build deepen it later.
 1. **Guard.** If `.cluedoc/` already has papers, do **not** overwrite. Tell the user it's already initialized and offer a normal sync instead. Only proceed when `.cluedoc/` is absent or empty.
 2. **Find the top-level features.** Survey the repository and identify its handful of major capabilities in language-neutral terms (the same "capability, not code layout" judgment used everywhere in Cluedoc). Aim for a small set — typically 3–7 — not an exhaustive list.
 3. **Write only two levels:**
-   - The **root paper** (`.cluedoc/README.md`) — the whole-repository overview.
-   - **One paper per top-level feature** (`.cluedoc/<slug>/README.md`).
+   - The **root paper** (`.cluedoc/<project name>.md`) — the whole-repository overview.
+   - **One paper per top-level feature** (`.cluedoc/<slug>/<slug>.md`).
    Each is a full paper: frontmatter (`title`, `sources`) plus the six sections and a hero visual, per *The Paper Structure*.
 4. **Do not recurse.** Stop at the top level. Sub-features are left for the progressive build — this keeps `init` fast and honors the "progressive, not one pass" principle. The root's Related Work links the top-level papers you just created (they exist now, so the links are live — never link papers you haven't written).
 
@@ -115,9 +115,9 @@ After both jobs, briefly report what was created: the root paper, the top-level 
 
 Because the docs track real code, the tree must stay consistent as features appear, move, and disappear:
 
-- **New feature** → create its folder + `README.md`; add it to its parent's Related Work.
+- **New feature** → create its folder + `<slug>.md`; add it to its parent's Related Work.
 - **Feature grows sub-capabilities** → split it: create subfolders for the new sub-features, move the fine-grained detail down, leave the parent paper as an overview that links to its children.
-- **Feature renamed or refocused** → rename the folder (new slug) and update every inbound hyperlink so no reference dangles.
+- **Feature renamed or refocused** → rename the folder **and the paper file** (new slug for both) and update every inbound wikilink so no reference dangles.
 - **Feature removed** → delete its folder and fix or remove links that pointed to it.
 
 After any of these, verify that all Related Work hyperlinks still resolve.
@@ -134,7 +134,7 @@ Papers are **about** the code but must never **contain** the code. The reading e
 
 Name concepts the way a user or designer would ("the option's *value source*", "the *parse loop*"), not the way the compiler would (`getOptionValueSource()`). If you feel the urge to paste code to explain something, draw a visual instead.
 
-**In the frontmatter — anchor to code.** So an agent (or curious reader) can still jump from a paper to the implementation, each `README.md` carries a `sources` list in YAML frontmatter pointing at the files or directories that realize the feature. This is the *only* place raw paths appear, and it is metadata, not narrative:
+**In the frontmatter — anchor to code.** So an agent (or curious reader) can still jump from a paper to the implementation, each paper carries a `sources` list in YAML frontmatter pointing at the files or directories that realize the feature. This is the *only* place raw paths appear, and it is metadata, not narrative:
 
 ```markdown
 ---
@@ -181,7 +181,7 @@ Related Work carries **all** cross-paper links, including hierarchy links:
 
 Guidelines:
 - Prefer linking to Cluedoc papers over re-explaining shared concepts.
-- Every listed reference must be a working relative hyperlink (e.g. `../README.md`, `./login/README.md`).
+- Every listed reference must be a working **Obsidian wikilink** whose path is relative to the vault root `.cluedoc/` (사용자 결정 2026-10-08): `[[Banblit|Banblit 개요]]` for the root paper, `[[deployment/deployment|배포]]`, `[[database-layer/schedule-versioning/schedule-versioning#절 제목|표시 글]]` for a section. Inside a markdown table escape the pipe: `[[deployment/deployment\|배포]]`. Do not write relative markdown links (`../README.md`); the papers are read in Obsidian, not on GitHub. Obsidian's settings folder `.cluedoc/.obsidian/` is git-ignored.
 - **Link only papers that already exist. Never create a dead link to a planned-but-unwritten paper.** Because the tree is built progressively, many features will be known before they are documented. Refer to such a feature by name in plain text (no link), or — if it is important context — write its paper first, then link it. A missing paper you keep wanting to cite is a signal to write it next.
 
 ## Reading Guide — Recommend Papers When Answering Questions
@@ -200,14 +200,14 @@ The papers are not only for writing; they are a map for reading. Whenever the us
 
 **Rules.**
 - **Link only papers that exist** — the same dead-link rule as Related Work. If the ideal paper hasn't been written yet, name the feature in plain text and (optionally) note it as a gap worth documenting. Never fabricate a path.
-- Use working relative hyperlinks to each paper's `README.md`, resolved from the repository root (e.g. `.cluedoc/authentication/README.md`).
+- Use working relative hyperlinks to each paper file, resolved from the repository root (e.g. `.cluedoc/authentication/authentication.md`). The guide is read in the chat, not in Obsidian, so markdown links are correct here.
 - The guide **supplements** the answer; it never replaces answering the question. Do not defer the reader to the papers instead of responding.
 
 **Format.** Close the answer with a compact section, for example:
 
 ```markdown
 ### Reading Guide
-1. [Authentication](.cluedoc/authentication/README.md) — start here for the overall login flow your question is about.
-2. [Session Management](.cluedoc/authentication/session-management/README.md) — how the session your request creates is tracked afterward.
-3. [Token Refresh](.cluedoc/authentication/session-management/token-refresh/README.md) — the specific mechanism behind the expiry behavior you asked about.
+1. [Authentication](.cluedoc/authentication/authentication.md) — start here for the overall login flow your question is about.
+2. [Session Management](.cluedoc/authentication/session-management/session-management.md) — how the session your request creates is tracked afterward.
+3. [Token Refresh](.cluedoc/authentication/session-management/token-refresh/token-refresh.md) — the specific mechanism behind the expiry behavior you asked about.
 ```

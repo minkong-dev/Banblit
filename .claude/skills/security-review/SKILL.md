@@ -502,3 +502,7 @@ Before ANY production deployment:
 ---
 
 **Remember**: Security is not optional. One vulnerability can compromise the entire platform. When in doubt, err on the side of caution.
+
+## ECC rules 에서 흡수 (2026-10-08)
+
+- 다음 코드를 수정한 diff 는 `security-reviewer` 를 돌립니다. 인증·인가, 사용자 입력 처리, DB 질의, 파일 시스템 접근, 외부 API 호출, 암호화, 결제.

@@ -749,3 +749,18 @@ except SpecificError as e:
 ```
 
 __Remember__: Python code should be readable, explicit, and follow the principle of least surprise. When in doubt, prioritize clarity over cleverness.
+
+## ECC rules 에서 흡수 (2026-10-08)
+
+- 수정하지 않는 데이터는 `@dataclass(frozen=True)` 또는 `NamedTuple` 로 정의합니다. 필드 대입 시 `FrozenInstanceError` 가 발생합니다.
+
+```python
+from dataclasses import dataclass
+
+@dataclass(frozen=True)
+class User:
+    name: str
+    email: str
+```
+
+- 출력은 `print()` 가 아니라 `logging` 모듈로 합니다. 수정한 파일에 `print()` 가 남아 있을 경우 리뷰에서 지적합니다.
