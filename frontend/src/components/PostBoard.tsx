@@ -13,7 +13,7 @@ import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { boardActions, boardListKey, getJSON, stampLabel } from "../lib/pipeline";
 import { BackButton, Button, EditButton, Empty } from "./controls";
 import { Card, SectionHead } from "./Layout";
-import { useReturnFocus } from "./hooks";
+import { idParam, useReturnFocus } from "./hooks";
 import { Pager } from "./Pager";
 import { AttachmentList } from "./PostAttachments";
 import { BlindPost, EditPost, RemovePost } from "./PostActions";
@@ -154,9 +154,10 @@ export function PostBoard(props: {
   const queryKey = boardListKey(listPath);
   const navigate = useNavigate();
   const { postId } = useParams();
+  // 열 때는 기록을 쌓고 닫을 때는 바꿔 끼웁니다(replace). 닫은 뒤 뒤로 가기가 닫은 글을 다시 열지 않게 합니다.
   const focus = useReturnFocus<HTMLHeadingElement>({
-    openId: postId === undefined ? null : Number(postId),
-    setOpenId: (id) => void navigate(id === null ? basePath : `${basePath}/${id}`),
+    openId: idParam(postId),
+    setOpenId: (id) => void (id === null ? navigate(basePath, { replace: true }) : navigate(`${basePath}/${id}`)),
   });
   const client = useQueryClient();
   const [page, setPage] = useState(1);

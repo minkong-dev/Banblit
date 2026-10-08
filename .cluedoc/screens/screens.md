@@ -10,6 +10,7 @@ sources:
   - "[[graph/frontend/src/routes/SettingsReservations]]"  # 예약 구역 — 모든 멤버의 예약과 취소 — frontend/src/routes/SettingsReservations.tsx
   - "[[graph/frontend/src/routes/SettingsBlinded]]"  # 블라인드 구역 — 가려 둔 글과 되돌리기 — frontend/src/routes/SettingsBlinded.tsx
   - "[[graph/frontend/src/components/Modal]]"  # 모든 화면이 함께 쓰는 Modal 컴포넌트 — frontend/src/components/Modal.tsx
+  - "[[graph/frontend/src/components/controls]]"  # 버튼·체크·시작/종료 쌍·검색·파일 선택·문구 등 본질이 같은 요소 1벌 — frontend/src/components/controls.tsx
   - "[[graph/frontend/src/components/MemberSearch]]"  # 창 위에 겹쳐 뜨는 멤버 검색 창의 입력칸과 목록 — frontend/src/components/MemberSearch.tsx
   - "[[graph/frontend/src/styles/base.css]]"  # 색·본문 최대 폭 같은 모든 화면 공통 값 — frontend/src/styles/base.css
   - "[[graph/frontend/src/styles/shell.css]]"  # 상단바·사이드바·카드·입력칸 등 모든 화면이 함께 쓰는 스타일 — frontend/src/styles/shell.css
@@ -105,9 +106,9 @@ flowchart LR
 | `/admin` | 배정 결과와 조율안, 재계산 | 예. 조회하고, 재계산하고, 결과를 받습니다 |
 | `/rooms` `/periods` `/members` `/reservations` `/blinded` `/unavailable` | 관리 구역 6개. 각자 다른 권한 항목을 요구하고, 가진 권한의 구역만 사이드바의 관리자 메뉴에 표시됩니다 | 예. 조회하고, 생성하고, 수정합니다 |
 | `/settings` | 구역별 주소로 나누기 전의 주소입니다. 열 수 있는 첫 구역으로 보내고, 관리 권한이 없으면 안내 문구를 표시합니다 | 아니요 |
-| `/notices` | 공지사항 — 목록, 글, 댓글, 첨부파일 | 예 |
-| `/board` | 팀 게시판 — 내가 속한 팀의 글, 댓글, 첨부파일 | 예 |
-| `/teams` | 팀 관리(팀 생성·수정·삭제 권한이 없으면 사이드바에 "내 팀") — 팀 목록과 명단 | 예 |
+| `/notices` `/notices/{글 번호}` | 공지사항 — 목록, 글, 댓글, 첨부파일. 글 번호가 있으면 그 글의 상세입니다(2026-10-08) | 예 |
+| `/board` `/board/{팀 번호}` `/board/{팀 번호}/{글 번호}` | 팀 게시판 — 내가 속한 팀의 글, 댓글, 첨부파일. 팀 번호가 없으면 첫 팀입니다 | 예 |
+| `/teams` `/teams/{팀 번호}` | 팀 관리(팀 생성·수정·삭제 권한이 없으면 사이드바에 "내 팀") — 팀 목록과 명단. 팀 번호가 있으면 그 팀의 포지션 구성이 열립니다 | 예 |
 | `/profile` | 프로필 설정 — 사진·이름·기수·비밀번호·테마·탈퇴와 소속 팀별 포지션 | 예. 조회하고 수정합니다 |
 
 ### 자기 계정 설정을 프로필 화면으로 옮겼습니다 (2026-09-23)
@@ -203,7 +204,32 @@ flowchart LR
         └── Panel  ── 오른쪽 공지 · 팀 목록
      Field        ── 계정 서식 다섯 벌이 함께 쓰는 입력 한 칸
      icons        ── 화면마다 박혀 있던 그림을 모아둔 자리
+     controls     ── 본질이 같은 요소 전부 (2026-10-08, 아래 절)
 ```
+
+### 본질이 같은 요소는 1개입니다 (2026-10-08)
+
+**버튼·체크·시작/종료 쌍·검색칸·파일 선택·오류 문구·빈 목록 문구는 `components/controls.tsx` 의 요소 1개씩으로만 만듭니다**(사용자 결정 2026-10-08 "본질이 같은 것은 하나"). 크기·색은 CSS 가 놓인 자리에 따라 정하고, 요소는 동작과 접근성(aria-label, role, 초점)만 가집니다. 그 전에는 같은 삭제 버튼이 8곳에 각자 적혀 있었고, 저장 버튼의 class 가 4가지(`btn go`·`go`·`primary`·`new`)였습니다.
+
+| 요소 | 무엇 | 대체한 것 |
+|---|---|---|
+| `Button kind=go·ghost·danger` | 주 행동·보조·되돌릴 수 없는 동작. `to` 를 주면 같은 모양의 링크 | `btn go`·`go`·`primary`·`new`·`ghost`·`btn warn` |
+| `IconButton` 과 `EditButton`·`DeleteButton`·`CloseButton`·`BackButton`·`NavButton` | 아이콘 1개짜리 버튼. 아이콘이 고정된 5종은 이름만 다릅니다 | `ic` 버튼 34곳 |
+| `Toggle kind=check·switch` | 켜고 끄기. check 는 제출 시 적용, switch 는 즉시 적용(`role="switch"`) | `CheckMark`, `.sw` input |
+| `TimeRange`·`DateRange` | 시작·종료 쌍. id 는 `{id}-from`·`{id}-to`, 종료일의 min 은 시작일 | 합주실·기간·전체 합주·날짜별 시각의 input 쌍 |
+| `SearchInput`, `FilePicker` | 검색칸, 숨긴 파일 input(여는 버튼이 `ref.click()`). 같은 파일을 다시 골라도 감지되도록 선택 뒤 값을 비웁니다 | `type=search` 2곳, `label>input[file]` 과 `rtpick` |
+| `Why`, `Empty` | 오류 문구(`role="alert"`), 빈 목록·불러오는 중·실패 문구(`stateText`) | `<p className="why">` 14곳, `.empty` 24곳 |
+| `FormFoot`, `MenuItem`, `Cell` | 취소·저장 줄(form 이면 `type=submit`, modal 이면 `onSubmit`), 팝업 메뉴 항목, 입력칸 label | `ModalFormFoot`·`FormTail`, `.act`, 설정 화면의 `Cell` |
+
+CSS 는 공용 `.btn`·`.ic`·`.why`·`.empty` 1벌(`shell.css`)만 남기고 `.primary`·`.ghost`·`.listfoot .new` 를 없앴습니다. modal 아래 줄과 목록 아래 줄은 `.mfoot .btn`·`.listfoot .btn` 이 자리만 정합니다.
+
+**어떻게 확인했나.** `frontend/src/components/controls.test.tsx` 가 요소마다 깨지면 잡히는 검사 1개씩(13개)을 가집니다 — class·aria·pending·Link 전환·Range 의 id 와 onChange·FilePicker 의 값 비우기. 구현 전에 실패를 확인했습니다. 화면까지는 `frontend/e2e` 86개가 통과했고, 글 작성 폼의 파일 첨부 버튼 hover 문제(2026-10-07 접수)는 `label` 로 감싸던 구조가 없어져 원인 자체가 사라졌습니다.
+
+### 글과 팀의 상세는 주소로 엽니다 (2026-10-08)
+
+**열린 글·팀을 화면 state 가 아니라 주소가 정합니다.** `/notices/{글 번호}`, `/board/{팀 번호}/{글 번호}`, `/teams/{팀 번호}` 입니다. 대시보드의 공지·내 팀 줄을 누르면 목록이 아니라 그 상세로 바로 갑니다. 새로 고쳐도, 주소를 복사해 보내도 같은 글이 열립니다. `PostBoard` 는 `useReturnFocus` 에 주소에서 읽은 번호를 넘기고(controlled), 열고 닫을 때 `navigate` 로 주소를 바꿉니다. 목록으로 돌아올 때 눌렀던 줄로 초점이 되돌아가는 동작은 그대로입니다.
+
+**어떻게 확인했나.** `frontend/e2e/notices.spec.ts` 가 글을 연 뒤 주소가 `/notices/{번호}` 인지, 새로 고쳐도 같은 글이 열리는지, 목록으로 돌아가면 `/notices` 인지 확인합니다. `teams.spec.ts` 가 팀을 누르면 `/teams/{번호}` 가 되는지 확인합니다.
 
 ### 서버를 호출하는 지점은 1곳입니다
 

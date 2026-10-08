@@ -23,16 +23,20 @@ export function useReturnFocus<Focus extends HTMLElement = HTMLElement>(
   const [openId, setOpenId] = controlled === undefined ? own : [controlled.openId, controlled.setOpenId];
   const buttons = useRef(new Map<number, HTMLButtonElement>());
   // 돌아갈 버튼 ID를 state가 아닌 ref로 보유합니다. state로 보유하면 초점 이동 후 값을 초기화하는 과정에서 불필요한 재생성이 발생합니다.
+  // 직전에 열려 있던 ID 도 기억합니다. 주소가 열림 상태를 보유하면 브라우저 뒤로 가기로도 닫히는데, 그 경로는 close() 를 거치지 않습니다.
   const back = useRef<number | null>(null);
+  const previous = useRef<number | null>(null);
   const openFocus = useRef<Focus>(null);
 
   useEffect(() => {
+    const target = back.current ?? previous.current;
+    previous.current = openId;
     if (openId !== null) {
       openFocus.current?.focus();
       return;
     }
-    if (back.current === null) return;
-    buttons.current.get(back.current)?.focus();
+    if (target === null) return;
+    buttons.current.get(target)?.focus();
     back.current = null;
   }, [openId]);
 
@@ -49,6 +53,12 @@ export function useReturnFocus<Focus extends HTMLElement = HTMLElement>(
     },
     openFocus,
   };
+}
+
+/** 주소의 번호 자리(:postId 등)를 정수로 읽습니다. 없거나 정수가 아니면 null 입니다 — /notices/abc 가 NaN 상세를 열지 않게 합니다. */
+export function idParam(value: string | undefined): number | null {
+  const id = Number(value);
+  return value !== undefined && Number.isInteger(id) ? id : null;
 }
 
 /** 클릭으로 여는 팝업 하나입니다. 열려 있는 동안 바깥을 누르거나 Escape를 누르면 닫힙니다.

@@ -20,6 +20,7 @@ flowchart LR
   frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_components_hooks
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_components_hooks
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_components_hooks
+  frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_components_hooks
 ```
 
 ## imports
@@ -38,3 +39,4 @@ flowchart LR
 - [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
+- [[graph/frontend/src/routes/Teams|Teams.tsx]]
