@@ -5,7 +5,7 @@
 #
 #   <optional body>
 #
-# 활성화: git config core.hooksPath .githooks
+# 활성화: git config core.hooksPath .githooks   (banblit up 이 자동으로 실행합니다)
 
 set -u
 
@@ -46,14 +46,14 @@ if [ -z "$SUBJECT" ]; then
     reject "메시지가 비어 있습니다."
 fi
 
-# 병합·되돌리기 커밋은 git 이 생성하는 형식이므로 통과합니다.
+# Merge 커밋과 Revert 커밋은 git 이 생성하는 형식이므로 통과합니다.
 case "$SUBJECT" in
     "Merge "*|"Revert "*)
         exit 0
         ;;
 esac
 
-# 첫 줄: 허용 scope + 콜론 + 공백 1개 + 비어 있지 않은 요약
+# 첫 줄은 허용 scope, 콜론, 공백 1개, 비어 있지 않은 요약 순서입니다.
 PATTERN="^($(echo "$SCOPES" | tr ' ' '|')): [^[:space:]].*$"
 if ! printf '%s' "$SUBJECT" | grep -Eq "$PATTERN"; then
     reject "첫 줄이 '<scope>: <요약>' 형식이 아니거나, 허용되지 않은 scope 입니다."

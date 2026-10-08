@@ -35,18 +35,19 @@ DEV_API_HEALTH_URL='http://localhost:8000/health'
 DEV_WEB_TIMEOUT=420
 DEV_API_TIMEOUT=120
 DEPLOY_TIMEOUT=180
+# 윈도우에서 Docker Desktop 을 실행한 후 엔진 응답을 기다리는 시간입니다.
+DOCKER_DESKTOP_TIMEOUT=180
 
 step() { printf '\n\033[36m== %s\033[0m\n' "$1"; }
 note() { printf '   \033[90m%s\033[0m\n' "$1"; }
 good() { printf '   \033[32m%s\033[0m\n' "$1"; }
 fail() { printf '\033[31m!! %s\033[0m\n' "$1" >&2; }
 
+is_windows() { case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) return 0 ;; *) return 1 ;; esac; }
+
 # ── 실행 방식 결정 ───────────────────────────────────────────────────────────
 
-case "$(uname -s)" in
-  MINGW*|MSYS*|CYGWIN*) MODE='dev' ;;
-  *)                    MODE='deploy' ;;
-esac
+if is_windows; then MODE='dev'; else MODE='deploy'; fi
 
 COMMAND=''
 SERVICE=''
@@ -75,8 +76,11 @@ COMMAND="${COMMAND:-up}"
 if [ "$MODE" = 'deploy' ]; then
   # 배포는 docker-compose.yml 1개만 씁니다. -f 를 지정하면 docker compose 가 override 파일을 자동으로 적용하지 않습니다.
   COMPOSE=(docker compose -f docker-compose.yml)
+  # 배포에서 alembic 은 api service 의 Docker image 안에서 실행합니다. --no-deps 로 web·caddy 는 재실행하지 않습니다.
+  ALEMBIC=(run --rm --no-deps api alembic)
 else
   COMPOSE=(docker compose)
+  ALEMBIC=(run --rm dev alembic)
 fi
 
 # ── 공통 ─────────────────────────────────────────────────────────────────────
@@ -104,19 +108,36 @@ health_url() {
   fi
 }
 
+docker_alive() { docker info >/dev/null 2>&1; }
+
+# 윈도우에서 Docker 엔진이 응답하지 않을 경우 Docker Desktop 을 실행하고 응답할 때까지 기다립니다.
+start_docker_desktop() {
+  local exe="$PROGRAMFILES/Docker/Docker/Docker Desktop.exe" deadline
+  [ -f "$exe" ] || return 1
+  note "Docker 엔진이 응답하지 않습니다. Docker Desktop 을 실행합니다."
+  cmd.exe //c start "" "$(cygpath -w "$exe")" >/dev/null 2>&1 || return 1
+  deadline=$(( SECONDS + DOCKER_DESKTOP_TIMEOUT ))
+  while [ "$SECONDS" -lt "$deadline" ]; do
+    docker_alive && return 0
+    sleep 3
+  done
+  return 1
+}
+
+# Docker·curl 이 있는지, 엔진이 응답하는지, .env 가 있는지 확인합니다. 모든 명령이 실행 전에 거칩니다.
 assert_ready() {
   command -v docker >/dev/null 2>&1 || {
-    fail "저장소에서 Docker를 찾지 못했습니다."
+    fail "Docker를 찾지 못했습니다."
     if [ "$MODE" = 'dev' ]; then
-      note "Docker Desktop 을 설치한 후 다시 실행하십시오."
+      note "Docker Desktop 을 설치한 후 다시 실행하십시오: https://www.docker.com/products/docker-desktop/"
     else
       note "Docker를 설치한 후 다시 실행하십시오: curl -fsSL https://get.docker.com | sh"
     fi
     exit 1
   }
-  docker info >/dev/null 2>&1 || {
+  docker_alive || { is_windows && start_docker_desktop; } || {
     fail "Docker 엔진이 응답하지 않습니다."
-    if [ "$MODE" = 'dev' ]; then
+    if is_windows; then
       note "Docker Desktop 을 실행한 후 다시 실행하십시오."
     else
       note "Docker의 응답 상태를 확인하십시오: sudo systemctl start docker"
@@ -129,13 +150,11 @@ assert_ready() {
     fail "curl 을 찾지 못했습니다. 설치 상태를 확인해주십시오."
     exit 1
   }
-}
-
-# .env 가 없으면 견본을 복사합니다. 개발용 기본값이라 dev 는 그대로 실행할 수 있습니다.
-ensure_env() {
-  [ -f .env ] && return 0
-  cp .env.example .env
-  good ".env.example 복사를 통해 .env 를 생성하는 데 성공했습니다."
+  # .env 가 없으면 견본을 복사합니다. 개발용 기본값이라 dev 는 그대로 실행할 수 있습니다.
+  if [ ! -f .env ]; then
+    cp .env.example .env
+    good ".env.example 복사를 통해 .env 를 생성하는 데 성공했습니다."
+  fi
 }
 
 # 배포에 반드시 필요한 값이 채워졌는지 확인합니다. 1개라도 비어 있으면 여기서 중단합니다 —
@@ -169,22 +188,16 @@ assert_deploy_env() {
   good "$domain"
 }
 
-# migration이 변경될 경우, 백업 지점이 반드시 필요합니다. 
-# backup service 는 6시간마다 실행되므로 자동 백업만으로는 서버와 데이터 차이가 발생 할 수 있습니다. 
-# 따라서, migration 직전 상태의 백업을 1회 더 진행합니다.
-# 백업은 backup service 의 container 에서 실행합니다. host 의 backups 폴더는 해당 container 가
-# root 로 생성한 것이므로, 로그인한 사용자가 직접 사용할 경우 Permission denied 가 발생합니다.
+# migration이 변경될 경우, 백업 지점이 반드시 필요합니다.
+# backup service 는 6시간마다 실행되므로 자동 백업만으로는 서버와 데이터 차이가 발생 할 수 있습니다.
+# 따라서, migration 직전 상태의 백업을 1회 더 진행합니다. 백업은 deploy/backup.sh 의 once 가 실행합니다.
+# host 의 backups 폴더는 backup service 의 container 가 root 로 생성한 것이므로,
+# 로그인한 사용자가 직접 사용할 경우 Permission denied 가 발생합니다.
 backup_db() {
   local stamp
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-
-  # 저장이 중단되면 .part 확장자로 저장되므로, 정상 백업파일과 구분이 가능합니다.
-  "${COMPOSE[@]}" run --rm --no-deps -T -e "STAMP=$stamp" --entrypoint bash backup -c '
-    set -euo pipefail
-    out="/backups/pre-migrate-$STAMP.sql.gz"
-    pg_dump --clean --if-exists -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB" | gzip > "$out.part"
-    mv "$out.part" "$out"
-  ' || {
+  # backup service 의 entrypoint 가 sh /backup.sh 이므로 인자만 전달합니다.
+  "${COMPOSE[@]}" run --rm --no-deps -T backup once "pre-migrate-$stamp" || {
     fail "백업에 실패했습니다. migration 을 실행하지 않습니다."
     exit 1
   }
@@ -192,16 +205,9 @@ backup_db() {
 }
 
 # migration 을 적용하기 전에, 데이터베이스가 현재 가리키는 revision 의 파일이 저장소에 있는지 확인합니다.
-#
-# alembic 은 현재 revision 의 파일이 없으면 "Can't locate revision" 만 출력하고 중단합니다. 그 문구만
-# 보면 무엇을 해야 하는지 알 수 없습니다. 2026-09-16 에 migration 36개를 1개로 합치면서 옛 파일을
-# 삭제했는데, 그때 배포 데이터베이스가 옛 체인 중간에 있어 2026-09-19 배포가 이 지점에서 중단되었습니다.
-#
-# 합치기 전에 배포 데이터베이스를 먼저 head 로 올렸다면 발생하지 않았을 상황입니다. 다음에 같은 일이
-# 발생했을 때 원인과 할 일이 바로 보이도록 여기서 먼저 검사합니다.
+# alembic 은 현재 revision 의 파일이 없으면 "Can't locate revision" 만 출력하고 중단하므로 이 함수가 먼저 검사합니다.
 assert_revision_known() {
-  local service="$1"
-  if "${COMPOSE[@]}" run --rm --no-deps -T "$service" alembic current >/dev/null 2>&1; then
+  if "${COMPOSE[@]}" "${ALEMBIC[@]}" current >/dev/null 2>&1; then
     return 0
   fi
 
@@ -220,6 +226,18 @@ assert_revision_known() {
   note "파일이 삭제된 후에도 데이터베이스가 이전 revision 에 남아 있을 경우,"
   note "alembic이 적용 시작 지점을 찾지 못할 수 있습니다."
   exit 1
+}
+
+# migration 을 최신으로 적용합니다. 배포는 db 를 먼저 실행하고 백업을 진행한 후 적용합니다.
+migrate_db() {
+  step "migration 을 최신으로 업데이트합니다."
+  note "Database 가 정상 응답을 반환할 때까지 기다린 후 업데이트합니다."
+  if [ "$MODE" = 'deploy' ]; then
+    "${COMPOSE[@]}" up -d db
+    backup_db
+  fi
+  assert_revision_known
+  "${COMPOSE[@]}" "${ALEMBIC[@]}" upgrade head
 }
 
 wait_url() {
@@ -255,9 +273,17 @@ show_account_hint() {
   fi
 }
 
-# 리눅스는 현재 디렉토리를 PATH에 포함하지 않습니다. 
-# 따라서 clone 직후에는 지정자인 ./ 를 부여해 실행하고, 
-# 이후 alias를 등록합니다. 
+# 커밋 메시지 형식을 검사하는 .githooks 를 활성화합니다. 이미 같은 값이면 변경하지 않습니다.
+register_hooks() {
+  command -v git >/dev/null 2>&1 && [ -d .git ] || return 0
+  [ "$(git config core.hooksPath || true)" = '.githooks' ] && return 0
+  git config core.hooksPath .githooks
+  note "git hook 을 활성화했습니다 — 커밋 메시지 형식을 .githooks/commit-msg 가 검사합니다."
+}
+
+# 리눅스는 현재 디렉토리를 PATH에 포함하지 않습니다.
+# 따라서 clone 직후에는 지정자인 ./ 를 부여해 실행하고,
+# 이후 alias를 등록합니다.
 #
 # ~/.bashrc 에 function 을 추가합니다.
 # 재실행시 누적 적용되지는 않으나, 경로 이동시 새 PATH로 등록될 수 있습니다.
@@ -265,8 +291,8 @@ BASHRC_BEGIN='# >>> banblit >>>'
 BASHRC_END='# <<< banblit <<<'
 
 register_command() {
-  # 윈도우는 setup.ps1 파일을 통해 alias를 진행합니다.
-  case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) return 0 ;; esac
+  # 윈도우는 banblit.ps1 setup 이 PowerShell profile 에 등록합니다.
+  is_windows && return 0
 
   local rc="$HOME/.bashrc" here had
   here="$(pwd)"
@@ -291,14 +317,13 @@ register_command() {
 open_browser() {
   [ "$NO_BROWSER" -eq 0 ] || return 0
   # 헤드리스 서버이므로 Browser를 열지 않습니다.
-  case "$(uname -s)" in
-    MINGW*|MSYS*|CYGWIN*) cmd.exe //c start "" "$1" >/dev/null 2>&1 || true ;;
-  esac
+  is_windows && { cmd.exe //c start "" "$1" >/dev/null 2>&1 || true; }
+  return 0
 }
 
 # ── dev ──────────────────────────────────────────────────────────────────────
 
-# dependency 를 추가하고 Docker image 다시 빌드하지 않을 경우,  
+# dependency 를 추가하고 Docker image 다시 빌드하지 않을 경우,
 # uvicorn 이 import 단계에서 종료됩니다.
 # uv.lock 파일과 Docker image의 Dockerfile 내 의존성을 비교하여 판단합니다.
 image_stale() {
@@ -319,15 +344,12 @@ image_stale() {
 
 up_dev() {
   if [ "$BUILD" -eq 1 ] || image_stale; then
-    step "개발용 image 를 다시 build 합니다."
-    note "변경된 의존성이 없을 경우, layer cache 를 사용하여 bulid 속도를 향상시킵니다."
+    step "개발용 Docker image 를 다시 build 합니다."
+    note "변경된 의존성이 없을 경우, layer cache 를 사용하여 build 속도를 향상시킵니다."
     "${COMPOSE[@]}" build dev
   fi
 
-  step "migration 을 최신으로 업데이트합니다."
-  note "Database 가 정상 응답을 반환할 때까지 기다린 후 업데이트합니다."
-  assert_revision_known dev
-  "${COMPOSE[@]}" run --rm dev alembic upgrade head
+  migrate_db
 
   local services=(api web)
   if [ "$AUTO" -eq 1 ]; then
@@ -341,7 +363,7 @@ up_dev() {
   "${COMPOSE[@]}" up -d "${services[@]}"
 
   step "정상 응답이 올 때까지 대기합니다"
-  wait_url "$DEV_API_HEALTH_URL" "$DEV_API_TIMEOUT" 'API (8000)' || {
+  wait_url "$(health_url)" "$DEV_API_TIMEOUT" 'API (8000)' || {
     note "로그를 확인하십시오: ./banblit.sh logs api"
     note "import 단계에서 종료되었다면 Docker image의 의존성 업데이트가"
     note "필요할 수 있습니다."
@@ -366,16 +388,10 @@ up_deploy() {
   assert_deploy_env
 
   step "Docker image 를 Build 합니다"
-  note "변경된 의존성이 없을 경우, layer cache 를 사용하여 bulid 속도를 향상시킵니다."
+  note "변경된 의존성이 없을 경우, layer cache 를 사용하여 build 속도를 향상시킵니다."
   "${COMPOSE[@]}" build
 
-  step "Database Container 를 실행하고 migration 을 적용합니다"
-  "${COMPOSE[@]}" up -d db
-  backup_db
-  # 배포용 Docker image 안에 alembic.ini 와 migrations 가 포함되어 있습니다.
-  # --no-deps 옵션은 build가 web 및 caddy container를 재실행되지 않도록 하여 자원을 절약합니다.
-  assert_revision_known api
-  "${COMPOSE[@]}" run --rm --no-deps api alembic upgrade head
+  migrate_db
 
   step "아직 실행되지 않은 Container 를 모두 생성합니다"
   "${COMPOSE[@]}" up -d
@@ -394,25 +410,22 @@ up_deploy() {
 # ── 명령 ─────────────────────────────────────────────────────────────────────
 
 cmd_up() {
-  assert_ready
-  ensure_env
   if [ "$MODE" = 'deploy' ]; then up_deploy; else up_dev; fi
+  register_hooks
   register_command
 }
 
 # 서버 소스코드를 Github 최신 릴리즈로 갱신합니다.
 cmd_update() {
-  assert_ready
   step "Git pull을 실행하여 소스코드를 업데이트합니다"
   git pull
   cmd_up
 }
 
 cmd_down() {
-  assert_ready
   if [ "$VOLUMES" -eq 1 ]; then
     step "Container 를 Down 하고 Container에 mount 된 volume을 삭제합니다"
-    fail "Databas 의 데이터와 저장된 첨부파일이 전부 삭제됩니다."
+    fail "Database 의 데이터와 저장된 첨부파일이 전부 삭제됩니다."
     printf '   삭제를 진행하시려면 yes 를 입력하십시오 : '
     local answer
     read -r answer
@@ -425,19 +438,17 @@ cmd_down() {
 }
 
 cmd_restart() {
-  assert_ready
   local targets=(api web)
   [ -z "$SERVICE" ] || targets=("$SERVICE")
   step "Container를 강제로 재실행합니다 — ${targets[*]}"
-  # docker compose restart 를 쓰지 않습니다. 
-  # restart 는 기존 container 의 중단 시점에서 다시 up 되므로, 
+  # docker compose restart 를 쓰지 않습니다.
+  # restart 는 기존 container 의 중단 시점에서 다시 up 되므로,
   # env 파일이 생성 시점의 값을 반영하고 있습니다.
   # up --force-recreate 를 통해 Container 를 강제로 재생성하여 업데이트를 반영합니다.
   "${COMPOSE[@]}" up -d --force-recreate "${targets[@]}"
 }
 
 cmd_logs() {
-  assert_ready
   # --since 1m 옵션을 통해 이전 종료된 Compose 의 Log 가 출력되는 것을 방지합니다.
   local args=(logs --since 1m)
   [ "$FOLLOW" -eq 0 ] || args+=(-f)
@@ -446,7 +457,6 @@ cmd_logs() {
 }
 
 cmd_status() {
-  assert_ready
   step "실행 중인 Container"
   "${COMPOSE[@]}" ps
   step "READY"
@@ -466,21 +476,9 @@ cmd_status() {
 }
 
 cmd_migrate() {
-  assert_ready
-  ensure_env
-  step "migration 을 최신으로 업데이트합니다."
-  if [ "$MODE" = 'deploy' ]; then
-    assert_deploy_env
-    "${COMPOSE[@]}" up -d db
-    backup_db
-    assert_revision_known api
-    "${COMPOSE[@]}" run --rm --no-deps api alembic upgrade head
-    "${COMPOSE[@]}" run --rm --no-deps api alembic current
-  else
-    assert_revision_known dev
-    "${COMPOSE[@]}" run --rm dev alembic upgrade head
-    "${COMPOSE[@]}" run --rm dev alembic current
-  fi
+  [ "$MODE" = 'dev' ] || assert_deploy_env
+  migrate_db
+  "${COMPOSE[@]}" "${ALEMBIC[@]}" current
 }
 
 # pytest를 실행하여 테스트 결과를 반환받습니다.
@@ -498,9 +496,7 @@ check_step() {
 }
 
 cmd_check() {
-  [ "$MODE" = 'dev' ] || { fail "check 옵션은 개발용입니다. 배포용 Docker image에는 Test Tool 이 포함되어 있지 않습니다."; exit 1; }
-  assert_ready
-  ensure_env
+  [ "$MODE" = 'dev' ] || { fail "check 옵션은 개발용입니다. 배포용 Docker image에는 테스트 도구가 포함되어 있지 않습니다."; exit 1; }
   mkdir -p .logs
   local stamp ok=0
   stamp="$(date +%Y%m%d-%H%M%S)"
@@ -525,46 +521,33 @@ COMMAND
   down      Product 를 종료합니다.
   restart   대상을 재실행합니다.
   logs      최근 1분 이내에 출력된 로그를 출력합니다.
-  status    Container 의 Heath check 를 진행합니다.
+  status    Container 의 Health check 를 진행합니다.
   migrate   migration 를 적용하고 현재 revision 을 출력합니다.
   check     [DEV] pytest 와 mypy 를 통해 Test를 실행합니다.
   help      도움말을 출력합니다.
 
-
-
 SERVICE
 
   api  web  db  auto-assign  caddy        [DEBUG] logs·restart 옵션 실행시 대상으로 부여
-
-
-
 
 OPTIONS
 
   --dev --deploy   실행 방식을 직접 지정합니다.
   --auto           [DEV] Compose up 을 진행할 때 스케줄링 엔진도 Load 합니다.
   --build          [DEV] Compose up 을 진행할 때 Docker image 를 새로 build 합니다.
-  --no-browser     [DEV] Compose up 을 진행할 때 View 용 Browser를 실행하지 않습니다. 
+  --no-browser     [DEV] Compose up 을 진행할 때 View 용 Browser를 실행하지 않습니다.
   --volumes  -v    Compose down 을 진행할 때, mount 된 volume 을 삭제합니다.
-  --follow   -f    logs 를 실시간으로. 출력합니다
-
+  --follow   -f    logs 를 실시간으로 출력합니다.
 
 HELP
 }
 
-if [ "$COMMAND" != 'help' ]; then
-  note "$MODE 로 실행합니다."
-fi
+if [ "$COMMAND" = 'help' ]; then cmd_help; exit 0; fi
 
 case "$COMMAND" in
-  up)      cmd_up ;;
-  update)  cmd_update ;;
-  down)    cmd_down ;;
-  restart) cmd_restart ;;
-  logs)    cmd_logs ;;
-  status)  cmd_status ;;
-  migrate) cmd_migrate ;;
-  check)   cmd_check ;;
-  help)    cmd_help ;;
-  *)       fail "존재하지 않는 명령어입니다 — $COMMAND"; cmd_help; exit 1 ;;
+  up|update|down|restart|logs|status|migrate|check) ;;
+  *) fail "존재하지 않는 명령어입니다 — $COMMAND"; cmd_help; exit 1 ;;
 esac
+note "$MODE 로 실행합니다."
+assert_ready
+"cmd_$COMMAND"

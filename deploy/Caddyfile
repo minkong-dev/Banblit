@@ -5,10 +5,10 @@
 {$BANBLIT_DOMAIN} {
 	encode zstd gzip
 
-	# 화면과 /api 의 분기는 web(nginx) 이 합니다. 여기서는 전부 web 으로 전달합니다.
+	# 화면과 /api 의 분기는 web(nginx) 이 합니다. caddy 는 전부 web 으로 전달합니다.
 	reverse_proxy web:80
 
-	# 접속 기록만 남깁니다. 요청 본문은 남기지 않습니다(비밀번호·재설정 token 포함).
+	# 접속 기록만 남깁니다. 요청 본문(비밀번호, 재설정 token)은 남기지 않습니다.
 	log {
 		output file /var/log/caddy/access.log {
 			roll_size 10MiB
