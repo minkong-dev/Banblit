@@ -11,44 +11,28 @@
 **`dev_history/` 의 가장 최근 파일 하나를 읽습니다.** 현재 상태, 지금 하던 일, 남은 것이
 전부 거기 있습니다. 그 파일이 가리키기 전에는 저장소를 훑지 않습니다.
 
-이 규칙은 세션을 짧게 유지하기 위한 것입니다. 컨텍스트는 요청마다 통째로 다시 나가므로
-세션이 길어질수록 같은 질문 하나가 몇 배씩 비싸집니다. 파악을 파일에서 하면 `/clear` 가
-공짜가 되고, 작업 하나가 끝날 때마다 끊을 수 있습니다.
+파악을 파일에서 하면 작업 1개가 끝날 때마다 `/clear` 로 세션을 끊어도 비용이 들지 않습니다.
 
 ---
 ## 1. 이 프로젝트의 에이전트
 
-`.claude/agents/` 에 있는 열한 개가 전부입니다. ECC(`affaan-m/ECC`)에서 필요한 것만 옮겨 왔고,
-플러그인 자체는 꺼 두었습니다 — 68개를 다 켜면 요청마다 40,637 토큰이 붙는데 이 열한 개의
-몫은 671 토큰입니다.
-
-| 상황 | 에이전트 |
-|---|---|
-| 복잡한 기능·리팩토링 계획 | `planner` |
-| 구조 결정 | `architect` |
-| 새 기능·버그 수정 | `tdd-guide` |
-| 코드를 쓰거나 고친 직후 | `code-reviewer` |
-| 파이썬 코드 | `python-reviewer` |
-| 서버 주소(FastAPI) 코드 | `fastapi-reviewer` |
-| 데이터베이스·마이그레이션 | `database-reviewer` |
-| 화면 코드 | `react-reviewer` |
-| 보안이 걸린 코드, 커밋 전 | `security-reviewer` |
-| 빌드·타입 오류 | `build-error-resolver` |
-| README 갱신 | `doc-updater` |
+`.claude/agents/` 에 있는 파일이 전부이고, 이 폴더가 유일한 기준입니다(사용자 결정 2026-10-08).
+각 파일 머리의 description 이 "언제 쓰는가" 입니다. 표를 따로 두지 않습니다. ECC(`affaan-m/ECC`)에서
+필요한 것만 옮겨 왔고, 플러그인 자체는 꺼 두었습니다. 전부 켜면 요청마다 에이전트 설명이 수만 토큰씩 붙습니다.
+계획·구조 결정·README 수정은 에이전트 없이 직접 합니다.
 
 서브에이전트는 **중간 산출물을 확인하지 않아도 되는 일**에만 띄웁니다.
 훑을 양이 6만 자를 넘고 돌려받을 것이 한 문단일 때가 그 경우입니다.
 수정할 파일과 내용이 정해진 편집은 직접 합니다.
 서브에이전트 2개 이상을 동시에 띄우는 것은 시간이 급할 때만 합니다. 비용은 개수만큼 늘어납니다.
 
-서브에이전트 하나의 고정비는 프리앰블 38,000 토큰이고, 그 값은 그 에이전트가 도는 내내
-매 요청마다 다시 나갑니다. 유일한 이득은 그 에이전트가 읽은 것이 끝나면 버려진다는 것뿐입니다.
-결과를 이쪽에서 검토해야 하는 일은 내용이 어차피 이 대화로 들어오므로 이득이 없습니다.
+서브에이전트는 생성할 때마다 프리앰블 입력 토큰이 발생합니다. 이득은 컨텍스트 창이 분리되는 것뿐이라,
+결과를 이쪽에서 검토해야 하는 일은 출력이 다시 이 대화의 입력 토큰이 되어 이득이 없습니다.
 
 위임할 때는 파일 경로와 줄 번호, 무엇을·왜·어떻게를 빠짐없이 넘깁니다 — 서브에이전트는
 이 대화를 보지 못합니다.
-목록에 없는 에이전트가 필요해지면 ECC 캐시에서 그 파일 하나만 `.claude/agents/` 로 옮기고
-표에 적습니다. 플러그인을 통째로 켜지 않습니다.
+없는 에이전트가 필요해지면 ECC 캐시에서 그 파일 하나만 `.claude/agents/` 로 옮깁니다.
+플러그인을 통째로 켜지 않습니다.
 
 ---
 ## 2. 이 프로젝트의 스킬
@@ -62,35 +46,37 @@
 - **테스트** — `tdd-workflow`, `e2e-testing`
 - **점검** — `security-review`, `security-scan`, `context-budget`, `repo-scan`
 
-`coding-standards`는 주석 규칙이 아래 `refactoring` 스킬과 충돌합니다. 충돌 시 `refactoring`이 우선합니다.
+`coding-standards` 는 전역 `refactoring` 스킬의 참조 파일(`reference/coding-standards.md`)로 흡수했습니다. 필요할 때만 참조합니다.
 
 ECC 밖의 스킬은 다섯 가지를 씁니다 — 문서는 `cluedoc`(`KeunwooPark/cluedoc`, `.claude/skills/` 에 있습니다),
-외부 포맷 내보내기는 `document-skills`, Claude API 연동은 `claude-api`, `ui-ux-pro-max`, 그리고 글쓰기 보충 `writing-style-local`.
+외부 포맷 내보내기는 `document-skills`, Claude API 연동은 `claude-api`, `ui-ux-pro-max`, 그리고 보충 스킬 2개 `writing-style-local`·`refactoring-local`.
 
 `writing-style-local`(`.claude/skills/writing-style-local/SKILL.md`)은 이 저장소에서 확정된 표기(집중 합주기간, 전체 합주,
 시작 시간/종료 시간, 권한 세트 등)와 문서별 규칙만 담습니다. 글쓰기 규칙 본문은 전역 `writing-style` 스킬에 있고,
-한국어 글을 쓸 때 두 스킬을 함께 invoke 합니다. 저장소에 있던 전역 스킬 사본은 2026-10-07 에 `trash/` 로 옮겼습니다.
+한국어 글을 쓸 때 두 스킬을 함께 invoke 합니다. 저장소에 있던 전역 스킬 사본은 전역과 중복이라 `trash/` 로 옮겼습니다.
 
-ECC의 언어별 규칙 문서는 `.claude/rules/{common,python,react,typescript}/` 에 있습니다.
-스킬과 에이전트가 이 경로를 참조합니다. 주석·가독성 규칙이 `refactoring` 스킬과 어긋나면
-`refactoring` 에 작성되어 있는 내용을 기준으로 합니다.
+ECC 의 규칙 문서(`.claude/rules/`)는 2026-10-08 에 없앴습니다. 다른 곳에 없던 규칙만 해당 저장소 스킬의
+"ECC rules 에서 흡수" 절로 옮겼고, 나머지는 공통 CLAUDE.md·전역 스킬과 중복이었습니다.
+하네스 구성과 추가·삭제 기준은 `.claude/README.md` 에 있습니다.
 
 `ui-ux-pro-max` 는 **자료를 찾아보는 용도로만 씁니다.** 색 짝·폰트 짝·차트 종류를 고를 때
 엽니다. 화면을 실제로 만드는 것은 6장이 정한 `example-skills:frontend-design` 입니다.
-이 스킬에 화면을 맡기면 "이런 제품에는 보통 이런 색"의 평균값이 나와, 어느 서비스에
-갖다 놔도 되는 화면이 됩니다.
+`ui-ux-pro-max` 에 화면을 맡기면 평균값 디자인이 나오기 때문입니다.
 
 ---
-## 2-1. 리팩토링 스킬 (이 저장소 것)
+## 2-1. 리팩토링 스킬
 
-**리팩토링을 할 때는 `refactoring` 스킬을 반드시 invoke합니다.** 예외 없습니다.
+**리팩토링을 할 때는 전역 `refactoring` 스킬과 이 저장소의 `refactoring-local` 스킬을 함께 invoke 합니다.** 예외 없습니다.
 
 모듈을 나누거나 합칠 때, 모듈 간 통신 방식을 정할 때, 메시지 규격을 바꿀 때,
 코드 리뷰에서 컨벤션 위반을 찾을 때도 같습니다.
 
-`.claude/skills/refactoring/SKILL.md` 에 있습니다. 목적은 `refactoring.md` 에 있습니다.
+규칙 본문은 전역 `~/.claude/skills/refactoring/SKILL.md` 에 있습니다.
+`refactoring-local`(`.claude/skills/refactoring-local/SKILL.md`)은 이 저장소의 모듈 지도, 시퀀스 파일 이름(`pipeline.py`),
+직접 호출 예외 목록, 테스트 위치, audit 기본 범위, 그리고 개발자님이 쓴 리팩토링 목적(옛 `refactoring.md`)을 담습니다.
+writing-style 과 같은 구조입니다. 저장소에 있던 `refactoring`·`refactor-audit` 스킬은 전역과 중복이라 `trash/` 로 옮겼습니다.
 
-**수정하기 전에는 `refactor-audit` 스킬로 먼저 셉니다.** 리뷰어가 위반 판정으로 검사하고,
+**수정하기 전에는 `refactoring audit` 으로 먼저 셉니다.** 리뷰어가 위반 판정으로 검사하고,
 러너가 코드를 처음 보는 개발자 입장에서 막히는 지점을 질문으로 남깁니다. 두 결과를
 `AUDIT.md` 한 장으로 합쳐 승인받은 뒤에 수정합니다. 규모를 모르고 손대지 않습니다.
 
@@ -114,12 +100,12 @@ ECC의 언어별 규칙 문서는 `.claude/rules/{common,python,react,typescript
 ---
 ## 3. 문서
 
-`cluedoc` 스킬이 관리합니다. 단 **`README.md`는 ECC 소관**입니다 — `doc-updater` 에이전트가 맡습니다.
+`cluedoc` 스킬이 관리합니다. `README.md`(GitHub 첫 화면)는 에이전트 없이 직접 수정합니다.
 
 ### 3-1. 관리 범위
 
 - **cluedoc**: `.cluedoc/` 아래 전부, `COMMAND.md`
-- **ECC**: `README.md`
+- **직접 수정**: `README.md`
 - **아무도 자동으로 건드리지 않음**: `CLAUDE.md`
 
 담당 도구를 부르는 것은 **문서를 새로 만들거나 절 단위로 다시 쓸 때**입니다.
@@ -147,8 +133,7 @@ ECC의 언어별 규칙 문서는 `.claude/rules/{common,python,react,typescript
 무엇을 했는지는 `git log`에 이미 있으므로 커밋 목록을 옮겨 적지 않습니다.
 **맨 끝에 "남은 것" 항목을 둡니다** — 아직 못 한 작업을 개발일지 맨 끝에 적습니다. 별도 파일을 만들지 않습니다.
 
-> 2026-08-27에 `PROGRESS.md`·`TASK.md`를 폐지했습니다. `git log`와 개발일지에 같은 내용이
-> 중복돼서입니다. 파일은 `trash/2026-08-27-harness-ecc/` 에 있습니다. 다시 만들지 않습니다.
+> 진행도 문서(`PROGRESS.md`·`TASK.md`)는 `git log`·개발일지와 중복이라 폐지했습니다. 다시 만들지 않습니다.
 
 ### 3-3. COMMAND.md
 
@@ -182,7 +167,7 @@ PDF·PPT·Word·Excel은 `document-skills` 스킬을 포맷에 맞게 씁니다.
 - 타입 표기를 반드시 붙입니다. 함수의 매개변수와 반환값 모두.
 - 이름 규칙은 언어의 표준을 따릅니다 — 파이썬은 함수·변수 `snake_case`, 클래스 `PascalCase`,
   화면 코드(TypeScript)는 변수·함수 `camelCase`, 컴포넌트·타입 `PascalCase`.
-- 그 밖의 가독성·주석 규칙은 `refactoring` 스킬 7·8절에 작성되어 있는 내용을 기준으로 합니다.
+- 가독성·주석 규칙은 2장의 `refactoring` 스킬을 따릅니다.
 
 ---
 ## 6. 이 프로젝트 고유 제약
@@ -213,7 +198,7 @@ PDF·PPT·Word·Excel은 `document-skills` 스킬을 포맷에 맞게 씁니다.
 - 이 형식은 커밋 검사 훅(`.githooks/commit-msg`)이 강제합니다. 어기면 커밋이 거부됩니다.
 - 새로 받은 저장소는 한 번 `git config core.hooksPath .githooks` 를 실행해 훅을 켭니다.
 - scope를 추가할 때는 `.githooks/commit-msg` 의 `SCOPES` 목록도 함께 수정합니다.
-- 커밋 메시지 끝에 `Co-Authored-By` 같은 꼬리말을 붙이지 않습니다.
+- 꼬리말(`Co-Authored-By` 등) 규칙은 공통 규칙 8장과 같습니다.
 
 ---
 ## 8. 비밀값
