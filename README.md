@@ -62,7 +62,7 @@ flowchart TD
 ### 개발 (Windows)
 
 ```
-.\setup.ps1     # 한 번만. .env를 생성하고 git hook과 banblit 명령을 활성화합니다
+.\setup.ps1     # 한 번만. banblit 명령을 PowerShell 에 등록합니다
 banblit up
 ```
 
