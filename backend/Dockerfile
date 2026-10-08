@@ -1,9 +1,8 @@
 # syntax=docker/dockerfile:1
 
 # ─────────────────────────────────────────────────────────────
-# 1단계 · 공통 바탕 — 개발용·배포용이 함께 물려받는 층
-#   파이썬 버전과 실행 의존성(OR-Tools)을 여기 한 곳에서만 고정한다.
-#   두 단계가 이 층을 공유하므로 버전이 서로 어긋날 수 없다.
+# 1단계 base — dev 와 prod 가 공유하는 stage 입니다.
+#   Python 버전과 실행 의존성(OR-Tools)을 이 stage 에서만 지정합니다.
 # ─────────────────────────────────────────────────────────────
 FROM python:3.14-slim AS base
 
@@ -18,14 +17,13 @@ COPY --from=ghcr.io/astral-sh/uv:0.11.23 /uv /usr/local/bin/uv
 
 WORKDIR /app
 
-# 잠금 파일에 적힌 버전 그대로 설치한다. 소스는 아직 넣지 않는다.
+# uv.lock 에 작성된 버전으로 설치합니다. 소스는 복사하지 않습니다.
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --locked --no-dev --no-install-project
 
 # ─────────────────────────────────────────────────────────────
-# 2단계 · 개발용 — 테스트 도구가 포함된 층
-#   소스는 이미지에 굽지 않고 바깥 폴더를 연결해서 쓴다.
-#   PYTHONPATH로 연결된 소스를 찾게 한다.
+# 2단계 dev — 테스트 도구(pytest, mypy)가 포함된 stage 입니다.
+#   소스는 Docker image 에 복사하지 않고 host 폴더를 volume 으로 연결합니다(docker-compose.override.yml).
 # ─────────────────────────────────────────────────────────────
 FROM base AS dev
 
@@ -36,18 +34,15 @@ RUN --mount=type=cache,target=/root/.cache/uv uv sync --locked --no-install-proj
 CMD ["pytest"]
 
 # ─────────────────────────────────────────────────────────────
-# 3단계 · 배포용 — 실행에 필요한 것만 남긴 층
-#   테스트 도구가 들어오지 않는다.
+# 3단계 prod — 실행에 필요한 파일만 포함하는 stage 입니다. 테스트 도구는 설치하지 않습니다.
 # ─────────────────────────────────────────────────────────────
 FROM base AS prod
 
-# pyproject.toml이 readme = "README.md"를 선언하므로 패키지 설치에 이 파일이 필요하다.
+# pyproject.toml 이 readme = "README.md" 를 선언하므로 패키지 설치에 이 파일이 필요합니다.
 COPY README.md ./
 COPY src ./src
 
-# 마이그레이션도 함께 굽는다. 이것이 없으면 배포한 서버에서 표를 만들 방법이 없다 —
-# 마이그레이션을 돌리던 dev service 는 개발용 override 에만 있어 배포에는 존재하지 않는다.
-# 적용은 `docker compose -f docker-compose.yml run --rm api alembic upgrade head` 로 한다.
+# migration 파일을 복사합니다. 배포에는 dev service 가 존재하지 않으므로 api container 에서 alembic 을 실행합니다.
 COPY alembic.ini ./
 COPY migrations ./migrations
 

@@ -2,19 +2,25 @@
 #   배포:  docker compose -f docker-compose.yml up -d
 #   개발:  docker compose up -d        (override 가 자동으로 적용됩니다)
 
+# 백엔드 service 가 공유하는 값입니다. 아래에서 *backend-image, *database-url 로 참조합니다.
+x-backend-image: &backend-image
+  build:
+    context: ./backend
+    target: prod
+  image: banblit-backend:prod
+
+x-database-url: &database-url postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+
 services:
   api:
-    build:
-      context: ./backend
-      target: prod
-    image: banblit-backend:prod
+    <<: *backend-image
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: *database-url
       # container 시간대입니다. 이 저장소는 시각에 시간대를 붙이지 않으므로(CLAUDE.md 6장) 이 값이 기준입니다.
       TZ: ${TZ:-Asia/Seoul}
       # 로그인 session cookie 의 Secure 입니다. 배포는 https 이므로 true, 개발용 override 가 false 로 덮어씁니다.
       COOKIE_SECURE: "true"
-      # api 앞의 reverse proxy 개수입니다. 배포는 caddy → web(nginx) → api 이므로 2, 개발용 override 가 1로 덮어씁니다.
+      # api 앞의 reverse proxy 개수입니다. 배포는 caddy, web(nginx), api 순서이므로 2, 개발용 override 가 1로 덮어씁니다.
       # rate limit 이 X-Forwarded-For 의 뒤에서 이 번째 값을 요청자로 봅니다(backend/src/backend/api/rate_limit.py).
       TRUSTED_PROXY_COUNT: "2"
       ATTACHMENT_DIR: ${ATTACHMENT_DIR:-/var/lib/banblit/attachments}
@@ -36,16 +42,13 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # 자동 배정입니다. 기간에 저장된 연산 시각(first_run_at·second_run_at)이 지나면 assign_period 를 직접 호출합니다.
+  # 자동 배정입니다. 기간에 저장된 연산 시각(first_run_at, second_run_at)이 지나면 assign_period 를 직접 호출합니다.
   # api 를 여러 대로 늘려도 이 service 는 1대만 둡니다. 첨부파일 volume 은 연결하지 않습니다.
   auto-assign:
-    build:
-      context: ./backend
-      target: prod
-    image: banblit-backend:prod
+    <<: *backend-image
     command: python -m backend.jobs.auto_assign
     environment:
-      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: *database-url
       # api 와 같은 시간대여야 합니다. 다르면 지정한 시각과 다른 시각에 배정이 실행됩니다.
       TZ: ${TZ:-Asia/Seoul}
       AUTO_ASSIGN_ENABLED: "${AUTO_ASSIGN_ENABLED:-true}"
@@ -55,7 +58,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # 화면입니다. nginx 가 빌드 결과를 제공하고 /api 요청만 api 로 전달합니다.
+  # 화면입니다. nginx 가 build 결과를 제공하고 /api 요청만 api 로 전달합니다.
   web:
     build:
       context: ./frontend
@@ -66,7 +69,7 @@ services:
     image: banblit-frontend:prod
     environment:
       API_ORIGIN: http://api:8000
-      # 이 값이 없으면 nginx 가 설정 파일의 $$uri·$$host 까지 빈 값으로 치환합니다.
+      # 이 값이 없으면 nginx 가 설정 파일의 $$uri, $$host 까지 빈 값으로 치환합니다.
       NGINX_ENVSUBST_FILTER: "^API_ORIGIN$$"
     # 외부 요청은 caddy 만 받습니다. localhost 로 묶어 서버 안에서 SSH 로 확인할 수 있게 둡니다.
     ports:
@@ -96,8 +99,8 @@ services:
       - web
     restart: unless-stopped
 
-  # 정기 백업입니다. 데이터베이스와 첨부파일을 host 폴더에 백업합니다.
-  # pg_dump 버전이 서버와 같아야 하므로 db 와 같은 image 를 씁니다.
+  # 정기 백업입니다. 데이터베이스와 첨부파일을 host 폴더에 백업합니다. banblit.sh 가 migration 직전 백업에도 이 service 를 씁니다.
+  # pg_dump 버전이 서버와 같아야 하므로 db 와 같은 Docker image 를 씁니다.
   backup:
     image: postgres:17
     entrypoint: ["/bin/sh", "/backup.sh"]
@@ -141,5 +144,3 @@ volumes:
   banblit-caddy-logs:
   banblit-db-data:
   banblit-attachments:
-  banblit-web-modules:
-  banblit-e2e-modules:

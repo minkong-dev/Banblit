@@ -1,4 +1,4 @@
-# 사용자 설명서 캡쳐·PDF 전용 image 입니다. E2E 가 쓰는 공식 Playwright image 에 한글 글꼴만 추가합니다.
+# 사용자 설명서 캡처, PDF 전용 Docker image 입니다. E2E 가 쓰는 공식 Playwright Docker image 에 한글 글꼴만 추가합니다.
 # 글꼴은 화면이 지정하는 "Noto Sans KR" 1개입니다(frontend/src/styles/base.css). 다른 글꼴로 대체하지 않습니다.
 # 태그는 docker-compose.override.yml 의 e2e service 와 같은 값이어야 합니다. 다르면 브라우저를 다시 내려받습니다.
 FROM mcr.microsoft.com/playwright:v1.62.1-noble
