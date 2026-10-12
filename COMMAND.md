@@ -894,8 +894,8 @@ docker compose --profile e2e run --rm e2e
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: `frontend/e2e/` 의 Playwright 검사를 전부 실행합니다(84개 — chromium 과 webkit 합계). 로그인·가입, 배정 다시
-  계산과 조율안, 팀 게시판 권한·첨부, 공지 글·댓글, 달력·알림, 합주실 수정, 전체 합주 지정, 팀 명단을 브라우저로
+- **용도**: `frontend/e2e/` 의 Playwright 검사를 전부 실행합니다(86개 — chromium 과 webkit 합계). 로그인·가입, 배정 다시
+  계산과 연산 결과 표시, 팀 게시판 권한·첨부, 공지 글·댓글, 달력·알림, 합주실 수정, 전체 합주 지정, 팀 명단을 브라우저로
   재현해 화면·서버·DB 가 연결되어 동작하는지 확인합니다. dev DB 는 건드리지 않습니다.
 - **옵션**
   - `--profile e2e` — `docker-compose.override.yml` 에서 `profiles: ["e2e"]` 가 붙은 `e2e-api`·`e2e`
@@ -914,8 +914,8 @@ docker compose --profile e2e run --rm e2e
      DB 이름이 `_e2e` 로 끝나지 않으면 초기화하지 않고 중단합니다.
   2. `e2e` 안에서 Playwright 가 Vite 개발 서버(`npm run dev`)를 시작합니다(`frontend/playwright.config.ts`
      의 `webServer`). `/api` 요청은 `API_ORIGIN=http://e2e-api:8000` 으로 전달됩니다. `web` 서비스는 쓰지 않습니다.
-  3. `frontend/e2e/global-setup.ts` 가 계정 2개·합주실·팀 2개·집중 합주기간 2개(오늘은 배정 저장,
-     내일은 조율안이 나오도록 불가능 일정 등록)를 만들고, 첫 가입자라 전체 권한을 받은 E2E 계정의
+  3. `frontend/e2e/global-setup.ts` 가 계정 2개·합주실·팀 2개·집중 합주기간 2개(오늘은 연산 후 그 결과를 적용,
+     내일은 부족분이 있는 연산 결과가 나오도록 불가능 일정 등록)를 만들고, 첫 가입자라 전체 권한을 받은 E2E 계정의
      로그인 cookie 를 `frontend/playwright/.auth/e2e-account.json` 에 저장합니다. 모든 검사가 이 로그인 상태로 시작합니다.
 - **주의점**
   - **실행할 때마다 첫 줄부터 실행합니다.** 둘째 줄만 다시 실행하면 global-setup 이
