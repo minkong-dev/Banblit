@@ -65,6 +65,22 @@ class WindowIn:
         }
 
 
+@dataclass(frozen=True)
+class AssignRuleIn:
+    """배정 규칙입니다. target_hours 가 None 이면 팀당 목표 시간은 전체 시간 ÷ 팀 수입니다(사용자 결정 2026-10-12)."""
+
+    target_hours: int | None = None
+    max_absent: int = 0
+
+    def columns(self) -> dict[str, object]:
+        """저장할 열 두 개를 반환합니다. DB 의 CHECK 도 같은 조건을 보지만, 어느 값이 잘못됐는지 알리기 위해 먼저 봅니다."""
+        if self.target_hours is not None and self.target_hours <= 0:
+            raise ValueError("팀당 목표 시간은 1시간 이상이어야 합니다")
+        if self.max_absent < 0:
+            raise ValueError("불참 허용 인원은 0명 이상이어야 합니다")
+        return {"target_hours_per_team": self.target_hours, "max_absent_members": self.max_absent}
+
+
 def _pair_columns(part: str, pair: ClockPair) -> dict[str, object]:
     if pair is None:
         return {
@@ -99,6 +115,7 @@ def create_period(
     first_run_at: str,
     second_run_at: str,
     window: WindowIn | None = None,
+    rule: AssignRuleIn | None = None,
 ) -> Period:
     """새 기간을 생성합니다. 경계에서 kind와 날짜 순서를 사람이 읽을 문장으로 검증합니다."""
     require_valid_kind(kind)
@@ -115,6 +132,7 @@ def create_period(
         first_run_at=parse_clock(first_run_at, "1차 연산 시각"),
         second_run_at=parse_clock(second_run_at, "2차 연산 시각"),
         **(WindowIn() if window is None else window).columns(),
+        **(AssignRuleIn() if rule is None else rule).columns(),
     )
     session.add(period)
     commit_with_cancellations(session, period)
@@ -161,6 +179,7 @@ def update_period(
     first_run_at: str | None,
     second_run_at: str | None,
     window: WindowIn | None = None,
+    rule: AssignRuleIn | None = None,
 ) -> Period:
     """period_id의 기간에서 전달된 항목만 수정하여 저장하고, 수정된 기간을 반환합니다.
 
@@ -181,6 +200,8 @@ def update_period(
         changes["everyday"] = everyday
     if window is not None:
         changes.update(window.columns())
+    if rule is not None:
+        changes.update(rule.columns())
     for field, value in changes.items():
         setattr(period, field, value)
     commit_with_cancellations(session, period)

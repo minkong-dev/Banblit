@@ -4,7 +4,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.services.period.pipeline import assign_period, open_slots_in_period
+from backend.services.period.pipeline import open_slots_in_period, run_period_assignment
 from backend.contract import DEFAULT_SLOT_MINUTES
 from backend.db.models import (
     Assignment,
@@ -60,11 +60,10 @@ def test_successful_assignment_is_saved_as_the_current_schedule(
     team_id = _team_with_member(db_session, "A", "김민수")
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))  # 2개 slot
 
-    result = assign_period(
+    result = run_period_assignment(
         db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT
     )
 
-    assert result.resolution.assignment.feasible is True
     assert result.saved is True
     saved = db_session.scalars(
         select(Assignment).where(Assignment.period_id == period_id)
@@ -85,11 +84,10 @@ def test_successful_assignment_round_trips_rooms_teams_and_times(
     room_1 = _room(db_session, "1번방", time(18, 0), time(20, 0))  # 하루 2개 slot
     room_2 = _room(db_session, "2번방", time(20, 0), time(22, 0))  # 하루 2개 slot, 다른 시간대
 
-    result = assign_period(
+    result = run_period_assignment(
         db_session, period_id, [team_a, team_b], [room_1, room_2], saved_at=SAVED_AT
     )
 
-    assert result.resolution.assignment.feasible is True
     assert result.saved is True
     saved = db_session.scalars(
         select(Assignment).where(Assignment.period_id == period_id)
@@ -120,7 +118,7 @@ def test_successful_assignment_round_trips_rooms_teams_and_times(
     assert team_hours == {team_a: 4, team_b: 4}
 
 
-def test_failed_assignment_saves_nothing_and_names_who_to_exclude(
+def test_short_assignment_is_kept_as_an_unsaved_record(
     db_session: Session,
 ) -> None:
     period_id = _period(db_session)
@@ -142,17 +140,18 @@ def test_failed_assignment_saves_nothing_and_names_who_to_exclude(
     db_session.flush()
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
-    result = assign_period(
+    result = run_period_assignment(
         db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT
     )
 
-    assert result.resolution.assignment.feasible is False
+    # 목표 2회 중 이영희가 가능한 19~20시 1회만 받습니다. 확정하지 않고 미확정 배정안으로 등록합니다.
     assert result.saved is False
+    assert result.record_saved_at == SAVED_AT
     assert db_session.scalars(select(Assignment)).all() == []
-    excluded = [
-        result.member_names[p.excluded_member] for p in result.resolution.proposals
-    ]
-    assert excluded == ["이영희"]
+    assert [(s.team, s.assigned_hours) for s in result.report.shortfalls] == [("A", 1.0)]
+    assert result.report.target_hours == 2.0
+    kinds = db_session.scalars(select(AssignmentBackup.kind)).all()
+    assert kinds == ["unsaved"]
 
 
 def test_open_period_is_rejected(db_session: Session) -> None:
@@ -161,7 +160,7 @@ def test_open_period_is_rejected(db_session: Session) -> None:
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
     with pytest.raises(ValueError, match="집중"):
-        assign_period(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
+        run_period_assignment(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
 
 
 def test_unknown_team_is_rejected(db_session: Session) -> None:
@@ -169,7 +168,7 @@ def test_unknown_team_is_rejected(db_session: Session) -> None:
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
     with pytest.raises(ValueError, match="존재하지 않는 팀입니다"):
-        assign_period(db_session, period_id, [999999], [room_id], saved_at=SAVED_AT)
+        run_period_assignment(db_session, period_id, [999999], [room_id], saved_at=SAVED_AT)
 
 
 def test_unknown_room_is_rejected(db_session: Session) -> None:
@@ -177,7 +176,7 @@ def test_unknown_room_is_rejected(db_session: Session) -> None:
     team_id = _team_with_member(db_session, "A", "김민수")
 
     with pytest.raises(ValueError, match="존재하지 않는 합주실입니다"):
-        assign_period(db_session, period_id, [team_id], [999999], saved_at=SAVED_AT)
+        run_period_assignment(db_session, period_id, [team_id], [999999], saved_at=SAVED_AT)
 
 
 def test_reassignment_archives_the_previous_schedule(db_session: Session) -> None:
@@ -185,8 +184,8 @@ def test_reassignment_archives_the_previous_schedule(db_session: Session) -> Non
     team_id = _team_with_member(db_session, "A", "김민수")
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
-    assign_period(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
-    assign_period(
+    run_period_assignment(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
+    run_period_assignment(
         db_session,
         period_id,
         [team_id],
@@ -206,7 +205,7 @@ def test_failed_reassignment_preserves_the_current_schedule(
     team_id = _team_with_member(db_session, "A", "김민수")
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
-    first = assign_period(
+    first = run_period_assignment(
         db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT
     )
     assert first.saved is True
@@ -232,7 +231,7 @@ def test_failed_reassignment_preserves_the_current_schedule(
     )
     db_session.flush()
 
-    second = assign_period(
+    second = run_period_assignment(
         db_session,
         period_id,
         [team_id],
@@ -240,7 +239,6 @@ def test_failed_reassignment_preserves_the_current_schedule(
         saved_at=datetime(2026, 8, 1, 21, 0),
     )
 
-    assert second.resolution.assignment.feasible is False
     assert second.saved is False
     after = {
         (row.room_id, row.team_id, row.starts_at, row.ends_at)
@@ -256,7 +254,7 @@ def test_unknown_period_is_rejected(db_session: Session) -> None:
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
     with pytest.raises(ValueError, match="존재하지 않는 기간입니다"):
-        assign_period(db_session, 999999, [team_id], [room_id], saved_at=SAVED_AT)
+        run_period_assignment(db_session, 999999, [team_id], [room_id], saved_at=SAVED_AT)
 
 
 def test_team_without_members_is_rejected(db_session: Session) -> None:
@@ -267,7 +265,7 @@ def test_team_without_members_is_rejected(db_session: Session) -> None:
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
     with pytest.raises(ValueError, match="멤버가 없습니다"):
-        assign_period(
+        run_period_assignment(
             db_session, period_id, [empty_team.id], [room_id], saved_at=SAVED_AT
         )
 
@@ -285,7 +283,7 @@ def test_overlapping_period_room_conflict_is_rejected_not_500(
     team_b = _team_with_member(db_session, "B", "이영희")
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
-    first = assign_period(
+    first = run_period_assignment(
         db_session, period_a, [team_a], [room_id], saved_at=SAVED_AT
     )
     assert first.saved is True
@@ -297,7 +295,7 @@ def test_overlapping_period_room_conflict_is_rejected_not_500(
     period_b = _period(db_session)
 
     with pytest.raises(ValueError, match="이미"):
-        assign_period(db_session, period_b, [team_b], [room_id], saved_at=SAVED_AT)
+        run_period_assignment(db_session, period_b, [team_b], [room_id], saved_at=SAVED_AT)
 
     remaining = db_session.scalars(
         select(Assignment).where(Assignment.period_id == period_a)
@@ -314,7 +312,7 @@ def test_duplicate_team_id_is_rejected(db_session: Session) -> None:
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
     with pytest.raises(ValueError, match="팀"):
-        assign_period(
+        run_period_assignment(
             db_session, period_id, [team_id, team_id], [room_id], saved_at=SAVED_AT
         )
 
@@ -325,7 +323,7 @@ def test_duplicate_room_id_is_rejected(db_session: Session) -> None:
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
     with pytest.raises(ValueError, match="합주실"):
-        assign_period(
+        run_period_assignment(
             db_session, period_id, [team_id], [room_id, room_id], saved_at=SAVED_AT
         )
 
@@ -356,11 +354,10 @@ def test_two_week_schedule_for_four_teams_finishes(db_session: Session) -> None:
         _room(db_session, "2번방", time(19, 0), time(23, 0)),
     ]
 
-    result = assign_period(
+    result = run_period_assignment(
         db_session, period.id, team_ids, room_ids, saved_at=SAVED_AT
     )
 
-    assert result.resolution.assignment.feasible is True
     assert result.saved is True
 
 
@@ -394,16 +391,13 @@ def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
     db_session.flush()
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))  # 하루 2칸 × 2일 = 4칸
 
-    result = assign_period(
+    result = run_period_assignment(
         db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT
     )
 
-    assert result.resolution.assignment.feasible is False
+    # 4칸 중 이영희가 불가능한 8/2 18시를 뺀 3칸만 받습니다.
     assert result.saved is False
-    excluded = [
-        result.member_names[p.excluded_member] for p in result.resolution.proposals
-    ]
-    assert excluded == ["이영희"]
+    assert [s.assigned_hours for s in result.report.shortfalls] == [3.0]
 
 
 def test_multiple_unavailable_times_for_the_same_person_all_block_assignment(
@@ -449,24 +443,26 @@ def test_multiple_unavailable_times_for_the_same_person_all_block_assignment(
     )
     db_session.flush()
 
-    result = assign_period(
+    result = run_period_assignment(
         db_session, period_id, [team_a, team_b], [room_id], saved_at=SAVED_AT
     )
 
-    assert result.resolution.assignment.feasible is False
     assert result.saved is False
 
 
-def test_excluding_the_proposed_member_makes_the_assignment_savable(
+def test_allowed_absence_is_reported_with_position_and_cohort(
     db_session: Session,
 ) -> None:
-    """조율안 확정 경로입니다. 조율안이 지목한 멤버를 제외하면 그 결과가 현행 시간표가 됩니다."""
+    """불참 허용 1명이면 이영희가 불가능한 18시도 배정하고, 불참자로 포지션과 기수를 함께 보고합니다."""
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
-    blocked = Member(name="이영희")
+    blocked = Member(name="이영희", cohort=23)
     db_session.add(blocked)
     db_session.flush()
-    seat(db_session, team_id, blocked.id)
+    seat(db_session, team_id, blocked.id, "보컬")
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    period.max_absent_members = 1
     db_session.add(
         UnavailableTime(
             member_id=blocked.id,
@@ -479,44 +475,35 @@ def test_excluding_the_proposed_member_makes_the_assignment_savable(
     db_session.flush()
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
-    refused = assign_period(
+    result = run_period_assignment(
         db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT
     )
-    assert refused.saved is False
 
-    result = assign_period(
-        db_session,
-        period_id,
-        [team_id],
-        [room_id],
-        saved_at=SAVED_AT,
-        excluded_member_id=blocked.id,
-    )
-
-    assert result.resolution.assignment.feasible is True
-    assert result.saved is True
-    saved = db_session.scalars(
-        select(Assignment).where(Assignment.period_id == period_id)
-    ).all()
-    assert len(saved) == 1  # 팀 하나가 전체 2칸을 이어 가져가 구간 한 행이 된다
+    # 팀이 2칸을 다 받지만 18시 session 에 이영희가 빠지므로 확정하지 않습니다.
+    assert result.saved is False
+    assert result.report.shortfalls == []
+    [absence] = result.report.absences
+    assert (absence.team, absence.member, absence.cohort, absence.sessions) == ("A", "이영희", 23, 1)
+    assert absence.position == "보컬"
 
 
-def test_excluding_someone_outside_the_roster_is_rejected(
+def test_target_hours_of_the_period_replace_the_automatic_target(
     db_session: Session,
 ) -> None:
+    # 자동 목표는 2칸 ÷ 1팀 = 2시간입니다. 기간에 1시간을 지정하면 1회만 받고, 목표를 채웠으므로 확정합니다.
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    period.target_hours_per_team = 1
+    db_session.flush()
 
-    with pytest.raises(ValueError, match="명단에 없습니다"):
-        assign_period(
-            db_session,
-            period_id,
-            [team_id],
-            [room_id],
-            saved_at=SAVED_AT,
-            excluded_member_id=999999,
-        )
+    result = run_period_assignment(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
+
+    assert result.saved is True
+    assert result.report.target_hours == 1.0
+    assert len(result.computed.assignment.sessions_by_team[team_id]) == 1
 
 
 def test_open_slots_come_from_the_saved_schedule_without_recomputing(
@@ -528,11 +515,11 @@ def test_open_slots_come_from_the_saved_schedule_without_recomputing(
     team_b = _team_with_member(db_session, "B", "박지훈")
     room_id = _room(db_session, "1번방", time(18, 0), time(21, 0))  # 3칸
 
-    result = assign_period(
+    result = run_period_assignment(
         db_session, period_id, [team_a, team_b], [room_id], saved_at=SAVED_AT
     )
     assert result.saved is True
-    assert len(result.resolution.assignment.open_slots) == 1  # 3칸 - 팀당 1칸 × 2팀
+    assert len(result.computed.assignment.open_slots) == 1  # 3칸 - 팀당 1칸 × 2팀
 
     period = db_session.get(Period, period_id)
     assert period is not None
@@ -565,7 +552,7 @@ def test_an_everyday_period_assigns_only_the_day_of_the_run(db_session: Session)
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
     db_session.commit()
 
-    result = assign_period(
+    result = run_period_assignment(
         db_session, period_id, [team_id], [room_id], saved_at=datetime(2026, 8, 5, 9, 0)
     )
 
@@ -586,7 +573,7 @@ def test_ensemble_days_are_left_out_of_team_assignment(db_session: Session) -> N
     period.ensemble_starts_at, period.ensemble_ends_at = time(18, 0), time(20, 0)
     db_session.commit()
 
-    result = assign_period(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
+    result = run_period_assignment(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
 
     assert result.saved is True
     rows = db_session.scalars(select(Assignment)).all()

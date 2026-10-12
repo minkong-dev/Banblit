@@ -1,4 +1,4 @@
-"""팀마다 합주실의 빈 시간을 sessions_per_team 회씩 배정하는 계산입니다.
+"""팀마다 합주실의 빈 시간을 target_sessions 회까지 배정하는 계산입니다.
 
 Banblit 은 밴드 동아리의 합주 일정 관리 서비스입니다. 팀(밴드)이 합주실(연습 공간)을 나눠 쓰고, 이 파일이 그 배정을
 계산합니다. 계산은 OR-Tools 의 CP-SAT(제약 조건을 전부 충족하는 값의 조합을 찾는 해결기)로 합니다.
@@ -23,31 +23,31 @@ from datetime import date, datetime
 
 from ortools.sat.python import cp_model
 
-from backend.scheduling.availability import Team, is_team_available
+from backend.scheduling.availability import Team, absent_member_ids
 from backend.scheduling.interval import TimeInterval
 from backend.scheduling.slots import generate_sessions, generate_slots
 
 
-class _StopAfterFirst(cp_model.CpSolverSolutionCallback):
-    """solver 가 첫 해(조건을 전부 충족하는 배정안)를 찾으면 improve_seconds 초 뒤에 계산을 멈추는 timer 를 겁니다.
+class _StopWhenStalled(cp_model.CpSolverSolutionCallback):
+    """solver 가 더 나은 해를 stall_seconds 초 동안 찾지 못하면 계산을 멈추는 timer 를 겁니다.
 
-    solver 는 해를 찾을 때마다 on_solution_callback 을 부릅니다. 첫 호출에서만 timer 를 걸고, timer 는 별도 thread 에서
-    stop_search 를 불러 계산을 중단합니다(stop_search 는 다른 thread 에서 불러도 됩니다). daemon=True 는 프로세스가
-    끝날 때 이 thread 가 남아 있어도 종료를 막지 않게 합니다.
+    solver 는 목적식 값이 나아진 해를 찾을 때마다 on_solution_callback 을 부릅니다. 부를 때마다 앞의 timer 를 취소하고
+    새 timer 를 겁니다. timer 는 별도 thread 에서 stop_search 를 불러 계산을 중단합니다(stop_search 는 다른 thread 에서
+    불러도 됩니다). daemon=True 는 프로세스가 끝날 때 이 thread 가 남아 있어도 종료를 막지 않게 합니다.
     """
 
-    def __init__(self, solver: cp_model.CpSolver, improve_seconds: float) -> None:
+    def __init__(self, solver: cp_model.CpSolver, stall_seconds: float) -> None:
         super().__init__()
         self._solver = solver
-        self._improve_seconds = improve_seconds
+        self._stall_seconds = stall_seconds
         self._timer: threading.Timer | None = None
 
     def on_solution_callback(self) -> None:
-        if self._timer is None:
-            # stop_search 를 괄호 없이 넘깁니다. timer 가 만료될 때 부를 함수 자체를 전달하는 것입니다.
-            self._timer = threading.Timer(self._improve_seconds, self._solver.stop_search)
-            self._timer.daemon = True
-            self._timer.start()
+        self.cancel()
+        # stop_search 를 괄호 없이 넘깁니다. timer 가 만료될 때 부를 함수 자체를 전달하는 것입니다.
+        self._timer = threading.Timer(self._stall_seconds, self._solver.stop_search)
+        self._timer.daemon = True
+        self._timer.start()
 
     def cancel(self) -> None:
         if self._timer is not None:
@@ -76,9 +76,11 @@ class RoomInterval:
 
 @dataclass
 class Assignment:
-    feasible: bool
+    """배정 결과입니다. absences 는 불참자가 있는 session 과 불참 멤버 번호를 팀별로 담고, 불참자가 없는 팀은 key 가 없습니다."""
+
     sessions_by_team: dict[int, list[RoomInterval]]
     open_slots: list[RoomInterval]
+    absences: dict[int, list[tuple[RoomInterval, list[int]]]]
 
 
 def _build_room_slots(rooms: list[Room], slot_minutes: int) -> list[RoomInterval]:
@@ -139,10 +141,12 @@ def _covered_slots(
     return covered
 
 
-def _validate(teams: list[Team], sessions_per_team: int) -> None:
+def _validate(teams: list[Team], target_sessions: int, max_absent: int) -> None:
     """번호는 대상을 유일하게 식별해야 합니다. 중복되면 결과에서 대상을 구분할 수 없기 때문입니다."""
-    if sessions_per_team < 0:
+    if target_sessions < 0:
         raise ValueError("팀당 배정 개수는 음수일 수 없습니다")
+    if max_absent < 0:
+        raise ValueError("불참 허용 인원은 음수일 수 없습니다")
 
     team_counts = Counter(team.id for team in teams)
     duplicated_teams = {team_id for team_id, count in team_counts.items() if count > 1}
@@ -168,86 +172,99 @@ def _validate(teams: list[Team], sessions_per_team: int) -> None:
 def assign(
     teams: list[Team],
     rooms: list[Room],
-    sessions_per_team: int,
+    target_sessions: int,
     slot_minutes: int,
     session_minutes: int,
     solver_time_limit_seconds: float,
-    improve_seconds_after_first: float,
+    stall_seconds: float,
     daily_max_minutes: int | None = None,
+    max_absent: int = 0,
 ) -> Assignment:
-    """각 팀에게, 그 팀이 사용 가능한 시간의 빈 합주실 session 을 sessions_per_team 회 배정합니다.
+    """각 팀에게 빈 합주실 session 을 target_sessions 회까지, 가장 적게 받은 팀부터 최대한 배정합니다.
 
-    solver_time_limit_seconds 는 계산 1회의 상한이고, improve_seconds_after_first 는 첫 배정안을 찾은 뒤 연속 배정을
-    더 늘리는 데 쓰는 시간입니다. 두 값 모두 pipeline.py 가 전달합니다.
+    solver_time_limit_seconds 는 계산 1회의 상한이고, stall_seconds 는 더 나은 해가 나오지 않을 때 기다리는
+    시간입니다. 두 값 모두 pipeline.py 가 전달합니다.
 
     session 은 session_minutes 동안 끊기지 않고 이어지는 구간 하나입니다. slot_minutes 는 칸 하나의
     크기(분)이고 session 이 시작할 수 있는 간격입니다. 두 값 모두 저장소 설정이 결정합니다.
 
+    max_absent 는 session 1회에서 불가능 일정 때문에 빠져도 되는 팀원 수의 상한입니다. 0 이면 팀 전원이
+    가능한 session 만 씁니다.
+
     칸 하나에는 팀 하나만 배정됩니다. 팀 하나는 같은 시간에 여러 합주실을 동시에 사용할 수 없으며,
-    여러 팀에 속한 멤버도 같은 시간에 한 곳에만 있을 수 있습니다. 조건을 모두 충족하는 배정안이
-    없을 경우 feasible=False 를 반환합니다.
+    여러 팀에 속한 멤버도 같은 시간에 한 곳에만 있을 수 있습니다. 모든 팀에 0회를 배정하는 해가 항상
+    조건을 충족하므로 결과는 항상 나옵니다.
 
     open_slots 는 어떤 session 도 차지하지 않은 칸입니다. session 이 아니라 칸 단위입니다 —
     남은 시간이 session 1회보다 짧아도 선착순 예약은 그 칸을 쓸 수 있기 때문입니다.
     """
-    _validate(teams, sessions_per_team)
+    _validate(teams, target_sessions, max_absent)
     room_slots = _build_room_slots(rooms, slot_minutes)
     room_sessions = _build_room_sessions(rooms, slot_minutes, session_minutes)
     covered = _covered_slots(room_sessions, slot_minutes)
 
     model = cp_model.CpModel()
-    chosen = _session_vars(model, teams, room_sessions, sessions_per_team)
+    chosen, absent = _session_vars(model, teams, room_sessions, target_sessions, max_absent)
     indices_by_slot = _indices_by_slot(covered)
     indices_by_interval = _indices_by_interval(indices_by_slot)
     _one_team_per_slot(model, chosen, teams, indices_by_slot)
     _one_room_per_team(model, chosen, teams, indices_by_interval)
-    _one_place_per_member(model, chosen, teams, indices_by_interval)
+    _one_place_per_member(model, chosen, absent, teams, indices_by_interval)
     if daily_max_minutes is not None:
         _limit_per_day(model, chosen, room_sessions, daily_max_minutes // session_minutes)
-    _prefer_back_to_back(model, chosen, room_sessions)
+    joined = _back_to_back_pairs(model, chosen, room_sessions)
+    _objective(model, chosen, absent, joined, teams, target_sessions, max_absent)
 
-    solved, solver = _solve(model, solver_time_limit_seconds, improve_seconds_after_first)
-    if not solved:
-        return Assignment(feasible=False, sessions_by_team={}, open_slots=[])
+    solver = _solve(model, solver_time_limit_seconds, stall_seconds)
 
     sessions_by_team: dict[int, list[RoomInterval]] = {}
+    absences: dict[int, list[tuple[RoomInterval, list[int]]]] = {}
     taken: set[RoomInterval] = set()
     for team in teams:
         picked = _picked_indices(solver, chosen, team.id)
         for index in picked:
             taken.update(covered[index])
         sessions_by_team[team.id] = [room_sessions[index] for index in picked]
+        missing = [(room_sessions[index], absent[(team.id, index)]) for index in picked if absent[(team.id, index)]]
+        if missing:
+            absences[team.id] = missing
 
     open_slots = [room_slot for room_slot in room_slots if room_slot not in taken]
-    return Assignment(
-        feasible=True, sessions_by_team=sessions_by_team, open_slots=open_slots
-    )
+    return Assignment(sessions_by_team=sessions_by_team, open_slots=open_slots, absences=absences)
 
 
 # (팀 번호, session 후보 번호) → 그 팀이 그 후보를 쓰면 1, 아니면 0 인 model 변수입니다.
 Chosen = dict[tuple[int, int], cp_model.IntVar]
+# (팀 번호, session 후보 번호) → 그 후보 시각에 불가능 일정이 있는 팀원 번호입니다. Chosen 과 key 가 같습니다.
+Absent = dict[tuple[int, int], list[int]]
 
 
 def _session_vars(
-    model: cp_model.CpModel, teams: list[Team], room_sessions: list[RoomInterval], sessions_per_team: int
-) -> Chosen:
-    """팀마다 사용 가능한 session 후보에 변수를 만들고, 팀당 선택 수가 sessions_per_team 과 같다는 제약을 겁니다.
+    model: cp_model.CpModel,
+    teams: list[Team],
+    room_sessions: list[RoomInterval],
+    target_sessions: int,
+    max_absent: int,
+) -> tuple[Chosen, Absent]:
+    """팀마다 불참자가 max_absent 명 이하인 session 후보에 변수를 만들고, 팀당 선택 수가 target_sessions 이하라는 제약을 겁니다.
 
-    팀이 쓸 수 없는 session 에는 변수를 만들지 않습니다. 변수를 만든 뒤 0 으로 고정하는 것보다
-    model 의 변수·제약 수가 줄어 solve 시간이 짧아집니다. 팀이 쓸 수 있는 후보가 sessions_per_team 개보다
-    적으면 제약을 충족할 수 없어 solve 가 해 없음을 반환합니다.
+    불참자가 상한을 넘는 session 에는 변수를 만들지 않습니다. 변수를 만든 뒤 0 으로 고정하는 것보다
+    model 의 변수·제약 수가 줄어 solve 시간이 짧아집니다.
     """
     chosen: Chosen = {}
+    absent: Absent = {}
     for team in teams:
         own: list[cp_model.IntVar] = []
         for index, room_session in enumerate(room_sessions):
-            if not is_team_available(team, room_session.interval):
+            missing = absent_member_ids(team, room_session.interval)
+            if len(missing) > max_absent:
                 continue
             var = model.new_bool_var(f"chosen_{team.id}_{index}")
             chosen[(team.id, index)] = var
+            absent[(team.id, index)] = missing
             own.append(var)
-        model.add(cp_model.LinearExpr.sum(own) == sessions_per_team)
-    return chosen
+        model.add(cp_model.LinearExpr.sum(own) <= target_sessions)
+    return chosen, absent
 
 
 def _indices_by_slot(covered: dict[int, list[RoomInterval]]) -> dict[RoomInterval, list[int]]:
@@ -296,36 +313,50 @@ def _one_room_per_team(
 
 
 def _one_place_per_member(
-    model: cp_model.CpModel, chosen: Chosen, teams: list[Team], indices_by_interval: dict[TimeInterval, list[int]]
+    model: cp_model.CpModel,
+    chosen: Chosen,
+    absent: Absent,
+    teams: list[Team],
+    indices_by_interval: dict[TimeInterval, list[int]],
 ) -> None:
-    """여러 팀에 속한 멤버는 같은 시각에 한 팀에만 있습니다. 팀이 하나뿐인 멤버는 제약이 필요 없습니다."""
+    """여러 팀에 속한 멤버는 같은 시각에 한 팀에만 있습니다. 팀이 하나뿐인 멤버는 제약이 필요 없습니다.
+
+    그 시각에 불가능 일정이 있는 멤버는 어느 팀에도 참석하지 않으므로, 그 후보는 이 멤버의 제약에서 뺍니다.
+    """
     teams_by_member: dict[int, list[int]] = defaultdict(list)
     for team in teams:
         for member in team.members:
             teams_by_member[member.id].append(team.id)
-    for team_ids in teams_by_member.values():
+    for member_id, team_ids in teams_by_member.items():
         if len(team_ids) < 2:
             continue
         for indices in indices_by_interval.values():
-            _at_most_one(model, _vars_of(chosen, team_ids, indices))
+            present = [
+                chosen[(team_id, index)]
+                for team_id in team_ids
+                for index in indices
+                if (team_id, index) in chosen and member_id not in absent[(team_id, index)]
+            ]
+            _at_most_one(model, present)
 
 
-def _solve(
-    model: cp_model.CpModel, solver_time_limit_seconds: float, improve_seconds_after_first: float
-) -> tuple[bool, cp_model.CpSolver]:
-    """model 을 풉니다. 해를 찾았으면 (True, solver), 시간 안에 못 찾았거나 해가 없으면 (False, solver) 를 반환합니다.
+def _solve(model: cp_model.CpModel, solver_time_limit_seconds: float, stall_seconds: float) -> cp_model.CpSolver:
+    """model 을 풀고 해를 담은 solver 를 반환합니다.
 
-    두 경우를 구분하지 않습니다 — 부르는 쪽은 배정안이 없다는 사실만 씁니다.
+    모든 변수가 0 인 해가 항상 조건을 충족하므로 해가 없는 경우는 없습니다. 시간 상한 안에 해를 1개도 찾지
+    못하면 ValueError 를 발생시켜 배정 작업(job)을 실패로 끝냅니다.
     """
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = solver_time_limit_seconds
-    stopper = _StopAfterFirst(solver, improve_seconds_after_first)
+    stopper = _StopWhenStalled(solver, stall_seconds)
     # 계산 중 오류가 나도 timer 를 취소합니다. 남겨 두면 끝난 계산에 timer 만료 시 stop_search 를 부릅니다.
     try:
         status = solver.solve(model, stopper)
     finally:
         stopper.cancel()
-    return status in (cp_model.OPTIMAL, cp_model.FEASIBLE), solver
+    if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        raise ValueError("배정 계산이 시간 상한 안에 끝나지 않았습니다")
+    return solver
 
 
 def _picked_indices(solver: cp_model.CpSolver, chosen: Chosen, team_id: int) -> list[int]:
@@ -353,16 +384,14 @@ def _limit_per_day(
             model.add(cp_model.LinearExpr.sum(variables) <= most)
 
 
-def _prefer_back_to_back(
+def _back_to_back_pairs(
     model: cp_model.CpModel,
     chosen: Chosen,
     room_sessions: list[RoomInterval],
-) -> None:
-    """같은 팀이 같은 합주실에서 바로 이어 쓰는 session 쌍의 수를 최대화하는 목적을 model 에 둡니다.
+) -> list[cp_model.IntVar]:
+    """같은 팀이 같은 합주실에서 바로 이어 쓰는 session 쌍마다, 두 session 이 모두 선택되었을 때만 1 이 될 수 있는 변수를 만들어 반환합니다.
 
     합주실을 옮겨 가며 이어지는 쌍은 세지 않습니다. 하루에 몰리는 것은 _limit_per_day 가 막습니다.
-    model 의 목적은 하나뿐이므로 maximize 는 여기서만 부릅니다. 시간 상한에 걸려 멈추면 그때까지 찾은
-    가장 좋은 해가 결과입니다.
     """
     by_start: dict[tuple[int, int, datetime], cp_model.IntVar] = {}
     for (team_id, index), var in chosen.items():
@@ -380,8 +409,38 @@ def _prefer_back_to_back(
         model.add(both <= var)
         model.add(both <= after)
         joined.append(both)
-    if joined:
-        model.maximize(cp_model.LinearExpr.sum(joined))
+    return joined
+
+
+def _objective(
+    model: cp_model.CpModel,
+    chosen: Chosen,
+    absent: Absent,
+    joined: list[cp_model.IntVar],
+    teams: list[Team],
+    target_sessions: int,
+    max_absent: int,
+) -> None:
+    """목적식 4개를 앞 항목이 우선하도록 가중치 합 1개로 묶어 maximize 합니다.
+
+    1. 가장 적게 받은 팀의 횟수 2. 전체 배정 횟수 3. 불참 인원 합(최소화) 4. 이어지는 session 쌍 수.
+    model 의 목적은 하나뿐이므로 maximize 는 여기서만 부릅니다. 각 가중치는 뒤 항목들이 가질 수 있는 최댓값의
+    합보다 크게 잡아, 앞 항목을 1 늘리는 해가 뒤 항목과 관계없이 항상 더 좋게 합니다.
+    """
+    team_count = len(teams)
+    w_absent = len(joined) + 1
+    w_total = w_absent * (max_absent * target_sessions * team_count + 1)
+    w_min = w_total * (target_sessions * team_count + 1)
+
+    fewest = model.new_int_var(0, target_sessions, "fewest")
+    for team in teams:
+        own = [var for (team_id, _), var in chosen.items() if team_id == team.id]
+        model.add(fewest <= cp_model.LinearExpr.sum(own))
+    total = cp_model.LinearExpr.sum(list(chosen.values()))
+    absent_sum = cp_model.LinearExpr.weighted_sum(
+        list(chosen.values()), [len(absent[key]) for key in chosen]
+    )
+    model.maximize(w_min * fewest + w_total * total - w_absent * absent_sum + cp_model.LinearExpr.sum(joined))
 
 
 def _at_most_one(model: cp_model.CpModel, variables: list[cp_model.IntVar]) -> None:

@@ -33,5 +33,6 @@ flowchart LR
 - `_occurrences`
 - `build_engine_rooms`: `backend.scheduling.pipeline`
 - `capped_sessions_per_team`
+- `target_sessions`
 - `auto_sessions_per_team`: `backend.scheduling.pipeline`
 - `build_engine_teams`: `backend.scheduling.pipeline`

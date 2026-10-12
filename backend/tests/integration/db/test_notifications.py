@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.jobs import auto_assign
-from backend.services.period.pipeline import assign_period
+from backend.services.period.pipeline import run_period_assignment
 from backend.db.models import Member, Notification, Period, Room, Team, TeamSlot
 
 # account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 이 파일의 첫 호출이 헤드매니저입니다.
@@ -218,7 +218,7 @@ def test_rolling_back_leaves_a_notification(
     team_ids = list(db_session.scalars(select(Team.id)))
     room_ids = list(db_session.scalars(select(Room.id)))
     for hour in (18, 19):
-        assign_period(
+        run_period_assignment(
             db_session,
             period_id,
             team_ids,

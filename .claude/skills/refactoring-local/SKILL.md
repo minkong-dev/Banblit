@@ -28,6 +28,7 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 
 - **message broker 는 적용하지 않습니다.** 서버 1개 process 의 FastAPI 입니다. 모듈 간 통신은 api(gateway) 의 router 가 services 의 `pipeline.py` 를 호출하는 직접 호출입니다.
 - services 끼리의 직접 호출은 2절 예외입니다. 자리를 세어 둡니다. audit 때 목록을 갱신합니다.
+  - `services/period/pipeline.py run_period_assignment` → `services/notification/pipeline.py notify_assignment_updated`(2026-10-12). 확정 시간표가 바뀐 경우에만 알리는 판단이 저장과 같은 자리에 있어야 합니다.
 - 외부와 직접 통신하는 자리(timeout 필수)
 
 | 호출하는 쪽 | 대상 | timeout 위치 |

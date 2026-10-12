@@ -8,6 +8,7 @@ from backend.services.validation.pipeline import format_calendar_date
 from backend.services.validation.pipeline import format_clock
 from backend.services.period.pipeline import create_period as create_period_row
 from backend.services.period.pipeline import (
+    AssignRuleIn,
     WindowIn,
     delete_period,
     list_periods,
@@ -21,6 +22,8 @@ from backend.services.period.pipeline import (
     set_ensemble_day,
 )
 from backend.api.schemas import (
+    AssignRuleIn as AssignRuleBody,
+    AssignRuleOut,
     ClockRangeOut,
     EnsembleDayIn,
     EnsembleDayOut,
@@ -90,6 +93,11 @@ def _window_in(req: PracticeWindowIn | None) -> WindowIn | None:
     return WindowIn(weekday=pair(req.weekday), weekend=pair(req.weekend))
 
 
+def _rule_in(req: AssignRuleBody | None) -> AssignRuleIn | None:
+    # 보내지 않았으면 None 을 그대로 넘겨 저장된 배정 규칙을 유지합니다.
+    return None if req is None else AssignRuleIn(target_hours=req.target_hours, max_absent=req.max_absent)
+
+
 def _period_out(period: Period, days: list[EnsembleDay]) -> PeriodOut:
     return PeriodOut(
         id=period.id,
@@ -101,6 +109,7 @@ def _period_out(period: Period, days: list[EnsembleDay]) -> PeriodOut:
         first_run_at=format_clock(period.first_run_at),
         second_run_at=format_clock(period.second_run_at),
         practice_window=_window_out(period),
+        assign_rule=AssignRuleOut(target_hours=period.target_hours_per_team, max_absent=period.max_absent_members),
         ensemble=_ensemble_out(period, days),
     )
 
@@ -141,6 +150,7 @@ def create_period(
         req.first_run_at,
         req.second_run_at,
         _window_in(req.practice_window),
+        _rule_in(req.assign_rule),
     )
     return _envelope(session, period)
 
@@ -166,6 +176,7 @@ def patch_period(
         req.first_run_at,
         req.second_run_at,
         _window_in(req.practice_window),
+        _rule_in(req.assign_rule),
     )
     return _envelope(session, period)
 

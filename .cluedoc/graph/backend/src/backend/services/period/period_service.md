@@ -34,15 +34,19 @@ flowchart LR
 
 ## 함수와 호출
 
-- `assign_period`: `backend.db.pipeline`, `backend.scheduling.pipeline`, `backend.services.period.period_input`
+- `assign_period`: `backend.scheduling.pipeline`
+- `schedule_report`: `backend.scheduling.pipeline`
+- `stored_report`: `backend.db.pipeline`
+- `clean`
+- `_absence`
+- `_sessions_of`: `backend.scheduling.pipeline`
+- `_prepare`: `backend.services.period.period_input`, `backend.services.settings.pipeline`
 - `_check_request`: `backend.services.period.period_crud_service`
-- `_engine_limits`: `backend.services.period.period_input`, `backend.services.settings.pipeline`
 - `practice_window`: `backend.services.period.period_input`
 - `period_days`: `backend.services.period.period_input`
 - `_load_rooms`
 - `_load_team_names`
-- `_load_members`
-- `_without_member`
+- `_load_roster`
 - `open_slots_in_period`: `backend.scheduling.pipeline`, `backend.services.period.period_input`, `backend.services.settings.pipeline`
 - `_load_unavailable`: `backend.services.period.period_input`
-- `_assignment_rows`
+- `assignment_rows`

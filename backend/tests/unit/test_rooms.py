@@ -17,9 +17,8 @@ def test_team_is_assigned_to_a_room_that_is_open_when_it_can_play() -> None:
     # 팀은 18~19시에 불가능 일정이 있으므로, 2번 합주실에만 배정 가능합니다.
     team = Team(id=10, members=[Member(id=1, unavailable=[TimeInterval(_at(18), _at(19))])])
 
-    result = assign(teams=[team], rooms=[room_a, room_b], sessions_per_team=1)
+    result = assign(teams=[team], rooms=[room_a, room_b], target_sessions=1)
 
-    assert result.feasible is True
     # 2번 합주실 내 어느 slot을 선택할지는 배정 엔진의 자유입니다. 합주실이 맞는지만 검증합니다.
     assigned = result.sessions_by_team[10]
     assert len(assigned) == 1
@@ -33,9 +32,10 @@ def test_two_teams_cannot_take_the_same_slot_in_the_same_room() -> None:
     team_a = Team(id=10, members=[Member(id=1, unavailable=[])])
     team_b = Team(id=20, members=[Member(id=2, unavailable=[])])
 
-    result = assign(teams=[team_a, team_b], rooms=[room], sessions_per_team=1)
+    result = assign(teams=[team_a, team_b], rooms=[room], target_sessions=1)
 
-    assert result.feasible is False
+    # 자리가 1개뿐이라 한 팀만 받고, 다른 팀은 0회입니다.
+    assert sorted(len(s) for s in result.sessions_by_team.values()) == [0, 1]
 
 
 def test_two_teams_can_take_the_same_time_in_different_rooms() -> None:
@@ -44,9 +44,8 @@ def test_two_teams_can_take_the_same_time_in_different_rooms() -> None:
     team_a = Team(id=10, members=[Member(id=1, unavailable=[])])
     team_b = Team(id=20, members=[Member(id=2, unavailable=[])])
 
-    result = assign(teams=[team_a, team_b], rooms=[room_a, room_b], sessions_per_team=1)
+    result = assign(teams=[team_a, team_b], rooms=[room_a, room_b], target_sessions=1)
 
-    assert result.feasible is True
     assigned_rooms = {
         result.sessions_by_team[10][0].room_id,
         result.sessions_by_team[20][0].room_id,
@@ -61,9 +60,9 @@ def test_one_team_cannot_occupy_two_rooms_at_the_same_time() -> None:
     room_b = Room(id=2, open_period=TimeInterval(_at(18), _at(19)))
     team = Team(id=10, members=[Member(id=1, unavailable=[])])
 
-    result = assign(teams=[team], rooms=[room_a, room_b], sessions_per_team=2)
+    result = assign(teams=[team], rooms=[room_a, room_b], target_sessions=2)
 
-    assert result.feasible is False
+    assert len(result.sessions_by_team[10]) == 1
 
 
 def test_shared_member_cannot_be_in_two_rooms_at_the_same_time() -> None:
@@ -73,9 +72,9 @@ def test_shared_member_cannot_be_in_two_rooms_at_the_same_time() -> None:
     team_a = Team(id=10, members=[Member(id=7, unavailable=[])])
     team_b = Team(id=20, members=[Member(id=7, unavailable=[])])
 
-    result = assign(teams=[team_a, team_b], rooms=[room_a, room_b], sessions_per_team=1)
+    result = assign(teams=[team_a, team_b], rooms=[room_a, room_b], target_sessions=1)
 
-    assert result.feasible is False
+    assert sorted(len(s) for s in result.sessions_by_team.values()) == [0, 1]
 
 
 def test_shared_member_can_practice_with_both_teams_at_different_times() -> None:
@@ -85,9 +84,8 @@ def test_shared_member_can_practice_with_both_teams_at_different_times() -> None
     team_a = Team(id=10, members=[Member(id=7, unavailable=[])])
     team_b = Team(id=20, members=[Member(id=7, unavailable=[])])
 
-    result = assign(teams=[team_a, team_b], rooms=[room], sessions_per_team=1)
+    result = assign(teams=[team_a, team_b], rooms=[room], target_sessions=1)
 
-    assert result.feasible is True
     time_a = result.sessions_by_team[10][0].interval
     time_b = result.sessions_by_team[20][0].interval
     assert time_a != time_b
@@ -101,9 +99,8 @@ def test_two_people_with_the_same_name_are_not_treated_as_one_person() -> None:
     team_a = Team(id=10, members=[Member(id=7, unavailable=[])])
     team_b = Team(id=20, members=[Member(id=8, unavailable=[])])
 
-    result = assign(teams=[team_a, team_b], rooms=[room_a, room_b], sessions_per_team=1)
+    result = assign(teams=[team_a, team_b], rooms=[room_a, room_b], target_sessions=1)
 
-    assert result.feasible is True
 
 
 def test_leftover_slots_are_returned_as_open_slots() -> None:
@@ -111,9 +108,8 @@ def test_leftover_slots_are_returned_as_open_slots() -> None:
     room = Room(id=1, open_period=TimeInterval(_at(18), _at(20)))
     team = Team(id=10, members=[Member(id=1, unavailable=[])])
 
-    result = assign(teams=[team], rooms=[room], sessions_per_team=1)
+    result = assign(teams=[team], rooms=[room], target_sessions=1)
 
-    assert result.feasible is True
     taken = result.sessions_by_team[10][0]
     assert len(result.open_slots) == 1
     assert result.open_slots[0].room_id == 1
@@ -124,19 +120,17 @@ def test_no_open_slots_when_every_slot_is_used() -> None:
     room = Room(id=1, open_period=TimeInterval(_at(18), _at(20)))
     team = Team(id=10, members=[Member(id=1, unavailable=[])])
 
-    result = assign(teams=[team], rooms=[room], sessions_per_team=2)
+    result = assign(teams=[team], rooms=[room], target_sessions=2)
 
-    assert result.feasible is True
     assert result.open_slots == []
 
 
-def test_open_slots_are_empty_when_assignment_fails() -> None:
-    # 배정이 불가능하면 예약 가능 자리를 특정할 수 없습니다.
+def test_open_slots_keep_the_slots_no_team_can_use() -> None:
+    # 팀이 18~19시에 불가능하면 그 칸은 배정되지 않고 예약 가능 자리로 남습니다.
     room = Room(id=1, open_period=TimeInterval(_at(18), _at(19)))
-    team_a = Team(id=10, members=[Member(id=1, unavailable=[])])
-    team_b = Team(id=20, members=[Member(id=2, unavailable=[])])
+    team = Team(id=10, members=[Member(id=1, unavailable=[TimeInterval(_at(18), _at(19))])])
 
-    result = assign(teams=[team_a, team_b], rooms=[room], sessions_per_team=1)
+    result = assign(teams=[team], rooms=[room], target_sessions=1)
 
-    assert result.feasible is False
-    assert result.open_slots == []
+    assert result.sessions_by_team[10] == []
+    assert [slot.interval for slot in result.open_slots] == [TimeInterval(_at(18), _at(19))]

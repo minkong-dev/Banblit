@@ -455,3 +455,17 @@ def test_sessions_per_team_is_capped_by_days_times_the_daily_limit() -> None:
 
     assert capped_sessions_per_team(20, day_count=7, daily_max_minutes=120, session_minutes=60) == 14
     assert capped_sessions_per_team(5, day_count=7, daily_max_minutes=120, session_minutes=60) == 5
+
+
+def test_target_sessions_uses_the_automatic_value_when_no_hours_are_set() -> None:
+    from backend.services.period.period_input import target_sessions
+
+    assert target_sessions(None, auto=5, day_count=7, daily_max_minutes=120, session_minutes=60) == 5
+
+
+def test_target_sessions_converts_hours_and_is_capped_by_the_daily_limit() -> None:
+    from backend.services.period.period_input import target_sessions
+
+    # 3시간을 30분 session 으로 바꾸면 6회입니다. 1일 × 하루 상한 2시간이면 4회까지입니다.
+    assert target_sessions(3, auto=1, day_count=7, daily_max_minutes=120, session_minutes=30) == 6
+    assert target_sessions(3, auto=1, day_count=1, daily_max_minutes=120, session_minutes=30) == 4

@@ -137,6 +137,14 @@ def capped_sessions_per_team(
     return min(per_team, day_count * (daily_max_minutes // session_minutes))
 
 
+def target_sessions(
+    target_hours: int | None, auto: int, day_count: int, daily_max_minutes: int, session_minutes: int
+) -> int:
+    """팀당 목표 session 횟수입니다. target_hours 가 None 이면 auto, 아니면 그 시간을 session 횟수로 바꾼 값을 하루 상한으로 자릅니다."""
+    wanted = auto if target_hours is None else target_hours * 60 // session_minutes
+    return capped_sessions_per_team(wanted, day_count, daily_max_minutes, session_minutes)
+
+
 def auto_sessions_per_team(
     engine_rooms: list[EngineRoom],
     team_count: int,

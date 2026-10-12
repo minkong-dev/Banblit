@@ -27,3 +27,13 @@ def test_member_available_when_slot_is_adjacent_to_unavailable_time() -> None:
     slot = TimeInterval(datetime(2026, 7, 20, 19, 0), datetime(2026, 7, 20, 20, 0))
 
     assert is_member_available(member, slot) is True
+
+
+def test_absent_member_ids_lists_only_the_members_who_are_busy() -> None:
+    from backend.scheduling.availability import Team, absent_member_ids
+
+    slot = TimeInterval(datetime(2026, 7, 20, 19, 0), datetime(2026, 7, 20, 20, 0))
+    busy = Member(id=3, unavailable=[TimeInterval(datetime(2026, 7, 20, 18, 0), datetime(2026, 7, 20, 20, 0))])
+    free = Member(id=1, unavailable=[])
+
+    assert absent_member_ids(Team(id=1, members=[free, busy]), slot) == [3]

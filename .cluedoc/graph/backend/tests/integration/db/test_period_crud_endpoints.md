@@ -54,3 +54,6 @@ flowchart LR
 - `test_a_patch_without_the_practice_window_keeps_it`
 - `test_the_practice_window_is_cleared_by_sending_empty_pairs`
 - `test_period_name_is_saved_on_create_and_patch_and_defaults_to_empty`
+- `test_a_new_period_has_the_automatic_assign_rule`
+- `test_patching_other_fields_keeps_the_assign_rule`
+- `test_a_zero_target_hours_is_refused`

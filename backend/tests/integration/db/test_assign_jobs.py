@@ -103,7 +103,6 @@ def test_polling_the_job_eventually_reports_the_saved_result(
     assert job["error"] is None
     assert job["finished_at"] is not None
     assert job["result"]["saved"] is True
-    assert job["result"]["assignment"]["feasible"] is True
 
 
 def test_a_rejected_assignment_becomes_a_failed_job_with_the_reason(
@@ -168,14 +167,14 @@ def test_health_responds_while_an_assignment_job_is_running(
 
     started = threading.Event()
     release = threading.Event()
-    real_assign_period = app_module.assign_period
+    real_assign_period = app_module.run_period_assignment
 
     def slow_assign_period(*args: Any, **kwargs: Any) -> Any:
         started.set()
         release.wait(timeout=5)
         return real_assign_period(*args, **kwargs)
 
-    monkeypatch.setattr(app_module, "assign_period", slow_assign_period)
+    monkeypatch.setattr(app_module, "run_period_assignment", slow_assign_period)
 
     submitted = api_client.post(
         f"/periods/{period_id}/assign",

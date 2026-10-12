@@ -37,5 +37,11 @@ flowchart LR
 - `_is_one_run`
 - `test_sessions_of_a_team_are_placed_back_to_back`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
 - `test_sessions_skip_only_the_unavailable_hour`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
-- `test_assignment_stops_improving_shortly_after_the_first_solution`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
+- `test_assignment_stops_when_no_better_solution_comes`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
 - `test_a_team_gets_no_more_than_the_daily_limit_on_one_day`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
+- `_counts`
+- `test_short_of_room_still_returns_the_fairest_assignment`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
+- `test_no_member_is_absent_when_absence_is_not_allowed`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
+- `test_one_absent_member_is_allowed_and_reported`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
+- `test_an_absent_shared_member_does_not_block_both_teams`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
+- `test_fewer_absences_win_over_back_to_back_sessions`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`

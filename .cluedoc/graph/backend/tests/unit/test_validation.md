@@ -40,4 +40,4 @@ flowchart LR
 - `test_rejects_duplicate_team_ids`
 - `test_rejects_a_member_listed_twice_in_the_same_team`: `backend.scheduling.availability`
 - `test_rejects_a_team_with_no_members`: `backend.scheduling.availability`
-- `test_rejects_negative_sessions_per_team`
+- `test_rejects_negative_target_sessions`

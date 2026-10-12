@@ -48,8 +48,13 @@ def require_permission(permission: Permission) -> Callable[..., Member]:
         account: Member = Depends(require_account),
         session: Session = Depends(get_session),
     ) -> Member:
-        if permission not in account_permissions(session, account.id):
-            raise HTTPException(status_code=403, detail=FORBIDDEN_DETAIL)
+        ensure_permission(session, account, permission)
         return account
 
     return check
+
+
+def ensure_permission(session: Session, account: Member, permission: Permission) -> None:
+    """account 에게 permission 이 없으면 403 을 발생시킵니다. 필요한 권한이 요청 내용에 따라 달라 Depends 로 미리 정할 수 없는 endpoint 가 씁니다."""
+    if permission not in account_permissions(session, account.id):
+        raise HTTPException(status_code=403, detail=FORBIDDEN_DETAIL)

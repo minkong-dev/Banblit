@@ -2,7 +2,7 @@
 
 서버(api)와 같은 image 를 사용하는 별도 container 로 동작합니다. 서버를 여러 대로 확장해도
 이 서비스는 한 대로 유지하므로 같은 계산이 여러 번 실행되지 않습니다. HTTP endpoint 를 거치지 않고
-assign_period 를 직접 호출하므로 서버가 실행 중이 아니어도 계산을 수행합니다.
+run_period_assignment 를 직접 호출하므로 서버가 실행 중이 아니어도 계산을 수행합니다.
 """
 
 import logging
@@ -16,9 +16,8 @@ from typing import Literal
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from backend.services.notification.pipeline import notify_assignment_updated
 from backend.services.board.pipeline import sweep_stale_drafts
-from backend.services.period.pipeline import assign_period, period_days
+from backend.services.period.pipeline import period_days, run_period_assignment
 from backend.db.models import AssignmentRun, Period, Room, Team
 from backend.db.pipeline import get_session_factory
 
@@ -132,7 +131,7 @@ def _run_one(
     # 두 계산 시각이 모두 지난 경우에도 계산은 1번만 합니다. 같은 기간을 같은 입력으로 2번
     # 계산한 결과가 같기 때문입니다. 1번 계산하고 두 시각 모두 실행한 것으로 기록합니다.
     try:
-        result = assign_period(
+        result = run_period_assignment(
             session, period_id, team_ids, room_ids, saved_at=now
         )
     except Exception as error:  # noqa: BLE001 - 한 기간의 계산이 실패해도 다음 기간을 계속 처리합니다
@@ -142,16 +141,10 @@ def _run_one(
 
     # 실행 기록은 계산이 완료된 후에 남깁니다. 시작할 때 기록하면 중간에 실패했을 때
     # 그 시각이 다시 실행되지 않기 때문입니다. 그날 배정이 비는 것이 계산을 1번 더
-    # 실행하는 것보다 나쁩니다. 다시 실행해도 assign_period 는 같은 기간을 다시 계산해
+    # 실행하는 것보다 나쁩니다. 다시 실행해도 run_period_assignment 는 같은 기간을 다시 계산해
     # 덮어쓰기 때문입니다.
+    # 저장과 알림은 run_period_assignment 안에서 이미 commit 되었습니다.
     _mark_ran(session, period_id, now, slots)
-
-    # 알림은 저장이 완료되고 실행 기록을 commit 한 후에 생성합니다.
-    # 배정할 slot 을 찾지 못해 저장하지 않으면 확정 시간표가 변경되지 않으므로
-    # 알릴 내용이 없습니다. 알림 생성이 실패해도 실행 기록은 이미 commit 되어 있어
-    # 계산을 다시 실행하지 않습니다.
-    if result.saved:
-        notify_assignment_updated(session, period_id, now)
     return AutoRun(period_id, now.date(), slots, saved=result.saved, error=None)
 
 

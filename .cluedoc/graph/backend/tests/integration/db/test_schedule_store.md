@@ -40,3 +40,8 @@ flowchart LR
 - `test_a_gap_between_slots_keeps_two_rows`: `backend.db.schedule_store`
 - `test_different_teams_are_not_joined`: `backend.db.models`, `backend.db.schedule_store`
 - `test_backup_rounds_are_empty_before_any_reassignment`: `backend.db.schedule_store`
+- `_current`
+- `test_an_unsaved_record_leaves_the_current_schedule_alone`: `backend.db.schedule_store`
+- `test_applying_a_record_archives_the_current_one_and_replaces_it`: `backend.db.schedule_store`
+- `test_applying_a_missing_record_changes_nothing`: `backend.db.schedule_store`
+- `test_each_record_kind_keeps_its_own_count`: `backend.db.schedule_store`

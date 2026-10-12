@@ -583,3 +583,42 @@ def test_period_name_is_saved_on_create_and_patch_and_defaults_to_empty(
     )
     assert unnamed.status_code == 201
     assert unnamed.json()["period"]["name"] == ""
+
+
+def test_a_new_period_has_the_automatic_assign_rule(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    """정하지 않으면 목표 시간은 자동(null), 불참 허용은 0명입니다. 지금까지의 동작과 같습니다."""
+    _, head = account(*HEAD)
+
+    period = api_client.post("/periods", json=_BASE, cookies=head).json()["period"]
+
+    assert period["assign_rule"] == {"target_hours": None, "max_absent": 0}
+
+
+def test_patching_other_fields_keeps_the_assign_rule(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+    rule = {"target_hours": 6, "max_absent": 2}
+    period = api_client.post(
+        "/periods", json={**_BASE, "assign_rule": rule}, cookies=head
+    ).json()["period"]
+
+    patched = api_client.patch(
+        f"/periods/{period['id']}", json={"name": "정기공연"}, cookies=head
+    ).json()["period"]
+
+    assert patched["assign_rule"] == rule
+
+
+def test_a_zero_target_hours_is_refused(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+
+    response = api_client.post(
+        "/periods", json={**_BASE, "assign_rule": {"target_hours": 0, "max_absent": 0}}, cookies=head
+    )
+
+    assert response.status_code == 422

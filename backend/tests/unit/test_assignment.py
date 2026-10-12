@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from backend.scheduling.assignment import Room
+from backend.scheduling.assignment import Assignment, Room, RoomInterval
 from backend.scheduling.availability import Member, Team
 from backend.scheduling.interval import TimeInterval
 from conftest import assign
@@ -16,9 +16,8 @@ def test_team_is_assigned_only_to_a_slot_it_is_available_for() -> None:
     member = Member(id=1, unavailable=[TimeInterval(_at(18), _at(19))])
     team = Team(id=10, members=[member])
 
-    result = assign(teams=[team], rooms=[room], sessions_per_team=1)
+    result = assign(teams=[team], rooms=[room], target_sessions=1)
 
-    assert result.feasible is True
     assert result.sessions_by_team[10][0].interval == TimeInterval(_at(19), _at(20))
 
 
@@ -26,9 +25,8 @@ def test_team_gets_exactly_the_requested_number_of_slots() -> None:
     room = Room(id=1, open_period=TimeInterval(_at(18), _at(20)))
     team = Team(id=10, members=[Member(id=1, unavailable=[])])
 
-    result = assign(teams=[team], rooms=[room], sessions_per_team=2)
+    result = assign(teams=[team], rooms=[room], target_sessions=2)
 
-    assert result.feasible is True
     assert len(result.sessions_by_team[10]) == 2
 
 
@@ -40,12 +38,11 @@ def test_session_occupies_one_uninterrupted_interval() -> None:
     result = assign(
         teams=[team],
         rooms=[room],
-        sessions_per_team=1,
+        target_sessions=1,
         slot_minutes=30,
         session_minutes=60,
     )
 
-    assert result.feasible is True
     assigned = result.sessions_by_team[10]
     assert len(assigned) == 1
     assert assigned[0].interval.end - assigned[0].interval.start == timedelta(minutes=60)
@@ -59,12 +56,11 @@ def test_two_sessions_of_the_same_team_do_not_overlap() -> None:
     result = assign(
         teams=[team],
         rooms=[room],
-        sessions_per_team=2,
+        target_sessions=2,
         slot_minutes=30,
         session_minutes=60,
     )
 
-    assert result.feasible is True
     intervals = sorted(
         (s.interval for s in result.sessions_by_team[10]), key=lambda i: i.start
     )
@@ -83,12 +79,11 @@ def test_two_teams_do_not_share_a_slot_that_a_session_covers() -> None:
     result = assign(
         teams=[team_a, team_b],
         rooms=[room],
-        sessions_per_team=1,
+        target_sessions=1,
         slot_minutes=30,
         session_minutes=60,
     )
 
-    assert result.feasible is True
     first = result.sessions_by_team[10][0].interval
     second = result.sessions_by_team[20][0].interval
     assert first.end <= second.start or second.end <= first.start
@@ -103,12 +98,11 @@ def test_open_slots_exclude_every_slot_a_session_covers() -> None:
     result = assign(
         teams=[team],
         rooms=[room],
-        sessions_per_team=1,
+        target_sessions=1,
         slot_minutes=30,
         session_minutes=60,
     )
 
-    assert result.feasible is True
     assert [slot.interval for slot in result.open_slots] == [
         TimeInterval(_at(19), _at(19, 30)),
         TimeInterval(_at(19, 30), _at(20)),
@@ -126,9 +120,8 @@ def test_sessions_of_a_team_are_placed_back_to_back() -> None:
     room = Room(id=1, open_period=TimeInterval(_at(10), _at(20)))
     team = Team(id=10, members=[Member(id=1, unavailable=[])])
 
-    result = assign(teams=[team], rooms=[room], sessions_per_team=3)
+    result = assign(teams=[team], rooms=[room], target_sessions=3)
 
-    assert result.feasible is True
     assert _is_one_run([session.interval for session in result.sessions_by_team[10]])
 
 
@@ -138,18 +131,17 @@ def test_sessions_skip_only_the_unavailable_hour() -> None:
     member = Member(id=1, unavailable=[TimeInterval(_at(11), _at(12))])
     team = Team(id=10, members=[member])
 
-    result = assign(teams=[team], rooms=[room], sessions_per_team=2)
+    result = assign(teams=[team], rooms=[room], target_sessions=2)
 
-    assert result.feasible is True
     assert sorted((session.interval for session in result.sessions_by_team[10]), key=lambda i: i.start) == [
         TimeInterval(_at(12), _at(13)),
         TimeInterval(_at(13), _at(14)),
     ]
 
 
-def test_assignment_stops_improving_shortly_after_the_first_solution() -> None:
-    # 연속 배정을 더 늘릴 수 있는지는 끝까지 증명하지 못해, 그대로 두면 상한(60초)을 다 씁니다. 첫 배정을 찾은 뒤
-    # 개선은 improve_seconds_after_first(3초)만 하고 멈춥니다. 12팀·40명·합주실 2개·7일 규모에서 잽니다.
+def test_assignment_stops_when_no_better_solution_comes() -> None:
+    # 최선인지는 끝까지 증명하지 못해, 그대로 두면 상한(60초)을 다 씁니다. 더 나은 해가
+    # stall_seconds(3초) 동안 나오지 않으면 멈춥니다. 12팀·40명·합주실 2개·7일 규모에서 잽니다.
     import random
     import time
 
@@ -173,8 +165,7 @@ def test_assignment_stops_improving_shortly_after_the_first_solution() -> None:
     started = time.monotonic()
     result = assign_sessions(teams, rooms, 7, 60, 60, 60.0, 3.0)
 
-    assert result.feasible is True
-    # 상한 60초보다 충분히 짧은지만 봅니다. 첫 해를 찾는 시간은 CPU 부하에 따라 달라 좁게 잡지 않습니다.
+    # 상한 60초보다 충분히 짧은지만 봅니다. 해를 찾는 시간은 CPU 부하에 따라 달라 좁게 잡지 않습니다.
     assert time.monotonic() - started < 30
 
 
@@ -190,9 +181,74 @@ def test_a_team_gets_no_more_than_the_daily_limit_on_one_day() -> None:
 
     result = assign_sessions([team], rooms, 4, 60, 60, 10.0, 1.0, daily_max_minutes=120)
 
-    assert result.feasible is True
     by_day: dict[object, list[TimeInterval]] = {}
     for session in result.sessions_by_team[10]:
         by_day.setdefault(session.interval.start.date(), []).append(session.interval)
     assert sorted(len(day) for day in by_day.values()) == [2, 2]
     assert all(_is_one_run(day) for day in by_day.values())
+
+
+def _counts(result: Assignment) -> list[int]:
+    return sorted(len(sessions) for sessions in result.sessions_by_team.values())
+
+
+def test_short_of_room_still_returns_the_fairest_assignment() -> None:
+    # 자리 7개를 목표 3회인 3팀이 나눕니다. 모두 3회는 불가능하므로 가장 적게 받은 팀을 최대로 해 3, 2, 2 입니다.
+    room = Room(id=1, open_period=TimeInterval(_at(12), _at(19)))
+    teams = [Team(id=team_id, members=[Member(id=team_id, unavailable=[])]) for team_id in (10, 20, 30)]
+
+    result = assign(teams=teams, rooms=[room], target_sessions=3)
+
+    assert _counts(result) == [2, 2, 3]
+
+
+def test_no_member_is_absent_when_absence_is_not_allowed() -> None:
+    # 멤버 2가 18~19시에 불가능합니다. 불참 허용 0명이면 19~20시 1회만 배정합니다.
+    room = Room(id=1, open_period=TimeInterval(_at(18), _at(20)))
+    busy = Member(id=2, unavailable=[TimeInterval(_at(18), _at(19))])
+    team = Team(id=10, members=[Member(id=1, unavailable=[]), busy])
+
+    result = assign(teams=[team], rooms=[room], target_sessions=2)
+
+    assert [s.interval for s in result.sessions_by_team[10]] == [TimeInterval(_at(19), _at(20))]
+    assert result.absences == {}
+
+
+def test_one_absent_member_is_allowed_and_reported() -> None:
+    # 같은 입력에 불참 허용 1명이면 18~19시도 쓰고, 그 session 의 불참자 2번을 기록합니다.
+    room = Room(id=1, open_period=TimeInterval(_at(18), _at(20)))
+    busy = Member(id=2, unavailable=[TimeInterval(_at(18), _at(19))])
+    team = Team(id=10, members=[Member(id=1, unavailable=[]), busy])
+
+    result = assign(teams=[team], rooms=[room], target_sessions=2, max_absent=1)
+
+    assert len(result.sessions_by_team[10]) == 2
+    assert result.absences == {10: [(RoomInterval(1, TimeInterval(_at(18), _at(19))), [2])]}
+
+
+def test_an_absent_shared_member_does_not_block_both_teams() -> None:
+    # 멤버 7은 두 팀에 속하고 18~19시에 불가능합니다. 어느 팀에도 참석하지 않으므로 두 팀이 같은 시각에 받을 수 있습니다.
+    room_a = Room(id=1, open_period=TimeInterval(_at(18), _at(19)))
+    room_b = Room(id=2, open_period=TimeInterval(_at(18), _at(19)))
+    shared = Member(id=7, unavailable=[TimeInterval(_at(18), _at(19))])
+    team_a = Team(id=10, members=[shared, Member(id=1, unavailable=[])])
+    team_b = Team(id=20, members=[shared, Member(id=2, unavailable=[])])
+
+    result = assign(teams=[team_a, team_b], rooms=[room_a, room_b], target_sessions=1, max_absent=1)
+
+    assert _counts(result) == [1, 1]
+
+
+def test_fewer_absences_win_over_back_to_back_sessions() -> None:
+    # 19~20시에 멤버 2가 불가능합니다. 이어 붙이는 18~20시보다 불참자 없는 18~19시, 20~21시를 고릅니다.
+    room = Room(id=1, open_period=TimeInterval(_at(18), _at(21)))
+    busy = Member(id=2, unavailable=[TimeInterval(_at(19), _at(20))])
+    team = Team(id=10, members=[Member(id=1, unavailable=[]), busy])
+
+    result = assign(teams=[team], rooms=[room], target_sessions=2, max_absent=1)
+
+    assert sorted((s.interval for s in result.sessions_by_team[10]), key=lambda i: i.start) == [
+        TimeInterval(_at(18), _at(19)),
+        TimeInterval(_at(20), _at(21)),
+    ]
+    assert result.absences == {}

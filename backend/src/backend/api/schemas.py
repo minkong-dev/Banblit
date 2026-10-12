@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, NaiveDatetime, model_validator
 
-from backend.db.models import PERMISSIONS, Instrument, Permission
+from backend.db.models import PERMISSIONS, Instrument, Permission, RecordKind
 from backend.db.models import NotificationKind
 from backend.contract import MAX_SESSION_MINUTES, REJECT_REASON_MAX_LENGTH
 
@@ -15,20 +15,34 @@ class RoomSlotOut(BaseModel):
     end: datetime
 
 
-class ExcludedMemberOut(BaseModel):
-    id: int
-    name: str
-
-
 class AssignmentOut(BaseModel):
-    feasible: bool
     slots_by_team: dict[str, list[RoomSlotOut]]
     open_slots: list[RoomSlotOut]
 
 
-class ProposalOut(BaseModel):
-    excluded_member: ExcludedMemberOut
-    assignment: AssignmentOut
+class ShortfallOut(BaseModel):
+    team_id: int
+    team: str
+    assigned_hours: float
+
+
+class AbsenceOut(BaseModel):
+    # 한 멤버는 한 팀에서 포지션 1개만 맡습니다(team_slots 의 (team_id, member_id) unique).
+    team_id: int
+    team: str
+    member_id: int
+    member: str
+    cohort: int | None
+    position: str
+    sessions: int
+
+
+class ScheduleReportOut(BaseModel):
+    """시간표 하나의 부족분과 불참자입니다. 두 목록이 모두 비면 그 시간표는 확정할 수 있는 결과입니다."""
+
+    target_hours: float
+    shortfalls: list[ShortfallOut]
+    absences: list[AbsenceOut]
 
 
 class ScheduleRowOut(BaseModel):
@@ -46,6 +60,8 @@ class ScheduleOut(BaseModel):
     # 거절합니다. 어느 자리가 비었는지를 알리는 값이며 지금은 화면이 사용하지 않습니다.
     rows: list[ScheduleRowOut]
     open_slots: list[RoomSlotOut]
+    # 확정 시간표가 없으면 null 입니다.
+    report: ScheduleReportOut | None
 
 
 class PeriodAssignIn(BaseModel):
@@ -54,8 +70,9 @@ class PeriodAssignIn(BaseModel):
 
 
 class BackupOut(BaseModel):
-    # 배정기록을 구분하는 값은 저장 시각입니다. assignment_backups에 별도 배정기록 번호가 없습니다.
+    # 스케줄링 기록을 구분하는 값은 저장 시각입니다. assignment_backups에 별도 기록 번호가 없습니다.
     saved_at: datetime
+    kind: RecordKind
     slot_count: int
 
 
@@ -64,19 +81,27 @@ class BackupsOut(BaseModel):
 
 
 class BackupRoundOut(BaseModel):
-    # 지난 배정기록의 시간표입니다. 확정 시간표(ScheduleOut)와 row(데이터베이스 행) 구조는 같지만
-    # open_slots는 없습니다. 지나간 배정기록에 예약을 개방할 필요가 없습니다.
+    # 스케줄링 기록 1개의 시간표입니다. 확정 시간표(ScheduleOut)와 row(데이터베이스 행) 구조는 같지만
+    # open_slots는 없습니다. 지나간 기록에 예약을 개방할 필요가 없습니다.
+    kind: RecordKind
     rows: list[ScheduleRowOut]
+    report: ScheduleReportOut | None
 
 
 class PeriodAssignOut(BaseModel):
     assignment: AssignmentOut
-    proposals: list[ProposalOut]
+    report: ScheduleReportOut
     saved: bool
+    # 미확정 배정안으로 등록했으면 그 기록의 saved_at 입니다.
+    record_saved_at: datetime | None
 
 
 class RollbackOut(BaseModel):
     rolled_back: bool
+
+
+class ApplyRecordOut(BaseModel):
+    applied: bool
 
 
 class JobOut(BaseModel):
@@ -165,6 +190,20 @@ class PracticeWindowIn(BaseModel):
     weekend: ClockRangeOut | None = None
 
 
+class AssignRuleOut(BaseModel):
+    """배정 규칙입니다. target_hours 가 null 이면 팀당 목표 시간은 전체 시간 ÷ 팀 수입니다."""
+
+    target_hours: int | None
+    max_absent: int
+
+
+class AssignRuleIn(BaseModel):
+    """배정 규칙 전체를 한 번에 대체합니다. PATCH 에서 보내지 않으면 저장값을 그대로 둡니다(PracticeWindowIn 과 같은 방식)."""
+
+    target_hours: int | None = Field(default=None, gt=0)
+    max_absent: int = Field(default=0, ge=0, le=32767)
+
+
 class PeriodOut(BaseModel):
     id: int
     kind: str
@@ -177,6 +216,7 @@ class PeriodOut(BaseModel):
     second_run_at: str
     # 정하지 않은 쌍은 null 입니다. 껍데기는 언제나 있습니다 — 화면이 null 검사를 두 번 하지 않습니다.
     practice_window: PracticeWindowOut
+    assign_rule: AssignRuleOut
     # 전체 합주를 지정하지 않은 기간은 null 입니다.
     ensemble: EnsembleOut | None
 
@@ -212,6 +252,8 @@ class PeriodCreateIn(BaseModel):
     second_run_at: str
     # 생략하면 시간대를 정하지 않은 기간이 됩니다.
     practice_window: PracticeWindowIn | None = None
+    # 생략하면 목표 시간 자동, 불참 허용 0명입니다.
+    assign_rule: AssignRuleIn | None = None
 
 
 class PeriodUpdateIn(BaseModel):
@@ -224,6 +266,8 @@ class PeriodUpdateIn(BaseModel):
     second_run_at: str | None = None
     # 보내지 않으면 저장된 시간대를 그대로 둡니다. 지우려면 두 쌍이 null 인 객체를 보냅니다.
     practice_window: PracticeWindowIn | None = None
+    # 보내지 않으면 저장된 배정 규칙을 그대로 둡니다.
+    assign_rule: AssignRuleIn | None = None
 
 
 class TeamOut(BaseModel):

@@ -63,3 +63,5 @@ flowchart LR
 - `test_a_repeat_count_of_one_covers_only_the_first_week`: `backend.services.period.period_input`
 - `test_a_start_day_outside_the_chosen_weekdays_still_repeats_on_them`: `backend.services.period.period_input`
 - `test_sessions_per_team_is_capped_by_days_times_the_daily_limit`: `backend.services.period.period_input`
+- `test_target_sessions_uses_the_automatic_value_when_no_hours_are_set`: `backend.services.period.period_input`
+- `test_target_sessions_converts_hours_and_is_capped_by_the_daily_limit`: `backend.services.period.period_input`

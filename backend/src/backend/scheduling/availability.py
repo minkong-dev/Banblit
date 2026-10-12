@@ -30,6 +30,6 @@ def is_member_available(member: Member, slot: TimeInterval) -> bool:
     return True
 
 
-def is_team_available(team: Team, slot: TimeInterval) -> bool:
-    """팀의 모든 멤버가 그 slot(점유 단위 길이의 시간 칸)에 사용 가능할 경우 True를 반환합니다."""
-    return all(is_member_available(member, slot) for member in team.members)
+def absent_member_ids(team: Team, interval: TimeInterval) -> list[int]:
+    """interval 에 불가능 일정이 있어 참석하지 못하는 팀원의 번호를 명단 순서로 반환합니다."""
+    return [member.id for member in team.members if not is_member_available(member, interval)]
