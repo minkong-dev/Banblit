@@ -12,6 +12,7 @@ flowchart LR
   frontend_src_lib_assignment["assignment.ts"]
   frontend_src_lib_assignment --> frontend_src_lib_calendar["calendar.ts"]
   frontend_src_lib_assignment --> frontend_src_lib_contract["contract.ts"]
+  frontend_src_lib_assignment --> frontend_src_lib_roster["roster.ts"]
   frontend_src_lib_assignment --> frontend_src_lib_slots["slots.ts"]
   frontend_src_lib_assignment --> frontend_src_lib_teamColors["teamColors.ts"]
   frontend_src_lib_assignment_test["assignment.test.ts"] --> frontend_src_lib_assignment
@@ -23,6 +24,7 @@ flowchart LR
 
 - [[graph/frontend/src/lib/calendar|calendar.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
+- [[graph/frontend/src/lib/roster|roster.ts]]
 - [[graph/frontend/src/lib/slots|slots.ts]]
 - [[graph/frontend/src/lib/teamColors|teamColors.ts]]
 

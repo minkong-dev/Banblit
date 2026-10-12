@@ -4,7 +4,13 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.services.period.pipeline import open_slots_in_period, run_period_assignment
+from backend.db.pipeline import apply_record
+from backend.services.period.pipeline import (
+    assignment_rows,
+    open_slots_in_period,
+    run_period_assignment,
+    schedule_report,
+)
 from backend.contract import DEFAULT_SLOT_MINUTES
 from backend.db.models import (
     Assignment,
@@ -53,9 +59,10 @@ def _room(session: Session, name: str, opens: time, closes: time) -> int:
     return room.id
 
 
-def test_successful_assignment_is_saved_as_the_current_schedule(
+def test_a_run_is_kept_as_a_record_and_leaves_the_current_schedule_alone(
     db_session: Session,
 ) -> None:
+    # 연산 결과는 쌓기만 합니다. 현재 배정안은 적용할 때만 바뀝니다(사용자 결정 2026-10-13).
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))  # 2개 slot
@@ -64,9 +71,10 @@ def test_successful_assignment_is_saved_as_the_current_schedule(
         db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT
     )
 
-    assert result.saved is True
+    assert result.record_saved_at == SAVED_AT
+    assert db_session.scalars(select(Assignment)).all() == []
     saved = db_session.scalars(
-        select(Assignment).where(Assignment.period_id == period_id)
+        select(AssignmentBackup).where(AssignmentBackup.period_id == period_id)
     ).all()
     # 팀 하나가 전체 2칸을 배정받고, 이어진 칸이라 구간 한 행으로 저장됩니다.
     assert len(saved) == 1
@@ -88,9 +96,9 @@ def test_successful_assignment_round_trips_rooms_teams_and_times(
         db_session, period_id, [team_a, team_b], [room_1, room_2], saved_at=SAVED_AT
     )
 
-    assert result.saved is True
+    assert result.record_saved_at is not None
     saved = db_session.scalars(
-        select(Assignment).where(Assignment.period_id == period_id)
+        select(AssignmentBackup).where(AssignmentBackup.period_id == period_id)
     ).all()
 
     # 하루 4칸(합주실 2개 × 2칸) × 2일 = 8칸, 팀 2개가 4칸씩 배정받습니다. 합주실 하나에서
@@ -144,14 +152,10 @@ def test_short_assignment_is_kept_as_an_unsaved_record(
         db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT
     )
 
-    # 목표 2회 중 이영희가 가능한 19~20시 1회만 받습니다. 확정하지 않고 미확정 배정안으로 등록합니다.
-    assert result.saved is False
+    # 목표 2회 중 이영희가 가능한 19~20시 1회만 받습니다.
     assert result.record_saved_at == SAVED_AT
-    assert db_session.scalars(select(Assignment)).all() == []
     assert [(s.team, s.assigned_hours) for s in result.report.shortfalls] == [("A", 1.0)]
     assert result.report.target_hours == 2.0
-    kinds = db_session.scalars(select(AssignmentBackup.kind)).all()
-    assert kinds == ["unsaved"]
 
 
 def test_open_period_is_rejected(db_session: Session) -> None:
@@ -179,74 +183,34 @@ def test_unknown_room_is_rejected(db_session: Session) -> None:
         run_period_assignment(db_session, period_id, [team_id], [999999], saved_at=SAVED_AT)
 
 
-def test_reassignment_archives_the_previous_schedule(db_session: Session) -> None:
+def test_every_run_adds_a_record(db_session: Session) -> None:
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
 
     run_period_assignment(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
     run_period_assignment(
-        db_session,
-        period_id,
-        [team_id],
-        [room_id],
-        saved_at=datetime(2026, 8, 1, 21, 0),
+        db_session, period_id, [team_id], [room_id], saved_at=datetime(2026, 8, 1, 21, 0)
     )
 
-    backups = db_session.scalars(select(AssignmentBackup)).all()
-    assert len(backups) == 1  # 첫 배정기록의 2칸이 구간 한 행으로 백업에 옮겨졌다
-    assert {b.saved_at for b in backups} == {datetime(2026, 8, 1, 21, 0)}
+    times = set(db_session.scalars(select(AssignmentBackup.saved_at)).all())
+    assert times == {SAVED_AT, datetime(2026, 8, 1, 21, 0)}
 
 
-def test_failed_reassignment_preserves_the_current_schedule(
-    db_session: Session,
-) -> None:
+def test_a_run_does_not_change_the_applied_schedule(db_session: Session) -> None:
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
+    first = run_period_assignment(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
+    assert first.record_saved_at is not None
+    assert apply_record(db_session, period_id, first.record_saved_at) is True
+    before = db_session.scalars(select(Assignment.starts_at)).all()
 
-    first = run_period_assignment(
-        db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT
-    )
-    assert first.saved is True
-    before = {
-        (row.room_id, row.team_id, row.starts_at, row.ends_at)
-        for row in db_session.scalars(
-            select(Assignment).where(Assignment.period_id == period_id)
-        ).all()
-    }
-
-    # 유일한 멤버를 운영시간 내내 불가능하게 만들어 재계산을 불가능하게 합니다.
-    member_id = db_session.scalars(
-        select(Member.id).where(Member.name == "김민수")
-    ).one()
-    db_session.add(
-        UnavailableTime(
-            member_id=member_id,
-            starts_at=datetime(2026, 8, 1, 18, 0),
-            ends_at=datetime(2026, 8, 1, 19, 0),
-            repeat_weekdays=None,
-            repeat_until=None,
-        )
-    )
-    db_session.flush()
-
-    second = run_period_assignment(
-        db_session,
-        period_id,
-        [team_id],
-        [room_id],
-        saved_at=datetime(2026, 8, 1, 21, 0),
+    run_period_assignment(
+        db_session, period_id, [team_id], [room_id], saved_at=datetime(2026, 8, 1, 21, 0)
     )
 
-    assert second.saved is False
-    after = {
-        (row.room_id, row.team_id, row.starts_at, row.ends_at)
-        for row in db_session.scalars(
-            select(Assignment).where(Assignment.period_id == period_id)
-        ).all()
-    }
-    assert after == before  # 실패한 재계산이 현행 시간표를 지우지 않았다
+    assert db_session.scalars(select(Assignment.starts_at)).all() == before
 
 
 def test_unknown_period_is_rejected(db_session: Session) -> None:
@@ -273,9 +237,9 @@ def test_team_without_members_is_rejected(db_session: Session) -> None:
 def test_overlapping_period_room_conflict_is_rejected_not_500(
     db_session: Session,
 ) -> None:
-    """배정을 저장한 기간 A 의 날짜를 변경하면 A 의 배정은 옛 날짜에 남습니다. 비워진 날짜에 만든
-    기간 B 가 같은 합주실·같은 시각을 사용하면 저장 제약을 위반합니다. 사용자가 만들 수 있는 상황이므로
-    500 이 아니라 422(ValueError)로 거부되어야 하고, 첫 번째 기간의 현행 시간표는 그대로 남아 있어야 합니다.
+    """배정을 적용한 기간 A 의 날짜를 변경하면 A 의 배정은 옛 날짜에 남습니다. 비워진 날짜에 만든
+    기간 B 의 연산 결과가 같은 합주실·같은 시각을 사용하면 적용할 때 저장 제약을 위반합니다. 사용자가 만들 수 있는
+    상황이므로 500 이 아니라 422(ValueError)로 거부되어야 하고, 첫 번째 기간의 현행 시간표는 그대로 남아 있어야 합니다.
 
     집중 합주기간끼리는 날짜가 겹칠 수 없으므로(migration b5e1d9a37c42) 날짜 변경으로 재현합니다."""
     period_a = _period(db_session)
@@ -286,16 +250,19 @@ def test_overlapping_period_room_conflict_is_rejected_not_500(
     first = run_period_assignment(
         db_session, period_a, [team_a], [room_id], saved_at=SAVED_AT
     )
-    assert first.saved is True
+    assert first.record_saved_at is not None
+    assert apply_record(db_session, period_a, first.record_saved_at) is True
 
     moved = db_session.get(Period, period_a)
     assert moved is not None
     moved.starts_on, moved.ends_on = date(2026, 9, 1), date(2026, 9, 1)
     db_session.flush()
     period_b = _period(db_session)
+    second = run_period_assignment(db_session, period_b, [team_b], [room_id], saved_at=SAVED_AT)
+    assert second.record_saved_at is not None
 
     with pytest.raises(ValueError, match="이미"):
-        run_period_assignment(db_session, period_b, [team_b], [room_id], saved_at=SAVED_AT)
+        apply_record(db_session, period_b, second.record_saved_at)
 
     remaining = db_session.scalars(
         select(Assignment).where(Assignment.period_id == period_a)
@@ -358,7 +325,7 @@ def test_two_week_schedule_for_four_teams_finishes(db_session: Session) -> None:
         db_session, period.id, team_ids, room_ids, saved_at=SAVED_AT
     )
 
-    assert result.saved is True
+    assert result.record_saved_at is not None
 
 
 
@@ -396,7 +363,7 @@ def test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment(
     )
 
     # 4칸 중 이영희가 불가능한 8/2 18시를 뺀 3칸만 받습니다.
-    assert result.saved is False
+    assert result.record_saved_at is not None
     assert [s.assigned_hours for s in result.report.shortfalls] == [3.0]
 
 
@@ -447,7 +414,7 @@ def test_multiple_unavailable_times_for_the_same_person_all_block_assignment(
         db_session, period_id, [team_a, team_b], [room_id], saved_at=SAVED_AT
     )
 
-    assert result.saved is False
+    assert result.record_saved_at is not None
 
 
 def test_allowed_absence_is_reported_with_position_and_cohort(
@@ -480,11 +447,49 @@ def test_allowed_absence_is_reported_with_position_and_cohort(
     )
 
     # 팀이 2칸을 다 받지만 18시 session 에 이영희가 빠지므로 확정하지 않습니다.
-    assert result.saved is False
+    assert result.record_saved_at is not None
     assert result.report.shortfalls == []
     [absence] = result.report.absences
     assert (absence.team, absence.member, absence.cohort, absence.sessions) == ("A", "이영희", 23, 1)
     assert absence.position == "보컬"
+
+
+def test_the_report_flags_a_session_whose_absences_exceed_the_allowed_count(
+    db_session: Session,
+) -> None:
+    """불참 허용 1명으로 계산한 결과를 0명으로 낮춘 뒤 다시 보고하면 초과로 표시합니다.
+
+    적용 중인 배정안이 불가능 일정 변동으로 허용 인원을 넘었는지 화면이 경고하는 근거입니다(사용자 결정 2026-10-13).
+    """
+    period_id = _period(db_session)
+    team_id = _team_with_member(db_session, "A", "김민수")
+    blocked = Member(name="이영희")
+    db_session.add(blocked)
+    db_session.flush()
+    seat(db_session, team_id, blocked.id)
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    period.max_absent_members = 1
+    db_session.add(
+        UnavailableTime(
+            member_id=blocked.id,
+            starts_at=datetime(2026, 8, 1, 18, 0),
+            ends_at=datetime(2026, 8, 1, 19, 0),
+            repeat_weekdays=None,
+            repeat_until=None,
+        )
+    )
+    db_session.flush()
+    room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
+    result = run_period_assignment(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
+    assert result.report.over_absent is False
+
+    period.max_absent_members = 0
+    db_session.flush()
+    rows = assignment_rows(result.computed.assignment)
+    again = schedule_report(db_session, period_id, [team_id], [room_id], rows, SAVED_AT.date())
+
+    assert again.over_absent is True
 
 
 def test_target_hours_of_the_period_replace_the_automatic_target(
@@ -501,7 +506,7 @@ def test_target_hours_of_the_period_replace_the_automatic_target(
 
     result = run_period_assignment(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
 
-    assert result.saved is True
+    assert result.record_saved_at is not None
     assert result.report.target_hours == 1.0
     assert len(result.computed.assignment.sessions_by_team[team_id]) == 1
 
@@ -518,7 +523,8 @@ def test_open_slots_come_from_the_saved_schedule_without_recomputing(
     result = run_period_assignment(
         db_session, period_id, [team_a, team_b], [room_id], saved_at=SAVED_AT
     )
-    assert result.saved is True
+    assert result.record_saved_at is not None
+    assert apply_record(db_session, period_id, result.record_saved_at) is True
     assert len(result.computed.assignment.open_slots) == 1  # 3칸 - 팀당 1칸 × 2팀
 
     period = db_session.get(Period, period_id)
@@ -556,8 +562,8 @@ def test_an_everyday_period_assigns_only_the_day_of_the_run(db_session: Session)
         db_session, period_id, [team_id], [room_id], saved_at=datetime(2026, 8, 5, 9, 0)
     )
 
-    assert result.saved is True
-    rows = db_session.scalars(select(Assignment)).all()
+    assert result.record_saved_at is not None
+    rows = db_session.scalars(select(AssignmentBackup)).all()
     assert {row.starts_at.date() for row in rows} == {date(2026, 8, 5)}
 
 
@@ -575,6 +581,6 @@ def test_ensemble_days_are_left_out_of_team_assignment(db_session: Session) -> N
 
     result = run_period_assignment(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
 
-    assert result.saved is True
-    rows = db_session.scalars(select(Assignment)).all()
+    assert result.record_saved_at is not None
+    rows = db_session.scalars(select(AssignmentBackup)).all()
     assert {row.starts_at.date() for row in rows} == {date(2026, 8, 1)}

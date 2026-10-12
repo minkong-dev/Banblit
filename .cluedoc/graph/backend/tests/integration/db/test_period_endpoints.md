@@ -34,21 +34,21 @@ flowchart LR
 - `test_assign_reports_open_slots_with_real_room_names`: `backend.db.models`
 - `test_a_short_assignment_is_reported_and_kept_as_an_unsaved_record`: `backend.db.models`
 - `test_assign_on_an_open_period_is_rejected`: `backend.db.models`
-- `test_rollback_restores_the_previous_schedule`: `backend.db.models`
-- `test_rollback_without_any_backup_reports_nothing_to_undo`
-- `test_rollback_room_time_conflict_with_another_period_is_rejected_not_500`: `backend.db.models`
+- `_run`
+- `test_applying_an_older_record_makes_exactly_that_record_the_schedule`: `backend.db.models`
+- `test_applying_a_record_that_clashes_with_another_period_is_rejected_not_500`: `backend.db.models`
+- `test_the_rollback_endpoint_is_gone`
 - `test_schedule_without_login_is_rejected`
 - `test_assign_needs_assign_run`
-- `test_rollback_needs_rollback`
 - `test_schedule_reports_the_slots_left_open_by_the_assignment`: `backend.db.models`
 - `test_backups_list_each_round_newest_first`: `backend.db.models`
 - `test_backup_round_shows_the_schedule_of_that_round`: `backend.db.models`
 - `test_backup_round_that_never_happened_is_rejected`
-- `test_backup_round_needs_rollback`
+- `test_backup_round_needs_proposal_confirm`
 - `test_backups_of_unknown_period_are_rejected`
-- `test_backups_need_rollback`
+- `test_backups_need_proposal_confirm`
 - `_blocked_team`: `backend.db.models`
-- `test_applying_an_unsaved_record_makes_it_the_schedule`: `backend.db.models`
+- `test_applying_a_short_record_makes_it_the_schedule`: `backend.db.models`
 - `test_the_old_proposal_confirm_endpoint_is_gone`
-- `test_applying_a_record_needs_the_permission_of_its_kind`: `backend.db.models`
+- `test_applying_a_record_needs_proposal_confirm_and_keeps_the_record`: `backend.db.models`
 - `test_assign_gives_a_team_one_uninterrupted_session_per_turn`: `backend.db.models`

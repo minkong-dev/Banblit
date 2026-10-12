@@ -13,7 +13,6 @@ flowchart LR
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_lib_confirm
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_lib_confirm
   frontend_src_lib_confirm_test["confirm.test.ts"] --> frontend_src_lib_confirm
-  frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_confirm
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_confirm
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_lib_confirm
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_lib_confirm
@@ -32,7 +31,6 @@ flowchart LR
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
 - [[graph/frontend/src/lib/confirm.test|confirm.test.ts]]
-- [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]

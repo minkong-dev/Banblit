@@ -37,7 +37,6 @@ class AutoRun:
     period_id: int
     run_on: date
     slots: tuple[RunSlot, ...]
-    saved: bool
     error: str | None
 
 
@@ -131,21 +130,18 @@ def _run_one(
     # 두 계산 시각이 모두 지난 경우에도 계산은 1번만 합니다. 같은 기간을 같은 입력으로 2번
     # 계산한 결과가 같기 때문입니다. 1번 계산하고 두 시각 모두 실행한 것으로 기록합니다.
     try:
-        result = run_period_assignment(
-            session, period_id, team_ids, room_ids, saved_at=now
-        )
+        run_period_assignment(session, period_id, team_ids, room_ids, saved_at=now)
     except Exception as error:  # noqa: BLE001 - 한 기간의 계산이 실패해도 다음 기간을 계속 처리합니다
         session.rollback()
         logger.exception("자동 배정이 실패했습니다 (period=%s)", period_id)
-        return AutoRun(period_id, now.date(), (), saved=False, error=str(error))
+        return AutoRun(period_id, now.date(), (), error=str(error))
 
     # 실행 기록은 계산이 완료된 후에 남깁니다. 시작할 때 기록하면 중간에 실패했을 때
-    # 그 시각이 다시 실행되지 않기 때문입니다. 그날 배정이 비는 것이 계산을 1번 더
-    # 실행하는 것보다 나쁩니다. 다시 실행해도 run_period_assignment 는 같은 기간을 다시 계산해
-    # 덮어쓰기 때문입니다.
-    # 저장과 알림은 run_period_assignment 안에서 이미 commit 되었습니다.
+    # 그 시각이 다시 실행되지 않기 때문입니다. 다시 실행해도 스케줄링 기록이 1개 더 쌓일 뿐
+    # 현재 배정안은 바뀌지 않습니다.
+    # 기록 저장은 run_period_assignment 안에서 이미 commit 되었습니다.
     _mark_ran(session, period_id, now, slots)
-    return AutoRun(period_id, now.date(), slots, saved=result.saved, error=None)
+    return AutoRun(period_id, now.date(), slots, error=None)
 
 
 def _mark_ran(

@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.jobs import auto_assign
-from backend.db.models import Assignment, AssignmentRun, Member, Period, Room, Team, TeamSlot
+from backend.db.models import Assignment, AssignmentBackup, AssignmentRun, Member, Period, Room, Team, TeamSlot
 
 TODAY = date(2026, 8, 10)
 FIRST_RUN_AT = time(9, 0)
@@ -61,8 +61,9 @@ def _runs(session: Session) -> list[AssignmentRun]:
     )
 
 
-def _assignments(session: Session) -> list[Assignment]:
-    return list(session.scalars(select(Assignment)).all())
+def _records(session: Session) -> list[AssignmentBackup]:
+    # 자동 연산의 결과는 기록으로만 쌓입니다(사용자 결정 2026-10-13).
+    return list(session.scalars(select(AssignmentBackup)).all())
 
 
 def _count_assign_calls(monkeypatch: pytest.MonkeyPatch) -> list[int]:
@@ -87,8 +88,7 @@ def test_runs_the_slot_whose_time_has_passed(db_session: Session) -> None:
 
     assert [result.period_id for result in results] == [period_id]
     assert results[0].error is None
-    assert results[0].saved is True
-    assert len(_assignments(db_session)) == 1  # 2칸이 이어져 구간 한 행입니다
+    assert len(_records(db_session)) == 1  # 2칸이 이어져 구간 한 행입니다
     assert [(run.period_id, run.run_on, run.slot) for run in _runs(db_session)] == [
         (period_id, TODAY, "first")
     ]
@@ -100,7 +100,7 @@ def test_does_not_run_before_the_time(db_session: Session) -> None:
     _room(db_session, "1번방")
 
     assert auto_assign.run_due_assignments(db_session, _at(8)) == []
-    assert _assignments(db_session) == []
+    assert _records(db_session) == []
     assert _runs(db_session) == []
 
 
@@ -118,7 +118,7 @@ def test_an_everyday_period_does_not_run_on_an_ensemble_day(db_session: Session)
     db_session.commit()
 
     assert auto_assign.run_due_assignments(db_session, _at(10)) == []
-    assert _assignments(db_session) == []
+    assert _records(db_session) == []
     assert _runs(db_session) == []
 
 
@@ -134,7 +134,7 @@ def test_does_not_run_a_slot_that_already_ran(db_session: Session) -> None:
     db_session.commit()
 
     assert auto_assign.run_due_assignments(db_session, _at(10)) == []
-    assert _assignments(db_session) == []
+    assert _records(db_session) == []
     assert len(_runs(db_session)) == 1
 
 
@@ -201,7 +201,7 @@ def test_a_failing_period_leaves_no_run_record(
     assert [result.period_id for result in results] == [broken_id]
     assert results[0].error is not None
     assert _runs(db_session) == []
-    assert _assignments(db_session) == []
+    assert _records(db_session) == []
 
 
 def test_an_everyday_period_keeps_running_after_its_end_date(db_session: Session) -> None:
@@ -219,13 +219,12 @@ def test_an_everyday_period_keeps_running_after_its_end_date(db_session: Session
     results = auto_assign.run_due_assignments(db_session, _at(10))
 
     assert [result.period_id for result in results] == [period_id]
-    assert results[0].saved is True
-    assert {row.starts_at.date() for row in _assignments(db_session)} == {TODAY}
+    assert {row.starts_at.date() for row in _records(db_session)} == {TODAY}
 
 
-def test_a_short_run_keeps_the_current_schedule_and_only_adds_a_record(db_session: Session) -> None:
+def test_a_run_keeps_the_current_schedule_and_only_adds_a_record(db_session: Session) -> None:
     # 유일한 멤버가 18~19시에 불가능해 목표 2회 중 1회만 받습니다. 메인 캘린더는 비어 있는 그대로이고 알림도 없습니다.
-    from backend.db.models import AssignmentBackup, Notification, UnavailableTime
+    from backend.db.models import Notification, UnavailableTime
 
     _period(db_session)
     _team_with_member(db_session, "A", "김민수")
@@ -236,7 +235,7 @@ def test_a_short_run_keeps_the_current_schedule_and_only_adds_a_record(db_sessio
 
     results = auto_assign.run_due_assignments(db_session, _at(10))
 
-    assert results[0].saved is False
-    assert _assignments(db_session) == []
-    assert db_session.scalars(select(AssignmentBackup.kind)).all() == ["unsaved"]
+    assert results[0].error is None
+    assert db_session.scalars(select(Assignment)).all() == []
+    assert len({row.saved_at for row in _records(db_session)}) == 1
     assert db_session.scalars(select(Notification)).all() == []

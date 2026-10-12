@@ -38,6 +38,7 @@ flowchart LR
   backend_src_backend_services_roster_roster_service["roster_service.py"] --> backend_src_backend_db_pipeline
   backend_tests_conftest["conftest.py"] --> backend_src_backend_db_pipeline
   backend_tests_integration_db_test_db_connection["test_db_connection.py"] --> backend_src_backend_db_pipeline
+  backend_tests_integration_db_test_period_service["test_period_service.py"] --> backend_src_backend_db_pipeline
   backend_tests_integration_db_test_room_endpoints["test_room_endpoints.py"] --> backend_src_backend_db_pipeline
   backend_tests_integration_db_test_roster_endpoints["test_roster_endpoints.py"] --> backend_src_backend_db_pipeline
   backend_tests_unit_test_api_database_down["test_api_database_down.py"] --> backend_src_backend_db_pipeline
@@ -77,6 +78,7 @@ flowchart LR
 - [[graph/backend/src/backend/services/roster/roster_service|roster_service.py]]
 - [[graph/backend/tests/conftest|conftest.py]]
 - [[graph/backend/tests/integration/db/test_db_connection|test_db_connection.py]]
+- [[graph/backend/tests/integration/db/test_period_service|test_period_service.py]]
 - [[graph/backend/tests/integration/db/test_room_endpoints|test_room_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_roster_endpoints|test_roster_endpoints.py]]
 - [[graph/backend/tests/unit/test_api_database_down|test_api_database_down.py]]

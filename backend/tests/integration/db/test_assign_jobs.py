@@ -102,7 +102,7 @@ def test_polling_the_job_eventually_reports_the_saved_result(
     assert job["status"] == "done"
     assert job["error"] is None
     assert job["finished_at"] is not None
-    assert job["result"]["saved"] is True
+    assert job["result"]["record_saved_at"] is not None
 
 
 def test_a_rejected_assignment_becomes_a_failed_job_with_the_reason(

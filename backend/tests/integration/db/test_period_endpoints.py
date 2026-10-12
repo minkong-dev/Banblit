@@ -184,12 +184,15 @@ def test_assign_saves_the_schedule_and_reports_it(
 
     assert job["status"] == "done"
     body = job["result"]
-    assert body["saved"] is True
     slots = body["assignment"]["slots_by_team"]["A"]
     assert len(slots) == 4  # 2일 × slot(1시간 단위 시간 칸) 2개
     assert {slot["room"] for slot in slots} == {"1번방"}
     assert all(slot["room_id"] == room.id for slot in slots)
 
+    # 연산 결과는 기록으로만 쌓이고, 적용해야 현재 배정안이 됩니다(사용자 결정 2026-10-13).
+    assert api_client.get(f"/periods/{period_id}/schedule").json()["rows"] == []
+    applied = api_client.post(f"/periods/{period_id}/backups/{body['record_saved_at']}/apply")
+    assert applied.json() == {"applied": True}
     saved = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
     # 계산 결과는 칸 4개지만 저장은 구간 한 행씩이라, 이어진 2칸이 합쳐져 하루 한 행씩 2행입니다.
     assert len(saved) == 2
@@ -246,8 +249,7 @@ def test_a_short_assignment_is_reported_and_kept_as_an_unsaved_record(
     poll_job: Callable[[str], dict[str, Any]],
     head_login: dict[str, str],
 ) -> None:
-    """배정이 실패해 조율안이 나오는 경로입니다. 제외 멤버와 조율안의 open_slots 모두 실제 값으로
-    반환되는지 확인합니다."""
+    """목표를 채우지 못한 결과의 부족분이 실제 팀 번호와 이름으로 반환되는지 확인합니다."""
     period = Period(
         kind="focused",
         starts_on=date(2026, 8, 1),
@@ -291,7 +293,6 @@ def test_a_short_assignment_is_reported_and_kept_as_an_unsaved_record(
 
     assert job["status"] == "done"
     body = job["result"]
-    assert body["saved"] is False
     assert body["record_saved_at"] is not None
     # 이영희가 18시에 불가능해 팀 A 는 목표 2시간 중 19시 1시간만 받습니다. 응답에는 실제 id 와 이름으로 반환되어야 합니다.
     assert body["report"]["shortfalls"] == [{"team_id": team.id, "team": "A", "assigned_hours": 1.0}]
@@ -340,23 +341,32 @@ def test_assign_on_an_open_period_is_rejected(
     assert "집중" in job["error"]
 
 
-def test_rollback_restores_the_previous_schedule(
+def _run(
+    api_client: TestClient,
+    poll_job: Callable[[str], dict[str, Any]],
+    period_id: int,
+    team_ids: list[int],
+    room_ids: list[int],
+) -> str:
+    """연산 1회를 접수하고 끝날 때까지 기다린 뒤, 쌓인 기록의 saved_at 을 반환합니다."""
+    submitted = api_client.post(
+        f"/periods/{period_id}/assign", json={"team_ids": team_ids, "room_ids": room_ids}
+    )
+    saved_at = poll_job(submitted.json()["job"]["id"])["result"]["record_saved_at"]
+    assert saved_at is not None
+    return str(saved_at)
+
+
+def test_applying_an_older_record_makes_exactly_that_record_the_schedule(
     api_client: TestClient,
     db_session: Session,
     poll_job: Callable[[str], dict[str, Any]],
     head_login: dict[str, str],
 ) -> None:
-    """직전 배정기록이 아니라 다른 배정기록을 복원하는 결함을 검출해야 합니다.
+    """기록 3개 중 가운데 기록(S2)을 적용하면 현재 배정안이 S2 와 정확히 같아야 합니다.
 
-    합주실을 하나 더 만들어 두 번째 배정에서만 함께 지정합니다. 그러면 전체
-    자리 수가 달라져(4칸에서 8칸으로) 두 배정기록의 시각·합주실 구성이 서로 다릅니다.
-    배정을 3번(S1·S2·S3) 실행하는 이유는, 2번만 실행하면 백업이 1개(S1)만
-    생겨 "가장 오래된 배정기록"과 "가장 최신 배정기록"을 고르는 정렬 방향이 뒤집혀도
-    LIMIT 1 이 그 하나뿐인 후보를 그대로 반환하므로 결함이 드러나지 않기
-    때문입니다. 세 번째 배정(S3)까지 실행해야 백업이 2개(S1, S2)가 되어 정렬
-    방향이 실제로 결과를 결정합니다. 되돌린 뒤에는 직전 배정기록(S2)과 정확히
-    같아야 하고, 그보다 오래된 배정기록(S1)이나 되돌리기 전 현행이었던 배정기록(S3)과는
-    달라야 합니다. 아래 목록 전체 일치 assert 가 이 조건을 함께 검증합니다.
+    합주실 구성을 연산마다 달리해 세 기록의 시각과 합주실이 서로 다르게 합니다. 다른 기록의 칸이 섞이거나
+    가장 최근 기록이 적용되는 결함을 아래 목록 전체 일치 assert 가 검출합니다.
     """
     period_id = _period(db_session)
     team_id = _team_with_member(db_session, "A", "김민수")
@@ -367,102 +377,38 @@ def test_rollback_restores_the_previous_schedule(
     db_session.flush()
     db_session.commit()
 
-    # S1: 1번방만 지정합니다. 팀 하나가 이틀 × 2칸 = 4칸 전부를 받습니다.
-    # 배정마다 poll_job 으로 완료를 기다린 뒤 다음 배정을 접수합니다. 세 배정의
-    # 저장 순서(saved_at)가 뒤섞이면 백업 정렬이 검증하려는 조건과 달라집니다.
-    r1 = api_client.post(
-        f"/periods/{period_id}/assign",
-        json={"team_ids": [team_id], "room_ids": [room_1.id]},
-    )
-    assert poll_job(r1.json()["job"]["id"])["result"]["saved"] is True
-    # S2: 1번방 + 2번방을 지정합니다. 전체 자리가 6칸으로 늘어 팀이 6칸 전부를 받습니다.
-    #     합주실 구성 자체가 S1 과 다르므로 결과도 다릅니다.
-    r2 = api_client.post(
-        f"/periods/{period_id}/assign",
-        json={"team_ids": [team_id], "room_ids": [room_1.id, room_2.id]},
-    )
-    assert poll_job(r2.json()["job"]["id"])["result"]["saved"] is True
-    # S3: 2번방만 지정합니다. 세 번째 저장으로 백업 배정기록을 2개(S1, S2)로 만듭니다.
-    r3 = api_client.post(
-        f"/periods/{period_id}/assign",
-        json={"team_ids": [team_id], "room_ids": [room_2.id]},
-    )
-    assert poll_job(r3.json()["job"]["id"])["result"]["saved"] is True
+    _run(api_client, poll_job, period_id, [team_id], [room_1.id])
+    s2 = _run(api_client, poll_job, period_id, [team_id], [room_1.id, room_2.id])
+    _run(api_client, poll_job, period_id, [team_id], [room_2.id])
 
-    response = api_client.post(f"/periods/{period_id}/rollback")
+    response = api_client.post(f"/periods/{period_id}/backups/{s2}/apply")
 
-    assert response.status_code == 200
-    assert response.json() == {"rolled_back": True}
-
+    assert response.json() == {"applied": True}
     rows = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
-    # 직전 배정기록(S2)과 정확히 같아야 합니다. 시각·합주실까지 실제 값으로 비교합니다.
     # 합주실마다 이어진 칸이 구간 한 행이라, 6칸이 하루 2행씩 4행으로 저장됩니다.
-    assert rows == [
-        {
-            "team_id": team_id,
-            "team": "A",
-            "room_id": room_1.id,
-            "room": "1번방",
-            "start": "2026-08-01T18:00:00",
-            "end": "2026-08-01T20:00:00",
-        },
-        {
-            "team_id": team_id,
-            "team": "A",
-            "room_id": room_2.id,
-            "room": "2번방",
-            "start": "2026-08-01T20:00:00",
-            "end": "2026-08-01T21:00:00",
-        },
-        {
-            "team_id": team_id,
-            "team": "A",
-            "room_id": room_1.id,
-            "room": "1번방",
-            "start": "2026-08-02T18:00:00",
-            "end": "2026-08-02T20:00:00",
-        },
-        {
-            "team_id": team_id,
-            "team": "A",
-            "room_id": room_2.id,
-            "room": "2번방",
-            "start": "2026-08-02T20:00:00",
-            "end": "2026-08-02T21:00:00",
-        },
+    assert [(row["room"], row["start"], row["end"]) for row in rows] == [
+        ("1번방", "2026-08-01T18:00:00", "2026-08-01T20:00:00"),
+        ("2번방", "2026-08-01T20:00:00", "2026-08-01T21:00:00"),
+        ("1번방", "2026-08-02T18:00:00", "2026-08-02T20:00:00"),
+        ("2번방", "2026-08-02T20:00:00", "2026-08-02T21:00:00"),
     ]
 
 
-def test_rollback_without_any_backup_reports_nothing_to_undo(
-    api_client: TestClient, db_session: Session, head_login: dict[str, str]
-) -> None:
-    period_id = _period(db_session)
-    db_session.commit()
-
-    response = api_client.post(f"/periods/{period_id}/rollback")
-
-    assert response.status_code == 200
-    assert response.json() == {"rolled_back": False}
-
-
-def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
+def test_applying_a_record_that_clashes_with_another_period_is_rejected_not_500(
     api_client: TestClient,
     db_session: Session,
     poll_job: Callable[[str], dict[str, Any]],
     head_login: dict[str, str],
 ) -> None:
-    """되돌리려는 백업이 다른 기간이 차지한 합주실·시각과 겹치면, 저장 제약 위반이
-    500 으로 응답되면 안 됩니다. 배정 경로와 같은 422 로 거부해야 합니다.
+    """적용하려는 기록이 다른 기간이 차지한 합주실·시각과 겹치면 500 이 아니라 422 로 거부합니다.
 
     재현 순서:
-    1) 기간 A 를 1번방으로 배정합니다. 현행 = 1번방
-    2) 기간 A 를 2번방으로 다시 배정합니다. 백업 = 1번방, 현행 = 2번방(1번방 자리가 빕니다)
-    3) 기간 A 의 날짜를 변경하고, 비워진 8/1~8/2 에 기간 B 를 만들어 1번방으로 배정합니다. 충돌 없이 성공합니다.
+    1) 기간 A 에서 1번방 결과(R1)와 2번방 결과(R2)를 쌓고 R2 를 적용합니다(1번방 자리가 빕니다).
+    2) 기간 A 의 날짜를 변경하고, 비워진 8/1~8/2 에 기간 B 를 만들어 1번방 결과를 적용합니다.
        집중 합주기간끼리는 날짜가 겹칠 수 없어(migration b5e1d9a37c42) 날짜 변경으로 재현합니다.
-    4) 기간 A 를 되돌립니다. 옛 날짜의 1번방 백업을 복원하려다 기간 B 와 충돌합니다.
+    3) 기간 A 의 R1 을 적용합니다. 옛 날짜의 1번방을 쓰려다 기간 B 와 충돌합니다.
     """
     period_a = _period(db_session)  # 8/1 ~ 8/2
-
     team_a = _team_with_member(db_session, "A", "김민수")
     team_b = _team_with_member(db_session, "B", "이영희")
     room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
@@ -471,17 +417,9 @@ def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
     db_session.flush()
     db_session.commit()
 
-    r1 = api_client.post(
-        f"/periods/{period_a}/assign",
-        json={"team_ids": [team_a], "room_ids": [room_1.id]},
-    )
-    assert poll_job(r1.json()["job"]["id"])["result"]["saved"] is True
-
-    r2 = api_client.post(
-        f"/periods/{period_a}/assign",
-        json={"team_ids": [team_a], "room_ids": [room_2.id]},
-    )
-    assert poll_job(r2.json()["job"]["id"])["result"]["saved"] is True
+    r1 = _run(api_client, poll_job, period_a, [team_a], [room_1.id])
+    r2 = _run(api_client, poll_job, period_a, [team_a], [room_2.id])
+    assert api_client.post(f"/periods/{period_a}/backups/{r2}/apply").json() == {"applied": True}
 
     moved = db_session.get(Period, period_a)
     assert moved is not None
@@ -497,21 +435,26 @@ def test_rollback_room_time_conflict_with_another_period_is_rejected_not_500(
     )
     db_session.add(period_b)
     db_session.commit()
+    rb = _run(api_client, poll_job, period_b.id, [team_b], [room_1.id])
+    assert api_client.post(f"/periods/{period_b.id}/backups/{rb}/apply").json() == {"applied": True}
 
-    r3 = api_client.post(
-        f"/periods/{period_b.id}/assign",
-        json={"team_ids": [team_b], "room_ids": [room_1.id]},
-    )
-    assert poll_job(r3.json()["job"]["id"])["result"]["saved"] is True
-
-    response = api_client.post(f"/periods/{period_a}/rollback")
+    response = api_client.post(f"/periods/{period_a}/backups/{r1}/apply")
 
     assert response.status_code == 422
     assert "이미" in response.json()["detail"]
-
-    # 실패한 되돌리기가 기간 B 의 현행 시간표를 변경하지 않아야 합니다.
+    # 실패한 적용이 기간 B 의 현재 배정안을 변경하지 않아야 합니다.
     b_rows = api_client.get(f"/periods/{period_b.id}/schedule").json()["rows"]
     assert len(b_rows) == 2  # 이틀 × 2칸이 하루 한 구간씩 2행
+
+
+def test_the_rollback_endpoint_is_gone(
+    api_client: TestClient, db_session: Session, head_login: dict[str, str]
+) -> None:
+    # 이전 확정본과 되돌리기는 삭제했습니다. 예전 시간표로 돌아가려면 그 기록을 다시 적용합니다(사용자 결정 2026-10-13).
+    period_id = _period(db_session)
+    db_session.commit()
+
+    assert api_client.post(f"/periods/{period_id}/rollback").status_code == 404
 
 
 def test_schedule_without_login_is_rejected(
@@ -549,26 +492,6 @@ def test_assign_needs_assign_run(
     passed = api_client.post("/periods/999999/assign", json=body, cookies=head)
     assert passed.status_code == 422
     assert "존재하지 않는 기간입니다" in passed.json()["detail"]
-
-
-def test_rollback_needs_rollback(
-    api_client: TestClient,
-    db_session: Session,
-    account: AccountFactory,
-) -> None:
-    period_id = _period(db_session)
-    db_session.commit()
-    _, head = account("박서연", "head@example.com")
-    _, member = account("김민수", "member@example.com")
-
-    assert api_client.post(f"/periods/{period_id}/rollback").status_code == 401
-
-    forbidden = api_client.post(f"/periods/{period_id}/rollback", cookies=member)
-    assert forbidden.status_code == 403
-    assert "권한" in forbidden.json()["detail"]
-
-    allowed = api_client.post(f"/periods/{period_id}/rollback", cookies=head)
-    assert allowed.status_code == 200
 
 
 def test_schedule_reports_the_slots_left_open_by_the_assignment(
@@ -619,7 +542,7 @@ def test_schedule_reports_the_slots_left_open_by_the_assignment(
 def test_backups_list_each_round_newest_first(
     api_client: TestClient, db_session: Session, head_login: dict[str, str]
 ) -> None:
-    """되돌리기 화면이 고를 배정기록 목록 — 저장 시각과 칸 수를 최신순으로."""
+    """적용할 기록을 고르는 목록입니다. 저장 시각과 칸 수를 최신순으로 반환합니다."""
     period_id = _period(db_session)
     team = Team(name="A")
     room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
@@ -660,8 +583,8 @@ def test_backups_list_each_round_newest_first(
     assert response.status_code == 200
     assert response.json() == {
         "backups": [
-            {"saved_at": "2026-08-02T21:00:00", "kind": "previous", "slot_count": 2},
-            {"saved_at": "2026-08-01T21:00:00", "kind": "previous", "slot_count": 1},
+            {"saved_at": "2026-08-02T21:00:00", "slot_count": 2},
+            {"saved_at": "2026-08-01T21:00:00", "slot_count": 1},
         ]
     }
 
@@ -703,7 +626,6 @@ def test_backup_round_shows_the_schedule_of_that_round(
 
     assert response.status_code == 200
     body = response.json()
-    assert body["kind"] == "previous"
     assert body["report"] is not None
     assert {"rows": body["rows"]} == {
         "rows": [
@@ -734,7 +656,7 @@ def test_backup_round_that_never_happened_is_rejected(
     assert "존재하지 않는 배정기록입니다" in response.json()["detail"]
 
 
-def test_backup_round_needs_rollback(
+def test_backup_round_needs_proposal_confirm(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     period_id = _period(db_session)
@@ -761,7 +683,7 @@ def test_backups_of_unknown_period_are_rejected(
     assert "존재하지 않는 기간입니다" in response.json()["detail"]
 
 
-def test_backups_need_rollback(
+def test_backups_need_proposal_confirm(
     api_client: TestClient,
     db_session: Session,
     account: AccountFactory,
@@ -806,7 +728,7 @@ def _blocked_team(db_session: Session) -> tuple[int, int]:
     return team.id, blocked.id
 
 
-def test_applying_an_unsaved_record_makes_it_the_schedule(
+def test_applying_a_short_record_makes_it_the_schedule(
     api_client: TestClient,
     db_session: Session,
     poll_job: Callable[[str], dict[str, Any]],
@@ -823,7 +745,6 @@ def test_applying_an_unsaved_record_makes_it_the_schedule(
     refused = poll_job(
         api_client.post(f"/periods/{period_id}/assign", json=body).json()["job"]["id"]
     )
-    assert refused["result"]["saved"] is False
     saved_at = refused["result"]["record_saved_at"]
 
     response = api_client.post(f"/periods/{period_id}/backups/{saved_at}/apply")
@@ -847,7 +768,7 @@ def test_the_old_proposal_confirm_endpoint_is_gone(
     assert response.status_code == 404
 
 
-def test_applying_a_record_needs_the_permission_of_its_kind(
+def test_applying_a_record_needs_proposal_confirm_and_keeps_the_record(
     api_client: TestClient,
     db_session: Session,
     account: AccountFactory,
@@ -865,7 +786,6 @@ def test_applying_a_record_needs_the_permission_of_its_kind(
             starts_at=datetime(2026, 8, 1, 18, 0),
             ends_at=datetime(2026, 8, 1, 19, 0),
             saved_at=datetime(2026, 8, 1, 21, 0),
-            kind="unsaved",
         )
     )
     db_session.commit()
@@ -878,7 +798,9 @@ def test_applying_a_record_needs_the_permission_of_its_kind(
     forbidden = api_client.post(path, cookies=member)
     assert forbidden.status_code == 403
     assert api_client.post(path, cookies=head).json() == {"applied": True}
-    missing = api_client.post(path, cookies=head)
+    # 적용한 기록도 목록에 남아 같은 기록을 다시 적용할 수 있습니다.
+    assert api_client.post(path, cookies=head).json() == {"applied": True}
+    missing = api_client.post(path.replace("21:00:00", "22:00:00"), cookies=head)
     assert missing.status_code == 422
     assert "존재하지 않는 배정기록입니다" in missing.json()["detail"]
 

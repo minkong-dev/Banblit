@@ -1,4 +1,4 @@
-"""확정 스케줄·배정 계산·스케줄링 기록·되돌리기 endpoint(API의 요청 주소 단위)입니다. 스케줄을 수정하는 endpoint 는 이 모듈에만 있습니다."""
+"""현재 배정안·배정 계산·스케줄링 기록 endpoint(API의 요청 주소 단위)입니다. 스케줄을 수정하는 endpoint 는 이 모듈에만 있습니다."""
 
 from collections.abc import Callable
 from datetime import date, datetime
@@ -6,7 +6,7 @@ from datetime import date, datetime
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from backend.api.auth_dependency import ensure_permission, require_account, require_permission
+from backend.api.auth_dependency import require_account, require_permission
 from backend.api.job_runner import Job, JobRunner, max_concurrent_jobs_from_env
 from backend.services.notification.pipeline import notify_assignment_updated
 from backend.services.settings.pipeline import slot_minutes
@@ -35,20 +35,18 @@ from backend.api.schemas import (
     JobOut,
     PeriodAssignIn,
     PeriodAssignOut,
-    RollbackOut,
     RoomSlotOut,
     ScheduleOut,
     ScheduleReportOut,
     ScheduleRowOut,
     ShortfallOut,
 )
-from backend.db.models import Member, Period, Permission, RecordKind
+from backend.db.models import Period
 from backend.db.pipeline import (
     apply_record,
     get_session,
     get_session_factory,
     list_backup_rounds,
-    rollback_schedule,
 )
 from backend.scheduling.pipeline import RoomInterval
 
@@ -59,11 +57,6 @@ router = APIRouter()
 job_runner: JobRunner[PeriodRun] = JobRunner(
     max_concurrent=max_concurrent_jobs_from_env()
 )
-
-# 스케줄링 기록을 확정할 때 필요한 권한입니다. 이전 확정본으로 돌아가는 것은 되돌리기와 같고, 미확정 배정안을
-# 확정하는 것은 옛 조율안 확정과 같은 판단이라 권한 key 를 그대로 씁니다(permission CHECK migration 이 이 문자열을 가짐).
-APPLY_PERMISSION: dict[RecordKind, Permission] = {"previous": "rollback", "unsaved": "proposal_confirm"}
-
 
 def _period(period_id: int, session: Session = Depends(get_session)) -> Period:
     # 기간 존재 여부는 여러 endpoint(API의 요청 주소 단위)가 동일하게 검증합니다. 없으면 ValueError 를 발생시켜 422 로 응답합니다.
@@ -91,6 +84,7 @@ def _report_out(report: ScheduleReport) -> ScheduleReportOut:
             )
             for a in report.absences
         ],
+        over_absent=report.over_absent,
     )
 
 
@@ -148,7 +142,6 @@ def _result_out(run: PeriodRun) -> PeriodAssignOut:
     return PeriodAssignOut(
         assignment=_assignment_out(run.computed),
         report=_report_out(run.report),
-        saved=run.saved,
         record_saved_at=run.record_saved_at,
     )
 
@@ -182,7 +175,7 @@ def assign_period_schedule(
         # 요청을 받은 스레드의 session 을 그대로 전달하지 않습니다. SQLAlchemy Session 은
         # 스레드끼리 공유하면 안 되므로, 백그라운드 스레드 전용 session 을 새로 엽니다.
         with session_factory() as job_session:
-            # 저장과 알림은 run_period_assignment 가 결과에 따라 정합니다(services/period/pipeline.py).
+            # 결과는 기록으로만 쌓습니다(services/period/pipeline.py). 현재 배정안은 apply 로만 바뀝니다.
             return run_period_assignment(
                 job_session, period.id, req.team_ids, req.room_ids, saved_at=datetime.now()
             )
@@ -203,37 +196,29 @@ def read_job(job_id: str) -> JobEnvelopeOut:
     return JobEnvelopeOut(job=_job_out(job))
 
 
-# 스케줄링 기록 목록입니다. 되돌리기와 같은 권한으로 검증합니다.
+# 스케줄링 기록 목록입니다. 기록을 보고 적용하는 권한(proposal_confirm) 하나로 검증합니다(사용자 결정 2026-10-13).
 @router.get(
     "/periods/{period_id}/backups",
     response_model=BackupsOut,
-    dependencies=[Depends(require_permission("rollback"))],
+    dependencies=[Depends(require_permission("proposal_confirm"))],
 )
 def read_period_backups(
     period: Period = Depends(_period), session: Session = Depends(get_session)
 ) -> BackupsOut:
     return BackupsOut(
         backups=[
-            BackupOut(saved_at=round_["saved_at"], kind=round_["kind"], slot_count=round_["slot_count"])
+            BackupOut(saved_at=round_["saved_at"], slot_count=round_["slot_count"])
             # 칸 수는 구간 길이를 칸 크기로 나눈 값입니다. 칸 크기는 저장소 설정이 결정합니다.
             for round_ in list_backup_rounds(session, period.id, slot_minutes(session))
         ]
     )
 
 
-def _record_kind(session: Session, period_id: int, saved_at: datetime) -> RecordKind:
-    # 기록 목록은 기간마다 종류별 2개뿐이라 목록에서 찾습니다. 없는 기록은 빈 시간표가 아니라 거절입니다.
-    for round_ in list_backup_rounds(session, period_id, slot_minutes(session)):
-        if round_["saved_at"] == saved_at:
-            return round_["kind"]
-    raise ValueError("존재하지 않는 배정기록입니다")
-
-
-# 스케줄링 기록 하나를 선택해 그 시간표와 보고를 봅니다. 목록에서 이어지는 화면이므로 같은 권한으로 검증합니다.
+# 스케줄링 기록 하나를 선택해 그 시간표와 보고를 봅니다. 없는 기록은 list_backup_round 가 ValueError 로 거절합니다.
 @router.get(
     "/periods/{period_id}/backups/{saved_at}",
     response_model=BackupRoundOut,
-    dependencies=[Depends(require_permission("rollback"))],
+    dependencies=[Depends(require_permission("proposal_confirm"))],
 )
 def read_period_backup_round(
     saved_at: datetime,
@@ -242,42 +227,24 @@ def read_period_backup_round(
 ) -> BackupRoundOut:
     rows = list_backup_round(session, period.id, saved_at)
     return BackupRoundOut(
-        kind=_record_kind(session, period.id, saved_at),
         rows=[_row_out(row) for row in rows],
         report=_stored_report_out(session, period, rows),
     )
 
 
-# 스케줄링 기록 하나를 확정 시간표로 만듭니다. 필요한 권한이 기록의 종류에 따라 달라 함수 안에서 검증합니다.
+# 스케줄링 기록 하나를 현재 배정안으로 적용합니다. 현재 배정안이 바뀌는 곳은 이 endpoint 하나라 알림도 여기서 남깁니다.
 @router.post(
     "/periods/{period_id}/backups/{saved_at}/apply",
     response_model=ApplyRecordOut,
+    dependencies=[Depends(require_permission("proposal_confirm"))],
 )
 def apply_period_record(
     saved_at: datetime,
     period: Period = Depends(_period),
-    account: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> ApplyRecordOut:
-    ensure_permission(session, account, APPLY_PERMISSION[_record_kind(session, period.id, saved_at)])
-    # 교체되는 현행은 이전 확정본으로 보관합니다. 합주실·시각 충돌은 ValueError 를 발생시켜 422 로 응답합니다.
-    applied = apply_record(session, period.id, saved_at, archived_at=datetime.now())
-    if applied:
-        notify_assignment_updated(session, period.id, datetime.now())
-    return ApplyRecordOut(applied=applied)
-
-
-@router.post(
-    "/periods/{period_id}/rollback",
-    response_model=RollbackOut,
-    dependencies=[Depends(require_permission("rollback"))],
-)
-def rollback_period_schedule(
-    period: Period = Depends(_period), session: Session = Depends(get_session)
-) -> RollbackOut:
-    # rollback_schedule 이 되돌리기와 확정을 함께 완료합니다. 합주실·시각 충돌은 ValueError 를 발생시켜 422 로 응답합니다.
-    rolled_back = rollback_schedule(session, period.id)
-    # 되돌릴 백업이 없어 아무것도 변경되지 않은 경우(False)에는 알리지 않습니다.
-    if rolled_back:
-        notify_assignment_updated(session, period.id, datetime.now())
-    return RollbackOut(rolled_back=rolled_back)
+    # 합주실·시각 충돌은 ValueError 를 발생시켜 422 로 응답합니다.
+    if not apply_record(session, period.id, saved_at):
+        raise ValueError("존재하지 않는 배정기록입니다")
+    notify_assignment_updated(session, period.id, datetime.now())
+    return ApplyRecordOut(applied=True)

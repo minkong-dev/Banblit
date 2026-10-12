@@ -248,7 +248,7 @@ def list_schedule(session: Session, period_id: int) -> list[ScheduleRow]:
 
 
 def list_backup_round(session: Session, period_id: int, saved_at: datetime) -> list[ScheduleRow]:
-    """밀려난 배정기록(backup round) 1개의 스케줄을 반환합니다. 배정기록을 식별하는 값은 저장 시각입니다.
+    """스케줄링 기록(backup round) 1개의 스케줄을 반환합니다. 배정기록을 식별하는 값은 저장 시각입니다.
 
     배정이 1개도 없는 배정기록은 저장되지 않으므로, 빈 결과일 경우 ValueError 를 발생시킵니다.
     """
