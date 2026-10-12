@@ -76,15 +76,17 @@ class ScheduleReport:
     target_hours: float
     shortfalls: list[Shortfall]
     absences: list[Absence]
+    # session 1회라도 빠지는 인원이 기간의 불참 허용 인원(max_absent_members)을 넘으면 True 입니다.
+    # 적용 중인 배정안이 불가능 일정 변동으로 허용 인원을 넘었는지 화면이 경고하는 근거입니다(사용자 결정 2026-10-13).
+    over_absent: bool
 
 
 @dataclass(frozen=True)
 class PeriodRun:
-    """배정 계산 1회의 결과입니다. saved 이면 확정 시간표가 되었고, 아니면 record_saved_at 의 미확정 배정안으로 등록되었습니다."""
+    """배정 계산 1회의 결과입니다. record_saved_at 은 쌓은 스케줄링 기록의 saved_at 이고, 배정이 0건이면 None 입니다."""
 
     computed: PeriodAssignResult
     report: ScheduleReport
-    saved: bool
     record_saved_at: datetime | None
 
 
@@ -171,10 +173,13 @@ def schedule_report(
     hours: dict[int, float] = defaultdict(float)
     missed: dict[tuple[int, int], int] = defaultdict(int)
     teams = {team.id: team for team in inputs.engine_teams}
+    over_absent = False
     for row in rows:
         hours[row["team_id"]] += (row["ends_at"] - row["starts_at"]).total_seconds() / 3600
         for piece in _sessions_of(row, inputs.session_minutes):
-            for member_id in absent_member_ids(teams[row["team_id"]], piece):
+            absent = absent_member_ids(teams[row["team_id"]], piece)
+            over_absent = over_absent or len(absent) > inputs.max_absent
+            for member_id in absent:
                 missed[(row["team_id"], member_id)] += 1
     return ScheduleReport(
         target_hours=target_hours,
@@ -184,6 +189,7 @@ def schedule_report(
             if hours[team_id] < target_hours
         ],
         absences=[_absence(inputs, team_id, member_id, count) for (team_id, member_id), count in sorted(missed.items())],
+        over_absent=over_absent,
     )
 
 
@@ -206,11 +212,6 @@ def stored_report(
         for team_id, _, room_id, _, start, end in rows
     ]
     return schedule_report(session, period.id, team_ids, room_ids, stored_rows, on)
-
-
-def clean(report: ScheduleReport) -> bool:
-    """부족분과 불참자가 모두 없으면 True 입니다. True 일 때만 계산 결과를 확정 시간표로 저장합니다."""
-    return not report.shortfalls and not report.absences
 
 
 def _absence(inputs: _Inputs, team_id: int, member_id: int, count: int) -> Absence:

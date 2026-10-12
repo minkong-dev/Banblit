@@ -5,10 +5,10 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team
 from backend.db.schedule_store import (
+    RECORD_KEEP,
     AssignmentRow,
-    list_backup_rounds,
     apply_record,
-    rollback_schedule,
+    list_backup_rounds,
     save_record,
     save_schedule,
 )
@@ -32,13 +32,23 @@ def _scaffold(session: Session) -> tuple[int, int, int]:
 
 
 def _row(team_id: int, room_id: int, hour: int) -> AssignmentRow:
-    """8월 1일 hour시 시작하는 한 시간짜리 배정 행을 반환합니다(현행/백업 공용 입력)."""
+    """8월 1일 hour시 시작하는 한 시간짜리 배정 행을 반환합니다(현행/기록 공용 입력)."""
     return {
         "team_id": team_id,
         "room_id": room_id,
         "starts_at": datetime(2026, 8, 1, hour, 0),
         "ends_at": datetime(2026, 8, 1, hour + 1),
     }
+
+
+def _current(session: Session, period_id: int) -> list[datetime]:
+    return sorted(
+        session.scalars(select(Assignment.starts_at).where(Assignment.period_id == period_id)).all()
+    )
+
+
+def _record_times(session: Session, period_id: int) -> list[datetime]:
+    return [r["saved_at"] for r in list_backup_rounds(session, period_id, slot_minutes=60)]
 
 
 def test_assignment_backup_round_trips(db_session: Session) -> None:
@@ -60,157 +70,120 @@ def test_assignment_backup_round_trips(db_session: Session) -> None:
     assert saved.starts_at == datetime(2026, 8, 1, 19, 0)
 
 
-def test_first_save_writes_current_schedule(db_session: Session) -> None:
+def test_save_schedule_replaces_the_current_schedule_without_making_a_record(db_session: Session) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 19)])
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 20)])
+
+    assert _current(db_session, period_id) == [datetime(2026, 8, 1, 20, 0)]
+    assert db_session.scalars(select(AssignmentBackup)).all() == []
+
+
+def test_consecutive_slots_become_one_row(db_session: Session) -> None:
+    """같은 팀이 같은 합주실에서 이어 쓰는 칸은 구간 한 행으로 저장합니다."""
     period_id, team_id, room_id = _scaffold(db_session)
 
     save_schedule(
         db_session,
         period_id,
-        [_row(team_id, room_id, 19)],
-        saved_at=datetime(2026, 8, 1, 21, 0),
+        [_row(team_id, room_id, 19), _row(team_id, room_id, 20), _row(team_id, room_id, 21)],
     )
-    db_session.commit()
 
-    current = db_session.scalars(
-        select(Assignment).where(Assignment.period_id == period_id)
-    ).all()
-    assert [a.starts_at for a in current] == [datetime(2026, 8, 1, 19, 0)]
-    assert db_session.scalars(select(AssignmentBackup)).all() == []
+    current = db_session.scalars(select(Assignment).where(Assignment.period_id == period_id)).all()
+    assert [(a.starts_at, a.ends_at) for a in current] == [
+        (datetime(2026, 8, 1, 19, 0), datetime(2026, 8, 1, 22, 0))
+    ]
 
 
-def test_second_save_archives_previous(db_session: Session) -> None:
+def test_a_gap_between_slots_keeps_two_rows(db_session: Session) -> None:
+    """떨어진 칸은 잇지 않습니다. 이으면 배정받지 않은 시간까지 점유한 것이 됩니다."""
     period_id, team_id, room_id = _scaffold(db_session)
 
-    save_schedule(
-        db_session, period_id, [_row(team_id, room_id, 19)],
-        saved_at=datetime(2026, 8, 1, 9, 0),
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 19), _row(team_id, room_id, 21)])
+
+    assert _current(db_session, period_id) == [datetime(2026, 8, 1, 19, 0), datetime(2026, 8, 1, 21, 0)]
+
+
+def test_different_teams_are_not_joined(db_session: Session) -> None:
+    """이어진 칸이라도 팀이 다르면 각각의 행입니다."""
+    period_id, team_id, room_id = _scaffold(db_session)
+    other = Team(name="B")
+    db_session.add(other)
+    db_session.flush()
+
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 19), _row(other.id, room_id, 20)])
+
+    current = db_session.scalars(
+        select(Assignment).where(Assignment.period_id == period_id).order_by(Assignment.starts_at)
+    ).all()
+    assert [(a.team_id, a.starts_at, a.ends_at) for a in current] == [
+        (team_id, datetime(2026, 8, 1, 19, 0), datetime(2026, 8, 1, 20, 0)),
+        (other.id, datetime(2026, 8, 1, 20, 0), datetime(2026, 8, 1, 21, 0)),
+    ]
+
+
+def test_a_record_leaves_the_current_schedule_alone(db_session: Session) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)])
+
+    save_record(db_session, period_id, [_row(team_id, room_id, 20)], saved_at=datetime(2026, 8, 1, 9, 0))
+
+    assert _current(db_session, period_id) == [datetime(2026, 8, 1, 18, 0)]
+    assert _record_times(db_session, period_id) == [datetime(2026, 8, 1, 9, 0)]
+
+
+def test_records_are_listed_newest_first_with_their_slot_counts(db_session: Session) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+    save_record(db_session, period_id, [_row(team_id, room_id, 19)], saved_at=datetime(2026, 8, 2, 21, 0))
+    save_record(
+        db_session,
+        period_id,
+        [_row(team_id, room_id, 19), _row(team_id, room_id, 20)],
+        saved_at=datetime(2026, 8, 3, 21, 0),
     )
-    db_session.commit()
-    save_schedule(
-        db_session, period_id, [_row(team_id, room_id, 20)],
-        saved_at=datetime(2026, 8, 1, 21, 0),
-    )
-    db_session.commit()
 
-    current = db_session.scalars(
-        select(Assignment).where(Assignment.period_id == period_id)
-    ).all()
-    assert [a.starts_at for a in current] == [datetime(2026, 8, 1, 20, 0)]
-
-    backups = db_session.scalars(select(AssignmentBackup)).all()
-    assert [b.starts_at for b in backups] == [datetime(2026, 8, 1, 19, 0)]
-    assert backups[0].saved_at == datetime(2026, 8, 1, 21, 0)
+    assert list_backup_rounds(db_session, period_id, slot_minutes=60) == [
+        {"saved_at": datetime(2026, 8, 3, 21, 0), "slot_count": 2},
+        {"saved_at": datetime(2026, 8, 2, 21, 0), "slot_count": 1},
+    ]
 
 
-def test_backups_keep_only_two_most_recent(db_session: Session) -> None:
+def test_only_the_most_recent_records_are_kept(db_session: Session) -> None:
     period_id, team_id, room_id = _scaffold(db_session)
+    hours = range(RECORD_KEEP + 1)
+    for hour in hours:
+        save_record(db_session, period_id, [_row(team_id, room_id, 18)], saved_at=datetime(2026, 8, 2, hour, 0))
 
-    # 네 번 저장하면 백업 배정기록 3개(9:00·21:00·다음날 9:00)가 생기고,
-    # 최신 2개만 남아야 합니다.
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)],
-                  saved_at=datetime(2026, 8, 1, 8, 0))
-    db_session.commit()
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 19)],
-                  saved_at=datetime(2026, 8, 1, 9, 0))
-    db_session.commit()
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 20)],
-                  saved_at=datetime(2026, 8, 1, 21, 0))
-    db_session.commit()
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 21)],
-                  saved_at=datetime(2026, 8, 2, 9, 0))
-    db_session.commit()
+    times = _record_times(db_session, period_id)
 
-    saved_times = set(
-        db_session.scalars(select(AssignmentBackup.saved_at).distinct()).all()
-    )
-    assert saved_times == {
-        datetime(2026, 8, 1, 21, 0),
-        datetime(2026, 8, 2, 9, 0),
-    }
+    assert len(times) == RECORD_KEEP
+    assert datetime(2026, 8, 2, 0, 0) not in times
 
 
-def test_rollback_restores_previous_schedule(db_session: Session) -> None:
+def test_applying_a_record_replaces_the_current_schedule_and_keeps_the_record(db_session: Session) -> None:
+    # 기록은 쌓기만 합니다(사용자 결정 2026-10-13). 적용한 기록도 목록에 남아 다시 적용할 수 있습니다.
     period_id, team_id, room_id = _scaffold(db_session)
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 19)],
-                  saved_at=datetime(2026, 8, 1, 9, 0))
-    db_session.commit()
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 20)],
-                  saved_at=datetime(2026, 8, 1, 21, 0))
-    db_session.commit()
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)])
+    save_record(db_session, period_id, [_row(team_id, room_id, 20)], saved_at=datetime(2026, 8, 1, 9, 0))
 
-    ok = rollback_schedule(db_session, period_id)
-    db_session.commit()
+    applied = apply_record(db_session, period_id, datetime(2026, 8, 1, 9, 0))
 
-    assert ok is True
-    current = db_session.scalars(
-        select(Assignment).where(Assignment.period_id == period_id)
-    ).all()
-    assert [a.starts_at for a in current] == [datetime(2026, 8, 1, 19, 0)]
-    assert db_session.scalars(select(AssignmentBackup)).all() == []
+    assert applied is True
+    assert _current(db_session, period_id) == [datetime(2026, 8, 1, 20, 0)]
+    assert _record_times(db_session, period_id) == [datetime(2026, 8, 1, 9, 0)]
 
 
-def test_rollback_after_third_save_leaves_older_backup_intact(
-    db_session: Session,
-) -> None:
-    """세 번째 저장(s3) 뒤 롤백 1회는 s2로 되돌리고, s2 백업 배정기록만 남겨야 합니다.
-
-    s1 은 백업할 현행이 없어 백업을 만들지 않으므로 백업 배정기록은 s2·s3 2개입니다.
-    이 상태에서 rollback 하면 최신 배정기록(s3)만 삭제되고 s2 는 그대로 남아야 합니다.
-    """
+def test_applying_a_missing_record_changes_nothing(db_session: Session) -> None:
     period_id, team_id, room_id = _scaffold(db_session)
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)])
 
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)],
-                  saved_at=datetime(2026, 8, 1, 8, 0))  # s1
-    db_session.commit()
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 19)],
-                  saved_at=datetime(2026, 8, 1, 9, 0))  # s2
-    db_session.commit()
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 20)],
-                  saved_at=datetime(2026, 8, 1, 21, 0))  # s3
-    db_session.commit()
-
-    backups_before = db_session.scalars(select(AssignmentBackup)).all()
-    assert len(backups_before) == 2
-    assert {b.saved_at for b in backups_before} == {
-        datetime(2026, 8, 1, 9, 0),
-        datetime(2026, 8, 1, 21, 0),
-    }
-
-    ok = rollback_schedule(db_session, period_id)
-    db_session.commit()
-
-    assert ok is True
-    current = db_session.scalars(
-        select(Assignment).where(Assignment.period_id == period_id)
-    ).all()
-    assert [a.starts_at for a in current] == [datetime(2026, 8, 1, 19, 0)]
-
-    remaining = db_session.scalars(select(AssignmentBackup)).all()
-    assert len(remaining) == 1
-    assert remaining[0].saved_at == datetime(2026, 8, 1, 9, 0)
-    assert remaining[0].starts_at == datetime(2026, 8, 1, 18, 0)
+    assert apply_record(db_session, period_id, datetime(2026, 8, 1, 9, 0)) is False
+    assert _current(db_session, period_id) == [datetime(2026, 8, 1, 18, 0)]
 
 
-def test_rollback_without_backup_returns_false(db_session: Session) -> None:
-    period_id, team_id, room_id = _scaffold(db_session)
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 19)],
-                  saved_at=datetime(2026, 8, 1, 9, 0))
-    db_session.commit()
-
-    ok = rollback_schedule(db_session, period_id)
-    db_session.commit()
-
-    assert ok is False
-    current = db_session.scalars(
-        select(Assignment).where(Assignment.period_id == period_id)
-    ).all()
-    assert [a.starts_at for a in current] == [datetime(2026, 8, 1, 19, 0)]
-
-
-def test_two_periods_do_not_interfere(db_session: Session) -> None:
-    """한 기간의 저장·오래된 백업 삭제·rollback 은 다른 기간의 현행·백업을 변경하지 않습니다."""
+def test_pruning_one_period_keeps_the_other_periods_records(db_session: Session) -> None:
     period1_id, team1_id, room1_id = _scaffold(db_session)
-
     # 집중 합주기간끼리 날짜가 겹칠 수 없어(migration b5e1d9a37c42) period1(8/1~8/14) 뒤에 둡니다.
     period2 = Period(
         kind="focused",
@@ -224,234 +197,10 @@ def test_two_periods_do_not_interfere(db_session: Session) -> None:
     room2 = Room(name="2번방", opens_at=time(18, 0), closes_at=time(23, 0))
     db_session.add_all([period2, team2, room2])
     db_session.flush()
-    period2_id, team2_id, room2_id = period2.id, team2.id, room2.id
+    # period1 의 기록은 period2 의 어느 기록보다 오래되었습니다. _prune_backups 가 period_id 를 무시하면 삭제됩니다.
+    save_record(db_session, period1_id, [_row(team1_id, room1_id, 10)], saved_at=datetime(2026, 8, 1, 0, 0))
+    for hour in range(1, RECORD_KEEP + 2):
+        save_record(db_session, period2.id, [_row(team2.id, room2.id, 18)], saved_at=datetime(2026, 8, 2, hour, 0))
 
-    # period1: 두 번 저장해 백업 배정기록 1개(saved_at=8/1 23:00)를 만들어둡니다.
-    # 이 saved_at은 아래 period2의 백업 saved_at들(9:00·21:00·22:00)과
-    # 겹치지 않게 정합니다. _prune_backups 가 period_id 를 무시하면 period2 의
-    # keep 목록에 없다는 이유로 이 배정기록이 잘못 삭제되는 것을 검증하기 위해서입니다.
-    save_schedule(db_session, period1_id, [_row(team1_id, room1_id, 10)],
-                  saved_at=datetime(2026, 8, 1, 7, 0))
-    db_session.commit()
-    save_schedule(db_session, period1_id, [_row(team1_id, room1_id, 11)],
-                  saved_at=datetime(2026, 8, 1, 23, 0))
-    db_session.commit()
-
-    # period2: 4번 저장해 오래된 백업 삭제를 실제로 일으킨 뒤 rollback 까지 수행합니다.
-    # (1번째 저장은 백업할 현행이 없어 백업을 만들지 않으므로, 백업 배정기록이
-    # 3개(9:00·21:00·22:00)가 되는 4번째 저장에서야 BACKUP_KEEP=2 를 넘겨
-    # 가장 오래된 배정기록(9:00)이 실제로 삭제됩니다.)
-    save_schedule(db_session, period2_id, [_row(team2_id, room2_id, 18)],
-                  saved_at=datetime(2026, 8, 1, 8, 0))
-    db_session.commit()
-    save_schedule(db_session, period2_id, [_row(team2_id, room2_id, 19)],
-                  saved_at=datetime(2026, 8, 1, 9, 0))
-    db_session.commit()
-    save_schedule(db_session, period2_id, [_row(team2_id, room2_id, 20)],
-                  saved_at=datetime(2026, 8, 1, 21, 0))
-    db_session.commit()
-    save_schedule(db_session, period2_id, [_row(team2_id, room2_id, 17)],
-                  saved_at=datetime(2026, 8, 1, 22, 0))
-    db_session.commit()
-    ok = rollback_schedule(db_session, period2_id)
-    db_session.commit()
-    assert ok is True
-
-    # period1의 현행·백업은 위 period2 작업 전 상태 그대로여야 합니다.
-    current1 = db_session.scalars(
-        select(Assignment).where(Assignment.period_id == period1_id)
-    ).all()
-    assert [a.starts_at for a in current1] == [datetime(2026, 8, 1, 11, 0)]
-    backups1 = db_session.scalars(
-        select(AssignmentBackup).where(AssignmentBackup.period_id == period1_id)
-    ).all()
-    assert [b.saved_at for b in backups1] == [datetime(2026, 8, 1, 23, 0)]
-    assert [b.starts_at for b in backups1] == [datetime(2026, 8, 1, 10, 0)]
-
-    # period2 도 자신의 저장·오래된 백업 삭제·rollback 결과대로 동작해야 합니다.
-    # 4번째 저장에서 9:00 배정기록이 삭제되었고, rollback 은 최신 배정기록(22:00,
-    # starts_at 20:00)을 현행으로 되돌린 뒤 그 배정기록을 삭제합니다. 남는 백업은
-    # 21:00(starts_at 19:00) 하나입니다.
-    current2 = db_session.scalars(
-        select(Assignment).where(Assignment.period_id == period2_id)
-    ).all()
-    assert [a.starts_at for a in current2] == [datetime(2026, 8, 1, 20, 0)]
-    backups2 = db_session.scalars(
-        select(AssignmentBackup).where(AssignmentBackup.period_id == period2_id)
-    ).all()
-    assert [b.saved_at for b in backups2] == [datetime(2026, 8, 1, 21, 0)]
-    assert [b.starts_at for b in backups2] == [datetime(2026, 8, 1, 19, 0)]
-
-
-def test_backup_rounds_are_listed_newest_first_with_their_slot_counts(
-    db_session: Session,
-) -> None:
-    period_id, team_id, room_id = _scaffold(db_session)
-
-    # 첫 저장은 현행이 비어 있어 백업 배정기록을 만들지 않습니다.
-    save_schedule(
-        db_session,
-        period_id,
-        [_row(team_id, room_id, 19)],
-        saved_at=datetime(2026, 8, 1, 21, 0),
-    )
-    save_schedule(
-        db_session,
-        period_id,
-        [_row(team_id, room_id, 19), _row(team_id, room_id, 20)],
-        saved_at=datetime(2026, 8, 2, 21, 0),
-    )
-    save_schedule(
-        db_session,
-        period_id,
-        [_row(team_id, room_id, 19)],
-        saved_at=datetime(2026, 8, 3, 21, 0),
-    )
-
-    rounds = list_backup_rounds(db_session, period_id, slot_minutes=60)
-
-    assert rounds == [
-        {"saved_at": datetime(2026, 8, 3, 21, 0), "kind": "previous", "slot_count": 2},
-        {"saved_at": datetime(2026, 8, 2, 21, 0), "kind": "previous", "slot_count": 1},
-    ]
-
-
-def test_consecutive_slots_become_one_row(db_session: Session) -> None:
-    """같은 팀이 같은 합주실에서 이어 쓰는 칸은 구간 한 행으로 저장합니다.
-
-    칸마다 한 행이면 점유 단위가 5분일 때 하루에 수백 행이 쌓이고, 화면이 다시 이어 붙여야 합니다.
-    """
-    period_id, team_id, room_id = _scaffold(db_session)
-
-    save_schedule(
-        db_session,
-        period_id,
-        [_row(team_id, room_id, 19), _row(team_id, room_id, 20), _row(team_id, room_id, 21)],
-        saved_at=datetime(2026, 8, 1, 21, 0),
-    )
-    db_session.commit()
-
-    current = db_session.scalars(
-        select(Assignment).where(Assignment.period_id == period_id)
-    ).all()
-    assert [(a.starts_at, a.ends_at) for a in current] == [
-        (datetime(2026, 8, 1, 19, 0), datetime(2026, 8, 1, 22, 0))
-    ]
-
-
-def test_a_gap_between_slots_keeps_two_rows(db_session: Session) -> None:
-    """떨어진 칸은 잇지 않습니다. 이으면 배정받지 않은 시간까지 점유한 것이 됩니다."""
-    period_id, team_id, room_id = _scaffold(db_session)
-
-    save_schedule(
-        db_session,
-        period_id,
-        [_row(team_id, room_id, 19), _row(team_id, room_id, 21)],
-        saved_at=datetime(2026, 8, 1, 21, 0),
-    )
-    db_session.commit()
-
-    current = db_session.scalars(
-        select(Assignment)
-        .where(Assignment.period_id == period_id)
-        .order_by(Assignment.starts_at)
-    ).all()
-    assert [(a.starts_at, a.ends_at) for a in current] == [
-        (datetime(2026, 8, 1, 19, 0), datetime(2026, 8, 1, 20, 0)),
-        (datetime(2026, 8, 1, 21, 0), datetime(2026, 8, 1, 22, 0)),
-    ]
-
-
-def test_different_teams_are_not_joined(db_session: Session) -> None:
-    """이어진 칸이라도 팀이 다르면 각각의 행입니다."""
-    period_id, team_id, room_id = _scaffold(db_session)
-    other = Team(name="B")
-    db_session.add(other)
-    db_session.flush()
-
-    save_schedule(
-        db_session,
-        period_id,
-        [_row(team_id, room_id, 19), _row(other.id, room_id, 20)],
-        saved_at=datetime(2026, 8, 1, 21, 0),
-    )
-    db_session.commit()
-
-    current = db_session.scalars(
-        select(Assignment)
-        .where(Assignment.period_id == period_id)
-        .order_by(Assignment.starts_at)
-    ).all()
-    assert [(a.team_id, a.starts_at, a.ends_at) for a in current] == [
-        (team_id, datetime(2026, 8, 1, 19, 0), datetime(2026, 8, 1, 20, 0)),
-        (other.id, datetime(2026, 8, 1, 20, 0), datetime(2026, 8, 1, 21, 0)),
-    ]
-
-
-def test_backup_rounds_are_empty_before_any_reassignment(db_session: Session) -> None:
-    period_id, team_id, room_id = _scaffold(db_session)
-    save_schedule(
-        db_session,
-        period_id,
-        [_row(team_id, room_id, 19)],
-        saved_at=datetime(2026, 8, 1, 21, 0),
-    )
-
-    assert list_backup_rounds(db_session, period_id, slot_minutes=60) == []
-
-
-def _current(session: Session, period_id: int) -> list[datetime]:
-    return sorted(
-        session.scalars(select(Assignment.starts_at).where(Assignment.period_id == period_id)).all()
-    )
-
-
-def test_an_unsaved_record_leaves_the_current_schedule_alone(db_session: Session) -> None:
-    period_id, team_id, room_id = _scaffold(db_session)
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)], saved_at=datetime(2026, 8, 1, 8, 0))
-
-    save_record(db_session, period_id, [_row(team_id, room_id, 20)], saved_at=datetime(2026, 8, 1, 9, 0))
-
-    assert _current(db_session, period_id) == [datetime(2026, 8, 1, 18, 0)]
-    rounds = list_backup_rounds(db_session, period_id, slot_minutes=60)
-    assert [(r["saved_at"], r["kind"]) for r in rounds] == [(datetime(2026, 8, 1, 9, 0), "unsaved")]
-
-
-def test_applying_a_record_archives_the_current_one_and_replaces_it(db_session: Session) -> None:
-    period_id, team_id, room_id = _scaffold(db_session)
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)], saved_at=datetime(2026, 8, 1, 8, 0))
-    save_record(db_session, period_id, [_row(team_id, room_id, 20)], saved_at=datetime(2026, 8, 1, 9, 0))
-
-    applied = apply_record(
-        db_session, period_id, datetime(2026, 8, 1, 9, 0), archived_at=datetime(2026, 8, 1, 10, 0)
-    )
-
-    assert applied is True
-    assert _current(db_session, period_id) == [datetime(2026, 8, 1, 20, 0)]
-    rounds = list_backup_rounds(db_session, period_id, slot_minutes=60)
-    assert [(r["saved_at"], r["kind"]) for r in rounds] == [(datetime(2026, 8, 1, 10, 0), "previous")]
-
-
-def test_applying_a_missing_record_changes_nothing(db_session: Session) -> None:
-    period_id, team_id, room_id = _scaffold(db_session)
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)], saved_at=datetime(2026, 8, 1, 8, 0))
-
-    assert apply_record(db_session, period_id, datetime(2026, 8, 1, 9, 0), archived_at=datetime(2026, 8, 1, 10, 0)) is False
-    assert _current(db_session, period_id) == [datetime(2026, 8, 1, 18, 0)]
-
-
-def test_each_record_kind_keeps_its_own_count(db_session: Session) -> None:
-    # 미확정 배정안이 3개 쌓여도 이전 확정본은 지워지지 않습니다. 종류마다 최신 2개씩 남습니다.
-    period_id, team_id, room_id = _scaffold(db_session)
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)], saved_at=datetime(2026, 8, 1, 8, 0))
-    save_schedule(db_session, period_id, [_row(team_id, room_id, 19)], saved_at=datetime(2026, 8, 1, 9, 0))
-    for hour in (10, 11, 12):
-        save_record(db_session, period_id, [_row(team_id, room_id, 20)], saved_at=datetime(2026, 8, 1, hour, 0))
-
-    rounds = list_backup_rounds(db_session, period_id, slot_minutes=60)
-
-    assert [(r["saved_at"].hour, r["kind"]) for r in rounds] == [
-        (12, "unsaved"),
-        (11, "unsaved"),
-        (9, "previous"),
-    ]
+    assert _record_times(db_session, period1_id) == [datetime(2026, 8, 1, 0, 0)]
+    assert len(_record_times(db_session, period2.id)) == RECORD_KEEP

@@ -3,7 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, NaiveDatetime, model_validator
 
-from backend.db.models import PERMISSIONS, Instrument, Permission, RecordKind
+from backend.db.models import PERMISSIONS, Instrument, Permission
 from backend.db.models import NotificationKind
 from backend.contract import MAX_SESSION_MINUTES, REJECT_REASON_MAX_LENGTH
 
@@ -43,6 +43,8 @@ class ScheduleReportOut(BaseModel):
     target_hours: float
     shortfalls: list[ShortfallOut]
     absences: list[AbsenceOut]
+    # session 1회라도 빠지는 인원이 불참 허용 인원을 넘으면 true 입니다. 화면이 현재 배정안 경고에 씁니다.
+    over_absent: bool
 
 
 class ScheduleRowOut(BaseModel):
@@ -72,7 +74,6 @@ class PeriodAssignIn(BaseModel):
 class BackupOut(BaseModel):
     # 스케줄링 기록을 구분하는 값은 저장 시각입니다. assignment_backups에 별도 기록 번호가 없습니다.
     saved_at: datetime
-    kind: RecordKind
     slot_count: int
 
 
@@ -81,9 +82,8 @@ class BackupsOut(BaseModel):
 
 
 class BackupRoundOut(BaseModel):
-    # 스케줄링 기록 1개의 시간표입니다. 확정 시간표(ScheduleOut)와 row(데이터베이스 행) 구조는 같지만
+    # 스케줄링 기록 1개의 시간표입니다. 현재 배정안(ScheduleOut)과 row(데이터베이스 행) 구조는 같지만
     # open_slots는 없습니다. 지나간 기록에 예약을 개방할 필요가 없습니다.
-    kind: RecordKind
     rows: list[ScheduleRowOut]
     report: ScheduleReportOut | None
 
@@ -91,13 +91,8 @@ class BackupRoundOut(BaseModel):
 class PeriodAssignOut(BaseModel):
     assignment: AssignmentOut
     report: ScheduleReportOut
-    saved: bool
-    # 미확정 배정안으로 등록했으면 그 기록의 saved_at 입니다.
+    # 쌓은 스케줄링 기록의 saved_at 입니다. 배정이 0건이면 기록이 없어 null 입니다.
     record_saved_at: datetime | None
-
-
-class RollbackOut(BaseModel):
-    rolled_back: bool
 
 
 class ApplyRecordOut(BaseModel):

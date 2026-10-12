@@ -8,7 +8,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.jobs import auto_assign
-from backend.services.period.pipeline import run_period_assignment
 from backend.db.models import Member, Notification, Period, Room, Team, TeamSlot
 
 # account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 이 파일의 첫 호출이 헤드매니저입니다.
@@ -73,16 +72,22 @@ def assigned_member(
     return member_id, cookies
 
 
-def test_auto_assign_leaves_a_notification(
+def test_a_notification_is_left_only_when_a_record_is_applied(
     api_client: TestClient,
     db_session: Session,
     assigned_member: tuple[int, dict[str, str]],
 ) -> None:
+    # 연산은 기록만 쌓고 현재 배정안을 바꾸지 않으므로 알리지 않습니다. 적용해 현재 배정안이 바뀔 때 알립니다.
     member_id, cookies = assigned_member
+    period_id = db_session.scalars(select(Period.id)).one()
 
-    results = auto_assign.run_due_assignments(db_session, _due_time())
+    auto_assign.run_due_assignments(db_session, _due_time())
+    assert _notifications(api_client, cookies) == []
 
-    assert results[0].saved is True
+    applied = api_client.post(
+        f"/periods/{period_id}/backups/{_due_time().isoformat()}/apply", cookies=cookies
+    )
+    assert applied.status_code == 200, applied.text
     rows = _notifications(api_client, cookies)
     assert [row["kind"] for row in rows] == ["assignment_updated"]
     # endpoint(API의 요청 주소 단위) 응답이 아니라 database(저장소)에도 그 사람 번호로 남았는지 함께 확인합니다.
@@ -142,7 +147,10 @@ def test_marking_read_deletes_the_notifications(
     비례해 전송량이 증가합니다.
     """
     _, cookies = assigned_member
+    period_id = db_session.scalars(select(Period.id)).one()
     auto_assign.run_due_assignments(db_session, _due_time())
+    # 연산은 알리지 않으므로 기록을 적용해 알림을 1개 만듭니다.
+    api_client.post(f"/periods/{period_id}/backups/{_due_time().isoformat()}/apply", cookies=cookies)
     assert len(_notifications(api_client, cookies)) == 1
 
     assert api_client.post("/notifications/read", cookies=cookies).status_code == 204
@@ -178,13 +186,13 @@ def test_marking_read_leaves_other_peoples_notifications(
     assert member_id != stranger.id
 
 
-def test_a_person_pressing_recalculate_also_leaves_a_notification(
+def test_a_person_pressing_recalculate_leaves_no_notification(
     api_client: TestClient,
     db_session: Session,
     assigned_member: tuple[int, dict[str, str]],
     poll_job: Callable[[str], dict[str, Any]],
 ) -> None:
-    """자동으로 실행된 배정이든 사용자가 실행한 배정이든, 시간표가 새로 저장되면 알림을 생성합니다."""
+    """사용자가 실행한 연산도 기록만 쌓으므로 알림을 생성하지 않습니다."""
     # 이 파일의 첫 계정이 헤드매니저입니다. assigned_member 가 그 계정을 만듭니다.
     _, cookies = assigned_member
     api_client.cookies.update(cookies)
@@ -198,37 +206,6 @@ def test_a_person_pressing_recalculate_also_leaves_a_notification(
     )
     assert submitted.status_code == 202, submitted.text
     job = poll_job(submitted.json()["job"]["id"])
-    assert job["result"]["saved"] is True
+    assert job["result"]["record_saved_at"] is not None
 
-    assert [row["kind"] for row in _notifications(api_client, cookies)] == [
-        "assignment_updated"
-    ]
-
-
-def test_rolling_back_leaves_a_notification(
-    api_client: TestClient,
-    db_session: Session,
-    assigned_member: tuple[int, dict[str, str]],
-) -> None:
-    """되돌리기도 확정 시간표를 변경하므로 알림을 생성합니다."""
-    _, cookies = assigned_member
-    period_id = db_session.scalars(select(Period.id)).one()
-    # 2번 저장해야 되돌릴 백업 배정기록이 생깁니다. 자동 배정은 같은 날 같은 시각을
-    # 2번 실행하지 않으므로 저장 함수를 직접 2번 호출합니다.
-    team_ids = list(db_session.scalars(select(Team.id)))
-    room_ids = list(db_session.scalars(select(Room.id)))
-    for hour in (18, 19):
-        run_period_assignment(
-            db_session,
-            period_id,
-            team_ids,
-            room_ids,
-            saved_at=datetime.combine(TODAY, time(hour, 0)),
-        )
-    before = len(_notifications(api_client, cookies))
-
-    rolled = api_client.post(f"/periods/{period_id}/rollback", cookies=cookies)
-    assert rolled.status_code == 200, rolled.text
-    assert rolled.json()["rolled_back"] is True
-
-    assert len(_notifications(api_client, cookies)) == before + 1
+    assert _notifications(api_client, cookies) == []

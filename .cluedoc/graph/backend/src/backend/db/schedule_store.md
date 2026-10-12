@@ -33,8 +33,6 @@ flowchart LR
 - `merge_runs`
 - `save_schedule`: `backend.db.commit`, `backend.db.models`
 - `save_record`: `backend.db.models`
-- `_archive_current`: `backend.db.models`
 - `_prune_backups`
 - `list_backup_rounds`
-- `apply_record`: `backend.db.commit`, `backend.db.models`
-- `rollback_schedule`
+- `apply_record`

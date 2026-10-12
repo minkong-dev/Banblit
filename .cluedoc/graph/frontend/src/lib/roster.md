@@ -14,6 +14,7 @@ flowchart LR
   frontend_src_lib_roster --> frontend_src_lib_teamColors["teamColors.ts"]
   frontend_src_lib_roster --> frontend_src_lib_validate["validate.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_roster
+  frontend_src_lib_assignment["assignment.ts"] --> frontend_src_lib_roster
   frontend_src_lib_dayEntries_test["dayEntries.test.ts"] --> frontend_src_lib_roster
   frontend_src_lib_dayEntries["dayEntries.ts"] --> frontend_src_lib_roster
   frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_roster
@@ -36,6 +37,7 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
+- [[graph/frontend/src/lib/assignment|assignment.ts]]
 - [[graph/frontend/src/lib/dayEntries.test|dayEntries.test.ts]]
 - [[graph/frontend/src/lib/dayEntries|dayEntries.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]

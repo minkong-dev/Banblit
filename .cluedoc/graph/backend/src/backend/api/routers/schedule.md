@@ -50,7 +50,6 @@ flowchart LR
 | GET | `/periods/{period_id}/backups` | `read_period_backups` |
 | GET | `/periods/{period_id}/backups/{saved_at}` | `read_period_backup_round` |
 | POST | `/periods/{period_id}/backups/{saved_at}/apply` | `apply_period_record` |
-| POST | `/periods/{period_id}/rollback` | `rollback_period_schedule` |
 
 ## 함수와 호출
 
@@ -65,7 +64,5 @@ flowchart LR
 - `assign_period_schedule`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.services.period.pipeline`
 - `read_job`: `backend.api.auth_dependency`, `backend.api.schemas`
 - `read_period_backups`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.settings.pipeline`
-- `_record_kind`: `backend.db.pipeline`, `backend.services.settings.pipeline`
 - `read_period_backup_round`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.services.period.pipeline`
 - `apply_period_record`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.notification.pipeline`
-- `rollback_period_schedule`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.notification.pipeline`

@@ -19,5 +19,6 @@ kind: directory
 - [[graph/backend/migrations/versions/c7d2e5a18f40_assign_rule_and_record_kind|c7d2e5a18f40_assign_rule_and_record_kind.py]]
 - [[graph/backend/migrations/versions/d7c5b93e18a2_repeat_weekdays|d7c5b93e18a2_repeat_weekdays.py]]
 - [[graph/backend/migrations/versions/d8c1f5a30b74_unavailable_permissions|d8c1f5a30b74_unavailable_permissions.py]]
+- [[graph/backend/migrations/versions/e4a9b7c2d150_drop_rollback_permission|e4a9b7c2d150_drop_rollback_permission.py]]
 - [[graph/backend/migrations/versions/e9a1c6d0f2b3_login_id|e9a1c6d0f2b3_login_id.py]]
 - [[graph/backend/migrations/versions/f2b7d4e91c05_avatar|f2b7d4e91c05_avatar.py]]

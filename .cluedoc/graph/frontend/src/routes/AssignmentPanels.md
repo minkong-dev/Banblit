@@ -12,6 +12,7 @@ flowchart LR
   frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"]
   frontend_src_routes_AssignmentPanels --> frontend_src_components_Layout["Layout.tsx"]
   frontend_src_routes_AssignmentPanels --> frontend_src_components_controls["controls.tsx"]
+  frontend_src_routes_AssignmentPanels --> frontend_src_components_queries["queries.ts"]
   frontend_src_routes_AssignmentPanels --> frontend_src_lib_api["api.ts"]
   frontend_src_routes_AssignmentPanels --> frontend_src_lib_assignment["assignment.ts"]
   frontend_src_routes_AssignmentPanels --> frontend_src_lib_contract["contract.ts"]
@@ -26,6 +27,7 @@ flowchart LR
 
 - [[graph/frontend/src/components/Layout|Layout.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
+- [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/assignment|assignment.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]

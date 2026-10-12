@@ -13,14 +13,13 @@ from backend.db.schedule_store import (
     BackupRound,
     apply_record,
     list_backup_rounds,
-    rollback_schedule,
     save_record,
     save_schedule,
 )
 
 
 # db 모듈의 진입점 파일입니다. api 는 db 안의 다른 파일을 직접 호출하지 않고 이 파일만
-# 참조합니다. save_schedule·rollback_schedule·list_backup_rounds·AssignmentRow·
+# 참조합니다. save_schedule·save_record·apply_record·list_backup_rounds·AssignmentRow·
 # BackupRound 는 schedule_store.py 에서 정의한 것을 그대로 재공개합니다.
 __all__ = [
     "get_engine",
@@ -31,7 +30,6 @@ __all__ = [
     "save_schedule",
     "save_record",
     "apply_record",
-    "rollback_schedule",
     "list_backup_rounds",
     "AssignmentRow",
     "BackupRound",

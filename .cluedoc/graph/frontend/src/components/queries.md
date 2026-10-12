@@ -16,6 +16,7 @@ flowchart LR
   frontend_src_components_queries --> frontend_src_lib_teamColors["teamColors.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_components_queries
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_components_queries
+  frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_components_queries
   frontend_src_routes_Board["Board.tsx"] --> frontend_src_components_queries
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_components_queries
   frontend_src_routes_Notices["Notices.tsx"] --> frontend_src_components_queries
@@ -43,6 +44,7 @@ flowchart LR
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
+- [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
 - [[graph/frontend/src/routes/Board|Board.tsx]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
 - [[graph/frontend/src/routes/Notices|Notices.tsx]]

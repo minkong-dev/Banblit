@@ -27,21 +27,16 @@ flowchart LR
 
 - `_scaffold`: `backend.db.models`
 - `_row`
+- `_current`
+- `_record_times`: `backend.db.schedule_store`
 - `test_assignment_backup_round_trips`: `backend.db.models`
-- `test_first_save_writes_current_schedule`: `backend.db.schedule_store`
-- `test_second_save_archives_previous`: `backend.db.schedule_store`
-- `test_backups_keep_only_two_most_recent`: `backend.db.schedule_store`
-- `test_rollback_restores_previous_schedule`: `backend.db.schedule_store`
-- `test_rollback_after_third_save_leaves_older_backup_intact`: `backend.db.schedule_store`
-- `test_rollback_without_backup_returns_false`: `backend.db.schedule_store`
-- `test_two_periods_do_not_interfere`: `backend.db.models`, `backend.db.schedule_store`
-- `test_backup_rounds_are_listed_newest_first_with_their_slot_counts`: `backend.db.schedule_store`
+- `test_save_schedule_replaces_the_current_schedule_without_making_a_record`: `backend.db.schedule_store`
 - `test_consecutive_slots_become_one_row`: `backend.db.schedule_store`
 - `test_a_gap_between_slots_keeps_two_rows`: `backend.db.schedule_store`
 - `test_different_teams_are_not_joined`: `backend.db.models`, `backend.db.schedule_store`
-- `test_backup_rounds_are_empty_before_any_reassignment`: `backend.db.schedule_store`
-- `_current`
-- `test_an_unsaved_record_leaves_the_current_schedule_alone`: `backend.db.schedule_store`
-- `test_applying_a_record_archives_the_current_one_and_replaces_it`: `backend.db.schedule_store`
+- `test_a_record_leaves_the_current_schedule_alone`: `backend.db.schedule_store`
+- `test_records_are_listed_newest_first_with_their_slot_counts`: `backend.db.schedule_store`
+- `test_only_the_most_recent_records_are_kept`: `backend.db.schedule_store`
+- `test_applying_a_record_replaces_the_current_schedule_and_keeps_the_record`: `backend.db.schedule_store`
 - `test_applying_a_missing_record_changes_nothing`: `backend.db.schedule_store`
-- `test_each_record_kind_keeps_its_own_count`: `backend.db.schedule_store`
+- `test_pruning_one_period_keeps_the_other_periods_records`: `backend.db.models`, `backend.db.schedule_store`
