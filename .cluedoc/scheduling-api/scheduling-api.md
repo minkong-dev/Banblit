@@ -2,7 +2,7 @@
 title: 스케줄링 API
 sources:
   - "[[graph/backend/src/backend/api/app]]"  # FastAPI 앱을 생성하고 라우터를 등록하는 파일, 오류를 응답으로 변환하는 전역 처리 — backend/src/backend/api/app.py
-  - "[[graph/backend/src/backend/api/routers/schedule]]"  # 시간표·배정·백업 endpoint — backend/src/backend/api/routers/schedule.py
+  - "[[graph/backend/src/backend/api/routers/schedule]]"  # 현재 배정안·배정·스케줄링 기록 조회와 적용 endpoint — backend/src/backend/api/routers/schedule.py
   - "[[graph/backend/src/backend/services/validation/input]]"  # 모든 endpoint 가 함께 쓰는 입력 경계 검증 — backend/src/backend/services/validation/input.py
   - "[[graph/backend/src/backend/db/commit]]"  # 저장 중 데이터베이스 제약에 위반되었을 때 사용자가 읽을 사유로 변환하는 파일 — backend/src/backend/db/commit.py
   - "[[graph/backend/src/backend/api/routers/routers]]"  # 합주실·기간·팀·예약·게시판·계정·권한·알림 endpoint — backend/src/backend/api/routers/
@@ -12,7 +12,7 @@ sources:
   - "[[graph/backend/src/backend/db/health]]"  # 상태 확인 endpoint가 조회하는 대상 — backend/src/backend/db/health.py
 ---
 
-> 문서 버전: 2.0.3 draft
+> 문서 버전: 2.1.0 draft
 
 ```mermaid
 flowchart TD
@@ -29,7 +29,7 @@ flowchart TD
 
 ## Abstract
 
-서버가 화면에 제공하는 endpoint(API의 요청 주소 단위) 전체가 따르는 **공통 규칙** 3가지를 다룹니다. 호출 권한 검증, 잘못된 요청에 대한 응답 형식, 서버 상태 확인 endpoint입니다. 개별 endpoint가 무엇을 하는지는 각 기능 문서가 담당하고, 배정을 계산하고 저장하는 endpoint는 [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]]이 담당합니다.
+서버가 화면에 제공하는 endpoint(API의 요청 주소 단위) 전체가 따르는 **공통 규칙** 3가지를 다룹니다. 호출 권한 검증, 잘못된 요청에 대한 응답 형식, 서버 상태 확인 endpoint입니다. 개별 endpoint가 무엇을 하는지는 각 기능 문서가 담당하고, 배정을 계산해 스케줄링 기록으로 쌓고 적용하는 endpoint는 [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]]이 담당합니다.
 
 처음에는 팀·합주실을 **이름으로 직접 보내면 저장하지 않고 계산만 하는** `POST /assign`이 이 문서의 주제였습니다. 저장소가 생기고 화면이 기간 번호 1개로 호출하는 endpoint만 쓰게 되면서, `POST /assign`과 이름↔번호 변환 계층은 2026-09-08에 제거했습니다(사용자 결정). 로그인만 하면 어떤 이름으로든 22초가 걸리는 계산을 실행할 수 있던 endpoint도 함께 제거했습니다.
 
@@ -41,7 +41,7 @@ endpoint는 10개 이상이고 각각 하는 일이 다르지만, 3가지는 모
 
 - [[Banblit|Banblit 개요]] — 전체 기능 지도
 - [[accounts-and-roles/accounts-and-roles|계정과 역할]] — 로그인 session과, endpoint마다 요구하는 권한 항목
-- [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]] — 배정을 계산하고 저장하고 되돌리는 5개 endpoint
+- [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]] — 배정 계산, 현재 배정안 조회, 스케줄링 기록 목록, 기록 1개, 이 배정안 적용 5개 endpoint
 - [[auto-assignment/auto-assignment|자동 배정]] — 그 endpoint 가 호출하는 계산 자체
 - [[database-layer/database-layer|데이터 저장소]] — 상태 확인 endpoint가 조회하는 계층
 - [[dev-environment/dev-environment|개발 환경]] — 서버를 컨테이너로 실행하는 방식
@@ -69,7 +69,7 @@ endpoint마다 요구 조건만 선언합니다. "로그인한 사용자" 또는
 
 형식 오류는 FastAPI가 항목별 목록으로 반환하는데, 그 목록을 문장 1개로 변환하는 처리가 앱에 1개 있습니다. 규칙 위반은 서비스 함수가 발생시킨 문장을 422에 그대로 담아 반환합니다.
 
-"요청은 올바르지만 결과가 없다"는 오류가 아닙니다. 배정 계산이 조건을 충족하는 시간표를 찾지 못하면 200에 조율안을 담아 반환합니다. 그 차이는 [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]]에 있습니다.
+"요청은 올바르지만 결과가 모자라다"는 오류가 아닙니다. 배정 계산은 결과를 항상 내고, 목표보다 적게 받은 팀이나 빠지는 팀원이 있으면 정상 응답에 결과 보고(부족분, 불참자)를 담아 반환합니다. 그 차이는 [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]]에 있습니다.
 
 ### 상태 확인은 실제 상태를 반환합니다
 
@@ -104,6 +104,7 @@ endpoint마다 요구 조건만 선언합니다. "로그인한 사용자" 또는
 | `backend/tests/unit/test_api_health.py` | 상태 확인이 의존 대상의 실제 상태를 그대로 반환하는지, 1개라도 접속하지 못했을 때 정상이 아니라고 응답하는지 |
 | `backend/tests/unit/test_api_database_down.py` | 저장소에 접속하지 못한 요청이 500이 아니라 503으로 응답하는지, 그 사유가 로그에는 기록되고 화면에는 노출되지 않는지 |
 | `backend/tests/integration/db/test_*_endpoints.py` | endpoint마다 로그인하지 않은 요청은 401로, 권한 항목이 없는 사용자는 403으로 구분하는지 |
+| `backend/tests/integration/db/test_period_endpoints.py` | 스케줄링 기록 목록, 기록 1개, 이 배정안 적용이 "스케줄링 기록 확정" 항목을 요구하는지, 삭제된 되돌리기 endpoint 와 조율안 확정 endpoint 가 존재하지 않는지, 다른 기간과 겹치는 기록의 적용이 500 이 아니라 422 문장 1개로 응답하는지 |
 
 옛 `POST /assign` 을 확인하던 테스트 16개는 endpoint와 함께 `trash/2026-09-08-refactor/` 로 옮겼습니다. 남은 서버 테스트는 485개입니다.
 
@@ -129,4 +130,4 @@ endpoint마다 요구 조건만 선언합니다. "로그인한 사용자" 또는
 
 ## Conclusion
 
-호출 권한 검증 방식, 오류 응답 형식, 상태 확인 endpoint. 이 3가지 위에 각 기능의 endpoint가 구현됩니다. 배정을 계산하고 저장하는 endpoint는 [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]]으로 이어집니다.
+호출 권한 검증 방식, 오류 응답 형식, 상태 확인 endpoint. 이 3가지 위에 각 기능의 endpoint가 구현됩니다. 배정을 계산해 스케줄링 기록으로 쌓고 적용하는 endpoint는 [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]]으로 이어집니다.

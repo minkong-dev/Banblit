@@ -16,7 +16,7 @@ sources:
   - "[[graph/frontend/src/styles/shell.css]]"  # 상단바·사이드바·카드·입력칸 등 모든 화면이 함께 쓰는 스타일 — frontend/src/styles/shell.css
   - "[[graph/frontend/src/lib/loading]]"  # 목록이 불러오는 중인지·실패했는지·정상인지를 값 1개로 표현하는 타입 — frontend/src/lib/loading.ts
   - "[[graph/frontend/src/lib/calendar]]"  # 모든 화면이 함께 쓰는 날짜·요일·시각 표기 — frontend/src/lib/calendar.ts
-  - "[[graph/frontend/src/lib/account]]"  # 권한 항목 23가지의 한국어 이름, "내가 그 항목을 가졌는가" 판단, 프로필 카드의 역할 문구 — frontend/src/lib/account.ts
+  - "[[graph/frontend/src/lib/account]]"  # 권한 항목 22가지의 한국어 이름, "내가 그 항목을 가졌는가" 판단, 프로필 카드의 역할 문구 — frontend/src/lib/account.ts
   - "[[graph/frontend/src/lib/confirm]]"  # 삭제·취소·추방 전에 1회 확인하는 문구 — frontend/src/lib/confirm.ts
   - "[[graph/frontend/src/routes/Settings]]"  # 관리 구역과 계정 화면의 진입점 — 주소가 고른 구역 1개를 그림 — frontend/src/routes/Settings.tsx
   - "[[graph/frontend/src/routes/SettingsUnavailable]]"  # 전체 멤버의 불가능 일정 조회 구역 — frontend/src/routes/SettingsUnavailable.tsx
@@ -25,7 +25,12 @@ sources:
   - "[[graph/frontend/public/CI/CI]]"  # CI 가이드와 심볼 파일. 로고 규격의 기준입니다 — frontend/public/CI/
   - "[[graph/frontend/index.html]]"  # 브라우저 탭·앱 아이콘 연결 — frontend/index.html
   - "[[graph/frontend/src/routes/SettingsRooms]]"  # 합주실 구역 — 목록·추가·수정·삭제 — frontend/src/routes/SettingsRooms.tsx
-  - "[[graph/frontend/src/routes/SettingsPeriods]]"  # 기간 구역. 매일 기간은 종료일 입력을 숨깁니다 — frontend/src/routes/SettingsPeriods.tsx
+  - "[[graph/frontend/src/routes/SettingsPeriods]]"  # 기간 구역. 매일 기간은 종료일 입력을 숨깁니다. 팀당 목표 시간, 불참 허용 인원 입력칸 — frontend/src/routes/SettingsPeriods.tsx
+  - "[[graph/frontend/src/routes/Assignment]]"  # 배정 화면 — 스케줄링 버튼, 토스트, 기록 미리보기와 적용 — frontend/src/routes/Assignment.tsx
+  - "[[graph/frontend/src/routes/AssignmentPanels]]"  # 캘린더 아래 결과 설명, 현재 배정안 경고, 오른쪽 스케줄링 기록 패널 — frontend/src/routes/AssignmentPanels.tsx
+  - "[[graph/frontend/src/lib/assignment]]"  # 탭 목록, 결과 설명 문구(reportLines) — frontend/src/lib/assignment.ts
+  - "[[graph/frontend/src/lib/assignment.test]]"  # 탭과 결과 설명 문구 시나리오 — frontend/src/lib/assignment.test.ts
+  - "[[graph/frontend/e2e/assignment.spec]]"  # 연산이 현재 배정안을 바꾸지 않는지, 결과 설명과 적용 버튼을 브라우저로 확인 — frontend/e2e/assignment.spec.ts
   - "[[graph/frontend/src/lib/account.test]]"  # 역할 문구 시나리오 — frontend/src/lib/account.test.ts
   - "[[graph/frontend/src/lib/pipeline.test]]"  # 매일 기간의 저장값과 멤버 추방 호출 시나리오 — frontend/src/lib/pipeline.test.ts
   - "[[graph/frontend/src/components/AppShell]]"  # 사이드바 관리 구역을 권한 항목으로 표시·숨김하는 컴포넌트 — frontend/src/components/AppShell.tsx
@@ -47,7 +52,7 @@ sources:
   - "[[graph/docker-compose.yml]]"  # web 컨테이너가 화면을 제공합니다 — docker-compose.yml
 ---
 
-> 문서 버전: 3.6.0 draft
+> 문서 버전: 3.7.0 draft
 
 ```mermaid
 flowchart LR
@@ -55,7 +60,7 @@ flowchart LR
     B -->|정해진 경로만| W
     W -->|API 경로를 프록시합니다| A[스케줄링 API<br/>8000]
     A --> D[(데이터 저장소)]
-    A -->|시간표 · 조율안| B
+    A -->|현재 배정안 · 스케줄링 기록 · 결과 보고| B
 ```
 
 ## Abstract
@@ -75,7 +80,7 @@ flowchart LR
 - [[Banblit|Banblit 개요]] — 전체 기능 지도
 - [[dev-environment/dev-environment|개발 환경 실행]] — 이 화면을 띄우는 서비스와 그 기동 절차
 - [[scheduling-api/scheduling-api|스케줄링 API]] — 화면이 값을 받아오는 endpoint
-- [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]] — 배정 화면이 부르는 "다시 계산"과 "확정된 시간표"의 실체
+- [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]] — 배정 화면이 부르는 "스케줄링" 버튼, "현재 배정안", "스케줄링 기록", "이 배정안 적용"의 실체
 - [[scheduler/scheduler|스케줄러]] — 달력 화면의 설계 기준 문서
 - [[auto-assignment/auto-assignment|자동 배정]] — 배정 화면이 보여주는 계산 결과의 규칙
 - [[accounts-and-roles/accounts-and-roles|계정과 역할]] — 계정 화면 5개가 따르는 규칙
@@ -103,7 +108,7 @@ flowchart LR
 | `/` | 랜딩 — 서비스 소개 | 연동할 필요가 없습니다 |
 | `/login` `/signup` `/find-id` `/find-password` `/reset-password` | 계정 화면 5개 | 예. 5개 모두 연동되었습니다. 소셜 로그인 2가지만 미구현입니다 |
 | `/scheduler` | 달력에 확정된 합주 일정과 알림 | 예. 저장된 시간표와 내 알림을 조회하여 표시합니다 |
-| `/admin` | 배정 결과와 조율안, 재계산 | 예. 조회하고, 재계산하고, 결과를 받습니다 |
+| `/admin` | 현재 배정안, 스케줄링 기록, 결과 설명, 스케줄링 | 예. 조회하고, 연산하고, 기록을 적용합니다 |
 | `/rooms` `/periods` `/members` `/reservations` `/blinded` `/unavailable` | 관리 구역 6개. 각자 다른 권한 항목을 요구하고, 가진 권한의 구역만 사이드바의 관리자 메뉴에 표시됩니다 | 예. 조회하고, 생성하고, 수정합니다 |
 | `/settings` | 구역별 주소로 나누기 전의 주소입니다. 열 수 있는 첫 구역으로 보내고, 관리 권한이 없으면 안내 문구를 표시합니다 | 아니요 |
 | `/notices` `/notices/{글 번호}` | 공지사항 — 목록, 글, 댓글, 첨부파일. 글 번호가 있으면 그 글의 상세입니다(2026-10-08) | 예 |
@@ -478,11 +483,7 @@ slot을 합치는 계산과 달력에 데이터를 채우는 계산은 화면 �
 | 팀·합주실의 전체 목록 | 팀 목록·합주실 목록 endpoint |
 | 예약과 불가능 일정 | 예약·불가능 일정 endpoint. 서버에 저장되며, 예약자도 서버가 결정합니다 |
 
-남은 행은 1개입니다.
-
-| 화면이 필요로 하는 정보 | 현재 처리 방식 |
-| --- | --- |
-| 배정 계산 이력 | 배정기록 목록을 반환하는 endpoint도, 되돌리는 endpoint도 이미 구현되어 있습니다. 배정 화면이 아직 배정기록 목록을 UI에 연결하지 않아서 이 행을 "미연동"으로 표시합니다. 생성할 endpoint가 아니라 연결할 UI가 남았습니다 |
+남아 있던 마지막 행(배정 계산 이력)도 삭제되었습니다. 배정 화면 오른쪽 "스케줄링 기록" 패널이 기록 목록 endpoint 에 연결되었기 때문입니다(아래 "배정 화면은 연산 결과를 기록으로 보여 줍니다" 절).
 
 "현재 로그인한 사용자"는 이 표에서 삭제되었습니다. 로그인 기능이 추가되면서 화면은 서버에 "내 계정"을 조회하여 이름·역할·포지션을 수신하고, 그 응답에 포함된 소속 팀 목록으로 내 팀을 필터링합니다. 하드코딩된 사용자 1명과 팀 2개는 삭제했으며, 로그인 상태를 어떻게 유지하는지는 [[accounts-and-roles/accounts-and-roles|계정과 역할]]에서 설명합니다.
 
@@ -563,7 +564,7 @@ TanStack Query 가 `error` 를 null 로 되돌리므로, 조회 상태를 그대
 
 ### 설정 화면은 계산 결과를 함께 표시합니다
 
-합주실의 운영 시간만 정해서는 그 설정이 실제로 실행 가능한지 판단할 수 없습니다. 집중 합주기간 동안 모든 팀이 정확히 동일한 시간을 할당받아야 하고, 팀 1개라도 할당량을 충족하지 못하면 전체 배정이 실패로 처리되기 때문입니다. 따라서 설정 화면은 현재 입력한 값으로 총 몇 시간이 사용 가능한지를 실시간으로 표시합니다.
+합주실의 운영 시간만 정해서는 그 설정이 실제로 실행 가능한지 판단할 수 없습니다. 집중 합주기간 동안 팀마다 목표 시간까지 할당받는데, 운영 시간이 모자라면 목표를 채우지 못한 팀이 결과 보고의 부족분으로 남기 때문입니다. 따라서 설정 화면은 현재 입력한 값으로 총 몇 시간이 사용 가능한지를 실시간으로 표시합니다.
 
 ```
 합주실 A  18:00 – 22:00   4시간
@@ -575,9 +576,53 @@ TanStack Query 가 `error` 를 null 로 되돌리므로, 조회 상태를 그대
 
 이 계산은 이미 화면이 보유한 값으로 수행 가능하므로 서버에 조회할 필요가 없습니다. 실제 배정을 실행하기 전에 설정의 타당성을 미리 검증하는 것이 목적입니다.
 
+### 배정 화면은 연산 결과를 기록으로 보여 줍니다 (2026-10-12, 2026-10-13)
+
+배정 화면(`/admin`)은 현재 배정안과 스케줄링 기록을 같은 캘린더에 번갈아 표시합니다. 연산은 현재 배정안을 바꾸지 않고, 관리자가 기록을 열어 적용해야 메인 캘린더가 바뀝니다(사용자 결정 2026-10-13).
+
+```
+┌ 탭: 현재 확정된 배정안 | 10월 13일 21:00 ┐   ┌ 스케줄링 기록 ───────────┐
+│ 캘린더                                  │   │ 10월 13일 21:00 (칸 12개) │
+│                                        │   │ 10월 13일 09:00 (칸 10개) │
+├────────────────────────────────────────┤   │ …최근 10개               │
+│ 결과 설명                               │   └──────────────────────────┘
+│ [이 배정안 적용] [현재 배정안으로 돌아가기] │   ┌ 스케줄링 시간 ───────────┐
+└────────────────────────────────────────┘   └──────────────────────────┘
+```
+
+| 동작 | 화면이 하는 일 |
+| --- | --- |
+| "스케줄링" 버튼 | 연산을 접수하고 끝날 때까지 polling 합니다. 끝나면 토스트 "스케줄링 연산에 성공했어요" 를 표시하고, "스케줄링 기록 확정" 항목이 있으면 방금 쌓인 기록을 캘린더에 표시합니다. 없으면 현재 배정안에 머뭅니다 |
+| 오른쪽 "스케줄링 기록" 패널(이전 이름 "이전 배정기록") | 기록을 최신순으로 나열합니다. 하나를 누르면 그 기록이 탭으로 추가되어 캘린더에 미리보기됩니다. 항목이 없으면 "스케줄링 기록 확정 권한이 있어야 확인이 가능해요." 를 표시합니다 |
+| 기록 미리보기 | 제목 "{시각} 연산 결과예요", 결과 설명, 안내 "적용할 경우에만 메인 캘린더에 반영되니, 신중하게 결정해주세요.", 버튼 "이 배정안 적용"과 "현재 배정안으로 돌아가기" |
+| "이 배정안 적용" | 적용 endpoint 를 호출하고 현재 배정안으로 돌아가 토스트 "선택한 배정안을 적용했어요" 를 표시합니다. 다른 기간과 겹쳐 거절되면 서버의 문장을 그대로 표시합니다 |
+
+**캘린더 아래 결과 설명**은 결과 보고 2가지를 문단으로 바꿉니다(문구는 사용자 결정 2026-10-12). 목록이 빈 문단은 표시하지 않습니다.
+
+| 문단 | 큰 굵은 문구 | 1줄씩 | 끝 문장 |
+| --- | --- | --- | --- |
+| 부족분 | "팀 당 {목표}시간을 배정받아야하나, 더 적게 배정받은 팀이 있어요." | "{팀} {N}시간 배정" | 없음 |
+| 불참자 | "일부 인원을 제외하고 진행해야하는 팀이 있어요." | "{팀} {포지션} {멤버(기수)}" | "를 제외해야 연산이 가능했어요." |
+
+**현재 배정안 경고.** 결과 보고는 조회할 때마다 그 시점의 불가능 일정으로 계산하므로, 적용 뒤 멤버가 불가능 일정을 추가하면 현재 배정안의 보고가 달라집니다. session 1회라도 빠지는 인원이 불참 허용 인원을 넘으면(보고의 허용 인원 초과 값) 현재 배정안 화면에 "현재 적용중인 배정안이 불가능일정 변동으로 인해 최대 제외인원을 초과했어요." 와 "새로 연산된 배정안으로 업데이트하는 것을 추천드려요." 를 경고로 표시합니다(사용자 결정 2026-10-13).
+
+**설정 화면의 기간 form** 에는 "팀당 목표 시간" 과 "불참 허용 인원" 입력칸이 있습니다. 목표 시간을 비우면 자동 계산이고, placeholder 가 "자동 N시간" 으로 그 값을 보여 줍니다. 규칙의 뜻은 [[practice-room-and-periods/practice-room-and-periods|합주실과 기간]]에 있습니다.
+
+이전의 조율안 목록, 조율안 확정 버튼, 되돌리기 버튼은 삭제되었습니다.
+
+**어떻게 확인했나.**
+
+| 테스트 파일 | 커버하는 시나리오 |
+| --- | --- |
+| `frontend/src/lib/assignment.test.ts` | 기록을 선택하지 않으면 "현재 확정된 배정안" 탭만, 선택하면 그 탭이 뒤에 붙는지, 결과 설명이 부족분과 불참자가 없으면 문단이 없고 부족분 문단이 먼저 오는지, 불참자 줄이 팀, 포지션, 기수를 붙인 이름이고 끝 문장이 붙는지 |
+| `frontend/src/lib/settings.test.ts` | 팀당 목표 시간 빈칸(자동)과 불참 0명은 통과하고 목표 0, 소수, 불참 음수와 빈칸은 거절되는지 |
+| `frontend/e2e/assignment.spec.ts` | 다시 계산하면 연산 결과를 표시하고 현재 배정안은 그대로 두는지, 부족분이 있으면 연산 결과를 결과 설명과 적용 버튼과 함께 표시하는지 |
+
+실행 명령은 단위 테스트가 `docker compose run --rm --no-deps web npm test`, e2e 가 COMMAND.md 12-1 절의 두 줄입니다.
+
 ### 오래 걸리는 계산을 기다리는 방식
 
-배정 계산은 조율안까지 포함하면 20초를 초과한 경우도 있는데, 화면의 요청 타임아웃은 8초입니다. 그대로 두면 사용자 판단이 가장 필요한 경우에만 화면이 먼저 대기를 중단하게 됩니다.
+배정 계산은 20초를 초과한 경우도 있는데(2026-09-04 당시 조율안 계산 포함), 화면의 요청 타임아웃은 8초입니다. 그대로 두면 사용자 판단이 가장 필요한 경우에만 화면이 먼저 대기를 중단하게 됩니다.
 
 따라서 서버가 계산 요청의 연결을 유지한 채 계산하지 않습니다. 요청을 수신하면 즉시 작업 ID만 반환하고 계산은 백그라운드에서 진행되며, 화면은 그 작업 ID로 완료 여부를 polling합니다.
 
