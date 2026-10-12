@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assignRuleMessage,
   capacity,
   dateRangeMessage,
   ensembleMessage,
@@ -12,6 +13,24 @@ import {
   slotsBetween,
   periodTitle,
 } from "./settings";
+
+describe("assignRuleMessage — 팀당 목표 시간과 불참 허용 인원", () => {
+  it("목표 시간 자동(null)과 불참 0명은 통과한다", () => {
+    expect(assignRuleMessage({ target_hours: null, max_absent: 0 })).toBe("");
+  });
+
+  it("목표 시간은 1 이상의 정수여야 한다", () => {
+    expect(assignRuleMessage({ target_hours: 0, max_absent: 0 })).not.toBe("");
+    expect(assignRuleMessage({ target_hours: 1.5, max_absent: 0 })).not.toBe("");
+    expect(assignRuleMessage({ target_hours: 4, max_absent: 0 })).toBe("");
+  });
+
+  it("불참 허용 인원은 0 이상의 정수여야 하고 빈칸(NaN)은 거부한다", () => {
+    expect(assignRuleMessage({ target_hours: null, max_absent: -1 })).not.toBe("");
+    expect(assignRuleMessage({ target_hours: null, max_absent: Number.NaN })).not.toBe("");
+    expect(assignRuleMessage({ target_hours: null, max_absent: 2 })).toBe("");
+  });
+});
 
 describe("ensembleMessage", () => {
   const period = { starts_on: "2026-09-01", ends_on: "2026-09-20", everyday: false };

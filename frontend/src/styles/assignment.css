@@ -40,6 +40,15 @@ body[data-page="admin"] {
   .cnt b { font-weight: 700; }
   .cnt.short b { color: var(--red); }
 
+  /* 부족분, 불참자 결과 설명입니다. 문단마다 왼쪽 3px 선의 색으로 종류를 구분합니다. 부족분은 .cnt.short 와 같은 빨강, 불참자는 amber 입니다. */
+  .report { display: flex; flex-direction: column; gap: 18px; margin-bottom: 20px; }
+  .report .rp { padding: 2px 0 2px 16px; box-shadow: inset 3px 0 0 var(--red); }
+  .report .rp.absent { box-shadow: inset 3px 0 0 var(--amber); }
+  .report h3 { margin: 0 0 8px; font-size: 18px; font-weight: 700; letter-spacing: -.03em; line-height: 1.45; }
+  .report ul { margin: 0; padding: 0; list-style: none; }
+  .report li { font-size: 14px; line-height: 1.8; color: var(--t1); }
+  .report p { margin: 6px 0 0; font-size: 14px; color: var(--t2); }
+
   .act { display: flex; gap: 10px; flex-wrap: wrap; }
   /* 이 화면의 버튼은 한 단계 큽니다. 계산·되돌리기가 화면의 주된 동작입니다. */
   .btn { min-height: 50px; padding: 14px 22px; border-radius: 12px; font-size: 15px; transition: background-color .15s ease, color .15s ease; }
@@ -47,9 +56,12 @@ body[data-page="admin"] {
 
   .note { padding: 15px 17px; background: var(--amber-tint); border-radius: 13px; font-size: 13.5px; color: var(--t2); line-height: 1.75; margin-bottom: 18px; }
   .note b { color: var(--t1); font-weight: 700; }
+  /* 현재 배정안이 불참 허용 인원을 넘었을 때의 경고입니다. .note 와 같은 모양이고 색만 빨강입니다. 첫 줄은 굵게, 둘째 줄은 추천 문장입니다. */
+  .warn { padding: 15px 17px; background: var(--red-tint); border-radius: 13px; font-size: 13.5px; color: var(--t2); line-height: 1.75; margin-bottom: 18px; }
+  .warn b { display: block; color: var(--red); font-weight: 700; }
 
-  /* 오른쪽 칸의 지난 배정기록 목록입니다. 줄 전체가 버튼입니다. 대시보드 오른쪽 목록(scheduler.css .panel li button)과
-     같은 모양이고, 표시 중인 배정기록은 사이드바의 현재 화면과 같이 왼쪽 2px 코랄 선으로 표시합니다. */
+  /* 오른쪽 칸의 스케줄링 기록 목록입니다. 줄 전체가 버튼입니다. 대시보드 오른쪽 목록(scheduler.css .panel li button)과
+     같은 모양이고, 표시 중인 스케줄링 기록은 사이드바의 현재 화면과 같이 왼쪽 2px 코랄 선으로 표시합니다. */
   .panel .round {
     display: block; width: 100%; text-align: left;
     padding: 12px 0; border-bottom: 1px solid var(--line);
@@ -93,5 +105,6 @@ body[data-page="admin"] {
     .ses small { font-size: 10px; }
     .ses .out { display: none; }
     .calhead { padding: 0 0 10px; gap: 10px; }
+    .report h3 { font-size: 16px; }
   }
 }

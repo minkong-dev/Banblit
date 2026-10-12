@@ -6,9 +6,9 @@
 // - 계정 2개(전체 권한인 E2E 계정, 권한 없는 E2E 멤버)
 // - 합주실 1개(18:00–22:00, 하루 4칸)
 // - 팀 2개 — E2E_TEAM(E2E 계정·E2E 멤버), E2E_OTHER_TEAM(E2E 멤버). 배정 엔진은 멤버 없는 팀을 거절합니다
-// - 오늘 하루짜리 집중 합주기간 — 배정을 계산해 저장합니다. 팀마다 2칸이라 계산이 성공합니다
+// - 오늘 하루짜리 집중 합주기간 — 배정을 계산하고 그 연산 결과를 적용합니다. 팀마다 2칸이라 계산이 성공합니다
 // - 내일 하루짜리 집중 합주기간 — 저장하지 않습니다. E2E 계정이 합주실이 여는 시간 전체에
-//   불가능 일정을 두어, 이 기간을 계산하면 조율안(E2E 계정을 제외한 배정안)이 나옵니다
+//   불가능 일정을 두어, 이 기간을 계산하면 E2E_TEAM 의 부족분이 있는 연산 결과가 나옵니다
 
 import { request } from "@playwright/test";
 import type { APIRequestContext, FullConfig } from "@playwright/test";
@@ -22,7 +22,12 @@ const JOB_WAIT_MS = 30_000;
 const RUN_TIMES = { first_run_at: "09:00", second_run_at: "21:00" };
 
 type Method = "GET" | "POST" | "PUT";
-type Job = { id: string; status: "queued" | "running" | "done" | "failed"; result: { saved: boolean } | null; error: string | null };
+type Job = {
+  id: string;
+  status: "queued" | "running" | "done" | "failed";
+  result: { record_saved_at: string | null } | null;
+  error: string | null;
+};
 
 /** 요청이 실패하면 응답 본문을 담아 멈춥니다. 준비가 반쯤 된 상태로 검사를 돌리지 않습니다. */
 async function call<T>(context: APIRequestContext, method: Method, url: string, data?: unknown): Promise<T> {
@@ -94,9 +99,12 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     const today = await createFocusedPeriod(context, dayFromToday(0));
     const { job } = await call<{ job: Job }>(context, "POST", `/api/periods/${today.id}/assign`, assignBody);
     const finished = await waitForJob(context, job.id);
-    if (finished.result?.saved !== true) {
-      throw new Error(`오늘 기간의 배정이 저장되지 않았습니다: ${finished.error ?? "조율안만 나옴"}`);
+    const savedAt = finished.result?.record_saved_at;
+    if (savedAt == null) {
+      throw new Error(`오늘 기간의 연산 결과가 쌓이지 않았습니다: ${finished.error ?? "배정 0건"}`);
     }
+    // 연산 결과는 기록으로만 쌓이므로 적용해야 현재 배정안이 됩니다.
+    await call(context, "POST", `/api/periods/${today.id}/backups/${encodeURIComponent(savedAt)}/apply`);
 
     const tomorrow = dayFromToday(1);
     await createFocusedPeriod(context, tomorrow);

@@ -21,7 +21,8 @@ test.describe("배정 다시 계산", () => {
     }
   });
 
-  test("저장된 배정이 있는 기간을 다시 계산할 수 있다", async ({ page }) => {
+  // 연산 결과는 스케줄링 기록으로만 쌓이고 현재 배정안은 적용할 때만 바뀝니다(사용자 결정 2026-10-13).
+  test("다시 계산하면 연산 결과를 표시하고 현재 배정안은 그대로 둔다", async ({ page }) => {
     const { withSchedule } = await findFocusedPeriods(page.request);
     const originalRows = withSchedule.rows;
 
@@ -37,13 +38,9 @@ test.describe("배정 다시 계산", () => {
     const runButton = page.getByRole("button", { name: /^스케줄링/ });
     await runButton.click();
     await expect(runButton).toHaveText("스케줄링 진행 중…");
-    await expect(runButton).toHaveText("스케줄링", { timeout: ASSIGN_WAIT_MS });
-    await expect(page.getByText("선택한 배정으로 확정했어요")).toBeVisible();
-
-    // 되돌립니다. save_schedule 이 재계산 직전 현행을 백업 배정기록으로 남기므로 rollback 으로 그대로 복구됩니다.
-    // scheduler.spec.ts 도 이 기간의 배정을 읽습니다.
-    const rollback = await page.request.post(`/api/periods/${withSchedule.id}/rollback`);
-    expect(rollback.ok()).toBe(true);
+    // 연산이 끝나면 연산 결과 보기로 넘어가 스케줄링 버튼이 사라지므로 토스트를 기다립니다.
+    await expect(page.getByText("스케줄링 연산에 성공했어요")).toBeVisible({ timeout: ASSIGN_WAIT_MS });
+    await expect(page.getByRole("heading", { name: /연산 결과예요$/ })).toBeVisible();
 
     const restored = (await (
       await page.request.get(`/api/periods/${withSchedule.id}/schedule`)
@@ -53,7 +50,9 @@ test.describe("배정 다시 계산", () => {
     expect(new Set(restored.rows.map(key))).toEqual(new Set(originalRows.map(key)));
   });
 
-  test("자리를 다 채우지 못하면 조율안 탭이 나온다", async ({ page }) => {
+  // 적용 버튼은 누르지 않습니다. 적용하면 이 기간이 현재 배정안을 갖게 되어 findFocusedPeriods 의
+  // withoutSchedule 이 사라집니다. 적용 동작은 backend 통합 테스트(test_period_endpoints.py)가 확인합니다.
+  test("부족분이 있으면 연산 결과를 결과 설명과 적용 버튼과 함께 표시한다", async ({ page }) => {
     const { withoutSchedule } = await findFocusedPeriods(page.request);
 
     await page.goto("/admin");
@@ -69,7 +68,10 @@ test.describe("배정 다시 계산", () => {
     // 이 검사는 계산이 끝난 뒤의 결과만 확인합니다.
     await page.getByRole("button", { name: /^스케줄링/ }).click();
 
-    await expect(page.getByRole("tab", { name: "A안" })).toBeVisible({ timeout: ASSIGN_WAIT_MS });
+    await expect(page.getByText("스케줄링 연산에 성공했어요")).toBeVisible({ timeout: ASSIGN_WAIT_MS });
+    await expect(page.getByRole("heading", { name: /연산 결과예요$/ })).toBeVisible();
+    await expect(page.getByText("더 적게 배정받은 팀이 있어요.", { exact: false })).toBeVisible();
+    await expect(page.getByRole("button", { name: "이 배정안 적용" })).toBeVisible();
   });
 });
 

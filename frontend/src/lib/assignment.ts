@@ -4,34 +4,22 @@ import { teamColorKey } from "./teamColors";
 import { datesBetween, stampLabel } from "./calendar";
 import { dayOf, mergeSessions } from "./slots";
 import type { Session } from "./slots";
-import type { AssignOut, ScheduleRow, Slot } from "./contract";
+import { memberLabel } from "./roster";
+import type { ScheduleReport, ScheduleRow } from "./contract";
 
 const MINUTES_PER_HOUR = 60;
 
-/** 달력에 표시하는 대상입니다. 현재 확정된 시간표, n번째 조율안, 지난 배정기록 하나 중 하나입니다. */
-export type View = { kind: "now" } | { kind: "proposal"; index: number } | { kind: "round"; at: string };
+/** 달력에 표시하는 대상입니다. 현재 확정된 시간표, 스케줄링 기록 하나 중 하나입니다. */
+export type View = { kind: "now" } | { kind: "round"; at: string };
 export const NOW: View = { kind: "now" };
 
 // 탭은 문자열 키만 받습니다. 문자열과 View 를 변환하는 함수는 아래 2개뿐입니다.
 export function tabKey(view: View): string {
-  if (view.kind === "proposal") return `p${view.index}`;
   return view.kind === "round" ? `r:${view.at}` : "now";
 }
 
 export function viewOf(key: string): View {
-  if (key.startsWith("p")) return { kind: "proposal", index: Number(key.slice(1)) };
   return key.startsWith("r:") ? { kind: "round", at: key.slice(2) } : NOW;
-}
-
-/** 팀별로 나뉘어 온 slot 을 하나의 목록으로 합쳐 연속된 slot 을 합주 한 번으로 묶습니다. */
-export function sessionsOf(byTeam: Record<string, Slot[]>): Session[] {
-  const flat: Session[] = [];
-  for (const [team, slots] of Object.entries(byTeam)) {
-    for (const slot of slots) {
-      flat.push({ team, room: slot.room, start: slot.start, end: slot.end });
-    }
-  }
-  return mergeSessions(flat);
 }
 
 /** 서버가 반환한 시간표 한 줄씩을 합주 목록으로 변환합니다. ScheduleRow 는 team_id·room_id 를
@@ -52,19 +40,13 @@ export function dayRangeOf(sessions: readonly Session[]): string[] {
   return datesBetween(dayOf(starts[0]), dayOf(starts[starts.length - 1]));
 }
 
-/** 배정 화면의 탭 목록입니다. 맨 앞은 현재 확정된 배정안이고, 그 뒤에 조율안이 A안·B안 순서로
- *  오며, 배정기록을 선택했을 경우 그 시각 탭이 맨 뒤에 옵니다.
+/** 배정 화면의 탭 목록입니다. 맨 앞은 현재 확정된 배정안이고, 스케줄링 기록을 선택했을 경우 그 시각 탭이 뒤에 옵니다.
  *  key 는 tabKey 가 만들므로 viewOf 가 되돌릴 수 있습니다. */
-export function tabsOf(proposalCount: number, roundAt: string | null): { key: string; text: string }[] {
-  const proposals = Array.from({ length: proposalCount }, (_, index) => ({
-    key: tabKey({ kind: "proposal", index }),
-    // 65 는 "A" 의 문자 번호입니다. 0번 조율안이 A안, 1번이 B안입니다.
-    text: `${String.fromCharCode(65 + index)}안`,
-  }));
+export function tabsOf(roundAt: string | null): { key: string; text: string }[] {
   const round = roundAt === null
     ? []
     : [{ key: tabKey({ kind: "round", at: roundAt }), text: stampLabel(roundAt) }];
-  return [{ key: tabKey(NOW), text: "현재 확정된 배정안" }, ...proposals, ...round];
+  return [{ key: tabKey(NOW), text: "현재 확정된 배정안" }, ...round];
 }
 
 function minutesOf(session: Session): number {
@@ -76,12 +58,32 @@ export function hoursOf(sessions: Session[]): number {
   return sessions.reduce((sum, session) => sum + minutesOf(session), 0) / MINUTES_PER_HOUR;
 }
 
-/** 계산이 끝난 뒤 알릴 한 줄입니다. 자리를 다 채웠는지, 채웠으면 저장까지 되었는지로 나뉩니다. */
-export function runResultText(result: AssignOut): string {
-  if (!result.assignment.feasible) {
-    return `모든 시간을 다 사용하지는 못했어요. 배정 제안 ${result.proposals.length}건`;
+/** 결과 설명의 문단 하나입니다. title 은 큰 굵은 글자, lines 는 1줄씩, tail 은 목록 뒤 문장입니다. */
+export type ReportParagraph = { title: string; lines: string[]; tail: string | null };
+
+/** 1.5 → "1.5", 3 → "3". 서버의 시간 값은 소수 1자리까지입니다. */
+function hoursText(hours: number): string {
+  return String(Math.round(hours * 10) / 10);
+}
+
+/** 캘린더 아래 결과 설명 문단입니다(문구는 사용자 결정 2026-10-12). 목록이 빈 문단은 반환하지 않습니다. */
+export function reportLines(report: ScheduleReport): ReportParagraph[] {
+  const paragraphs: ReportParagraph[] = [];
+  if (report.shortfalls.length > 0) {
+    paragraphs.push({
+      title: `팀 당 ${hoursText(report.target_hours)}시간을 배정받아야하나, 더 적게 배정받은 팀이 있어요.`,
+      lines: report.shortfalls.map((item) => `${item.team} ${hoursText(item.assigned_hours)}시간 배정`),
+      tail: null,
+    });
   }
-  return result.saved ? "선택한 배정으로 확정했어요" : "해당 배정을 선택하지 않았어요";
+  if (report.absences.length > 0) {
+    paragraphs.push({
+      title: "일부 인원을 제외하고 진행해야하는 팀이 있어요.",
+      lines: report.absences.map((item) => `${item.team} ${item.position} ${memberLabel(item.member, item.cohort)}`),
+      tail: "를 제외해야 연산이 가능했어요.",
+    });
+  }
+  return paragraphs;
 }
 
 /** 배정안에 나온 팀 이름마다 팀 색 key 를 반환합니다. 색은 teams(서버의 팀 목록)에 저장된 팀 색입니다.

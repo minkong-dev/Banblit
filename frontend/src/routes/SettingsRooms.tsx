@@ -64,7 +64,7 @@ export function RoomCard(props: {
   const slotMinutes = useSlotMinutes();
   const { openId: editing, open, close, register } = useReturnFocus();
   const [making, setMaking] = useState(false);
-  // 합주실을 삭제하면 서버가 그 합주실의 예약·배정 결과·이전 배정기록을 함께 삭제합니다(외래 키 CASCADE).
+  // 합주실을 삭제하면 서버가 그 합주실의 예약·배정 결과·스케줄링 기록을 함께 삭제합니다(외래 키 CASCADE).
   const drop = useMutation({
     mutationFn: (id: number) => getJSON(`/rooms/${id}`, { method: "DELETE" }),
     onSuccess: onDeleted,

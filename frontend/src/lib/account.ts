@@ -31,7 +31,7 @@ export const PERMISSION_ITEMS: readonly {
   {
     key: "room_delete",
     label: "합주실 삭제",
-    note: "합주실을 삭제할 수 있어요. 그 합주실의 예약과 배정기록도 함께 삭제돼요.",
+    note: "합주실을 삭제할 수 있어요. 그 합주실의 예약과 스케줄링 기록도 함께 삭제돼요.",
   },
   {
     key: "period_create",
@@ -46,7 +46,7 @@ export const PERMISSION_ITEMS: readonly {
   {
     key: "period_delete",
     label: "집중 합주기간 삭제",
-    note: "집중 합주기간을 삭제할 수 있어요. 그 기간의 배정 결과와 이전 배정기록도 함께 삭제돼요.",
+    note: "집중 합주기간을 삭제할 수 있어요. 그 기간의 배정 결과와 스케줄링 기록도 함께 삭제돼요.",
   },
   {
     key: "team_create",
@@ -115,13 +115,8 @@ export const PERMISSION_ITEMS: readonly {
   },
   {
     key: "proposal_confirm",
-    label: "배정안 확정",
-    note: "제안된 배정안을 확정하여 메인캘린더에 반영할 수 있어요.",
-  },
-  {
-    key: "rollback",
-    label: "되돌리기",
-    note: "이전 배정기록을 선택하고, 해당 배정기록을 메인캘린더에 표시할 수 있어요.",
+    label: "스케줄링 기록 확정",
+    note: "스케줄링 기록을 확인하고, 선택한 배정안을 메인캘린더에 적용할 수 있어요.",
   },
   {
     key: "permission_manage",

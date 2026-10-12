@@ -14,10 +14,9 @@ export type Job<T> = {
 /** 다시 조회하는 간격(밀리초)입니다. */
 export const JOB_POLL_MS = 700;
 
-/** 서버가 배정 작업 1개에 쓰는 최대 시간(초)입니다. 조율안 상한 300초(resolution.py 의
- *  RESOLUTION_TIME_LIMIT_SECONDS)에 마지막 solver 계산 1회 60초(assignment.py 의
- *  SOLVER_TIME_LIMIT_SECONDS)를 더한 값입니다. 서버의 두 값을 변경하면 이 값도 함께 변경합니다. */
-const SERVER_JOB_LIMIT_SECONDS = 300 + 60;
+/** 서버가 배정 작업 1개에 쓰는 최대 시간(초)입니다. solver 계산 1회 60초(scheduling/pipeline.py 의
+ *  SOLVER_TIME_LIMIT_SECONDS)입니다. 서버 값을 변경하면 이 값도 함께 변경합니다. */
+const SERVER_JOB_LIMIT_SECONDS = 60;
 
 /** 서버 상한에 더하는 여유(초)입니다. 결과 저장과 마지막 조회 간격만큼입니다. */
 const DEADLINE_MARGIN_SECONDS = 30;
