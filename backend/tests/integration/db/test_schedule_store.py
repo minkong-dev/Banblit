@@ -7,7 +7,9 @@ from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team
 from backend.db.schedule_store import (
     AssignmentRow,
     list_backup_rounds,
+    apply_record,
     rollback_schedule,
+    save_record,
     save_schedule,
 )
 
@@ -309,8 +311,8 @@ def test_backup_rounds_are_listed_newest_first_with_their_slot_counts(
     rounds = list_backup_rounds(db_session, period_id, slot_minutes=60)
 
     assert rounds == [
-        {"saved_at": datetime(2026, 8, 3, 21, 0), "slot_count": 2},
-        {"saved_at": datetime(2026, 8, 2, 21, 0), "slot_count": 1},
+        {"saved_at": datetime(2026, 8, 3, 21, 0), "kind": "previous", "slot_count": 2},
+        {"saved_at": datetime(2026, 8, 2, 21, 0), "kind": "previous", "slot_count": 1},
     ]
 
 
@@ -396,3 +398,60 @@ def test_backup_rounds_are_empty_before_any_reassignment(db_session: Session) ->
     )
 
     assert list_backup_rounds(db_session, period_id, slot_minutes=60) == []
+
+
+def _current(session: Session, period_id: int) -> list[datetime]:
+    return sorted(
+        session.scalars(select(Assignment.starts_at).where(Assignment.period_id == period_id)).all()
+    )
+
+
+def test_an_unsaved_record_leaves_the_current_schedule_alone(db_session: Session) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)], saved_at=datetime(2026, 8, 1, 8, 0))
+
+    save_record(db_session, period_id, [_row(team_id, room_id, 20)], saved_at=datetime(2026, 8, 1, 9, 0))
+
+    assert _current(db_session, period_id) == [datetime(2026, 8, 1, 18, 0)]
+    rounds = list_backup_rounds(db_session, period_id, slot_minutes=60)
+    assert [(r["saved_at"], r["kind"]) for r in rounds] == [(datetime(2026, 8, 1, 9, 0), "unsaved")]
+
+
+def test_applying_a_record_archives_the_current_one_and_replaces_it(db_session: Session) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)], saved_at=datetime(2026, 8, 1, 8, 0))
+    save_record(db_session, period_id, [_row(team_id, room_id, 20)], saved_at=datetime(2026, 8, 1, 9, 0))
+
+    applied = apply_record(
+        db_session, period_id, datetime(2026, 8, 1, 9, 0), archived_at=datetime(2026, 8, 1, 10, 0)
+    )
+
+    assert applied is True
+    assert _current(db_session, period_id) == [datetime(2026, 8, 1, 20, 0)]
+    rounds = list_backup_rounds(db_session, period_id, slot_minutes=60)
+    assert [(r["saved_at"], r["kind"]) for r in rounds] == [(datetime(2026, 8, 1, 10, 0), "previous")]
+
+
+def test_applying_a_missing_record_changes_nothing(db_session: Session) -> None:
+    period_id, team_id, room_id = _scaffold(db_session)
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)], saved_at=datetime(2026, 8, 1, 8, 0))
+
+    assert apply_record(db_session, period_id, datetime(2026, 8, 1, 9, 0), archived_at=datetime(2026, 8, 1, 10, 0)) is False
+    assert _current(db_session, period_id) == [datetime(2026, 8, 1, 18, 0)]
+
+
+def test_each_record_kind_keeps_its_own_count(db_session: Session) -> None:
+    # 미확정 배정안이 3개 쌓여도 이전 확정본은 지워지지 않습니다. 종류마다 최신 2개씩 남습니다.
+    period_id, team_id, room_id = _scaffold(db_session)
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 18)], saved_at=datetime(2026, 8, 1, 8, 0))
+    save_schedule(db_session, period_id, [_row(team_id, room_id, 19)], saved_at=datetime(2026, 8, 1, 9, 0))
+    for hour in (10, 11, 12):
+        save_record(db_session, period_id, [_row(team_id, room_id, 20)], saved_at=datetime(2026, 8, 1, hour, 0))
+
+    rounds = list_backup_rounds(db_session, period_id, slot_minutes=60)
+
+    assert [(r["saved_at"].hour, r["kind"]) for r in rounds] == [
+        (12, "unsaved"),
+        (11, "unsaved"),
+        (9, "previous"),
+    ]

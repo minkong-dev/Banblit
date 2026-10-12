@@ -66,15 +66,15 @@ def _assignments(session: Session) -> list[Assignment]:
 
 
 def _count_assign_calls(monkeypatch: pytest.MonkeyPatch) -> list[int]:
-    # assign_period를 감싸 호출 횟수만 셉니다. 계산 자체는 원본이 그대로 합니다.
+    # run_period_assignment를 감싸 호출 횟수만 셉니다. 계산 자체는 원본이 그대로 합니다.
     calls: list[int] = []
-    real = auto_assign.assign_period
+    real = auto_assign.run_period_assignment
 
     def counting(*args: Any, **kwargs: Any) -> Any:
         calls.append(kwargs["period_id"] if "period_id" in kwargs else args[1])
         return real(*args, **kwargs)
 
-    monkeypatch.setattr(auto_assign, "assign_period", counting)
+    monkeypatch.setattr(auto_assign, "run_period_assignment", counting)
     return calls
 
 
@@ -194,7 +194,7 @@ def test_a_failing_period_leaves_no_run_record(
     def failing(*args: Any, **kwargs: Any) -> Any:
         raise RuntimeError("계산이 터졌다")
 
-    monkeypatch.setattr(auto_assign, "assign_period", failing)
+    monkeypatch.setattr(auto_assign, "run_period_assignment", failing)
 
     results = auto_assign.run_due_assignments(db_session, _at(10))
 
@@ -221,3 +221,22 @@ def test_an_everyday_period_keeps_running_after_its_end_date(db_session: Session
     assert [result.period_id for result in results] == [period_id]
     assert results[0].saved is True
     assert {row.starts_at.date() for row in _assignments(db_session)} == {TODAY}
+
+
+def test_a_short_run_keeps_the_current_schedule_and_only_adds_a_record(db_session: Session) -> None:
+    # 유일한 멤버가 18~19시에 불가능해 목표 2회 중 1회만 받습니다. 메인 캘린더는 비어 있는 그대로이고 알림도 없습니다.
+    from backend.db.models import AssignmentBackup, Notification, UnavailableTime
+
+    _period(db_session)
+    _team_with_member(db_session, "A", "김민수")
+    _room(db_session, "1번방")
+    member_id = db_session.scalars(select(Member.id).where(Member.name == "김민수")).one()
+    db_session.add(UnavailableTime(member_id=member_id, starts_at=_at(18), ends_at=_at(19)))
+    db_session.flush()
+
+    results = auto_assign.run_due_assignments(db_session, _at(10))
+
+    assert results[0].saved is False
+    assert _assignments(db_session) == []
+    assert db_session.scalars(select(AssignmentBackup.kind)).all() == ["unsaved"]
+    assert db_session.scalars(select(Notification)).all() == []

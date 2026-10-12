@@ -11,8 +11,10 @@ from backend.db.health import DependencyStatus, check_database as _check_databas
 from backend.db.schedule_store import (
     AssignmentRow,
     BackupRound,
+    apply_record,
     list_backup_rounds,
     rollback_schedule,
+    save_record,
     save_schedule,
 )
 
@@ -27,6 +29,8 @@ __all__ = [
     "check_database",
     "commit_translating",
     "save_schedule",
+    "save_record",
+    "apply_record",
     "rollback_schedule",
     "list_backup_rounds",
     "AssignmentRow",

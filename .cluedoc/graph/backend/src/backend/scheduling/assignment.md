@@ -14,10 +14,8 @@ flowchart LR
   backend_src_backend_scheduling_assignment --> backend_src_backend_scheduling_interval["interval.py"]
   backend_src_backend_scheduling_assignment --> backend_src_backend_scheduling_slots["slots.py"]
   backend_src_backend_scheduling_pipeline["pipeline.py"] --> backend_src_backend_scheduling_assignment
-  backend_src_backend_scheduling_resolution["resolution.py"] --> backend_src_backend_scheduling_assignment
   backend_tests_conftest["conftest.py"] --> backend_src_backend_scheduling_assignment
   backend_tests_unit_test_assignment["test_assignment.py"] --> backend_src_backend_scheduling_assignment
-  backend_tests_unit_test_resolution["test_resolution.py"] --> backend_src_backend_scheduling_assignment
   backend_tests_unit_test_rooms["test_rooms.py"] --> backend_src_backend_scheduling_assignment
   backend_tests_unit_test_validation["test_validation.py"] --> backend_src_backend_scheduling_assignment
 ```
@@ -31,10 +29,8 @@ flowchart LR
 ## imported by
 
 - [[graph/backend/src/backend/scheduling/pipeline|pipeline.py]]
-- [[graph/backend/src/backend/scheduling/resolution|resolution.py]]
 - [[graph/backend/tests/conftest|conftest.py]]
 - [[graph/backend/tests/unit/test_assignment|test_assignment.py]]
-- [[graph/backend/tests/unit/test_resolution|test_resolution.py]]
 - [[graph/backend/tests/unit/test_rooms|test_rooms.py]]
 - [[graph/backend/tests/unit/test_validation|test_validation.py]]
 
@@ -55,5 +51,6 @@ flowchart LR
 - `_solve`
 - `_picked_indices`
 - `_limit_per_day`
-- `_prefer_back_to_back`
+- `_back_to_back_pairs`
+- `_objective`
 - `_at_most_one`

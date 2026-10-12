@@ -10,6 +10,8 @@ kind: file
 ```mermaid
 flowchart LR
   backend_src_backend_services_period_pipeline["pipeline.py"]
+  backend_src_backend_services_period_pipeline --> backend_src_backend_db_pipeline["pipeline.py"]
+  backend_src_backend_services_period_pipeline --> backend_src_backend_services_notification_pipeline["pipeline.py"]
   backend_src_backend_services_period_pipeline --> backend_src_backend_services_period_ensemble_service["ensemble_service.py"]
   backend_src_backend_services_period_pipeline --> backend_src_backend_services_period_period_crud_service["period_crud_service.py"]
   backend_src_backend_services_period_pipeline --> backend_src_backend_services_period_period_service["period_service.py"]
@@ -23,6 +25,8 @@ flowchart LR
 
 ## imports
 
+- [[graph/backend/src/backend/db/pipeline|pipeline.py]]
+- [[graph/backend/src/backend/services/notification/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/period/ensemble_service|ensemble_service.py]]
 - [[graph/backend/src/backend/services/period/period_crud_service|period_crud_service.py]]
 - [[graph/backend/src/backend/services/period/period_service|period_service.py]]
@@ -35,3 +39,7 @@ flowchart LR
 - [[graph/backend/tests/integration/db/test_focus_cancels_reservations|test_focus_cancels_reservations.py]]
 - [[graph/backend/tests/integration/db/test_notifications|test_notifications.py]]
 - [[graph/backend/tests/integration/db/test_period_service|test_period_service.py]]
+
+## 함수와 호출
+
+- `run_period_assignment`: `backend.db.pipeline`, `backend.services.notification.pipeline`, `backend.services.period.period_service`

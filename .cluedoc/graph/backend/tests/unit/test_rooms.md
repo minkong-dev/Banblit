@@ -37,4 +37,4 @@ flowchart LR
 - `test_two_people_with_the_same_name_are_not_treated_as_one_person`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
 - `test_leftover_slots_are_returned_as_open_slots`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
 - `test_no_open_slots_when_every_slot_is_used`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
-- `test_open_slots_are_empty_when_assignment_fails`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
+- `test_open_slots_keep_the_slots_no_team_can_use`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`

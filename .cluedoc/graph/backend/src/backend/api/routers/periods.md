@@ -50,6 +50,7 @@ flowchart LR
 - `_ensemble_out`: `backend.api.schemas`, `backend.services.validation.pipeline`
 - `_window_out`: `backend.api.schemas`, `backend.services.validation.pipeline`
 - `_window_in`: `backend.services.period.pipeline`
+- `_rule_in`: `backend.services.period.pipeline`
 - `_period_out`: `backend.api.schemas`, `backend.services.validation.pipeline`
 - `_envelope`: `backend.api.schemas`, `backend.services.period.pipeline`
 - `read_periods`: `backend.api.schemas`, `backend.services.period.pipeline`

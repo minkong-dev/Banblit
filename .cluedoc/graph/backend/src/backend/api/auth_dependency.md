@@ -51,4 +51,5 @@ flowchart LR
 ## 함수와 호출
 
 - `require_account`: `backend.services.auth.pipeline`
-- `require_permission`: `backend.services.permission.pipeline`
+- `require_permission`
+- `ensure_permission`: `backend.services.permission.pipeline`

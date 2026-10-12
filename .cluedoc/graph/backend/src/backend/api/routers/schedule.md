@@ -46,24 +46,26 @@ flowchart LR
 |---|---|---|
 | GET | `/periods/{period_id}/schedule` | `read_schedule` |
 | POST | `/periods/{period_id}/assign` | `assign_period_schedule` |
-| POST | `/periods/{period_id}/proposals/{member_id}/confirm` | `confirm_period_proposal` |
 | GET | `/jobs/{job_id}` | `read_job` |
 | GET | `/periods/{period_id}/backups` | `read_period_backups` |
 | GET | `/periods/{period_id}/backups/{saved_at}` | `read_period_backup_round` |
+| POST | `/periods/{period_id}/backups/{saved_at}/apply` | `apply_period_record` |
 | POST | `/periods/{period_id}/rollback` | `rollback_period_schedule` |
 
 ## 함수와 호출
 
 - `_period`: `backend.services.period.pipeline`
 - `_row_out`: `backend.api.schemas`
+- `_report_out`: `backend.api.schemas`
+- `_stored_report_out`: `backend.services.period.pipeline`
 - `read_schedule`: `backend.api.schemas`, `backend.services.period.pipeline`
 - `_assignment_out`: `backend.api.schemas`
 - `_result_out`: `backend.api.schemas`
 - `_job_out`: `backend.api.schemas`
-- `_submit`: `backend.api.schemas`, `backend.services.notification.pipeline`, `backend.services.period.pipeline`
-- `assign_period_schedule`: `backend.api.auth_dependency`
-- `confirm_period_proposal`: `backend.api.auth_dependency`
+- `assign_period_schedule`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.services.period.pipeline`
 - `read_job`: `backend.api.auth_dependency`, `backend.api.schemas`
 - `read_period_backups`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.settings.pipeline`
+- `_record_kind`: `backend.db.pipeline`, `backend.services.settings.pipeline`
 - `read_period_backup_round`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.services.period.pipeline`
+- `apply_period_record`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.notification.pipeline`
 - `rollback_period_schedule`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.notification.pipeline`

@@ -18,7 +18,6 @@ flowchart LR
   backend_tests_conftest --> backend_src_backend_db_pipeline["pipeline.py"]
   backend_tests_conftest --> backend_src_backend_scheduling_assignment["assignment.py"]
   backend_tests_conftest --> backend_src_backend_scheduling_availability["availability.py"]
-  backend_tests_conftest --> backend_src_backend_scheduling_resolution["resolution.py"]
 ```
 
 ## imports
@@ -31,7 +30,6 @@ flowchart LR
 - [[graph/backend/src/backend/db/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/scheduling/assignment|assignment.py]]
 - [[graph/backend/src/backend/scheduling/availability|availability.py]]
-- [[graph/backend/src/backend/scheduling/resolution|resolution.py]]
 
 ## imported by
 
@@ -40,7 +38,6 @@ flowchart LR
 ## 함수와 호출
 
 - `assign`: `backend.scheduling.assignment`
-- `resolve`: `backend.scheduling.resolution`
 - `seat`: `backend.db.models`
 - `test_engine`
 - `db_session`

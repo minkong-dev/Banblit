@@ -31,6 +31,7 @@ flowchart LR
   backend_src_backend_services_auth_auth_service["auth_service.py"] --> backend_src_backend_db_pipeline
   backend_src_backend_services_period_period_crud_service["period_crud_service.py"] --> backend_src_backend_db_pipeline
   backend_src_backend_services_period_period_service["period_service.py"] --> backend_src_backend_db_pipeline
+  backend_src_backend_services_period_pipeline["pipeline.py"] --> backend_src_backend_db_pipeline
   backend_src_backend_services_permission_permission_service["permission_service.py"] --> backend_src_backend_db_pipeline
   backend_src_backend_services_reservation_reservation_service["reservation_service.py"] --> backend_src_backend_db_pipeline
   backend_src_backend_services_room_room_service["room_service.py"] --> backend_src_backend_db_pipeline
@@ -69,6 +70,7 @@ flowchart LR
 - [[graph/backend/src/backend/services/auth/auth_service|auth_service.py]]
 - [[graph/backend/src/backend/services/period/period_crud_service|period_crud_service.py]]
 - [[graph/backend/src/backend/services/period/period_service|period_service.py]]
+- [[graph/backend/src/backend/services/period/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/permission/permission_service|permission_service.py]]
 - [[graph/backend/src/backend/services/reservation/reservation_service|reservation_service.py]]
 - [[graph/backend/src/backend/services/room/room_service|room_service.py]]

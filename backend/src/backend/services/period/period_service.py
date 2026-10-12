@@ -1,6 +1,6 @@
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -8,11 +8,11 @@ from sqlalchemy.orm import Session
 from backend.services.period.period_input import (
     PracticeWindow,
     auto_sessions_per_team,
-    capped_sessions_per_team,
     build_engine_rooms,
     build_engine_teams,
     dates_in_period,
     expand_unavailable,
+    target_sessions,
 )
 from backend.db.models import (
     Assignment,
@@ -23,16 +23,17 @@ from backend.db.models import (
     Team,
     UnavailableTime,
 )
-from backend.services.period.period_crud_service import get_period_or_raise
+from backend.services.period.period_crud_service import ScheduleRow, get_period_or_raise
 from backend.services.settings.pipeline import daily_max_hours, session_minutes, slot_minutes
-from backend.db.pipeline import AssignmentRow, save_schedule
+from backend.db.pipeline import AssignmentRow
 from backend.scheduling.pipeline import Assignment as EngineAssignment
 from backend.scheduling.pipeline import Room as EngineRoom
+from backend.scheduling.pipeline import Team as EngineTeam
 from backend.scheduling.pipeline import (
-    Resolution,
     TimeInterval,
+    absent_member_ids,
+    assign,
     generate_slots,
-    resolve,
 )
 
 
@@ -40,11 +41,51 @@ from backend.scheduling.pipeline import (
 class PeriodAssignResult:
     """배정 결과와, 엔진이 사용한 번호를 화면에 표시할 이름으로 변환할 대응표입니다."""
 
-    resolution: Resolution
-    saved: bool
+    assignment: EngineAssignment
+    target_sessions: int
     team_names: dict[int, str]
     room_names: dict[int, str]
-    member_names: dict[int, str]
+
+
+@dataclass(frozen=True)
+class Shortfall:
+    """목표 시간보다 적게 배정받은 팀 하나입니다."""
+
+    team_id: int
+    team: str
+    assigned_hours: float
+
+
+@dataclass(frozen=True)
+class Absence:
+    """배정된 session 에 불가능 일정이 있어 빠지는 팀원 하나입니다. sessions 는 그 팀에서 빠지는 session 수입니다."""
+
+    team_id: int
+    team: str
+    member_id: int
+    member: str
+    cohort: int | None
+    position: str
+    sessions: int
+
+
+@dataclass(frozen=True)
+class ScheduleReport:
+    """시간표 하나의 부족분과 불참자입니다. 저장하지 않고 볼 때마다 지금의 불가능 일정으로 계산합니다(사용자 결정 2026-10-12)."""
+
+    target_hours: float
+    shortfalls: list[Shortfall]
+    absences: list[Absence]
+
+
+@dataclass(frozen=True)
+class PeriodRun:
+    """배정 계산 1회의 결과입니다. saved 이면 확정 시간표가 되었고, 아니면 record_saved_at 의 미확정 배정안으로 등록되었습니다."""
+
+    computed: PeriodAssignResult
+    report: ScheduleReport
+    saved: bool
+    record_saved_at: datetime | None
 
 
 @dataclass(frozen=True)
@@ -57,66 +98,182 @@ class OpenSlot:
     end: datetime
 
 
+@dataclass(frozen=True)
+class _Roster:
+    """팀별 명단입니다. 한 멤버는 한 팀에서 포지션 1개만 맡으므로(team_slots 의 (team_id, member_id) unique) positions 의 값도 1개입니다."""
+
+    member_ids_by_team: dict[int, list[int]]
+    names: dict[int, str]
+    cohorts: dict[int, int | None]
+    positions: dict[tuple[int, int], str]
+
+
+@dataclass(frozen=True)
+class _Inputs:
+    """배정 계산과 결과 보고가 함께 쓰는 입력입니다. 두 곳이 같은 함수로 읽어 같은 규칙을 2벌 두지 않습니다."""
+
+    rooms: list[Room]
+    team_names: dict[int, str]
+    roster: _Roster
+    engine_teams: list[EngineTeam]
+    engine_rooms: list[EngineRoom]
+    slot_minutes: int
+    session_minutes: int
+    daily_max_minutes: int
+    target_sessions: int
+    max_absent: int
+
+
 def assign_period(
     session: Session,
     period_id: int,
     team_ids: list[int],
     room_ids: list[int],
     saved_at: datetime,
-    excluded_member_id: int | None = None,
 ) -> PeriodAssignResult:
-    """기간 전체의 스케줄을 계산하고, 성공하면 현행 스케줄로 저장합니다.
+    """기간 전체의 스케줄을 계산합니다. 저장은 하지 않습니다(services/period/pipeline.py 의 run_period_assignment).
 
-    배정이 불가능할 경우 저장하지 않고 Resolution(조율안 목록)만 반환합니다. 배정 불가능은 오류가 아닙니다.
-    excluded_member_id 를 지정하면 그 멤버를 명단에서 제외하고 계산합니다. 조율안 확정이
-    이 매개변수를 사용합니다. 조율안이 지목한 멤버를 제외하면 조율안과 같은 계산이 됩니다.
-    없는 기간·팀·합주실, 상시 기간(kind="open"), 명단에 없는 멤버는 ValueError 로 거부합니다.
-    saved_at 은 저장 시각이자 everyday 기간의 배정 날짜입니다. 부르는 쪽(api)이 넘겨야 같은 입력에 같은 결과가 나옵니다.
+    없는 기간·팀·합주실, 상시 기간(kind="open")은 ValueError 로 거부합니다.
+    saved_at 은 everyday 기간의 배정 날짜입니다. 부르는 쪽이 넘겨야 같은 입력에 같은 결과가 나옵니다.
     """
+    inputs = _prepare(session, period_id, team_ids, room_ids, saved_at.date())
+    assignment = assign(
+        inputs.engine_teams,
+        inputs.engine_rooms,
+        inputs.target_sessions,
+        inputs.slot_minutes,
+        inputs.session_minutes,
+        inputs.daily_max_minutes,
+        max_absent=inputs.max_absent,
+    )
+    return PeriodAssignResult(
+        assignment=assignment,
+        target_sessions=inputs.target_sessions,
+        team_names=inputs.team_names,
+        room_names={room.id: room.name for room in inputs.rooms},
+    )
+
+
+def schedule_report(
+    session: Session,
+    period_id: int,
+    team_ids: list[int],
+    room_ids: list[int],
+    rows: list[AssignmentRow],
+    on: date,
+) -> ScheduleReport:
+    """rows(현행 시간표 또는 스케줄링 기록 1개)의 부족분과 불참자를 지금의 불가능 일정으로 계산합니다.
+
+    불참 판정은 엔진과 같은 absent_member_ids 를 씁니다. on 은 everyday 기간의 배정 날짜입니다(period_days).
+    """
+    inputs = _prepare(session, period_id, team_ids, room_ids, on)
+    target_hours = inputs.target_sessions * inputs.session_minutes / 60
+    hours: dict[int, float] = defaultdict(float)
+    missed: dict[tuple[int, int], int] = defaultdict(int)
+    teams = {team.id: team for team in inputs.engine_teams}
+    for row in rows:
+        hours[row["team_id"]] += (row["ends_at"] - row["starts_at"]).total_seconds() / 3600
+        for piece in _sessions_of(row, inputs.session_minutes):
+            for member_id in absent_member_ids(teams[row["team_id"]], piece):
+                missed[(row["team_id"], member_id)] += 1
+    return ScheduleReport(
+        target_hours=target_hours,
+        shortfalls=[
+            Shortfall(team_id=team_id, team=inputs.team_names[team_id], assigned_hours=hours[team_id])
+            for team_id in team_ids
+            if hours[team_id] < target_hours
+        ],
+        absences=[_absence(inputs, team_id, member_id, count) for (team_id, member_id), count in sorted(missed.items())],
+    )
+
+
+def stored_report(
+    session: Session, period: Period, rows: list[ScheduleRow], on: date
+) -> ScheduleReport | None:
+    """저장된 시간표(현행 또는 스케줄링 기록 1개)의 보고입니다. 집중 합주기간이 아니거나 행이 없으면 None 입니다.
+
+    저장된 시간표는 계산에 넣은 팀·합주실 목록을 보관하지 않으므로, 자동 배정(jobs/auto_assign.py)과 같이 모든 팀과
+    모든 합주실을 기준으로 계산합니다.
+    """
+    # ponytail: everyday 기간은 on 하루치 목표로 보고합니다. 여러 날의 행이 쌓이면 부족분이 실제보다 적게 보입니다.
+    # everyday 기간의 시간표를 날짜별로 보여 주게 되면 rows 를 on 날짜로 거릅니다.
+    if period.kind != "focused" or not rows:
+        return None
+    team_ids = list(session.scalars(select(Team.id).order_by(Team.id)).all())
+    room_ids = list(session.scalars(select(Room.id).order_by(Room.id)).all())
+    stored_rows = [
+        AssignmentRow(team_id=team_id, room_id=room_id, starts_at=start, ends_at=end)
+        for team_id, _, room_id, _, start, end in rows
+    ]
+    return schedule_report(session, period.id, team_ids, room_ids, stored_rows, on)
+
+
+def clean(report: ScheduleReport) -> bool:
+    """부족분과 불참자가 모두 없으면 True 입니다. True 일 때만 계산 결과를 확정 시간표로 저장합니다."""
+    return not report.shortfalls and not report.absences
+
+
+def _absence(inputs: _Inputs, team_id: int, member_id: int, count: int) -> Absence:
+    roster = inputs.roster
+    return Absence(
+        team_id=team_id,
+        team=inputs.team_names[team_id],
+        member_id=member_id,
+        member=roster.names[member_id],
+        cohort=roster.cohorts[member_id],
+        position=roster.positions[(team_id, member_id)],
+        sessions=count,
+    )
+
+
+def _sessions_of(row: AssignmentRow, length: int) -> list[TimeInterval]:
+    # 저장된 행은 이어진 session 을 한 구간으로 합친 것이라(merge_runs) session 길이로 다시 나눕니다.
+    # 저장 뒤 session 길이 설정이 바뀌어 나누어떨어지지 않아도 오류 없이 마지막 조각을 짧게 둡니다.
+    pieces: list[TimeInterval] = []
+    start = row["starts_at"]
+    while start < row["ends_at"]:
+        end = min(start + timedelta(minutes=length), row["ends_at"])
+        pieces.append(TimeInterval(start, end))
+        start = end
+    return pieces
+
+
+def _prepare(
+    session: Session, period_id: int, team_ids: list[int], room_ids: list[int], on: date
+) -> _Inputs:
     period = _check_request(session, period_id, team_ids, room_ids)
     rooms = _load_rooms(session, room_ids)
     team_names = _load_team_names(session, team_ids)
-    member_ids_by_team, member_names = _load_members(session, team_ids)
-    if excluded_member_id is not None:
-        member_ids_by_team = _without_member(member_ids_by_team, excluded_member_id)
+    roster = _load_roster(session, team_ids)
 
-    days = period_days(period, saved_at.date())
+    days = period_days(period, on)
     if not days:
         raise ValueError("전체 합주 날짜뿐이라 팀별로 배정할 날짜가 없습니다")
     window_start = datetime.combine(days[0], time())
     window_end = datetime.combine(days[-1], time.max)
-    unavailable_by_member = _load_unavailable(
-        session, list(member_names), window_start, window_end
-    )
+    unavailable_by_member = _load_unavailable(session, list(roster.names), window_start, window_end)
 
     engine_rooms = build_engine_rooms(rooms, days, practice_window(period))
-    unit, length, daily_max_minutes, sessions_per_team = _engine_limits(
-        session, engine_rooms, len(team_ids), len(days)
+    unit = slot_minutes(session)
+    length = session_minutes(session)
+    daily_max_minutes = daily_max_hours(session) * 60
+    # 목표 시간을 지정한 기간은 자동값을 계산하지 않습니다. 자동값 계산은 자리가 없으면 거부하기 때문입니다.
+    auto = 0 if period.target_hours_per_team is not None else auto_sessions_per_team(
+        engine_rooms, len(team_ids), unit, length
     )
-    engine_teams = build_engine_teams(
-        team_ids, member_ids_by_team, unavailable_by_member
-    )
-
-    resolution = resolve(
-        engine_teams, engine_rooms, sessions_per_team, unit, length, daily_max_minutes
-    )
-
-    saved = False
-    if resolution.assignment.feasible:
-        save_schedule(
-            session,
-            period_id,
-            _assignment_rows(resolution.assignment),
-            saved_at=saved_at,
-        )
-        saved = True
-
-    return PeriodAssignResult(
-        resolution=resolution,
-        saved=saved,
+    return _Inputs(
+        rooms=rooms,
         team_names=team_names,
-        room_names={room.id: room.name for room in rooms},
-        member_names=member_names,
+        roster=roster,
+        engine_teams=build_engine_teams(team_ids, roster.member_ids_by_team, unavailable_by_member),
+        engine_rooms=engine_rooms,
+        slot_minutes=unit,
+        session_minutes=length,
+        daily_max_minutes=daily_max_minutes,
+        target_sessions=target_sessions(
+            period.target_hours_per_team, auto, len(days), daily_max_minutes, length
+        ),
+        max_absent=period.max_absent_members,
     )
 
 
@@ -130,25 +287,6 @@ def _check_request(session: Session, period_id: int, team_ids: list[int], room_i
     if len(room_ids) != len(set(room_ids)):
         raise ValueError("합주실 id가 중복되었습니다")
     return period
-
-
-def _engine_limits(
-    session: Session, engine_rooms: list[EngineRoom], team_count: int, day_count: int
-) -> tuple[int, int, int, int]:
-    """저장소 설정에서 엔진에 넘길 값 4개를 (slot_minutes, session_minutes, daily_max_minutes, sessions_per_team) 순서로 반환합니다.
-
-    sessions_per_team 은 합주실의 빈 시간을 팀 수로 나눈 값(auto_sessions_per_team)을 날짜 수와 하루 상한으로 자른 값입니다.
-    """
-    unit = slot_minutes(session)
-    length = session_minutes(session)
-    daily_max_minutes = daily_max_hours(session) * 60
-    sessions_per_team = capped_sessions_per_team(
-        auto_sessions_per_team(engine_rooms, team_count, unit, length),
-        day_count=day_count,
-        daily_max_minutes=daily_max_minutes,
-        session_minutes=length,
-    )
-    return unit, length, daily_max_minutes, sessions_per_team
 
 
 def practice_window(period: Period) -> PracticeWindow:
@@ -204,40 +342,25 @@ def _load_team_names(session: Session, team_ids: list[int]) -> dict[int, str]:
     return names
 
 
-def _load_members(
-    session: Session, team_ids: list[int]
-) -> tuple[dict[int, list[int]], dict[int, str]]:
-    # 팀별 멤버 번호 목록과, 번호에서 이름을 찾을 대응표를 함께 반환합니다.
-    # 엔진에는 번호만 전달하고, 이름은 응답을 만들 때만 사용합니다.
+def _load_roster(session: Session, team_ids: list[int]) -> _Roster:
+    # 엔진에는 번호만 전달하고, 이름·기수·포지션은 결과 보고를 만들 때만 사용합니다.
     # member_id 가 None 인 TeamSlot 은 명단에 포함하지 않습니다. inner join 이 그 행을 제외합니다.
     rows = session.execute(
-        select(TeamSlot.team_id, Member.id, Member.name)
+        select(TeamSlot.team_id, Member.id, Member.name, Member.cohort, TeamSlot.instrument)
         .join(Member, Member.id == TeamSlot.member_id)
         .where(TeamSlot.team_id.in_(team_ids))
         .order_by(TeamSlot.team_id, Member.id)
     ).all()
     member_ids_by_team: dict[int, list[int]] = defaultdict(list)
-    member_names: dict[int, str] = {}
-    for team_id, member_id, member_name in rows:
+    names: dict[int, str] = {}
+    cohorts: dict[int, int | None] = {}
+    positions: dict[tuple[int, int], str] = {}
+    for team_id, member_id, name, cohort, instrument in rows:
         member_ids_by_team[team_id].append(member_id)
-        member_names[member_id] = member_name
-    return member_ids_by_team, member_names
-
-
-def _without_member(
-    member_ids_by_team: dict[int, list[int]], excluded_member_id: int
-) -> dict[int, list[int]]:
-    # excluded_member_id 를 제외한 명단을 새로 만들어 반환합니다. 원본은 수정하지 않습니다.
-    # 어느 팀에도 없는 번호면 조율안이 지목할 수 없는 사람이므로 이 함수에서 거부합니다.
-    in_some_team = any(
-        excluded_member_id in member_ids for member_ids in member_ids_by_team.values()
-    )
-    if not in_some_team:
-        raise ValueError(f"{excluded_member_id}번은 이 팀들의 명단에 없습니다")
-    return {
-        team_id: [i for i in member_ids if i != excluded_member_id]
-        for team_id, member_ids in member_ids_by_team.items()
-    }
+        positions[(team_id, member_id)] = instrument
+        names[member_id] = name
+        cohorts[member_id] = cohort
+    return _Roster(member_ids_by_team, names, cohorts, positions)
 
 
 def open_slots_in_period(session: Session, period: Period, on: date) -> list[OpenSlot]:
@@ -245,7 +368,7 @@ def open_slots_in_period(session: Session, period: Period, on: date) -> list[Ope
 
     저장된 배정에 사용된 합주실의 운영시간을 기간의 날짜마다 칸으로 분할한 뒤, 배정 구간과
     겹치는 칸을 제외합니다. 배정은 구간 한 행으로 저장되므로(db/models.py 의 Assignment) 시작
-    시각이 같은지가 아니라 구간이 겹치는지로 판정합니다. 배정 계산(resolve)은 이 함수에서
+    시각이 같은지가 아니라 구간이 겹치는지로 판정합니다. 배정 계산(assign_period)은 이 함수에서
     실행하지 않습니다. 합주실 운영시간이 칸으로 분할되지 않으면 ValueError 를 발생시킵니다.
     """
     # ponytail: slot 을 만들 합주실을 저장된 Assignment 행에서 조회합니다. 배정에 입력한 합주실
@@ -313,7 +436,7 @@ def _load_unavailable(
     }
 
 
-def _assignment_rows(assignment: EngineAssignment) -> list[AssignmentRow]:
+def assignment_rows(assignment: EngineAssignment) -> list[AssignmentRow]:
     # 엔진이 반환한 session 을 저장할 행으로 변환합니다. session 1회가 행 1개이므로,
     # 60분 session 은 칸 크기가 30분이어도 30분짜리 행 2개가 아니라 60분짜리 행 1개입니다.
     # 팀 번호도 합주실 번호도 DB 의 번호 그대로이므로 변환할 값이 없습니다.

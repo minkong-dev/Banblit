@@ -50,7 +50,7 @@ def test_schedule_is_empty_before_any_assignment(
     response = api_client.get(f"/periods/{period_id}/schedule")
 
     assert response.status_code == 200
-    assert response.json() == {"rows": [], "open_slots": []}
+    assert response.json() == {"rows": [], "open_slots": [], "report": None}
 
 
 def test_schedule_lists_current_assignments_with_names(
@@ -185,7 +185,6 @@ def test_assign_saves_the_schedule_and_reports_it(
     assert job["status"] == "done"
     body = job["result"]
     assert body["saved"] is True
-    assert body["assignment"]["feasible"] is True
     slots = body["assignment"]["slots_by_team"]["A"]
     assert len(slots) == 4  # 2일 × slot(1시간 단위 시간 칸) 2개
     assert {slot["room"] for slot in slots} == {"1번방"}
@@ -232,7 +231,6 @@ def test_assign_reports_open_slots_with_real_room_names(
 
     assert job["status"] == "done"
     body = job["result"]
-    assert body["assignment"]["feasible"] is True
     open_slots = body["assignment"]["open_slots"]
     assert len(open_slots) == 1  # 전체 5개 slot - 팀당 2개 slot × 2팀 = 1개 slot 남음
     room_id_by_name = {"1번방": room_1.id, "2번방": room_2.id}
@@ -242,7 +240,7 @@ def test_assign_reports_open_slots_with_real_room_names(
     assert slot["room_id"] == room_id_by_name[slot["room"]]
 
 
-def test_assign_reports_a_coordination_proposal_with_real_names(
+def test_a_short_assignment_is_reported_and_kept_as_an_unsaved_record(
     api_client: TestClient,
     db_session: Session,
     poll_job: Callable[[str], dict[str, Any]],
@@ -294,15 +292,13 @@ def test_assign_reports_a_coordination_proposal_with_real_names(
     assert job["status"] == "done"
     body = job["result"]
     assert body["saved"] is False
-    assert body["assignment"]["feasible"] is False
-    assert len(body["proposals"]) == 1
-    proposal = body["proposals"][0]
-    # 엔진 내부 식별자는 "이영희 #<id>" 형태입니다. 응답에는 실제 id 와 이름으로 반환되어야 합니다.
-    assert proposal["excluded_member"] == {"id": member_2.id, "name": "이영희"}
-    slots = proposal["assignment"]["slots_by_team"]["A"]
-    assert len(slots) == 2
-    assert {slot["room"] for slot in slots} == {"1번방"}
-    assert all(slot["room_id"] == room.id for slot in slots)
+    assert body["record_saved_at"] is not None
+    # 이영희가 18시에 불가능해 팀 A 는 목표 2시간 중 19시 1시간만 받습니다. 응답에는 실제 id 와 이름으로 반환되어야 합니다.
+    assert body["report"]["shortfalls"] == [{"team_id": team.id, "team": "A", "assigned_hours": 1.0}]
+    slots = body["assignment"]["slots_by_team"]["A"]
+    assert [slot["room_id"] for slot in slots] == [room.id]
+    rows = api_client.get(f"/periods/{period.id}/schedule").json()["rows"]
+    assert rows == []  # 메인 캘린더는 그대로입니다
 
 
 # 없는 팀 번호를 넣었을 때 job 이 failed 로 남는 경로는
@@ -664,8 +660,8 @@ def test_backups_list_each_round_newest_first(
     assert response.status_code == 200
     assert response.json() == {
         "backups": [
-            {"saved_at": "2026-08-02T21:00:00", "slot_count": 2},
-            {"saved_at": "2026-08-01T21:00:00", "slot_count": 1},
+            {"saved_at": "2026-08-02T21:00:00", "kind": "previous", "slot_count": 2},
+            {"saved_at": "2026-08-01T21:00:00", "kind": "previous", "slot_count": 1},
         ]
     }
 
@@ -706,7 +702,10 @@ def test_backup_round_shows_the_schedule_of_that_round(
     )
 
     assert response.status_code == 200
-    assert response.json() == {
+    body = response.json()
+    assert body["kind"] == "previous"
+    assert body["report"] is not None
+    assert {"rows": body["rows"]} == {
         "rows": [
             {
                 "team_id": team.id,
@@ -807,14 +806,14 @@ def _blocked_team(db_session: Session) -> tuple[int, int]:
     return team.id, blocked.id
 
 
-def test_confirming_a_proposal_saves_the_schedule_without_that_member(
+def test_applying_an_unsaved_record_makes_it_the_schedule(
     api_client: TestClient,
     db_session: Session,
     poll_job: Callable[[str], dict[str, Any]],
     head_login: dict[str, str],
 ) -> None:
     period_id = _period(db_session)  # 8/1 ~ 8/2
-    team_id, blocked_id = _blocked_team(db_session)
+    team_id, _ = _blocked_team(db_session)
     room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
     db_session.add(room)
     db_session.flush()
@@ -825,71 +824,63 @@ def test_confirming_a_proposal_saves_the_schedule_without_that_member(
         api_client.post(f"/periods/{period_id}/assign", json=body).json()["job"]["id"]
     )
     assert refused["result"]["saved"] is False
-    assert refused["result"]["proposals"][0]["excluded_member"]["id"] == blocked_id
+    saved_at = refused["result"]["record_saved_at"]
 
-    submitted = api_client.post(
-        f"/periods/{period_id}/proposals/{blocked_id}/confirm", json=body
-    )
-    assert submitted.status_code == 202
+    response = api_client.post(f"/periods/{period_id}/backups/{saved_at}/apply")
 
-    job = poll_job(submitted.json()["job"]["id"])
-
-    assert job["status"] == "done"
-    assert job["result"]["saved"] is True
-    assert job["result"]["assignment"]["feasible"] is True
+    assert response.status_code == 200
+    assert response.json() == {"applied": True}
     saved = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
-    assert len(saved) == 2  # 이틀 × 2칸을 팀 하나가 가져가고, 하루치 2칸이 구간 한 행이 된다
+    assert len(saved) == 2  # 8/1 19시 1칸과 8/2 18~20시 2칸(구간 한 행)
 
 
-def test_confirming_someone_outside_the_roster_fails_the_job(
-    api_client: TestClient,
-    db_session: Session,
-    poll_job: Callable[[str], dict[str, Any]],
-    head_login: dict[str, str],
+def test_the_old_proposal_confirm_endpoint_is_gone(
+    api_client: TestClient, db_session: Session, head_login: dict[str, str]
 ) -> None:
     period_id = _period(db_session)
-    team_id = _team_with_member(db_session, "A", "김민수")
-    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
-    db_session.add(room)
-    db_session.flush()
     db_session.commit()
 
-    submitted = api_client.post(
-        f"/periods/{period_id}/proposals/999999/confirm",
-        json={"team_ids": [team_id], "room_ids": [room.id]},
+    response = api_client.post(
+        f"/periods/{period_id}/proposals/1/confirm", json={"team_ids": [1], "room_ids": [1]}
     )
-    assert submitted.status_code == 202
 
-    job = poll_job(submitted.json()["job"]["id"])
-
-    assert job["status"] == "failed"
-    assert "명단에 없습니다" in job["error"]
+    assert response.status_code == 404
 
 
-def test_confirming_a_proposal_needs_proposal_confirm(
+def test_applying_a_record_needs_the_permission_of_its_kind(
     api_client: TestClient,
     db_session: Session,
     account: AccountFactory,
 ) -> None:
     period_id = _period(db_session)
+    team = Team(name="A")
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
+    db_session.add_all([team, room])
+    db_session.flush()
+    db_session.add(
+        AssignmentBackup(
+            period_id=period_id,
+            team_id=team.id,
+            room_id=room.id,
+            starts_at=datetime(2026, 8, 1, 18, 0),
+            ends_at=datetime(2026, 8, 1, 19, 0),
+            saved_at=datetime(2026, 8, 1, 21, 0),
+            kind="unsaved",
+        )
+    )
     db_session.commit()
+    # 맨 처음 가입한 사람이 모든 권한을 받습니다. 권한이 없는 사람을 만들려면 그 앞에 한 명이 먼저 가입해야 합니다.
     _, head = account("박서연", "head@example.com")
     _, member = account("김민수", "member@example.com")
-    path = f"/periods/{period_id}/proposals/1/confirm"
-    body = {"team_ids": [1], "room_ids": [1]}
+    path = f"/periods/{period_id}/backups/2026-08-01T21:00:00/apply"
 
-    assert api_client.post(path, json=body).status_code == 401
-
-    forbidden = api_client.post(path, json=body, cookies=member)
+    assert api_client.post(path).status_code == 401
+    forbidden = api_client.post(path, cookies=member)
     assert forbidden.status_code == 403
-    assert "권한" in forbidden.json()["detail"]
-
-    # 없는 기간으로 호출해 계산을 실행하지 않고 권한 검증만 통과하는지 확인합니다.
-    passed = api_client.post(
-        "/periods/999999/proposals/1/confirm", json=body, cookies=head
-    )
-    assert passed.status_code == 422
-    assert "존재하지 않는 기간입니다" in passed.json()["detail"]
+    assert api_client.post(path, cookies=head).json() == {"applied": True}
+    missing = api_client.post(path, cookies=head)
+    assert missing.status_code == 422
+    assert "존재하지 않는 배정기록입니다" in missing.json()["detail"]
 
 
 def test_assign_gives_a_team_one_uninterrupted_session_per_turn(

@@ -91,6 +91,11 @@ _TEAM_COLOR_ARRAY_SQL = "ARRAY[{}]::text[]".format(
 PeriodKind = Literal["open", "focused"]
 PERIOD_KINDS: tuple[PeriodKind, ...] = get_args(PeriodKind)
 
+# 스케줄링 기록의 종류입니다. previous 는 새 확정에 밀려난 옛 확정 시간표, unsaved 는 부족분이나 불참자가 있어
+# 확정하지 않고 보관한 계산 결과(미확정 배정안)입니다.
+RecordKind = Literal["previous", "unsaved"]
+RECORD_KINDS: tuple[RecordKind, ...] = get_args(RecordKind)
+
 # 팀을 생성할 때 선택하는 포지션 종류입니다. 자리 하나가 이 중 하나를 할당받습니다.
 # 같은 포지션을 2자리 이상 두면 ordinal(순서 번호)로 구분합니다. 예: 일렉 2자리는
 # (일렉, 1)과 (일렉, 2)입니다.
@@ -384,6 +389,10 @@ class Period(Base):
     practice_weekday_ends_at: Mapped[time | None] = mapped_column(Time, nullable=True)
     practice_weekend_starts_at: Mapped[time | None] = mapped_column(Time, nullable=True)
     practice_weekend_ends_at: Mapped[time | None] = mapped_column(Time, nullable=True)
+    # 팀당 목표 시간입니다. null 이면 전체 시간 ÷ 팀 수를 씁니다(사용자 결정 2026-10-12).
+    target_hours_per_team: Mapped[int | None] = mapped_column(nullable=True)
+    # session 1회에서 불가능 일정 때문에 빠져도 되는 팀원 수의 상한입니다. 0 이면 팀 전원이 가능한 시간만 배정합니다.
+    max_absent_members: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
 
     # 집중 합주기간끼리의 날짜 겹침 금지 제약(EXCLUDE)은 Reservation 의 겹침 금지 제약과 같이 migration 에만
     # 둡니다(migrations/versions/b5e1d9a37c42_focused_period_no_overlap.py).
@@ -420,6 +429,8 @@ class Period(Base):
             " AND (practice_weekend_ends_at > practice_weekend_starts_at OR practice_weekend_starts_at IS NULL)",
             name="periods_practice_window_order",
         ),
+        CheckConstraint("target_hours_per_team > 0", name="periods_target_hours_positive"),
+        CheckConstraint("max_absent_members >= 0", name="periods_max_absent_not_negative"),
     )
 
 
@@ -668,11 +679,14 @@ class AssignmentBackup(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime)
     ends_at: Mapped[datetime] = mapped_column(DateTime)
     saved_at: Mapped[datetime] = mapped_column(DateTime)
+    # 같은 saved_at 의 행은 모두 같은 종류입니다. 종류마다 남길 개수를 따로 셉니다(schedule_store.RECORD_KEEP).
+    kind: Mapped[str] = mapped_column(Text, default="previous", server_default="previous")
 
     __table_args__ = (
         # 같은 기간의 배정기록을 saved_at 으로 구분하고 정렬하므로 두 열을 묶습니다.
         Index("ix_assignment_backups_period_id_saved_at", "period_id", "saved_at"),
         CheckConstraint("ends_at > starts_at"),
+        CheckConstraint(_in_sql("kind", RECORD_KINDS), name="assignment_backups_kind"),
     )
 
 

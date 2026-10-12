@@ -43,3 +43,4 @@ flowchart LR
 - `test_skips_periods_that_do_not_contain_today`: `backend.jobs.auto_assign.run_due_assignments`
 - `test_a_failing_period_leaves_no_run_record`: `backend.jobs.auto_assign.run_due_assignments`
 - `test_an_everyday_period_keeps_running_after_its_end_date`: `backend.jobs.auto_assign.run_due_assignments`
+- `test_a_short_run_keeps_the_current_schedule_and_only_adds_a_record`: `backend.db.models`, `backend.jobs.auto_assign.run_due_assignments`

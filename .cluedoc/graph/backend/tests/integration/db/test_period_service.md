@@ -32,7 +32,7 @@ flowchart LR
 - `_room`: `backend.db.models`
 - `test_successful_assignment_is_saved_as_the_current_schedule`: `backend.services.period.pipeline`
 - `test_successful_assignment_round_trips_rooms_teams_and_times`: `backend.services.period.pipeline`
-- `test_failed_assignment_saves_nothing_and_names_who_to_exclude`: `backend.db.models`, `backend.services.period.pipeline`
+- `test_short_assignment_is_kept_as_an_unsaved_record`: `backend.db.models`, `backend.services.period.pipeline`
 - `test_open_period_is_rejected`: `backend.services.period.pipeline`
 - `test_unknown_team_is_rejected`: `backend.services.period.pipeline`
 - `test_unknown_room_is_rejected`: `backend.services.period.pipeline`
@@ -46,8 +46,8 @@ flowchart LR
 - `test_two_week_schedule_for_four_teams_finishes`: `backend.db.models`, `backend.services.period.pipeline`
 - `test_unavailable_time_on_the_last_day_of_the_period_blocks_assignment`: `backend.db.models`, `backend.services.period.pipeline`
 - `test_multiple_unavailable_times_for_the_same_person_all_block_assignment`: `backend.db.models`, `backend.services.period.pipeline`
-- `test_excluding_the_proposed_member_makes_the_assignment_savable`: `backend.db.models`, `backend.services.period.pipeline`
-- `test_excluding_someone_outside_the_roster_is_rejected`: `backend.services.period.pipeline`
+- `test_allowed_absence_is_reported_with_position_and_cohort`: `backend.db.models`, `backend.services.period.pipeline`
+- `test_target_hours_of_the_period_replace_the_automatic_target`: `backend.services.period.pipeline`
 - `test_open_slots_come_from_the_saved_schedule_without_recomputing`: `backend.services.period.pipeline`
 - `test_open_slots_are_empty_when_nothing_is_assigned`: `backend.services.period.pipeline`
 - `test_an_everyday_period_assigns_only_the_day_of_the_run`: `backend.services.period.pipeline`

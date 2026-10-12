@@ -13,7 +13,7 @@ flowchart LR
   backend_src_backend_services_notification_pipeline --> backend_src_backend_services_notification_notification_service["notification_service.py"]
   backend_src_backend_api_routers_notifications["notifications.py"] --> backend_src_backend_services_notification_pipeline
   backend_src_backend_api_routers_schedule["schedule.py"] --> backend_src_backend_services_notification_pipeline
-  backend_src_backend_jobs_auto_assign["auto_assign.py"] --> backend_src_backend_services_notification_pipeline
+  backend_src_backend_services_period_pipeline["pipeline.py"] --> backend_src_backend_services_notification_pipeline
   backend_src_backend_services_reservation_reservation_service["reservation_service.py"] --> backend_src_backend_services_notification_pipeline
   backend_src_backend_services_unavailable_unavailable_service["unavailable_service.py"] --> backend_src_backend_services_notification_pipeline
 ```
@@ -26,6 +26,6 @@ flowchart LR
 
 - [[graph/backend/src/backend/api/routers/notifications|notifications.py]]
 - [[graph/backend/src/backend/api/routers/schedule|schedule.py]]
-- [[graph/backend/src/backend/jobs/auto_assign|auto_assign.py]]
+- [[graph/backend/src/backend/services/period/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/reservation/reservation_service|reservation_service.py]]
 - [[graph/backend/src/backend/services/unavailable/unavailable_service|unavailable_service.py]]

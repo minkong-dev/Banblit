@@ -13,7 +13,6 @@ flowchart LR
   backend_src_backend_scheduling_pipeline --> backend_src_backend_scheduling_assignment["assignment.py"]
   backend_src_backend_scheduling_pipeline --> backend_src_backend_scheduling_availability["availability.py"]
   backend_src_backend_scheduling_pipeline --> backend_src_backend_scheduling_interval["interval.py"]
-  backend_src_backend_scheduling_pipeline --> backend_src_backend_scheduling_resolution["resolution.py"]
   backend_src_backend_scheduling_pipeline --> backend_src_backend_scheduling_slots["slots.py"]
   backend_src_backend_api_routers_schedule["schedule.py"] --> backend_src_backend_scheduling_pipeline
   backend_src_backend_services_period_period_input["period_input.py"] --> backend_src_backend_scheduling_pipeline
@@ -26,7 +25,6 @@ flowchart LR
 - [[graph/backend/src/backend/scheduling/assignment|assignment.py]]
 - [[graph/backend/src/backend/scheduling/availability|availability.py]]
 - [[graph/backend/src/backend/scheduling/interval|interval.py]]
-- [[graph/backend/src/backend/scheduling/resolution|resolution.py]]
 - [[graph/backend/src/backend/scheduling/slots|slots.py]]
 
 ## imported by
@@ -38,4 +36,4 @@ flowchart LR
 
 ## 함수와 호출
 
-- `resolve`: `backend.scheduling.resolution`
+- `assign`: `backend.scheduling.assignment`

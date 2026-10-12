@@ -5,9 +5,11 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from backend.db.commit import commit_translating
-from backend.db.models import Assignment, AssignmentBackup
+from backend.db.models import Assignment, AssignmentBackup, RecordKind
 
-BACKUP_KEEP = 2  # 남길 백업 배정기록 수입니다. 하루 2회 계산하므로 하루치입니다.
+# 종류마다 남길 스케줄링 기록 수입니다. 하루 2회 계산하므로 하루치입니다. 종류마다 따로 세는 이유는, 미확정 배정안이
+# 쌓여도 되돌리기 대상인 이전 확정본이 밀려 지워지지 않게 하기 위해서입니다.
+RECORD_KEEP: dict[RecordKind, int] = {"previous": 2, "unsaved": 2}
 
 
 class AssignmentRow(TypedDict):
@@ -93,6 +95,23 @@ def save_schedule(
     commit_translating(session, SCHEDULE_MESSAGES, write, ScheduleConflict)
 
 
+def save_record(
+    session: Session,
+    period_id: int,
+    rows: list[AssignmentRow],
+    saved_at: datetime,
+    kind: RecordKind = "unsaved",
+) -> None:
+    """rows 를 현행으로 바꾸지 않고 스케줄링 기록으로만 보관합니다. commit 까지 이 함수에서 처리합니다.
+
+    기록 table 에는 겹침 금지 제약이 없으므로 ScheduleConflict 가 발생하지 않습니다.
+    """
+    for row in merge_runs(rows):
+        session.add(AssignmentBackup(period_id=period_id, saved_at=saved_at, kind=kind, **row))
+    _prune_backups(session, period_id)
+    session.commit()
+
+
 def _archive_current(session: Session, period_id: int, saved_at: datetime) -> None:
     current = session.scalars(
         select(Assignment).where(Assignment.period_id == period_id)
@@ -106,23 +125,26 @@ def _archive_current(session: Session, period_id: int, saved_at: datetime) -> No
                 starts_at=a.starts_at,
                 ends_at=a.ends_at,
                 saved_at=saved_at,
+                kind="previous",
             )
         )
 
 
 def _prune_backups(session: Session, period_id: int) -> None:
-    saved_times = session.scalars(
-        select(AssignmentBackup.saved_at)
-        .where(AssignmentBackup.period_id == period_id)
-        .distinct()
-        .order_by(AssignmentBackup.saved_at.desc())
-    ).all()
-    keep = saved_times[:BACKUP_KEEP]
-    session.execute(
-        delete(AssignmentBackup)
-        .where(AssignmentBackup.period_id == period_id)
-        .where(AssignmentBackup.saved_at.notin_(keep))
-    )
+    # 새로 추가한 행을 아래 조회가 세도록 먼저 DB 에 보냅니다.
+    session.flush()
+    for kind, count in RECORD_KEEP.items():
+        saved_times = session.scalars(
+            select(AssignmentBackup.saved_at)
+            .where(AssignmentBackup.period_id == period_id, AssignmentBackup.kind == kind)
+            .distinct()
+            .order_by(AssignmentBackup.saved_at.desc())
+        ).all()
+        session.execute(
+            delete(AssignmentBackup)
+            .where(AssignmentBackup.period_id == period_id, AssignmentBackup.kind == kind)
+            .where(AssignmentBackup.saved_at.notin_(saved_times[:count]))
+        )
 
 
 class BackupRound(TypedDict):
@@ -138,12 +160,13 @@ class BackupRound(TypedDict):
 
     saved_at: datetime
     slot_count: int
+    kind: RecordKind
 
 
 def list_backup_rounds(
     session: Session, period_id: int, slot_minutes: int
 ) -> list[BackupRound]:
-    """그 기간의 백업 배정기록을 최신순으로 반환합니다. 사용자가 되돌릴 배정기록을 선택하는 목록입니다.
+    """그 기간의 스케줄링 기록을 최신순으로 반환합니다. 사용자가 보거나 확정할 기록을 선택하는 목록입니다.
 
     slot_minutes 는 칸 하나의 크기(분)이고 저장소 설정이 결정합니다. 구간의 길이를 그 값으로 나눠
     칸 수를 셉니다. 저장 이후 설정이 변경되었으면 지금 설정 기준의 칸 수가 됩니다.
@@ -153,38 +176,37 @@ def list_backup_rounds(
         func.extract("epoch", AssignmentBackup.ends_at - AssignmentBackup.starts_at)
     ) / 60
     rows = session.execute(
-        select(AssignmentBackup.saved_at, minutes)
+        select(AssignmentBackup.saved_at, AssignmentBackup.kind, minutes)
         .where(AssignmentBackup.period_id == period_id)
-        .group_by(AssignmentBackup.saved_at)
+        .group_by(AssignmentBackup.saved_at, AssignmentBackup.kind)
         .order_by(AssignmentBackup.saved_at.desc())
     ).all()
     return [
-        BackupRound(saved_at=saved_at, slot_count=round(total / slot_minutes))
-        for saved_at, total in rows
+        BackupRound(saved_at=saved_at, kind=kind, slot_count=round(total / slot_minutes))
+        for saved_at, kind, total in rows
     ]
 
 
-def rollback_schedule(session: Session, period_id: int) -> bool:
-    """가장 최근 백업 배정기록을 현행으로 복원하고 그 배정기록을 삭제합니다.
+def apply_record(
+    session: Session, period_id: int, saved_at: datetime, archived_at: datetime | None
+) -> bool:
+    """saved_at 의 스케줄링 기록을 현행으로 복원하고 그 기록을 삭제합니다.
 
-    되돌릴 백업이 없으면 변경하지 않고 False 를 반환합니다. commit 까지 이 함수에서 처리합니다.
+    archived_at 이 있으면 교체 전 현행을 그 시각의 이전 확정본으로 보관합니다. 없으면 현행을 보관하지 않고 버립니다.
+    그 기록이 없으면 변경하지 않고 False 를 반환합니다. commit 까지 이 함수에서 처리합니다.
     """
-    latest = session.scalar(
-        select(AssignmentBackup.saved_at)
+    batch = session.scalars(
+        select(AssignmentBackup)
         .where(AssignmentBackup.period_id == period_id)
-        .order_by(AssignmentBackup.saved_at.desc())
-        .limit(1)
-    )
-    if latest is None:
+        .where(AssignmentBackup.saved_at == saved_at)
+    ).all()
+    if not batch:
         return False
 
     def write() -> None:
+        if archived_at is not None:
+            _archive_current(session, period_id, archived_at)
         session.execute(delete(Assignment).where(Assignment.period_id == period_id))
-        batch = session.scalars(
-            select(AssignmentBackup)
-            .where(AssignmentBackup.period_id == period_id)
-            .where(AssignmentBackup.saved_at == latest)
-        ).all()
         for b in batch:
             session.add(
                 Assignment(
@@ -195,13 +217,28 @@ def rollback_schedule(session: Session, period_id: int) -> bool:
                     ends_at=b.ends_at,
                 )
             )
-        # 복원한 배정기록은 삭제합니다. 남겨두면 같은 배정기록으로 두 번 복원할 수 있기 때문입니다.
-        session.execute(
-            delete(AssignmentBackup)
-            .where(AssignmentBackup.period_id == period_id)
-            .where(AssignmentBackup.saved_at == latest)
-        )
+        # 복원한 기록은 삭제합니다. 남겨두면 같은 기록으로 두 번 복원할 수 있기 때문입니다.
+        for b in batch:
+            session.delete(b)
+        _prune_backups(session, period_id)
         session.commit()
 
     commit_translating(session, SCHEDULE_MESSAGES, write, ScheduleConflict)
     return True
+
+
+def rollback_schedule(session: Session, period_id: int) -> bool:
+    """가장 최근 이전 확정본을 현행으로 복원하고 그 기록을 삭제합니다.
+
+    현행은 보관하지 않습니다. 보관하면 되돌린 시간표가 가장 최근 이전 확정본이 되어, 다시 되돌리기를 누를 때
+    더 옛 기록이 아니라 방금 버린 시간표로 돌아갑니다. 되돌릴 기록이 없으면 False 를 반환합니다.
+    """
+    latest = session.scalar(
+        select(AssignmentBackup.saved_at)
+        .where(AssignmentBackup.period_id == period_id, AssignmentBackup.kind == "previous")
+        .order_by(AssignmentBackup.saved_at.desc())
+        .limit(1)
+    )
+    if latest is None:
+        return False
+    return apply_record(session, period_id, latest, archived_at=None)

@@ -20,55 +20,32 @@ from backend.scheduling.assignment import Assignment as EngineAssignment
 from backend.scheduling.assignment import Room as EngineRoom
 from backend.scheduling.assignment import assign as assign_sessions
 from backend.scheduling.availability import Team as EngineTeam
-from backend.scheduling.resolution import Resolution
-from backend.scheduling.resolution import resolve as resolve_sessions
 
-# 테스트가 정하는 상한(초)입니다. 운영 값은 scheduling/pipeline.py 의 SOLVER_TIME_LIMIT_SECONDS 와
-# RESOLUTION_TIME_LIMIT_SECONDS 입니다. 테스트에서 짧게 두는 이유는, 풀리지 않는 입력을 넣은
-# 테스트 하나가 검사 전체를 운영 상한만큼 멈추지 않게 하기 위해서입니다.
+# 테스트가 정하는 상한(초)입니다. 운영 값은 scheduling/pipeline.py 의 SOLVER_TIME_LIMIT_SECONDS 입니다.
+# 테스트에서 짧게 두는 이유는, 오래 걸리는 입력을 넣은 테스트 하나가 검사 전체를 운영 상한만큼 멈추지 않게 하기 위해서입니다.
 TEST_SOLVER_TIME_LIMIT_SECONDS = 10.0
-TEST_RESOLUTION_TIME_LIMIT_SECONDS = 30.0
-# 첫 배정안 뒤 이어 붙임을 더 찾는 시간입니다. 검사는 배정안의 성질만 확인하므로 운영 값(3초)보다 짧게 둡니다.
-TEST_IMPROVE_SECONDS_AFTER_FIRST = 1.0
+# 더 나은 해가 나오지 않으면 멈추는 시간입니다. 테스트 입력은 작아 1초 안에 최선의 해가 나오므로 운영 값보다 짧게 둡니다.
+TEST_STALL_SECONDS = 1.0
 
 
 def assign(
     teams: list[EngineTeam],
     rooms: list[EngineRoom],
-    sessions_per_team: int,
+    target_sessions: int,
     slot_minutes: int = DEFAULT_SLOT_MINUTES,
     session_minutes: int = DEFAULT_SESSION_MINUTES,
+    max_absent: int = 0,
 ) -> EngineAssignment:
     """scheduling.assignment.assign 에 테스트용 상한과 기본 칸 크기를 채워 호출합니다."""
     return assign_sessions(
         teams,
         rooms,
-        sessions_per_team,
+        target_sessions,
         slot_minutes,
         session_minutes,
         TEST_SOLVER_TIME_LIMIT_SECONDS,
-        TEST_IMPROVE_SECONDS_AFTER_FIRST,
-    )
-
-
-def resolve(
-    teams: list[EngineTeam],
-    rooms: list[EngineRoom],
-    sessions_per_team: int,
-    slot_minutes: int = DEFAULT_SLOT_MINUTES,
-    session_minutes: int = DEFAULT_SESSION_MINUTES,
-    resolution_time_limit_seconds: float = TEST_RESOLUTION_TIME_LIMIT_SECONDS,
-) -> Resolution:
-    """scheduling.resolution.resolve 에 테스트용 상한과 기본 칸 크기를 채워 호출합니다."""
-    return resolve_sessions(
-        teams,
-        rooms,
-        sessions_per_team,
-        slot_minutes,
-        session_minutes,
-        TEST_SOLVER_TIME_LIMIT_SECONDS,
-        resolution_time_limit_seconds,
-        TEST_IMPROVE_SECONDS_AFTER_FIRST,
+        TEST_STALL_SECONDS,
+        max_absent=max_absent,
     )
 
 

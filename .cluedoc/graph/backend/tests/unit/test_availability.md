@@ -28,3 +28,4 @@ flowchart LR
 - `test_member_unavailable_when_slot_overlaps_their_unavailable_time`: `backend.scheduling.availability`, `backend.scheduling.interval`
 - `test_member_available_when_slot_is_outside_their_unavailable_time`: `backend.scheduling.availability`, `backend.scheduling.interval`
 - `test_member_available_when_slot_is_adjacent_to_unavailable_time`: `backend.scheduling.availability`, `backend.scheduling.interval`
+- `test_absent_member_ids_lists_only_the_members_who_are_busy`: `backend.scheduling.availability`, `backend.scheduling.interval`
