@@ -123,3 +123,9 @@ const MEMBER_AREA_KEYS: readonly (readonly string[])[] = [SETS_KEY, MEMBERS_KEY,
 export function refreshMemberArea(client: QueryClient): void {
   for (const queryKey of MEMBER_AREA_KEYS) void client.invalidateQueries({ queryKey });
 }
+
+/** 배정 화면의 스케줄링 기록 목록과 기록 1개의 queryKey 입니다. 조회하는 곳과 무효화하는 곳이 같은 key 를 씁니다. */
+export const backupsKey = (periodId: number | null) => ["backups", periodId] as const;
+export const backupRoundsKey = (periodId: number | null) => ["backup-round", periodId] as const;
+export const backupRoundKey = (periodId: number | null, savedAt: string | null) =>
+  [...backupRoundsKey(periodId), savedAt] as const;

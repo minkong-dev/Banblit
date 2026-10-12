@@ -27,11 +27,11 @@ export function askCancel(name: string): boolean {
   return window.confirm(`${name}${objectParticle(name)} 취소할까요?`);
 }
 
-/** 합주실을 삭제하기 전에 묻습니다. 삭제하면 그 합주실의 예약과 배정 결과, 이전 배정기록이
+/** 합주실을 삭제하기 전에 묻습니다. 삭제하면 그 합주실의 예약과 배정 결과, 스케줄링 기록이
  *  ON DELETE CASCADE 로 함께 삭제되므로, 합주실명이 아니라 함께 사라지는 것을 문장에 적습니다. */
 export function askDeleteRoom(): boolean {
   return window.confirm(
-    "기록이 있을경우 예약과 배정안, 이전 배정기록이 모두 삭제돼요. 정말 삭제할까요?",
+    "기록이 있을경우 예약과 배정안, 스케줄링 기록이 모두 삭제돼요. 정말 삭제할까요?",
   );
 }
 
@@ -45,12 +45,4 @@ export function askBlind(): boolean {
 /** 글을 삭제하기 전에 묻습니다. 첨부파일도 함께 삭제되므로 그 사실을 문장에 적습니다. */
 export function askDeletePost(): boolean {
   return window.confirm("해당 글과 첨부된 파일을 모두 삭제할까요?");
-}
-
-/** 확정된 배정안을 이전 배정기록으로 되돌리기 전에 묻습니다. 취소할 수 없는 작업이므로 복구가
- *  어렵다는 것을 문장에 적습니다. */
-export function askRollback(): boolean {
-  return window.confirm(
-    "현재 확정된 시간표를 해당 배정안으로 되돌려요. 해당 작업은 진행 후 다시 복구하기 어려워요. 그래도 되돌릴까요?",
-  );
 }

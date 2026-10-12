@@ -6,14 +6,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button, Empty } from "../components/controls";
 import { Panel } from "../components/Layout";
+import { backupsKey } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
-import { hoursOf } from "../lib/assignment";
+import { hoursOf, reportLines } from "../lib/assignment";
 import { checkRunTimes, slotCountLabel } from "../lib/runs";
 import { say } from "../lib/toast";
 import { LOADING_TEXT, loadState } from "../lib/loading";
 import { dayOf, hhmm, stampLabel, WEEKDAY_NAMES } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
-import type { AssignOut, Backup, Period } from "../lib/contract";
+import type { Backup, Period, ScheduleReport } from "../lib/contract";
 
 /** 팀마다 배정된 합주 총 시간을 표시합니다. 배정된 합주가 0건인 팀은 흐리게 표시합니다. */
 function TeamCounts({ shown, colors }: { shown: Session[]; colors: Map<string, string> }) {
@@ -81,11 +82,27 @@ export function AssignmentCalendar({ days, shown, colors }: {
   );
 }
 
-type Proposal = AssignOut["proposals"][number];
+/** 부족분과 불참자 설명입니다. 문단 문구는 lib/assignment 의 reportLines 가 만듭니다. 두 목록이 모두 비면 표시하지 않습니다. */
+function ScheduleReportBlock({ report }: { report: ScheduleReport | null }) {
+  const paragraphs = report === null ? [] : reportLines(report);
+  if (paragraphs.length === 0) return null;
+  return (
+    <div className="report">
+      {paragraphs.map((paragraph) => (
+        <section className={paragraph.tail === null ? "rp short" : "rp absent"} key={paragraph.title}>
+          <h3>{paragraph.title}</h3>
+          {/* 목록은 서버가 준 순서 그대로이고 다시 정렬되지 않아 index 를 key 로 씁니다. 같은 문구 2줄이 있어도 충돌하지 않습니다. */}
+          <ul>{paragraph.lines.map((line, index) => <li key={index}>{line}</li>)}</ul>
+          {paragraph.tail === null ? null : <p>{paragraph.tail}</p>}
+        </section>
+      ))}
+    </div>
+  );
+}
 
-/** 달력 아래 설명 구역입니다. 오류, 지난 배정기록, 조율안, 확정 없음, 확정 있음 5가지 중 하나를 표시합니다. */
+/** 달력 아래 설명 구역입니다. 오류, 스케줄링 기록, 현재 배정안 없음, 현재 배정안 있음 4가지 중 하나를 표시합니다. */
 export function AssignmentStatus({
-  error, roundAt, roundPending, roundError, proposal, hasConfirmed, shown, colors,
+  error, roundAt, roundPending, roundError, report, hasConfirmed, shown, colors,
   canRun, canConfirm, confirmPending, onConfirm, onBack, actions,
 }: {
   /** 조회·계산 중 첫 실패입니다. 없으면 null 입니다. */
@@ -93,19 +110,21 @@ export function AssignmentStatus({
   roundAt: string | null;
   roundPending: boolean;
   roundError: unknown;
-  proposal: Proposal | null;
+  /** 표시 중인 시간표의 부족분과 불참자입니다. */
+  report: ScheduleReport | null;
   hasConfirmed: boolean;
   shown: Session[];
   colors: Map<string, string>;
   canRun: boolean;
   canConfirm: boolean;
   confirmPending: boolean;
-  onConfirm: (memberId: number) => void;
+  onConfirm: () => void;
   onBack: () => void;
-  /** 스케줄링·되돌리기 버튼 줄입니다. 권한이 둘 다 없으면 null 입니다. */
+  /** 스케줄링 버튼 줄입니다. 계산 권한이 없으면 null 입니다. */
   actions: ReactNode;
 }) {
   const counts = <TeamCounts shown={shown} colors={colors} />;
+  const reportBlock = <ScheduleReportBlock report={report} />;
   const hours = hoursOf(shown);
 
   if (error !== null) {
@@ -120,7 +139,7 @@ export function AssignmentStatus({
   if (roundAt !== null) {
     return (
       <>
-        <h2>{stampLabel(roundAt)} 현 배정안 업데이트 직전 배정기록이에요</h2>
+        <h2>{stampLabel(roundAt)} 연산 결과예요</h2>
         <p className="sub">
           {roundPending
             ? LOADING_TEXT
@@ -129,29 +148,12 @@ export function AssignmentStatus({
               : `총 ${hours.toFixed(1)}시간이에요`}
         </p>
         {counts}
-        <div className="act">
-          <Button kind="ghost" onClick={onBack}>현재 배정안으로 돌아가기</Button>
-        </div>
-      </>
-    );
-  }
-  if (proposal !== null) {
-    const who = proposal.excluded_member;
-    return (
-      <>
-        <h2>{who.name} 멤버를 제외하고 진행하는건 어떨까요?</h2>
-        <p className="sub">
-          해당 인원의 불가능 일정으로 인해 이상적인 배정안을 찾지 못했어요.
-        </p>
-        {counts}
-        <div className="note">
-          현재 캘린더는 해당 멤버를 제외한 예상 결과를 보여주고 있어요.
-          확정할 경우에만 해당 배정안으로 확정되니, 신중하게 결정해주세요.
-        </div>
+        {reportBlock}
+        <div className="note">적용할 경우에만 메인 캘린더에 반영되니, 신중하게 결정해주세요.</div>
         <div className="act">
           {!canConfirm ? null : (
-            <Button kind="go" pending={confirmPending} pendingLabel="배정안 확정 중…" onClick={() => onConfirm(who.id)}>
-              해당 배정안으로 확정
+            <Button kind="go" pending={confirmPending} pendingLabel="배정안 적용 중…" onClick={onConfirm}>
+              이 배정안 적용
             </Button>
           )}
           <Button kind="ghost" onClick={onBack}>현재 배정안으로 돌아가기</Button>
@@ -173,7 +175,7 @@ export function AssignmentStatus({
           {canRun ? (
             <>
               아래의 <b>스케줄링</b> 버튼을 누르면 스케줄링 엔진이 즉시 다시 연산을 시작해요.
-              즉시 연산이 필요할 경우에만 사용해주세요.
+              연산 결과는 스케줄링 기록에 쌓이고, 적용해야 메인 캘린더에 반영돼요.
             </>
           ) : (
             "관리자가 배정을 진행할 경우 배정안이 여기에 표시돼요."
@@ -189,43 +191,51 @@ export function AssignmentStatus({
       <p className="sub">
         총 {hours.toFixed(1)}시간이에요.
       </p>
+      {/* 결과 설명은 조회하는 시점의 불가능 일정으로 계산합니다. 적용 뒤 불가능 일정이 바뀌어 허용 인원을 넘으면 경고합니다(사용자 결정 2026-10-13). */}
+      {report?.over_absent !== true ? null : (
+        <div className="warn" role="alert">
+          <b>현재 적용중인 배정안이 불가능일정 변동으로 인해 최대 제외인원을 초과했어요.</b>
+          새로 연산된 배정안으로 업데이트하는 것을 추천드려요.
+        </div>
+      )}
       {counts}
+      {reportBlock}
       {!canRun ? null : (
-        <div className="note">다시 스케줄링하면 현재 배정안은 기록 후 새 배정안으로 변경돼요.</div>
+        <div className="note">다시 스케줄링하면 연산 결과가 스케줄링 기록에 쌓이고, 현재 배정안은 적용할 때만 바뀌어요.</div>
       )}
       {actions}
     </>
   );
 }
 
-/** 오른쪽 칸의 이전 배정기록 목록입니다. 되돌리기 권한이 있는 사용자에게만 목록을 조회해 표시합니다.
+/** 오른쪽 칸의 스케줄링 기록 목록입니다. 스케줄링 기록 확정 권한(proposal_confirm)이 있는 사용자에게만 목록을 조회해 표시합니다.
  *  서버가 같은 권한으로 차단하고 있으므로, 화면에서 감추는 것은 정리일 뿐 권한 판정이 아닙니다. */
-export function PastRunsPanel({ periodId, canRollback, roundAt, onSelect }: {
+export function PastRunsPanel({ periodId, canView, roundAt, onSelect }: {
   periodId: number | null;
-  canRollback: boolean;
+  canView: boolean;
   roundAt: string | null;
   onSelect: (at: string) => void;
 }) {
   const backups = useQuery({
-    queryKey: ["backups", periodId],
+    queryKey: backupsKey(periodId),
     queryFn: () => {
       if (periodId === null) throw new Error("선택할 집중 합주기간이 없어요");
       return getJSON<{ backups: Backup[] }>(`/periods/${periodId}/backups`);
     },
-    enabled: periodId !== null && canRollback,
+    enabled: periodId !== null && canView,
   });
   const rounds = backups.data?.backups ?? [];
 
   let list;
-  if (!canRollback) {
-    list = <Empty as="li" text="이전 배정 되돌리기 권한이 있어야 확인이 가능해요." />;
+  if (!canView) {
+    list = <Empty as="li" text="스케줄링 기록 확정 권한이 있어야 확인이 가능해요." />;
   } else if (!backups.isSuccess || rounds.length === 0) {
-    list = <Empty as="li" state={loadState(backups)} text="이전 배정기록이 없어요." />;
+    list = <Empty as="li" state={loadState(backups)} text="스케줄링 기록이 없어요." />;
   } else {
-    // 최근 배정기록이 위로 오게 순서를 뒤집습니다. 되돌리기는 언제나 맨 위 배정기록으로만 복원합니다.
+    // 최근 기록이 위로 오게 정렬합니다.
     list = [...rounds]
       .sort((a, b) => b.saved_at.localeCompare(a.saved_at))
-      .map((backup, index) => (
+      .map((backup) => (
         <li key={backup.saved_at}>
           <button
             className={roundAt === backup.saved_at ? "round on" : "round"}
@@ -233,13 +243,13 @@ export function PastRunsPanel({ periodId, canRollback, roundAt, onSelect }: {
             onClick={() => onSelect(backup.saved_at)}
           >
             <b>{stampLabel(backup.saved_at)}</b>
-            <small>{slotCountLabel(backup.slot_count)}{index === 0 ? " 되돌린 배정안은 여기로" : ""}</small>
+            <small>{slotCountLabel(backup.slot_count)}</small>
           </button>
         </li>
       ));
   }
   return (
-    <Panel title="이전 배정기록" hint="캘린더에서 미리보기가 가능해요">
+    <Panel title="스케줄링 기록" hint="캘린더에서 미리보기가 가능해요">
       <ul>{list}</ul>
     </Panel>
   );

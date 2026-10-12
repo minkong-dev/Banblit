@@ -96,7 +96,7 @@ type Method = "GET" | "POST" | "PUT" | "PATCH";
 type Job = {
   id: string;
   status: "queued" | "running" | "done" | "failed";
-  result: { saved: boolean } | null;
+  result: { record_saved_at: string | null } | null;
   error: string | null;
 };
 
@@ -246,12 +246,15 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     const assignBody = { team_ids: teams.map((team) => team.id), room_ids: rooms.map((room) => room.id) };
     const { job } = await call<{ job: Job }>(context, "POST", `/api/periods/${focused.id}/assign`, assignBody);
     const finished = await waitForJob(context, job.id);
-    if (finished.result?.saved !== true) {
-      throw new Error(`집중 합주기간 1 의 배정이 저장되지 않았습니다: ${finished.error ?? "조율안만 출력됨"}`);
+    const savedAt = finished.result?.record_saved_at;
+    if (savedAt == null) {
+      throw new Error(`집중 합주기간 1 의 연산 결과가 쌓이지 않았습니다: ${finished.error ?? "배정 0건"}`);
     }
+    // 연산 결과는 기록으로만 쌓이므로 적용해야 현재 배정안이 됩니다.
+    await call(context, "POST", `/api/periods/${focused.id}/backups/${encodeURIComponent(savedAt)}/apply`);
 
-    // 집중 합주기간 2 — 캡쳐 계정이 합주실이 여는 시간 전체에 불가능 일정을 두어, 계산하면
-    // 조율안(그 계정을 제외한 배정안)이 출력됩니다. 배정 결과 화면의 조율안 설명에 사용합니다.
+    // 집중 합주기간 2 — 캡처 계정이 합주실이 여는 시간 전체에 불가능 일정을 두어, 계산하면
+    // 그 계정의 팀에 부족분이 있는 미확정 배정안이 등록됩니다. 배정 결과 화면의 결과 설명에 사용합니다.
     const { period: tight } = await call<{ period: { id: number } }>(context, "POST", "/api/periods", {
       kind: "focused", name: "신입 환영회", starts_on: day(9), ends_on: day(10), everyday: false, ...RUN_TIMES,
     });

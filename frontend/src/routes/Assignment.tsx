@@ -5,24 +5,21 @@ import { Button } from "../components/controls";
 import { Card, Tabs } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
 import { getJSON, reason } from "../lib/api";
-import { askRollback } from "../lib/confirm";
 import { say } from "../lib/toast";
-import { loadSchedule, runAssignment, SCHEDULE_KEY } from "../lib/pipeline";
+import { applyRecord, loadScheduleOut, runAssignment, SCHEDULE_KEY } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
-import { useMe, usePeriods, useRooms, useTeams } from "../components/queries";
+import { backupRoundKey, backupRoundsKey, backupsKey, useMe, usePeriods, useRooms, useTeams } from "../components/queries";
 import { can } from "../lib/account";
-import {
-  NOW, colorsOf, dayRangeOf, runResultText, sessionsOf, sessionsOfRows, tabKey, tabsOf, viewOf,
-} from "../lib/assignment";
+import { NOW, colorsOf, dayRangeOf, sessionsOfRows, tabKey, tabsOf, viewOf } from "../lib/assignment";
 import type { View } from "../lib/assignment";
 import { AssignmentCalendar, AssignmentStatus, PastRunsPanel, RunTimesPanel } from "./AssignmentPanels";
 import "../styles/assignment.css";
-import type { AssignOut, ScheduleRow } from "../lib/contract";
+import type { AssignOut, BackupRound, ScheduleRow } from "../lib/contract";
 // 조회 결과가 아직 없을 때 사용하는 빈 목록입니다. 같은 배열을 계속 사용해야 useMemo 의 의존성이 변하지 않습니다.
 const NO_ROWS: ScheduleRow[] = [];
 
 /** 선택된 집중 합주기간의 번호입니다. 없을 경우 error 를 발생시킵니다.
- *  조회·재계산·확정·되돌리기·배정기록 조회가 모두 기간 번호를 요구하고, enabled 조건으로 막아도
+ *  조회·재계산·확정·되돌리기·스케줄링 기록 조회가 모두 기간 번호를 요구하고, enabled 조건으로 막아도
  *  queryFn·mutationFn 의 타입에서는 null 이 남습니다. 문구를 한 곳에 두어 다섯 곳이 같게 합니다. */
 function requirePeriod(periodId: number | null): number {
   if (periodId === null) throw new Error("선택할 집중 합주기간이 없어요");
@@ -31,6 +28,9 @@ function requirePeriod(periodId: number | null): number {
 
 export function Assignment() {
   const { me } = useMe();
+  // 계산은 assign_run, 스케줄링 기록 조회와 적용은 proposal_confirm 권한입니다.
+  const canRun = can(me, "assign_run");
+  const canConfirm = can(me, "proposal_confirm");
   const queryClient = useQueryClient();
   const [periodId, setPeriodId] = useState<number | null>(null);
   const [view, setView] = useState<View>(NOW);
@@ -48,11 +48,11 @@ export function Assignment() {
 
   const schedule = useQuery({
     queryKey: ["schedule", activePeriodId],
-    queryFn: () => loadSchedule(requirePeriod(activePeriodId)),
+    queryFn: () => loadScheduleOut(requirePeriod(activePeriodId)),
     enabled: activePeriodId !== null,
   });
   // schedule.data 가 없으면 NO_ROWS 를 사용합니다. 매 render 마다 새 빈 배열을 만들면 아래 useMemo 가 매번 다시 실행됩니다.
-  const rows = schedule.data ?? NO_ROWS;
+  const rows = schedule.data?.rows ?? NO_ROWS;
 
   // 확정된 시간표에 나온 id를 재계산에 그대로 넘깁니다. 아직 아무것도 확정되지 않았으면
   // 목록 endpoint(API의 요청 주소 단위)가 준 전체를 사용합니다.
@@ -64,15 +64,16 @@ export function Assignment() {
     ? uniqueSorted(rows.map((row) => row.room_id))
     : (rooms.data?.rooms ?? []).map((room) => room.id);
 
-  // 저장까지 끝났으면 확정된 시간표를 다시 받아 화면과 서버를 맞춥니다. 저장이 되었으면
-  // 이전 시간표가 배정기록으로 밀려나므로 목록도 다시 받습니다.
+  // 현재 배정안과 스케줄링 기록 목록을 다시 받아 화면과 서버를 맞춥니다. 연산하면 기록이 추가되고,
+  // 적용하면 현재 배정안이 바뀌므로 둘 다 다시 받습니다.
   // SCHEDULE_KEY(["schedule"]) 로 무효화해야 캘린더 화면(routes/Scheduler.tsx)의
   // ["schedule", periodIds] 캐시도 함께 무효화됩니다. activePeriodId 로만 무효화하면
   // key 모양이 달라 캘린더 화면에 이전 배정이 그대로 남습니다.
   const refreshSchedule = async () => {
     await queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY });
-    await queryClient.invalidateQueries({ queryKey: ["backups", activePeriodId] });
-    setView(NOW);
+    await queryClient.invalidateQueries({ queryKey: backupsKey(activePeriodId) });
+    // 기록 1개의 결과 설명은 조회하는 시점의 불가능 일정으로 계산하므로 함께 무효화합니다.
+    await queryClient.invalidateQueries({ queryKey: backupRoundsKey(activePeriodId) });
   };
 
   const recompute = useMutation({
@@ -80,62 +81,48 @@ export function Assignment() {
     mutationFn: (body: AssignBody) => runAssignment<AssignOut>(requirePeriod(activePeriodId), body),
     onSuccess: async (result) => {
       await refreshSchedule();
-      say(runResultText(result));
+      // 연산 결과는 기록으로만 쌓입니다(사용자 결정 2026-10-13). 기록 조회는 서버가 proposal_confirm 권한으로
+      // 검증하므로 그 권한이 있을 때만 그 기록을 캘린더에 표시하고, 없으면 현재 배정안에 머뭅니다.
+      const record = canConfirm ? result.record_saved_at : null;
+      setView(record === null ? NOW : { kind: "round", at: record });
+      say("스케줄링 연산에 성공했어요");
     },
     onError: (error) => say(reason(error, "엔진이 연산에 실패했어요")),
   });
 
-  // 조율안 확정입니다. 조율안이 지목한 멤버를 제외한 채로 같은 계산을 다시 실행해 저장합니다. 서버 경로가
-  // 다를 뿐 결과를 받는 방식은 재계산과 같습니다.
-  const confirm = useMutation({
-    mutationFn: (memberId: number) =>
-      runAssignment<AssignOut>(requirePeriod(activePeriodId), { team_ids: teamIds, room_ids: roomIds }, memberId),
-    onSuccess: async (result) => {
-      await refreshSchedule();
-      say(result.saved ? "선택한 배정으로 확정했어요" : "해당 배정을 선택하지 않았어요");
-    },
-    onError: (error) => say(reason(error, "해당 배정을 선택하는데 실패했어요")),
-  });
-
-  const rollback = useMutation({
-    // 배정기록을 받지 않는 endpoint 입니다. 언제나 바로 직전 배정기록으로만 되돌아갑니다.
-    mutationFn: () =>
-      getJSON<{ rolled_back: boolean }>(`/periods/${requirePeriod(activePeriodId)}/rollback`, { method: "POST" }),
-    onSuccess: async (result) => {
-      // 되돌린 배정기록은 목록에서 제거됩니다.
-      await refreshSchedule();
-      say(result.rolled_back ? "이전 배정안으로 되돌렸어요" : "이전 배정기록이 없어요");
-    },
-    // 서버가 거절한 사유를 그대로 표시합니다. 합주실·시각이 겹쳐 되돌릴 수 없는 경우가 있습니다.
-    onError: (error) => say(error instanceof Error ? error.message : "이전 배정기록으로 되돌리는데 실패했어요"),
-  });
-
-  // 선택한 배정기록입니다. 조율안과 같은 view 값 하나를 사용하므로 달력·아래 설명·탭이 값 하나로 결정됩니다.
+  // 선택한 스케줄링 기록입니다. view 값 하나를 사용하므로 달력, 아래 설명, 탭이 값 하나로 결정됩니다.
   const roundAt = view.kind === "round" ? view.at : null;
+
+  // 표시 중인 스케줄링 기록을 현재 배정안으로 적용합니다. 기록은 목록에 남습니다.
+  const confirm = useMutation({
+    mutationFn: () => {
+      if (roundAt === null) throw new Error("선택할 스케줄링 기록이 없어요");
+      return applyRecord(requirePeriod(activePeriodId), roundAt);
+    },
+    onSuccess: async () => {
+      await refreshSchedule();
+      setView(NOW);
+      say("선택한 배정안을 적용했어요");
+    },
+    // 서버가 거절한 사유를 그대로 표시합니다. 다른 기간과 합주실·시각이 겹쳐 적용할 수 없는 경우가 있습니다.
+    onError: (error) => say(reason(error, "해당 배정안을 적용하는데 실패했어요")),
+  });
+
   const round = useQuery({
-    queryKey: ["backup-round", activePeriodId, roundAt],
+    queryKey: backupRoundKey(activePeriodId, roundAt),
     queryFn: () => {
-      if (activePeriodId === null || roundAt === null) throw new Error("선택할 이전 배정기록이 없어요");
-      return getJSON<{ rows: ScheduleRow[] }>(
-        `/periods/${activePeriodId}/backups/${encodeURIComponent(roundAt)}`,
-      );
+      if (activePeriodId === null || roundAt === null) throw new Error("선택할 스케줄링 기록이 없어요");
+      return getJSON<BackupRound>(`/periods/${activePeriodId}/backups/${encodeURIComponent(roundAt)}`);
     },
     enabled: activePeriodId !== null && roundAt !== null,
   });
 
   const confirmed = useMemo(() => sessionsOfRows(rows), [rows]);
 
-  // recompute.data 가 없을 때만 매번 새 빈 배열이 생깁니다. 재계산 전에는 proposals 를
-  // 사용하는 곳도 없어 아래 useMemo 가 다시 실행되어도 비용이 없습니다.
-  const proposals = recompute.data?.proposals ?? [];
-  const proposalIndex = view.kind === "proposal" ? view.index : null;
-  const proposal = proposalIndex === null ? null : proposals[proposalIndex] ?? null;
   const roundRows = round.data?.rows ?? NO_ROWS;
   const roundSessions = useMemo(() => sessionsOfRows(roundRows), [roundRows]);
-  const shown = useMemo(() => {
-    if (roundAt !== null) return roundSessions;
-    return proposal ? sessionsOf(proposal.assignment.slots_by_team) : confirmed;
-  }, [roundAt, roundSessions, proposal, confirmed]);
+  const shown = roundAt !== null ? roundSessions : confirmed;
+  const report = (roundAt !== null ? round.data?.report : schedule.data?.report) ?? null;
 
   const teamList = teams.data?.teams;
   const colors = useMemo(
@@ -143,29 +130,16 @@ export function Assignment() {
     [confirmed, shown, teamList],
   );
 
-  const tabs = tabsOf(proposals.length, roundAt);
+  const tabs = tabsOf(roundAt);
   const days = dayRangeOf(shown);
 
-  // 버튼마다 필요한 권한이 다릅니다. 계산은 assign_run, 되돌리기는 rollback 입니다.
-  // 둘 다 없으면 버튼 줄 자체를 표시하지 않습니다.
-  const canRun = can(me, "assign_run");
-  const canRollback = can(me, "rollback");
-  const actions = !canRun && !canRollback ? null : (
+  // 계산 권한(assign_run)이 없으면 버튼 줄 자체를 표시하지 않습니다.
+  const actions = !canRun ? null : (
     <div className="act">
-      {!canRun ? null : (
-        <Button kind="go" pending={recompute.isPending} pendingLabel="스케줄링 진행 중…" disabled={activePeriodId === null}
-          onClick={() => recompute.mutate({ team_ids: teamIds, room_ids: roomIds })}>
-          스케줄링
-        </Button>
-      )}
-      {/* ponytail: 되돌리기는 취소할 수 없어 확인을 한 번 요청합니다. 이 화면에는 확인 dialog(화면 위에 뜨는 대화 상자)가
-          없어 브라우저 기본 대화상자를 사용합니다. 화면 자체의 dialog 가 생기면 그 dialog 로 교체합니다. */}
-      {!canRollback ? null : (
-        <Button kind="ghost" pending={rollback.isPending} pendingLabel="되돌리는 중…" disabled={activePeriodId === null}
-          onClick={() => { if (askRollback()) rollback.mutate(); }}>
-          이전 배정안으로 되돌리기
-        </Button>
-      )}
+      <Button kind="go" pending={recompute.isPending} pendingLabel="스케줄링 진행 중…" disabled={activePeriodId === null}
+        onClick={() => recompute.mutate({ team_ids: teamIds, room_ids: roomIds })}>
+        스케줄링
+      </Button>
     </div>
   );
 
@@ -206,14 +180,14 @@ export function Assignment() {
               roundAt={roundAt}
               roundPending={round.isPending}
               roundError={round.error}
-              proposal={proposal}
+              report={report}
               hasConfirmed={confirmed.length > 0}
               shown={shown}
               colors={colors}
               canRun={canRun}
-              canConfirm={can(me, "proposal_confirm")}
+              canConfirm={canConfirm}
               confirmPending={confirm.isPending}
-              onConfirm={(memberId) => confirm.mutate(memberId)}
+              onConfirm={() => confirm.mutate()}
               onBack={() => setView(NOW)}
               actions={actions}
             />
@@ -224,7 +198,7 @@ export function Assignment() {
       <div className="rail">
         <PastRunsPanel
           periodId={activePeriodId}
-          canRollback={canRollback}
+          canView={canConfirm}
           roundAt={roundAt}
           onSelect={(at) => setView({ kind: "round", at })}
         />

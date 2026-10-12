@@ -9,15 +9,15 @@ import { Card, SectionHead } from "../components/Layout";
 import { Button, Cell, Empty, FormFoot, TimeRange, Toggle } from "../components/controls";
 import { useReturnFocus } from "../components/hooks";
 import { Modal } from "../components/Modal";
-import { useSlotMinutes } from "../components/queries";
+import { useSlotMinutes, useTeams } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
 import { askDelete } from "../lib/confirm";
 import type { ClockRange, Period, PracticeWindow, Room } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import {
-  checkEnsemble, checkPeriod, checkPracticeWindow, daysBetween,
-  periodBody, savePeriod,
+  checkAssignRule, checkEnsemble, checkPeriod, checkPracticeWindow, daysBetween,
+  openingHours, periodBody, savePeriod,
 } from "../lib/pipeline";
 import type { PeriodBody } from "../lib/pipeline";
 import { periodTitle } from "../lib/settings";
@@ -37,13 +37,14 @@ const BLANK_PERIOD: PeriodBody = {
   first_run_at: "09:00",
   second_run_at: "21:00",
   practice_window: NO_WINDOW,
+  assign_rule: { target_hours: null, max_absent: 0 },
 };
 
 /** 기간 form 이 수정하는 값만 추립니다. 목록에서 받은 기간에는 id·ensemble 이 함께 있어 그대로 보내면 요청 본문에 섞입니다. */
 function periodFields(period: Period): PeriodBody {
   const { kind, name, starts_on, ends_on, everyday, first_run_at, second_run_at } = period;
   return { kind, name, starts_on, ends_on, everyday, first_run_at, second_run_at,
-    practice_window: period.practice_window };
+    practice_window: period.practice_window, assign_rule: period.assign_rule };
 }
 
 /** 시간대 한 쌍을 입력칸 두 개로 펼칩니다. 정하지 않은 쌍은 빈 칸 두 개입니다. */
@@ -100,8 +101,13 @@ function PeriodFields(props: {
   first: RefObject<HTMLInputElement | null>;
   /** 전체 합주 체크박스(EnsembleToggle). 날짜 줄의 "매일" 옆에 놓입니다 — 둘 다 날짜에 딸린 옵션입니다. */
   ensembleToggle: ReactNode;
+  /** 팀당 목표 시간 입력칸을 비웠을 때의 자동 계산값입니다. 예: "3.5시간". 계산할 수 없으면 null 입니다. */
+  autoHours: string | null;
 }) {
-  const { form, setForm, at, bad, whyId, first, ensembleToggle } = props;
+  const { form, setForm, at, bad, whyId, first, ensembleToggle, autoHours } = props;
+  const rule = form.assign_rule;
+  // 폼 하단 오류(bad)가 배정 규칙 때문일 때만 두 입력칸을 오류로 표시합니다.
+  const ruleBad = bad !== "" && checkAssignRule(rule) !== "";
   return (
     <>
       <div className="fgroup">
@@ -181,6 +187,43 @@ function PeriodFields(props: {
             />
           </Cell>
           </div>
+          <div className="frow">
+          {/* 빈칸이면 서버가 전체 시간 ÷ 팀 수로 계산합니다(사용자 결정 2026-10-12). */}
+          <Cell label="팀당 목표 시간" htmlFor={at("target")}>
+            <input
+              id={at("target")}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              step={1}
+              placeholder={autoHours === null ? "자동" : `자동 ${autoHours}`}
+              aria-invalid={ruleBad}
+              aria-describedby={ruleBad ? whyId : undefined}
+              value={rule.target_hours ?? ""}
+              onChange={(event) => setForm({
+                ...form,
+                assign_rule: { ...rule, target_hours: event.target.value === "" ? null : Number(event.target.value) },
+              })}
+            />
+          </Cell>
+          {/* 빈칸은 NaN 으로 담아 checkAssignRule 이 거부합니다. 0 으로 바꾸면 사용자가 지운 값이 0 으로 저장됩니다. */}
+          <Cell label="불참 허용 인원" htmlFor={at("absent")}>
+            <input
+              id={at("absent")}
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={1}
+              value={Number.isNaN(rule.max_absent) ? "" : rule.max_absent}
+              aria-invalid={ruleBad}
+              aria-describedby={ruleBad ? whyId : undefined}
+              onChange={(event) => setForm({
+                ...form,
+                assign_rule: { ...rule, max_absent: event.target.value === "" ? Number.NaN : Number(event.target.value) },
+              })}
+            />
+          </Cell>
+          </div>
           </div>
           <div className="fgroup">
           <h4>팀별 합주</h4>
@@ -243,7 +286,7 @@ export function PeriodCard(props: {
   const { periods, rooms, state, canEdit, canCreate, canDelete, onSaved, onDeleted } = props;
   const { openId: editing, open, close, register } = useReturnFocus();
   const [making, setMaking] = useState(false);
-  // 기간을 삭제하면 서버가 그 기간의 배정 결과·계산 기록·이전 배정기록을 함께 삭제합니다(외래 키 CASCADE).
+  // 기간을 삭제하면 서버가 그 기간의 배정 결과·계산 기록·스케줄링 기록을 함께 삭제합니다(외래 키 CASCADE).
   const drop = useMutation({
     mutationFn: (id: number) => getJSON(`/periods/${id}`, { method: "DELETE" }),
     onSuccess: onDeleted,
@@ -334,6 +377,7 @@ function PeriodForm(props: {
   const [draft, setDraft, draftTouched, resetDraft] = useForm(ensembleDraft(before, rooms));
   const first = useFirstField<HTMLInputElement>(onCancel !== undefined);
   const slotMinutes = useSlotMinutes();
+  const teams = useTeams();
 
   const withEnsemble = form.kind === "focused" && draft.on;
   const send = useMutation({
@@ -354,7 +398,15 @@ function PeriodForm(props: {
       windowPair(form.practice_window.weekend),
       slotMinutes,
     )
+    || checkAssignRule(form.assign_rule)
     || (withEnsemble ? checkEnsemble(draft, periodBody(form), room, slotMinutes) : "");
+
+  // ponytail: 합주실 개방시각 전체 기준이라 팀별 합주 시간대, 전체 합주 날짜, session 길이로 남는 칸을 빼지 않습니다.
+  // 서버의 auto_sessions_per_team 과 차이가 나면 서버가 자동값을 함께 반환하게 수정합니다.
+  const teamCount = teams.data?.teams.length ?? 0;
+  const autoHours = form.everyday || teamCount === 0 || checkPeriod(form) !== ""
+    ? null
+    : openingHours({ rooms, days: daysBetween(form.starts_on, form.ends_on), teams: teamCount, slotMinutes }).perTeam;
 
   const at = (field: string): string => `${before === null ? "/periods" : `/periods/${before.id}`}-${field}`;
   const whyId = at("why");
@@ -372,7 +424,7 @@ function PeriodForm(props: {
         <div className="fields period">
           <h3 className="fsec">기간 기본설정</h3>
           <PeriodFields form={form} setForm={setForm} at={at} bad={bad} whyId={whyId} first={first}
-            ensembleToggle={<EnsembleToggle draft={draft} setDraft={setDraft} at={at} />} />
+            ensembleToggle={<EnsembleToggle draft={draft} setDraft={setDraft} at={at} />} autoHours={autoHours} />
           {withEnsemble ? (
             <div className="fgroup">
               <h4>전체 합주</h4>

@@ -113,6 +113,22 @@ function windowPairMessage(pair: WindowPair, label: string, slotMinutes: number)
   return "";
 }
 
+// 서버 periods.max_absent_members 의 SMALLINT 상한입니다.
+const MAX_ABSENT_LIMIT = 32767;
+
+/** 배정 규칙을 검증합니다. 서버 쪽은 backend/src/backend/api/schemas.py 의 AssignRuleIn 에 작성되어 있는 내용을 기준으로 합니다.
+ *  입력칸을 비우면 max_absent 가 NaN 입니다. */
+export function assignRuleMessage(rule: { target_hours: number | null; max_absent: number }): string {
+  const { target_hours, max_absent } = rule;
+  if (target_hours !== null && (!Number.isInteger(target_hours) || target_hours < 1)) {
+    return "팀당 목표 시간은 1 이상의 정수로 입력해주세요.";
+  }
+  if (!Number.isInteger(max_absent) || max_absent < 0 || max_absent > MAX_ABSENT_LIMIT) {
+    return "불참 허용 인원은 0 이상의 정수로 입력해주세요.";
+  }
+  return "";
+}
+
 export function roomNameMessage(name: string, taken: string[]): string {
   return uniqueNameMessage(name, taken, "합주실", "합주실명");
 }
@@ -178,7 +194,7 @@ export type Capacity = {
   perDay: number;
   /** 기간 전체의 자리 수입니다. */
   total: number;
-  /** 팀 하나가 갖는 자리 수입니다. 집중 합주기간은 모든 팀이 정확히 같은 개수를 갖습니다. */
+  /** 팀 하나가 갖는 자리 수입니다. 집중 합주기간 목표 횟수의 기본값입니다. */
   perTeam: number;
   /** 팀에 고르게 나누고 남는 자리 수입니다. 예약에 사용할 수 있습니다. */
   leftover: number;

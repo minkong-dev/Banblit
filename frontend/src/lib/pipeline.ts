@@ -2,7 +2,8 @@
 
 import { getJSON, isSignedIn, sendFile } from "./api";
 import type {
-  Account, Ensemble, Me, Member, MemberUnavailable, Notification, Period, Reservation, ScheduleRow, Unavailable,
+  Account, Ensemble, Me, Member, MemberUnavailable, Notification, Period, Reservation, ScheduleOut, ScheduleRow,
+  Unavailable,
 } from "./contract";
 import {
   dayKey,
@@ -175,6 +176,8 @@ export { commentMessage as checkComment };
 export { ensembleMessage as checkEnsemble, ensembleTimeMessage as checkEnsembleTime } from "./settings";
 // 팀별 합주 시간대 검증입니다. 순서 의존이 없어 그대로 export 합니다.
 export { practiceWindowMessage as checkPracticeWindow } from "./settings";
+// 배정 규칙(팀당 목표 시간, 불참 허용 인원) 검증입니다. 순서 의존이 없어 그대로 export 합니다.
+export { assignRuleMessage as checkAssignRule } from "./settings";
 export type { WindowPair } from "./settings";
 
 export function checkPost(form: PostForm): string {
@@ -213,8 +216,19 @@ export const SCHEDULE_KEY = ["schedule"] as const;
 /** 기간 하나의 확정 시간표입니다. 달력 화면(routes/Scheduler)과 배정 결과 화면(routes/Assignment)이 같은
  *  endpoint 를 조회하므로 주소를 적는 곳을 이 함수 하나로 유지합니다. */
 export async function loadSchedule(periodId: number): Promise<ScheduleRow[]> {
-  const body = await getJSON<{ rows: ScheduleRow[] }>(`/periods/${periodId}/schedule`);
-  return body.rows;
+  return (await loadScheduleOut(periodId)).rows;
+}
+
+/** loadSchedule 과 같은 endpoint 입니다. 배정 결과 화면은 부족분과 불참자 보고(report)도 함께 씁니다. */
+export function loadScheduleOut(periodId: number): Promise<ScheduleOut> {
+  return getJSON<ScheduleOut>(`/periods/${periodId}/schedule`);
+}
+
+/** 스케줄링 기록 1개를 확정 시간표로 만듭니다. 교체되는 현행은 서버가 이전 확정본으로 보관합니다. */
+export function applyRecord(periodId: number, savedAt: string): Promise<{ applied: boolean }> {
+  return getJSON<{ applied: boolean }>(
+    `/periods/${periodId}/backups/${encodeURIComponent(savedAt)}/apply`, { method: "POST" },
+  );
 }
 
 // backend/src/backend/db/models.py 의 ON DELETE CASCADE 기준입니다. 기간을 삭제하면 서버가
@@ -227,19 +241,11 @@ export const ROOM_DELETE_KEYS = ["rooms", "schedule", "backups", "backup-round",
 
 export type AssignBody = { team_ids: number[]; room_ids: number[] };
 
-export async function runAssignment<T>(
-  periodId: number,
-  body: AssignBody,
-  /** 조율안을 선택했으면 그 안에서 제외할 멤버의 번호입니다. 그 멤버를 제외하고 다시 계산해 저장합니다. */
-  excludeMemberId?: number,
-): Promise<T> {
+export async function runAssignment<T>(periodId: number, body: AssignBody): Promise<T> {
   // 접수(POST 요청)가 먼저입니다. 서버는 계산을 기다리지 않고 job(서버가 접수해 백그라운드에서 실행하는 계산 하나) 번호만 반환합니다. 그 번호로
   // awaitJob()이 완료될 때까지 다시 조회합니다. 순서가 반대일 수 없고, 접수 응답을 결과로 사용하면
   // 계산이 시작되지도 않은 값을 화면에 표시하게 됩니다.
-  const path = excludeMemberId === undefined
-    ? `/periods/${periodId}/assign`
-    : `/periods/${periodId}/proposals/${excludeMemberId}/confirm`;
-  const accepted = await getJSON<{ job: Job<T> }>(path, {
+  const accepted = await getJSON<{ job: Job<T> }>(`/periods/${periodId}/assign`, {
     method: "POST",
     body: JSON.stringify(body),
   });

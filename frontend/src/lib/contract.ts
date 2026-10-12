@@ -26,9 +26,14 @@ export type Period = {
   second_run_at: string;
   /** 팀별 합주를 배정할 수 있는 하루 중의 시간대입니다. 껍데기는 언제나 있습니다. */
   practice_window: PracticeWindow;
+  assign_rule: AssignRule;
   /** 전체 합주를 지정하지 않은 기간은 null 입니다. */
   ensemble: Ensemble | null;
 };
+
+/** 기간의 배정 규칙입니다. target_hours 가 null 이면 팀당 목표 시간은 전체 시간 ÷ 팀 수입니다.
+ *  max_absent 는 session 1회에서 불가능 일정 때문에 빠져도 되는 팀원 수의 상한입니다. */
+export type AssignRule = { target_hours: number | null; max_absent: number };
 
 /** 팀별 합주를 배정할 수 있는 하루 중의 시간대입니다. 합주실 개방시각과는 다른 값입니다 —
  *  합주실이 09시에 열어도 팀별 합주는 17시부터만 배정할 수 있습니다. 실제 배정 구간은
@@ -63,7 +68,7 @@ export type Ensemble = {
 /** 기본 시각과 다르게 지정한 날짜 하나입니다. */
 export type EnsembleDay = { day: string; starts_at: string; ends_at: string };
 
-/** 되돌릴 수 있는 이전 시간표 배정기록 하나입니다. 배정기록을 구분하는 값은 저장 시각입니다. */
+/** 스케줄링 기록(연산 결과) 하나입니다. 스케줄링 기록을 구분하는 값은 연산한 시각입니다. */
 export type Backup = {
   /** "2026-09-07T18:03:00" */
   saved_at: string;
@@ -119,7 +124,7 @@ export type MyTeam = {
 /** /me 응답 전체입니다. 현재 로그인한 계정과 그 계정이 배정된 자리 목록입니다. */
 export type Me = { account: Account; teams: MyTeam[] };
 
-/** 할 수 있는 일 23가지입니다. 서버 쪽은 backend/src/backend/db/models.py 의 Permission 에 작성되어 있는 내용을 기준으로 합니다 */
+/** 할 수 있는 일 22가지입니다. 서버 쪽은 backend/src/backend/db/models.py 의 Permission 에 작성되어 있는 내용을 기준으로 합니다 */
 export type Permission =
   | "room_create"
   | "room_edit"
@@ -141,7 +146,6 @@ export type Permission =
   | "assign_run"
   | "assign_read"
   | "proposal_confirm"
-  | "rollback"
   | "permission_manage"
   | "permission_grant";
 
@@ -153,7 +157,7 @@ export type Account = {
   login_id: string | null;
   /** 프로필 사진의 저장 파일명입니다. 없으면 null 입니다. 이 값이 바뀌면 사진을 다시 불러옵니다. */
   avatar: string | null;
-  /** 저장된 값이 아니라 permissions 에서 계산한 값입니다. 20가지가 모두 켜져 있으면 head_manager 입니다. */
+  /** 저장된 값이 아니라 permissions 에서 계산한 값입니다. 22가지가 모두 켜져 있으면 head_manager 입니다. */
   role: "head_manager" | "member";
   permissions: Permission[];
   /** 가진 permission set(권한 집합)의 이름입니다. 화면은 "헤드매니저" 고정 문구 대신 이 이름을 역할로 표시합니다. */
@@ -198,13 +202,43 @@ export type ScheduleRow = {
 
 export type Slot = { room_id: number; room: string; start: string; end: string };
 
-export type AssignmentOut = { feasible: boolean; slots_by_team: Record<string, Slot[]> };
+export type AssignmentOut = { slots_by_team: Record<string, Slot[]> };
+
+/** 목표 시간보다 적게 배정받은 팀 하나입니다. */
+export type Shortfall = { team_id: number; team: string; assigned_hours: number };
+
+/** 배정된 session 시각에 불가능 일정이 있는 팀원 하나입니다. sessions 는 빠지는 session 횟수입니다. */
+export type Absence = {
+  team_id: number;
+  team: string;
+  member_id: number;
+  member: string;
+  cohort: number | null;
+  position: Instrument;
+  sessions: number;
+};
+
+/** 시간표 하나의 부족분과 불참자입니다. 조회하는 시점의 불가능 일정으로 계산합니다. */
+export type ScheduleReport = {
+  target_hours: number;
+  shortfalls: Shortfall[];
+  absences: Absence[];
+  /** session 1회라도 빠지는 인원이 불참 허용 인원을 넘으면 true 입니다. */
+  over_absent: boolean;
+};
 
 export type AssignOut = {
-  saved: boolean;
+  /** 쌓은 스케줄링 기록의 saved_at 입니다. 배정이 0건이면 기록이 없어 null 입니다. */
+  record_saved_at: string | null;
   assignment: AssignmentOut;
-  proposals: { excluded_member: { id: number; name: string }; assignment: AssignmentOut }[];
+  report: ScheduleReport;
 };
+
+/** GET /periods/{id}/schedule 응답입니다. 확정 시간표가 없으면 report 는 null 입니다. */
+export type ScheduleOut = { rows: ScheduleRow[]; report: ScheduleReport | null };
+
+/** GET /periods/{id}/backups/{saved_at} 응답입니다. */
+export type BackupRound = { rows: ScheduleRow[]; report: ScheduleReport | null };
 
 export type Post = {
   id: number;
