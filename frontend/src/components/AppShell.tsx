@@ -10,6 +10,7 @@ import { usePage, usePopoverRouteClose } from "./hooks";
 import { ME_KEY, TEAMS_KEY, useMe, useMyTeamCohorts } from "./queries";
 import { useToast } from "./toast";
 import { LOADING_TEXT } from "../lib/loading";
+import type { LoadState } from "../lib/loading";
 import { Avatar } from "./Avatar";
 import { can, roleLabel, teamNavLabel } from "../lib/account";
 import { ADMIN_MENU } from "../lib/adminMenu";
@@ -86,11 +87,8 @@ function MenuItems({ nav, managerNav }: { nav: readonly NavItem[]; managerNav: r
   );
 }
 
-/** 로그인 뒤 화면의 layout route 입니다. 화면을 이동해도 유지되고 Outlet 안의 화면만 교체됩니다. */
-export function AppShell() {
-  const { pathname } = useLocation();
-  const toast = useToast();
-  usePage(PAGE_BY_PATH[pathname.split("/")[1]] ?? "");
+/** body 에 data-shell 속성을 붙입니다. AppShell 이 화면에 있는 동안만 유지됩니다. */
+function useShellBodyMark(): void {
   // shell.css 가 이 속성으로 공통 layout(상단바·사이드바·탭·카드)의 스타일을 적용합니다. 계정·랜딩 화면에는 없습니다.
   // AppShell 이 유지되므로 로그인 뒤 화면 사이를 이동하는 동안에는 삭제되지 않습니다.
   // useEffect 는 화면을 그린 뒤 실행되어 shell.css 가 적용되지 않은 화면이 한 번 그려집니다. useLayoutEffect 는 그리기 전에 실행되어 이를 막습니다.
@@ -98,7 +96,10 @@ export function AppShell() {
     document.body.dataset.shell = "";
     return () => { delete document.body.dataset.shell; };
   }, []);
-  const { me, meState, meUnresolved } = useMe();
+}
+
+/** 계정 조회 실패 안내 줄의 사유(meWhy)와 다시 불러오기(retryMe)입니다. retrying 은 사용자가 누른 재조회가 진행 중인지입니다. */
+function useMeRetry(meState: LoadState): { meWhy: string; retrying: boolean; retryMe: () => Promise<void> } {
   const client = useQueryClient();
   // 사용자가 누른 재조회가 진행 중인지입니다. 20초 간격 폴링(main.tsx)의 재조회와 구분합니다 — 폴링까지
   // 표시하면 안내 문구가 20초마다 바뀌고 role="alert" 이 그때마다 다시 읽힙니다.
@@ -130,6 +131,18 @@ export function AppShell() {
     const kept = document.activeElement === pressed || document.activeElement === document.body;
     if (kept && client.getQueryData(ME_KEY) !== undefined) document.getElementById(PAGE_ID)?.focus();
   }
+
+  return { meWhy, retrying, retryMe };
+}
+
+/** 로그인 뒤 화면의 layout route 입니다. 화면을 이동해도 유지되고 Outlet 안의 화면만 교체됩니다. */
+export function AppShell() {
+  const { pathname } = useLocation();
+  const toast = useToast();
+  usePage(PAGE_BY_PATH[pathname.split("/")[1]] ?? "");
+  useShellBodyMark();
+  const { me, meState, meUnresolved } = useMe();
+  const { meWhy, retrying, retryMe } = useMeRetry(meState);
 
   // 가진 권한으로 필터링합니다. 계정을 아직 받지 못했으면 아무것도 표시되지 않습니다.
   const managerNav = MANAGER_NAV.filter((item) => item.needs.some((need) => can(me, need)));

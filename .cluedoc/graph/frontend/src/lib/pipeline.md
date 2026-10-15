@@ -31,6 +31,7 @@ flowchart LR
   frontend_src_lib_pipeline_test["pipeline.test.ts"] --> frontend_src_lib_pipeline
   frontend_src_routes_Account["Account.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_pipeline
+  frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_DayDialogParts["DayDialogParts.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_lib_pipeline
@@ -71,6 +72,7 @@ flowchart LR
 - [[graph/frontend/src/lib/pipeline.test|pipeline.test.ts]]
 - [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
+- [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
 - [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]
 - [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
