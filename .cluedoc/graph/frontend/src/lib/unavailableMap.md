@@ -14,6 +14,7 @@ flowchart LR
   frontend_src_lib_unavailableMap --> frontend_src_lib_contract["contract.ts"]
   frontend_src_lib_unavailableMap --> frontend_src_lib_dayEntries["dayEntries.ts"]
   frontend_src_lib_unavailableMap_test["unavailableMap.test.ts"] --> frontend_src_lib_unavailableMap
+  frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_lib_unavailableMap
 ```
 
 ## imports
@@ -25,3 +26,4 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/lib/unavailableMap.test|unavailableMap.test.ts]]
+- [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]

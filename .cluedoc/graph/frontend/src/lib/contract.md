@@ -20,6 +20,7 @@ flowchart LR
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_lib_contract
   frontend_src_components_PostWriteForm["PostWriteForm.tsx"] --> frontend_src_lib_contract
   frontend_src_components_RejectDialog["RejectDialog.tsx"] --> frontend_src_lib_contract
+  frontend_src_components_TeamSearch["TeamSearch.tsx"] --> frontend_src_lib_contract
   frontend_src_components_queries["queries.ts"] --> frontend_src_lib_contract
   frontend_src_lib_account_test["account.test.ts"] --> frontend_src_lib_contract
   frontend_src_lib_account["account.ts"] --> frontend_src_lib_contract
@@ -51,6 +52,7 @@ flowchart LR
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_lib_contract
+  frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_lib_contract
 ```
 
 ## imports
@@ -69,6 +71,7 @@ flowchart LR
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
 - [[graph/frontend/src/components/PostWriteForm|PostWriteForm.tsx]]
 - [[graph/frontend/src/components/RejectDialog|RejectDialog.tsx]]
+- [[graph/frontend/src/components/TeamSearch|TeamSearch.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/lib/account.test|account.test.ts]]
 - [[graph/frontend/src/lib/account|account.ts]]
@@ -100,3 +103,4 @@ flowchart LR
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]
+- [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]

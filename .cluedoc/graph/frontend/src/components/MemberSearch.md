@@ -10,6 +10,7 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_components_MemberSearch["MemberSearch.tsx"]
+  frontend_src_components_MemberSearch --> frontend_src_components_SearchList["SearchList.tsx"]
   frontend_src_components_MemberSearch --> frontend_src_components_controls["controls.tsx"]
   frontend_src_components_MemberSearch --> frontend_src_lib_api["api.ts"]
   frontend_src_components_MemberSearch --> frontend_src_lib_contract["contract.ts"]
@@ -18,10 +19,12 @@ flowchart LR
   frontend_src_components_MemberPicker_test["MemberPicker.test.tsx"] --> frontend_src_components_MemberSearch
   frontend_src_components_MemberPicker["MemberPicker.tsx"] --> frontend_src_components_MemberSearch
   frontend_src_components_MemberSearch_test["MemberSearch.test.tsx"] --> frontend_src_components_MemberSearch
+  frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_components_MemberSearch
 ```
 
 ## imports
 
+- [[graph/frontend/src/components/SearchList|SearchList.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
@@ -33,3 +36,4 @@ flowchart LR
 - [[graph/frontend/src/components/MemberPicker.test|MemberPicker.test.tsx]]
 - [[graph/frontend/src/components/MemberPicker|MemberPicker.tsx]]
 - [[graph/frontend/src/components/MemberSearch.test|MemberSearch.test.tsx]]
+- [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]

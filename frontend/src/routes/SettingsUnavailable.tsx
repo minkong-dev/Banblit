@@ -1,4 +1,4 @@
-// 관리자 메뉴의 불가능 일정 구역입니다. 전체 멤버가 등록한 불가능 일정을 한 표에서 봅니다.
+// 관리자 메뉴의 불가능 일정 구역입니다. 전체 멤버가 등록한 불가능 일정을 표 또는 캘린더(routes/UnavailableCalendar)로 봅니다.
 // "타 멤버 불가능 일정 조회"(unavailable_read) 권한자에게만 이 항목이 표시되고, 서버도 같은 권한으로
 // 거절합니다(backend/src/backend/services/unavailable/unavailable_service.py 의 _require_read).
 //
@@ -9,7 +9,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { Button, Empty, SearchInput } from "../components/controls";
+import { Button, Empty, IconButton, SearchInput } from "../components/controls";
+import { BulletListIcon, CalendarIcon } from "../components/icons";
 import { Card, SectionHead } from "../components/Layout";
 import { RejectDialog } from "../components/RejectDialog";
 import { useMe } from "../components/queries";
@@ -20,6 +21,7 @@ import { askDelete } from "../lib/confirm";
 import { clockEndLabel, dayWithWeekday, hhmm, loadAllUnavailable, rejectUnavailable, removeUnavailable } from "../lib/pipeline";
 import type { MemberUnavailable } from "../lib/contract";
 import { say } from "../lib/toast";
+import { UnavailableCalendar } from "./UnavailableCalendar";
 
 // 전체 목록의 queryKey 입니다. 앞머리가 달력의 불가능 일정 조회와 같은 "unavailable" 이라, 반려·삭제 뒤 둘 다 다시 조회합니다.
 const LIST_KEY = ["unavailable", "all"] as const;
@@ -44,6 +46,7 @@ export function UnavailableCards() {
   const [keyword, setKeyword] = useState("");
   // 반려 사유 modal 을 연 일정입니다. null 이면 modal 이 닫혀 있습니다.
   const [rejecting, setRejecting] = useState<MemberUnavailable | null>(null);
+  const [calendar, setCalendar] = useState(false);
 
   const list = useQuery({ queryKey: LIST_KEY, queryFn: loadAllUnavailable });
 
@@ -53,8 +56,14 @@ export function UnavailableCards() {
 
   return (
     <Card>
-      <SectionHead title="불가능 일정" desc="전체 멤버가 등록한 불가능 일정이에요." />
+      <SectionHead title="불가능 일정" desc="전체 멤버가 등록한 불가능 일정이에요.">
+        <div className="viewswitch" role="group" aria-label="보기 방식">
+          <IconButton label="캘린더로 보기" icon={<CalendarIcon />} pressed={calendar} onClick={() => setCalendar(true)} />
+          <IconButton label="목록으로 보기" icon={<BulletListIcon />} pressed={!calendar} onClick={() => setCalendar(false)} />
+        </div>
+      </SectionHead>
 
+      {calendar ? <UnavailableCalendar times={rows} /> : (
       <div className="roster">
         <label className="find" htmlFor="findMember">
           <span>멤버 이름</span>
@@ -74,6 +83,7 @@ export function UnavailableCards() {
           <Empty text={`${needle} 님이 등록한 불가능 일정이 없어요`} />
         ) : null}
       </div>
+      )}
 
       {rejecting === null ? null : (
         <RejectDialog

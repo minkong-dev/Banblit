@@ -4,16 +4,17 @@ import { useNavigate } from "react-router-dom";
 
 import { Card, Panel, Tabs } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
-import { Button, NavButton } from "../components/controls";
+import { Button } from "../components/controls";
+import { CalendarBar, useCalendarCursor } from "../components/CalendarBar";
 import { ClockIcon } from "../components/icons";
 import { getJSON } from "../lib/api";
 import { firstWhy } from "../lib/loading";
-import { currentMonth, monthRange, slotLabels, slotSteps, weekLabel } from "../lib/calendar";
+import { monthRange, slotLabels, slotSteps } from "../lib/calendar";
 import {
-  boardListKey, focusedRanges, inRanges, loadMyBookings, loadReservationRows, loadSchedule, loadUnavailable, roomBounds, slotCountOf, stampLabel, weekKeys,
+  boardListKey, focusedRanges, inRanges, loadMyBookings, loadReservationRows, loadSchedule, loadUnavailable, roomBounds, slotCountOf, stampLabel,
 } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
-import { MonthView, WeekView } from "./SchedulerViews";
+import { MonthView, WeekView } from "../components/CalendarViews";
 import {
   allBookedEntries, allOffEntries, assignedByDay, bookedByDay, ensembleByDay, ensembleOn, listNote, memberCountLabel, mergeByDay, offByDay, visibleDays,
 } from "../lib/dayEntries";
@@ -51,9 +52,8 @@ export function Scheduler() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [tab, setTab] = useState<DayTab>("me");
-  const [week, setWeek] = useState(false);
-  const [cursor, setCursor] = useState(currentMonth);
-  const [weekShift, setWeekShift] = useState(0);
+  const cursor = useCalendarCursor();
+  const { week, weekDayKeys } = cursor;
   const [from, setFrom] = useState<number | null>(null);
   const [to, setTo] = useState<number | null>(null);
   const [openDay, setOpenDay] = useState<string | null>(null);
@@ -67,7 +67,6 @@ export function Scheduler() {
   const month = monthRange(cursor.year, cursor.month);
   // 주 보기는 달을 벗어난 주로도 넘어갑니다. 그래서 예약은 달이 아니라 현재 보고 있는
   // 날짜 범위로 요청합니다. 범위가 queryKey 에 들어 있어 주를 옮기면 그 주의 예약을 다시 받습니다.
-  const weekDayKeys = weekKeys(cursor.year, cursor.month, weekShift);
   const rangeFrom = week ? weekDayKeys[0] : month.from;
   const rangeTo = week ? weekDayKeys[6] : month.to;
 
@@ -175,21 +174,8 @@ export function Scheduler() {
   const { label, endLabel } = slotLabels(open, close, slotCount);
   const range = from !== null && to !== null ? { from, to } : null;
 
-  const weekText = weekLabel(weekDayKeys);
-
   // 오른쪽 "내 팀" 은 소속된 팀 전부입니다. teams 는 배정 일정에 나온 팀만 담고 있어, 아직 일정이 없는 팀이 빠집니다.
   const myTeams = useMyTeams();
-  // 달력 위 화살표 하나가 두 가지를 이동합니다. 달 보기에서는 달을, 주 보기에서는 주를 이동합니다.
-  // 달을 이동하면 주는 그 달 15일이 포함된 주로 돌아갑니다(weekShift 를 0 으로 초기화합니다).
-  const shift = (step: number) => {
-    if (week) {
-      setWeekShift(weekShift + step);
-      return;
-    }
-    const moved = new Date(cursor.year, cursor.month + step, 1);
-    setCursor({ year: moved.getFullYear(), month: moved.getMonth() });
-    setWeekShift(0);
-  };
 
   const viewProps = { tab, teams, entriesOf, openHour: open, slotCount, slotMinutes };
 
@@ -218,15 +204,7 @@ export function Scheduler() {
       )}
 
       <Card>
-        <div className="calbar">
-          <NavButton dir="prev" className="navb" label={week ? "저번 주" : "저번 달"} onClick={() => shift(-1)} />
-          <span className="ml">{week ? weekText : `${cursor.year}년 ${cursor.month + 1}월`}</span>
-          <NavButton dir="next" className="navb" label={week ? "다음 주" : "다음 달"} onClick={() => shift(1)} />
-          <div className="seg" role="group" aria-label="레이아웃 변경">
-            <button aria-pressed={!week} onClick={() => setWeek(false)}>월</button>
-            <button aria-pressed={week} onClick={() => setWeek(true)}>주</button>
-          </div>
-        </div>
+        <CalendarBar cursor={cursor} />
 
         {tab === "book" && !week ? (
           <div className="timebar">

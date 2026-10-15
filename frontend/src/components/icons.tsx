@@ -100,6 +100,16 @@ export function ChevronRightIcon(props: IconProps) {
   return <Stroke width={2.4} {...props}><path d="M9 5l7 7-7 7" /></Stroke>;
 }
 
+/** 달력 아이콘입니다. */
+export function CalendarIcon(props: IconProps) {
+  return (
+    <Stroke width={1.9} {...props}>
+      <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" />
+    </Stroke>
+  );
+}
+
 export function ClockIcon(props: IconProps) {
   return (
     <Stroke width={2.2} {...props}>

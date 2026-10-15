@@ -1,6 +1,6 @@
 // 달력 하루에 표시할 항목(Entry)을 서버 자료에서 만드는 계산입니다. 화면이나 서버와 상호작용하지 않습니다.
 
-import { dayWithWeekday, hasWeekday, repeatLabel, weekdayIndex } from "./calendar";
+import { dayWithWeekday, hasWeekday, repeatLabel, shiftDay, weekdayIndex } from "./calendar";
 import { dayOf, mergeSessions, slotEndIndex, slotIndex } from "./slots";
 import { LOADING_TEXT } from "./loading";
 import type { Session } from "./slots";
@@ -37,6 +37,19 @@ export type Entry = {
 };
 
 export type DayEntries = Record<string, Entry[]>;
+
+/** 항목에 표시할 이름입니다. 불가능 일정은 일정 이름, 배정·예약은 팀 이름, 팀이 없으면 예약자 이름입니다. */
+export function entryName(entry: Entry, teams: DayTeam[]): string {
+  return entry.kind === "off"
+    ? entry.who ?? "불가능 일정"
+    : teams.find((team) => team.key === entry.team)?.name ?? entry.who ?? "개인";
+}
+
+/** 막대·항목의 색 class 입니다. 전체 합주는 팀이 아니라 전원의 일정이라 팀 색 대신 ens, 팀이 없는 항목은 off 입니다. */
+export function entryClass(entry: Entry): string {
+  if (entry.kind === "ensemble") return "ens";
+  return entry.team ?? "off";
+}
 
 /** 날짜별 항목 여러 벌을 한 벌로 합치고, 각 날짜의 목록을 시작 slot 번호(a) 순서로 정렬합니다.
  *  달력은 배정·전체 합주·불가능 일정·예약 네 가지를 한 칸에 함께 표시하고 칸마다 목록을 다시
@@ -192,7 +205,6 @@ export function allOffEntries(times: Unavailable[], openHour: number): Entry[] {
     }));
 }
 
-
 /** allOffEntries 의 항목 1줄에 적는 날짜입니다. "9월 14일 월요일" 이고, 반복 일정이면 " · 매주" 를 덧붙입니다.
  *  day 가 없는 항목(그날의 항목만 나열하는 목록)은 날짜를 적지 않으므로 빈 문자열입니다. */
 export function offWhenLabel(entry: Entry): string {
@@ -219,14 +231,6 @@ export function repeatDays(item: Unavailable, days: string[]): string[] {
     return afterLast === null || day < afterLast;
   });
 }
-
-/** day 에서 며칠 뒤(음수면 며칠 전)의 날짜 문자열입니다. "2026-09-14" 형식입니다. */
-function shiftDay(day: string, days: number): string {
-  const at = new Date(`${day}T12:00:00`);
-  at.setDate(at.getDate() + days);
-  return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
-}
-
 
 /** 현재 보고 있는 달에 표시할 수 있는 날짜 전부입니다. 앞뒤로 한 주씩 더 포함하는 것은 주 보기가
  *  달의 경계를 넘을 수 있어서입니다. 반복을 전개할 때만 사용하므로 범위가 넓어도 문제없습니다. */

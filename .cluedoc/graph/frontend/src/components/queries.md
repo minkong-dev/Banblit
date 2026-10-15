@@ -15,6 +15,7 @@ flowchart LR
   frontend_src_components_queries --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_components_queries --> frontend_src_lib_teamColors["teamColors.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_components_queries
+  frontend_src_components_TeamSearch["TeamSearch.tsx"] --> frontend_src_components_queries
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_components_queries
   frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_components_queries
   frontend_src_routes_Board["Board.tsx"] --> frontend_src_components_queries
@@ -31,6 +32,7 @@ flowchart LR
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_components_queries
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_components_queries
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_components_queries
+  frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_components_queries
 ```
 
 ## imports
@@ -43,6 +45,7 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
+- [[graph/frontend/src/components/TeamSearch|TeamSearch.tsx]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
 - [[graph/frontend/src/routes/Board|Board.tsx]]
@@ -59,3 +62,4 @@ flowchart LR
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]
+- [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]

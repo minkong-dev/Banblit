@@ -14,6 +14,8 @@ flowchart LR
   frontend_src_lib_roster --> frontend_src_lib_teamColors["teamColors.ts"]
   frontend_src_lib_roster --> frontend_src_lib_validate["validate.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_roster
+  frontend_src_components_CalendarViews["CalendarViews.tsx"] --> frontend_src_lib_roster
+  frontend_src_components_TeamSearch["TeamSearch.tsx"] --> frontend_src_lib_roster
   frontend_src_lib_assignment["assignment.ts"] --> frontend_src_lib_roster
   frontend_src_lib_dayEntries_test["dayEntries.test.ts"] --> frontend_src_lib_roster
   frontend_src_lib_dayEntries["dayEntries.ts"] --> frontend_src_lib_roster
@@ -23,7 +25,6 @@ flowchart LR
   frontend_src_routes_DayDialogParts["DayDialogParts.tsx"] --> frontend_src_lib_roster
   frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_lib_roster
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_lib_roster
-  frontend_src_routes_SchedulerViews["SchedulerViews.tsx"] --> frontend_src_lib_roster
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_lib_roster
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_lib_roster
 ```
@@ -37,6 +38,8 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
+- [[graph/frontend/src/components/CalendarViews|CalendarViews.tsx]]
+- [[graph/frontend/src/components/TeamSearch|TeamSearch.tsx]]
 - [[graph/frontend/src/lib/assignment|assignment.ts]]
 - [[graph/frontend/src/lib/dayEntries.test|dayEntries.test.ts]]
 - [[graph/frontend/src/lib/dayEntries|dayEntries.ts]]
@@ -46,6 +49,5 @@ flowchart LR
 - [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]
 - [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
-- [[graph/frontend/src/routes/SchedulerViews|SchedulerViews.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]

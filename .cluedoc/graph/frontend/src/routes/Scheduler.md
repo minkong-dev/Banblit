@@ -10,6 +10,8 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_routes_Scheduler["Scheduler.tsx"]
+  frontend_src_routes_Scheduler --> frontend_src_components_CalendarBar["CalendarBar.tsx"]
+  frontend_src_routes_Scheduler --> frontend_src_components_CalendarViews["CalendarViews.tsx"]
   frontend_src_routes_Scheduler --> frontend_src_components_Dropdown["Dropdown.tsx"]
   frontend_src_routes_Scheduler --> frontend_src_components_Layout["Layout.tsx"]
   frontend_src_routes_Scheduler --> frontend_src_components_controls["controls.tsx"]
@@ -24,12 +26,13 @@ flowchart LR
   frontend_src_routes_Scheduler --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_routes_Scheduler --> frontend_src_lib_roster["roster.ts"]
   frontend_src_routes_Scheduler --> frontend_src_routes_DayDialog["DayDialog.tsx"]
-  frontend_src_routes_Scheduler --> frontend_src_routes_SchedulerViews["SchedulerViews.tsx"]
   frontend_src_App["App.tsx"] --> frontend_src_routes_Scheduler
 ```
 
 ## imports
 
+- [[graph/frontend/src/components/CalendarBar|CalendarBar.tsx]]
+- [[graph/frontend/src/components/CalendarViews|CalendarViews.tsx]]
 - [[graph/frontend/src/components/Dropdown|Dropdown.tsx]]
 - [[graph/frontend/src/components/Layout|Layout.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
@@ -44,7 +47,6 @@ flowchart LR
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/roster|roster.ts]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
-- [[graph/frontend/src/routes/SchedulerViews|SchedulerViews.tsx]]
 
 ## imported by
 

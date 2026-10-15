@@ -1,5 +1,5 @@
-// 이름으로 멤버를 검색합니다. 팀 생성 화면과 permission set(권한 집합) 편집 화면이 같은 컴포넌트를 사용합니다.
-// Modal 이 제목과 아래 버튼 줄을 렌더하고, 이 컴포넌트는 입력 칸과 검색 결과 목록만 렌더합니다.
+// 이름으로 멤버를 검색합니다. 팀 생성 화면, permission set(권한 집합) 편집 화면, 불가능 일정 화면이 같은 컴포넌트를 사용합니다.
+// Modal 이 제목과 아래 버튼 줄을 렌더하고, 이 컴포넌트는 서버 조회 결과를 SearchList 에 전달합니다.
 //
 // 검색어가 비어 있으면 명단 전체를 이름 순으로 표시합니다. 누가 있는지 보이지 않으면 찾으려는 사람의
 // 이름을 한 글자씩 넣어 보는 수밖에 없기 때문입니다. 목록은 modal 본문이 스크롤합니다.
@@ -11,7 +11,8 @@ import { getJSON } from "../lib/api";
 import { memberLabel, noMembersMessage } from "../lib/pipeline";
 import { loadState } from "../lib/loading";
 import type { Member } from "../lib/contract";
-import { Empty, SearchInput } from "./controls";
+import { Empty } from "./controls";
+import { SearchList } from "./SearchList";
 
 export function MemberSearch(props: {
   onPick: (member: Member) => void;
@@ -31,39 +32,19 @@ export function MemberSearch(props: {
     placeholderData: keepPreviousData,
   });
   const skip = new Set(exclude ?? []);
-  const members = (found.data?.members ?? []).filter((member) => !skip.has(member.id));
-
-  let body;
-  if (!found.isSuccess || members.length === 0) {
-    body = <Empty state={loadState(found)} text={noMembersMessage(query)} />;
-  } else {
-    body = (
-      <ul className="found">
-        {members.map((member) => (
-          <li key={member.id}>
-            <button onClick={() => onPick(member)}>
-              {memberLabel(member.name, member.cohort)}
-            </button>
-          </li>
-        ))}
-      </ul>
-    );
-  }
+  const members = found.isSuccess ? found.data.members.filter((member) => !skip.has(member.id)) : [];
 
   return (
-    <div className="seek">
-      {/* 목록이 길어 본문이 스크롤해도 입력 칸은 제자리에 남습니다(shell.css 의 .seekbar). */}
-      <div className="seekbar">
-        <SearchInput
-          // eslint-disable-next-line jsx-a11y/no-autofocus -- 검색 컴포넌트가 열릴 때 검색어 입력칸으로 초점을 이동합니다. 페이지 최초 로드가 아닙니다.
-          autoFocus
-          label="검색어"
-          value={text}
-          placeholder="이름을 입력해주세요"
-          onChange={setText}
-        />
-      </div>
-      {body}
-    </div>
+    <SearchList
+      text={text}
+      onText={setText}
+      placeholder="이름을 입력해주세요"
+      items={members.map((member) => ({ id: member.id, label: memberLabel(member.name, member.cohort) }))}
+      empty={<Empty state={loadState(found)} text={noMembersMessage(query)} />}
+      onPick={(id) => {
+        const member = members.find((item) => item.id === id);
+        if (member !== undefined) onPick(member);
+      }}
+    />
   );
 }

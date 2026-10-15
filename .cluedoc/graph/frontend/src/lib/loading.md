@@ -21,6 +21,7 @@ flowchart LR
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_lib_loading
   frontend_src_components_PostWriteForm["PostWriteForm.tsx"] --> frontend_src_lib_loading
   frontend_src_components_RejectDialog["RejectDialog.tsx"] --> frontend_src_lib_loading
+  frontend_src_components_TeamSearch["TeamSearch.tsx"] --> frontend_src_lib_loading
   frontend_src_components_controls["controls.tsx"] --> frontend_src_lib_loading
   frontend_src_components_queries["queries.ts"] --> frontend_src_lib_loading
   frontend_src_lib_dayEntries["dayEntries.ts"] --> frontend_src_lib_loading
@@ -38,6 +39,7 @@ flowchart LR
   frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_lib_loading
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_lib_loading
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_lib_loading
+  frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_lib_loading
 ```
 
 ## imports
@@ -56,6 +58,7 @@ flowchart LR
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
 - [[graph/frontend/src/components/PostWriteForm|PostWriteForm.tsx]]
 - [[graph/frontend/src/components/RejectDialog|RejectDialog.tsx]]
+- [[graph/frontend/src/components/TeamSearch|TeamSearch.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/lib/dayEntries|dayEntries.ts]]
@@ -73,3 +76,4 @@ flowchart LR
 - [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]
+- [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]

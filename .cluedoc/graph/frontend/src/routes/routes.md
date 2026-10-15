@@ -18,7 +18,6 @@ kind: directory
 - [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
-- [[graph/frontend/src/routes/SchedulerViews|SchedulerViews.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]
 - [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]
@@ -29,3 +28,4 @@ kind: directory
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]
+- [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]

@@ -22,6 +22,7 @@ flowchart LR
   frontend_src_lib_pipeline --> frontend_src_lib_validate["validate.ts"]
   frontend_src_App["App.tsx"] --> frontend_src_lib_pipeline
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_pipeline
+  frontend_src_components_CalendarViews["CalendarViews.tsx"] --> frontend_src_lib_pipeline
   frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_lib_pipeline
   frontend_src_components_NotificationMenu["NotificationMenu.tsx"] --> frontend_src_lib_pipeline
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_lib_pipeline
@@ -39,7 +40,6 @@ flowchart LR
   frontend_src_routes_PostWrite["PostWrite.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_lib_pipeline
-  frontend_src_routes_SchedulerViews["SchedulerViews.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"] --> frontend_src_lib_pipeline
@@ -49,6 +49,7 @@ flowchart LR
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_lib_pipeline
+  frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_lib_pipeline
 ```
 
 ## imports
@@ -68,6 +69,7 @@ flowchart LR
 
 - [[graph/frontend/src/App|App.tsx]]
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
+- [[graph/frontend/src/components/CalendarViews|CalendarViews.tsx]]
 - [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
 - [[graph/frontend/src/components/NotificationMenu|NotificationMenu.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
@@ -85,7 +87,6 @@ flowchart LR
 - [[graph/frontend/src/routes/PostWrite|PostWrite.tsx]]
 - [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
-- [[graph/frontend/src/routes/SchedulerViews|SchedulerViews.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]
 - [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]
@@ -95,3 +96,4 @@ flowchart LR
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]
+- [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]
