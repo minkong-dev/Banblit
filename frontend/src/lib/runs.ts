@@ -2,6 +2,9 @@
 // 검증하는 함수입니다. 서버를 호출하지 않는 순수 계산만 둡니다.
 // 배정기록에 붙는 날짜·시각 표기는 lib/calendar의 stampLabel이 담당합니다.
 
+import { dayLabel } from "./calendar";
+import type { RecordScore } from "./contract";
+
 /** 그 배정기록이 몇 칸을 포함했는지 표시합니다. */
 export function slotCountLabel(count: number): string {
   return count === 0 ? "빈 배정기록" : `${count}건`;
@@ -14,4 +17,15 @@ export function checkRunTimes(first: string, second: string): string {
   // 같은 시각을 두 번 지정하면 하루 두 번이 아니라 한 번이 됩니다.
   if (first === second) return "1차와 2차 스케줄링 시간은 같을 수 없어요.";
   return "";
+}
+
+/** 기록의 점수를 우선순위 순서로 적습니다. 앞 항목이 우선하고, 불참만 적을수록 좋습니다. 점수가 없으면 빈 문자열입니다. */
+export function scoreLabel(score: RecordScore | null): string {
+  if (score === null) return "";
+  return `팀 최소 ${score.fewest}회 · 전체 ${score.sessions}회 · 불참 ${score.absences}회 · 연속 ${score.joined}쌍`;
+}
+
+/** 한 번이라도 확정한 기록에 "10월 15일 확정" 을 붙입니다. 확정한 적 없으면 빈 문자열입니다. */
+export function appliedLabel(appliedAt: string | null): string {
+  return appliedAt === null ? "" : `${dayLabel(appliedAt)} 확정`;
 }

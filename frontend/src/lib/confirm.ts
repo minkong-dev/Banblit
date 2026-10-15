@@ -46,3 +46,8 @@ export function askBlind(): boolean {
 export function askDeletePost(): boolean {
   return window.confirm("해당 글과 첨부된 파일을 모두 삭제할까요?");
 }
+
+/** 스케줄링 기록을 현재 배정안으로 확정하기 전에 한 번 묻습니다. 확인하면 점수와 관계없이 적용합니다(사용자 결정 2026-10-15). */
+export function askApplyRecord(): boolean {
+  return window.confirm("이 배정안으로 확정할까요?");
+}

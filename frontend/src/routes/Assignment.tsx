@@ -6,6 +6,7 @@ import { Card, Tabs } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
 import { getJSON, reason } from "../lib/api";
 import { say } from "../lib/toast";
+import { askApplyRecord } from "../lib/confirm";
 import { applyRecord, loadScheduleOut, runAssignment, SCHEDULE_KEY } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
 import { backupRoundKey, backupRoundsKey, backupsKey, useMe, usePeriods, useRooms, useTeams } from "../components/queries";
@@ -187,7 +188,7 @@ export function Assignment() {
               canRun={canRun}
               canConfirm={canConfirm}
               confirmPending={confirm.isPending}
-              onConfirm={() => confirm.mutate()}
+              onConfirm={() => { if (askApplyRecord()) confirm.mutate(); }}
               onBack={() => setView(NOW)}
               actions={actions}
             />

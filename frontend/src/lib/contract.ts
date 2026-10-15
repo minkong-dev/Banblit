@@ -73,7 +73,14 @@ export type Backup = {
   /** "2026-09-07T18:03:00" */
   saved_at: string;
   slot_count: number;
+  /** 마지막으로 확정한 시각입니다. 확정한 적 없으면 null 입니다. */
+  applied_at: string | null;
+  /** 조회 시점의 불가능 일정으로 매긴 점수입니다. 집중 합주기간이 아니면 null 입니다. */
+  score: RecordScore | null;
 };
+
+/** 기록 하나의 점수입니다. 서버 쪽은 backend/src/backend/services/period/period_service.py 의 RecordScore 를 기준으로 합니다. */
+export type RecordScore = { fewest: number; sessions: number; absences: number; joined: number };
 
 /** 팀이 가질 수 있는 포지션 종류입니다. 서버 쪽은 backend/src/backend/db/models.py 의 Instrument 에 작성되어 있는 내용을 기준으로 합니다 */
 export type Instrument = "보컬" | "일렉" | "통기타" | "베이스" | "신디" | "드럼";
