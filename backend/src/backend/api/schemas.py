@@ -57,7 +57,7 @@ class ScheduleRowOut(BaseModel):
 
 class ScheduleOut(BaseModel):
     # open_slots 는 어느 팀도 배정받지 않은 slot(점유 단위 길이의 시간 칸)입니다. 예약 대상이 아닙니다 —
-    # 이 slot 은 집중 합주기간 안에 있고, 그 기간의 예약은 services/reservation_service.py 가 전부
+    # 이 slot 은 집중 합주기간 안에 있고, 그 기간의 예약은 services/reservation/reservation_service.py 가 전부
     # 거절합니다. 어느 자리가 비었는지를 알리는 값이며 지금은 화면이 사용하지 않습니다.
     rows: list[ScheduleRowOut]
     open_slots: list[RoomSlotOut]
@@ -638,7 +638,7 @@ class SettingsUpdateIn(BaseModel):
     # 한 시간을 남김없이 나누는 값만 받습니다. DB 의 CHECK 와 같은 조건을 경계에서도 봅니다.
     # 허용 값은 contract.py 의 SlotMinutes 에 작성되어 있는 내용을 기준으로 합니다.
     slot_minutes: SlotMinutes | None = None
-    # 칸의 배수인지는 저장된 칸 크기를 함께 봐야 알 수 있어 services/settings_service.py 가 판정합니다.
+    # 칸의 배수인지는 저장된 칸 크기를 함께 봐야 알 수 있어 services/settings/settings_service.py 가 판정합니다.
     # 여기서는 값 하나만으로 판정할 수 있는 범위만 봅니다.
     session_minutes: int | None = Field(default=None, ge=1, le=MAX_SESSION_MINUTES)
     # 허용 값은 contract.py 의 DailyMaxHours 에 작성되어 있는 내용을 기준으로 합니다.

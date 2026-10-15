@@ -280,7 +280,7 @@ class UnavailableTime(Base):
 
     반복은 repeat_weekdays 하나로 저장합니다. 어느 요일에 반복할지를 담고, 매일 반복은 일곱 요일을
     전부 고른 것과 같습니다. 끝나는 조건은 repeat_count(횟수)나 repeat_until(종료일) 중 하나이고,
-    둘 다 지정하면 경계에서 거부합니다(services/input.py 의 require_repeat_end).
+    둘 다 지정하면 경계에서 거부합니다(services/validation/input.py 의 require_repeat_end).
 
     reason 은 사용자가 입력하는 사유입니다. 엔진은 사용하지 않고 화면에만 표시합니다. null 을 허용합니다.
     name 은 캘린더에 표시할 이름입니다. 비어 있으면 화면이 "불가능 일정"으로 표시합니다.
@@ -297,7 +297,7 @@ class UnavailableTime(Base):
     # 반복할 요일의 집합입니다. 월요일이 1, 화요일이 2, 수요일이 4 … 일요일이 64 이고 더해서 저장합니다.
     # date.weekday() 와 같은 순서입니다. null 이거나 0 이면 반복하지 않습니다. 일곱 요일 전부(127)가 매일 반복입니다.
     repeat_weekdays: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
-    # 반복 횟수입니다. 시작 회차를 포함해 셉니다. repeat_until 과 동시에 지정할 수 없습니다(services/input.py).
+    # 반복 횟수입니다. 시작 회차를 포함해 셉니다. repeat_until 과 동시에 지정할 수 없습니다(services/validation/input.py).
     repeat_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     repeat_until: Mapped[date | None] = mapped_column(Date, nullable=True)
     reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -673,7 +673,7 @@ class Notification(Base):
     """멤버 1명에게 표시하는 화면 알림 하나입니다.
 
     읽음 처리는 행을 삭제합니다. 읽음 표시만 남기면 삭제되는 경로가 없어 행이 쌓이기만 합니다
-    (services/notification_service.py 의 mark_all_read). 그래서 읽음 여부 열을 두지 않습니다.
+    (services/notification/notification_service.py 의 mark_all_read). 그래서 읽음 여부 열을 두지 않습니다.
     """
 
     __tablename__ = "notifications"

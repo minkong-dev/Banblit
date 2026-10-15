@@ -16,7 +16,7 @@ from backend.services.reservation.pipeline import cancel_reservations_in_focus
 from backend.db.pipeline import commit_translating
 
 # 위반될 수 있는 제약과 그때 표시할 문장입니다. 제약 이름은 migration b5e1d9a37c42·d9a4c6e1f207 이 지정했습니다.
-# 전체 합주 설정(services/ensemble_service.py)도 이 문장을 씁니다.
+# 전체 합주 설정(services/period/ensemble_service.py)도 이 문장을 씁니다.
 PERIOD_MESSAGES = {
     "periods_focused_no_overlap": (
         "다른 집중 합주기간과 날짜가 겹칩니다. \"매일\" 기간은 종료일 없이 계속되는 것으로 봅니다"

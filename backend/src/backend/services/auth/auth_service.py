@@ -20,9 +20,7 @@ from backend.services.permission.pipeline import grant_full_permissions
 from backend.db.models import Member
 from backend.db.pipeline import commit_translating
 
-# scrypt 는 표준 라이브러리(hashlib)가 제공하는 메모리-하드 KDF(Key Derivation Function)입니다. bcrypt·argon2용
-# 추가 패키지를 설치하지 않고도 비밀번호를 안전하게 저장할 수 있으므로 scrypt 를 사용합니다.
-# 매개변수는 OWASP 권고 최솟값(N=2^14, r=8, p=1)을 따릅니다.
+# hashlib 의 scrypt(메모리를 많이 쓰게 해 대입 공격을 느리게 하는 KDF, Key Derivation Function) 매개변수입니다. OWASP 권고 최솟값입니다.
 _SCRYPT_N = 2**14
 _SCRYPT_R = 8
 _SCRYPT_P = 1
@@ -103,7 +101,7 @@ def signup(
 ) -> Member:
     """새 계정을 만듭니다. 이름 중복은 허용합니다. 이메일·아이디가 같거나 이름·학과·학번·기수가 모두 같은 계정이 있으면 거부합니다.
 
-    cohort 를 받는 이유는 동명이인 때문입니다. 화면에서 두 사람을 구분하는 유일한 값이 이름 옆의 기수이므로, 가입 시 입력받지 않으면 나중에 채울 수 없습니다.
+    cohort(기수)는 화면이 동명이인을 구분하는 값입니다.
 
     admin_code 가 환경변수의 코드와 같으면 권한 항목이 모두 활성화된 permission set 을 부여합니다.
     넣지 않았거나 다르면 권한 0개로 가입하고, 이미 권한을 가진 사람에게서 부여받습니다.

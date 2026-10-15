@@ -29,11 +29,7 @@ ROSTER_MESSAGES = {
 }
 
 def list_teams(session: Session) -> list[tuple[Team, int, int]]:
-    """팀을 id 오름차순으로, 각 팀의 (전체 포지션 수, 멤버가 배정된 포지션 수)와 함께 반환합니다.
-
-    두 수를 함께 제공하는 것은 화면이 "6개 중 4명"처럼 표시하기 때문입니다. 배정된 멤버 수만
-    제공하면 화면이 비어 있는 포지션 개수를 알 수 없습니다.
-    """
+    """팀을 id 오름차순으로, 각 팀의 (전체 포지션 수, 멤버가 배정된 포지션 수)와 함께 반환합니다."""
     rows = session.execute(
         select(
             TeamSlot.team_id,
@@ -194,15 +190,10 @@ def _require_known_color(color: str) -> str:
 def create_team(
     session: Session, name: str, counts: dict[str, int], max_slots: int, color: str | None = None
 ) -> Team:
-    """팀을 생성하면서 포지션 자리를 함께 생성합니다.
+    """팀과 포지션 자리를 한 번에 생성합니다.
 
-    포지션을 나중에 따로 생성하지 않는 것은, 포지션 없는 팀이 잠깐이라도 저장되면 그 팀이
-    배정 계산에서 "멤버가 없는 팀"으로 취급되기 때문입니다. 팀과 포지션은 한 번에 저장됩니다.
-
-    color 가 None 이면 색을 넣지 않고 INSERT 해 DB 트리거가 남은 첫 색을 채우게 합니다. 남은 색이 없으면
-    트리거가 teams_color_exhausted 로, 다른 팀이 쓰는 색을 선택하면 unique 제약(teams_color_key)이 거절하고,
-    두 거절 모두 ROSTER_MESSAGES 가 문장으로 변경합니다. 저장 전에 남은 색을 세지 않는 것은, 동시에 들어온
-    두 요청이 둘 다 통과하기 때문입니다.
+    color 가 None 이면 DB 트리거가 남은 첫 색을 채웁니다. 남은 색이 없으면 teams_color_exhausted, 다른 팀이 쓰는 색이면
+    unique 제약(teams_color_key)이 거절하고, ROSTER_MESSAGES 가 두 거절을 문장으로 변경합니다.
     """
     clean_name = require_non_empty(name, "팀 이름")
     checked = require_slot_counts(counts, max_slots)

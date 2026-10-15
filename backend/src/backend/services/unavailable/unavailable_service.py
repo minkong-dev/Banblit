@@ -50,8 +50,7 @@ def list_unavailable(
 def list_all_unavailable(session: Session) -> list[tuple[UnavailableTime, str]]:
     """등록된 불가능 일정 전부를 (행, 멤버 이름) 으로 시작시간 순으로 반환합니다.
 
-    권한은 호출하는 endpoint 가 검증합니다. 멤버마다 따로 조회하지 않고 한 번에 가져오는 이유는,
-    이 목록을 쓰는 화면이 멤버 전체를 한 표에 표시하기 때문입니다 — 멤버 수만큼 요청이 늘지 않습니다.
+    권한은 호출하는 endpoint 가 검증합니다.
     """
     rows = session.execute(
         select(UnavailableTime, Member.name)

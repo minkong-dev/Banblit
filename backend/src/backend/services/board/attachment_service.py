@@ -54,8 +54,7 @@ def save_attachment(
     """
     # 댓글에 넣은 사진도 그 글의 attachment 로 올라가므로, 업로드 조건을 댓글 작성과 같은
     # require_post_readable 로 둡니다. 글쓴이만 허용하면 댓글은 쓸 수 있는데 사진은 넣을 수 없습니다.
-    # board_moderate 를 통로로 쓰지 않는 이유는 그 권한자가 팀 소속을 확인받지 않아, 허용하면
-    # 어느 팀의 어느 글에도 붙일 수 있기 때문입니다.
+    # board_moderate 권한은 팀 소속을 확인하지 않으므로 업로드 조건에 넣지 않습니다. 넣으면 어느 팀의 글에도 첨부할 수 있습니다.
     post = require_post_readable(session, post_id, requester)
     name = display_name(filename)
     extension = _allowed_extension(name, allowed_extensions)
@@ -65,7 +64,7 @@ def save_attachment(
     stored_name = f"{secrets.token_hex(16)}.{extension}"
     # 합계를 조회하기 전에 그 글의 행을 잠급니다. 잠그지 않으면 같은 글에 동시에 들어온 업로드 2건이
     # 서로의 commit 전 합계를 읽어, 2건 모두 max_post_bytes 만큼 저장합니다. 같은 방식의 잠금을
-    # reservation_service.py 의 _owned_reservation 이 사용합니다.
+    # reservation_service.py 의 _get_own_reservation 이 사용합니다.
     session.scalars(select(Post).where(Post.id == post.id).with_for_update()).one()
     remaining = max_post_bytes - _used_bytes(session, post.id)
     size = write_stream(stream, stored_path(stored_name), remaining, "이 글의 첨부 파일 크기 합계가 상한을 초과했습니다")

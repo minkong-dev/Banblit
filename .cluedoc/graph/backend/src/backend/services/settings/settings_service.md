@@ -13,6 +13,7 @@ flowchart LR
   backend_src_backend_services_settings_settings_service --> backend_src_backend_contract["contract.py"]
   backend_src_backend_services_settings_settings_service --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_settings_pipeline["pipeline.py"] --> backend_src_backend_services_settings_settings_service
+  backend_tests_unit_test_settings_rules["test_settings_rules.py"] --> backend_src_backend_services_settings_settings_service
 ```
 
 ## imports
@@ -23,6 +24,7 @@ flowchart LR
 ## imported by
 
 - [[graph/backend/src/backend/services/settings/pipeline|pipeline.py]]
+- [[graph/backend/tests/unit/test_settings_rules|test_settings_rules.py]]
 
 ## 함수와 호출
 
