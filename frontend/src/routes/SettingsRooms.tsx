@@ -8,14 +8,13 @@ import type { RefObject } from "react";
 import { Card, SectionHead } from "../components/Layout";
 import { useReturnFocus } from "../components/hooks";
 import { Modal } from "../components/Modal";
-import { useSlotMinutes } from "../components/queries";
-import { getJSON, reason } from "../lib/api";
+import { useRemoveRow, useSlotMinutes } from "../components/queries";
+import { getJSON } from "../lib/api";
 import { askDeleteRoom } from "../lib/confirm";
 import type { Room, RoomInput } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
-import { checkRoom, openingHours } from "../lib/pipeline";
-import { say } from "../components/toast";
+import { checkRoom, openingHours, removeRoom } from "../lib/pipeline";
 import { Button, Cell, Empty, FormFoot, TimeRange } from "../components/controls";
 import { Row, useFirstField, useForm } from "./SettingsForm";
 import { clockEndLabel } from "../lib/calendar";
@@ -65,12 +64,7 @@ export function RoomCard(props: {
   const slotMinutes = useSlotMinutes();
   const { openId: editing, open, close, register } = useReturnFocus();
   const [making, setMaking] = useState(false);
-  // 합주실을 삭제하면 서버가 그 합주실의 예약·배정 결과·스케줄링 기록을 함께 삭제합니다(외래 키 CASCADE).
-  const drop = useMutation({
-    mutationFn: (id: number) => getJSON(`/rooms/${id}`, { method: "DELETE" }),
-    onSuccess: onDeleted,
-    onError: (error) => say(reason(error)),
-  });
+  const drop = useRemoveRow(removeRoom, onDeleted);
 
   return (
     <Card>
@@ -109,12 +103,8 @@ export function RoomCard(props: {
                 buttonRef={canEdit ? register(room.id) : undefined}
                 onEdit={canEdit ? () => open(room.id) : undefined}
                 deleteLabel={canDelete ? `${room.name} 삭제` : undefined}
-                // 삭제 요청이 진행 중이면 다시 누른 것을 무시합니다. 연속으로 누르면 같은 DELETE 가 여러 번 전송됩니다.
                 onDelete={canDelete
-                  ? () => {
-                    if (drop.isPending) return;
-                    if (askDeleteRoom()) drop.mutate(room.id);
-                  }
+                  ? () => drop(room.id, askDeleteRoom)
                   : undefined}
               />
             ),

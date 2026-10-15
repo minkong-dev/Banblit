@@ -1,17 +1,18 @@
 // 여러 화면에서 공유하는 서버 조회 훅입니다. DOM·화면 상태 훅은 hooks.ts 에 있습니다.
 
 import { useMemo } from "react";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 
-import { fetchMe, loadTeamMembers } from "../lib/pipeline";
-import type { Member } from "../lib/contract";
+import { fetchMe, loadTeamMembers, loadTeamSlots } from "../lib/pipeline";
+import type { Member, TeamSlot } from "../lib/contract";
 import { loadState, stillUnresolved } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { teamColorKey } from "../lib/teamColors";
 import { DEFAULT_SETTINGS } from "../lib/contract";
 import type { Account, Period, Room, Settings, Team } from "../lib/contract";
-import { getJSON } from "../lib/api";
+import { getJSON, reason } from "../lib/api";
+import { say } from "./toast";
 import { myTeamIds } from "../lib/roster";
 
 // ===== queryKey =====
@@ -35,6 +36,10 @@ export const teamMembersKey = (teamId: number) => [...TEAM_MEMBERS_KEY, teamId] 
 /** 팀 명단 조회 1개입니다. useQuery 와 useQueries 의 queries 에 그대로 넣습니다. */
 export function teamMembersQuery(teamId: number): { queryKey: readonly ["members", number]; queryFn: () => Promise<Member[]> } {
   return { queryKey: teamMembersKey(teamId), queryFn: () => loadTeamMembers(teamId) };
+}
+/** 팀 1개의 포지션 자리 조회입니다. 포지션 구성 창과 팀 수정 창이 같은 cache 를 씁니다. */
+export function teamSlotsQuery(teamId: number): { queryKey: readonly ["slots", number]; queryFn: () => Promise<TeamSlot[]> } {
+  return { queryKey: teamSlotsKey(teamId), queryFn: () => loadTeamSlots(teamId) };
 }
 
 // routes/Assignment.tsx 는 ["schedule", activePeriodId](숫자 하나)를, routes/Scheduler.tsx 는
@@ -178,3 +183,15 @@ export const backupsKey = (periodId: number | null) => ["backups", periodId] as 
 export const backupRoundsKey = (periodId: number | null) => ["backup-round", periodId] as const;
 export const backupRoundKey = (periodId: number | null, savedAt: string | null) =>
   [...backupRoundsKey(periodId), savedAt] as const;
+
+/** 목록의 행 1개를 삭제하는 요청입니다. 반환한 함수에 id 와 확인 함수(ask)를 넣으면 ask 가 true 일 때 삭제합니다.
+ *  성공하면 onDone 을 부르고, 실패하면 사유를 toast 로 알립니다. 삭제 요청이 진행 중이면 ask 를 부르지 않고 무시합니다. */
+export function useRemoveRow(
+  remove: (id: number) => Promise<void>, onDone: () => void,
+): (id: number, ask: () => boolean) => void {
+  const drop = useMutation({ mutationFn: remove, onSuccess: onDone, onError: (error) => say(reason(error)) });
+  return (id, ask) => {
+    if (drop.isPending) return;
+    if (ask()) drop.mutate(id);
+  };
+}

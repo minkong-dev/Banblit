@@ -152,15 +152,27 @@ function DayPanes({ dayName, hint, onClose, timeline, form, footer, list }: {
   );
 }
 
-/** 내 일정 탭의 하루 창입니다. 불가능 일정을 등록하거나, 오른쪽 목록에서 고른 일정을 수정합니다. 창은 닫지 않고 이어서 등록할 수 있습니다. */
-export function OffDialog(props: EditProps & {
-  /** 로그인한 사용자가 등록한 불가능 일정 전부입니다(lib/dayEntries 의 allOffEntries). 선택한 날짜의 항목만이 아닙니다. */
-  myOff: Entry[];
-}) {
-  const { dayKey, teams, entries, openHour, slotCount, ensemble, canEditEnsemble, rooms, myOff, onSaved, onClose } = props;
-  const day = useDayForm(props);
+/** 불가능 일정 form 의 입력값과 등록, 수정, 수정 취소입니다. editing 이 null 이면 새로 등록하고, 번호면 그 일정을 덮어씁니다. */
+type OffForm = {
+  repeat: Repeat;
+  setRepeat: (next: Repeat) => void;
+  /** 수정 중인 불가능 일정의 번호입니다. null 이면 새로 등록하는 중입니다. */
+  editing: number | null;
+  offName: string;
+  setOffName: (next: string) => void;
+  offReason: string;
+  setOffReason: (next: string) => void;
+  range: SlotRange | null;
+  setRange: (next: SlotRange | null) => void;
+  /** 등록할 구간입니다. range 가 null 이면 그날 전부입니다. */
+  picked: SlotRange;
+  resetForm: () => void;
+  startEdit: (entry: Entry) => void;
+  addOff: () => Promise<void>;
+};
+
+function useOffForm(dayKey: string, openHour: number, slotCount: number, day: DayForm, onSaved: () => void): OffForm {
   const [repeat, setRepeat] = useState<Repeat>(NO_REPEAT);
-  // 수정 중인 불가능 일정의 번호입니다. null 이면 새로 등록하는 중입니다.
   const [editing, setEditing] = useState<number | null>(null);
   const [offName, setOffName] = useState("");
   const [offReason, setOffReason] = useState("");
@@ -211,6 +223,19 @@ export function OffDialog(props: EditProps & {
     say(edited ? "불가능 일정을 수정했어요" : "불가능 일정을 등록했어요");
   };
 
+  return { repeat, setRepeat, editing, offName, setOffName, offReason, setOffReason, range, setRange, picked, resetForm, startEdit, addOff };
+}
+
+/** 내 일정 탭의 하루 창입니다. 불가능 일정을 등록하거나, 오른쪽 목록에서 고른 일정을 수정합니다. 창은 닫지 않고 이어서 등록할 수 있습니다. */
+export function OffDialog(props: EditProps & {
+  /** 로그인한 사용자가 등록한 불가능 일정 전부입니다(lib/dayEntries 의 allOffEntries). 선택한 날짜의 항목만이 아닙니다. */
+  myOff: Entry[];
+}) {
+  const { dayKey, teams, entries, openHour, slotCount, ensemble, canEditEnsemble, rooms, myOff, onSaved, onClose } = props;
+  const day = useDayForm(props);
+  const { repeat, setRepeat, editing, offName, setOffName, offReason, setOffReason, range, setRange, picked, resetForm, startEdit, addOff }
+    = useOffForm(dayKey, openHour, slotCount, day, onSaved);
+
   return (
     <DayPanes
       dayName={day.dayName}
@@ -259,16 +284,23 @@ export function OffDialog(props: EditProps & {
   );
 }
 
-/** 예약 탭의 하루 창입니다. 합주실과 시간을 골라 예약합니다. 위쪽 시간 선택으로 연 경우(fixed)에는 예약한 뒤 창을 닫습니다. */
-export function BookDialog(props: EditProps & {
-  /** 로그인한 사용자가 잡은 예약 중 아직 끝나지 않은 것 전부입니다(lib/dayEntries 의 allBookedEntries). 선택한 날짜의 항목만이 아닙니다. */
-  myBookings: Entry[];
-  /** 위쪽 시간 선택에서 이미 시간을 지정했으면 그 시간으로 바로 예약합니다. */
-  fixed: { from: number; to: number } | null;
-  myName: string;
-}) {
-  const { dayKey, teams, openHour, slotCount, ensemble, canEditEnsemble, rooms, myBookings, fixed, myName, onSaved, onClose } = props;
-  const day = useDayForm(props);
+/** 예약 form 의 입력값과 예약 요청입니다. 선택한 합주실에서 이미 찬 칸(grid)은 서버를 호출하기 전에 거절합니다. */
+type BookForm = {
+  /** 일정 이름으로 쓸 팀의 key 입니다. "me" 면 예약자 이름입니다. */
+  who: string;
+  setWho: (next: string) => void;
+  setRoomId: (next: number) => void;
+  range: SlotRange | null;
+  setRange: (next: SlotRange | null) => void;
+  picked: SlotRange;
+  room: Room | null;
+  /** 선택한 합주실에서 이미 찬 칸(slotMinutes 길이)입니다. */
+  grid: boolean[];
+  addBooking: () => Promise<void>;
+};
+
+function useBookForm(props: EditProps & { fixed: { from: number; to: number } | null }, day: DayForm): BookForm {
+  const { dayKey, teams, openHour, slotCount, rooms, fixed, onSaved, onClose } = props;
   const [who, setWho] = useState("me");
   const [roomId, setRoomId] = useState<number | null>(null);
   const [range, setRange] = useState<SlotRange | null>(null);
@@ -307,6 +339,22 @@ export function BookDialog(props: EditProps & {
     say(`${day.dayName} ${label(a)}–${endLabel(b)} 예약했어요`);
     if (fixed) onClose();
   };
+
+  return { who, setWho, setRoomId, range, setRange, picked, room, grid, addBooking };
+}
+
+/** 예약 탭의 하루 창입니다. 합주실과 시간을 골라 예약합니다. 위쪽 시간 선택으로 연 경우(fixed)에는 예약한 뒤 창을 닫습니다. */
+export function BookDialog(props: EditProps & {
+  /** 로그인한 사용자가 잡은 예약 중 아직 끝나지 않은 것 전부입니다(lib/dayEntries 의 allBookedEntries). 선택한 날짜의 항목만이 아닙니다. */
+  myBookings: Entry[];
+  /** 위쪽 시간 선택에서 이미 시간을 지정했으면 그 시간으로 바로 예약합니다. */
+  fixed: { from: number; to: number } | null;
+  myName: string;
+}) {
+  const { dayKey, teams, ensemble, canEditEnsemble, rooms, myBookings, fixed, myName, onClose } = props;
+  const day = useDayForm(props);
+  const { who, setWho, setRoomId, range, setRange, picked, room, grid, addBooking } = useBookForm(props, day);
+  const { label, endLabel } = day;
 
   return (
     <DayPanes

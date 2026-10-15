@@ -10,6 +10,7 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_components_queries["queries.ts"]
+  frontend_src_components_queries --> frontend_src_components_toast["toast.ts"]
   frontend_src_components_queries --> frontend_src_lib_api["api.ts"]
   frontend_src_components_queries --> frontend_src_lib_contract["contract.ts"]
   frontend_src_components_queries --> frontend_src_lib_loading["loading.ts"]
@@ -48,6 +49,7 @@ flowchart LR
 
 ## imports
 
+- [[graph/frontend/src/components/toast|toast.ts]]
 - [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]

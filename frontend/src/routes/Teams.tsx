@@ -10,17 +10,19 @@ import { Modal, Stepper } from "../components/Modal";
 import { SearchIcon } from "../components/icons";
 import { SeatRow } from "../components/SeatRow";
 import { idParam } from "../components/hooks";
-import { ME_KEY, SLOTS_KEY, TEAM_MEMBERS_KEY, teamMembersKey, TEAMS_KEY, teamSlotsKey, useMe, useTeams } from "../components/queries";
+import {
+  ME_KEY, SLOTS_KEY, TEAM_MEMBERS_KEY, teamMembersKey, TEAMS_KEY, teamSlotsKey, teamSlotsQuery, useMe, useTeams,
+} from "../components/queries";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { say } from "../components/toast";
 import { askDelete } from "../lib/confirm";
-import { getJSON, reason } from "../lib/api";
+import { reason } from "../lib/api";
 import { loadState } from "../lib/loading";
 import { can, canManageTeams, teamNavLabel } from "../lib/account";
 import { INSTRUMENTS } from "../lib/contract";
 import { TEAM_COLORS, teamColorKey } from "../lib/teamColors";
 import { MAX_SLOTS_PER_TEAM, seatKey, seatsOf, teamsShown } from "../lib/roster";
-import { saveSeats, saveTeam } from "../lib/pipeline";
+import { removeTeam, saveSeats, saveTeam, seatMember, unseatMember } from "../lib/pipeline";
 import type { Seat } from "../lib/roster";
 import type { Instrument, Member, Team, TeamSlot } from "../lib/contract";
 import "../styles/teams.css";
@@ -114,6 +116,27 @@ function ColorPick(props: { value: string | null; taken: string[]; onChange: (ne
   );
 }
 
+/** 포지션 구성 창의 자리 조회와 멤버 지정, 해제입니다. 성공하면 팀, 자리, 명단, 내 계정을 다시 조회합니다.
+ *  현재 사용자가 지정되거나 해제되면 "내 팀"(프로필, 달력의 내 일정)도 바뀌기 때문입니다. */
+function useLineup(teamId: number, onSat: () => void) {
+  const client = useQueryClient();
+  const slots = useQuery(teamSlotsQuery(teamId));
+  const refresh = (): void => {
+    for (const queryKey of [teamSlotsKey(teamId), TEAMS_KEY, teamMembersKey(teamId), ME_KEY]) void client.invalidateQueries({ queryKey });
+  };
+  const sit = useMutation({
+    mutationFn: (vars: { slotId: number; memberId: number }) => seatMember(teamId, vars.slotId, vars.memberId),
+    onSuccess: () => { onSat(); refresh(); },
+    onError: (error) => say(reason(error)),
+  });
+  const clear = useMutation({
+    mutationFn: (slotId: number) => unseatMember(teamId, slotId),
+    onSuccess: refresh,
+    onError: (error) => say(reason(error)),
+  });
+  return { slots, sit, clear };
+}
+
 /** 선택한 팀의 포지션 구성입니다. 빈 포지션도 함께 표시됩니다. 채워야 할 자리를 명확히 보여주는 것이 이 화면의 목적입니다. */
 function Lineup(props: {
   teamId: number;
@@ -123,48 +146,16 @@ function Lineup(props: {
   canRemove: boolean;
 }) {
   const { teamId, canAdd, canRemove } = props;
-  const client = useQueryClient();
+  // 멤버를 찾는 중인 자리의 번호입니다. null 이면 검색 창을 닫은 상태입니다.
   const [seeking, setSeeking] = useState<number | null>(null);
-
-  const slots = useQuery({
-    queryKey: teamSlotsKey(teamId),
-    queryFn: () => getJSON<{ slots: TeamSlot[] }>(`/teams/${teamId}/slots`),
-  });
-
-  const refresh = (): void => {
-    void client.invalidateQueries({ queryKey: teamSlotsKey(teamId) });
-    void client.invalidateQueries({ queryKey: TEAMS_KEY });
-    void client.invalidateQueries({ queryKey: teamMembersKey(teamId) });
-    // 현재 사용자가 추가되거나 제거된 포지션이면, "내 팀"(프로필·달력의 내 일정)도 함께 갱신됩니다.
-    void client.invalidateQueries({ queryKey: ME_KEY });
-  };
-
-  const sit = useMutation({
-    mutationFn: (vars: { slotId: number; memberId: number }) =>
-      getJSON(`/teams/${teamId}/slots/${vars.slotId}`, {
-        method: "PUT",
-        body: JSON.stringify({ member_id: vars.memberId }),
-      }),
-    onSuccess: () => {
-      setSeeking(null);
-      refresh();
-    },
-    onError: (error) => say(reason(error)),
-  });
-
-  const clear = useMutation({
-    mutationFn: (slotId: number) =>
-      getJSON(`/teams/${teamId}/slots/${slotId}`, { method: "DELETE" }),
-    onSuccess: refresh,
-    onError: (error) => say(reason(error)),
-  });
+  const { slots, sit, clear } = useLineup(teamId, () => setSeeking(null));
 
   // isSuccess 로 분기해야 TypeScript 가 아래에서 slots.data 를 undefined 없이 좁혀줍니다.
   if (!slots.isSuccess) return <Empty as="div" state={loadState(slots)} text="" />;
 
   return (
     <ul className="lineup">
-      {labelled(slots.data.slots).map(({ slot, label }) => (
+      {labelled(slots.data).map(({ slot, label }) => (
         <SeatRow
           key={slot.id}
           label={label}
@@ -379,10 +370,7 @@ function TeamForm(props: TeamFormProps) {
 /** 팀 수정 창입니다. 서버의 자리 목록을 조회한 뒤에 TeamForm 을 엽니다. 조회 전에 열면 빈 포지션으로 시작해 저장 시 자리가 삭제됩니다. */
 function EditTeam(props: Omit<TeamFormProps, "team" | "start"> & { team: Team }) {
   const { team, onClose } = props;
-  const slots = useQuery({
-    queryKey: teamSlotsKey(team.id),
-    queryFn: () => getJSON<{ slots: TeamSlot[] }>(`/teams/${team.id}/slots`),
-  });
+  const slots = useQuery(teamSlotsQuery(team.id));
 
   // isSuccess 로 분기해야 TypeScript 가 아래에서 slots.data 를 undefined 없이 좁혀줍니다.
   if (!slots.isSuccess) {
@@ -392,7 +380,7 @@ function EditTeam(props: Omit<TeamFormProps, "team" | "start"> & { team: Team })
       </Modal>
     );
   }
-  return <TeamForm {...props} start={startOf(team, slots.data.slots)} />;
+  return <TeamForm {...props} start={startOf(team, slots.data)} />;
 }
 
 /** 팀 목록입니다. 열린 팀(포지션 구성 modal)은 주소의 :teamId 가 정합니다(/teams/:teamId). */
@@ -411,7 +399,7 @@ export function Teams() {
   const client = useQueryClient();
 
   const drop = useMutation({
-    mutationFn: (team: Team) => getJSON<null>(`/teams/${team.id}`, { method: "DELETE" }),
+    mutationFn: (team: Team) => removeTeam(team.id),
     onSuccess: (_body, team) => {
       // 삭제된 팀의 포지션 구성이나 수정 창이 열려 있으면 함께 닫습니다.
       if (openId === team.id) setOpenId(null);

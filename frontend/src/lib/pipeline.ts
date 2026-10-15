@@ -3,7 +3,7 @@
 
 import { apiUrl, getJSON, reason, sendFile } from "./api";
 import type {
-  Account, Attachment, Ensemble, Me, Member, MemberUnavailable, Notification, Period, Post, PostComment, Reservation,
+  Account, Attachment, BackupRound, Ensemble, Me, Member, MemberUnavailable, Notification, Period, PermissionSet, Post, PostComment, Reservation,
   RoomInput, ScheduleOut, ScheduleRow, Settings, Team, TeamSlot, Unavailable,
 } from "./contract";
 import { seatAssignments } from "./roster";
@@ -615,8 +615,100 @@ export async function saveTeam(team: Team | null, name: string, color: string | 
 /** 저장된 자리를 seats 와 같게 변경합니다. 바뀐 자리 전부를 요청 1번으로 보내고, 바뀐 자리가 없으면 보내지 않습니다.
  *  서버가 transaction 1개로 처리하므로 실패하면 아무것도 반영되지 않습니다. */
 export async function saveSeats(teamId: number, seats: Seat[]): Promise<void> {
-  const saved = await getJSON<{ slots: TeamSlot[] }>(`/teams/${teamId}/slots`);
-  const assignments = seatAssignments(seats, saved.slots);
+  const saved = await loadTeamSlots(teamId);
+  const assignments = seatAssignments(seats, saved);
   if (assignments.length === 0) return;
   await getJSON(`/teams/${teamId}/slot-members`, { method: "PUT", body: JSON.stringify({ assignments }) });
+}
+
+/** 프로필 사진을 올립니다. 서버가 이미지 형식과 크기를 검증합니다. */
+export async function uploadAvatar(file: File): Promise<void> {
+  await sendFile<{ ok: boolean }>("/me/avatar", file, () => {});
+}
+
+/** 올린 프로필 사진을 삭제합니다. 화면은 이름 앞 두 글자로 표시합니다. */
+export async function resetAvatar(): Promise<void> {
+  await getJSON<null>("/me/avatar", { method: "DELETE" });
+}
+
+/** 프로필 편집의 바뀐 값만 저장합니다. 이름, 기수가 그대로면 PATCH /me 를, next 가 비어 있으면 비밀번호 변경을 보내지 않습니다.
+ *  ponytail: 요청 2개를 차례로 보내 이름은 저장되고 비밀번호만 실패할 수 있습니다. 그때는 이름, 기수를 저장했다는 문구로 오류를 발생시킵니다.
+ *  한 번에 기록해야 하면 서버에 두 값을 함께 받는 endpoint 를 만듭니다. */
+export async function saveProfile(
+  me: Account, draft: { name: string; cohort: string; current: string; next: string },
+): Promise<void> {
+  const cohort = draft.cohort.trim() === "" ? null : Number(draft.cohort);
+  const infoChanged = draft.name.trim() !== me.name || cohort !== me.cohort;
+  if (infoChanged) {
+    await getJSON<{ account: Account }>("/me", { method: "PATCH", body: JSON.stringify({ name: draft.name.trim(), cohort }) });
+  }
+  if (draft.next === "") return;
+  try {
+    await getJSON<null>("/me/password", { method: "POST", body: JSON.stringify({ current: draft.current, next: draft.next }) });
+  } catch (error) {
+    if (!infoChanged) throw error;
+    throw new Error(`이름과 기수는 저장했지만 비밀번호는 변경하지 못했어요. ${reason(error)}`);
+  }
+}
+
+/** 회원 탈퇴입니다. 서버가 계정과 작성한 글, 댓글, 예약을 삭제합니다. */
+export async function leaveAccount(): Promise<void> {
+  await getJSON<null>("/me", { method: "DELETE" });
+}
+
+/** permission set 전부를 조회합니다. 카드마다 그 권한을 가진 멤버 목록이 함께 옵니다. */
+export async function loadPermissionSets(): Promise<PermissionSet[]> {
+  const body = await getJSON<{ permission_sets: PermissionSet[] }>("/permission-sets");
+  return body.permission_sets;
+}
+
+/** permission set 1개를 삭제합니다. */
+export async function removePermissionSet(setId: number): Promise<void> {
+  await getJSON<null>(`/permission-sets/${setId}`, { method: "DELETE" });
+}
+
+/** 멤버 1명에게 permission set 을 부여합니다. */
+export async function grantPermissionSet(memberId: number, setId: number): Promise<void> {
+  await getJSON<null>(`/members/${memberId}/permission-sets/${setId}`, { method: "POST" });
+}
+
+/** 멤버 1명에게서 permission set 을 회수합니다. */
+export async function revokePermissionSet(memberId: number, setId: number): Promise<void> {
+  await getJSON<null>(`/members/${memberId}/permission-sets/${setId}`, { method: "DELETE" });
+}
+
+/** 팀 1개의 포지션 자리 전부를 조회합니다. 비어 있는 자리는 member_id 가 null 입니다. */
+export async function loadTeamSlots(teamId: number): Promise<TeamSlot[]> {
+  const body = await getJSON<{ slots: TeamSlot[] }>(`/teams/${teamId}/slots`);
+  return body.slots;
+}
+
+/** 포지션 자리 1개에 멤버를 지정합니다. */
+export async function seatMember(teamId: number, slotId: number, memberId: number): Promise<void> {
+  await getJSON(`/teams/${teamId}/slots/${slotId}`, { method: "PUT", body: JSON.stringify({ member_id: memberId }) });
+}
+
+/** 포지션 자리 1개에서 멤버를 해제합니다. 자리는 남습니다. */
+export async function unseatMember(teamId: number, slotId: number): Promise<void> {
+  await getJSON(`/teams/${teamId}/slots/${slotId}`, { method: "DELETE" });
+}
+
+/** 팀 1개를 삭제합니다. */
+export async function removeTeam(teamId: number): Promise<void> {
+  await getJSON<null>(`/teams/${teamId}`, { method: "DELETE" });
+}
+
+/** 합주실 1개를 삭제합니다. 서버가 그 합주실의 예약, 배정 결과, 스케줄링 기록을 함께 삭제합니다(외래 키 CASCADE). */
+export async function removeRoom(roomId: number): Promise<void> {
+  await getJSON(`/rooms/${roomId}`, { method: "DELETE" });
+}
+
+/** 집중 합주기간 1개를 삭제합니다. 서버가 그 기간의 배정 결과, 계산 기록, 스케줄링 기록을 함께 삭제합니다(외래 키 CASCADE). */
+export async function removePeriod(periodId: number): Promise<void> {
+  await getJSON(`/periods/${periodId}`, { method: "DELETE" });
+}
+
+/** 스케줄링 기록 1개의 배정 행과 결과 설명을 조회합니다. savedAt 은 기록 목록이 준 저장 시각 문자열입니다. */
+export async function loadBackupRound(periodId: number, savedAt: string): Promise<BackupRound> {
+  return getJSON<BackupRound>(`/periods/${periodId}/backups/${encodeURIComponent(savedAt)}`);
 }

@@ -4,10 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "../components/controls";
 import { Card, Tabs } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
-import { getJSON, reason } from "../lib/api";
+import { reason } from "../lib/api";
 import { say } from "../components/toast";
 import { askApplyRecord } from "../lib/confirm";
-import { applyRecord, loadScheduleOut, runAssignment } from "../lib/pipeline";
+import { applyRecord, loadBackupRound, loadScheduleOut, runAssignment } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
 import { backupRoundKey, backupRoundsKey, backupsKey, SCHEDULE_KEY, useMe, usePeriods, useRooms, useTeams } from "../components/queries";
 import { can } from "../lib/account";
@@ -15,7 +15,7 @@ import { NOW, colorsOf, dayRangeOf, sessionsOfRows, tabKey, tabsOf, viewOf } fro
 import type { View } from "../lib/assignment";
 import { AssignmentCalendar, AssignmentStatus, PastRunsPanel, RunTimesPanel } from "./AssignmentPanels";
 import "../styles/assignment.css";
-import type { AssignOut, BackupRound, ScheduleRow } from "../lib/contract";
+import type { AssignOut, ScheduleRow } from "../lib/contract";
 // 조회 결과가 아직 없을 때 사용하는 빈 목록입니다. 같은 배열을 계속 사용해야 useMemo 의 의존성이 변하지 않습니다.
 const NO_ROWS: ScheduleRow[] = [];
 
@@ -27,26 +27,9 @@ function requirePeriod(periodId: number | null): number {
   return periodId;
 }
 
-export function Assignment() {
-  const { me } = useMe();
-  // 계산은 assign_run, 스케줄링 기록 조회와 적용은 proposal_confirm 권한입니다.
-  const canRun = can(me, "assign_run");
-  const canConfirm = can(me, "proposal_confirm");
-  const queryClient = useQueryClient();
-  const [periodId, setPeriodId] = useState<number | null>(null);
-  const [view, setView] = useState<View>(NOW);
-
-  const periods = usePeriods();
-  // 이 화면은 집중 합주기간만 다룹니다. 상시 기간은 자동 배정 대상이 아닙니다.
-  const focusedPeriods = (periods.data?.periods ?? []).filter((period) => period.kind === "focused");
-  // 사용자가 아직 선택하지 않았으면 목록의 첫 기간을 사용합니다. useEffect 로 동기화하지 않고
-  // 렌더할 때마다 이렇게 계산합니다.
-  const activePeriodId = periodId ?? focusedPeriods[0]?.id ?? null;
-  const activePeriod = focusedPeriods.find((period) => period.id === activePeriodId) ?? null;
-
-  const rooms = useRooms();
-  const teams = useTeams();
-
+/** 화면에 표시할 배정입니다. roundAt 이 null 이면 현재 배정안(confirmed)을, 기록 저장 시각이면 그 스케줄링 기록을 shown 으로 반환합니다.
+ *  report 는 shown 의 결과 설명입니다. */
+function useShownSchedule(activePeriodId: number | null, roundAt: string | null) {
   const schedule = useQuery({
     queryKey: [...SCHEDULE_KEY, activePeriodId],
     queryFn: () => loadScheduleOut(requirePeriod(activePeriodId)),
@@ -55,16 +38,28 @@ export function Assignment() {
   // schedule.data 가 없으면 NO_ROWS 를 사용합니다. 매 render 마다 새 빈 배열을 만들면 아래 useMemo 가 매번 다시 실행됩니다.
   const rows = schedule.data?.rows ?? NO_ROWS;
 
-  // 확정된 시간표에 나온 id를 재계산에 그대로 넘깁니다. 아직 아무것도 확정되지 않았으면
-  // 목록 endpoint(API의 요청 주소 단위)가 준 전체를 사용합니다.
-  const uniqueSorted = (values: number[]) => [...new Set(values)].sort((a, b) => a - b);
-  const teamIds = rows.length
-    ? uniqueSorted(rows.map((row) => row.team_id))
-    : (teams.data?.teams ?? []).map((team) => team.id);
-  const roomIds = rows.length
-    ? uniqueSorted(rows.map((row) => row.room_id))
-    : (rooms.data?.rooms ?? []).map((room) => room.id);
+  const round = useQuery({
+    queryKey: backupRoundKey(activePeriodId, roundAt),
+    queryFn: () => {
+      if (activePeriodId === null || roundAt === null) throw new Error("선택할 스케줄링 기록이 없어요");
+      return loadBackupRound(activePeriodId, roundAt);
+    },
+    enabled: activePeriodId !== null && roundAt !== null,
+  });
 
+  const confirmed = useMemo(() => sessionsOfRows(rows), [rows]);
+
+  const roundRows = round.data?.rows ?? NO_ROWS;
+  const roundSessions = useMemo(() => sessionsOfRows(roundRows), [roundRows]);
+  const shown = roundAt !== null ? roundSessions : confirmed;
+  const report = (roundAt !== null ? round.data?.report : schedule.data?.report) ?? null;
+  return { schedule, rows, round, confirmed, shown, report };
+}
+
+/** 스케줄링 연산과 기록 적용 요청입니다. 둘 다 성공하면 현재 배정안, 기록 목록, 기록 결과 설명을 다시 조회합니다.
+ *  연산하면 기록이 추가되고, 적용하면 현재 배정안이 바뀌기 때문입니다. */
+function useRunAndApply(activePeriodId: number | null, roundAt: string | null, canConfirm: boolean, setView: (next: View) => void) {
+  const queryClient = useQueryClient();
   // 현재 배정안과 스케줄링 기록 목록을 다시 받아 화면과 서버를 맞춥니다. 연산하면 기록이 추가되고,
   // 적용하면 현재 배정안이 바뀌므로 둘 다 다시 받습니다.
   // SCHEDULE_KEY 로 무효화해야 캘린더 화면(routes/Scheduler.tsx)의
@@ -91,9 +86,6 @@ export function Assignment() {
     onError: (error) => say(reason(error, "엔진이 연산에 실패했어요")),
   });
 
-  // 선택한 스케줄링 기록입니다. view 값 하나를 사용하므로 달력, 아래 설명, 탭이 값 하나로 결정됩니다.
-  const roundAt = view.kind === "round" ? view.at : null;
-
   // 표시 중인 스케줄링 기록을 현재 배정안으로 적용합니다. 기록은 목록에 남습니다.
   const confirm = useMutation({
     mutationFn: () => {
@@ -108,22 +100,43 @@ export function Assignment() {
     // 서버가 거절한 사유를 그대로 표시합니다. 다른 기간과 합주실·시각이 겹쳐 적용할 수 없는 경우가 있습니다.
     onError: (error) => say(reason(error, "해당 배정안을 적용하는데 실패했어요")),
   });
+  return { recompute, confirm };
+}
 
-  const round = useQuery({
-    queryKey: backupRoundKey(activePeriodId, roundAt),
-    queryFn: () => {
-      if (activePeriodId === null || roundAt === null) throw new Error("선택할 스케줄링 기록이 없어요");
-      return getJSON<BackupRound>(`/periods/${activePeriodId}/backups/${encodeURIComponent(roundAt)}`);
-    },
-    enabled: activePeriodId !== null && roundAt !== null,
-  });
+export function Assignment() {
+  const { me } = useMe();
+  // 계산은 assign_run, 스케줄링 기록 조회와 적용은 proposal_confirm 권한입니다.
+  const canRun = can(me, "assign_run");
+  const canConfirm = can(me, "proposal_confirm");
+  const [periodId, setPeriodId] = useState<number | null>(null);
+  const [view, setView] = useState<View>(NOW);
 
-  const confirmed = useMemo(() => sessionsOfRows(rows), [rows]);
+  const periods = usePeriods();
+  // 이 화면은 집중 합주기간만 다룹니다. 상시 기간은 자동 배정 대상이 아닙니다.
+  const focusedPeriods = (periods.data?.periods ?? []).filter((period) => period.kind === "focused");
+  // 사용자가 아직 선택하지 않았으면 목록의 첫 기간을 사용합니다. useEffect 로 동기화하지 않고
+  // 렌더할 때마다 이렇게 계산합니다.
+  const activePeriodId = periodId ?? focusedPeriods[0]?.id ?? null;
+  const activePeriod = focusedPeriods.find((period) => period.id === activePeriodId) ?? null;
 
-  const roundRows = round.data?.rows ?? NO_ROWS;
-  const roundSessions = useMemo(() => sessionsOfRows(roundRows), [roundRows]);
-  const shown = roundAt !== null ? roundSessions : confirmed;
-  const report = (roundAt !== null ? round.data?.report : schedule.data?.report) ?? null;
+  const rooms = useRooms();
+  const teams = useTeams();
+
+  // 선택한 스케줄링 기록입니다. view 값 하나를 사용하므로 달력, 아래 설명, 탭이 값 하나로 결정됩니다.
+  const roundAt = view.kind === "round" ? view.at : null;
+  const { schedule, rows, round, confirmed, shown, report } = useShownSchedule(activePeriodId, roundAt);
+
+  // 확정된 시간표에 나온 id를 재계산에 그대로 넘깁니다. 아직 아무것도 확정되지 않았으면
+  // 목록 endpoint(API의 요청 주소 단위)가 준 전체를 사용합니다.
+  const uniqueSorted = (values: number[]) => [...new Set(values)].sort((a, b) => a - b);
+  const teamIds = rows.length
+    ? uniqueSorted(rows.map((row) => row.team_id))
+    : (teams.data?.teams ?? []).map((team) => team.id);
+  const roomIds = rows.length
+    ? uniqueSorted(rows.map((row) => row.room_id))
+    : (rooms.data?.rooms ?? []).map((room) => room.id);
+
+  const { recompute, confirm } = useRunAndApply(activePeriodId, roundAt, canConfirm, setView);
 
   const teamList = teams.data?.teams;
   const colors = useMemo(
