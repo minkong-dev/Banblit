@@ -3,7 +3,7 @@
 
 import { apiUrl, getJSON, reason, sendFile } from "./api";
 import type {
-  Account, Attachment, BackupRound, Ensemble, Me, Member, MemberUnavailable, Notification, Period, PermissionSet, Post, PostComment, Reservation,
+  Account, Attachment, RecordRound, ScheduleRecord, Ensemble, Me, Member, MemberUnavailable, Notification, Period, PermissionSet, Post, PostComment, Reservation,
   RoomInput, ScheduleOut, ScheduleRow, Settings, Team, TeamSlot, Unavailable,
 } from "./contract";
 import { seatAssignments } from "./roster";
@@ -183,7 +183,7 @@ export function loadScheduleOut(periodId: number): Promise<ScheduleOut> {
 /** 스케줄링 기록 1개를 확정 시간표로 만듭니다. 교체되는 현행은 서버가 이전 확정본으로 보관합니다. */
 export function applyRecord(periodId: number, savedAt: string): Promise<{ applied: boolean }> {
   return getJSON<{ applied: boolean }>(
-    `/periods/${periodId}/backups/${encodeURIComponent(savedAt)}/apply`, { method: "POST" },
+    `/periods/${periodId}/records/${encodeURIComponent(savedAt)}/apply`, { method: "POST" },
   );
 }
 
@@ -709,6 +709,12 @@ export async function removePeriod(periodId: number): Promise<void> {
 }
 
 /** 스케줄링 기록 1개의 배정 행과 결과 설명을 조회합니다. savedAt 은 기록 목록이 준 저장 시각 문자열입니다. */
-export async function loadBackupRound(periodId: number, savedAt: string): Promise<BackupRound> {
-  return getJSON<BackupRound>(`/periods/${periodId}/backups/${encodeURIComponent(savedAt)}`);
+export async function loadRecordRound(periodId: number, savedAt: string): Promise<RecordRound> {
+  return getJSON<RecordRound>(`/periods/${periodId}/records/${encodeURIComponent(savedAt)}`);
+}
+
+/** 집중 합주기간 1개의 스케줄링 기록 목록을 조회합니다. 기록마다 조회 시점의 불가능 일정으로 매긴 점수가 함께 옵니다. */
+export async function loadRecords(periodId: number): Promise<ScheduleRecord[]> {
+  const body = await getJSON<{ records: ScheduleRecord[] }>(`/periods/${periodId}/records`);
+  return body.records;
 }

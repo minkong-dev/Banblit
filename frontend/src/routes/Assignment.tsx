@@ -7,9 +7,9 @@ import { Dropdown } from "../components/Dropdown";
 import { reason } from "../lib/api";
 import { say } from "../components/toast";
 import { askApplyRecord } from "../lib/confirm";
-import { applyRecord, loadBackupRound, loadScheduleOut, runAssignment } from "../lib/pipeline";
+import { applyRecord, loadRecordRound, loadScheduleOut, runAssignment } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
-import { backupRoundKey, backupRoundsKey, backupsKey, SCHEDULE_KEY, useMe, usePeriods, useRooms, useTeams } from "../components/queries";
+import { recordRoundKey, recordRoundsKey, recordsKey, SCHEDULE_KEY, useMe, usePeriods, useRooms, useTeams } from "../components/queries";
 import { can } from "../lib/account";
 import { NOW, colorsOf, dayRangeOf, sessionsOfRows, tabKey, tabsOf, viewOf } from "../lib/assignment";
 import type { View } from "../lib/assignment";
@@ -39,10 +39,10 @@ function useShownSchedule(activePeriodId: number | null, roundAt: string | null)
   const rows = schedule.data?.rows ?? NO_ROWS;
 
   const round = useQuery({
-    queryKey: backupRoundKey(activePeriodId, roundAt),
+    queryKey: recordRoundKey(activePeriodId, roundAt),
     queryFn: () => {
       if (activePeriodId === null || roundAt === null) throw new Error("선택할 스케줄링 기록이 없어요");
-      return loadBackupRound(activePeriodId, roundAt);
+      return loadRecordRound(activePeriodId, roundAt);
     },
     enabled: activePeriodId !== null && roundAt !== null,
   });
@@ -67,9 +67,9 @@ function useRunAndApply(activePeriodId: number | null, roundAt: string | null, c
   // key 모양이 달라 캘린더 화면에 이전 배정이 그대로 남습니다.
   const refreshSchedule = async () => {
     await queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY });
-    await queryClient.invalidateQueries({ queryKey: backupsKey(activePeriodId) });
+    await queryClient.invalidateQueries({ queryKey: recordsKey(activePeriodId) });
     // 기록 1개의 결과 설명은 조회하는 시점의 불가능 일정으로 계산하므로 함께 무효화합니다.
-    await queryClient.invalidateQueries({ queryKey: backupRoundsKey(activePeriodId) });
+    await queryClient.invalidateQueries({ queryKey: recordRoundsKey(activePeriodId) });
   };
 
   const recompute = useMutation({

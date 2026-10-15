@@ -50,10 +50,10 @@ export const SCHEDULE_KEY = ["schedule"] as const;
 // backend/src/backend/db/models.py 의 ON DELETE CASCADE 기준입니다. 기간을 삭제하면 서버가
 // assignments·assignment_runs·assignment_backups 를 함께 삭제합니다. reservations 는 기간을
 // 참조하지 않아 삭제되지 않으므로 무효화 대상에서 뺍니다.
-export const PERIOD_DELETE_KEYS = ["periods", "schedule", "backups", "backup-round"] as const;
+export const PERIOD_DELETE_KEYS = ["periods", "schedule", "records", "record-round"] as const;
 
 // 합주실을 삭제하면 서버가 그 합주실의 assignments·assignment_backups·reservations 를 함께 삭제합니다.
-export const ROOM_DELETE_KEYS = ["rooms", "schedule", "backups", "backup-round", "reservations"] as const;
+export const ROOM_DELETE_KEYS = ["rooms", "schedule", "records", "record-round", "reservations"] as const;
 
 // 게시판 query 전부의 queryKey 맨 앞 값입니다. 이 값으로 무효화하면 목록과 글 상세가 전부 다시 조회됩니다.
 export const BOARD_KEY = ["board"] as const;
@@ -179,10 +179,10 @@ export function refreshMemberArea(client: QueryClient): void {
 }
 
 /** 배정 화면의 스케줄링 기록 목록과 기록 1개의 queryKey 입니다. 조회하는 곳과 무효화하는 곳이 같은 key 를 씁니다. */
-export const backupsKey = (periodId: number | null) => ["backups", periodId] as const;
-export const backupRoundsKey = (periodId: number | null) => ["backup-round", periodId] as const;
-export const backupRoundKey = (periodId: number | null, savedAt: string | null) =>
-  [...backupRoundsKey(periodId), savedAt] as const;
+export const recordsKey = (periodId: number | null) => ["records", periodId] as const;
+export const recordRoundsKey = (periodId: number | null) => ["record-round", periodId] as const;
+export const recordRoundKey = (periodId: number | null, savedAt: string | null) =>
+  [...recordRoundsKey(periodId), savedAt] as const;
 
 /** 목록의 행 1개를 삭제하는 요청입니다. 반환한 함수에 id 와 확인 함수(ask)를 넣으면 ask 가 true 일 때 삭제합니다.
  *  성공하면 onDone 을 부르고, 실패하면 사유를 toast 로 알립니다. 삭제 요청이 진행 중이면 ask 를 부르지 않고 무시합니다. */

@@ -191,7 +191,7 @@ def test_assign_saves_the_schedule_and_reports_it(
 
     # 연산 결과는 기록으로만 쌓이고, 적용해야 현재 배정안이 됩니다(사용자 결정 2026-10-13).
     assert api_client.get(f"/periods/{period_id}/schedule").json()["rows"] == []
-    applied = api_client.post(f"/periods/{period_id}/backups/{body['record_saved_at']}/apply")
+    applied = api_client.post(f"/periods/{period_id}/records/{body['record_saved_at']}/apply")
     assert applied.json() == {"applied": True}
     saved = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
     # 계산 결과는 칸 4개지만 저장은 구간 한 행씩이라, 이어진 2칸이 합쳐져 하루 한 행씩 2행입니다.
@@ -381,7 +381,7 @@ def test_applying_an_older_record_makes_exactly_that_record_the_schedule(
     s2 = _run(api_client, poll_job, period_id, [team_id], [room_1.id, room_2.id])
     _run(api_client, poll_job, period_id, [team_id], [room_2.id])
 
-    response = api_client.post(f"/periods/{period_id}/backups/{s2}/apply")
+    response = api_client.post(f"/periods/{period_id}/records/{s2}/apply")
 
     assert response.json() == {"applied": True}
     rows = api_client.get(f"/periods/{period_id}/schedule").json()["rows"]
@@ -419,7 +419,7 @@ def test_applying_a_record_that_clashes_with_another_period_is_rejected_not_500(
 
     r1 = _run(api_client, poll_job, period_a, [team_a], [room_1.id])
     r2 = _run(api_client, poll_job, period_a, [team_a], [room_2.id])
-    assert api_client.post(f"/periods/{period_a}/backups/{r2}/apply").json() == {"applied": True}
+    assert api_client.post(f"/periods/{period_a}/records/{r2}/apply").json() == {"applied": True}
 
     moved = db_session.get(Period, period_a)
     assert moved is not None
@@ -436,9 +436,9 @@ def test_applying_a_record_that_clashes_with_another_period_is_rejected_not_500(
     db_session.add(period_b)
     db_session.commit()
     rb = _run(api_client, poll_job, period_b.id, [team_b], [room_1.id])
-    assert api_client.post(f"/periods/{period_b.id}/backups/{rb}/apply").json() == {"applied": True}
+    assert api_client.post(f"/periods/{period_b.id}/records/{rb}/apply").json() == {"applied": True}
 
-    response = api_client.post(f"/periods/{period_a}/backups/{r1}/apply")
+    response = api_client.post(f"/periods/{period_a}/records/{r1}/apply")
 
     assert response.status_code == 422
     assert "이미" in response.json()["detail"]
@@ -539,7 +539,7 @@ def test_schedule_reports_the_slots_left_open_by_the_assignment(
     ]
 
 
-def test_backups_list_each_round_newest_first(
+def test_records_list_each_round_newest_first(
     api_client: TestClient, db_session: Session, head_login: dict[str, str]
 ) -> None:
     """적용할 기록을 고르는 목록입니다. 저장 시각, 칸 수, 확정 시각, 지금의 불가능 일정으로 매긴 점수를 최신순으로 반환합니다."""
@@ -578,11 +578,11 @@ def test_backups_list_each_round_newest_first(
     )
     db_session.commit()
 
-    response = api_client.get(f"/periods/{period_id}/backups")
+    response = api_client.get(f"/periods/{period_id}/records")
 
     assert response.status_code == 200
     assert response.json() == {
-        "backups": [
+        "records": [
             {
                 "saved_at": "2026-08-02T21:00:00",
                 "slot_count": 2,
@@ -631,7 +631,7 @@ def test_backup_round_shows_the_schedule_of_that_round(
     db_session.commit()
 
     response = api_client.get(
-        f"/periods/{period_id}/backups/2026-08-01T21:00:00"
+        f"/periods/{period_id}/records/2026-08-01T21:00:00"
     )
 
     assert response.status_code == 200
@@ -659,7 +659,7 @@ def test_backup_round_that_never_happened_is_rejected(
     db_session.commit()
 
     response = api_client.get(
-        f"/periods/{period_id}/backups/2026-08-01T21:00:00"
+        f"/periods/{period_id}/records/2026-08-01T21:00:00"
     )
 
     assert response.status_code == 422
@@ -675,7 +675,7 @@ def test_backup_round_needs_proposal_confirm(
     # 그 앞에 한 명이 먼저 가입해야 합니다.
     account("박서연", "head@example.com")
     _, member = account("김민수", "member@example.com")
-    path = f"/periods/{period_id}/backups/2026-08-01T21:00:00"
+    path = f"/periods/{period_id}/records/2026-08-01T21:00:00"
 
     assert api_client.get(path).status_code == 401
 
@@ -684,16 +684,16 @@ def test_backup_round_needs_proposal_confirm(
     assert "권한" in forbidden.json()["detail"]
 
 
-def test_backups_of_unknown_period_are_rejected(
+def test_records_of_unknown_period_are_rejected(
     api_client: TestClient, head_login: dict[str, str]
 ) -> None:
-    response = api_client.get("/periods/999999/backups")
+    response = api_client.get("/periods/999999/records")
 
     assert response.status_code == 422
     assert "존재하지 않는 기간이에요" in response.json()["detail"]
 
 
-def test_backups_need_proposal_confirm(
+def test_records_need_proposal_confirm(
     api_client: TestClient,
     db_session: Session,
     account: AccountFactory,
@@ -703,15 +703,15 @@ def test_backups_need_proposal_confirm(
     _, head = account("박서연", "head@example.com")
     _, member = account("김민수", "member@example.com")
 
-    assert api_client.get(f"/periods/{period_id}/backups").status_code == 401
+    assert api_client.get(f"/periods/{period_id}/records").status_code == 401
 
-    forbidden = api_client.get(f"/periods/{period_id}/backups", cookies=member)
+    forbidden = api_client.get(f"/periods/{period_id}/records", cookies=member)
     assert forbidden.status_code == 403
     assert "권한" in forbidden.json()["detail"]
 
-    allowed = api_client.get(f"/periods/{period_id}/backups", cookies=head)
+    allowed = api_client.get(f"/periods/{period_id}/records", cookies=head)
     assert allowed.status_code == 200
-    assert allowed.json() == {"backups": []}
+    assert allowed.json() == {"records": []}
 
 
 def _blocked_team(db_session: Session) -> tuple[int, int]:
@@ -757,7 +757,7 @@ def test_applying_a_short_record_makes_it_the_schedule(
     )
     saved_at = refused["result"]["record_saved_at"]
 
-    response = api_client.post(f"/periods/{period_id}/backups/{saved_at}/apply")
+    response = api_client.post(f"/periods/{period_id}/records/{saved_at}/apply")
 
     assert response.status_code == 200
     assert response.json() == {"applied": True}
@@ -802,7 +802,7 @@ def test_applying_a_record_needs_proposal_confirm_and_keeps_the_record(
     # 맨 처음 가입한 사람이 모든 권한을 받습니다. 권한이 없는 사람을 만들려면 그 앞에 한 명이 먼저 가입해야 합니다.
     _, head = account("박서연", "head@example.com")
     _, member = account("김민수", "member@example.com")
-    path = f"/periods/{period_id}/backups/2026-08-01T21:00:00/apply"
+    path = f"/periods/{period_id}/records/2026-08-01T21:00:00/apply"
 
     assert api_client.post(path).status_code == 401
     forbidden = api_client.post(path, cookies=member)

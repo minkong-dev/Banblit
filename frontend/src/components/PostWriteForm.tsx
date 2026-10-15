@@ -1,6 +1,7 @@
 // 게시판 글을 새로 쓰는 form 입니다. 작성 페이지(routes/PostWrite)만 사용합니다.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { reason } from "../lib/api";
@@ -11,6 +12,76 @@ import { Button, FilePicker, FormFoot } from "./controls";
 import { AttachmentRow } from "./PostAttachments";
 import { RichText } from "./RichText";
 import { ATTACHMENT_ACCEPT, ATTACHMENT_HINT } from "../lib/boards";
+
+/** 화면이 열리면 빈 글(초안)을 만들고 그 번호를 draftId 로 반환합니다. 받기 전에는 null 입니다. 첨부는 이 번호로 올립니다.
+ *  markPublished 를 부르지 않고 화면을 떠나면 초안을 삭제합니다. 탭을 닫거나 연결이 끊겨 삭제 요청이 가지 못하면
+ *  하루 뒤 서버가 삭제합니다(jobs/auto_assign.py 의 sweep_stale_drafts). */
+function useDraft(draftPath: string): { draftId: number | null; markPublished: () => void } {
+  const [draftId, setDraftId] = useState<number | null>(null);
+  const published = useRef(false);
+  useEffect(() => {
+    let made: number | null = null;
+    // 응답이 오기 전에 화면을 떠났으면 true 입니다. 그때 도착한 초안은 바로 삭제합니다.
+    // StrictMode 개발 실행은 effect 를 2번 실행하므로 초안 2개 중 첫 번째가 이 경로로 삭제됩니다.
+    let left = false;
+    void createDraft(draftPath)
+      .then((post) => {
+        if (left) { void deletePost(post.id).catch(() => undefined); return; }
+        made = post.id;
+        setDraftId(post.id);
+      })
+      .catch((error: unknown) => { if (!left) say(reason(error)); });
+    return () => {
+      left = true;
+      if (made !== null && !published.current) void deletePost(made).catch(() => undefined);
+    };
+  }, [draftPath]);
+  return { draftId, markPublished: () => { published.current = true; } };
+}
+
+/** 첨부를 차례로 올린 뒤 초안을 발행합니다. stage 는 "a.pdf 업로드 중 (1/2) 40%" 같은 진행 문구이고, 비어 있으면 업로드 중이 아닙니다.
+ *  성공하든 실패하든 queryKey 의 목록을 다시 조회합니다. */
+function usePublish(args: {
+  draftId: number | null;
+  markPublished: () => void;
+  title: string;
+  body: string;
+  files: File[];
+  setFiles: (next: File[]) => void;
+  queryKey: unknown[];
+  onDone: () => void;
+}): { send: UseMutationResult<void, Error, void>; stage: string } {
+  const { draftId, markPublished, title, body, files, setFiles, queryKey, onDone } = args;
+  const client = useQueryClient();
+  const [stage, setStage] = useState("");
+  const showProgress = (index: number, percent: number): void => {
+    const nth = files.length === 1 ? "" : ` (${index + 1}/${files.length})`;
+    setStage(`${files[index].name} 업로드 중${nth} ${percent}%`);
+  };
+  const send = useMutation({
+    mutationFn: async () => {
+      if (draftId === null) throw new Error("글을 준비하는 중이에요. 잠시 후 다시 눌러주세요.");
+      try {
+        await publishWithAttachments(draftId, files, { title, body }, showProgress);
+      } catch (error) {
+        // 앞의 첨부는 이미 초안에 붙어 있으므로 실패한 파일부터 남깁니다. 다시 누르면 같은 파일을 두 번 올리지 않습니다.
+        // 업로드 중에는 파일 입력칸이 disabled 라 files 는 이 렌더 시점의 값과 같습니다.
+        if (error instanceof AttachmentFailed) setFiles(files.slice(error.index));
+        throw error;
+      }
+      markPublished();
+    },
+    onSuccess: () => {
+      say(files.length === 0 ? "글을 업로드 했어요." : "글과 첨부파일을 업로드 했어요.");
+      onDone();
+    },
+    onSettled: () => {
+      setStage("");
+      void client.invalidateQueries({ queryKey });
+    },
+  });
+  return { send, stage };
+}
 
 /** 글 하나를 쓰는 form 입니다. 목록 화면이 아니라 작성 페이지(routes/PostWrite)가 사용합니다.
  *  목록 아래에 이어붙이지 않습니다 — 목록과 작성은 하는 일이 다르고, 붙이면 작성 화면을 주소로
@@ -27,70 +98,14 @@ export function WriteForm(props: {
   onCancel: () => void;
 }) {
   const { draftPath, authorId, queryKey, onDone, onCancel } = props;
-  const client = useQueryClient();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  // 파일 업로드 진행 상황을 표시합니다. 비어 있으면 업로드 중이 아닙니다.
-  const [stage, setStage] = useState("");
-  // 이 화면이 열릴 때 만든 초안의 글 번호입니다. null 이면 아직 받지 못한 상태입니다.
-  // 첨부는 이 번호로 올립니다 — 글이 있어야 올릴 수 있습니다.
-  const [draftId, setDraftId] = useState<number | null>(null);
-  // 발행을 마쳤는지입니다. 마쳤으면 이 화면을 떠날 때 초안을 삭제하지 않습니다.
-  const published = useRef(false);
   const [touched, setTouched] = useState(false);
-  // 선택한 파일은 브라우저가 관리하므로 코드에서 값을 설정할 수 없습니다.
-  // 업로드 완료 후 입력 칸을 초기화하려면 DOM 요소에 직접 접근해야 합니다.
+  // 선택한 파일은 브라우저가 관리하므로 코드에서 값을 설정할 수 없습니다. 파일 선택 버튼이 이 입력칸을 click() 으로 엽니다.
   const picker = useRef<HTMLInputElement>(null);
-
-  /** index 번째 파일의 업로드 진행률을 "a.pdf 업로드 중 (1/2) 40%" 로 표시합니다. */
-  const showProgress = (index: number, percent: number): void => {
-    const nth = files.length === 1 ? "" : ` (${index + 1}/${files.length})`;
-    setStage(`${files[index].name} 업로드 중${nth} ${percent}%`);
-  };
-
-  // 화면이 열리면 빈 글을 먼저 만듭니다. 그래야 쓰는 중에 첨부를 올릴 수 있습니다.
-  // 떠날 때 발행하지 않았으면 그 빈 글을 삭제합니다. 탭을 닫거나 연결이 끊겨 이 요청이 가지 못하면
-  // 하루 뒤 서버가 삭제합니다(jobs/auto_assign.py 의 sweep_stale_drafts).
-  const starting = useRef(false);
-  useEffect(() => {
-    if (starting.current) return;
-    starting.current = true;
-    let made: number | null = null;
-    void createDraft(draftPath)
-      .then((post) => { made = post.id; setDraftId(post.id); })
-      .catch((error: unknown) => say(reason(error)));
-    return () => {
-      if (made !== null && !published.current) {
-        void deletePost(made).catch(() => undefined);
-      }
-    };
-  }, [draftPath]);
-
-  const send = useMutation({
-    mutationFn: async () => {
-      if (draftId === null) throw new Error("글을 준비하는 중이에요. 잠시 후 다시 눌러주세요.");
-      try {
-        await publishWithAttachments(draftId, files, { title, body }, showProgress);
-      } catch (error) {
-        // 앞의 첨부는 이미 초안에 붙어 있으므로 실패한 파일부터 남깁니다. 다시 누르면 같은 파일을 두 번 올리지 않습니다.
-        // 업로드 중에는 파일 입력칸이 disabled 라 files 는 이 렌더 시점의 값과 같습니다.
-        if (error instanceof AttachmentFailed) setFiles(files.slice(error.index));
-        throw error;
-      }
-      published.current = true;
-    },
-    onSuccess: () => {
-      const said = files.length === 0 ? "글을 업로드 했어요." : "글과 첨부파일을 업로드 했어요.";
-      say(said);
-      onDone();
-    },
-    onSettled: () => {
-      // 첨부 업로드나 발행 중 어디서 실패해도 목록을 다시 조회합니다.
-      setStage("");
-      void client.invalidateQueries({ queryKey });
-    },
-  });
+  const { draftId, markPublished } = useDraft(draftPath);
+  const { send, stage } = usePublish({ draftId, markPublished, title, body, files, setFiles, queryKey, onDone });
 
   const postWhy = checkPost({ title, body });
   const why = postWhy !== "" ? postWhy : checkAttachments(files);

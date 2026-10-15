@@ -6,13 +6,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button, Empty } from "../components/controls";
 import { Panel } from "../components/Layout";
-import { backupsKey, PERIODS_KEY } from "../components/queries";
+import { recordsKey, PERIODS_KEY } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
+import { loadRecords } from "../lib/pipeline";
 import { hoursOf, reportLines } from "../lib/assignment";
 import { appliedLabel, checkRunTimes, scoreLabel, slotCountLabel } from "../lib/runs";
 import { say } from "../components/toast";
 import { LOADING_TEXT, loadState } from "../lib/loading";
-import type { Backup, Period, ScheduleReport } from "../lib/contract";
+import type { Period, ScheduleReport } from "../lib/contract";
 import { WEEKDAY_NAMES, stampLabel } from "../lib/calendar";
 import { dayOf, timeRangeLabel } from "../lib/slots";
 import type { Session } from "../lib/slots";
@@ -217,36 +218,36 @@ export function PastRunsPanel({ periodId, canView, roundAt, onSelect }: {
   roundAt: string | null;
   onSelect: (at: string) => void;
 }) {
-  const backups = useQuery({
-    queryKey: backupsKey(periodId),
+  const records = useQuery({
+    queryKey: recordsKey(periodId),
     queryFn: () => {
       if (periodId === null) throw new Error("선택할 집중 합주기간이 없어요");
-      return getJSON<{ backups: Backup[] }>(`/periods/${periodId}/backups`);
+      return loadRecords(periodId);
     },
     enabled: periodId !== null && canView,
   });
-  const rounds = backups.data?.backups ?? [];
+  const rounds = records.data ?? [];
 
   let list;
   if (!canView) {
     list = <Empty as="li" text="스케줄링 기록 확정 권한이 있어야 확인이 가능해요." />;
-  } else if (!backups.isSuccess || rounds.length === 0) {
-    list = <Empty as="li" state={loadState(backups)} text="스케줄링 기록이 없어요." />;
+  } else if (!records.isSuccess || rounds.length === 0) {
+    list = <Empty as="li" state={loadState(records)} text="스케줄링 기록이 없어요." />;
   } else {
     // 최근 기록이 위로 오게 정렬합니다.
     list = [...rounds]
       .sort((a, b) => b.saved_at.localeCompare(a.saved_at))
-      .map((backup) => (
-        <li key={backup.saved_at}>
+      .map((record) => (
+        <li key={record.saved_at}>
           <button
-            className={roundAt === backup.saved_at ? "round on" : "round"}
-            aria-pressed={roundAt === backup.saved_at}
-            onClick={() => onSelect(backup.saved_at)}
+            className={roundAt === record.saved_at ? "round on" : "round"}
+            aria-pressed={roundAt === record.saved_at}
+            onClick={() => onSelect(record.saved_at)}
           >
-            <b>{stampLabel(backup.saved_at)}</b>
-            <small>{slotCountLabel(backup.slot_count)}</small>
-            {backup.score === null ? null : <small>{scoreLabel(backup.score)}</small>}
-            {backup.applied_at === null ? null : <small>{appliedLabel(backup.applied_at)}</small>}
+            <b>{stampLabel(record.saved_at)}</b>
+            <small>{slotCountLabel(record.slot_count)}</small>
+            {record.score === null ? null : <small>{scoreLabel(record.score)}</small>}
+            {record.applied_at === null ? null : <small>{appliedLabel(record.applied_at)}</small>}
           </button>
         </li>
       ));

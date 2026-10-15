@@ -85,7 +85,7 @@ def test_a_notification_is_left_only_when_a_record_is_applied(
     assert _notifications(api_client, cookies) == []
 
     applied = api_client.post(
-        f"/periods/{period_id}/backups/{_due_time().isoformat()}/apply", cookies=cookies
+        f"/periods/{period_id}/records/{_due_time().isoformat()}/apply", cookies=cookies
     )
     assert applied.status_code == 200, applied.text
     rows = _notifications(api_client, cookies)
@@ -150,7 +150,7 @@ def test_marking_read_deletes_the_notifications(
     period_id = db_session.scalars(select(Period.id)).one()
     auto_assign.run_due_assignments(db_session, _due_time())
     # 연산은 알리지 않으므로 기록을 적용해 알림을 1개 만듭니다.
-    api_client.post(f"/periods/{period_id}/backups/{_due_time().isoformat()}/apply", cookies=cookies)
+    api_client.post(f"/periods/{period_id}/records/{_due_time().isoformat()}/apply", cookies=cookies)
     assert len(_notifications(api_client, cookies)) == 1
 
     assert api_client.post("/notifications/read", cookies=cookies).status_code == 204
