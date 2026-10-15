@@ -155,9 +155,7 @@ export function useMyTeamCohorts(): (ProfileTeam & { cohort: number | null })[] 
   const { me } = useMe();
   const teams = useMyTeams();
   const rosters = useQueries({
-    queries: teams.map((team) => ({
-      ...teamMembersQuery(team.id),
-    })),
+    queries: teams.map((team) => teamMembersQuery(team.id)),
   });
   return teams.map((team, index) => ({
     ...team,

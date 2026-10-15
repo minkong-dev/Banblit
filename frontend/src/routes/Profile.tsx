@@ -22,9 +22,7 @@ function useMyAffiliations(
     teams.find((team) => team.id === id)?.name ?? "이름 없는 팀";
 
   const memberQueries = useQueries({
-    queries: teamIds.map((id) => ({
-      ...teamMembersQuery(id),
-    })),
+    queries: teamIds.map((id) => teamMembersQuery(id)),
   });
 
   /** 명단에서 찾은 나입니다. 기수를 표시합니다. 찾지 못했거나 기수가 없을 경우 그 사유를 표시합니다. */

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { allBookedEntries, allOffEntries, ensembleByDay, ensembleOn, mergeByDay, myEntries, offByDay, offWhenLabel, repeatDays, visible } from "./dayEntries";
+import { allBookedEntries, allOffEntries, ensembleByDay, ensembleOn, entryName, mergeByDay, myEntries, offByDay, offWhenLabel, repeatDays, visible } from "./dayEntries";
 import type { DayEntries, Entry } from "./dayEntries";
 import type { Period, Reservation, Unavailable } from "./contract";
 import type { DayTeam } from "./roster";
@@ -187,7 +187,7 @@ describe("allOffEntries — 모달의 불가능 일정 목록", () => {
     const [entry] = allOffEntries([weekly], 18);
 
     expect(entry).toEqual({
-      kind: "off", team: null, who: "불가능 일정", note: undefined,
+      kind: "off", team: null, who: undefined, note: undefined,
       a: 0, b: 2, removeIds: [7], day: "2026-09-14", repeat: "매주 월",
       repeatWeekdays: 0b0000001, repeatCount: null, repeatUntil: "2026-09-28",
     });
@@ -211,7 +211,7 @@ describe("offByDay", () => {
   it("일정 이름이 표시 이름이고, 없으면 불가능 일정이다. 사유는 note 로 따로 둔다", () => {
     const named = { ...weekly, name: "치과", reason: "정기 검진" };
     expect(offByDay([named], 18, days)["2026-09-14"][0]).toMatchObject({ who: "치과", note: "정기 검진" });
-    expect(offByDay([weekly], 18, days)["2026-09-14"][0].who).toBe("불가능 일정");
+    expect(entryName(offByDay([weekly], 18, days)["2026-09-14"][0], [])).toBe("불가능 일정");
   });
 });
 
@@ -255,5 +255,23 @@ describe("allBookedEntries", () => {
       ["2026-09-18", 9, "개인 연습", 0, 1, null],
     ]);
     expect(offWhenLabel(entries[0])).toContain("9월 16일");
+  });
+});
+
+describe("불가능 일정 이름 — 실제 이름과 표시 문구를 나눈다", () => {
+  const off = (name: string | null): Unavailable => ({
+    id: 1, member_id: 1, starts_at: "2026-10-15T18:00:00", ends_at: "2026-10-15T19:00:00",
+    repeat_weekdays: null, repeat_count: null, repeat_until: null, reason: null, name,
+  });
+
+  it("이름이 없으면 who 는 비고 표시는 불가능 일정이다", () => {
+    const [entry] = allOffEntries([off(null)], 18);
+    expect(entry.who).toBeUndefined();
+    expect(entryName(entry, [])).toBe("불가능 일정");
+  });
+
+  it("이름을 정확히 불가능 일정으로 저장해도 who 에 그대로 남는다", () => {
+    const [entry] = allOffEntries([off("불가능 일정")], 18);
+    expect(entry.who).toBe("불가능 일정");
   });
 });

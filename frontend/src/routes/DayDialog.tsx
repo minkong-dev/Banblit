@@ -9,7 +9,7 @@ import { addReservation, addUnavailable, editUnavailable, NO_REPEAT, cancelBooki
 import type { Repeat } from "../lib/pipeline";
 import { firstTaken, slotLabels, unitLabel } from "../lib/calendar";
 import { teamMembersQuery, useMe, useSlotMinutes } from "../components/queries";
-import type { Room } from "../lib/contract";
+import type { Member, Room } from "../lib/contract";
 import { entryName, myEntries, offWhenLabel } from "../lib/dayEntries";
 import type { DayTab, EnsembleOn, Entry } from "../lib/dayEntries";
 import { EnsembleDayEditor } from "./SettingsEnsemble";
@@ -98,13 +98,12 @@ export function DayDialog({
   // 그날 뭔가 놓인 팀만 명단을 조회합니다. 프로필·권한 구역과 같은 query key(components/queries.ts 의 teamMembersKey)를
   // 써서, 이미 받아 둔 명단이 있으면 서버를 다시 조회하지 않습니다.
   const dayTeams = teams.filter((team) => booked.some((entry) => entry.team === team.key));
-  const rosters = useQueries({
-    queries: dayTeams.map((team) => ({
-      ...teamMembersQuery(team.id),
-    })),
-  });
-  const dayPeople = dayTeams.flatMap((team, index) =>
-    (rosters[index]?.data ?? []).map((member) => ({ team, member })));
+  const rosters = useQueries({ queries: dayTeams.map((team) => teamMembersQuery(team.id)) });
+  // useQueries 는 queries 와 같은 순서로 결과를 반환하므로 rosters[index] 가 dayTeams[index] 의 명단입니다.
+  const dayPeople: { team: DayTeam; member: Member }[] = [];
+  for (const [index, team] of dayTeams.entries()) {
+    for (const member of rosters[index]?.data ?? []) dayPeople.push({ team, member });
+  }
   const rosterError = rosters.find((query) => query.isError)?.error;
 
   /** 등록한 항목 하나를 삭제합니다. 예약은 번호 하나로 통째로 취소하고, 불가능 일정은 그 행의 id 로 삭제합니다. */
@@ -144,7 +143,7 @@ export function DayDialog({
     if (id === undefined) return;
     setEditing(id);
     setRange({ a: entry.a, b: entry.b });
-    setOffName(entry.who === "불가능 일정" ? "" : (entry.who ?? ""));
+    setOffName(entry.who ?? "");
     setOffReason(entry.note ?? "");
     setRepeat({
       weekdays: entry.repeatWeekdays ?? 0,

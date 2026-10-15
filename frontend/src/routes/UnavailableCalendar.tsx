@@ -12,7 +12,7 @@ import { MemberSearch } from "../components/MemberSearch";
 import { Modal } from "../components/Modal";
 import { teamMembersQuery, useRooms } from "../components/queries";
 import { TeamSearch } from "../components/TeamSearch";
-import { offByDay, visibleDays } from "../lib/dayEntries";
+import { entryName, offByDay, visibleDays } from "../lib/dayEntries";
 import type { Member, MemberUnavailable, Team } from "../lib/contract";
 import { loadState } from "../lib/loading";
 import { heatByMonth, heatByWeek, offMembersAt } from "../lib/unavailableMap";
@@ -100,7 +100,7 @@ function MemberCalendar({ times, cursor, open, close }: ViewArgs & { times: Memb
           {picked.length === 0 ? <p>불가능 일정이 없어요.</p> : (
             <ul>
               {picked.map((entry, index) => (
-                <li key={index}>{slotLabel(entry.a, open)}–{slotLabel(entry.b, open)} {entry.who}</li>
+                <li key={index}>{slotLabel(entry.a, open)}–{slotLabel(entry.b, open)} {entryName(entry, [])}</li>
               ))}
             </ul>
           )}
