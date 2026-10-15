@@ -1,8 +1,7 @@
 """프로필 사진을 저장·삭제합니다. 계정 1개에 사진 1장입니다.
 
-저장 폴더·조각 단위 쓰기·경로 조작 방지는 게시판 첨부(attachment_service)가 이미 하는 것을
-그대로 사용합니다. 사진에만 다른 것은 두 가지입니다 — 받는 확장자를 그림으로 좁히고, 크기
-상한을 파일 1개 기준으로 둡니다. 첨부는 글 1개에 붙은 합계로 제한하지만 사진은 1장뿐입니다.
+저장 폴더, 조각 단위 쓰기, 경로 조작 방지는 services/storage 를 씁니다. 받는 확장자는 그림 5종이고,
+크기 상한은 사진 1장 기준(MAX_AVATAR_BYTES)입니다.
 """
 
 import secrets
@@ -13,12 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.db.models import Member
-from backend.services.board.pipeline import (
-    display_name,
-    stored_path,
-    write_stream,
-    storage_root,
-)
+from backend.services.storage.pipeline import display_name, storage_root, stored_path, write_stream
 
 # 화면이 <img> 로 표시할 수 있고, 표시해도 스크립트가 실행되지 않는 그림 형식입니다.
 ALLOWED_IMAGE_TYPES: dict[str, str] = {
@@ -74,7 +68,7 @@ def save_avatar(session: Session, member: Member, filename: str, stream: BinaryI
     root = storage_root()
     root.mkdir(parents=True, exist_ok=True)
     stored_name = f"{secrets.token_hex(16)}.{extension}"
-    write_stream(stream, stored_path(stored_name), MAX_AVATAR_BYTES)
+    write_stream(stream, stored_path(stored_name), MAX_AVATAR_BYTES, f"프로필 사진은 {MAX_AVATAR_BYTES // (1024 * 1024)}MB 까지 올릴 수 있습니다")
 
     locked.avatar = stored_name
     try:

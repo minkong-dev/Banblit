@@ -6,7 +6,8 @@ from sqlalchemy.orm import Session
 
 from backend.services.auth.pipeline import SESSION_COOKIE, resolve_session
 from backend.services.permission.pipeline import account_permissions
-from backend.db.models import Member, Permission
+from backend.contract import Permission
+from backend.db.models import Member
 from backend.db.pipeline import get_session
 
 # 모든 endpoint(API의 요청 주소 단위)가 현재 요청자를 확인하는 코드를 이 모듈에 모았습니다.

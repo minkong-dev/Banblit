@@ -10,14 +10,12 @@ kind: file
 ```mermaid
 flowchart LR
   backend_tests_integration_db_test_settings_endpoints["test_settings_endpoints.py"]
-  backend_tests_integration_db_test_settings_endpoints --> backend_src_backend_api_schemas["schemas.py"]
   backend_tests_integration_db_test_settings_endpoints --> backend_src_backend_contract["contract.py"]
   backend_tests_integration_db_test_settings_endpoints --> backend_src_backend_db_models["models.py"]
 ```
 
 ## imports
 
-- [[graph/backend/src/backend/api/schemas|schemas.py]]
 - [[graph/backend/src/backend/contract|contract.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 
@@ -44,4 +42,3 @@ flowchart LR
 - `test_the_database_rejects_a_session_length_that_is_not_a_whole_number_of_slots`
 - `test_the_daily_limit_per_team_starts_at_three_hours_and_takes_one_to_three`
 - `test_the_daily_limit_cannot_be_shorter_than_one_session`
-- `test_the_api_daily_limit_choices_match_the_contract`

@@ -10,6 +10,7 @@ kind: file
 ```mermaid
 flowchart LR
   backend_src_backend_jobs_auto_assign["auto_assign.py"]
+  backend_src_backend_jobs_auto_assign --> backend_src_backend_contract["contract.py"]
   backend_src_backend_jobs_auto_assign --> backend_src_backend_db_models["models.py"]
   backend_src_backend_jobs_auto_assign --> backend_src_backend_db_pipeline["pipeline.py"]
   backend_src_backend_jobs_auto_assign --> backend_src_backend_services_board_pipeline["pipeline.py"]
@@ -20,6 +21,7 @@ flowchart LR
 
 ## imports
 
+- [[graph/backend/src/backend/contract|contract.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/db/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/board/pipeline|pipeline.py]]

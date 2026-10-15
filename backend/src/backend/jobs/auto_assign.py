@@ -11,19 +11,17 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from time import sleep
-from typing import Literal
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from backend.services.board.pipeline import sweep_stale_drafts
 from backend.services.period.pipeline import period_days, run_period_assignment
+from backend.contract import RunSlot
 from backend.db.models import AssignmentRun, Period, Room, Team
 from backend.db.pipeline import get_session_factory
 
 logger = logging.getLogger(__name__)
-
-RunSlot = Literal["first", "second"]
 
 DEFAULT_INTERVAL_SECONDS = 60
 _ENABLED_VARIABLE = "AUTO_ASSIGN_ENABLED"

@@ -23,7 +23,6 @@ flowchart LR
   backend_src_backend_api_routers_roster["roster.py"] --> backend_src_backend_db_models
   backend_src_backend_api_routers_schedule["schedule.py"] --> backend_src_backend_db_models
   backend_src_backend_api_routers_unavailable["unavailable.py"] --> backend_src_backend_db_models
-  backend_src_backend_api_schemas["schemas.py"] --> backend_src_backend_db_models
   backend_src_backend_db_schedule_store["schedule_store.py"] --> backend_src_backend_db_models
   backend_src_backend_jobs_auto_assign["auto_assign.py"] --> backend_src_backend_db_models
   backend_src_backend_services_auth_auth_service["auth_service.py"] --> backend_src_backend_db_models
@@ -58,7 +57,6 @@ flowchart LR
   backend_tests_integration_db_test_db_schedule_inputs["test_db_schedule_inputs.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_focus_cancels_reservations["test_focus_cancels_reservations.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_member_expel_endpoints["test_member_expel_endpoints.py"] --> backend_src_backend_db_models
-  backend_tests_integration_db_test_migration_chain["test_migration_chain.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_notifications["test_notifications.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_password_reset_endpoints["test_password_reset_endpoints.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_period_crud_endpoints["test_period_crud_endpoints.py"] --> backend_src_backend_db_models
@@ -94,7 +92,6 @@ flowchart LR
 - [[graph/backend/src/backend/api/routers/roster|roster.py]]
 - [[graph/backend/src/backend/api/routers/schedule|schedule.py]]
 - [[graph/backend/src/backend/api/routers/unavailable|unavailable.py]]
-- [[graph/backend/src/backend/api/schemas|schemas.py]]
 - [[graph/backend/src/backend/db/schedule_store|schedule_store.py]]
 - [[graph/backend/src/backend/jobs/auto_assign|auto_assign.py]]
 - [[graph/backend/src/backend/services/auth/auth_service|auth_service.py]]
@@ -129,7 +126,6 @@ flowchart LR
 - [[graph/backend/tests/integration/db/test_db_schedule_inputs|test_db_schedule_inputs.py]]
 - [[graph/backend/tests/integration/db/test_focus_cancels_reservations|test_focus_cancels_reservations.py]]
 - [[graph/backend/tests/integration/db/test_member_expel_endpoints|test_member_expel_endpoints.py]]
-- [[graph/backend/tests/integration/db/test_migration_chain|test_migration_chain.py]]
 - [[graph/backend/tests/integration/db/test_notifications|test_notifications.py]]
 - [[graph/backend/tests/integration/db/test_password_reset_endpoints|test_password_reset_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_period_crud_endpoints|test_period_crud_endpoints.py]]

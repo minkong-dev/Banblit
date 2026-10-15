@@ -12,6 +12,7 @@ flowchart LR
   backend_src_backend_services_board_attachment_service["attachment_service.py"]
   backend_src_backend_services_board_attachment_service --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_board_attachment_service --> backend_src_backend_services_board_board_service["board_service.py"]
+  backend_src_backend_services_board_attachment_service --> backend_src_backend_services_storage_pipeline["pipeline.py"]
   backend_src_backend_services_board_pipeline["pipeline.py"] --> backend_src_backend_services_board_attachment_service
   backend_tests_integration_db_test_attachment_endpoints["test_attachment_endpoints.py"] --> backend_src_backend_services_board_attachment_service
 ```
@@ -20,6 +21,7 @@ flowchart LR
 
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/services/board/board_service|board_service.py]]
+- [[graph/backend/src/backend/services/storage/pipeline|pipeline.py]]
 
 ## imported by
 
@@ -28,17 +30,13 @@ flowchart LR
 
 ## 함수와 호출
 
-- `storage_root`
-- `display_name`
 - `_allowed_extension`
-- `stored_path`
 - `_used_bytes`
-- `write_stream`
-- `save_attachment`: `backend.db.models`, `backend.services.board.board_service`
+- `save_attachment`: `backend.db.models`, `backend.services.board.board_service`, `backend.services.storage.pipeline`
 - `attachments_of_post`
 - `list_attachments`: `backend.services.board.board_service`
 - `_get_or_raise`
-- `attachment_for_download`: `backend.services.board.board_service`
+- `attachment_for_download`: `backend.services.board.board_service`, `backend.services.storage.pipeline`
 - `attachment_for_inline`
-- `delete_attachment`: `backend.services.board.board_service`
-- `remove_post_files`
+- `delete_attachment`: `backend.services.board.board_service`, `backend.services.storage.pipeline`
+- `remove_post_files`: `backend.services.storage.pipeline`

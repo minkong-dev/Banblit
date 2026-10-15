@@ -32,42 +32,18 @@ from backend.contract import (
     DEFAULT_DAILY_MAX_HOURS,
     DEFAULT_SESSION_MINUTES,
     DEFAULT_SLOT_MINUTES,
+    Instrument,
+    INSTRUMENTS,
     LATEST_CLOSE_NEXT_DAY,
     MAX_SESSION_MINUTES,
+    NOTIFICATION_KINDS,
+    NotificationKind,
+    Permission,
+    PERMISSIONS,
     REJECT_TARGETS,
+    RUN_SLOTS,
     SLOT_MINUTE_CHOICES,
 )
-
-# 권한 항목입니다. 생성·수정·삭제·조회를 따로 두어, permission set(권한 집합)을 만드는 사람이
-# 필요한 항목만 선택해 묶을 수 있게 합니다. 항목이 늘면 그 항목을 처리하는 서버 코드도
-# 같이 늘어나므로 데이터가 아니라 이 코드에 고정합니다. 활성화/비활성화 여부만 permission_sets 에
-# 저장합니다.
-Permission = Literal[
-    "room_create",  # 합주실 생성
-    "room_edit",  # 합주실 여는 시각·닫는 시각 수정
-    "room_delete",  # 합주실 삭제(그 합주실의 예약·배정 결과·스케줄링 기록도 함께 삭제)
-    "period_create",  # 기간 생성
-    "period_edit",  # 기간 수정
-    "period_delete",  # 기간 삭제(그 기간의 배정 결과·계산 기록·스케줄링 기록도 함께 삭제)
-    "team_create",  # 팀 생성
-    "team_edit",  # 팀 이름·포지션 구성 수정
-    "team_delete",  # 팀 삭제
-    "member_add",  # 팀 포지션에 멤버 배정
-    "member_remove",  # 팀 포지션에서 다른 멤버 제외
-    "member_expel",  # 멤버 추방(계정 삭제)
-    "notice_write",  # 공지 작성
-    "board_moderate",  # 다른 사용자의 글·댓글 삭제와 글 블라인드(수정은 작성자만 가능)
-    "reservation_manage",  # 다른 사용자의 예약 수정과 반려(사유를 담은 알림과 함께 취소)
-    "unavailable_read",  # 다른 사용자의 불가능 일정 조회
-    "unavailable_manage",  # 다른 사용자의 불가능 일정 반려(사유를 담은 알림과 함께 삭제. 등록·수정은 본인만 가능)
-    "assign_run",  # 배정 계산 실행
-    "assign_read",  # 계산 결과 조회
-    "proposal_confirm",  # 스케줄링 기록 조회와 적용
-    "permission_manage",  # permission set 생성·수정·삭제
-    "permission_grant",  # 멤버에게 permission set 부여·회수
-]
-
-PERMISSIONS: tuple[Permission, ...] = get_args(Permission)
 
 # CHECK 제약 문구는 위 목록에서 그대로 생성합니다. 목록과 제약이 분리되지 않도록 합니다.
 _PERMISSION_ARRAY_SQL = "ARRAY[{}]::text[]".format(
@@ -91,11 +67,7 @@ _TEAM_COLOR_ARRAY_SQL = "ARRAY[{}]::text[]".format(
 PeriodKind = Literal["open", "focused"]
 PERIOD_KINDS: tuple[PeriodKind, ...] = get_args(PeriodKind)
 
-# 팀을 생성할 때 선택하는 포지션 종류입니다. 자리 하나가 이 중 하나를 할당받습니다.
-# 같은 포지션을 2자리 이상 두면 ordinal(순서 번호)로 구분합니다. 예: 일렉 2자리는
-# (일렉, 1)과 (일렉, 2)입니다.
-Instrument = Literal["보컬", "일렉", "통기타", "베이스", "신디", "드럼"]
-INSTRUMENTS: tuple[Instrument, ...] = get_args(Instrument)
+
 
 
 def _slot_minutes_sql() -> str:
@@ -474,7 +446,7 @@ class AssignmentRun(Base):
 
     __table_args__ = (
         UniqueConstraint("period_id", "run_on", "slot"),
-        CheckConstraint("slot IN ('first', 'second')"),
+        CheckConstraint(_in_sql("slot", RUN_SLOTS)),
     )
 
 
@@ -694,13 +666,7 @@ class AssignmentBackup(Base):
     )
 
 
-# 알림의 종류입니다. 문구는 이 코드에 두지 않습니다. table 에는 종류만 저장하고 사람이 읽을
-# 문장은 화면이 만듭니다. 그래서 문구를 수정하면 이미 저장된 알림에도 적용되고, table 을
-# 수정할 필요가 없습니다.
-# reservation_cancelled: 집중 합주기간이 생기거나 넓어져 예약이 취소되었습니다(services/reservation_service.py).
-# rejected: 관리 권한자가 예약이나 불가능 일정을 사유와 함께 반려했습니다(services/notification/notification_service.py).
-NotificationKind = Literal["assignment_updated", "reservation_cancelled", "rejected"]
-NOTIFICATION_KINDS: tuple[NotificationKind, ...] = get_args(NotificationKind)
+
 
 
 class Notification(Base):

@@ -10,13 +10,14 @@ kind: file
 ```mermaid
 flowchart LR
   backend_src_backend_api_job_runner["job_runner.py"]
+  backend_src_backend_api_job_runner --> backend_src_backend_contract["contract.py"]
   backend_src_backend_api_routers_schedule["schedule.py"] --> backend_src_backend_api_job_runner
   backend_tests_unit_test_job_runner["test_job_runner.py"] --> backend_src_backend_api_job_runner
 ```
 
 ## imports
 
-- 없음
+- [[graph/backend/src/backend/contract|contract.py]]
 
 ## imported by
 

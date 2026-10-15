@@ -1,5 +1,3 @@
-import os
-import re
 import secrets
 from datetime import datetime
 from pathlib import Path
@@ -9,10 +7,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from backend.services.board.board_service import require_post_author, require_post_readable
+from backend.services.storage.pipeline import display_name, storage_root, stored_path, write_stream
 from backend.db.models import Attachment, Member, Post
 
 # 첨부 규칙 값입니다. 다른 파일에서 다시 정의하지 않습니다.
-DEFAULT_STORAGE_DIR = "/var/lib/banblit/attachments"
 MAX_NAME_CHARS = 200
 MAX_CONTENT_TYPE_CHARS = 100
 # 글 1개에 붙은 첨부 파일 크기의 합계 상한입니다. 파일 1개의 상한은 nginx 의 client_max_body_size
@@ -35,43 +33,12 @@ ALLOWED_EXTENSIONS = frozenset(
 )
 
 
-def storage_root() -> Path:
-    """파일을 저장하는 폴더를 반환합니다. ATTACHMENT_DIR 환경변수가 없으면 DEFAULT_STORAGE_DIR 을 사용합니다."""
-    return Path(os.environ.get("ATTACHMENT_DIR", DEFAULT_STORAGE_DIR))
-
-
-def display_name(raw: str) -> str:
-    """입력받은 파일명에서 경로 부분을 제거하고 파일명만 반환합니다.
-
-    "../../etc/passwd" 를 입력하면 "passwd" 를 반환합니다. 이 값은 화면에 표시할 때만
-    사용하고 저장 경로로는 사용하지 않습니다.
-    """
-    # [\\/] 는 역슬래시와 슬래시를 뜻하며, 윈도우·리눅스 두 경로 구분자를 모두 제거합니다.
-    name = re.split(r"[\\/]", raw)[-1].strip()
-    if not name or name in (".", ".."):
-        raise ValueError("파일 이름이 없습니다")
-    return name
-
-
 def _allowed_extension(name: str) -> str:
     """파일명 끝의 확장자를 소문자로 반환합니다. ALLOWED_EXTENSIONS 에 없으면 ValueError 를 발생시킵니다."""
     extension = Path(name).suffix.lstrip(".").lower()
     if extension not in ALLOWED_EXTENSIONS:
         raise ValueError(f"올릴 수 없는 파일 종류입니다: {name}")
     return extension
-
-
-def stored_path(stored_name: str) -> Path:
-    """저장된 파일명을 폴더 안의 실제 경로로 변환합니다. 폴더 밖을 가리키면 ValueError 를 발생시킵니다."""
-    root = storage_root().resolve()
-    path = (root / stored_name).resolve()
-    if not path.is_relative_to(root):
-        raise ValueError("잘못된 저장 위치입니다")
-    return path
-
-
-# 한 번에 읽어 디스크에 쓰는 조각의 크기입니다. 파일 전체가 메모리에 올라오지 않게 합니다.
-_CHUNK_BYTES = 64 * 1024
 
 
 def _used_bytes(session: Session, post_id: int) -> int:
@@ -82,29 +49,6 @@ def _used_bytes(session: Session, post_id: int) -> int:
         )
     )
     return int(total or 0)
-
-
-def write_stream(stream: BinaryIO, path: Path, limit: int) -> int:
-    """stream 을 path 에 복사하고, 쓴 바이트 수를 반환합니다.
-
-    조각으로 나눠 복사하므로 파일 전체가 메모리에 올라오지 않습니다. 쓴 양이 limit 을 초과하면
-    복사를 중단하고 ValueError 를 발생시킵니다. 전부 쓴 뒤에 판정하면 거절할 파일도 디스크에
-    전부 쓰게 됩니다.
-
-    복사 중 예외가 발생하면 부분적으로 쓰인 파일을 삭제하고 예외를 다시 발생시킵니다.
-    """
-    written = 0
-    try:
-        with path.open("wb") as target:
-            while chunk := stream.read(_CHUNK_BYTES):
-                written += len(chunk)
-                if written > limit:
-                    raise ValueError("이 글의 첨부 파일 크기 합계가 상한을 초과했습니다")
-                target.write(chunk)
-    except BaseException:
-        path.unlink(missing_ok=True)
-        raise
-    return written
 
 
 def save_attachment(
@@ -137,7 +81,7 @@ def save_attachment(
     # reservation_service.py 의 _owned_reservation 이 사용합니다.
     session.scalars(select(Post).where(Post.id == post.id).with_for_update()).one()
     remaining = MAX_POST_BYTES - _used_bytes(session, post.id)
-    size = write_stream(stream, stored_path(stored_name), remaining)
+    size = write_stream(stream, stored_path(stored_name), remaining, "이 글의 첨부 파일 크기 합계가 상한을 초과했습니다")
 
     attachment = Attachment(
         post_id=post.id,

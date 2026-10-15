@@ -12,6 +12,7 @@ flowchart LR
   backend_src_backend_services_board_board_service["board_service.py"]
   backend_src_backend_services_board_board_service --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_board_board_service --> backend_src_backend_services_permission_pipeline["pipeline.py"]
+  backend_src_backend_services_board_board_service --> backend_src_backend_services_roster_pipeline["pipeline.py"]
   backend_src_backend_services_board_board_service --> backend_src_backend_services_validation_pipeline["pipeline.py"]
   backend_src_backend_services_board_attachment_service["attachment_service.py"] --> backend_src_backend_services_board_board_service
   backend_src_backend_services_board_pipeline["pipeline.py"] --> backend_src_backend_services_board_board_service
@@ -21,6 +22,7 @@ flowchart LR
 
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/services/permission/pipeline|pipeline.py]]
+- [[graph/backend/src/backend/services/roster/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/validation/pipeline|pipeline.py]]
 
 ## imported by
@@ -30,10 +32,8 @@ flowchart LR
 
 ## 함수와 호출
 
-- `get_team_or_raise`
-- `require_team_member`
 - `_get_post_or_raise`
-- `require_post_readable`
+- `require_post_readable`: `backend.services.roster.pipeline`
 - `_moderates`: `backend.services.permission.pipeline`
 - `require_post_author`
 - `_comment_counts`
@@ -42,11 +42,11 @@ flowchart LR
 - `set_post_blinded`
 - `list_notices`
 - `create_notice`: `backend.db.models`, `backend.services.validation.pipeline`
-- `create_draft`: `backend.db.models`
+- `create_draft`: `backend.db.models`, `backend.services.roster.pipeline`
 - `publish_post`: `backend.services.validation.pipeline`
 - `sweep_stale_drafts`
-- `list_team_posts`
-- `create_team_post`: `backend.db.models`, `backend.services.validation.pipeline`
+- `list_team_posts`: `backend.services.roster.pipeline`
+- `create_team_post`: `backend.db.models`, `backend.services.roster.pipeline`, `backend.services.validation.pipeline`
 - `get_post_with_comments`
 - `update_post`: `backend.services.validation.pipeline`
 - `require_comment_author`

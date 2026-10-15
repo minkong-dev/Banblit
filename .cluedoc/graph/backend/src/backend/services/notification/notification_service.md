@@ -25,6 +25,7 @@ flowchart LR
 ## 함수와 호출
 
 - `notify_assignment_updated`: `backend.db.models`
+- `notify_reservations_cancelled`: `backend.db.models`
 - `notify_rejected`: `backend.db.models`
 - `list_notifications`
 - `mark_all_read`

@@ -11,7 +11,7 @@ kind: file
 flowchart LR
   backend_src_backend_services_roster_avatar_service["avatar_service.py"]
   backend_src_backend_services_roster_avatar_service --> backend_src_backend_db_models["models.py"]
-  backend_src_backend_services_roster_avatar_service --> backend_src_backend_services_board_pipeline["pipeline.py"]
+  backend_src_backend_services_roster_avatar_service --> backend_src_backend_services_storage_pipeline["pipeline.py"]
   backend_src_backend_services_roster_pipeline["pipeline.py"] --> backend_src_backend_services_roster_avatar_service
   backend_tests_integration_db_test_avatar_endpoints["test_avatar_endpoints.py"] --> backend_src_backend_services_roster_avatar_service
 ```
@@ -19,7 +19,7 @@ flowchart LR
 ## imports
 
 - [[graph/backend/src/backend/db/models|models.py]]
-- [[graph/backend/src/backend/services/board/pipeline|pipeline.py]]
+- [[graph/backend/src/backend/services/storage/pipeline|pipeline.py]]
 
 ## imported by
 
@@ -29,6 +29,6 @@ flowchart LR
 ## 함수와 호출
 
 - `_image_extension`
-- `avatar_path`: `backend.services.board.pipeline`
-- `save_avatar`: `backend.services.board.pipeline`
-- `delete_avatar`: `backend.services.board.pipeline`
+- `avatar_path`: `backend.services.storage.pipeline`
+- `save_avatar`: `backend.services.storage.pipeline`
+- `delete_avatar`: `backend.services.storage.pipeline`

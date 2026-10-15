@@ -7,7 +7,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.db.models import PERMISSIONS, Member, PermissionSet, Team, TeamSlot
+from backend.contract import PERMISSIONS
+from backend.db.models import Member, PermissionSet, Team, TeamSlot
 from conftest import AccountFactory, seat
 
 

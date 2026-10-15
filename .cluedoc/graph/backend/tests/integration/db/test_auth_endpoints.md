@@ -10,11 +10,13 @@ kind: file
 ```mermaid
 flowchart LR
   backend_tests_integration_db_test_auth_endpoints["test_auth_endpoints.py"]
+  backend_tests_integration_db_test_auth_endpoints --> backend_src_backend_contract["contract.py"]
   backend_tests_integration_db_test_auth_endpoints --> backend_src_backend_db_models["models.py"]
 ```
 
 ## imports
 
+- [[graph/backend/src/backend/contract|contract.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 
 ## imported by
