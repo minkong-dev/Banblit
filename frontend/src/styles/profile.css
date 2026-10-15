@@ -46,7 +46,7 @@ body[data-page="profile"] {
   .read dd { margin: 0; text-align: right; font-weight: 500; }
 
   /* 입력칸 묶음과 오류 문구의 안쪽 여백입니다. settings.css 의 .card > .fields 와 같은 값입니다.
-     2026-09-23 에 설정 화면에서 옮겨 온 카드라 settings.css 의 규칙이 이 화면에는 적용되지 않습니다. */
+     settings.css 의 규칙은 이 화면에 적용되지 않으므로 같은 값을 따로 둡니다. */
   .card .fields { padding: 16px 0 14px; }
   .card > .fields label { gap: 7px; }
   .card > .why { margin: 0; padding: 0 0 16px; }

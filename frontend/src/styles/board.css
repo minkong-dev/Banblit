@@ -195,10 +195,10 @@ body[data-page="board"] {
 /* 절대 위치라 폭이 정해지지 않습니다. max-content 를 주지 않으면 두 칸이 0 까지 줄어
    글자가 세로로 줄바꿈됩니다. 칸 폭은 팔레트 8칸(16px)이 정합니다. */
 /* popover="auto" 요소입니다. top layer(브라우저가 다른 요소 위에 그리는 계층)에서는 position: absolute 가
-   DOM 상의 조상이 아니라 뷰포트를 기준으로 계산되어(2026-09-29 e2e 스크린샷으로 발견 — 화면 바깥에 그려졌습니다),
+   DOM 상의 조상이 아니라 뷰포트를 기준으로 계산되어 화면 바깥에 그려지므로,
    CSS anchor positioning 으로 .rtcolor 버튼을 직접 기준 삼습니다. 칸 폭(팔레트 2칸 기준 약 330px)이 360px
    폭 화면에서 버튼 위치 그대로 넘칠 수 있어, left 를 [12px, 뷰포트 폭 - 칸 폭 - 12px] 범위로 clamp 합니다
-   (position-try-fallbacks 의 flip-inline 은 이 폭에서 뒤집지 않아 대신 씁니다. 2026-09-29 스크린샷으로 확인).
+   (position-try-fallbacks 의 flip-inline 은 이 폭에서 뒤집지 않아 대신 씁니다).
    :popover-open 에서 display 를 다시 지정해야, 열렸을 때 grid 대신 브라우저 기본값(block)이 쓰이지 않습니다. */
 .rtcolorpop {
   position: fixed; position-anchor: --rtcolor-trigger;

@@ -79,7 +79,7 @@ body[data-page="admin"] {
   .times .t { font-size: 22px; font-weight: 700; letter-spacing: -.04em; margin: 4px 0 14px; }
   /* 두 칸이 나란히 들어가지 않는 폭이면 아래로 내려갑니다. */
   .times .rows { display: flex; flex-wrap: wrap; gap: 10px; }
-  /* 입력칸 위의 작은 라벨(1차·2차)입니다. 큰 시각 표시는 2026-10-07 에 삭제했습니다 — 입력칸이 같은 값을 보여 줍니다. */
+  /* 입력칸 위의 작은 라벨(1차·2차)입니다. 큰 시각 표시는 두지 않습니다. 입력칸이 같은 값을 보여 줍니다(사용자 결정 2026-10-07). */
   .times .run { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--t3); }
   .times .run input[type="time"] { width: 100%; flex: none; }
   /* min-width: 0 — 입력칸은 기본값이 글자 폭보다 좁아지지 않아, 칸이 좁으면 두 번째 칸이 카드 밖으로 잘렸습니다. */
@@ -95,8 +95,8 @@ body[data-page="admin"] {
    달리, 스크롤 대상이 달력 하나로 한정됩니다. */
 @media (max-width: 767px) {
   body[data-page="admin"] {
-    /* 7열이 화면 폭 안에 들어갑니다. 전에는 620px 로 두고 가로 스크롤했는데, 보이지 않는 금·토 칸의 일정 때문에
-       보이는 빈 칸이 세로로 길어져 달력이 비어 보였습니다(2026-10-07). 칸이 좁아 합주실명은 숨기고 팀 이름은 글자 단위로 줄바꿈합니다. */
+    /* 7열이 화면 폭 안에 들어갑니다. 가로로 스크롤하면 보이지 않는 칸의 일정 때문에 보이는 칸이 세로로 길어집니다.
+       칸이 좁아 합주실명은 숨기고 팀 이름은 글자 단위로 줄바꿈합니다. */
     .dow span { font-size: 11px; }
     .day { min-height: 64px; padding: 5px 3px 6px; gap: 3px; }
     .day .n { font-size: 12px; }

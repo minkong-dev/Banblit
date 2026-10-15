@@ -84,7 +84,7 @@ body[data-page="landing"] {
 
   /* ===== 히어로 =====
      로그인 화면의 사진(account.css .stage)과 같은 배치입니다. 제목·부제·시작하기 링크를 사진의 왼쪽 아래에 놓고,
-     SCROLL 은 오른쪽 아래에 둡니다. 좌우 여백 40px 은 위 .nav 의 로고와 같은 선입니다(2026-09-30 사용자 결정). */
+     SCROLL 은 오른쪽 아래에 둡니다. 좌우 여백 40px 은 위 .nav 의 로고와 같은 선입니다(사용자 결정 2026-09-30). */
   .hero {
     position: relative; min-height: 100vh;
     display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end;

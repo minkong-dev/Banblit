@@ -6,7 +6,7 @@ body[data-page="scheduler"] {
      캘린더와 우측 목록은 같은 줄에 배치되어, 윗선과 높이가 정확히 같습니다.
      탭은 캘린더 위 칸에만 배치되어 우측 목록을 밀지 않습니다.
      창 바닥까지 채우는 화면은 대시보드 하나입니다(사용자 결정). 한 달이 스크롤 없이 한 화면에 들어오도록
-     높이를 창 높이로 고정하고, 달력 줄이 남는 높이를 나눠 가집니다(2026-09-28 사용자 결정). */
+     높이를 창 높이로 고정하고, 달력 줄이 남는 높이를 나눠 가집니다(사용자 결정 2026-09-28). */
   .page { grid-template-rows: auto auto minmax(0, 1fr); height: calc(100dvh - var(--bar) - var(--nav, 0px)); }
   .tabs { flex-wrap: nowrap; }
   .cut { grid-column: 1 / -1; grid-row: 2; }

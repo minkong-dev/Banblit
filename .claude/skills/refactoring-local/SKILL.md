@@ -41,7 +41,7 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 | `services/auth/mailer.py` | SMTP | 코드의 timeout 인자 |
 | `db/engine.py` | PostgreSQL | connect 인자 |
 | `frontend/src/lib/api.ts` | api | `REQUEST_TIMEOUT_MS`(AbortSignal.timeout), 업로드는 `UPLOAD_TIMEOUT_MS` |
-| `frontend/nginx.conf.template` | api(배포) | `proxy_read_timeout 30s`. 배정 계산 상한과 함께 변경 |
+| `frontend/nginx.conf.template` | api(배포) | `proxy_read_timeout 30s`. 배정 계산은 job 으로 접수하므로 요청 1개 기준 |
 
 - 규격 1세트: 서버는 `contract.py`, 화면은 field 타입이 `lib/contract.ts`, 조회 hook 과 queryKey 가 `components/queries.ts` 입니다. 같은 field 를 다른 곳에 다시 선언하지 않습니다.
 
