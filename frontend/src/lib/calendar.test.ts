@@ -14,6 +14,7 @@ import {
   acceptsDrag,
   monthCells,
   roomBounds,
+  clockEndLabel,
   slotCountOf,
   slotLabel,
   dragRange,
@@ -287,6 +288,17 @@ describe("roomBounds — 합주실 여닫는 시각으로 달력의 앞뒤를 �
 
   it("합주실이 없으면 기본값을 쓴다", () => {
     expect(roomBounds([])).toEqual({ open: 10, close: 22 });
+  });
+
+  it("00:00 마감은 24시까지로 잡는다", () => {
+    expect(roomBounds([{ opens_at: "18:00", closes_at: "00:00" }])).toEqual({ open: 18, close: 24 });
+  });
+});
+
+describe("clockEndLabel — 종료 시간 표기", () => {
+  it("00:00 종료는 24:00 으로 표시한다", () => {
+    expect(clockEndLabel("00:00")).toBe("24:00");
+    expect(clockEndLabel("23:00")).toBe("23:00");
   });
 });
 

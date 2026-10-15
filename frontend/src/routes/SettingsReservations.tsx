@@ -14,6 +14,7 @@ import { reason } from "../lib/api";
 import { askCancel } from "../lib/confirm";
 import {
   cancelBooking,
+  clockEndLabel,
   dayKey,
   dayWithWeekday,
   hhmm,
@@ -37,7 +38,7 @@ function whoLabel(booking: Booking): string {
 }
 
 function bookingLabel(booking: Booking): string {
-  return `${whoLabel(booking)} ${dayWithWeekday(booking.start.slice(0, 10))} ${hhmm(booking.start)}–${hhmm(booking.end)} 예약`;
+  return `${whoLabel(booking)} ${dayWithWeekday(booking.start.slice(0, 10))} ${hhmm(booking.start)}–${clockEndLabel(hhmm(booking.end))} 예약`;
 }
 
 export function ReservationCards() {
@@ -103,7 +104,7 @@ export function ReservationCards() {
             {bookings.map((booking) => (
               <tr key={booking.id}>
                 <td>{dayWithWeekday(booking.start.slice(0, 10))}</td>
-                <td>{hhmm(booking.start)}–{hhmm(booking.end)}</td>
+                <td>{hhmm(booking.start)}–{clockEndLabel(hhmm(booking.end))}</td>
                 <td>{booking.room}</td>
                 <td>{whoLabel(booking)}</td>
                 <td className="fill" />
@@ -137,7 +138,7 @@ export function ReservationCards() {
         <RejectDialog
           target="reservation"
           owner={rejecting.member}
-          subject={`${dayWithWeekday(rejecting.start.slice(0, 10))} ${hhmm(rejecting.start)}–${hhmm(rejecting.end)} ${rejecting.room}`}
+          subject={`${dayWithWeekday(rejecting.start.slice(0, 10))} ${hhmm(rejecting.start)}–${clockEndLabel(hhmm(rejecting.end))} ${rejecting.room}`}
           onReject={(text) => rejectBooking(rejecting.id, text)}
           onDone={() => {
             setRejecting(null);

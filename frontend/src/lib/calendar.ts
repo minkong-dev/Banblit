@@ -28,6 +28,7 @@ export function monthCells(year: number, month: number): (number | null)[] {
 }
 
 export const MINUTES_PER_HOUR = 60;
+const HOURS_PER_DAY = 24;
 
 export function slotLabel(index: number, openHour: number): string {
   // 여는 시각을 0번으로 둔 칸 번호를 "18:00"으로 표시합니다. 소수 칸 번호는 분으로 변경해 "18:10"이 됩니다.
@@ -148,7 +149,9 @@ export function roomBounds(rooms: { opens_at: string; closes_at: string }[]): {
   let close = 0;
   for (const room of rooms) {
     open = Math.min(open, Number(room.opens_at.slice(0, 2)));
-    close = Math.max(close, Number(room.closes_at.slice(0, 2)));
+    // 00:00 마감은 다음 날 00:00 이라 24시로 셉니다.
+    const closes = Number(room.closes_at.slice(0, 2));
+    close = Math.max(close, closes === 0 && room.opens_at !== room.closes_at ? HOURS_PER_DAY : closes);
   }
   return open < close ? { open, close } : { open: FALLBACK_OPEN_HOUR, close: FALLBACK_CLOSE_HOUR };
 }
@@ -178,8 +181,13 @@ export function focusedRanges(
     .sort((a, b) => a.from.localeCompare(b.from));
 }
 
+/** 종료 시간 "HH:MM" 을 표시합니다. 00:00 종료는 다음 날 00:00 이라 "24:00" 으로 표시합니다. */
+export function clockEndLabel(hhmm: string): string {
+  return hhmm === "00:00" ? `${HOURS_PER_DAY}:00` : hhmm;
+}
+
 /** "YYYY-MM-DD" 에 days 일을 더한 날짜입니다. 정오에서 계산합니다(NOON_HOUR). */
-function shiftDay(key: string, days: number): string {
+export function shiftDay(key: string, days: number): string {
   const date = new Date(`${key}T12:00:00`);
   date.setDate(date.getDate() + days);
   return dayKey(date);

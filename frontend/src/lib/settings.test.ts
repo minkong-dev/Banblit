@@ -5,6 +5,7 @@ import {
   capacity,
   dateRangeMessage,
   ensembleMessage,
+  ensembleTimeMessage,
   openHoursMessage,
   practiceWindowMessage,
   roomNameMessage,
@@ -69,9 +70,9 @@ describe("ensembleMessage", () => {
     expect(ensembleMessage({ ...form, starts_at: "19:30" }, period, room, 30)).toBe("");
   });
 
-  it("종료 시간이 시작 시간보다 늦어야 한다", () => {
+  it("종료 시간이 시작 시간보다 늦거나 00:00 이어야 한다", () => {
     expect(ensembleMessage({ ...form, starts_at: "21:00", ends_at: "20:00" }, period, room, 60))
-      .toBe("종료 시간은 시작 시간보다 늦어야 해요.");
+      .toBe("종료 시간은 시작 시간보다 늦거나 00:00 이어야 해요.");
   });
 
   it("합주실 운영 시간 밖의 시각은 받지 않는다", () => {
@@ -93,9 +94,22 @@ describe("openHoursMessage", () => {
     expect(openHoursMessage("18:00", "22:45")).toBe("마감 시간은 정각 기준으로 지정해주세요.");
   });
 
-  it("닫는 시각이 여는 시각보다 늦어야 한다", () => {
-    expect(openHoursMessage("23:00", "18:00")).toBe("마감 시간은 개방 시간보다 빠를 수 없어요.");
-    expect(openHoursMessage("18:00", "18:00")).toBe("마감 시간은 개방 시간보다 빠를 수 없어요.");
+  it("닫는 시각이 여는 시각보다 늦거나 00:00 이어야 한다", () => {
+    expect(openHoursMessage("23:00", "18:00")).toBe("마감 시간은 개방 시간보다 늦거나 00:00 이어야 해요.");
+    expect(openHoursMessage("18:00", "18:00")).toBe("마감 시간은 개방 시간과 같을 수 없어요.");
+  });
+
+  it("00:00 마감은 다음 날 00:00 까지 운영하는 합주실이다", () => {
+    expect(openHoursMessage("18:00", "00:00")).toBe("");
+    expect(slotsBetween("18:00", "00:00")).toBe(6);
+  });
+
+  it("00:00 까지의 팀별 합주 시간대와 전체 합주 시각을 허용한다", () => {
+    const blank = { starts_at: "", ends_at: "" };
+    expect(practiceWindowMessage({ starts_at: "19:00", ends_at: "00:00" }, blank, 60)).toBe("");
+    expect(ensembleTimeMessage("22:00", "00:00", { opens_at: "18:00", closes_at: "00:00" }, 60)).toBe("");
+    expect(ensembleTimeMessage("22:00", "00:00", { opens_at: "18:00", closes_at: "23:00" }, 60))
+      .toBe("전체 합주 시각은 합주실 운영 시간 안이어야 해요.");
   });
 
   it("비어 있으면 채워 달라고 한다", () => {
@@ -242,9 +256,9 @@ describe("practiceWindowMessage", () => {
       .toBe("평일 합주 종료 시간을 입력해주세요.");
   });
 
-  it("끝이 시작보다 빠르면 거절한다", () => {
+  it("종료 시간이 시작 시간보다 이르고 00:00 이 아니면 거절한다", () => {
     expect(practiceWindowMessage({ starts_at: "23:00", ends_at: "17:00" }, empty, 30))
-      .toBe("평일 합주 종료 시간은 시작 시간보다 늦어야 해요.");
+      .toBe("평일 합주 종료 시간은 시작 시간보다 늦거나 00:00 이어야 해요.");
   });
 
   it("격자 위가 아니면 거절한다", () => {

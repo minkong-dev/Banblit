@@ -12,7 +12,7 @@ import { hoursOf, reportLines } from "../lib/assignment";
 import { appliedLabel, checkRunTimes, scoreLabel, slotCountLabel } from "../lib/runs";
 import { say } from "../lib/toast";
 import { LOADING_TEXT, loadState } from "../lib/loading";
-import { dayOf, hhmm, stampLabel, WEEKDAY_NAMES } from "../lib/pipeline";
+import { clockEndLabel, dayOf, hhmm, stampLabel, WEEKDAY_NAMES } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";
 import type { Backup, Period, ScheduleReport } from "../lib/contract";
 
@@ -67,7 +67,7 @@ export function AssignmentCalendar({ days, shown, colors }: {
                   {items.map((session, index) => (
                     <div className={`ses ${colors.get(session.team) ?? ""}`} key={index}>
                       {session.team}
-                      <small>{hhmm(session.start)}–{hhmm(session.end)}</small>
+                      <small>{hhmm(session.start)}–{clockEndLabel(hhmm(session.end))}</small>
                       <span className="out">{session.room}</span>
                     </div>
                   ))}

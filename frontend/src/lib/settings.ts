@@ -9,6 +9,11 @@ import { uniqueNameMessage } from "./validate";
 // 서버 쪽은 backend/src/backend/services/settings_service.py 에 작성되어 있는 내용을 기준으로 합니다.
 const DEFAULT_SLOT_MINUTES = 60;
 const MINUTES_PER_HOUR = 60;
+const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
+
+/** 종료 시간이 시작 시간보다 이를 때 허용하는 유일한 종료 시간입니다. 다음 날 00:00 으로 봅니다(사용자 결정 2026-10-12).
+ *  서버 쪽은 backend/src/backend/contract.py 의 LATEST_CLOSE_NEXT_DAY 에 작성되어 있는 내용을 기준으로 합니다. */
+export const LATEST_CLOSE_NEXT_DAY = "00:00";
 
 /** 점유 단위로 선택할 수 있는 값(분)입니다. 한 시간을 나머지 없이 나누는 값만 둡니다.
  *  서버 쪽은 backend/src/backend/api/schemas.py 의 SettingsUpdateIn 과 settings 의 CHECK 에 작성되어 있는 내용을 기준으로 합니다. */
@@ -56,6 +61,13 @@ function minutesOf(hhmm: string): number | null {
   return parts === null ? null : Number(parts[1]) * MINUTES_PER_HOUR + Number(parts[2]);
 }
 
+/** 자정부터의 분 from, to 로 이루어진 하루 범위의 종료 분입니다. to 가 from 보다 늦으면 to, to 가 00:00 이면서 from 과 다르면
+ *  1440(다음 날 00:00), 그 외는 null 입니다. */
+function rangeEndMinutes(from: number, to: number): number | null {
+  if (to > from) return to;
+  return to === 0 && from !== 0 ? MINUTES_PER_DAY : null;
+}
+
 function onGrid(minutes: number, slotMinutes: number): boolean {
   return minutes % slotMinutes === 0;
 }
@@ -79,7 +91,8 @@ function gridMessage(from: number | null, to: number | null, slotMinutes: number
   const unit = unitText(slotMinutes);
   if (from === null || !onGrid(from, slotMinutes)) return `개방 시간은 ${unit} 기준으로 지정해주세요.`;
   if (to === null || !onGrid(to, slotMinutes)) return `마감 시간은 ${unit} 기준으로 지정해주세요.`;
-  if (to <= from) return "마감 시간은 개방 시간보다 빠를 수 없어요.";
+  if (to === from) return "마감 시간은 개방 시간과 같을 수 없어요.";
+  if (rangeEndMinutes(from, to) === null) return `마감 시간은 개방 시간보다 늦거나 ${LATEST_CLOSE_NEXT_DAY} 이어야 해요.`;
   return "";
 }
 
@@ -109,7 +122,10 @@ function windowPairMessage(pair: WindowPair, label: string, slotMinutes: number)
   if (from === null || to === null || !onGrid(from, slotMinutes) || !onGrid(to, slotMinutes)) {
     return `${label} 합주 시간은 ${unitText(slotMinutes)} 기준으로 지정해주세요.`;
   }
-  if (to <= from) return `${label} 합주 종료 시간은 시작 시간보다 늦어야 해요.`;
+  if (to === from) return `${label} 합주 시작 시간과 종료 시간은 같을 수 없어요.`;
+  if (rangeEndMinutes(from, to) === null) {
+    return `${label} 합주 종료 시간은 시작 시간보다 늦거나 ${LATEST_CLOSE_NEXT_DAY} 이어야 해요.`;
+  }
   return "";
 }
 
@@ -169,10 +185,13 @@ export function ensembleTimeMessage(
   if (from === null || to === null || !onGrid(from, slotMinutes) || !onGrid(to, slotMinutes)) {
     return `전체 합주 시각은 ${unitText(slotMinutes)} 기준으로 지정해주세요.`;
   }
-  if (to <= from) return "종료 시간은 시작 시간보다 늦어야 해요.";
+  if (to === from) return "시작 시간과 종료 시간은 같을 수 없어요.";
+  const end = rangeEndMinutes(from, to);
+  if (end === null) return `종료 시간은 시작 시간보다 늦거나 ${LATEST_CLOSE_NEXT_DAY} 이어야 해요.`;
   const opens = minutesOf(room.opens_at);
   const closes = minutesOf(room.closes_at);
-  if (opens === null || closes === null || from < opens || to > closes) {
+  const roomEnd = opens === null || closes === null ? null : rangeEndMinutes(opens, closes);
+  if (opens === null || roomEnd === null || from < opens || end > roomEnd) {
     return "전체 합주 시각은 합주실 운영 시간 안이어야 해요.";
   }
   return "";
@@ -185,7 +204,7 @@ export function slotsBetween(
   const from = minutesOf(opens);
   const to = minutesOf(closes);
   if (from === null || to === null || gridMessage(from, to, slotMinutes) !== "") return 0;
-  return (to - from) / slotMinutes;
+  return ((rangeEndMinutes(from, to) ?? from) - from) / slotMinutes;
 }
 
 /** 네 값 모두 자리의 개수입니다. 자리 하나의 길이는 capacity 에 넘긴 slotMinutes 입니다. */
