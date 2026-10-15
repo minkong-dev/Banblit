@@ -217,3 +217,21 @@ def test_the_log_tells_whether_an_id_reminder_went_out_and_why_not(
     ]
     # 메일 주소는 기록에 남기지 않습니다 — 기록만 열람할 수 있는 사람에게 가입자 주소가 노출됩니다.
     assert HEAD[1] not in "\n".join(reasons)
+
+
+def test_a_reset_mail_is_not_sent_without_the_site_address(
+    api_client: TestClient,
+    account: AccountFactory,
+    caplog: pytest.LogCaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # APP_ORIGIN 이 비면 열 수 없는 링크가 나가므로 발송하지 않고 오류 로그를 남깁니다.
+    account(*HEAD)
+    monkeypatch.delenv("APP_ORIGIN", raising=False)
+
+    response = api_client.post("/password-reset", json={"email": HEAD[1]})
+
+    assert response.status_code == 200
+    assert any(
+        record.levelno == logging.ERROR and "APP_ORIGIN" in record.getMessage() for record in caplog.records
+    )

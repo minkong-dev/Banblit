@@ -41,6 +41,12 @@ def _moderates(session: Session, requester: Member) -> bool:
     return "board_moderate" in account_permissions(session, requester.id)
 
 
+def delete_post_row(session: Session, post: Post) -> None:
+    """post 행을 삭제하고 commit 합니다. 댓글과 Attachment 행은 cascade 로 함께 삭제됩니다."""
+    session.delete(post)
+    session.commit()
+
+
 def require_post_author(
     session: Session, post_id: int, requester: Member, *, allow_moderator: bool = True
 ) -> Post:

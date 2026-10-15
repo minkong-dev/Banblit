@@ -13,7 +13,6 @@ flowchart LR
   backend_src_backend_api_routers_auth --> backend_src_backend_api_auth_dependency["auth_dependency.py"]
   backend_src_backend_api_routers_auth --> backend_src_backend_api_rate_limit["rate_limit.py"]
   backend_src_backend_api_routers_auth --> backend_src_backend_api_schemas["schemas.py"]
-  backend_src_backend_api_routers_auth --> backend_src_backend_contract["contract.py"]
   backend_src_backend_api_routers_auth --> backend_src_backend_db_models["models.py"]
   backend_src_backend_api_routers_auth --> backend_src_backend_db_pipeline["pipeline.py"]
   backend_src_backend_api_routers_auth --> backend_src_backend_services_auth_pipeline["pipeline.py"]
@@ -27,7 +26,6 @@ flowchart LR
 - [[graph/backend/src/backend/api/auth_dependency|auth_dependency.py]]
 - [[graph/backend/src/backend/api/rate_limit|rate_limit.py]]
 - [[graph/backend/src/backend/api/schemas|schemas.py]]
-- [[graph/backend/src/backend/contract|contract.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/db/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/auth/pipeline|pipeline.py]]
@@ -69,7 +67,7 @@ flowchart LR
 - `delete_my_avatar`: `backend.services.roster.pipeline`
 - `show_avatar`: `backend.services.roster.pipeline`
 - `edit_my_password`: `backend.services.auth.pipeline`
-- `leave`
+- `leave`: `backend.services.auth.pipeline`
 - `logout`: `backend.services.auth.pipeline`
 - `find_id`: `backend.api.schemas`, `backend.services.auth.pipeline`
 - `start_password_reset`: `backend.api.schemas`, `backend.services.auth.pipeline`

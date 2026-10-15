@@ -41,6 +41,8 @@ flowchart LR
 - `_validated_changes`: `backend.services.validation.pipeline`
 - `update_period`
 - `delete_period`
+- `focused_periods_on`
+- `every_team_and_room`
 - `get_period_or_raise`
 - `list_schedule`
 - `list_backup_round`

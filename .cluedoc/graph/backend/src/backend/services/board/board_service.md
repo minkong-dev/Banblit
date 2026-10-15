@@ -35,6 +35,7 @@ flowchart LR
 - `_get_post_or_raise`
 - `require_post_readable`: `backend.services.roster.pipeline`
 - `_moderates`: `backend.services.permission.pipeline`
+- `delete_post_row`
 - `require_post_author`
 - `_comment_counts`
 - `_posts_with_author_and_count`

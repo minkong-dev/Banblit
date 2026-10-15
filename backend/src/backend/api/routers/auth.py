@@ -6,15 +6,12 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account
-from backend.services.auth.pipeline import change_password, update_profile
-from backend.services.auth.pipeline import login as login_account
-from backend.services.auth.pipeline import signup as signup_account
+from backend.services.auth.pipeline import change_password, delete_account, sign_in, sign_up, update_profile
 from backend.services.roster.pipeline import avatar_path, delete_avatar, save_avatar
 from backend.services.auth.pipeline import (
     KEEP_TTL,
     SESSION_COOKIE,
     SIGNED_IN_COOKIE,
-    create_session,
     revoke_session,
 )
 from backend.services.auth.pipeline import (
@@ -22,7 +19,11 @@ from backend.services.auth.pipeline import (
     reset_password,
     send_id_reminder,
 )
-from backend.services.permission.pipeline import account_permission_set_names, account_permissions
+from backend.services.permission.pipeline import (
+    account_permission_set_names,
+    account_permissions,
+    holds_every_permission,
+)
 from backend.api.rate_limit import limit_guesses
 from backend.services.roster.pipeline import list_my_teams
 from backend.api.schemas import (
@@ -39,7 +40,6 @@ from backend.api.schemas import (
     PasswordResetIn,
     SignupIn,
 )
-from backend.contract import PERMISSIONS
 from backend.db.models import Member
 from backend.db.pipeline import get_session
 
@@ -99,8 +99,6 @@ def _clear_session_cookies(response: Response) -> None:
 
 
 def _account_out(session: Session, member: Member) -> AccountOut:
-    # 화면이 role 을 "헤드매니저"/"일반멤버"로 구분합니다. role 을 저장하는 열은 없으므로,
-    # PERMISSIONS 의 항목을 모두 가졌는지로 값을 결정합니다.
     permissions = account_permissions(session, member.id)
     return AccountOut(
         id=member.id,
@@ -108,7 +106,7 @@ def _account_out(session: Session, member: Member) -> AccountOut:
         email=member.email or "",
         login_id=member.login_id,
         avatar=member.avatar,
-        role="head_manager" if len(permissions) == len(PERMISSIONS) else "member",
+        role="head_manager" if holds_every_permission(permissions) else "member",
         permissions=permissions,  # type: ignore[arg-type]
         permission_sets=account_permission_set_names(session, member.id),
         cohort=member.cohort,
@@ -122,7 +120,7 @@ def _account_out(session: Session, member: Member) -> AccountOut:
 def signup(
     req: SignupIn, response: Response, session: Session = Depends(get_session)
 ) -> AuthOut:
-    member = signup_account(
+    member, token = sign_up(
         session,
         req.name,
         req.department,
@@ -132,8 +130,8 @@ def signup(
         req.password,
         req.cohort,
         req.admin_code,
+        datetime.now(),
     )
-    token = create_session(session, member.id, datetime.now())
     _set_session_cookies(response, token)
     return AuthOut(account=_account_out(session, member))
 
@@ -143,10 +141,9 @@ def login(
     req: LoginIn, response: Response, session: Session = Depends(get_session)
 ) -> AuthOut:
     try:
-        member = login_account(session, req.login_id, req.password)
+        member, token = sign_in(session, req.login_id, req.password, datetime.now(), req.keep)
     except ValueError as error:
         raise HTTPException(status_code=401, detail=str(error)) from error
-    token = create_session(session, member.id, datetime.now(), keep=req.keep)
     _set_session_cookies(response, token, keep=req.keep)
     return AuthOut(account=_account_out(session, member))
 
@@ -187,11 +184,8 @@ def show_avatar(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> FileResponse:
-    member = session.get(Member, member_id)
-    if member is None:
-        raise HTTPException(status_code=404, detail="프로필 사진이 없습니다")
     try:
-        path, content_type = avatar_path(member)
+        path, content_type = avatar_path(session, member_id)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
     # 첨부 파일을 표시하는 경로와 같은 머리말을 붙입니다. 브라우저가 내용을 보고 형식을 다시
@@ -235,8 +229,7 @@ def leave(
     포지션은 삭제하지 않고 member_id 만 None 으로 변경합니다. 포지션은 팀의 구성이므로 멤버가
     탈퇴해도 팀의 포지션 수가 줄면 안 됩니다. 삭제 규칙은 db/models.py 의 ondelete 에 정의되어 있습니다.
     """
-    session.delete(requester)
-    session.commit()
+    delete_account(session, requester)
     _clear_session_cookies(response)
 
 

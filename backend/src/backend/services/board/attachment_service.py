@@ -13,30 +13,14 @@ from backend.db.models import Attachment, Member, Post
 # 첨부 규칙 값입니다. 다른 파일에서 다시 정의하지 않습니다.
 MAX_NAME_CHARS = 200
 MAX_CONTENT_TYPE_CHARS = 100
-# 글 1개에 붙은 첨부 파일 크기의 합계 상한입니다. 파일 1개의 상한은 nginx 의 client_max_body_size
-# (frontend/nginx.conf.template)가 담당합니다. 이 값이 없으면 같은 글에 파일을 반복해서 붙여
-# 디스크를 채울 수 있습니다.
-MAX_POST_BYTES = 300 * 1024 * 1024
 DEFAULT_CONTENT_TYPE = "application/octet-stream"
 
-# 업로드할 수 있는 파일 확장자입니다. 이 목록에 없는 확장자는 전부 거절합니다.
-# 이 목록에 작성되어 있는 내용을 기준으로 합니다. 화면 쪽 사본은 frontend/src/lib/boards.ts 의 ALLOWED_EXTENSIONS 이고, 파일 선택창의
-# accept 와 업로드 전 검증에 사용합니다. 여기를 수정하면 그 사본도 같은 작업 안에서 수정합니다.
-ALLOWED_EXTENSIONS = frozenset(
-    {
-        "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic",
-        "mp3", "wav", "m4a", "flac", "ogg", "aac",
-        "mp4", "mov", "avi", "mkv", "webm",
-        "md", "txt", "pdf", "doc", "docx", "ppt", "pptx",
-        "hwp", "hwpx", "xls", "xlsx", "csv", "zip",
-    }
-)
 
 
-def _allowed_extension(name: str) -> str:
-    """파일명 끝의 확장자를 소문자로 반환합니다. ALLOWED_EXTENSIONS 에 없으면 ValueError 를 발생시킵니다."""
+def _allowed_extension(name: str, allowed: frozenset[str]) -> str:
+    """파일명 끝의 확장자를 소문자로 반환합니다. allowed 에 없으면 ValueError 를 발생시킵니다."""
     extension = Path(name).suffix.lstrip(".").lower()
-    if extension not in ALLOWED_EXTENSIONS:
+    if extension not in allowed:
         raise ValueError(f"올릴 수 없는 파일 종류입니다: {name}")
     return extension
 
@@ -59,8 +43,11 @@ def save_attachment(
     stream: BinaryIO,
     requester: Member,
     uploaded_at: datetime,
+    max_post_bytes: int,
+    allowed_extensions: frozenset[str],
 ) -> Attachment:
-    """stream 을 디스크에 저장하고, Attachment 행을 반환합니다.
+    """stream 을 디스크에 저장하고, Attachment 행을 반환합니다. 확장자가 allowed_extensions 에 없거나
+    글 1개의 첨부 합계가 max_post_bytes 를 넘으면 ValueError 를 발생시킵니다.
 
     저장된 파일명은 서버가 생성한 무작위 16바이트 hex 문자열 + 확장자입니다. 사용자가 입력한 파일명은 Attachment.name 열에
     표시 목적으로만 저장됩니다.
@@ -71,16 +58,16 @@ def save_attachment(
     # 어느 팀의 어느 글에도 붙일 수 있기 때문입니다.
     post = require_post_readable(session, post_id, requester)
     name = display_name(filename)
-    extension = _allowed_extension(name)
+    extension = _allowed_extension(name, allowed_extensions)
 
     root = storage_root()
     root.mkdir(parents=True, exist_ok=True)
     stored_name = f"{secrets.token_hex(16)}.{extension}"
     # 합계를 조회하기 전에 그 글의 행을 잠급니다. 잠그지 않으면 같은 글에 동시에 들어온 업로드 2건이
-    # 서로의 commit 전 합계를 읽어, 2건 모두 MAX_POST_BYTES 만큼 저장합니다. 같은 방식의 잠금을
+    # 서로의 commit 전 합계를 읽어, 2건 모두 max_post_bytes 만큼 저장합니다. 같은 방식의 잠금을
     # reservation_service.py 의 _owned_reservation 이 사용합니다.
     session.scalars(select(Post).where(Post.id == post.id).with_for_update()).one()
-    remaining = MAX_POST_BYTES - _used_bytes(session, post.id)
+    remaining = max_post_bytes - _used_bytes(session, post.id)
     size = write_stream(stream, stored_path(stored_name), remaining, "이 글의 첨부 파일 크기 합계가 상한을 초과했습니다")
 
     attachment = Attachment(

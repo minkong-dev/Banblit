@@ -14,7 +14,6 @@ flowchart LR
   backend_src_backend_api_routers_roster --> backend_src_backend_api_schemas["schemas.py"]
   backend_src_backend_api_routers_roster --> backend_src_backend_db_models["models.py"]
   backend_src_backend_api_routers_roster --> backend_src_backend_db_pipeline["pipeline.py"]
-  backend_src_backend_api_routers_roster --> backend_src_backend_services_permission_pipeline["pipeline.py"]
   backend_src_backend_api_routers_roster --> backend_src_backend_services_roster_pipeline["pipeline.py"]
   backend_src_backend_api_app["app.py"] --> backend_src_backend_api_routers_roster
 ```
@@ -25,7 +24,6 @@ flowchart LR
 - [[graph/backend/src/backend/api/schemas|schemas.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/db/pipeline|pipeline.py]]
-- [[graph/backend/src/backend/services/permission/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/roster/pipeline|pipeline.py]]
 
 ## imported by
@@ -65,6 +63,6 @@ flowchart LR
 - `delete_team_endpoint`: `backend.api.auth_dependency`, `backend.services.roster.pipeline`
 - `put_team_slots`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.services.roster.pipeline`
 - `put_slot_member`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.services.roster.pipeline`
-- `put_team_slot_members`: `backend.api.schemas`, `backend.services.permission.pipeline`, `backend.services.roster.pipeline`
-- `delete_slot_member`: `backend.services.permission.pipeline`, `backend.services.roster.pipeline`
+- `put_team_slot_members`: `backend.api.schemas`, `backend.services.roster.pipeline`
+- `delete_slot_member`: `backend.services.roster.pipeline`
 - `expel_member`: `backend.api.auth_dependency`, `backend.services.roster.pipeline`

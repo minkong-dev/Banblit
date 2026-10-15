@@ -19,6 +19,8 @@ from backend.services.period.period_crud_service import (
     WindowIn,
     create_period,
     delete_period,
+    every_team_and_room,
+    focused_periods_on,
     get_period_or_raise,
     list_backup_round,
     list_periods,
@@ -65,6 +67,8 @@ def run_period_assignment(
 
 
 __all__ = [
+    "every_team_and_room",
+    "focused_periods_on",
     "days_by_period",
     "delete_ensemble",
     "delete_ensemble_day",

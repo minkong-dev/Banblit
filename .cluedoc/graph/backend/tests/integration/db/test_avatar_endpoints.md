@@ -11,13 +11,13 @@ kind: file
 flowchart LR
   backend_tests_integration_db_test_avatar_endpoints["test_avatar_endpoints.py"]
   backend_tests_integration_db_test_avatar_endpoints --> backend_src_backend_db_models["models.py"]
-  backend_tests_integration_db_test_avatar_endpoints --> backend_src_backend_services_roster_avatar_service["avatar_service.py"]
+  backend_tests_integration_db_test_avatar_endpoints --> backend_src_backend_services_roster_pipeline["pipeline.py"]
 ```
 
 ## imports
 
 - [[graph/backend/src/backend/db/models|models.py]]
-- [[graph/backend/src/backend/services/roster/avatar_service|avatar_service.py]]
+- [[graph/backend/src/backend/services/roster/pipeline|pipeline.py]]
 
 ## imported by
 
@@ -37,4 +37,4 @@ flowchart LR
 - `test_another_members_photo_is_readable_by_anyone_signed_in`
 - `test_a_visitor_without_a_session_cannot_see_a_photo`
 - `test_my_account_carries_the_stored_photo_name`
-- `test_an_upload_during_another_session_does_not_leave_an_orphan_file`: `backend.services.roster.avatar_service.save_avatar`
+- `test_an_upload_during_another_session_does_not_leave_an_orphan_file`: `backend.services.roster.pipeline.save_avatar`

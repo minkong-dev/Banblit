@@ -33,7 +33,7 @@ flowchart LR
 - `_clean_permissions`
 - `_get_set_or_raise`
 - `account_permission_set_names`
-- `_is_full`
+- `holds_every_permission`
 - `_full_set_ids`
 - `_require_another_full_set`
 - `require_another_full_set_holder`

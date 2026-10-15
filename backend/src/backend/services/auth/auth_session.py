@@ -7,15 +7,6 @@ from sqlalchemy.orm import Session
 
 from backend.db.models import LoginSession
 
-# 로그인 상태 유지를 비활성화한 사람의 session(로그인 상태를 담는 서버 쪽 기록) 유효 기간입니다. 브라우저를 닫으면 쿠키가 삭제되므로, 이 값은 "브라우저를 계속 켜 둔 사람"에게만 적용됩니다.
-SESSION_TTL = timedelta(days=7)
-
-# 로그인 상태 유지를 활성화한 사람의 session 유효 기간입니다. 쿠키에도 같은 값을 설정해야 합니다. 한쪽만 길면 짧은 쪽이 먼저 만료되어 로그인이 해제됩니다.
-KEEP_TTL = timedelta(days=90)
-
-SESSION_COOKIE = "banblit_session"
-SIGNED_IN_COOKIE = "banblit_signed_in"
-
 
 def hash_token(token: str) -> str:
     """token(임시로 발급하는 인증 문자열)의 원문을 일방향 해시로 변환합니다. 저장 및 조회 모두 이 값을 사용합니다."""
@@ -35,10 +26,8 @@ def _delete_dead_sessions(session: Session, member_id: int, now: datetime) -> No
     )
 
 
-def create_session(
-    session: Session, member_id: int, now: datetime, keep: bool = False
-) -> str:
-    """새 session token(임시로 발급하는 인증 문자열)을 생성하여 저장하고, token 원문을 반환합니다.
+def create_session(session: Session, member_id: int, now: datetime, ttl: timedelta) -> str:
+    """now 부터 ttl 동안 유효한 session token(임시로 발급하는 인증 문자열)을 생성하여 저장하고, token 원문을 반환합니다.
 
     쌓인 만료된 행은 새 행과 같은 commit 에서 함께 삭제합니다. 로그인·가입이 sessions
     table 에 행을 추가하는 유일한 코드이므로, 이 함수 외에 삭제할 곳이 없습니다.
@@ -52,7 +41,7 @@ def create_session(
         LoginSession(
             token_hash=hash_token(token),
             member_id=member_id,
-            expires_at=now + (KEEP_TTL if keep else SESSION_TTL),
+            expires_at=now + ttl,
             created_at=now,
         )
     )

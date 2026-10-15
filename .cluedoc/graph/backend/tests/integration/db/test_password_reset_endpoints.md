@@ -39,3 +39,4 @@ flowchart LR
 - `_mail_reasons`
 - `test_the_log_tells_whether_a_reset_mail_went_out_and_why_not`
 - `test_the_log_tells_whether_an_id_reminder_went_out_and_why_not`
+- `test_a_reset_mail_is_not_sent_without_the_site_address`

@@ -30,7 +30,6 @@ from backend.services.validation.input import (
     require_email,
     require_department,
     require_person_name,
-    require_login_id,
 
     require_ends_not_before_starts,
 
@@ -39,9 +38,7 @@ from backend.services.validation.input import (
     require_on_the_hour,
 
     PASSWORD_SYMBOLS,
-    require_password,
 
-    require_repeat_end,
 
     require_repeat_weekdays,
 
@@ -52,6 +49,7 @@ from backend.services.validation.input import (
 
 
 )
+from backend.services.validation.pipeline import require_login_id, require_password, require_repeat_end
 
 
 

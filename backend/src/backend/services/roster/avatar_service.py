@@ -1,7 +1,7 @@
 """프로필 사진을 저장·삭제합니다. 계정 1개에 사진 1장입니다.
 
 저장 폴더, 조각 단위 쓰기, 경로 조작 방지는 services/storage 를 씁니다. 받는 확장자는 그림 5종이고,
-크기 상한은 사진 1장 기준(MAX_AVATAR_BYTES)입니다.
+크기 상한은 부르는 쪽이 max_bytes 로 넘깁니다.
 """
 
 import secrets
@@ -22,8 +22,6 @@ ALLOWED_IMAGE_TYPES: dict[str, str] = {
     "gif": "image/gif",
     "webp": "image/webp",
 }
-# 사진 1장의 크기 상한입니다. 휴대폰으로 찍은 사진 1장이 보통 3~5MB 입니다.
-MAX_AVATAR_BYTES = 5 * 1024 * 1024
 
 
 def _image_extension(name: str) -> str:
@@ -33,9 +31,10 @@ def _image_extension(name: str) -> str:
     return extension
 
 
-def avatar_path(member: Member) -> tuple[Path, str]:
-    """사진 파일의 경로와 형식을 반환합니다. 사진이 없으면 LookupError 를 발생시킵니다."""
-    if not member.avatar:
+def avatar_path(session: Session, member_id: int) -> tuple[Path, str]:
+    """member_id 계정의 사진 파일 경로와 형식을 반환합니다. 계정이나 사진이 없으면 LookupError 를 발생시킵니다."""
+    member = session.get(Member, member_id)
+    if member is None or not member.avatar:
         raise LookupError("프로필 사진이 없습니다")
     path = stored_path(member.avatar)
     if not path.is_file():
@@ -44,8 +43,8 @@ def avatar_path(member: Member) -> tuple[Path, str]:
     return path, ALLOWED_IMAGE_TYPES[member.avatar.rsplit(".", 1)[-1]]
 
 
-def save_avatar(session: Session, member: Member, filename: str, stream: BinaryIO) -> None:
-    """stream 을 사진으로 저장하고, 이전 사진 파일을 삭제합니다.
+def save_avatar(session: Session, member: Member, filename: str, stream: BinaryIO, max_bytes: int) -> None:
+    """stream 을 사진으로 저장하고, 이전 사진 파일을 삭제합니다. max_bytes 를 넘으면 ValueError 를 발생시킵니다.
 
     저장하는 파일명은 서버가 만든 무작위 16바이트 hex 와 확장자입니다. 올린 사람이 넣은
     파일명은 저장하지 않습니다 — 사진은 이름을 표시할 일이 없습니다.
@@ -68,7 +67,7 @@ def save_avatar(session: Session, member: Member, filename: str, stream: BinaryI
     root = storage_root()
     root.mkdir(parents=True, exist_ok=True)
     stored_name = f"{secrets.token_hex(16)}.{extension}"
-    write_stream(stream, stored_path(stored_name), MAX_AVATAR_BYTES, f"프로필 사진은 {MAX_AVATAR_BYTES // (1024 * 1024)}MB 까지 올릴 수 있습니다")
+    write_stream(stream, stored_path(stored_name), max_bytes, f"프로필 사진은 {max_bytes // (1024 * 1024)}MB 까지 올릴 수 있습니다")
 
     locked.avatar = stored_name
     try:

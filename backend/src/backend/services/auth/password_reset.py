@@ -1,5 +1,4 @@
 import logging
-import os
 import secrets
 from datetime import datetime, timedelta
 
@@ -11,19 +10,6 @@ from backend.services.auth.auth_service import hash_password
 from backend.services.auth.auth_session import hash_token, revoke_member_sessions
 from backend.services.auth.mailer import send_mail
 from backend.db.models import Member, PasswordResetToken
-
-# session 유효 기간(SESSION_TTL, 7일)보다 짧게 설정합니다. 이 token 하나만으로 계정을 탈취할 수 있고,
-# 만료 전까지 메일함에 남아 있기 때문입니다. 메일을 수신하고 열어 새 비밀번호를 설정하는 데 필요한
-# 시간만 있으면 되므로 30분으로 설정합니다.
-RESET_TTL = timedelta(minutes=30)
-
-# 같은 계정으로 이 시간 내에 다시 호출하면 token을 생성하지도, 메일을 전송하지도 않습니다.
-# 이 endpoint 는 인증 없이 열려 있어서 누구든 반복 호출할 수 있습니다. 제한하지 않으면 다른 사용자의
-# 메일함에 재설정 link 를 계속 보낼 수 있고, 유효한 token 도 그만큼 증가합니다.
-RESEND_INTERVAL = timedelta(minutes=1)
-
-# 메일에 포함할 재설정 link의 기본 도메인입니다. 배포 환경의 도메인은 환경변수로 지정합니다.
-DEFAULT_APP_ORIGIN = "http://localhost:5173"
 
 RESET_SUBJECT = "[Banblit] 비밀번호 재설정"
 FIND_ID_SUBJECT = "[Banblit] 아이디 안내"
@@ -50,15 +36,15 @@ def _find_account(session: Session, email: str) -> Member | None:
     )
 
 
-def _reset_link(token: str) -> str:
-    # 값이 없을 때와 빈 문자열로 들어올 때를 같이 처리합니다 — 환경 설정 파일이 설정하지 못한 환경변수는
-    # 삭제되지 않고 빈 문자열로 설정됩니다.
-    origin = (os.environ.get("APP_ORIGIN") or DEFAULT_APP_ORIGIN).rstrip("/")
-    return f"{origin}/reset-password?token={token}"
+def _reset_link(origin: str, token: str) -> str:
+    return f"{origin.rstrip('/')}/reset-password?token={token}"
 
 
-def issue_reset_token(session: Session, member_id: int, now: datetime) -> str | None:
-    """새 재설정 token을 생성하여 원문을 반환합니다. 반복 요청일 경우 생성하지 않고 None을 반환합니다.
+def issue_reset_token(
+    session: Session, member_id: int, now: datetime, ttl: timedelta, resend_interval: timedelta
+) -> str | None:
+    """now 부터 ttl 동안 유효한 재설정 token을 생성하여 원문을 반환합니다.
+    직전 token 이 resend_interval 안에 생성됐으면 생성하지 않고 None을 반환합니다.
 
     이전 token은 삭제합니다 — 한 계정에 유효한 token은 항상 하나뿐입니다.
     """
@@ -71,7 +57,7 @@ def issue_reset_token(session: Session, member_id: int, now: datetime) -> str | 
         .where(PasswordResetToken.member_id == member_id)
         .order_by(PasswordResetToken.created_at.desc())
     )
-    if latest is not None and now - latest < RESEND_INTERVAL:
+    if latest is not None and now - latest < resend_interval:
         return None
 
     session.execute(
@@ -82,7 +68,7 @@ def issue_reset_token(session: Session, member_id: int, now: datetime) -> str | 
         PasswordResetToken(
             token_hash=hash_token(token),
             member_id=member_id,
-            expires_at=now + RESET_TTL,
+            expires_at=now + ttl,
             created_at=now,
         )
     )
@@ -109,8 +95,11 @@ def _consume_token(session: Session, token: str, now: datetime) -> int | None:
     )
 
 
-def request_password_reset(session: Session, email: str, now: datetime) -> None:
-    """해당 이메일로 가입한 계정이 있으면 재설정 link를 전송합니다. 없으면 아무것도 수행하지 않습니다.
+def request_password_reset(
+    session: Session, email: str, now: datetime, ttl: timedelta, resend_interval: timedelta, origin: str
+) -> None:
+    """해당 이메일로 가입한 계정이 있으면 origin 주소의 재설정 link를 전송합니다. 없으면 아무것도 수행하지 않습니다.
+    origin 이 비어 있으면 열 수 없는 link 가 되므로 발송하지 않고 오류 로그를 남깁니다.
 
     있든 없든 호출자는 동일한 응답을 받습니다 — 다르게 응답하면 그 이메일이 가입되어 있는지를
     드러내는 결과가 됩니다.
@@ -119,15 +108,18 @@ def request_password_reset(session: Session, email: str, now: datetime) -> None:
     전송됩니다. 요청자 단위로 제한하려면 요청자의 IP 주소별로 호출 횟수를 추적해야 하는데, 그 기능은
     reverse proxy(gateway)에 구현합니다.
     """
+    if origin == "":
+        logger.error("APP_ORIGIN 이 비어 있어 비밀번호 재설정 메일을 발송하지 않았습니다. .env 에 APP_ORIGIN 을 지정하십시오")
+        return
     member = _find_account(session, email)
     if member is None or member.email is None:
         logger.info("비밀번호 재설정 메일을 발송하지 않았습니다 — 사유: 일치하는 계정 없음")
         return
-    token = issue_reset_token(session, member.id, now)
+    token = issue_reset_token(session, member.id, now, ttl, resend_interval)
     if token is None:
         logger.info(
             "비밀번호 재설정 메일을 발송하지 않았습니다 — 사유: 재발송 제한 %d분 이내, 계정 %d",
-            int(RESEND_INTERVAL.total_seconds() // 60),
+            int(resend_interval.total_seconds() // 60),
             member.id,
         )
         return
@@ -136,8 +128,8 @@ def request_password_reset(session: Session, email: str, now: datetime) -> None:
         member.email,
         RESET_SUBJECT,
         f"{member.name}님, 아래 주소에서 새 비밀번호를 설정해 주세요.\n\n"
-        f"{_reset_link(token)}\n\n"
-        f"이 링크는 {int(RESET_TTL.total_seconds() // 60)}분 뒤에 만료되고 한 번만 쓸 수 "
+        f"{_reset_link(origin, token)}\n\n"
+        f"이 링크는 {int(ttl.total_seconds() // 60)}분 뒤에 만료되고 한 번만 쓸 수 "
         "있습니다. 요청한 적이 없다면 이 메일을 버리셔도 됩니다.",
     )
 
