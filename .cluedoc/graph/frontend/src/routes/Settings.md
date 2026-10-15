@@ -29,6 +29,7 @@ flowchart LR
   frontend_src_routes_Settings --> frontend_src_routes_SettingsRooms["SettingsRooms.tsx"]
   frontend_src_routes_Settings --> frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"]
   frontend_src_App["App.tsx"] --> frontend_src_routes_Settings
+  frontend_src_routes_Settings_test["Settings.test.tsx"] --> frontend_src_routes_Settings
 ```
 
 ## imports
@@ -55,3 +56,4 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/App|App.tsx]]
+- [[graph/frontend/src/routes/Settings.test|Settings.test.tsx]]

@@ -24,6 +24,7 @@ flowchart LR
   frontend_src_routes_DayDialog --> frontend_src_lib_roster["roster.ts"]
   frontend_src_routes_DayDialog --> frontend_src_lib_slots["slots.ts"]
   frontend_src_routes_DayDialog --> frontend_src_routes_DayDialogParts["DayDialogParts.tsx"]
+  frontend_src_routes_DayDialog_test["DayDialog.test.tsx"] --> frontend_src_routes_DayDialog
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_routes_DayDialog
 ```
 
@@ -46,4 +47,5 @@ flowchart LR
 
 ## imported by
 
+- [[graph/frontend/src/routes/DayDialog.test|DayDialog.test.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
