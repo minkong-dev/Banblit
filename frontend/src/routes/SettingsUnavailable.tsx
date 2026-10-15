@@ -13,7 +13,7 @@ import { Button, Empty, IconButton, SearchInput } from "../components/controls";
 import { BulletListIcon, CalendarIcon } from "../components/icons";
 import { Card, SectionHead } from "../components/Layout";
 import { RejectDialog } from "../components/RejectDialog";
-import { useMe } from "../components/queries";
+import { UNAVAILABLE_KEY, useMe } from "../components/queries";
 import { can } from "../lib/account";
 import { reason } from "../lib/api";
 import { repeatLabel } from "../lib/calendar";
@@ -26,7 +26,7 @@ import { clockEndLabel, dayWithWeekday } from "../lib/calendar";
 import { hhmm } from "../lib/slots";
 
 // 전체 목록의 queryKey 입니다. 앞머리가 달력의 불가능 일정 조회와 같은 "unavailable" 이라, 반려·삭제 뒤 둘 다 다시 조회합니다.
-const LIST_KEY = ["unavailable", "all"] as const;
+const LIST_KEY = [...UNAVAILABLE_KEY, "all"] as const;
 
 /** 반복 일정이 끝나는 시점입니다. 종료일과 횟수는 동시에 값을 가질 수 없고, 둘 다 없으면 빈 문자열입니다.
  *  횟수는 고른 요일 전부를 한 세트로 세는 주 단위입니다(lib/dayEntries 의 repeatDays 와 같은 규칙). */
@@ -95,7 +95,7 @@ export function UnavailableCards() {
           onReject={(text) => rejectUnavailable(rejecting.member_id, rejecting.id, text)}
           onDone={() => {
             setRejecting(null);
-            void client.invalidateQueries({ queryKey: ["unavailable"] });
+            void client.invalidateQueries({ queryKey: UNAVAILABLE_KEY });
             say("불가능 일정을 반려했어요");
           }}
           onClose={() => setRejecting(null)}
@@ -158,7 +158,7 @@ function DeleteOwnButton({ row }: { row: MemberUnavailable }) {
   const client = useQueryClient();
   const remove = useMutation({
     mutationFn: () => removeUnavailable(row.member_id, row.id),
-    onSettled: () => { void client.invalidateQueries({ queryKey: ["unavailable"] }); },
+    onSettled: () => { void client.invalidateQueries({ queryKey: UNAVAILABLE_KEY }); },
     onSuccess: () => say("불가능 일정을 삭제했어요"),
     onError: (error) => say(reason(error, "불가능 일정을 삭제하지 못했어요")),
   });

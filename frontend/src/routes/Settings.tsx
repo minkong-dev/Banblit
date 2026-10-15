@@ -10,7 +10,7 @@ import { Navigate } from "react-router-dom";
 
 import { Card, Panel, SectionHead } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
-import { useMe, usePeriods, useRooms, useSettings, useSlotMinutes, useTeams } from "../components/queries";
+import { PERIOD_DELETE_KEYS, ROOM_DELETE_KEYS, useMe, usePeriods, useRooms, useSettings, useSlotMinutes, useTeams } from "../components/queries";
 import { can } from "../lib/account";
 import { ADMIN_MENU } from "../lib/adminMenu";
 import type { AdminSection } from "../lib/adminMenu";
@@ -18,7 +18,7 @@ import { reason } from "../lib/api";
 import type { Period, Room, Team } from "../lib/contract";
 import { LOADING_TEXT, loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
-import { daysBetween, openingHours, PERIOD_DELETE_KEYS, ROOM_DELETE_KEYS, saveSettings } from "../lib/pipeline";
+import { daysBetween, openingHours, saveSettings } from "../lib/pipeline";
 import {
   DAILY_MAX_HOUR_CHOICES,
   SLOT_MINUTE_CHOICES,

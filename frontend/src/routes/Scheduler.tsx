@@ -19,10 +19,9 @@ import {
 import { can } from "../lib/account";
 import type { DayTab, Entry } from "../lib/dayEntries";
 import { teamsOf } from "../lib/roster";
-import { useMe, useMyTeams, usePeriods, useRooms, useSlotMinutes } from "../components/queries";
+import { boardListKey, ME_KEY, PERIODS_KEY, RESERVATIONS_KEY, ROOMS_KEY, SCHEDULE_KEY, UNAVAILABLE_KEY, useMe, useMyTeams, usePeriods, useRooms, useSlotMinutes } from "../components/queries";
 import "../styles/scheduler.css";
 import type { Post, ScheduleRow } from "../lib/contract";
-import { boardListKey } from "../lib/boards";
 import { focusedRanges, inRanges, roomBounds, slotCountOf, stampLabel } from "../lib/calendar";
 // 오른쪽 공지 칸에 표시할 최대 줄 수입니다. 전체 목록은 공지 화면(routes/Notices)이 표시합니다.
 const RECENT_NOTICES = 3;
@@ -72,25 +71,25 @@ export function Scheduler() {
 
   // 기간 목록이 오기 전에는 어느 기간의 시간표를 받을지 알 수 없어 query를 비활성화합니다.
   const query = useQuery({
-    queryKey: ["schedule", periodIds],
+    queryKey: [...SCHEDULE_KEY, periodIds],
     queryFn: () => loadRows(periodIds),
     enabled: periods.data !== undefined,
   });
   // 로그인한 사용자 id가 와야 그 사용자의 불가능 일정을 조회할 수 있습니다.
   const unavailableQuery = useQuery({
-    queryKey: ["unavailable", me?.id],
+    queryKey: [...UNAVAILABLE_KEY, me?.id],
     queryFn: () => loadUnavailable(me?.id ?? 0),
     enabled: me !== null,
   });
   // 합주실 목록이 와야 어느 합주실의 예약을 조회할지 알 수 있습니다.
   const reservationQuery = useQuery({
-    queryKey: ["reservations", roomIds, rangeFrom, rangeTo],
+    queryKey: [...RESERVATIONS_KEY, roomIds, rangeFrom, rangeTo],
     queryFn: () => loadReservationRows(roomIds, rangeFrom, rangeTo),
     enabled: rooms.data !== undefined,
   });
   // 예약 모달 오른쪽 "내 예약" 목록입니다. 달력 범위와 관계없이 아직 끝나지 않은 내 예약 전부입니다.
-  // queryKey 가 "reservations" 로 시작해서, 예약·취소 후 ["reservations"] 를 무효로 할 때 함께 다시 받습니다.
-  const myBookingsQuery = useQuery({ queryKey: ["reservations", "mine"], queryFn: loadMyBookings });
+  // queryKey 가 "reservations" 로 시작해서, 예약·취소 후 RESERVATIONS_KEY 를 무효로 할 때 함께 다시 받습니다.
+  const myBookingsQuery = useQuery({ queryKey: [...RESERVATIONS_KEY, "mine"], queryFn: loadMyBookings });
   // 공지 화면(routes/Notices 의 PostBoard)이 사용하는 queryKey 와 endpoint(API의 요청 주소 단위)를 그대로 사용합니다. 두 화면이
   // 같은 목록을 공유하므로, 공지를 작성하고 돌아오면 이 화면도 함께 갱신됩니다.
   const notices = useQuery({
@@ -124,10 +123,10 @@ export function Scheduler() {
   // refetch 가 아니라 invalidateQueries 를 씁니다. refetch 는 enabled 를 무시하고 queryFn 을
   // 실행하므로 /me 나 목록 조회가 실패한 상태에서도 멤버 0번·빈 배열로 요청이 나갑니다.
   // invalidateQueries 는 enabled 가 false 인 조회를 다시 받지 않고, 선행 조회가 성공한 뒤에
-  // 받습니다. queryKey 는 앞부분만 같아도 함께 무효화되므로 ["reservations"] 하나가
+  // 받습니다. queryKey 는 앞부분만 같아도 함께 무효화되므로 RESERVATIONS_KEY 하나가
   // 달력 예약과 "내 예약" 둘을 포함합니다.
   const refreshAll = (): void => {
-    for (const queryKey of [["me"], ["rooms"], ["periods"], ["schedule"], ["unavailable"], ["reservations"]]) {
+    for (const queryKey of [ME_KEY, ROOMS_KEY, PERIODS_KEY, SCHEDULE_KEY, UNAVAILABLE_KEY, RESERVATIONS_KEY]) {
       void queryClient.invalidateQueries({ queryKey });
     }
   };
@@ -166,8 +165,8 @@ export function Scheduler() {
   // POST 가 끝난 뒤 화면이 새 값을 표시하게 합니다. 클라이언트 쪽에 따로 상태를 두지 않고
   // 서버가 가진 값을 다시 조회해 저장이 실제로 되었는지까지 함께 확인합니다.
   const onSaved = () => {
-    void queryClient.invalidateQueries({ queryKey: ["unavailable"] });
-    void queryClient.invalidateQueries({ queryKey: ["reservations"] });
+    void queryClient.invalidateQueries({ queryKey: UNAVAILABLE_KEY });
+    void queryClient.invalidateQueries({ queryKey: RESERVATIONS_KEY });
   };
 
   const inFocus = (key: string) => inRanges(focus, key);
@@ -197,7 +196,7 @@ export function Scheduler() {
       {failures.length === 0 ? null : (
         <div className="cut">
           <p><b>일부 기간의 배정을 불러오지 못했어요</b> {failures.join(", ")}</p>
-          <Button kind="danger" onClick={() => { void queryClient.invalidateQueries({ queryKey: ["schedule"] }); }}>
+          <Button kind="danger" onClick={() => { void queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY }); }}>
             다시 불러오기
           </Button>
         </div>

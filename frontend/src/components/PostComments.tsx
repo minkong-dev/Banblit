@@ -14,6 +14,7 @@ import { RichText, RichTextView } from "./RichText";
 import { commentMessage as checkComment } from "../lib/boards";
 import { addComment, deleteComment, editComment } from "../lib/pipeline";
 import { stampLabel } from "../lib/calendar";
+import { postKey } from "./queries";
 
 /** 댓글을 새로 다는 form 입니다. 로그인하지 않았으면(authorId 가 null) 버튼이 비활성화됩니다. */
 export function CommentForm(props: { postId: number; authorId: number | null }) {
@@ -27,7 +28,7 @@ export function CommentForm(props: { postId: number; authorId: number | null }) 
     onSuccess: () => {
       setBody("");
       setTouched(false);
-      void client.invalidateQueries({ queryKey: ["board", "post", postId] });
+      void client.invalidateQueries({ queryKey: postKey(postId) });
       say("댓글을 올렸습니다.");
     },
   });
@@ -81,7 +82,7 @@ export function CommentRow(props: {
   const [bad, setBad] = useState("");
 
   const refresh = (): void => {
-    void client.invalidateQueries({ queryKey: ["board", "post", postId] });
+    void client.invalidateQueries({ queryKey: postKey(postId) });
   };
 
   const save = useMutation({

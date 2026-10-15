@@ -1,10 +1,9 @@
 import { useQueries } from "@tanstack/react-query";
 
 import { reason } from "../lib/api";
-import { loadTeamMembers } from "../lib/pipeline";
 import { cohortLabel } from "../lib/roster";
 import { Empty } from "../components/controls";
-import { useMe } from "../components/queries";
+import { teamMembersQuery, useMe } from "../components/queries";
 import { LOADING_TEXT } from "../lib/loading";
 import "../styles/profile.css";
 import type { Account, Member } from "../lib/contract";
@@ -24,8 +23,7 @@ function useMyAffiliations(
 
   const memberQueries = useQueries({
     queries: teamIds.map((id) => ({
-      queryKey: ["members", id],
-      queryFn: () => loadTeamMembers(id),
+      ...teamMembersQuery(id),
     })),
   });
 

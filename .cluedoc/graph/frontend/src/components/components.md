@@ -43,6 +43,7 @@ kind: directory
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/hooks|hooks.ts]]
 - [[graph/frontend/src/components/icons|icons.tsx]]
+- [[graph/frontend/src/components/queries.test|queries.test.ts]]
 - [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/components/richTextEditor|richTextEditor.ts]]
 - [[graph/frontend/src/components/toast.test|toast.test.ts]]

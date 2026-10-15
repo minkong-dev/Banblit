@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button, Cell, DateRange, FormFoot, TimeRange, Toggle } from "../components/controls";
 import { Dropdown } from "../components/Dropdown";
-import { useSlotMinutes } from "../components/queries";
+import { PERIODS_KEY, useSlotMinutes } from "../components/queries";
 import type { Period, Room } from "../lib/contract";
 import { ensembleOn } from "../lib/dayEntries";
 import type { EnsembleOn } from "../lib/dayEntries";
@@ -153,7 +153,7 @@ export function EnsembleDayEditor({ day, on, room, picker }: {
   const [times, setTimes] = useState({ starts: on.startsAt, ends: on.endsAt });
 
   const done = (text: string) => () => {
-    void client.invalidateQueries({ queryKey: ["periods"] });
+    void client.invalidateQueries({ queryKey: PERIODS_KEY });
     say(text);
   };
   const save = useMutation({

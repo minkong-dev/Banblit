@@ -11,7 +11,7 @@ import { reason } from "../lib/api";
 import { say } from "../components/toast";
 import { loadState } from "../lib/loading";
 import type { Post } from "../lib/contract";
-import { BLINDED_KEY, BOARD_KEY } from "../lib/boards";
+import { BLINDED_KEY, BOARD_KEY } from "../components/queries";
 import { getJSON } from "../lib/api";
 import { stampLabel } from "../lib/calendar";
 

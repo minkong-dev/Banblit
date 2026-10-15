@@ -15,7 +15,6 @@ flowchart LR
   frontend_src_routes_Profile --> frontend_src_lib_api["api.ts"]
   frontend_src_routes_Profile --> frontend_src_lib_contract["contract.ts"]
   frontend_src_routes_Profile --> frontend_src_lib_loading["loading.ts"]
-  frontend_src_routes_Profile --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_routes_Profile --> frontend_src_lib_roster["roster.ts"]
   frontend_src_routes_Profile --> frontend_src_routes_ProfileCards["ProfileCards.tsx"]
   frontend_src_App["App.tsx"] --> frontend_src_routes_Profile
@@ -28,7 +27,6 @@ flowchart LR
 - [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
-- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/roster|roster.ts]]
 - [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
 
