@@ -47,6 +47,7 @@ flowchart LR
   frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_lib_contract
+  frontend_src_routes_Settings_test["Settings.test.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"] --> frontend_src_lib_contract
@@ -101,6 +102,7 @@ flowchart LR
 - [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
+- [[graph/frontend/src/routes/Settings.test|Settings.test.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]
 - [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]
