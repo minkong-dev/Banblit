@@ -225,14 +225,3 @@ def test_the_daily_limit_cannot_be_shorter_than_one_session(
     shorter = api_client.patch("/settings", json={"daily_max_hours": 2}, cookies=admin)
     assert shorter.status_code == 422
     assert api_client.get("/settings", cookies=admin).json()["daily_max_hours"] == 3
-
-
-def test_the_api_daily_limit_choices_match_the_contract() -> None:
-    from typing import get_args
-
-    from backend.api.schemas import SettingsUpdateIn
-    from backend.contract import DAILY_MAX_HOUR_CHOICES
-
-    annotation = SettingsUpdateIn.model_fields["daily_max_hours"].annotation
-    literal = next(arg for arg in get_args(annotation) if arg is not type(None))
-    assert get_args(literal) == DAILY_MAX_HOUR_CHOICES

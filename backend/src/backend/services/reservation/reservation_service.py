@@ -3,7 +3,7 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from backend.services.notification.pipeline import notify_rejected
+from backend.services.notification.pipeline import notify_rejected, notify_reservations_cancelled
 from backend.services.validation.pipeline import (
     require_reject_reason,
     require_valid_slot_bounds,
@@ -13,7 +13,7 @@ from backend.services.permission.pipeline import account_permissions
 from backend.services.room.pipeline import get_room_or_raise
 from backend.services.roster.pipeline import get_team_or_raise, require_team_member
 from backend.services.settings.pipeline import slot_minutes
-from backend.db.models import EnsembleDay, Member, Notification, Period, Reservation, Room, Team
+from backend.db.models import EnsembleDay, Member, Period, Reservation, Room, Team
 from backend.db.pipeline import commit_translating
 from backend.scheduling.pipeline import day_window
 
@@ -59,9 +59,7 @@ def cancel_reservations_in_focus(session: Session, period: Period, now: datetime
     ]
     for row in cancelled:
         row.cancelled_at = now
-    # 한 사람이 여러 건을 잃어도 알림은 1개입니다. 알림은 종류만 담고 건수·시각은 예약 목록에서 봅니다.
-    for member_id in sorted({row.member_id for row in cancelled}):
-        session.add(Notification(member_id=member_id, kind="reservation_cancelled", created_at=now))
+    notify_reservations_cancelled(session, {row.member_id for row in cancelled}, now)
     return len(cancelled)
 
 

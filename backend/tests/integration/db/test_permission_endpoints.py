@@ -4,7 +4,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
-from backend.db.models import PERMISSIONS, PermissionSet
+from backend.contract import PERMISSIONS
+from backend.db.models import PermissionSet
 from backend.services.permission.pipeline import delete_permission_set
 from conftest import AccountFactory
 

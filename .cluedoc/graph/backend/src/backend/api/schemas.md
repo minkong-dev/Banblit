@@ -11,7 +11,6 @@ kind: file
 flowchart LR
   backend_src_backend_api_schemas["schemas.py"]
   backend_src_backend_api_schemas --> backend_src_backend_contract["contract.py"]
-  backend_src_backend_api_schemas --> backend_src_backend_db_models["models.py"]
   backend_src_backend_api_routers_auth["auth.py"] --> backend_src_backend_api_schemas
   backend_src_backend_api_routers_boards["boards.py"] --> backend_src_backend_api_schemas
   backend_src_backend_api_routers_notifications["notifications.py"] --> backend_src_backend_api_schemas
@@ -23,14 +22,12 @@ flowchart LR
   backend_src_backend_api_routers_schedule["schedule.py"] --> backend_src_backend_api_schemas
   backend_src_backend_api_routers_settings["settings.py"] --> backend_src_backend_api_schemas
   backend_src_backend_api_routers_unavailable["unavailable.py"] --> backend_src_backend_api_schemas
-  backend_tests_integration_db_test_settings_endpoints["test_settings_endpoints.py"] --> backend_src_backend_api_schemas
   backend_tests_unit_test_schemas["test_schemas.py"] --> backend_src_backend_api_schemas
 ```
 
 ## imports
 
 - [[graph/backend/src/backend/contract|contract.py]]
-- [[graph/backend/src/backend/db/models|models.py]]
 
 ## imported by
 
@@ -45,5 +42,4 @@ flowchart LR
 - [[graph/backend/src/backend/api/routers/schedule|schedule.py]]
 - [[graph/backend/src/backend/api/routers/settings|settings.py]]
 - [[graph/backend/src/backend/api/routers/unavailable|unavailable.py]]
-- [[graph/backend/tests/integration/db/test_settings_endpoints|test_settings_endpoints.py]]
 - [[graph/backend/tests/unit/test_schemas|test_schemas.py]]

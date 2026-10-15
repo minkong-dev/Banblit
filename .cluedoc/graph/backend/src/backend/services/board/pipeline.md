@@ -14,7 +14,6 @@ flowchart LR
   backend_src_backend_services_board_pipeline --> backend_src_backend_services_board_board_service["board_service.py"]
   backend_src_backend_api_routers_boards["boards.py"] --> backend_src_backend_services_board_pipeline
   backend_src_backend_jobs_auto_assign["auto_assign.py"] --> backend_src_backend_services_board_pipeline
-  backend_src_backend_services_roster_avatar_service["avatar_service.py"] --> backend_src_backend_services_board_pipeline
   backend_tests_integration_db_test_board_endpoints["test_board_endpoints.py"] --> backend_src_backend_services_board_pipeline
 ```
 
@@ -27,5 +26,4 @@ flowchart LR
 
 - [[graph/backend/src/backend/api/routers/boards|boards.py]]
 - [[graph/backend/src/backend/jobs/auto_assign|auto_assign.py]]
-- [[graph/backend/src/backend/services/roster/avatar_service|avatar_service.py]]
 - [[graph/backend/tests/integration/db/test_board_endpoints|test_board_endpoints.py]]

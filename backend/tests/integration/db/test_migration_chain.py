@@ -7,7 +7,7 @@ from alembic.config import Config
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
 
-from backend.db.models import PERMISSIONS
+from backend.contract import PERMISSIONS
 
 
 @pytest.fixture()

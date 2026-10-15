@@ -7,7 +7,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from backend.db.models import PERMISSIONS, LoginSession, Member, Post
+from backend.contract import PERMISSIONS
+from backend.db.models import LoginSession, Member, Post
 
 LOGIN_ID = "seoyeon1"
 SIGNUP_BODY = {

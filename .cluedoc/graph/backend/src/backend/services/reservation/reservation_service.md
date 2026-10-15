@@ -41,7 +41,7 @@ flowchart LR
 ## 함수와 호출
 
 - `_require_not_in_focused_period`
-- `cancel_reservations_in_focus`: `backend.db.models`
+- `cancel_reservations_in_focus`: `backend.services.notification.pipeline`
 - `focus_refusal`: `backend.scheduling.pipeline`
 - `_require_not_started`
 - `_planned_row`: `backend.db.models`, `backend.services.room.pipeline`, `backend.services.roster.pipeline`, `backend.services.settings.pipeline`, `backend.services.validation.pipeline`

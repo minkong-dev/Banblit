@@ -5,34 +5,12 @@ from sqlalchemy.orm import Session, aliased
 
 from backend.services.validation.pipeline import require_non_empty
 from backend.services.permission.pipeline import account_permissions
-from backend.db.models import Comment, Member, Post, Team, TeamSlot
+from backend.services.roster.pipeline import get_team_or_raise, require_team_member
+from backend.db.models import Comment, Member, Post
 
 # 글, 작성자 이름, 댓글 수, 가린 사람 이름(가려지지 않았으면 None)입니다.
 PostRow = tuple[Post, str, int, str | None]
 CommentRow = tuple[Comment, str]
-
-
-# 아래 두 함수는 roster 모듈의 get_team_or_raise·require_team_member 와 같습니다. roster 의 아바타 저장이
-# 이 모듈의 파일 저장 함수를 import 하므로, 여기서 roster 를 import 하면 순환 import 가 됩니다.
-# 파일 저장 함수가 별도 모듈로 나가면 이 두 함수를 삭제하고 roster 것을 씁니다.
-def get_team_or_raise(session: Session, team_id: int) -> Team:
-    team = session.get(Team, team_id)
-    if team is None:
-        raise ValueError("존재하지 않는 팀입니다")
-    return team
-
-
-def require_team_member(session: Session, team_id: int, member_id: int) -> None:
-    # 인증된 사람이라도 팀 소속이 아니면 PermissionError(403)입니다. 팀이나 게시글이 없는 경우는
-    # ValueError(422)이며, 응답 상태 코드가 다르므로 구분합니다.
-    row = session.execute(
-        select(TeamSlot.id).where(
-            TeamSlot.team_id == team_id,
-            TeamSlot.member_id == member_id,
-        )
-    ).first()
-    if row is None:
-        raise PermissionError("그 팀 소속이 아닙니다")
 
 
 def _get_post_or_raise(session: Session, post_id: int) -> Post:

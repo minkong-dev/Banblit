@@ -10,6 +10,7 @@ kind: file
 ```mermaid
 flowchart LR
   backend_src_backend_services_permission_permission_service["permission_service.py"]
+  backend_src_backend_services_permission_permission_service --> backend_src_backend_contract["contract.py"]
   backend_src_backend_services_permission_permission_service --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_permission_permission_service --> backend_src_backend_db_pipeline["pipeline.py"]
   backend_src_backend_services_permission_permission_service --> backend_src_backend_services_validation_pipeline["pipeline.py"]
@@ -18,6 +19,7 @@ flowchart LR
 
 ## imports
 
+- [[graph/backend/src/backend/contract|contract.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/db/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/validation/pipeline|pipeline.py]]

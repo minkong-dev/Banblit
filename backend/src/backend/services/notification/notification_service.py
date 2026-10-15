@@ -35,6 +35,17 @@ def notify_assignment_updated(
     return len(member_ids)
 
 
+def notify_reservations_cancelled(session: Session, member_ids: set[int], created_at: datetime) -> None:
+    """member_ids 마다 예약 취소 알림 1개를 추가합니다. commit 은 부르는 쪽이 합니다.
+
+    한 멤버가 예약 여러 건을 잃어도 알림은 1개입니다. 건수와 시각은 화면이 예약 목록에서 조회합니다.
+    """
+    session.add_all(
+        Notification(member_id=member_id, kind="reservation_cancelled", created_at=created_at)
+        for member_id in sorted(member_ids)
+    )
+
+
 def notify_rejected(
     session: Session,
     member_id: int,

@@ -39,7 +39,8 @@ from backend.api.schemas import (
     PasswordResetIn,
     SignupIn,
 )
-from backend.db.models import PERMISSIONS, Member
+from backend.contract import PERMISSIONS
+from backend.db.models import Member
 from backend.db.pipeline import get_session
 
 router = APIRouter()

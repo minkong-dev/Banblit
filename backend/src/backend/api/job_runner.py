@@ -16,12 +16,13 @@ from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, replace
 from datetime import datetime
-from typing import Generic, Literal, TypeVar
+from typing import Generic, TypeVar
+
+from backend.contract import JobStatus
 
 logger = logging.getLogger(__name__)
 
 ResultT = TypeVar("ResultT")
-JobStatus = Literal["queued", "running", "done", "failed"]
 
 DEFAULT_MAX_CONCURRENT_JOBS = 2
 

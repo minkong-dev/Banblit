@@ -15,5 +15,6 @@ kind: directory
 - [[graph/backend/src/backend/services/room/room|room/]]
 - [[graph/backend/src/backend/services/roster/roster|roster/]]
 - [[graph/backend/src/backend/services/settings/settings|settings/]]
+- [[graph/backend/src/backend/services/storage/storage|storage/]]
 - [[graph/backend/src/backend/services/unavailable/unavailable|unavailable/]]
 - [[graph/backend/src/backend/services/validation/validation|validation/]]
