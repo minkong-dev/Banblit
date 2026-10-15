@@ -1,4 +1,5 @@
 from collections import defaultdict
+from collections.abc import Collection
 from typing import NamedTuple
 
 from sqlalchemy import Select, select
@@ -53,7 +54,7 @@ def account_permission_set_names(session: Session, member_id: int) -> list[str]:
     )
 
 
-def holds_every_permission(permissions: list[str]) -> bool:
+def holds_every_permission(permissions: Collection[str]) -> bool:
     return set(PERMISSIONS) <= set(permissions)
 
 
@@ -105,11 +106,14 @@ def require_another_full_set_holder(
         .order_by(MemberPermissionSet.member_id)
         .with_for_update()
     ).all()
-    remaining = [
-        holder
-        for holder, held in rows
-        if holder != member_id or (set_id is not None and held != set_id)
-    ]
+    # 회수 뒤에도 전체 권한을 가진 보유 기록입니다. 다른 멤버의 기록은 남고, 같은 멤버의 기록은
+    # set_id 1개만 회수할 때 그 밖의 set 이 남습니다. set_id 가 None 이면 그 멤버의 기록은 전부 사라집니다.
+    remaining: list[int] = []
+    for holder, held in rows:
+        if holder != member_id:
+            remaining.append(holder)
+        elif set_id is not None and held != set_id:
+            remaining.append(holder)
     if not remaining:
         raise ValueError(
             "모든 권한을 가진 permission set 의 마지막 보유자입니다. "
@@ -137,11 +141,7 @@ def account_permissions(session: Session, member_id: int) -> list[str]:
 
 
 class SetMember(NamedTuple):
-    """permission set을 가진 멤버입니다. 번호와 이름을 함께 포함합니다.
-
-    이름을 포함하는 이유는 화면이 번호를 이름으로 변환하지 않게 하기 위해서입니다. 화면은
-    멤버 목록을 페이지 단위로 받으므로, 아직 받지 않은 페이지에 있는 멤버는 이름을 찾지 못합니다.
-    """
+    """permission set을 가진 멤버의 번호와 이름입니다."""
 
     id: int
     name: str

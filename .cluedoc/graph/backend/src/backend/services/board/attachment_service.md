@@ -14,6 +14,7 @@ flowchart LR
   backend_src_backend_services_board_attachment_service --> backend_src_backend_services_board_board_service["board_service.py"]
   backend_src_backend_services_board_attachment_service --> backend_src_backend_services_storage_pipeline["pipeline.py"]
   backend_src_backend_services_board_pipeline["pipeline.py"] --> backend_src_backend_services_board_attachment_service
+  backend_tests_unit_test_board_rules["test_board_rules.py"] --> backend_src_backend_services_board_attachment_service
 ```
 
 ## imports
@@ -25,6 +26,7 @@ flowchart LR
 ## imported by
 
 - [[graph/backend/src/backend/services/board/pipeline|pipeline.py]]
+- [[graph/backend/tests/unit/test_board_rules|test_board_rules.py]]
 
 ## 함수와 호출
 

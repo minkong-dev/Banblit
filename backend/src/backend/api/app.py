@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 #
 # 수준(level)은 여기에서 올리지 않습니다. 여기에서 올리면 backend 아래 모든 모듈의 INFO 가
 # 함께 통과하는데, mailer 의 INFO 에는 개발 환경용 메일 본문(재설정 token 포함)이 들어 있습니다.
-# INFO 를 남겨야 하는 모듈이 자기 logger 의 수준을 직접 올립니다(services/password_reset.py).
+# INFO 를 남겨야 하는 모듈이 자기 logger 의 수준을 직접 올립니다(services/auth/password_reset.py).
 _service_logs = logging.getLogger("backend")
 if not _service_logs.handlers:
     # 이 모듈이 두 번 적재되면 handler 가 2개가 되어 같은 기록이 2줄씩 출력됩니다.

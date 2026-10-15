@@ -15,6 +15,7 @@ flowchart LR
   backend_src_backend_services_permission_permission_service --> backend_src_backend_db_pipeline["pipeline.py"]
   backend_src_backend_services_permission_permission_service --> backend_src_backend_services_validation_pipeline["pipeline.py"]
   backend_src_backend_services_permission_pipeline["pipeline.py"] --> backend_src_backend_services_permission_permission_service
+  backend_tests_unit_test_permission_rules["test_permission_rules.py"] --> backend_src_backend_services_permission_permission_service
 ```
 
 ## imports
@@ -27,6 +28,7 @@ flowchart LR
 ## imported by
 
 - [[graph/backend/src/backend/services/permission/pipeline|pipeline.py]]
+- [[graph/backend/tests/unit/test_permission_rules|test_permission_rules.py]]
 
 ## 함수와 호출
 

@@ -33,7 +33,7 @@ def create_session(session: Session, member_id: int, now: datetime, ttl: timedel
     table 에 행을 추가하는 유일한 코드이므로, 이 함수 외에 삭제할 곳이 없습니다.
 
     ponytail: 로그인하지 않는 계정의 행은 계속 남습니다. 해당 계정 수가 문제되면
-    주기적 삭제를 추가합니다. 현재 이 저장소에는 scheduled(시간을 지정해 자동으로 실행하는) 작업 기능이 없습니다.
+    jobs/auto_assign.py 의 반복(초안 삭제와 같은 자리)에 삭제를 추가합니다.
     """
     _delete_dead_sessions(session, member_id, now)
     token = secrets.token_urlsafe(32)

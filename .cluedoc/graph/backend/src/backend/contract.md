@@ -28,6 +28,7 @@ flowchart LR
   backend_tests_integration_db_test_permission_endpoints["test_permission_endpoints.py"] --> backend_src_backend_contract
   backend_tests_integration_db_test_reject_endpoints["test_reject_endpoints.py"] --> backend_src_backend_contract
   backend_tests_integration_db_test_settings_endpoints["test_settings_endpoints.py"] --> backend_src_backend_contract
+  backend_tests_unit_test_permission_rules["test_permission_rules.py"] --> backend_src_backend_contract
 ```
 
 ## imports
@@ -54,3 +55,4 @@ flowchart LR
 - [[graph/backend/tests/integration/db/test_permission_endpoints|test_permission_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_reject_endpoints|test_reject_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_settings_endpoints|test_settings_endpoints.py]]
+- [[graph/backend/tests/unit/test_permission_rules|test_permission_rules.py]]

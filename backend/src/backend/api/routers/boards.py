@@ -135,7 +135,7 @@ def start_team_post_draft(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> PostEnvelopeOut:
-    # ValueError 와 PermissionError 는 app.py 의 전역 처리기가 422·403 으로 변환합니다.
+    # ValueError 와 PermissionError 는 app.py 의 exception handler 가 422, 403 으로 변환합니다.
     post = create_draft(session, team_id, requester, datetime.now())
     return PostEnvelopeOut(post=_post_out(post, requester.name, 0, None))
 

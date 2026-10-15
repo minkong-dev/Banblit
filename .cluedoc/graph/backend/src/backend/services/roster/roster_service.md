@@ -16,6 +16,7 @@ flowchart LR
   backend_src_backend_services_roster_roster_service --> backend_src_backend_services_permission_pipeline["pipeline.py"]
   backend_src_backend_services_roster_roster_service --> backend_src_backend_services_validation_pipeline["pipeline.py"]
   backend_src_backend_services_roster_pipeline["pipeline.py"] --> backend_src_backend_services_roster_roster_service
+  backend_tests_unit_test_roster_rules["test_roster_rules.py"] --> backend_src_backend_services_roster_roster_service
 ```
 
 ## imports
@@ -29,6 +30,7 @@ flowchart LR
 ## imported by
 
 - [[graph/backend/src/backend/services/roster/pipeline|pipeline.py]]
+- [[graph/backend/tests/unit/test_roster_rules|test_roster_rules.py]]
 
 ## 함수와 호출
 

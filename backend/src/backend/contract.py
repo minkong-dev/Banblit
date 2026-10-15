@@ -18,9 +18,7 @@ from typing import Literal, get_args
 SlotMinutes = Literal[5, 10, 12, 15, 20, 30, 60]
 SLOT_MINUTE_CHOICES: tuple[SlotMinutes, ...] = get_args(SlotMinutes)
 
-# 설정에 값이 없던 시절에 쓰던 칸 크기입니다. 지금은 settings.slot_minutes 가 결정하고,
-# 이 값은 그 설정이 만들어질 때 넣는 기본값입니다
-# (migrations/versions/d2f7a08c5e16_slot_minutes_setting.py).
+# settings.slot_minutes 의 기본값입니다. 칸 크기는 저장소 설정이 결정합니다.
 DEFAULT_SLOT_MINUTES = 60
 
 # 합주 1회가 진행되는 길이(분)입니다. 칸 하나의 크기와는 다른 값입니다 — 칸은 합주를 "시작할 수 있는
@@ -93,7 +91,7 @@ INSTRUMENTS: tuple[Instrument, ...] = get_args(Instrument)
 # 알림의 종류입니다. 문구는 이 코드에 두지 않습니다. table 에는 종류만 저장하고 사람이 읽을
 # 문장은 화면이 만듭니다. 그래서 문구를 수정하면 이미 저장된 알림에도 적용되고, table 을
 # 수정할 필요가 없습니다.
-# reservation_cancelled: 집중 합주기간이 생기거나 넓어져 예약이 취소되었습니다(services/reservation_service.py).
+# reservation_cancelled: 집중 합주기간이 생기거나 넓어져 예약이 취소되었습니다(services/reservation/reservation_service.py).
 # rejected: 관리 권한자가 예약이나 불가능 일정을 사유와 함께 반려했습니다(services/notification/notification_service.py).
 NotificationKind = Literal["assignment_updated", "reservation_cancelled", "rejected"]
 NOTIFICATION_KINDS: tuple[NotificationKind, ...] = get_args(NotificationKind)
