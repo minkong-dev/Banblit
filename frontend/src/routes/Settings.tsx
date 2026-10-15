@@ -1,11 +1,9 @@
-// 관리자 메뉴의 진입점입니다. 주소가 고른 구역 1개를 그리고, 합주실·기간 구역에는
-// 오른쪽 계산 패널을 함께 표시합니다.
-// 합주실·기간·멤버·예약·블라인드·불가능 일정 구역은 각각 Settings*.tsx 가 담당하고,
-// 구역 목록과 주소는 lib/adminMenu.ts 에 작성되어 있는 내용을 기준으로 합니다.
-// 자기 계정에 대한 설정(이름·사진·비밀번호·테마·탈퇴)은 2026-09-23 에 프로필 화면(/profile)으로 옮겼습니다.
+// 관리자 메뉴 구역의 화면 표와 권한 확인입니다. 구역 목록과 주소는 lib/adminMenu.ts 에 작성되어 있는 내용을 기준으로 하고,
+// 구역마다 화면은 Settings*.tsx 가 담당합니다. 자기 계정에 대한 설정은 프로필 화면(/profile)에 있습니다.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 
 import { Card, Panel, SectionHead } from "../components/Layout";
@@ -61,51 +59,38 @@ export function SettingsIndex() {
   );
 }
 
-/** 관리자 메뉴 1개입니다. 어느 구역을 그릴지는 주소가 정합니다(App.tsx). */
-export function SettingsPage({ section }: { section: AdminSection }) {
+/** 관리자 메뉴 구역 1개의 권한 확인입니다. 계정을 받기 전에는 판정하지 않습니다. 아직 받지 못한 것을 "권한 없음" 으로
+ *  읽으면 화면을 열 때마다 다른 화면으로 이동됩니다. 권한이 없으면 SettingsIndex 로 보내 열 수 있는 첫 구역이나 안내를 표시합니다. */
+export function AdminArea({ section, children }: { section: AdminSection; children: ReactNode }) {
+  const { me } = useMe();
+  const needs = ADMIN_MENU.find((item) => item.key === section)?.needs ?? [];
+  if (me !== null && !needs.some((need) => can(me, need))) return <Navigate to="/settings" replace />;
+  return <>{children}</>;
+}
+
+/** 합주실, 기간 구역입니다. 두 구역만 설정값이 배정에 미치는 영향을 오른쪽 계산 패널에서 미리 봅니다. */
+function SetupArea({ tab }: { tab: "rooms" | "periods" }) {
   const client = useQueryClient();
   const { me } = useMe();
-
-  const needs = ADMIN_MENU.find((item) => item.key === section)?.needs ?? [];
-  // me 가 null 인 동안은 판정하지 않습니다. 아직 받지 못한 것을 "권한 없음" 으로 읽으면
-  // 화면을 열 때마다 다른 화면으로 이동됩니다.
-  const blocked = me !== null && !needs.some((need) => can(me, need));
-
-  const shown = section;
-  // 합주실·기간 구역만 이 3개를 사용합니다. 구역마다 주소가 따로 있어 구역을 옮기면 이 화면이
-  // 다시 마운트되는데, 가드가 없으면 멤버·예약·블라인드·불가능 일정 구역을 열 때마다
-  // 쓰지 않는 목록 3건을 요청합니다. 권한이 없어 바로 되돌려보내는 경우에도 마찬가지입니다.
-  const needsSetup = !blocked && (shown === "rooms" || shown === "periods");
-  const rooms = useRooms(needsSetup);
-  const periods = usePeriods(needsSetup);
-  // 팀 목록은 오른쪽 계산에만 사용합니다. queryKey 가 다른 화면에서 사용하는 것과 같아서,
-  // 이미 받은 목록이 있으면 다시 조회하지 않습니다.
-  const teams = useTeams(needsSetup);
-
+  const rooms = useRooms();
+  const periods = usePeriods();
+  // 팀 목록은 오른쪽 계산에만 씁니다. 다른 화면과 queryKey 가 같아 이미 받은 목록이 있으면 다시 조회하지 않습니다.
+  const teams = useTeams();
   const roomList = rooms.data?.rooms ?? [];
   const periodList = periods.data?.periods ?? [];
-  const teamList = teams.data?.teams ?? [];
 
-  // 저장이 끝나면 목록을 서버에서 다시 조회합니다. 화면은 서버에서 받은 값만 표시합니다.
-  // keys 가 여럿이면 전부 무효화합니다 — 삭제로 서버가 CASCADE 삭제하는 데이터의 캐시까지
-  // 함께 무효화할 때 씁니다(PERIOD_DELETE_KEYS, ROOM_DELETE_KEYS).
-  function saved(keys: string | readonly string[], text: string): () => void {
+  // 저장이 끝나면 keys 의 목록을 서버에서 다시 조회합니다. 삭제는 서버가 CASCADE 로 함께 삭제한 데이터의 key 까지 넘깁니다.
+  function saved(keys: readonly string[], text: string): () => void {
     return () => {
-      for (const key of typeof keys === "string" ? [keys] : keys) {
-        void client.invalidateQueries({ queryKey: [key] });
-      }
+      for (const key of keys) void client.invalidateQueries({ queryKey: [key] });
       say(text);
     };
   }
 
-  // 권한 없이 주소로 바로 들어온 경우입니다. 빈 화면을 두지 않고, 열 수 있는 첫 구역이나
-  // 안내 문구로 보냅니다(SettingsIndex).
-  if (blocked) return <Navigate to="/settings" replace />;
-
   return (
     <>
       <div className="main">
-        {shown === "rooms" ? (
+        {tab === "rooms" ? (
           <>
             <RoomCard
               rooms={roomList}
@@ -113,15 +98,12 @@ export function SettingsPage({ section }: { section: AdminSection }) {
               canEdit={can(me, "room_edit")}
               canCreate={can(me, "room_create")}
               canDelete={can(me, "room_delete")}
-              onSaved={saved("rooms", "합주실 정보를 등록했어요.")}
+              onSaved={saved(["rooms"], "합주실 정보를 등록했어요.")}
               onDeleted={saved(ROOM_DELETE_KEYS, "합주실을 삭제했어요.")}
             />
-            <SlotUnitCard
-              canEdit={can(me, "room_edit")}
-              onSaved={saved("settings", "설정을 변경했어요.")}
-            />
+            <SlotUnitCard canEdit={can(me, "room_edit")} onSaved={saved(["settings"], "설정을 변경했어요.")} />
           </>
-        ) : shown === "periods" ? (
+        ) : (
           <PeriodCard
             periods={periodList}
             rooms={roomList}
@@ -129,35 +111,27 @@ export function SettingsPage({ section }: { section: AdminSection }) {
             canEdit={can(me, "period_edit")}
             canCreate={can(me, "period_create")}
             canDelete={can(me, "period_delete")}
-            onSaved={saved("periods", "집중 합주기간을 등록했어요.")}
+            onSaved={saved(["periods"], "집중 합주기간을 등록했어요.")}
             onDeleted={saved(PERIOD_DELETE_KEYS, "집중 합주기간을 삭제했어요.")}
           />
-        ) : shown === "members" ? (
-          <MemberCards />
-        ) : shown === "reservations" ? (
-          <ReservationCards />
-        ) : shown === "blinded" ? (
-          <BlindedCards />
-        ) : (
-          <UnavailableCards />
         )}
       </div>
-
-      {/* 오른쪽 계산 패널은 합주실·기간 구역에만 붙습니다. 그 둘만 설정값이 배정에 미치는 영향을 미리 봐야 합니다. */}
-      {shown !== "rooms" && shown !== "periods" ? null : (
-        <div className="rail">
-          <Readout
-            rooms={roomList}
-            periods={periodList}
-            teams={teamList}
-            teamsState={loadState(teams)}
-            tab={shown}
-          />
-        </div>
-      )}
+      <div className="rail">
+        <Readout rooms={roomList} periods={periodList} teams={teams.data?.teams ?? []} teamsState={loadState(teams)} tab={tab} />
+      </div>
     </>
   );
 }
+
+/** 관리자 메뉴 구역마다 그릴 화면입니다. App.tsx 가 lib/adminMenu.ts 의 주소마다 AdminArea 로 감싸 연결합니다. */
+export const ADMIN_SCREENS: Record<AdminSection, ReactElement> = {
+  rooms: <SetupArea tab="rooms" />,
+  periods: <SetupArea tab="periods" />,
+  members: <div className="main"><MemberCards /></div>,
+  reservations: <div className="main"><ReservationCards /></div>,
+  blinded: <div className="main"><BlindedCards /></div>,
+  unavailable: <div className="main"><UnavailableCards /></div>,
+};
 
 /** 점유 단위(칸 하나의 크기)와 합주 1회 길이를 변경하는 카드입니다. 합주실 운영을 맡은 사람의
  *  설정이라 합주실 탭에 둡니다. 권한(room_edit)이 없으면 현재 값만 표시합니다.
