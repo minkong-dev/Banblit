@@ -10,9 +10,9 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_components_richTextEditor["richTextEditor.ts"]
+  frontend_src_components_richTextEditor --> frontend_src_components_toast["toast.ts"]
   frontend_src_components_richTextEditor --> frontend_src_lib_api["api.ts"]
   frontend_src_components_richTextEditor --> frontend_src_lib_richText["richText.ts"]
-  frontend_src_components_richTextEditor --> frontend_src_lib_toast["toast.ts"]
   frontend_src_components_RichText["RichText.tsx"] --> frontend_src_components_richTextEditor
   frontend_src_components_RichTextColor["RichTextColor.tsx"] --> frontend_src_components_richTextEditor
   frontend_src_components_RichTextToolbar["RichTextToolbar.tsx"] --> frontend_src_components_richTextEditor
@@ -20,9 +20,9 @@ flowchart LR
 
 ## imports
 
+- [[graph/frontend/src/components/toast|toast.ts]]
 - [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/richText|richText.ts]]
-- [[graph/frontend/src/lib/toast|toast.ts]]
 
 ## imported by
 

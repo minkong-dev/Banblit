@@ -11,7 +11,7 @@ import { TextStyle } from "@tiptap/extension-text-style";
 
 import { apiUrl, reason, sendFile } from "../lib/api";
 import { embedKind } from "../lib/richText";
-import { say } from "../lib/toast";
+import { say } from "./toast";
 
 /** useEditor 는 편집기를 아직 만들지 못했을 때 null 을 반환합니다. NonNullable 은 그 null 을
  *  제외한 타입이고, 이 타입을 받는 함수와 컴포넌트는 편집기가 있는 상태만 다룹니다. */

@@ -16,7 +16,7 @@ import { Button, Toggle } from "../components/controls";
 import { CheckIcon, CrossIcon, GoogleIcon, KakaoIcon } from "../components/icons";
 
 import { usePage } from "../components/hooks";
-import { say, useToast } from "../lib/toast";
+import { say, useToast } from "../components/toast";
 import "../styles/account.css";
 import {
   cohortMessage,

@@ -10,7 +10,7 @@ import { backupsKey } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
 import { hoursOf, reportLines } from "../lib/assignment";
 import { appliedLabel, checkRunTimes, scoreLabel, slotCountLabel } from "../lib/runs";
-import { say } from "../lib/toast";
+import { say } from "../components/toast";
 import { LOADING_TEXT, loadState } from "../lib/loading";
 import { clockEndLabel, dayOf, hhmm, stampLabel, WEEKDAY_NAMES } from "../lib/pipeline";
 import type { Session } from "../lib/pipeline";

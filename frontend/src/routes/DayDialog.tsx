@@ -25,7 +25,7 @@ import { entryName, myEntries, offWhenLabel } from "../lib/dayEntries";
 import type { DayTab, EnsembleOn, Entry } from "../lib/dayEntries";
 import { EnsembleDayEditor } from "./SettingsEnsemble";
 import type { DayTeam } from "../lib/roster";
-import { say } from "../lib/toast";
+import { say } from "../components/toast";
 import {
   DayPeople, DayTimeline, MyEntriesList, RepeatFields, SlotPicker, repeatConflict,
 } from "./DayDialogParts";

@@ -5,7 +5,7 @@ import { Button } from "../components/controls";
 import { Card, Tabs } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
 import { getJSON, reason } from "../lib/api";
-import { say } from "../lib/toast";
+import { say } from "../components/toast";
 import { askApplyRecord } from "../lib/confirm";
 import { applyRecord, loadScheduleOut, runAssignment, SCHEDULE_KEY } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";

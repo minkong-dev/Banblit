@@ -19,6 +19,7 @@ flowchart LR
   frontend_src_routes_Teams --> frontend_src_components_hooks["hooks.ts"]
   frontend_src_routes_Teams --> frontend_src_components_icons["icons.tsx"]
   frontend_src_routes_Teams --> frontend_src_components_queries["queries.ts"]
+  frontend_src_routes_Teams --> frontend_src_components_toast["toast.ts"]
   frontend_src_routes_Teams --> frontend_src_lib_account["account.ts"]
   frontend_src_routes_Teams --> frontend_src_lib_api["api.ts"]
   frontend_src_routes_Teams --> frontend_src_lib_confirm["confirm.ts"]
@@ -28,7 +29,6 @@ flowchart LR
   frontend_src_routes_Teams --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_routes_Teams --> frontend_src_lib_roster["roster.ts"]
   frontend_src_routes_Teams --> frontend_src_lib_teamColors["teamColors.ts"]
-  frontend_src_routes_Teams --> frontend_src_lib_toast["toast.ts"]
   frontend_src_App["App.tsx"] --> frontend_src_routes_Teams
 ```
 
@@ -43,6 +43,7 @@ flowchart LR
 - [[graph/frontend/src/components/hooks|hooks.ts]]
 - [[graph/frontend/src/components/icons|icons.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
+- [[graph/frontend/src/components/toast|toast.ts]]
 - [[graph/frontend/src/lib/account|account.ts]]
 - [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/confirm|confirm.ts]]
@@ -52,7 +53,6 @@ flowchart LR
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/roster|roster.ts]]
 - [[graph/frontend/src/lib/teamColors|teamColors.ts]]
-- [[graph/frontend/src/lib/toast|toast.ts]]
 
 ## imported by
 

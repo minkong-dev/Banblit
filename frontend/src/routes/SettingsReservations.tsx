@@ -23,7 +23,7 @@ import {
   upcomingBookings,
 } from "../lib/pipeline";
 import type { Booking } from "../lib/pipeline";
-import { say } from "../lib/toast";
+import { say } from "../components/toast";
 import { loadState } from "../lib/loading";
 
 // ponytail: 현재 기준 지정한 일수 범위 내의 예약만 표시합니다. 예약 목록 endpoint(API의 요청 주소 단위)가 합주실·날짜 범위 조건으로만 받으므로,

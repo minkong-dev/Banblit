@@ -12,7 +12,7 @@ import { SeatRow } from "../components/SeatRow";
 import { idParam } from "../components/hooks";
 import { useMe, useTeams } from "../components/queries";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
-import { say } from "../lib/toast";
+import { say } from "../components/toast";
 import { askDelete } from "../lib/confirm";
 import { getJSON, reason } from "../lib/api";
 import { loadState } from "../lib/loading";

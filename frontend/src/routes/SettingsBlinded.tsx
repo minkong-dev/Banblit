@@ -9,7 +9,7 @@ import { Button, Empty } from "../components/controls";
 import { Card, SectionHead } from "../components/Layout";
 import { reason } from "../lib/api";
 import { BLINDED_KEY, BOARD_KEY, getJSON, stampLabel } from "../lib/pipeline";
-import { say } from "../lib/toast";
+import { say } from "../components/toast";
 import { loadState } from "../lib/loading";
 import type { Post } from "../lib/contract";
 

@@ -14,7 +14,7 @@ import {
   getJSON,
   sendFile,
 } from "../lib/pipeline";
-import { say } from "../lib/toast";
+import { say } from "./toast";
 import { Button, FilePicker, FormFoot } from "./controls";
 import { AttachmentRow } from "./PostAttachments";
 import { RichText } from "./RichText";

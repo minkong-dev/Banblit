@@ -7,7 +7,7 @@ import { apiUrl } from "../lib/api";
 import type { Attachment } from "../lib/contract";
 import { firstWhy } from "../lib/loading";
 import { fileSizeLabel, getJSON } from "../lib/pipeline";
-import { say } from "../lib/toast";
+import { say } from "./toast";
 import { Button, Why } from "./controls";
 
 /** 첨부파일 목록의 한 줄입니다. 등록 전(선택한 파일)과 등록 후(저장된 파일)가 같은 모양을 씁니다.

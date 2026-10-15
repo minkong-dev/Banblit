@@ -14,10 +14,10 @@ flowchart LR
   frontend_src_routes_ProfileCards --> frontend_src_components_Layout["Layout.tsx"]
   frontend_src_routes_ProfileCards --> frontend_src_components_controls["controls.tsx"]
   frontend_src_routes_ProfileCards --> frontend_src_components_hooks["hooks.ts"]
+  frontend_src_routes_ProfileCards --> frontend_src_components_toast["toast.ts"]
   frontend_src_routes_ProfileCards --> frontend_src_lib_account["account.ts"]
   frontend_src_routes_ProfileCards --> frontend_src_lib_api["api.ts"]
   frontend_src_routes_ProfileCards --> frontend_src_lib_contract["contract.ts"]
-  frontend_src_routes_ProfileCards --> frontend_src_lib_toast["toast.ts"]
   frontend_src_routes_ProfileCards --> frontend_src_lib_validate["validate.ts"]
   frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_routes_ProfileCards
 ```
@@ -28,10 +28,10 @@ flowchart LR
 - [[graph/frontend/src/components/Layout|Layout.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/hooks|hooks.ts]]
+- [[graph/frontend/src/components/toast|toast.ts]]
 - [[graph/frontend/src/lib/account|account.ts]]
 - [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
-- [[graph/frontend/src/lib/toast|toast.ts]]
 - [[graph/frontend/src/lib/validate|validate.ts]]
 
 ## imported by

@@ -22,7 +22,7 @@ import {
 import type { PeriodBody } from "../lib/pipeline";
 import { periodTitle } from "../lib/settings";
 import type { WindowPair } from "../lib/settings";
-import { say } from "../lib/toast";
+import { say } from "../components/toast";
 import { EnsembleDays, EnsembleFields, EnsembleToggle, ensembleBody, ensembleDraft } from "./SettingsEnsemble";
 import { Row, useFirstField, useForm } from "./SettingsForm";
 
