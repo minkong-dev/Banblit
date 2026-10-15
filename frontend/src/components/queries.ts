@@ -4,11 +4,13 @@ import { useMemo } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 
-import { fetchMe, getJSON, loadTeamMembers, myTeamIds } from "../lib/pipeline";
+import { fetchMe, loadTeamMembers } from "../lib/pipeline";
 import { loadState, stillUnresolved } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { teamColorKey } from "../lib/teamColors";
 import type { Account, Period, Room, Team } from "../lib/contract";
+import { getJSON } from "../lib/api";
+import { myTeamIds } from "../lib/roster";
 
 /** 팀·합주실·기간 목록입니다. 여러 화면에서 같은 조회를 다시 작성하지 않습니다. queryKey 가 같아 cache 도 하나입니다.
  *

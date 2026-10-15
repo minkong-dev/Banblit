@@ -12,19 +12,12 @@ import { RejectDialog } from "../components/RejectDialog";
 import { useMe, useRooms } from "../components/queries";
 import { reason } from "../lib/api";
 import { askCancel } from "../lib/confirm";
-import {
-  cancelBooking,
-  clockEndLabel,
-  dayKey,
-  dayWithWeekday,
-  hhmm,
-  loadReservationRows,
-  rejectBooking,
-  upcomingBookings,
-} from "../lib/pipeline";
-import type { Booking } from "../lib/pipeline";
+import { cancelBooking, loadReservationRows, rejectBooking } from "../lib/pipeline";
 import { say } from "../components/toast";
 import { loadState } from "../lib/loading";
+import { clockEndLabel, dayKey, dayWithWeekday } from "../lib/calendar";
+import { hhmm, upcomingBookings } from "../lib/slots";
+import type { Booking } from "../lib/slots";
 
 // ponytail: 현재 기준 지정한 일수 범위 내의 예약만 표시합니다. 예약 목록 endpoint(API의 요청 주소 단위)가 합주실·날짜 범위 조건으로만 받으므로,
 // 합주실마다 요청을 하나씩 동시에 보냅니다(loadReservationRows). 합주실 수가 증가하여 성능 저하가 발생하거나 더 먼 범위의

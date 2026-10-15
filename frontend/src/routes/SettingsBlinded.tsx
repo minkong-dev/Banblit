@@ -8,10 +8,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Empty } from "../components/controls";
 import { Card, SectionHead } from "../components/Layout";
 import { reason } from "../lib/api";
-import { BLINDED_KEY, BOARD_KEY, getJSON, stampLabel } from "../lib/pipeline";
 import { say } from "../components/toast";
 import { loadState } from "../lib/loading";
 import type { Post } from "../lib/contract";
+import { BLINDED_KEY, BOARD_KEY } from "../lib/boards";
+import { getJSON } from "../lib/api";
+import { stampLabel } from "../lib/calendar";
 
 export function BlindedCards() {
   const client = useQueryClient();

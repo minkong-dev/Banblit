@@ -1,30 +1,14 @@
-// lib 모듈의 시퀀스 파일입니다. 어느 검증을 어느 순서로 호출할지 이 파일에서 결정합니다.
+// lib 모듈의 시퀀스 파일입니다. 서버 호출과, 그 앞뒤에 어느 검증을 어느 순서로 호출할지만 이 파일에서 결정합니다.
+// 서버와 무관한 계산 함수는 다시 export 하지 않습니다. 화면은 그 함수가 있는 lib 파일에서 직접 import 합니다.
 
-import { getJSON, isSignedIn, sendFile } from "./api";
+import { getJSON } from "./api";
 import type {
   Account, Ensemble, Me, Member, MemberUnavailable, Notification, Period, Reservation, ScheduleOut, ScheduleRow,
   Unavailable,
 } from "./contract";
 import {
-  dayKey,
   datesBetween,
-  clockEndLabel,
-  dayLabel,
-  dayWithWeekday,
-  focusedRanges,
   hoursLabel,
-  inRanges,
-  isRangeFree,
-  MINUTES_PER_HOUR,
-  monthCells,
-  roomBounds,
-  slotCountOf,
-  slotLabel,
-  stampLabel,
-  takenGrid,
-  WEEKDAY_NAMES,
-  weekKeys,
-  withPastTaken,
 } from "./calendar";
 import {
   capacity,
@@ -35,26 +19,10 @@ import {
 import { awaitJob } from "./jobs";
 import type { Job } from "./jobs";
 import {
-  ATTACHMENT_ACCEPT,
-  ATTACHMENT_HINT,
   attachmentMessage,
-  BLINDED_KEY,
-  BOARD_KEY,
-  boardActions,
-  boardListKey,
   bodyMessage,
-  commentMessage,
-  fileSizeLabel,
   titleMessage,
 } from "./boards";
-import {
-  memberLabel,
-  myTeamIds,
-  noMembersMessage,
-  slotCountsMessage,
-  slotName,
-  teamNameMessage,
-} from "./roster";
 
 type RoomForm = { name: string; opens_at: string; closes_at: string };
 type PeriodForm = { starts_on: string; ends_on: string };
@@ -169,17 +137,11 @@ export function daysBetween(from: string, to: string): number {
 
 // 스케줄러 화면이 사용하는 계산입니다. 합주실과 기간 사이에 순서 의존이 없어 그대로 export 합니다.
 // roomBounds()는 달력의 여닫는 시각을, focusedRanges()는 자동 배정 띠의 날짜 범위 전부를 반환합니다.
-export { focusedRanges, inRanges, roomBounds };
 
 type PostForm = { title: string; body: string };
 
-export { commentMessage as checkComment };
-export { ensembleMessage as checkEnsemble, ensembleTimeMessage as checkEnsembleTime } from "./settings";
 // 팀별 합주 시간대 검증입니다. 순서 의존이 없어 그대로 export 합니다.
-export { practiceWindowMessage as checkPracticeWindow } from "./settings";
 // 배정 규칙(팀당 목표 시간, 불참 허용 인원) 검증입니다. 순서 의존이 없어 그대로 export 합니다.
-export { assignRuleMessage as checkAssignRule } from "./settings";
-export type { WindowPair } from "./settings";
 
 export function checkPost(form: PostForm): string {
   // 제목을 먼저 검증합니다. 오류 메시지를 한 번에 하나만 표시하므로 먼저 수정할 것을 앞에 둡니다.
@@ -202,11 +164,8 @@ export function checkAttachments(files: { name: string; size: number }[]): strin
 }
 
 // 팀·포지션에 대해 화면이 하는 계산입니다. 순서 의존이 없어 그대로 export 합니다.
-export { memberLabel, myTeamIds, noMembersMessage, slotName };
-export { teamNameMessage as checkTeamName, slotCountsMessage as checkSlotCounts };
 
 // 게시판·공지 화면이 사용하는 계산입니다. fileSizeLabel 은 순서 의존이 없어 그대로 export 합니다.
-export { ATTACHMENT_ACCEPT, ATTACHMENT_HINT, BLINDED_KEY, BOARD_KEY, boardActions, boardListKey, fileSizeLabel };
 
 
 // routes/Assignment.tsx 는 ["schedule", activePeriodId](숫자 하나)를, routes/Scheduler.tsx 는
@@ -436,35 +395,6 @@ export async function addReservation(form: ReservationForm): Promise<Reservation
   return body.reservations;
 }
 
-// 아래는 서버 호출과 짝을 이루는 계산 함수의 재출력입니다. 순서 의존이 없어 그대로 export 합니다.
-// 이 파일이 모으는 것은 서버 호출을 조합하는 함수와 그 짝뿐입니다. 서버와 무관한 기능 파일
-// (lib/api 의 getJSON·reason, calendar, roster, runs, toast, confirm, loading, paging, theme)은
-// 화면이 직접 참조합니다.
-export {
-  dayOf,
-  hhmm,
-  isoAt,
-  mergeSessions,
-  slotIndex,
-  upcomingBookings,
-} from "./slots";
-export type { Booking, Session } from "./slots";
-export { dayKey, datesBetween, isRangeFree, MINUTES_PER_HOUR, monthCells, slotCountOf, slotLabel, takenGrid, weekKeys, withPastTaken };
-export { clockEndLabel, dayLabel, dayWithWeekday, stampLabel, WEEKDAY_NAMES };
-export { hoursLabel };
-export {
-  cohortMessage,
-  departmentMessage,
-  emailMessage,
-  loginIdMessage,
-  passwordChecks,
-  passwordMessage,
-  personNameMessage,
-  signupPasswordMessage,
-  strongPasswordMessage,
-  studentNoMessage,
-} from "./validate";
-
 type SignUpForm = {
   name: string;
   // 멤버를 구분하는 값의 일부입니다. 이름·학과·학번·기수 4개 항목이 모두 같아야 같은 멤버입니다.
@@ -535,14 +465,12 @@ export async function fetchMe(): Promise<Me> {
 }
 
 // isSignedIn 은 api.ts 에 있습니다. 401 처리가 같은 cookie 를 읽기 때문입니다. 화면은 이 파일에서 가져갑니다.
-export { isSignedIn };
 
 export async function logOut(): Promise<void> {
   // 서버가 session 을 무효로 설정하고 cookie 2개를 삭제합니다.
   await getJSON("/logout", { method: "POST" });
 }
 
-export { getJSON, sendFile };
 
 export async function loadTeamMembers(teamId: number): Promise<Member[]> {
   const body = await getJSON<{ members: Member[] }>(`/teams/${teamId}/members`);
@@ -563,4 +491,3 @@ export async function markNotificationsRead(): Promise<void> {
 }
 
 // 알림 문구 생성과 읽지 않은 개수 계산 사이에 순서 의존이 없어 그대로 export 합니다.
-export { notificationText, unreadCount } from "./notifications";

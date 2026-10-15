@@ -18,10 +18,12 @@ import { can } from "../lib/account";
 import { reason } from "../lib/api";
 import { repeatLabel } from "../lib/calendar";
 import { askDelete } from "../lib/confirm";
-import { clockEndLabel, dayWithWeekday, hhmm, loadAllUnavailable, rejectUnavailable, removeUnavailable } from "../lib/pipeline";
+import { loadAllUnavailable, rejectUnavailable, removeUnavailable } from "../lib/pipeline";
 import type { MemberUnavailable } from "../lib/contract";
 import { say } from "../components/toast";
 import { UnavailableCalendar } from "./UnavailableCalendar";
+import { clockEndLabel, dayWithWeekday } from "../lib/calendar";
+import { hhmm } from "../lib/slots";
 
 // 전체 목록의 queryKey 입니다. 앞머리가 달력의 불가능 일정 조회와 같은 "unavailable" 이라, 반려·삭제 뒤 둘 다 다시 조회합니다.
 const LIST_KEY = ["unavailable", "all"] as const;

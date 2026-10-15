@@ -15,11 +15,11 @@ import { TeamSearch } from "../components/TeamSearch";
 import { offByDay, visibleDays } from "../lib/dayEntries";
 import type { Member, MemberUnavailable, Team } from "../lib/contract";
 import { loadState } from "../lib/loading";
-import {
-  clockEndLabel, dayWithWeekday, loadTeamMembers, memberLabel, MINUTES_PER_HOUR, monthCells, roomBounds, slotLabel, WEEKDAY_NAMES,
-} from "../lib/pipeline";
+import { loadTeamMembers } from "../lib/pipeline";
 import { heatByMonth, heatByWeek, offMembersAt } from "../lib/unavailableMap";
 import "../styles/unavailable.css";
+import { MINUTES_PER_HOUR, WEEKDAY_NAMES, clockEndLabel, dayWithWeekday, monthCells, roomBounds, slotLabel } from "../lib/calendar";
+import { memberLabel } from "../lib/roster";
 
 type Target = "member" | "team";
 /** 누른 칸입니다. hour 가 null 이면 달 보기의 날짜 칸입니다. */

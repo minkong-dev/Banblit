@@ -7,11 +7,13 @@ import { reason } from "../lib/api";
 import { askDelete } from "../lib/confirm";
 import type { PostComment } from "../lib/contract";
 import { formError } from "../lib/loading";
-import { checkComment, getJSON, stampLabel } from "../lib/pipeline";
 import { say } from "./toast";
 import { DeleteButton, EditButton, FormFoot, Why } from "./controls";
 import { Modal } from "./Modal";
 import { RichText, RichTextView } from "./RichText";
+import { commentMessage as checkComment } from "../lib/boards";
+import { getJSON } from "../lib/api";
+import { stampLabel } from "../lib/calendar";
 
 /** 댓글을 새로 다는 form 입니다. 로그인하지 않았으면(authorId 가 null) 버튼이 비활성화됩니다. */
 export function CommentForm(props: { postId: number; authorId: number | null }) {

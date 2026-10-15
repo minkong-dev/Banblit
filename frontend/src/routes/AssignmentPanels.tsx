@@ -12,9 +12,10 @@ import { hoursOf, reportLines } from "../lib/assignment";
 import { appliedLabel, checkRunTimes, scoreLabel, slotCountLabel } from "../lib/runs";
 import { say } from "../components/toast";
 import { LOADING_TEXT, loadState } from "../lib/loading";
-import { clockEndLabel, dayOf, hhmm, stampLabel, WEEKDAY_NAMES } from "../lib/pipeline";
-import type { Session } from "../lib/pipeline";
 import type { Backup, Period, ScheduleReport } from "../lib/contract";
+import { WEEKDAY_NAMES, clockEndLabel, stampLabel } from "../lib/calendar";
+import { dayOf, hhmm } from "../lib/slots";
+import type { Session } from "../lib/slots";
 
 /** 팀마다 배정된 합주 총 시간을 표시합니다. 배정된 합주가 0건인 팀은 흐리게 표시합니다. */
 function TeamCounts({ shown, colors }: { shown: Session[]; colors: Map<string, string> }) {

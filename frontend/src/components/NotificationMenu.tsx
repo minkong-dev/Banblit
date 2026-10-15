@@ -5,13 +5,9 @@ import { Empty, IconButton, MenuItem } from "./controls";
 import { BellIcon } from "./icons";
 import { usePopoverRouteClose } from "./hooks";
 import { loadState } from "../lib/loading";
-import {
-  loadNotifications,
-  markNotificationsRead,
-  notificationText,
-  stampLabel,
-  unreadCount,
-} from "../lib/pipeline";
+import { loadNotifications, markNotificationsRead } from "../lib/pipeline";
+import { notificationText, unreadCount } from "../lib/notifications";
+import { stampLabel } from "../lib/calendar";
 
 // 알림 popover 의 id 입니다. 알림 버튼이 popoverTarget 으로 이 판을 엽니다.
 const NOTES_POP_ID = "notesPop";

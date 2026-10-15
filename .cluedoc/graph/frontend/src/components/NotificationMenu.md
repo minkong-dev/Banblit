@@ -13,7 +13,9 @@ flowchart LR
   frontend_src_components_NotificationMenu --> frontend_src_components_controls["controls.tsx"]
   frontend_src_components_NotificationMenu --> frontend_src_components_hooks["hooks.ts"]
   frontend_src_components_NotificationMenu --> frontend_src_components_icons["icons.tsx"]
+  frontend_src_components_NotificationMenu --> frontend_src_lib_calendar["calendar.ts"]
   frontend_src_components_NotificationMenu --> frontend_src_lib_loading["loading.ts"]
+  frontend_src_components_NotificationMenu --> frontend_src_lib_notifications["notifications.ts"]
   frontend_src_components_NotificationMenu --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_components_NotificationMenu
 ```
@@ -23,7 +25,9 @@ flowchart LR
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/hooks|hooks.ts]]
 - [[graph/frontend/src/components/icons|icons.tsx]]
+- [[graph/frontend/src/lib/calendar|calendar.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
+- [[graph/frontend/src/lib/notifications|notifications.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 
 ## imported by

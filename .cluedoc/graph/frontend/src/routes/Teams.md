@@ -26,7 +26,6 @@ flowchart LR
   frontend_src_routes_Teams --> frontend_src_lib_contract["contract.ts"]
   frontend_src_routes_Teams --> frontend_src_lib_loading["loading.ts"]
   frontend_src_routes_Teams --> frontend_src_lib_paging["paging.ts"]
-  frontend_src_routes_Teams --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_routes_Teams --> frontend_src_lib_roster["roster.ts"]
   frontend_src_routes_Teams --> frontend_src_lib_teamColors["teamColors.ts"]
   frontend_src_App["App.tsx"] --> frontend_src_routes_Teams
@@ -50,7 +49,6 @@ flowchart LR
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
 - [[graph/frontend/src/lib/paging|paging.ts]]
-- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/roster|roster.ts]]
 - [[graph/frontend/src/lib/teamColors|teamColors.ts]]
 

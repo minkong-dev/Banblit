@@ -13,9 +13,9 @@ flowchart LR
   frontend_src_lib_notifications --> frontend_src_lib_calendar["calendar.ts"]
   frontend_src_lib_notifications --> frontend_src_lib_contract["contract.ts"]
   frontend_src_lib_notifications --> frontend_src_lib_slots["slots.ts"]
+  frontend_src_components_NotificationMenu["NotificationMenu.tsx"] --> frontend_src_lib_notifications
   frontend_src_components_RejectDialog["RejectDialog.tsx"] --> frontend_src_lib_notifications
   frontend_src_lib_notifications_test["notifications.test.ts"] --> frontend_src_lib_notifications
-  frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_notifications
 ```
 
 ## imports
@@ -26,6 +26,6 @@ flowchart LR
 
 ## imported by
 
+- [[graph/frontend/src/components/NotificationMenu|NotificationMenu.tsx]]
 - [[graph/frontend/src/components/RejectDialog|RejectDialog.tsx]]
 - [[graph/frontend/src/lib/notifications.test|notifications.test.ts]]
-- [[graph/frontend/src/lib/pipeline|pipeline.ts]]

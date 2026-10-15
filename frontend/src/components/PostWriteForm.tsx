@@ -6,18 +6,13 @@ import { useEffect, useRef, useState } from "react";
 import { reason } from "../lib/api";
 import type { Post } from "../lib/contract";
 import { formError } from "../lib/loading";
-import {
-  ATTACHMENT_ACCEPT,
-  ATTACHMENT_HINT,
-  checkAttachments,
-  checkPost,
-  getJSON,
-  sendFile,
-} from "../lib/pipeline";
+import { checkAttachments, checkPost } from "../lib/pipeline";
 import { say } from "./toast";
 import { Button, FilePicker, FormFoot } from "./controls";
 import { AttachmentRow } from "./PostAttachments";
 import { RichText } from "./RichText";
+import { ATTACHMENT_ACCEPT, ATTACHMENT_HINT } from "../lib/boards";
+import { getJSON, sendFile } from "../lib/api";
 
 /** 글 하나를 쓰는 form 입니다. 목록 화면이 아니라 작성 페이지(routes/PostWrite)가 사용합니다.
  *  목록 아래에 이어붙이지 않습니다 — 목록과 작성은 하는 일이 다르고, 붙이면 작성 화면을 주소로

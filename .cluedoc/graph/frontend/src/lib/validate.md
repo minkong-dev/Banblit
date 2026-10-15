@@ -10,10 +10,10 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_lib_validate["validate.ts"]
-  frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_validate
   frontend_src_lib_roster["roster.ts"] --> frontend_src_lib_validate
   frontend_src_lib_settings["settings.ts"] --> frontend_src_lib_validate
   frontend_src_lib_validate_test["validate.test.ts"] --> frontend_src_lib_validate
+  frontend_src_routes_Account["Account.tsx"] --> frontend_src_lib_validate
   frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_lib_validate
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_lib_validate
 ```
@@ -24,9 +24,9 @@ flowchart LR
 
 ## imported by
 
-- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/roster|roster.ts]]
 - [[graph/frontend/src/lib/settings|settings.ts]]
 - [[graph/frontend/src/lib/validate.test|validate.test.ts]]
+- [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]

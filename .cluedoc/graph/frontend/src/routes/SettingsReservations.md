@@ -16,9 +16,11 @@ flowchart LR
   frontend_src_routes_SettingsReservations --> frontend_src_components_queries["queries.ts"]
   frontend_src_routes_SettingsReservations --> frontend_src_components_toast["toast.ts"]
   frontend_src_routes_SettingsReservations --> frontend_src_lib_api["api.ts"]
+  frontend_src_routes_SettingsReservations --> frontend_src_lib_calendar["calendar.ts"]
   frontend_src_routes_SettingsReservations --> frontend_src_lib_confirm["confirm.ts"]
   frontend_src_routes_SettingsReservations --> frontend_src_lib_loading["loading.ts"]
   frontend_src_routes_SettingsReservations --> frontend_src_lib_pipeline["pipeline.ts"]
+  frontend_src_routes_SettingsReservations --> frontend_src_lib_slots["slots.ts"]
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_routes_SettingsReservations
 ```
 
@@ -30,9 +32,11 @@ flowchart LR
 - [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/components/toast|toast.ts]]
 - [[graph/frontend/src/lib/api|api.ts]]
+- [[graph/frontend/src/lib/calendar|calendar.ts]]
 - [[graph/frontend/src/lib/confirm|confirm.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
+- [[graph/frontend/src/lib/slots|slots.ts]]
 
 ## imported by
 

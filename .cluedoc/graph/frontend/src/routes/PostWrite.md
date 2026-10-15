@@ -15,9 +15,9 @@ flowchart LR
   frontend_src_routes_PostWrite --> frontend_src_components_controls["controls.tsx"]
   frontend_src_routes_PostWrite --> frontend_src_components_queries["queries.ts"]
   frontend_src_routes_PostWrite --> frontend_src_lib_account["account.ts"]
+  frontend_src_routes_PostWrite --> frontend_src_lib_boards["boards.ts"]
   frontend_src_routes_PostWrite --> frontend_src_lib_contract["contract.ts"]
   frontend_src_routes_PostWrite --> frontend_src_lib_loading["loading.ts"]
-  frontend_src_routes_PostWrite --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_App["App.tsx"] --> frontend_src_routes_PostWrite
 ```
 
@@ -28,9 +28,9 @@ flowchart LR
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/lib/account|account.ts]]
+- [[graph/frontend/src/lib/boards|boards.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
-- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 
 ## imported by
 

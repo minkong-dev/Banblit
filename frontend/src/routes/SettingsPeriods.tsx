@@ -15,16 +15,14 @@ import { askDelete } from "../lib/confirm";
 import type { ClockRange, Period, PracticeWindow, Room } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
-import {
-  checkAssignRule, checkEnsemble, checkPeriod, checkPracticeWindow, daysBetween,
-  openingHours, periodBody, savePeriod,
-} from "../lib/pipeline";
+import { checkPeriod, daysBetween, openingHours, periodBody, savePeriod } from "../lib/pipeline";
 import type { PeriodBody } from "../lib/pipeline";
 import { periodTitle } from "../lib/settings";
 import type { WindowPair } from "../lib/settings";
 import { say } from "../components/toast";
 import { EnsembleDays, EnsembleFields, EnsembleToggle, ensembleBody, ensembleDraft } from "./SettingsEnsemble";
 import { Row, useFirstField, useForm } from "./SettingsForm";
+import { assignRuleMessage as checkAssignRule, ensembleMessage as checkEnsemble, practiceWindowMessage as checkPracticeWindow } from "../lib/settings";
 
 const NO_WINDOW: PracticeWindow = { weekday: null, weekend: null };
 

@@ -12,7 +12,7 @@ flowchart LR
   frontend_src_App["App.tsx"]
   frontend_src_App --> frontend_src_components_AppShell["AppShell.tsx"]
   frontend_src_App --> frontend_src_lib_adminMenu["adminMenu.ts"]
-  frontend_src_App --> frontend_src_lib_pipeline["pipeline.ts"]
+  frontend_src_App --> frontend_src_lib_api["api.ts"]
   frontend_src_App --> frontend_src_routes_Account["Account.tsx"]
   frontend_src_App --> frontend_src_routes_Assignment["Assignment.tsx"]
   frontend_src_App --> frontend_src_routes_Board["Board.tsx"]
@@ -31,7 +31,7 @@ flowchart LR
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
 - [[graph/frontend/src/lib/adminMenu|adminMenu.ts]]
-- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
+- [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/Board|Board.tsx]]

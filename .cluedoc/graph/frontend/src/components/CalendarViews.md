@@ -10,8 +10,8 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_components_CalendarViews["CalendarViews.tsx"]
+  frontend_src_components_CalendarViews --> frontend_src_lib_calendar["calendar.ts"]
   frontend_src_components_CalendarViews --> frontend_src_lib_dayEntries["dayEntries.ts"]
-  frontend_src_components_CalendarViews --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_components_CalendarViews --> frontend_src_lib_roster["roster.ts"]
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_components_CalendarViews
   frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_components_CalendarViews
@@ -19,8 +19,8 @@ flowchart LR
 
 ## imports
 
+- [[graph/frontend/src/lib/calendar|calendar.ts]]
 - [[graph/frontend/src/lib/dayEntries|dayEntries.ts]]
-- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/roster|roster.ts]]
 
 ## imported by

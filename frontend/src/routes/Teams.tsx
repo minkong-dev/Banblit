@@ -17,13 +17,13 @@ import { askDelete } from "../lib/confirm";
 import { getJSON, reason } from "../lib/api";
 import { loadState } from "../lib/loading";
 import { can, canManageTeams, teamNavLabel } from "../lib/account";
-import { checkSlotCounts, checkTeamName, memberLabel, slotName } from "../lib/pipeline";
 import { INSTRUMENTS } from "../lib/contract";
 import { TEAM_COLORS, teamColorKey } from "../lib/teamColors";
 import { MAX_SLOTS_PER_TEAM, seatAssignments, seatKey, seatsOf, teamsShown } from "../lib/roster";
 import type { Seat } from "../lib/roster";
 import type { Instrument, Member, Team, TeamSlot } from "../lib/contract";
 import "../styles/teams.css";
+import { memberLabel, slotCountsMessage as checkSlotCounts, slotName, teamNameMessage as checkTeamName } from "../lib/roster";
 
 
 type Counts = Record<string, number>;
