@@ -9,7 +9,7 @@ import { Panel } from "../components/Layout";
 import { backupsKey } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
 import { hoursOf, reportLines } from "../lib/assignment";
-import { checkRunTimes, slotCountLabel } from "../lib/runs";
+import { appliedLabel, checkRunTimes, scoreLabel, slotCountLabel } from "../lib/runs";
 import { say } from "../lib/toast";
 import { LOADING_TEXT, loadState } from "../lib/loading";
 import { dayOf, hhmm, stampLabel, WEEKDAY_NAMES } from "../lib/pipeline";
@@ -244,6 +244,8 @@ export function PastRunsPanel({ periodId, canView, roundAt, onSelect }: {
           >
             <b>{stampLabel(backup.saved_at)}</b>
             <small>{slotCountLabel(backup.slot_count)}</small>
+            {backup.score === null ? null : <small>{scoreLabel(backup.score)}</small>}
+            {backup.applied_at === null ? null : <small>{appliedLabel(backup.applied_at)}</small>}
           </button>
         </li>
       ));

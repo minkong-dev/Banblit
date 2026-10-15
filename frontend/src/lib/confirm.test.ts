@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { askBlind, askCancel, askDeletePost, askDeleteRoom, objectParticle } from "./confirm";
+import { askApplyRecord, askBlind, askCancel, askDeletePost, askDeleteRoom, objectParticle } from "./confirm";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -85,5 +85,15 @@ describe("askDeleteRoom — 합주실 삭제는 함께 사라지는 것을 적�
   test("아니오를 누르면 false 다", () => {
     vi.stubGlobal("window", { confirm: () => false });
     expect(askDeleteRoom()).toBe(false);
+  });
+});
+
+describe("askApplyRecord — 기록을 확정하기 전에 한 번 묻는다", () => {
+  test("점수와 관계없이 확정할지 묻는다", () => {
+    const asked: string[] = [];
+    vi.stubGlobal("window", { confirm: (text: string) => { asked.push(text); return true; } });
+
+    expect(askApplyRecord()).toBe(true);
+    expect(asked[0]).toBe("이 배정안으로 확정할까요?");
   });
 });

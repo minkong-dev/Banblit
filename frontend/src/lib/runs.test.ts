@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { checkRunTimes, slotCountLabel } from "./runs";
+import { appliedLabel, checkRunTimes, scoreLabel, slotCountLabel } from "./runs";
 
 describe("slotCountLabel", () => {
   test("칸 수를 사람이 읽는 말로 바꾼다", () => {
@@ -26,5 +26,27 @@ describe("checkRunTimes", () => {
     // <input type="time"> 은 유효한 "HH:MM" 또는 빈 값만 제공합니다. 빈 값만 검증하면 됩니다.
     expect(checkRunTimes("09:00", "")).toBe("1차와 2차 스케줄링 시간을 모두 지정해주세요.");
     expect(checkRunTimes("", "18:00")).toBe("1차와 2차 스케줄링 시간을 모두 지정해주세요.");
+  });
+});
+
+describe("scoreLabel", () => {
+  test("점수 4항목을 우선순위 순서로 적는다", () => {
+    expect(scoreLabel({ fewest: 2, sessions: 6, absences: 1, joined: 3 })).toBe(
+      "팀 최소 2회 · 전체 6회 · 불참 1회 · 연속 3쌍",
+    );
+  });
+
+  test("점수가 없으면 빈 문자열이다", () => {
+    expect(scoreLabel(null)).toBe("");
+  });
+});
+
+describe("appliedLabel", () => {
+  test("확정한 기록에는 날짜와 확정을 붙인다", () => {
+    expect(appliedLabel("2026-10-15T21:03:00")).toBe("10월 15일 확정");
+  });
+
+  test("확정한 적 없는 기록은 빈 문자열이다", () => {
+    expect(appliedLabel(null)).toBe("");
   });
 });
