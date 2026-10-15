@@ -5,7 +5,7 @@ from backend.db.models import Room, UnavailableTime
 from backend.scheduling.pipeline import Member as EngineMember
 from backend.scheduling.pipeline import Room as EngineRoom
 from backend.scheduling.pipeline import Team as EngineTeam
-from backend.scheduling.pipeline import TimeInterval, generate_slots
+from backend.scheduling.pipeline import TimeInterval, day_window, generate_slots
 
 DAY = timedelta(days=1)
 WEEK = timedelta(days=7)
@@ -114,11 +114,11 @@ def build_engine_rooms(
     for day in days:
         limits = None if window is None else window.on(day)
         for room in rooms:
-            start = datetime.combine(day, room.opens_at)
-            end = datetime.combine(day, room.closes_at)
+            opened = day_window(day, room.opens_at, room.closes_at)
+            start, end = opened.start, opened.end
             if limits is not None:
-                start = max(start, datetime.combine(day, limits[0]))
-                end = min(end, datetime.combine(day, limits[1]))
+                practice = day_window(day, limits[0], limits[1])
+                start, end = max(start, practice.start), min(end, practice.end)
             if start >= end:
                 continue
             engine_rooms.append(

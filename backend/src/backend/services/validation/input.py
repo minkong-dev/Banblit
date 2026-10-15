@@ -5,11 +5,11 @@ table(데이터베이스의 행과 열로 이루어진 데이터 구조)마다 �
 """
 
 import re
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 
-from backend.contract import REJECT_REASON_MAX_LENGTH
+from backend.contract import LATEST_CLOSE_NEXT_DAY, REJECT_REASON_MAX_LENGTH
 from backend.db.models import PERIOD_KINDS
-from backend.scheduling.pipeline import TimeInterval, generate_slots
+from backend.scheduling.pipeline import TimeInterval, day_window, generate_slots
 
 CLOCK_FORMAT = "%H:%M"
 DATE_FORMAT = "%Y-%m-%d"
@@ -204,9 +204,12 @@ def require_on_the_hour(value: time, field_label: str) -> None:
         raise ValueError(f"{field_label}은 정시여야 합니다")
 
 
-def require_closes_after_opens(opens_at: time, closes_at: time) -> None:
-    if closes_at <= opens_at:
-        raise ValueError("닫는 시각은 여는 시각보다 늦어야 합니다")
+def require_clock_range(starts: time, ends: time, label: str) -> None:
+    """하루 중의 범위 1개를 검증합니다. ends 가 starts 보다 이르면 LATEST_CLOSE_NEXT_DAY(다음 날 00:00)만 허용합니다."""
+    if ends == starts:
+        raise ValueError(f"{label}의 시작 시간과 종료 시간은 같을 수 없습니다")
+    if ends < starts and ends != time.fromisoformat(LATEST_CLOSE_NEXT_DAY):
+        raise ValueError(f"{label}의 종료 시간은 시작 시간보다 늦거나 {LATEST_CLOSE_NEXT_DAY} 이어야 합니다")
 
 
 def require_ends_not_before_starts(starts_on: date, ends_on: date) -> None:
@@ -226,16 +229,18 @@ def require_valid_slot_bounds(
     generate_slots(TimeInterval(start=starts_at, end=ends_at), slot_minutes)
 
 
-def require_same_day(starts_at: datetime, ends_at: datetime) -> None:
-    if starts_at.date() != ends_at.date():
-        raise ValueError("예약은 하루 안에서만 할 수 있습니다")
-
-
-def require_within_room_hours(
+def require_within_room_window(
     opens_at: time, closes_at: time, starts_at: datetime, ends_at: datetime
 ) -> None:
-    if starts_at.time() < opens_at or ends_at.time() > closes_at:
-        raise ValueError("합주실 운영 시간 안에서만 예약할 수 있습니다")
+    """starts_at 날짜 또는 그 전날의 합주실 운영 시간 중 하나가 예약 구간 전체를 포함하지 않으면 거부합니다.
+
+    전날을 함께 보는 이유는 00:00 에 마감하는 합주실의 운영 시간이 다음 날 00:00 까지이기 때문입니다.
+    """
+    for day in (starts_at.date(), starts_at.date() - timedelta(days=1)):
+        window = day_window(day, opens_at, closes_at)
+        if window.start <= starts_at and ends_at <= window.end:
+            return
+    raise ValueError("합주실 운영 시간 안에서만 예약할 수 있습니다")
 
 
 # 요일 집합이 가질 수 있는 최댓값입니다. 월요일 1 부터 일요일 64 까지 일곱 개를 전부 더한 값입니다.

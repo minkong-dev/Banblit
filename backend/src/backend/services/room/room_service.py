@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from backend.services.validation.pipeline import (
     parse_clock,
-    require_closes_after_opens,
+    require_clock_range,
     require_on_the_hour,
     require_non_empty,
 )
@@ -21,11 +21,11 @@ def list_rooms(session: Session) -> list[Room]:
 
 
 def create_room(session: Session, name: str, opens_at: str, closes_at: str) -> Room:
-    """새 합주실을 생성합니다. 이름이 비어 있는지, 시각이 HH:MM 형식이고 정시인지, 닫는 시각이 여는 시각보다 늦은지, 이름이 중복인지를 사람이 읽을 수 있는 문장으로 검증합니다."""
+    """새 합주실을 생성합니다. 이름이 비어 있는지, 시각이 HH:MM 형식이고 정시인지, 닫는 시각이 여는 시각보다 늦거나 00:00 인지, 이름이 중복인지를 사람이 읽을 수 있는 문장으로 검증합니다."""
     clean_name = require_non_empty(name, "합주실명")
     opens = _parse_room_clock(opens_at, "여는 시각")
     closes = _parse_room_clock(closes_at, "닫는 시각")
-    require_closes_after_opens(opens, closes)
+    require_clock_range(opens, closes, "합주실 운영 시간")
 
     room = Room(name=clean_name, opens_at=opens, closes_at=closes)
     session.add(room)
@@ -51,7 +51,7 @@ def update_room(
         if closes_at is not None
         else room.closes_at
     )
-    require_closes_after_opens(new_opens, new_closes)
+    require_clock_range(new_opens, new_closes, "합주실 운영 시간")
 
     if name is not None:
         room.name = require_non_empty(name, "합주실명")

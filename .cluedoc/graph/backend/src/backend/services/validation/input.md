@@ -14,6 +14,7 @@ flowchart LR
   backend_src_backend_services_validation_input --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_validation_input --> backend_src_backend_scheduling_pipeline["pipeline.py"]
   backend_src_backend_services_validation_pipeline["pipeline.py"] --> backend_src_backend_services_validation_input
+  backend_tests_unit_test_clock_range["test_clock_range.py"] --> backend_src_backend_services_validation_input
   backend_tests_unit_test_input["test_input.py"] --> backend_src_backend_services_validation_input
   backend_tests_unit_test_period_input["test_period_input.py"] --> backend_src_backend_services_validation_input
 ```
@@ -27,6 +28,7 @@ flowchart LR
 ## imported by
 
 - [[graph/backend/src/backend/services/validation/pipeline|pipeline.py]]
+- [[graph/backend/tests/unit/test_clock_range|test_clock_range.py]]
 - [[graph/backend/tests/unit/test_input|test_input.py]]
 - [[graph/backend/tests/unit/test_period_input|test_period_input.py]]
 
@@ -48,10 +50,9 @@ flowchart LR
 - `format_calendar_date`
 - `format_created_at`
 - `require_on_the_hour`
-- `require_closes_after_opens`
+- `require_clock_range`
 - `require_ends_not_before_starts`
 - `require_valid_slot_bounds`: `backend.scheduling.pipeline`
-- `require_same_day`
-- `require_within_room_hours`
+- `require_within_room_window`: `backend.scheduling.pipeline`
 - `require_repeat_weekdays`
 - `require_repeat_end`

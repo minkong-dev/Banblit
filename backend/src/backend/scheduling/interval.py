@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 
 
 @dataclass(frozen=True)
@@ -21,3 +21,13 @@ class TimeInterval:
             )
         if self.end <= self.start:
             raise ValueError("시간 구간의 끝은 시작보다 뒤여야 합니다")
+
+
+def day_window(day: date, starts: time, ends: time) -> TimeInterval:
+    """day 의 starts 부터 ends 까지의 구간입니다. ends 가 starts 보다 이르거나 같으면 다음 날의 ends 까지입니다.
+
+    시각 2개로 저장하는 하루 중의 범위(합주실 운영 시간, 팀별 합주 시간대, 전체 합주 시각)를 비교할 때 사용합니다.
+    ends 가 00:00 인지는 검증하지 않습니다. 저장 전에 require_clock_range 와 DB CHECK 제약이 검증합니다.
+    """
+    end_day = day + timedelta(days=1) if ends <= starts else day
+    return TimeInterval(datetime.combine(day, starts), datetime.combine(end_day, ends))

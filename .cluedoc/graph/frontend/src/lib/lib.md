@@ -51,5 +51,7 @@ kind: directory
 - [[graph/frontend/src/lib/theme|theme.ts]]
 - [[graph/frontend/src/lib/toast.test|toast.test.ts]]
 - [[graph/frontend/src/lib/toast|toast.ts]]
+- [[graph/frontend/src/lib/unavailableMap.test|unavailableMap.test.ts]]
+- [[graph/frontend/src/lib/unavailableMap|unavailableMap.ts]]
 - [[graph/frontend/src/lib/validate.test|validate.test.ts]]
 - [[graph/frontend/src/lib/validate|validate.ts]]

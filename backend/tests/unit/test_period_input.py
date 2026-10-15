@@ -469,3 +469,21 @@ def test_target_sessions_converts_hours_and_is_capped_by_the_daily_limit() -> No
     # 3시간을 30분 session 으로 바꾸면 6회입니다. 1일 × 하루 상한 2시간이면 4회까지입니다.
     assert target_sessions(3, auto=1, day_count=7, daily_max_minutes=120, session_minutes=30) == 6
     assert target_sessions(3, auto=1, day_count=1, daily_max_minutes=120, session_minutes=30) == 4
+
+
+def test_a_room_closing_at_midnight_is_open_until_the_next_day() -> None:
+    rooms = [_room(1, "1번방", time(18, 0), time(0, 0))]
+
+    engine_rooms = build_engine_rooms(rooms, [MONDAY])
+
+    assert engine_rooms[0].open_period.end == datetime(2026, 8, 4, 0, 0)
+
+
+def test_a_window_until_midnight_meets_a_room_closing_at_midnight() -> None:
+    rooms = [_room(1, "1번방", time(18, 0), time(0, 0))]
+
+    engine_rooms = build_engine_rooms(
+        rooms, [MONDAY], PracticeWindow(weekday=(time(19, 0), time(0, 0)), weekend=None)
+    )
+
+    assert engine_rooms[0].open_period == TimeInterval(datetime(2026, 8, 3, 19, 0), datetime(2026, 8, 4, 0, 0))

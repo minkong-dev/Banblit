@@ -130,6 +130,24 @@ def test_a_personal_reservation_is_created_as_one_row(
     assert rows[0]["team_id"] is None and rows[0]["member_id"] == owner_id
 
 
+def test_a_reservation_until_midnight_fits_a_room_closing_at_midnight(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    _, owner = account("이도현", "dohyun@example.com")
+    room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(0, 0))
+    db_session.add(room)
+    _open_period(db_session)
+    db_session.commit()
+
+    response = api_client.post(
+        "/reservations",
+        json={"room_id": room.id, "starts_at": f"{OPEN_DAY}T23:00:00", "ends_at": "2026-09-15T00:00:00"},
+        cookies=owner,
+    )
+
+    assert response.status_code == 201
+
+
 def test_a_reservation_that_partly_overlaps_another_is_refused(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:

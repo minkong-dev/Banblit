@@ -26,7 +26,6 @@ from backend.services.validation.input import (
 
     parse_clock,
 
-    require_closes_after_opens,
 
     require_email,
     require_department,
@@ -46,13 +45,11 @@ from backend.services.validation.input import (
 
     require_repeat_weekdays,
 
-    require_same_day,
 
     require_valid_kind,
 
     require_valid_slot_bounds,
 
-    require_within_room_hours,
 
 )
 
@@ -310,34 +307,6 @@ def test_on_the_hour_rejects_off_grid_minute() -> None:
 
 
 
-def test_closes_after_opens_rejects_equal_times() -> None:
-
-    with pytest.raises(ValueError, match="늦어야"):
-
-        require_closes_after_opens(time(20, 0), time(20, 0))
-
-
-
-
-
-def test_closes_after_opens_rejects_earlier_close() -> None:
-
-    with pytest.raises(ValueError, match="늦어야"):
-
-        require_closes_after_opens(time(20, 0), time(19, 0))
-
-
-
-
-
-def test_closes_after_opens_accepts_a_later_close() -> None:
-
-    require_closes_after_opens(time(18, 0), time(23, 0))
-
-
-
-
-
 def test_require_room_name_trims_surrounding_whitespace() -> None:
 
     assert require_non_empty("  1번방  ", "합주실명") == "1번방"
@@ -461,64 +430,6 @@ def test_ends_on_before_starts_on_is_rejected() -> None:
 def test_ends_on_equal_to_starts_on_is_accepted() -> None:
 
     require_ends_not_before_starts(date(2026, 9, 14), date(2026, 9, 14))
-
-
-
-
-
-def test_accepts_a_same_day_interval() -> None:
-
-    require_same_day(datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 19, 0))
-
-
-
-
-
-def test_rejects_an_interval_crossing_midnight() -> None:
-
-    with pytest.raises(ValueError, match="하루"):
-
-        require_same_day(datetime(2026, 9, 14, 23, 0), datetime(2026, 9, 15, 1, 0))
-
-
-
-
-
-def test_accepts_an_interval_within_room_hours() -> None:
-
-    require_within_room_hours(
-
-        time(18, 0), time(22, 0), datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 20, 0)
-
-    )
-
-
-
-
-
-def test_rejects_starting_before_the_room_opens() -> None:
-
-    with pytest.raises(ValueError, match="운영 시간"):
-
-        require_within_room_hours(
-
-            time(18, 0), time(22, 0), datetime(2026, 9, 14, 17), datetime(2026, 9, 14, 19, 0)
-
-        )
-
-
-
-
-
-def test_rejects_ending_after_the_room_closes() -> None:
-
-    with pytest.raises(ValueError, match="운영 시간"):
-
-        require_within_room_hours(
-
-            time(18, 0), time(22, 0), datetime(2026, 9, 14, 18, 0), datetime(2026, 9, 14, 23)
-
-        )
 
 
 
