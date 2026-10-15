@@ -8,12 +8,11 @@ import { Empty } from "../components/controls";
 import { SectionHead } from "../components/Layout";
 import { WriteForm } from "../components/PostWriteForm";
 import { can } from "../lib/account";
-import { useMe, useMyTeams } from "../components/queries";
+import { boardListKey, useMe, useMyTeams } from "../components/queries";
 import { stateText } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import type { Account } from "../lib/contract";
 import "../styles/board.css";
-import { boardListKey } from "../lib/boards";
 
 /** 공지사항 작성입니다. notice_write 권한이 있어야 form 이 보입니다. */
 export function NoticeWrite() {
@@ -74,7 +73,7 @@ function WritePage({ title, hint, draftPath, listPath, listKey, allowed, denied 
 }) {
   const navigate = useNavigate();
   const toList = (): void => void navigate(listPath);
-  // queryKey 가 ["me"] 로 같아 이 화면을 연 목록 화면이 받아 둔 응답을 그대로 씁니다.
+  // queryKey 가 ME_KEY 로 같아 이 화면을 연 목록 화면이 받아 둔 응답을 그대로 씁니다.
   const { me, meState } = useMe();
   const why = blockWhy(me, meState, allowed, denied);
 

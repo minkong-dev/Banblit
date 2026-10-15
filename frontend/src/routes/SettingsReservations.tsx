@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button, Empty } from "../components/controls";
 import { Card, SectionHead } from "../components/Layout";
 import { RejectDialog } from "../components/RejectDialog";
-import { useMe, useRooms } from "../components/queries";
+import { RESERVATIONS_KEY, useMe, useRooms } from "../components/queries";
 import { reason } from "../lib/api";
 import { askCancel } from "../lib/confirm";
 import { cancelBooking, loadReservationRows, rejectBooking } from "../lib/pipeline";
@@ -48,14 +48,14 @@ export function ReservationCards() {
 
   // queryKey 앞머리가 달력(Scheduler)과 같은 "reservations"이므로, 어느 쪽에서 취소하든 둘 다 데이터를 refetch합니다.
   const list = useQuery({
-    queryKey: ["reservations", "upcoming", roomIds, from, to],
+    queryKey: [...RESERVATIONS_KEY, "upcoming", roomIds, from, to],
     queryFn: () => loadReservationRows(roomIds, from, to),
     enabled: rooms.data !== undefined,
   });
 
   const cancel = useMutation({
     mutationFn: (booking: Booking) => cancelBooking(booking.id),
-    onSettled: () => { void client.invalidateQueries({ queryKey: ["reservations"] }); },
+    onSettled: () => { void client.invalidateQueries({ queryKey: RESERVATIONS_KEY }); },
     onSuccess: () => say("예약을 취소했어요"),
     onError: (error) => say(reason(error, "예약을 취소하지 못했어요")),
   });
@@ -135,7 +135,7 @@ export function ReservationCards() {
           onReject={(text) => rejectBooking(rejecting.id, text)}
           onDone={() => {
             setRejecting(null);
-            void client.invalidateQueries({ queryKey: ["reservations"] });
+            void client.invalidateQueries({ queryKey: RESERVATIONS_KEY });
             say("예약을 반려했어요");
           }}
           onClose={() => setRejecting(null)}

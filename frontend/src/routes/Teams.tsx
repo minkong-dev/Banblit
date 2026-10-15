@@ -10,7 +10,7 @@ import { Modal, Stepper } from "../components/Modal";
 import { SearchIcon } from "../components/icons";
 import { SeatRow } from "../components/SeatRow";
 import { idParam } from "../components/hooks";
-import { useMe, useTeams } from "../components/queries";
+import { ME_KEY, SLOTS_KEY, TEAM_MEMBERS_KEY, teamMembersKey, TEAMS_KEY, teamSlotsKey, useMe, useTeams } from "../components/queries";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { say } from "../components/toast";
 import { askDelete } from "../lib/confirm";
@@ -126,16 +126,16 @@ function Lineup(props: {
   const [seeking, setSeeking] = useState<number | null>(null);
 
   const slots = useQuery({
-    queryKey: ["slots", teamId],
+    queryKey: teamSlotsKey(teamId),
     queryFn: () => getJSON<{ slots: TeamSlot[] }>(`/teams/${teamId}/slots`),
   });
 
   const refresh = (): void => {
-    void client.invalidateQueries({ queryKey: ["slots", teamId] });
-    void client.invalidateQueries({ queryKey: ["teams"] });
-    void client.invalidateQueries({ queryKey: ["members", teamId] });
+    void client.invalidateQueries({ queryKey: teamSlotsKey(teamId) });
+    void client.invalidateQueries({ queryKey: TEAMS_KEY });
+    void client.invalidateQueries({ queryKey: teamMembersKey(teamId) });
     // 현재 사용자가 추가되거나 제거된 포지션이면, "내 팀"(프로필·달력의 내 일정)도 함께 갱신됩니다.
-    void client.invalidateQueries({ queryKey: ["me"] });
+    void client.invalidateQueries({ queryKey: ME_KEY });
   };
 
   const sit = useMutation({
@@ -367,7 +367,7 @@ function TeamForm(props: TeamFormProps) {
     onSuccess: () => onDone(isNew ? `${name.trim()} 팀 생성을 완료했어요.` : `${name.trim()} 수정을 완료했어요.`),
     onError: (error) => setBad(reason(error)),
     onSettled: () => {
-      for (const key of ["teams", "slots", "members", "me"]) void client.invalidateQueries({ queryKey: [key] });
+      for (const queryKey of [TEAMS_KEY, SLOTS_KEY, TEAM_MEMBERS_KEY, ME_KEY]) void client.invalidateQueries({ queryKey });
     },
   });
 
@@ -410,7 +410,7 @@ function TeamForm(props: TeamFormProps) {
 function EditTeam(props: Omit<TeamFormProps, "team" | "start"> & { team: Team }) {
   const { team, onClose } = props;
   const slots = useQuery({
-    queryKey: ["slots", team.id],
+    queryKey: teamSlotsKey(team.id),
     queryFn: () => getJSON<{ slots: TeamSlot[] }>(`/teams/${team.id}/slots`),
   });
 
@@ -446,7 +446,7 @@ export function Teams() {
       // 삭제된 팀의 포지션 구성이나 수정 창이 열려 있으면 함께 닫습니다.
       if (openId === team.id) setOpenId(null);
       setRenaming((now) => (now?.id === team.id ? null : now));
-      void client.invalidateQueries({ queryKey: ["teams"] });
+      void client.invalidateQueries({ queryKey: TEAMS_KEY });
       say(`${team.name} 팀을 삭제했어요.`);
     },
     onError: (error) => say(reason(error)),

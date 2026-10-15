@@ -7,7 +7,7 @@ import { Button, CloseButton, IconButton, MenuItem } from "./controls";
 import { NotificationMenu } from "./NotificationMenu";
 import { MoonIcon, SunIcon, WideMenuIcon } from "./icons";
 import { usePage, usePopoverRouteClose } from "./hooks";
-import { useMe, useMyTeamCohorts } from "./queries";
+import { ME_KEY, TEAMS_KEY, useMe, useMyTeamCohorts } from "./queries";
 import { useToast } from "./toast";
 import { LOADING_TEXT } from "../lib/loading";
 import { Avatar } from "./Avatar";
@@ -120,15 +120,15 @@ export function AppShell() {
     setRetrying(true);
     const pressed = document.activeElement;
     await Promise.all([
-      client.invalidateQueries({ queryKey: ["me"] }),
-      client.invalidateQueries({ queryKey: ["teams"], exact: true }),
+      client.invalidateQueries({ queryKey: ME_KEY }),
+      client.invalidateQueries({ queryKey: TEAMS_KEY, exact: true }),
     ]);
     setRetrying(false);
     // 조회가 성공하면 안내 줄이 DOM 에서 삭제되어 초점이 body 로 이동합니다. 본문으로 옮겨, 키보드 사용자가
     // 화면 맨 위부터 다시 탐색하지 않게 합니다. 기다리는 동안 사용자가 초점을 다른 요소로 옮겼으면
     // 그 초점을 빼앗지 않습니다. 다시 실패했으면 안내 줄이 남아 초점이 버튼에 그대로 있습니다.
     const kept = document.activeElement === pressed || document.activeElement === document.body;
-    if (kept && client.getQueryData(["me"]) !== undefined) document.getElementById(PAGE_ID)?.focus();
+    if (kept && client.getQueryData(ME_KEY) !== undefined) document.getElementById(PAGE_ID)?.focus();
   }
 
   // 가진 권한으로 필터링합니다. 계정을 아직 받지 못했으면 아무것도 표시되지 않습니다.

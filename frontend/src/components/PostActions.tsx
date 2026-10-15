@@ -13,7 +13,7 @@ import { DeleteButton, FormFoot, IconButton, Why } from "./controls";
 import { EyeOffIcon } from "./icons";
 import { Modal } from "./Modal";
 import { RichText } from "./RichText";
-import { BLINDED_KEY } from "../lib/boards";
+import { BLINDED_KEY, postKey } from "./queries";
 
 /** board_moderate 권한자에게만 표시되는 블라인드 버튼입니다. 글을 삭제하지 않고 목록·상세에서 가립니다.
  *  가린 글은 작성자 본인에게도 보이지 않고, 설정 화면의 블라인드 탭에서만 보이며 거기서 되돌립니다. */
@@ -98,7 +98,7 @@ export function EditPost(props: {
     mutationFn: () => editPost(post.id, title.trim(), body),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: listKey });
-      void client.invalidateQueries({ queryKey: ["board", "post", post.id] });
+      void client.invalidateQueries({ queryKey: postKey(post.id) });
       onClose();
       say("글을 수정했어요.");
     },

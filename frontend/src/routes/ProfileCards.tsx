@@ -21,6 +21,7 @@ import { roleLabel } from "../lib/account";
 import { personNameMessage } from "../lib/validate";
 import { say } from "../components/toast";
 import type { Account } from "../lib/contract";
+import { ME_KEY } from "../components/queries";
 
 /** 표시 상태의 한 줄입니다. 왼쪽 항목 이름, 오른쪽 값. */
 export type InfoRow = { label: string; text: string };
@@ -56,7 +57,7 @@ function PhotoEdit({ me }: { me: Account }) {
   usePopoverRouteClose(PHOTO_MENU_ID);
 
   function done(text: string): void {
-    void client.invalidateQueries({ queryKey: ["me"] });
+    void client.invalidateQueries({ queryKey: ME_KEY });
     say(text);
   }
 
@@ -182,7 +183,7 @@ function useSaveProfile(me: Account, onSaved: () => void) {
         throw new Error(`이름과 기수는 저장했지만 비밀번호는 변경하지 못했어요. ${reason(error)}`);
       }
     },
-    onSettled: () => { void client.invalidateQueries({ queryKey: ["me"] }); },
+    onSettled: () => { void client.invalidateQueries({ queryKey: ME_KEY }); },
     onSuccess: () => {
       say("프로필을 수정했어요.");
       onSaved();

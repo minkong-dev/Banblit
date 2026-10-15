@@ -11,6 +11,7 @@ kind: file
 flowchart LR
   frontend_src_components_PostAttachments["PostAttachments.tsx"]
   frontend_src_components_PostAttachments --> frontend_src_components_controls["controls.tsx"]
+  frontend_src_components_PostAttachments --> frontend_src_components_queries["queries.ts"]
   frontend_src_components_PostAttachments --> frontend_src_components_toast["toast.ts"]
   frontend_src_components_PostAttachments --> frontend_src_lib_boards["boards.ts"]
   frontend_src_components_PostAttachments --> frontend_src_lib_contract["contract.ts"]
@@ -23,6 +24,7 @@ flowchart LR
 ## imports
 
 - [[graph/frontend/src/components/controls|controls.tsx]]
+- [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/components/toast|toast.ts]]
 - [[graph/frontend/src/lib/boards|boards.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]

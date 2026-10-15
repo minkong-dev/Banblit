@@ -18,9 +18,10 @@ import { AttachmentList } from "./PostAttachments";
 import { BlindPost, EditPost, RemovePost } from "./PostActions";
 import { CommentForm, CommentRow } from "./PostComments";
 import { RichTextView } from "./RichText";
-import { boardActions, boardListKey } from "../lib/boards";
+import { boardActions } from "../lib/boards";
 import { loadPost, loadPosts } from "../lib/pipeline";
 import { stampLabel } from "../lib/calendar";
+import { boardListKey, postKey } from "./queries";
 
 /** 글 목록을 렌더합니다. 비어 있거나 로딩 중이어도 컨테이너는 유지합니다.
  *  컨테이너 높이를 측정해 한 page(페이지)에 표시할 글 개수를 계산하므로,
@@ -66,7 +67,7 @@ function PostDetail(props: {
   const { postId, authorId, canModerate, listKey, heading, onBack } = props;
   const [editing, setEditing] = useState(false);
   const detail = useQuery({
-    queryKey: ["board", "post", postId],
+    queryKey: postKey(postId),
     // attachment 들은 글 상세 조회 response(응답)에 포함되므로 따로 요청하지 않습니다.
     // 서버 정의는 `backend/src/backend/api/schemas.py` 의 `PostDetailOut` 를 참조합니다.
     queryFn: () => loadPost(postId),

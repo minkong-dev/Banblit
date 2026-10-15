@@ -10,12 +10,11 @@ import { MonthView, WeekView } from "../components/CalendarViews";
 import { Empty } from "../components/controls";
 import { MemberSearch } from "../components/MemberSearch";
 import { Modal } from "../components/Modal";
-import { useRooms } from "../components/queries";
+import { teamMembersQuery, useRooms } from "../components/queries";
 import { TeamSearch } from "../components/TeamSearch";
 import { offByDay, visibleDays } from "../lib/dayEntries";
 import type { Member, MemberUnavailable, Team } from "../lib/contract";
 import { loadState } from "../lib/loading";
-import { loadTeamMembers } from "../lib/pipeline";
 import { heatByMonth, heatByWeek, offMembersAt } from "../lib/unavailableMap";
 import "../styles/unavailable.css";
 import { MINUTES_PER_HOUR, WEEKDAY_NAMES, clockEndLabel, dayWithWeekday, monthCells, roomBounds, slotLabel } from "../lib/calendar";
@@ -118,7 +117,7 @@ function MemberCalendar({ times, cursor, open, close }: ViewArgs & { times: Memb
 /** 팀 1개의 히트맵입니다. 주 보기는 요일 × 시간 칸, 달 보기는 날짜마다 가장 많이 빠지는 시간의 인원입니다. */
 function TeamHeat({ times, team, cursor, open, close }: ViewArgs & { times: MemberUnavailable[]; team: Team }) {
   const [picked, setPicked] = useState<Picked | null>(null);
-  const roster = useQuery({ queryKey: ["members", team.id], queryFn: () => loadTeamMembers(team.id) });
+  const roster = useQuery(teamMembersQuery(team.id));
   if (!roster.isSuccess) return <Empty state={loadState(roster)} text="팀원을 불러오고 있어요." />;
   const members = roster.data;
   if (members.length === 0) return <Empty text="팀원이 없는 팀이에요." />;

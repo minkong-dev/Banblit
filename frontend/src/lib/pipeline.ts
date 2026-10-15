@@ -168,11 +168,6 @@ export function checkAttachments(files: { name: string; size: number }[]): strin
 // 게시판·공지 화면이 사용하는 계산입니다. fileSizeLabel 은 순서 의존이 없어 그대로 export 합니다.
 
 
-// routes/Assignment.tsx 는 ["schedule", activePeriodId](숫자 하나)를, routes/Scheduler.tsx 는
-// ["schedule", periodIds](배열 하나)를 queryKey 로 씁니다. invalidateQueries 는 첫 원소가 같으면
-// 나머지 모양이 달라도 무효화하므로, 이 접두사 하나로 두 화면의 schedule 캐시를 함께 무효화합니다.
-export const SCHEDULE_KEY = ["schedule"] as const;
-
 /** 기간 하나의 확정 시간표입니다. 달력 화면(routes/Scheduler)과 배정 결과 화면(routes/Assignment)이 같은
  *  endpoint 를 조회하므로 주소를 적는 곳을 이 함수 하나로 유지합니다. */
 export async function loadSchedule(periodId: number): Promise<ScheduleRow[]> {
@@ -190,14 +185,6 @@ export function applyRecord(periodId: number, savedAt: string): Promise<{ applie
     `/periods/${periodId}/backups/${encodeURIComponent(savedAt)}/apply`, { method: "POST" },
   );
 }
-
-// backend/src/backend/db/models.py 의 ON DELETE CASCADE 기준입니다. 기간을 삭제하면 서버가
-// assignments·assignment_runs·assignment_backups 를 함께 삭제합니다. reservations 는 기간을
-// 참조하지 않아 삭제되지 않으므로 무효화 대상에서 뺍니다.
-export const PERIOD_DELETE_KEYS = ["periods", "schedule", "backups", "backup-round"] as const;
-
-// 합주실을 삭제하면 서버가 그 합주실의 assignments·assignment_backups·reservations 를 함께 삭제합니다.
-export const ROOM_DELETE_KEYS = ["rooms", "schedule", "backups", "backup-round", "reservations"] as const;
 
 export type AssignBody = { team_ids: number[]; room_ids: number[] };
 

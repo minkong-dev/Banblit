@@ -31,7 +31,6 @@ flowchart LR
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_DayDialogParts["DayDialogParts.tsx"] --> frontend_src_lib_pipeline
-  frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"] --> frontend_src_lib_pipeline
@@ -40,7 +39,6 @@ flowchart LR
   frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_lib_pipeline
-  frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_lib_pipeline
 ```
 
 ## imports
@@ -69,7 +67,6 @@ flowchart LR
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
 - [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]
-- [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]
@@ -78,4 +75,3 @@ flowchart LR
 - [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
-- [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]

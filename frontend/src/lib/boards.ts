@@ -3,17 +3,6 @@
 
 import { hasContent, textOf } from "./richText";
 
-// 게시판 query 전부의 queryKey 맨 앞 값입니다. 이 값으로 무효화하면 목록과 글 상세가 전부 다시 조회됩니다.
-export const BOARD_KEY = ["board"] as const;
-
-// 블라인드된 글 목록의 queryKey 입니다. 글을 블라인드하는 화면(PostBoard)과 해제하는 화면(SettingsBlinded)이 같은 값을 무효화합니다.
-export const BLINDED_KEY = ["blinded-posts"] as const;
-
-// listPath("/notices"·"/posts" 등) 목록의 queryKey 입니다.
-export function boardListKey(listPath: string): string[] {
-  return [...BOARD_KEY, listPath];
-}
-
 const TITLE_MAX = 200;
 const BODY_MAX = 20000;
 const COMMENT_MAX = 2000;

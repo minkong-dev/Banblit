@@ -5,10 +5,10 @@ import { Modal } from "../components/Modal";
 import { Dropdown } from "../components/Dropdown";
 import { Button, CloseButton } from "../components/controls";
 import { askCancel, askDelete } from "../lib/confirm";
-import { addReservation, addUnavailable, editUnavailable, NO_REPEAT, cancelBooking, loadTeamMembers, removeUnavailable } from "../lib/pipeline";
+import { addReservation, addUnavailable, editUnavailable, NO_REPEAT, cancelBooking, removeUnavailable } from "../lib/pipeline";
 import type { Repeat } from "../lib/pipeline";
 import { firstTaken, slotLabels, unitLabel } from "../lib/calendar";
-import { useMe, useSlotMinutes } from "../components/queries";
+import { teamMembersQuery, useMe, useSlotMinutes } from "../components/queries";
 import type { Room } from "../lib/contract";
 import { entryName, myEntries, offWhenLabel } from "../lib/dayEntries";
 import type { DayTab, EnsembleOn, Entry } from "../lib/dayEntries";
@@ -67,7 +67,7 @@ export function DayDialog({
   const [range, setRange] = useState<SlotRange | null>(null);
   // 시각 선택지의 간격과 머리글의 단위 문구는 저장소 설정(slot_minutes)을 따릅니다.
   const slotMinutes = useSlotMinutes();
-  // queryKey 가 ["me"] 로 같아 Scheduler 가 받아 둔 응답을 그대로 씁니다.
+  // queryKey 가 ME_KEY 로 같아 Scheduler 가 받아 둔 응답을 그대로 씁니다.
   const { me, meState } = useMe();
   const memberId = me?.id ?? null;
   // memberId 가 null 인 경우는 조회 중과 조회 실패 둘입니다. 조회 중이면 잠시 후 해결되지만
@@ -99,13 +99,12 @@ export function DayDialog({
 
   const roomsLabel = [...new Set(booked.map((entry) => entry.room).filter(Boolean))].join(", ");
 
-  // 그날 뭔가 놓인 팀만 명단을 조회합니다. 프로필·권한 구역과 같은 query key(["members", team id])를
+  // 그날 뭔가 놓인 팀만 명단을 조회합니다. 프로필·권한 구역과 같은 query key(components/queries.ts 의 teamMembersKey)를
   // 써서, 이미 받아 둔 명단이 있으면 서버를 다시 조회하지 않습니다.
   const dayTeams = teams.filter((team) => booked.some((entry) => entry.team === team.key));
   const rosters = useQueries({
     queries: dayTeams.map((team) => ({
-      queryKey: ["members", team.id],
-      queryFn: () => loadTeamMembers(team.id),
+      ...teamMembersQuery(team.id),
     })),
   });
   const dayPeople = dayTeams.flatMap((team, index) =>

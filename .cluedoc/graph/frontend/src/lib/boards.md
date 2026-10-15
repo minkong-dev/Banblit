@@ -11,7 +11,6 @@ kind: file
 flowchart LR
   frontend_src_lib_boards["boards.ts"]
   frontend_src_lib_boards --> frontend_src_lib_richText["richText.ts"]
-  frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_lib_boards
   frontend_src_components_PostAttachments["PostAttachments.tsx"] --> frontend_src_lib_boards
   frontend_src_components_PostBoard["PostBoard.tsx"] --> frontend_src_lib_boards
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_lib_boards
@@ -19,9 +18,6 @@ flowchart LR
   frontend_src_components_RichTextToolbar["RichTextToolbar.tsx"] --> frontend_src_lib_boards
   frontend_src_lib_boards_test["boards.test.ts"] --> frontend_src_lib_boards
   frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_boards
-  frontend_src_routes_PostWrite["PostWrite.tsx"] --> frontend_src_lib_boards
-  frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_lib_boards
-  frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_lib_boards
 ```
 
 ## imports
@@ -30,7 +26,6 @@ flowchart LR
 
 ## imported by
 
-- [[graph/frontend/src/components/PostActions|PostActions.tsx]]
 - [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]
 - [[graph/frontend/src/components/PostBoard|PostBoard.tsx]]
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
@@ -38,6 +33,3 @@ flowchart LR
 - [[graph/frontend/src/components/RichTextToolbar|RichTextToolbar.tsx]]
 - [[graph/frontend/src/lib/boards.test|boards.test.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
-- [[graph/frontend/src/routes/PostWrite|PostWrite.tsx]]
-- [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
-- [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]

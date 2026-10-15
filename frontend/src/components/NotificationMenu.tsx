@@ -8,6 +8,7 @@ import { loadState } from "../lib/loading";
 import { loadNotifications, markNotificationsRead } from "../lib/pipeline";
 import { notificationText, unreadCount } from "../lib/notifications";
 import { stampLabel } from "../lib/calendar";
+import { NOTIFICATIONS_KEY } from "./queries";
 
 // 알림 popover 의 id 입니다. 알림 버튼이 popoverTarget 으로 이 판을 엽니다.
 const NOTES_POP_ID = "notesPop";
@@ -23,7 +24,7 @@ export function NotificationMenu() {
   // 이 query(서버 조회)는 항상 현재 로그인한 사람의 알림만 반환합니다.
   // 경로(주소)로는 사람을 구분하지 않고, 인증 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 확인합니다.
   const notifications = useQuery({
-    queryKey: ["notifications"],
+    queryKey: NOTIFICATIONS_KEY,
     queryFn: loadNotifications,
   });
   const rows = notifications.data ?? [];
@@ -36,7 +37,7 @@ export function NotificationMenu() {
       // 읽음 처리 요청이 실패하면 cache(클라이언트 임시 저장소)를 갱신하지 않습니다.
       // refetch(다시 조회)하면 서버의 정확한 상태를 반영합니다.
     }
-    void queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    void queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
   }
 
   let body;

@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button, Empty } from "../components/controls";
 import { Panel } from "../components/Layout";
-import { backupsKey } from "../components/queries";
+import { backupsKey, PERIODS_KEY } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
 import { hoursOf, reportLines } from "../lib/assignment";
 import { appliedLabel, checkRunTimes, scoreLabel, slotCountLabel } from "../lib/runs";
@@ -276,7 +276,7 @@ export function RunTimesPanel({ period, canManage }: { period: Period | null; ca
     },
     onSuccess: async () => {
       // 수정한 값을 서버에서 다시 받아 화면과 맞춥니다. 받아온 뒤에는 수정 기록을 삭제합니다.
-      await queryClient.invalidateQueries({ queryKey: ["periods"] });
+      await queryClient.invalidateQueries({ queryKey: PERIODS_KEY });
       setForm(null);
       say("엔진 연산 시간을 저장했어요");
     },

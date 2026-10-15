@@ -9,6 +9,7 @@ import { say } from "./toast";
 import { Button, Why } from "./controls";
 import { fileSizeLabel } from "../lib/boards";
 import { attachmentDownloadUrl, deleteAttachment } from "../lib/pipeline";
+import { postKey } from "./queries";
 
 /** 첨부파일 목록의 한 줄입니다. 등록 전(선택한 파일)과 등록 후(저장된 파일)가 같은 모양을 씁니다.
  *  href 가 있으면 이름이 다운로드 링크가 됩니다. 등록 전에는 받을 주소가 없어 넘기지 않습니다. */
@@ -42,7 +43,7 @@ export function AttachmentList(props: {
   const remove = useMutation({
     mutationFn: (attachmentId: number) => deleteAttachment(attachmentId),
     onSuccess: () => {
-      void client.invalidateQueries({ queryKey: ["board", "post", postId] });
+      void client.invalidateQueries({ queryKey: postKey(postId) });
       say("첨부파일을 삭제했어요.");
     },
   });

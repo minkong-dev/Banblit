@@ -7,9 +7,9 @@ import { Dropdown } from "../components/Dropdown";
 import { getJSON, reason } from "../lib/api";
 import { say } from "../components/toast";
 import { askApplyRecord } from "../lib/confirm";
-import { applyRecord, loadScheduleOut, runAssignment, SCHEDULE_KEY } from "../lib/pipeline";
+import { applyRecord, loadScheduleOut, runAssignment } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
-import { backupRoundKey, backupRoundsKey, backupsKey, useMe, usePeriods, useRooms, useTeams } from "../components/queries";
+import { backupRoundKey, backupRoundsKey, backupsKey, SCHEDULE_KEY, useMe, usePeriods, useRooms, useTeams } from "../components/queries";
 import { can } from "../lib/account";
 import { NOW, colorsOf, dayRangeOf, sessionsOfRows, tabKey, tabsOf, viewOf } from "../lib/assignment";
 import type { View } from "../lib/assignment";
@@ -48,7 +48,7 @@ export function Assignment() {
   const teams = useTeams();
 
   const schedule = useQuery({
-    queryKey: ["schedule", activePeriodId],
+    queryKey: [...SCHEDULE_KEY, activePeriodId],
     queryFn: () => loadScheduleOut(requirePeriod(activePeriodId)),
     enabled: activePeriodId !== null,
   });
@@ -67,8 +67,8 @@ export function Assignment() {
 
   // 현재 배정안과 스케줄링 기록 목록을 다시 받아 화면과 서버를 맞춥니다. 연산하면 기록이 추가되고,
   // 적용하면 현재 배정안이 바뀌므로 둘 다 다시 받습니다.
-  // SCHEDULE_KEY(["schedule"]) 로 무효화해야 캘린더 화면(routes/Scheduler.tsx)의
-  // ["schedule", periodIds] 캐시도 함께 무효화됩니다. activePeriodId 로만 무효화하면
+  // SCHEDULE_KEY 로 무효화해야 캘린더 화면(routes/Scheduler.tsx)의
+  // [...SCHEDULE_KEY, periodIds] 캐시도 함께 무효화됩니다. activePeriodId 로만 무효화하면
   // key 모양이 달라 캘린더 화면에 이전 배정이 그대로 남습니다.
   const refreshSchedule = async () => {
     await queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY });
