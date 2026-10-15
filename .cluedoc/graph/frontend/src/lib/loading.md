@@ -12,6 +12,7 @@ flowchart LR
   frontend_src_lib_loading["loading.ts"]
   frontend_src_lib_loading --> frontend_src_lib_api["api.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_loading
+  frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_lib_loading
   frontend_src_components_MemberSearch_test["MemberSearch.test.tsx"] --> frontend_src_lib_loading
   frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_lib_loading
   frontend_src_components_NotificationMenu["NotificationMenu.tsx"] --> frontend_src_lib_loading
@@ -33,7 +34,6 @@ flowchart LR
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_lib_loading
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_loading
   frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_lib_loading
-  frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"] --> frontend_src_lib_loading
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_lib_loading
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_lib_loading
   frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_lib_loading
@@ -49,6 +49,7 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
+- [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/components/MemberSearch.test|MemberSearch.test.tsx]]
 - [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
 - [[graph/frontend/src/components/NotificationMenu|NotificationMenu.tsx]]
@@ -70,7 +71,6 @@ flowchart LR
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]
-- [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]
 - [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]

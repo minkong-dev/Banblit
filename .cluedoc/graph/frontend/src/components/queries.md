@@ -17,6 +17,7 @@ flowchart LR
   frontend_src_components_queries --> frontend_src_lib_roster["roster.ts"]
   frontend_src_components_queries --> frontend_src_lib_teamColors["teamColors.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_components_queries
+  frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_components_queries
   frontend_src_components_NotificationMenu["NotificationMenu.tsx"] --> frontend_src_components_queries
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_components_queries
   frontend_src_components_PostAttachments["PostAttachments.tsx"] --> frontend_src_components_queries
@@ -57,6 +58,7 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
+- [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/components/NotificationMenu|NotificationMenu.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
 - [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]

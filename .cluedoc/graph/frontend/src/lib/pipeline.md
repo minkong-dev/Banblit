@@ -18,6 +18,7 @@ flowchart LR
   frontend_src_lib_pipeline --> frontend_src_lib_roster["roster.ts"]
   frontend_src_lib_pipeline --> frontend_src_lib_settings["settings.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_pipeline
+  frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_lib_pipeline
   frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_lib_pipeline
   frontend_src_components_NotificationMenu["NotificationMenu.tsx"] --> frontend_src_lib_pipeline
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_lib_pipeline
@@ -56,6 +57,7 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
+- [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
 - [[graph/frontend/src/components/NotificationMenu|NotificationMenu.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]

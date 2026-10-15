@@ -11,6 +11,7 @@ kind: file
 flowchart LR
   frontend_src_components_toast["toast.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_components_toast
+  frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_components_toast
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_components_toast
   frontend_src_components_PostAttachments["PostAttachments.tsx"] --> frontend_src_components_toast
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_components_toast
@@ -24,7 +25,6 @@ flowchart LR
   frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_components_toast
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_components_toast
   frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_components_toast
-  frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"] --> frontend_src_components_toast
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_components_toast
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_components_toast
   frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_components_toast
@@ -40,6 +40,7 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
+- [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
 - [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
@@ -53,7 +54,6 @@ flowchart LR
 - [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]
-- [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]
 - [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]

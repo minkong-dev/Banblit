@@ -12,7 +12,7 @@ import { teamMembersQuery, useMe, useSlotMinutes } from "../components/queries";
 import type { Member, Room } from "../lib/contract";
 import { entryName, myEntries, offWhenLabel } from "../lib/dayEntries";
 import type { DayTab, EnsembleOn, Entry } from "../lib/dayEntries";
-import { EnsembleDayEditor } from "./SettingsEnsemble";
+import { EnsembleDayEditor } from "../components/EnsembleDayEditor";
 import type { DayTeam } from "../lib/roster";
 import { say } from "../components/toast";
 import {

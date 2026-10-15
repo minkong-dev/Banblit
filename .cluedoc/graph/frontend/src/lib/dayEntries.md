@@ -16,6 +16,7 @@ flowchart LR
   frontend_src_lib_dayEntries --> frontend_src_lib_roster["roster.ts"]
   frontend_src_lib_dayEntries --> frontend_src_lib_slots["slots.ts"]
   frontend_src_components_CalendarViews["CalendarViews.tsx"] --> frontend_src_lib_dayEntries
+  frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_lib_dayEntries
   frontend_src_lib_dayEntries_test["dayEntries.test.ts"] --> frontend_src_lib_dayEntries
   frontend_src_lib_unavailableMap["unavailableMap.ts"] --> frontend_src_lib_dayEntries
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_dayEntries
@@ -36,6 +37,7 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/components/CalendarViews|CalendarViews.tsx]]
+- [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/lib/dayEntries.test|dayEntries.test.ts]]
 - [[graph/frontend/src/lib/unavailableMap|unavailableMap.ts]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]

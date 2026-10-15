@@ -14,6 +14,7 @@ flowchart LR
   frontend_src_components_controls --> frontend_src_lib_loading["loading.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_components_controls
   frontend_src_components_CalendarBar["CalendarBar.tsx"] --> frontend_src_components_controls
+  frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_components_controls
   frontend_src_components_ErrorBoundary["ErrorBoundary.tsx"] --> frontend_src_components_controls
   frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_components_controls
   frontend_src_components_Modal["Modal.tsx"] --> frontend_src_components_controls
@@ -63,6 +64,7 @@ flowchart LR
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
 - [[graph/frontend/src/components/CalendarBar|CalendarBar.tsx]]
+- [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/components/ErrorBoundary|ErrorBoundary.tsx]]
 - [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
 - [[graph/frontend/src/components/Modal|Modal.tsx]]

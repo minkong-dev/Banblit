@@ -11,33 +11,27 @@ kind: file
 flowchart LR
   frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"]
   frontend_src_routes_SettingsEnsemble --> frontend_src_components_Dropdown["Dropdown.tsx"]
+  frontend_src_routes_SettingsEnsemble --> frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"]
   frontend_src_routes_SettingsEnsemble --> frontend_src_components_controls["controls.tsx"]
   frontend_src_routes_SettingsEnsemble --> frontend_src_components_queries["queries.ts"]
-  frontend_src_routes_SettingsEnsemble --> frontend_src_components_toast["toast.ts"]
   frontend_src_routes_SettingsEnsemble --> frontend_src_lib_calendar["calendar.ts"]
   frontend_src_routes_SettingsEnsemble --> frontend_src_lib_contract["contract.ts"]
   frontend_src_routes_SettingsEnsemble --> frontend_src_lib_dayEntries["dayEntries.ts"]
-  frontend_src_routes_SettingsEnsemble --> frontend_src_lib_loading["loading.ts"]
   frontend_src_routes_SettingsEnsemble --> frontend_src_lib_pipeline["pipeline.ts"]
-  frontend_src_routes_SettingsEnsemble --> frontend_src_lib_settings["settings.ts"]
-  frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_routes_SettingsEnsemble
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_routes_SettingsEnsemble
 ```
 
 ## imports
 
 - [[graph/frontend/src/components/Dropdown|Dropdown.tsx]]
+- [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
-- [[graph/frontend/src/components/toast|toast.ts]]
 - [[graph/frontend/src/lib/calendar|calendar.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/dayEntries|dayEntries.ts]]
-- [[graph/frontend/src/lib/loading|loading.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
-- [[graph/frontend/src/lib/settings|settings.ts]]
 
 ## imported by
 
-- [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]

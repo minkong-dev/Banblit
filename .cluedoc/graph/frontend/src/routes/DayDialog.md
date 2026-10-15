@@ -11,6 +11,7 @@ kind: file
 flowchart LR
   frontend_src_routes_DayDialog["DayDialog.tsx"]
   frontend_src_routes_DayDialog --> frontend_src_components_Dropdown["Dropdown.tsx"]
+  frontend_src_routes_DayDialog --> frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"]
   frontend_src_routes_DayDialog --> frontend_src_components_Modal["Modal.tsx"]
   frontend_src_routes_DayDialog --> frontend_src_components_controls["controls.tsx"]
   frontend_src_routes_DayDialog --> frontend_src_components_queries["queries.ts"]
@@ -23,13 +24,13 @@ flowchart LR
   frontend_src_routes_DayDialog --> frontend_src_lib_roster["roster.ts"]
   frontend_src_routes_DayDialog --> frontend_src_lib_slots["slots.ts"]
   frontend_src_routes_DayDialog --> frontend_src_routes_DayDialogParts["DayDialogParts.tsx"]
-  frontend_src_routes_DayDialog --> frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"]
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_routes_DayDialog
 ```
 
 ## imports
 
 - [[graph/frontend/src/components/Dropdown|Dropdown.tsx]]
+- [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/components/Modal|Modal.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
@@ -42,7 +43,6 @@ flowchart LR
 - [[graph/frontend/src/lib/roster|roster.ts]]
 - [[graph/frontend/src/lib/slots|slots.ts]]
 - [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]
-- [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]
 
 ## imported by
 

@@ -13,6 +13,7 @@ kind: directory
 - [[graph/frontend/src/components/CalendarViews|CalendarViews.tsx]]
 - [[graph/frontend/src/components/Dropdown.test|Dropdown.test.tsx]]
 - [[graph/frontend/src/components/Dropdown|Dropdown.tsx]]
+- [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/components/ErrorBoundary|ErrorBoundary.tsx]]
 - [[graph/frontend/src/components/Field.test|Field.test.tsx]]
 - [[graph/frontend/src/components/Field|Field.tsx]]
