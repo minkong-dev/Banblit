@@ -11,7 +11,7 @@ import { Modal } from "../components/Modal";
 import { useSlotMinutes } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
 import { askDeleteRoom } from "../lib/confirm";
-import type { Room } from "../lib/contract";
+import type { Room, RoomInput } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { checkRoom, openingHours } from "../lib/pipeline";
@@ -20,12 +20,12 @@ import { Button, Cell, Empty, FormFoot, TimeRange } from "../components/controls
 import { Row, useFirstField, useForm } from "./SettingsForm";
 import { clockEndLabel } from "../lib/calendar";
 
-const BLANK_ROOM = { name: "", opens_at: "18:00", closes_at: "23:00" };
+const BLANK_ROOM: RoomInput = { name: "", opens_at: "18:00", closes_at: "23:00" };
 
 /** 합주실 form 의 입력칸입니다. */
 function RoomFields(props: {
-  form: { name: string; opens_at: string; closes_at: string };
-  setForm: (next: { name: string; opens_at: string; closes_at: string }) => void;
+  form: RoomInput;
+  setForm: (next: RoomInput) => void;
   at: (field: string) => string;
   bad: string;
   whyId: string;
@@ -150,7 +150,7 @@ export function RoomCard(props: {
 }
 
 function RoomForm(props: {
-  start: { name: string; opens_at: string; closes_at: string };
+  start: RoomInput;
   taken: string[];
   path: string;
   method: "POST" | "PATCH";

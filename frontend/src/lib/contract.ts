@@ -342,3 +342,12 @@ export type Notification = {
 
 /** 로그인 session 이 거절된 401 응답의 code 입니다. 서버 쪽은 backend/src/backend/contract.py 의 SESSION_REJECTED_CODE 에 작성되어 있는 내용을 기준으로 합니다. */
 export const SESSION_REJECTED_CODE = "session_rejected";
+
+/** GET, PATCH /settings 의 응답입니다. 서버 쪽은 backend/src/backend/api/schemas.py 의 SettingsOut 에 작성되어 있는 내용을 기준으로 합니다. */
+export type Settings = { slot_minutes: number; session_minutes: number; daily_max_hours: number };
+
+/** 설정을 아직 받지 못했을 때 쓰는 값입니다. 서버 기본값(backend/src/backend/contract.py)과 같아 받는 사이에 격자가 바뀌지 않습니다. */
+export const DEFAULT_SETTINGS: Settings = { slot_minutes: 60, session_minutes: 60, daily_max_hours: 3 };
+
+/** 합주실을 만들거나 수정할 때 보내는 값입니다. */
+export type RoomInput = Pick<Room, "name" | "opens_at" | "closes_at">;

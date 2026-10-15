@@ -4,7 +4,7 @@
 import { apiUrl, getJSON, reason, sendFile } from "./api";
 import type {
   Account, Attachment, Ensemble, Me, Member, MemberUnavailable, Notification, Period, Post, PostComment, Reservation,
-  ScheduleOut, ScheduleRow, Unavailable,
+  RoomInput, ScheduleOut, ScheduleRow, Settings, Unavailable,
 } from "./contract";
 import {
   datesBetween,
@@ -24,10 +24,9 @@ import {
   titleMessage,
 } from "./boards";
 
-type RoomForm = { name: string; opens_at: string; closes_at: string };
-type PeriodForm = { starts_on: string; ends_on: string };
+type PeriodForm = Pick<Period, "starts_on" | "ends_on">;
 
-export function checkRoom(form: RoomForm, taken: string[], slotMinutes: number): string {
+export function checkRoom(form: RoomInput, taken: string[], slotMinutes: number): string {
   // 이름을 먼저 검증합니다. 이름이 비었거나 겹치면 시각이 유효해도 저장할 수 없고,
   // 오류 메시지를 한 번에 하나만 표시하므로 먼저 수정할 것을 앞에 둡니다.
   const name = roomNameMessage(form.name, taken);
@@ -110,7 +109,7 @@ export function checkPeriod(form: PeriodForm): string {
   return dateRangeMessage(body.starts_on, body.ends_on);
 }
 
-type Opening = { rooms: RoomForm[]; days: number; teams: number; slotMinutes: number };
+type Opening = { rooms: RoomInput[]; days: number; teams: number; slotMinutes: number };
 
 export function openingHours(input: Opening): {
   perDay: string;
@@ -346,9 +345,6 @@ export async function removeUnavailable(memberId: number, timeId: number): Promi
   await getJSON(`/members/${memberId}/unavailable/${timeId}`, { method: "DELETE" });
 }
 
-/** 점유 단위(칸 하나의 크기, 분)를 변경합니다. room_edit 권한이 필요합니다.
- *  이미 저장된 예약과 배정은 그대로 남습니다. 단위를 늘리면 새 격자에 맞지 않는 기존 행이 남지만,
- *  삭제하면 사용자의 예약이 알림 없이 삭제됩니다(services/settings_service.py 의 set_slot_minutes). */
 /** 칸 크기와 합주 길이를 저장합니다. 보내지 않은 값은 서버가 그대로 둡니다.
  *
  *  두 값을 한 요청에 담을 수 있어야 합니다. 30분 합주로 내리려면 칸도 30분이어야 하는데,
@@ -358,7 +354,7 @@ export async function saveSettings(next: {
   sessionMinutes?: number;
   dailyMaxHours?: number;
 }): Promise<{ slotMinutes: number; sessionMinutes: number; dailyMaxHours: number }> {
-  const body = await getJSON<{ slot_minutes: number; session_minutes: number; daily_max_hours: number }>("/settings", {
+  const body = await getJSON<Settings>("/settings", {
     method: "PATCH",
     body: JSON.stringify({
       slot_minutes: next.slotMinutes,

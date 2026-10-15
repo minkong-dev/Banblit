@@ -10,6 +10,7 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_lib_settings["settings.ts"]
+  frontend_src_lib_settings --> frontend_src_lib_contract["contract.ts"]
   frontend_src_lib_settings --> frontend_src_lib_validate["validate.ts"]
   frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_settings
   frontend_src_lib_settings_test["settings.test.ts"] --> frontend_src_lib_settings
@@ -20,6 +21,7 @@ flowchart LR
 
 ## imports
 
+- [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/validate|validate.ts]]
 
 ## imported by

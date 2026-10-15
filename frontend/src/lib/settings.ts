@@ -2,12 +2,11 @@
 // 검증 함수는 값이 유효하면 빈 문자열을, 아니면 사용자가 읽을 수 있는 오류 메시지를 반환합니다.
 // 호출 순서는 pipeline.ts가 결정합니다.
 
+import { DEFAULT_SETTINGS } from "./contract";
 import { uniqueNameMessage } from "./validate";
 
-// 칸 하나의 크기는 저장소 설정이 결정합니다(GET /settings 의 slot_minutes). 이 파일은 서버와
-// 상호작용하지 않으므로 값을 인자로 받습니다. 부르는 쪽이 설정에서 읽어 넘깁니다.
-// 서버 쪽은 backend/src/backend/services/settings_service.py 에 작성되어 있는 내용을 기준으로 합니다.
-const DEFAULT_SLOT_MINUTES = 60;
+// 칸 하나의 크기는 저장소 설정이 결정합니다(GET /settings 의 slot_minutes). 부르는 쪽이 설정에서 읽어 넘기고, 생략하면 기본값입니다.
+const DEFAULT_SLOT_MINUTES = DEFAULT_SETTINGS.slot_minutes;
 const MINUTES_PER_HOUR = 60;
 const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
 
