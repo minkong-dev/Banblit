@@ -41,7 +41,7 @@ test("가입한 이메일로 다시 가입하면 서버가 거절한다", async 
   await fillSignup(page, "중복 검사", E2E_ACCOUNT.email);
   await page.getByRole("button", { name: "가입하기" }).click();
 
-  await expect(page.getByText("이미 가입된 이메일입니다")).toBeVisible();
+  await expect(page.getByText("이미 가입된 이메일이에요")).toBeVisible();
   await expect(page).toHaveURL(/\/signup$/);
 });
 
@@ -52,7 +52,7 @@ test("틀린 비밀번호로 로그인하면 거절 문구가 뜬다", async ({ 
   await page.getByLabel("비밀번호", { exact: true }).fill("Wrong-Password1!");
   await page.getByRole("button", { name: "로그인", exact: true }).click();
 
-  await expect(page.getByText("아이디 또는 비밀번호가 올바르지 않습니다")).toBeVisible();
+  await expect(page.getByText("아이디 또는 비밀번호가 올바르지 않아요")).toBeVisible();
   await expect(page).toHaveURL(/\/login$/);
 });
 
@@ -95,7 +95,7 @@ test("등록되지 않은 주소는 없는 주소 화면을 표시한다", async
 });
 
 // 로그인 표시 cookie 는 남았는데 서버 session 이 없는 경우입니다(다른 기기에서 비밀번호 변경 등).
-// 서버가 401 "로그인이 필요합니다" 로 거절하면 표시 cookie 를 삭제하고 로그인 화면으로 보내야 합니다.
+// 서버가 401 과 session_rejected code 로 거절하면 표시 cookie 를 삭제하고 로그인 화면으로 보내야 합니다.
 // 삭제하지 않으면 SkipIfSignedIn 이 로그인 화면을 대시보드로 되돌려 빠져나올 수 없습니다.
 test.describe("서버 session 이 취소된 경우", () => {
   test.use({

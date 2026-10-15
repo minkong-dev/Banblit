@@ -15,7 +15,7 @@ from backend.db.models import (
 from backend.db.pipeline import commit_translating
 
 # 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 변경하는 단계별 기록)이 지정한 이름입니다.
-SET_MESSAGES = {"permission_sets_name_key": "이미 있는 권한 묶음 이름입니다"}
+SET_MESSAGES = {"permission_sets_name_key": "이미 있는 권한 묶음 이름이에요"}
 
 # 계정이 0개인 DB 에 처음 가입한 사람이 받는 permission set 의 이름입니다. migration 이
 # 추가하는 permission set 도 같은 이름을 사용합니다(migrations/versions/b7f1a92c4d31_permission_sets.py).
@@ -82,7 +82,7 @@ def _require_another_full_set(session: Session, set_id: int) -> None:
     ).all()
     another = next((full_id for full_id in full_ids if full_id != set_id), None)
     if another is None:
-        raise ValueError("모든 권한을 가진 마지막 permission set 은 삭제하거나 항목을 끌 수 없습니다")
+        raise ValueError("모든 권한을 가진 마지막 permission set 은 삭제하거나 항목을 끌 수 없어요")
 
 
 def require_another_full_set_holder(
@@ -116,7 +116,7 @@ def require_another_full_set_holder(
             remaining.append(holder)
     if not remaining:
         raise ValueError(
-            "모든 권한을 가진 permission set 의 마지막 보유자입니다. "
+            "모든 권한을 가진 permission set 의 마지막 보유자예요. "
             "다른 사람에게 먼저 부여해 주세요"
         )
 

@@ -10,6 +10,7 @@ kind: file
 ```mermaid
 flowchart LR
   backend_src_backend_api_app["app.py"]
+  backend_src_backend_api_app --> backend_src_backend_api_auth_dependency["auth_dependency.py"]
   backend_src_backend_api_app --> backend_src_backend_api_job_runner["job_runner.py"]
   backend_src_backend_api_app --> backend_src_backend_api_rate_limit["rate_limit.py"]
   backend_src_backend_api_app --> backend_src_backend_api_routers_auth["auth.py"]
@@ -23,6 +24,7 @@ flowchart LR
   backend_src_backend_api_app --> backend_src_backend_api_routers_schedule["schedule.py"]
   backend_src_backend_api_app --> backend_src_backend_api_routers_settings["settings.py"]
   backend_src_backend_api_app --> backend_src_backend_api_routers_unavailable["unavailable.py"]
+  backend_src_backend_api_app --> backend_src_backend_contract["contract.py"]
   backend_src_backend_api_app --> backend_src_backend_db_pipeline["pipeline.py"]
   backend_tests_conftest["conftest.py"] --> backend_src_backend_api_app
   backend_tests_integration_db_test_reject_endpoints["test_reject_endpoints.py"] --> backend_src_backend_api_app
@@ -36,6 +38,7 @@ flowchart LR
 
 ## imports
 
+- [[graph/backend/src/backend/api/auth_dependency|auth_dependency.py]]
 - [[graph/backend/src/backend/api/job_runner|job_runner.py]]
 - [[graph/backend/src/backend/api/rate_limit|rate_limit.py]]
 - [[graph/backend/src/backend/api/routers/auth|auth.py]]
@@ -49,6 +52,7 @@ flowchart LR
 - [[graph/backend/src/backend/api/routers/schedule|schedule.py]]
 - [[graph/backend/src/backend/api/routers/settings|settings.py]]
 - [[graph/backend/src/backend/api/routers/unavailable|unavailable.py]]
+- [[graph/backend/src/backend/contract|contract.py]]
 - [[graph/backend/src/backend/db/pipeline|pipeline.py]]
 
 ## imported by
@@ -74,6 +78,7 @@ flowchart LR
 - `_format_validation_error`
 - `handle_database_down`
 - `handle_integrity_error`
+- `handle_session_rejected`
 - `handle_value_error`
 - `handle_permission_error`
 - `handle_validation_error`

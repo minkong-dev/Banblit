@@ -62,9 +62,9 @@ def require_email(value: str) -> str:
     """
     trimmed = value.strip()
     if not PRINTABLE_ASCII.match(trimmed):
-        raise ValueError("이메일은 영문·숫자·기호만 사용할 수 있습니다")
+        raise ValueError("이메일은 영문·숫자·기호만 사용할 수 있어요")
     if not EMAIL_PATTERN.match(trimmed):
-        raise ValueError("이메일 형식이 올바르지 않습니다")
+        raise ValueError("이메일 형식이 올바르지 않아요")
     return trimmed
 
 
@@ -110,7 +110,7 @@ def require_student_no(value: str) -> str:
     """학번입니다. 숫자 8자리가 아니면 거부하고, 앞뒤 공백을 제거한 값을 반환합니다."""
     trimmed = value.strip()
     if not STUDENT_NO_PATTERN.match(trimmed):
-        raise ValueError("학번은 숫자 8자리여야 합니다")
+        raise ValueError("학번은 숫자 8자리여야 해요")
     return trimmed
 
 
@@ -118,10 +118,10 @@ def require_student_no(value: str) -> str:
 # 가입·비밀번호 재설정·비밀번호 변경이 모두 이 규칙을 사용합니다. 경로마다 따로 두면 규칙이 어긋납니다.
 # 화면의 같은 규칙은 frontend/src/lib/validate.ts 에 있습니다.
 PASSWORD_RULES: tuple[tuple[str, str], ...] = (
-    (r"[a-z]", "비밀번호에는 소문자가 하나 이상 있어야 합니다"),
-    (r"[A-Z]", "비밀번호에는 대문자가 하나 이상 있어야 합니다"),
-    (r"[0-9]", "비밀번호에는 숫자가 하나 이상 있어야 합니다"),
-    (f"[{re.escape(PASSWORD_SYMBOLS)}]", "비밀번호에는 특수기호가 하나 이상 있어야 합니다"),
+    (r"[a-z]", "비밀번호에는 소문자가 하나 이상 있어야 해요"),
+    (r"[A-Z]", "비밀번호에는 대문자가 하나 이상 있어야 해요"),
+    (r"[0-9]", "비밀번호에는 숫자가 하나 이상 있어야 해요"),
+    (f"[{re.escape(PASSWORD_SYMBOLS)}]", "비밀번호에는 특수기호가 하나 이상 있어야 해요"),
 )
 
 # 목록에 없는 글자를 찾아내는 규칙입니다. 영어 글자·숫자·위 특수문자 외에는 전부 거부합니다.
@@ -133,11 +133,11 @@ def require_password(value: str, min_length: int, max_length: int) -> None:
     규칙을 변경하기 전에 생성된 계정이 로그인할 수 없어서는 안 되기 때문입니다."""
     # 쓸 수 있는 글자를 목록으로 정해, 목록 밖의 글자(한글 포함)는 종류와 관계없이 거부합니다.
     if not PRINTABLE_ASCII.match(value):
-        raise ValueError("비밀번호는 영문·숫자·기호만 사용할 수 있습니다")
+        raise ValueError("비밀번호는 영문·숫자·기호만 사용할 수 있어요")
     if not PASSWORD_ALLOWED.match(value):
         raise ValueError(f"특수문자는 {' '.join(PASSWORD_SYMBOLS)} 만 사용 가능해요")
     if not min_length <= len(value) <= max_length:
-        raise ValueError(f"비밀번호는 {min_length}자에서 {max_length}자 사이여야 합니다")
+        raise ValueError(f"비밀번호는 {min_length}자에서 {max_length}자 사이여야 해요")
     for pattern, message in PASSWORD_RULES:
         if not re.search(pattern, value):
             raise ValueError(message)
@@ -146,13 +146,13 @@ def require_password(value: str, min_length: int, max_length: int) -> None:
 def require_cohort(value: int, max_cohort: int) -> int:
     """기수입니다. 1 이상 max_cohort 이하만 받습니다. 연도로 환산하지 않고 숫자만 받습니다."""
     if value < 1 or value > max_cohort:
-        raise ValueError(f"기수는 1에서 {max_cohort} 사이여야 합니다")
+        raise ValueError(f"기수는 1에서 {max_cohort} 사이여야 해요")
     return value
 
 
 def require_valid_kind(kind: str) -> None:
     if kind not in PERIOD_KINDS:
-        raise ValueError("kind는 open 또는 focused여야 합니다")
+        raise ValueError("kind는 open 또는 focused여야 해요")
 
 
 # ── 시각·날짜 ─────────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ def parse_clock(value: str, field_label: str) -> time:
     try:
         return datetime.strptime(value, CLOCK_FORMAT).time()
     except ValueError as error:
-        raise ValueError(f"{field_label}은 HH:MM 형식이어야 합니다") from error
+        raise ValueError(f"{field_label}은 HH:MM 형식이어야 해요") from error
 
 
 def format_clock(value: time) -> str:
@@ -173,7 +173,7 @@ def parse_calendar_date(value: str, field_label: str) -> date:
     try:
         return datetime.strptime(value, DATE_FORMAT).date()
     except ValueError as error:
-        raise ValueError(f"{field_label}은 YYYY-MM-DD 형식이어야 합니다") from error
+        raise ValueError(f"{field_label}은 YYYY-MM-DD 형식이어야 해요") from error
 
 
 def format_calendar_date(value: date) -> str:
@@ -189,20 +189,20 @@ def require_on_the_hour(value: time, field_label: str) -> None:
     # DB의 CheckConstraint(정시 시간 단위 격자)와 같은 규칙을 경계에서 먼저 검증합니다 —
     # 위반해도 DB 오류가 아니라 사용자가 읽을 문장으로 거부합니다.
     if value.minute != 0 or value.second != 0:
-        raise ValueError(f"{field_label}은 정시여야 합니다")
+        raise ValueError(f"{field_label}은 정시여야 해요")
 
 
 def require_clock_range(starts: time, ends: time, label: str) -> None:
     """하루 중의 범위 1개를 검증합니다. ends 가 starts 보다 이르면 LATEST_CLOSE_NEXT_DAY(다음 날 00:00)만 허용합니다."""
     if ends == starts:
-        raise ValueError(f"{label}의 시작 시간과 종료 시간은 같을 수 없습니다")
+        raise ValueError(f"{label}의 시작 시간과 종료 시간은 같을 수 없어요")
     if ends < starts and ends != time.fromisoformat(LATEST_CLOSE_NEXT_DAY):
-        raise ValueError(f"{label}의 종료 시간은 시작 시간보다 늦거나 {LATEST_CLOSE_NEXT_DAY} 이어야 합니다")
+        raise ValueError(f"{label}의 종료 시간은 시작 시간보다 늦거나 {LATEST_CLOSE_NEXT_DAY} 이어야 해요")
 
 
 def require_ends_not_before_starts(starts_on: date, ends_on: date) -> None:
     if ends_on < starts_on:
-        raise ValueError("종료일은 시작일보다 빠를 수 없습니다")
+        raise ValueError("종료일은 시작일보다 빠를 수 없어요")
 
 
 # ── 구간 ─────────────────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ def require_within_room_window(
         window = day_window(day, opens_at, closes_at)
         if window.start <= starts_at and ends_at <= window.end:
             return
-    raise ValueError("합주실 운영 시간 안에서만 예약할 수 있습니다")
+    raise ValueError("합주실 운영 시간 안에서만 예약할 수 있어요")
 
 
 # 요일 집합이 가질 수 있는 최댓값입니다. 월요일 1 부터 일요일 64 까지 일곱 개를 전부 더한 값입니다.
@@ -240,7 +240,7 @@ def require_repeat_weekdays(value: int | None) -> int | None:
     if value is None:
         return None
     if value < 0 or value > ALL_WEEKDAYS:
-        raise ValueError("반복 요일 값이 올바르지 않습니다")
+        raise ValueError("반복 요일 값이 올바르지 않아요")
     return value
 
 
@@ -250,8 +250,8 @@ def require_repeat_end(
     """반복이 끝나는 조건을 검증합니다. 횟수와 종료일은 동시에 지정할 수 없고, 횟수는 1 이상 max_count 이하입니다."""
     repeating = bool(repeat_weekdays)
     if not repeating and (repeat_count is not None or repeat_until is not None):
-        raise ValueError("반복이 아니면 반복 횟수와 반복 종료일을 넣을 수 없습니다")
+        raise ValueError("반복이 아니면 반복 횟수와 반복 종료일을 넣을 수 없어요")
     if repeat_count is not None and repeat_until is not None:
         raise ValueError("반복 횟수와 반복 종료일은 동시에 설정할 수 없어요")
     if repeat_count is not None and (repeat_count < 1 or repeat_count > max_count):
-        raise ValueError(f"반복 횟수는 1에서 {max_count} 사이여야 합니다")
+        raise ValueError(f"반복 횟수는 1에서 {max_count} 사이여야 해요")

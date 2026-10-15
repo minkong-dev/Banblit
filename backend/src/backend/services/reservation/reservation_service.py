@@ -20,7 +20,7 @@ from backend.scheduling.pipeline import day_window
 # 선착순은 겹침 금지 제약이 commit 시점에 결정합니다. 먼저 commit 한 요청이 그 구간을 가져갑니다.
 # 제약 이름은 migration 이 지정한 이름입니다(c8e4a1b60d93_reservation_as_one_row.py).
 RESERVATION_MESSAGES = {
-    "reservations_no_overlap": "다른 멤버의 예약이 존재하여, 예약이 불가능합니다",
+    "reservations_no_overlap": "다른 멤버의 예약이 존재하여, 예약이 불가능해요",
 }
 
 ReservationRow = tuple[Reservation, str, str | None, str]
@@ -93,7 +93,7 @@ def focus_refusal(
         return None
     first, last = period.ensemble_starts_on, period.ensemble_ends_on
     if first is None or last is None or not first <= day <= last:
-        return "집중 합주기간에는 예약이 불가능합니다"
+        return "집중 합주기간에는 예약이 불가능해요"
     if room_id != period.ensemble_room_id:
         return None
     own = session.scalars(
@@ -104,14 +104,14 @@ def focus_refusal(
         return None
     ensemble = day_window(day, start, end)
     if starts_at < ensemble.end and ensemble.start < ends_at:
-        return "전체 합주 시간에는 예약할 수 없습니다"
+        return "전체 합주 시간에는 예약할 수 없어요"
     return None
 
 
 def _require_not_started(starts_at: datetime, now: datetime) -> None:
     """이미 시작했거나 지난 시각의 예약을 거절합니다. 지난 예약은 쓸 수 없고, 남겨 두면 지울 곳도 없습니다."""
     if starts_at <= now:
-        raise ValueError("과거 시간에는 예약이 불가능합니다.")
+        raise ValueError("과거 시간에는 예약이 불가능해요.")
 
 
 def _planned_row(
@@ -241,13 +241,13 @@ def _get_own_reservation(
         .with_for_update()
     ).first()
     if reservation is None:
-        raise ValueError("존재하지 않는 예약입니다")
+        raise ValueError("존재하지 않는 예약이에요")
     # reservation_manage 권한을 가진 멤버는 다른 사용자의 예약도 취소·이동할 수 있습니다. 이 권한이
     # 없으면 합주실 관리자가 다른 사용자의 예약을 취소할 방법이 없습니다.
     if reservation.member_id != requester.id and (
         "reservation_manage" not in account_permissions(session, requester.id)
     ):
-        raise PermissionError(f"본인이 예약한 자리만 {verb} 수 있습니다")
+        raise PermissionError(f"본인이 예약한 자리만 {verb} 수 있어요")
     return reservation
 
 
@@ -262,7 +262,7 @@ def cancel_reservation(
     """
     reservation = _get_own_reservation(session, reservation_id, requester, "취소할")
     if reservation.member_id != requester.id:
-        raise PermissionError("다른 멤버의 예약은 반려(사유 입력)로만 취소할 수 있습니다")
+        raise PermissionError("다른 멤버의 예약은 반려(사유 입력)로만 취소할 수 있어요")
     reservation.cancelled_at = cancelled_at
     session.commit()
 
@@ -276,7 +276,7 @@ def reject_reservation(
     cancelled_at 만 기록합니다. 본인의 예약을 반려하면 알림은 만들지 않습니다.
     """
     if "reservation_manage" not in account_permissions(session, requester.id):
-        raise PermissionError("다른 멤버의 예약을 반려할 권한이 없습니다")
+        raise PermissionError("다른 멤버의 예약을 반려할 권한이 없어요")
     trimmed = require_reject_reason(reason)
     reservation = _get_own_reservation(session, reservation_id, requester, "반려할")
     reservation.cancelled_at = rejected_at

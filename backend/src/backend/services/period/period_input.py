@@ -158,7 +158,7 @@ def auto_sessions_per_team(
     예약이 쓸 수 있는 칸으로 남습니다.
     """
     if team_count <= 0:
-        raise ValueError("배정할 팀이 없습니다")
+        raise ValueError("배정할 팀이 없어요")
 
     slots_per_session = session_minutes // slot_minutes
     total = 0
@@ -170,7 +170,7 @@ def auto_sessions_per_team(
     if per_team == 0:
         raise ValueError(
             f"전체 자리({total}회)가 팀 수({team_count})보다 적어 "
-            f"팀마다 한 번도 줄 수 없습니다"
+            f"팀마다 한 번도 줄 수 없어요"
         )
     return per_team
 

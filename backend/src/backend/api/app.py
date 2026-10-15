@@ -19,8 +19,10 @@ from backend.api.routers import (
     settings,
     unavailable,
 )
+from backend.api.auth_dependency import UNAUTHORIZED_DETAIL, SessionRejected
 from backend.api.job_runner import JobRunner, max_concurrent_jobs_from_env
 from backend.api.rate_limit import RateLimiter
+from backend.contract import SESSION_REJECTED_CODE
 from backend.db.pipeline import check_database
 
 logger = logging.getLogger(__name__)
@@ -86,12 +88,12 @@ async def handle_database_down(
         logger.error("쿼리 또는 잠금 대기가 상한을 넘어 취소되었습니다 (%s): %s", request.url.path, exc)
         return JSONResponse(
             status_code=503,
-            content={"detail": "요청이 몰려 처리하지 못했습니다. 잠시 후 다시 시도하십시오"},
+            content={"detail": "요청이 몰려 처리하지 못했어요. 잠시 후 다시 시도해주세요"},
         )
     logger.error("데이터베이스에 연결하지 못했습니다 (%s): %s", request.url.path, exc)
     return JSONResponse(
         status_code=503,
-        content={"detail": "데이터베이스에 연결하지 못했습니다. 잠시 후 다시 시도하십시오"},
+        content={"detail": "데이터베이스에 연결하지 못했어요. 잠시 후 다시 시도해주세요"},
     )
 
 
@@ -103,7 +105,7 @@ async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONR
     logger.error("데이터베이스 제약을 위반했습니다 (%s): %s", request.url.path, exc)
     return JSONResponse(
         status_code=409,
-        content={"detail": "다른 데이터가 참조하고 있어 처리할 수 없습니다"},
+        content={"detail": "다른 데이터가 참조하고 있어 처리할 수 없어요"},
     )
 
 
@@ -112,6 +114,12 @@ async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONR
 # 부족)는 403이며, 둘 다 detail 에 사용자가 읽을 수 있는 문장 하나를 포함합니다. 라우터는 이 두
 # exception 을 처리하지 않으며, 다른 상태 코드가 필요한 endpoint(로그인 실패 401 등)만 직접
 # 처리합니다.
+@app.exception_handler(SessionRejected)
+async def handle_session_rejected(request: Request, exc: SessionRejected) -> JSONResponse:
+    # 같은 401 이라도 틀린 비밀번호와 구분하도록 code 를 붙입니다. 화면은 이 code 를 받으면 로그인 화면으로 이동합니다.
+    return JSONResponse(status_code=401, content={"detail": UNAUTHORIZED_DETAIL, "code": SESSION_REJECTED_CODE})
+
+
 @app.exception_handler(ValueError)
 async def handle_value_error(request: Request, exc: ValueError) -> JSONResponse:
     return JSONResponse(status_code=422, content={"detail": str(exc)})

@@ -27,7 +27,7 @@ ALLOWED_IMAGE_TYPES: dict[str, str] = {
 def _image_extension(name: str) -> str:
     extension = Path(name).suffix.lstrip(".").lower()
     if extension not in ALLOWED_IMAGE_TYPES:
-        raise ValueError("프로필 사진은 jpg·png·gif·webp 만 올릴 수 있습니다")
+        raise ValueError("프로필 사진은 jpg·png·gif·webp 만 올릴 수 있어요")
     return extension
 
 
@@ -35,11 +35,11 @@ def avatar_path(session: Session, member_id: int) -> tuple[Path, str]:
     """member_id 계정의 사진 파일 경로와 형식을 반환합니다. 계정이나 사진이 없으면 LookupError 를 발생시킵니다."""
     member = session.get(Member, member_id)
     if member is None or not member.avatar:
-        raise LookupError("프로필 사진이 없습니다")
+        raise LookupError("프로필 사진이 없어요")
     path = stored_path(member.avatar)
     if not path.is_file():
         # 열은 남아 있는데 파일이 사라진 경우입니다. 화면에는 사진 없음과 같게 보입니다.
-        raise LookupError("프로필 사진이 없습니다")
+        raise LookupError("프로필 사진이 없어요")
     return path, ALLOWED_IMAGE_TYPES[member.avatar.rsplit(".", 1)[-1]]
 
 
@@ -67,7 +67,7 @@ def save_avatar(session: Session, member: Member, filename: str, stream: BinaryI
     root = storage_root()
     root.mkdir(parents=True, exist_ok=True)
     stored_name = f"{secrets.token_hex(16)}.{extension}"
-    write_stream(stream, stored_path(stored_name), max_bytes, f"프로필 사진은 {max_bytes // (1024 * 1024)}MB 까지 올릴 수 있습니다")
+    write_stream(stream, stored_path(stored_name), max_bytes, f"프로필 사진은 {max_bytes // (1024 * 1024)}MB 까지 올릴 수 있어요")
 
     locked.avatar = stored_name
     try:

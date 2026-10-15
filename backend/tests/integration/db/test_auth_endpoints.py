@@ -242,6 +242,8 @@ def test_me_rejects_a_missing_session_cookie(api_client: TestClient) -> None:
     response = api_client.get("/me")
 
     assert response.status_code == 401
+    # 화면은 문구가 아니라 이 code 로 로그인 만료를 판정합니다(frontend/src/lib/api.ts).
+    assert response.json()["code"] == "session_rejected"
 
 
 def test_me_rejects_an_unknown_session_cookie(api_client: TestClient) -> None:
@@ -481,7 +483,7 @@ def test_editing_my_profile_into_someone_else_says_who_it_collides_with(
 
     # 가입(test_signup_refuses_the_same_person_twice)과 같은 상태 코드입니다.
     assert response.status_code == 422
-    assert "이미 가입된 사람입니다" in response.json()["detail"]
+    assert "이미 가입된 사람이에요" in response.json()["detail"]
 
 
 def test_editing_my_profile_rejects_an_empty_name(api_client: TestClient) -> None:
@@ -617,7 +619,7 @@ def test_signup_rejects_a_duplicate_login_id(api_client: TestClient) -> None:
     )
 
     assert response.status_code == 422
-    assert response.json()["detail"] == "이미 사용 중인 아이디입니다"
+    assert response.json()["detail"] == "이미 사용 중인 아이디예요"
 
 
 def test_login_works_with_the_login_id_and_normalizes_uppercase_input(

@@ -99,7 +99,7 @@ class JobRunner(Generic[ResultT]):
         # ValueError 는 assign_period 가 의도적으로 발생시킨 사용자 메시지이므로 그대로 반환합니다.
         # 다른 예외는 데이터베이스 접속 정보 같은 내부 정보를 포함할 수 있으므로 로그에만 남기고
         # 화면에는 고정 문장을 반환합니다.
-        message = str(error) if isinstance(error, ValueError) else "배정 계산 중 오류가 발생했습니다"
+        message = str(error) if isinstance(error, ValueError) else "배정 계산 중 오류가 발생했어요"
         return replace(base, status="failed", error=message, finished_at=entry.finished_at)
 
 

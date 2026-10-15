@@ -23,7 +23,7 @@ def _require_self(member_id: int, requester: Member) -> None:
     등록한 불가능 일정은 본인이 모르는 채로 배정에 반영됩니다. 조회는 _require_read 가 따로 봅니다.
     """
     if member_id != requester.id:
-        raise PermissionError("본인의 불가능 일정만 관리할 수 있습니다")
+        raise PermissionError("본인의 불가능 일정만 관리할 수 있어요")
 
 
 def _require_read(session: Session, member_id: int, requester: Member) -> None:
@@ -31,7 +31,7 @@ def _require_read(session: Session, member_id: int, requester: Member) -> None:
     if member_id == requester.id:
         return
     if "unavailable_read" not in account_permissions(session, requester.id):
-        raise PermissionError("다른 멤버의 불가능 일정을 조회할 권한이 없습니다")
+        raise PermissionError("다른 멤버의 불가능 일정을 조회할 권한이 없어요")
 
 
 def list_unavailable(
@@ -114,7 +114,7 @@ def update_unavailable(
     _require_self(member_id, requester)
     row = session.get(UnavailableTime, time_id)
     if row is None or row.member_id != member_id:
-        raise ValueError("존재하지 않는 일정입니다")
+        raise ValueError("존재하지 않는 일정이에요")
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_repeat_weekdays(repeat_weekdays)
     require_repeat_end(repeat_weekdays, repeat_count, repeat_until)
@@ -144,12 +144,12 @@ def reject_unavailable(
     본인의 일정을 반려하면 알림은 만들지 않습니다.
     """
     if "unavailable_manage" not in account_permissions(session, requester.id):
-        raise PermissionError("다른 멤버의 불가능 일정을 반려할 권한이 없습니다")
+        raise PermissionError("다른 멤버의 불가능 일정을 반려할 권한이 없어요")
     trimmed = require_reject_reason(reason)
     # 행을 잠급니다. 같은 일정을 두 사람이 동시에 반려하면 알림이 2개 가거나 두 번째 삭제가 500 이 됩니다.
     row = session.get(UnavailableTime, time_id, with_for_update=True)
     if row is None or row.member_id != member_id:
-        raise ValueError("존재하지 않는 일정입니다")
+        raise ValueError("존재하지 않는 일정이에요")
     if row.member_id != requester.id:
         notify_rejected(session, row.member_id, "unavailable", row.starts_at, trimmed, rejected_at)
     session.delete(row)
@@ -163,6 +163,6 @@ def delete_unavailable(
     _require_self(member_id, requester)
     row = session.get(UnavailableTime, time_id)
     if row is None or row.member_id != member_id:
-        raise ValueError("존재하지 않는 일정입니다")
+        raise ValueError("존재하지 않는 일정이에요")
     session.delete(row)
     session.commit()

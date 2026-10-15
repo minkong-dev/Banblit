@@ -19,10 +19,10 @@ from backend.db.pipeline import commit_translating
 # 전체 합주 설정(services/period/ensemble_service.py)도 이 문장을 씁니다.
 PERIOD_MESSAGES = {
     "periods_focused_no_overlap": (
-        "다른 집중 합주기간과 날짜가 겹칩니다. \"매일\" 기간은 종료일 없이 계속되는 것으로 봅니다"
+        "다른 집중 합주기간과 날짜가 겹쳐요. \"매일\" 기간은 종료일 없이 계속되는 것으로 봐요"
     ),
-    "periods_ensemble_within_period": "전체 합주 날짜는 집중 합주기간 안이어야 합니다",
-    "periods_ensemble_focused_only": "전체 합주는 집중 합주기간에만 지정할 수 있습니다",
+    "periods_ensemble_within_period": "전체 합주 날짜는 집중 합주기간 안이어야 해요",
+    "periods_ensemble_focused_only": "전체 합주는 집중 합주기간에만 지정할 수 있어요",
 }
 
 
@@ -76,9 +76,9 @@ class AssignRuleIn:
     def columns(self) -> dict[str, object]:
         """저장할 열 두 개를 반환합니다. DB 의 CHECK 도 같은 조건을 보지만, 어느 값이 잘못됐는지 알리기 위해 먼저 봅니다."""
         if self.target_hours is not None and self.target_hours <= 0:
-            raise ValueError("팀당 목표 시간은 1시간 이상이어야 합니다")
+            raise ValueError("팀당 목표 시간은 1시간 이상이어야 해요")
         if self.max_absent < 0:
-            raise ValueError("불참 허용 인원은 0명 이상이어야 합니다")
+            raise ValueError("불참 허용 인원은 0명 이상이어야 해요")
         return {"target_hours_per_team": self.target_hours, "max_absent_members": self.max_absent}
 
 
@@ -252,7 +252,7 @@ def every_team_and_room(session: Session) -> tuple[list[int], list[int]]:
 def get_period_or_raise(session: Session, period_id: int) -> Period:
     period = session.get(Period, period_id)
     if period is None:
-        raise ValueError("존재하지 않는 기간입니다")
+        raise ValueError("존재하지 않는 기간이에요")
     return period
 
 
@@ -285,7 +285,7 @@ def list_backup_round(session: Session, period_id: int, saved_at: datetime) -> l
         .order_by(AssignmentBackup.starts_at, Room.name)
     ).all()
     if not rows:
-        raise ValueError("존재하지 않는 배정기록입니다")
+        raise ValueError("존재하지 않는 배정기록이에요")
     return [
         (b.team_id, team_name, b.room_id, room_name, b.starts_at, b.ends_at)
         for b, team_name, room_name in rows

@@ -29,9 +29,9 @@ _SCRYPT_DKLEN = 32
 # 데이터베이스 제약(constraint) 위반 시 표시할 오류 메시지입니다. 이메일은 계정 하나에 하나이며,
 # 이름·학과·학번·기수가 모두 같으면 같은 사람으로 판정합니다.
 MEMBER_MESSAGES = {
-    "members_email_key": "이미 가입된 이메일입니다",
-    "members_login_id_key": "이미 사용 중인 아이디입니다",
-    "members_name_department_student_no_cohort_key": "이미 가입된 사람입니다 — 이름·학과·학번·기수가 같습니다",
+    "members_email_key": "이미 가입된 이메일이에요",
+    "members_login_id_key": "이미 사용 중인 아이디예요",
+    "members_name_department_student_no_cohort_key": "이미 가입된 사람이에요 — 이름·학과·학번·기수가 같아요",
 }
 
 
@@ -150,7 +150,7 @@ def change_password(
     """비밀번호를 변경합니다. 현재 비밀번호를 먼저 확인하므로, 다른 사람이 사용 중인 기기에서 비밀번호를 무단으로 변경할 수 없습니다."""
     # password_hash 가 없는 계정은 이 경로로 비밀번호를 변경할 수 없습니다. 비교할 값이 없기 때문입니다.
     if member.password_hash is None or not verify_password(current, member.password_hash):
-        raise PermissionError("지금 비밀번호가 맞지 않습니다")
+        raise PermissionError("지금 비밀번호가 맞지 않아요")
     require_password(next_password)
     member.password_hash = hash_password(next_password)
     session.commit()
@@ -170,7 +170,7 @@ def login(session: Session, login_id: str, password: str) -> Member:
     if member is None or member.password_hash is None or not verify_password(
         password, member.password_hash
     ):
-        raise ValueError("아이디 또는 비밀번호가 올바르지 않습니다")
+        raise ValueError("아이디 또는 비밀번호가 올바르지 않아요")
     # 비밀번호 검증에 성공한 순간만 평문 비밀번호를 알 수 있습니다. 이때 기존 강도로 저장된 해시를 현재 강도로 다시 생성하여 자동으로 업그레이드합니다.
     if _needs_rehash(member.password_hash):
         member.password_hash = hash_password(password)

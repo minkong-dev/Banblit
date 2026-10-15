@@ -27,7 +27,7 @@ def display_name(raw: str) -> str:
     # [\\/] 는 역슬래시와 슬래시를 뜻하며, 윈도우·리눅스 두 경로 구분자를 모두 제거합니다.
     name = re.split(r"[\\/]", raw)[-1].strip()
     if not name or name in (".", ".."):
-        raise ValueError("파일 이름이 없습니다")
+        raise ValueError("파일 이름이 없어요")
     return name
 
 
@@ -36,7 +36,7 @@ def stored_path(stored_name: str) -> Path:
     root = storage_root().resolve()
     path = (root / stored_name).resolve()
     if not path.is_relative_to(root):
-        raise ValueError("잘못된 저장 위치입니다")
+        raise ValueError("잘못된 저장 위치예요")
     return path
 
 

@@ -10,6 +10,7 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_lib_api["api.ts"]
+  frontend_src_lib_api --> frontend_src_lib_contract["contract.ts"]
   frontend_src_components_Avatar["Avatar.tsx"] --> frontend_src_lib_api
   frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_lib_api
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_lib_api
@@ -38,7 +39,7 @@ flowchart LR
 
 ## imports
 
-- 없음
+- [[graph/frontend/src/lib/contract|contract.ts]]
 
 ## imported by
 

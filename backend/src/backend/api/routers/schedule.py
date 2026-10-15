@@ -195,7 +195,7 @@ def assign_period_schedule(
 def read_job(job_id: str, jobs: JobRunner[PeriodRun] = Depends(_jobs)) -> JobEnvelopeOut:
     job = jobs.get(job_id)
     if job is None:
-        raise ValueError("존재하지 않는 작업입니다")
+        raise ValueError("존재하지 않는 작업이에요")
     return JobEnvelopeOut(job=_job_out(job))
 
 
@@ -262,6 +262,6 @@ def apply_period_record(
     # 확정 시각과 알림 시각을 같은 값으로 남깁니다.
     now = datetime.now()
     if not apply_record(session, period.id, saved_at, applied_at=now):
-        raise ValueError("존재하지 않는 배정기록입니다")
+        raise ValueError("존재하지 않는 배정기록이에요")
     notify_assignment_updated(session, period.id, now)
     return ApplyRecordOut(applied=True)

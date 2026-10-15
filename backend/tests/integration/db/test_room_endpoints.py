@@ -184,7 +184,7 @@ def test_room_name_race_at_commit_time_is_translated_not_500(
         commit_translating(session_a, ROOM_MESSAGES)
 
         session_b.add(Room(name="경합방", opens_at=time(18, 0), closes_at=time(22, 0)))
-        with pytest.raises(ValueError, match="이미 있는 합주실명입니다"):
+        with pytest.raises(ValueError, match="이미 있는 합주실명이에요"):
             commit_translating(session_b, ROOM_MESSAGES)
     finally:
         session_a.close()

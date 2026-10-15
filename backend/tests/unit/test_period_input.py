@@ -284,7 +284,7 @@ def test_sessions_per_team_is_rejected_when_there_are_no_teams() -> None:
     rooms = [_room(1, "1번방", time(18, 0), time(20, 0))]
     engine_rooms = build_engine_rooms(rooms, [date(2026, 8, 1)])
 
-    with pytest.raises(ValueError, match="배정할 팀이 없습니다"):
+    with pytest.raises(ValueError, match="배정할 팀이 없어요"):
         auto_sessions_per_team(engine_rooms, slot_minutes=60, session_minutes=60, team_count=0)
 
 

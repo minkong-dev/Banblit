@@ -1,3 +1,5 @@
+import { SESSION_REJECTED_CODE } from "./contract";
+
 // 서버를 호출하는 함수는 이 파일에만 있습니다. 값을 저장하지 않습니다. 호출 순서와 상태는
 // pipeline.ts 에서 관리합니다.
 // 시간 제한과 실패 시 문구를 한 곳에 모아
@@ -51,7 +53,7 @@ export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) {
     const detail = detailOf(body);
-    if (res.status === 401 && detail === SESSION_REJECTED_DETAIL) leaveExpiredSession();
+    if (res.status === 401 && codeOf(body) === SESSION_REJECTED_CODE) leaveExpiredSession();
     throw new Error(detail ?? `${res.status} ${res.statusText}`);
   }
   return body as T;
@@ -66,9 +68,6 @@ export function isSignedIn(): boolean {
   return document.cookie.split("; ").includes(`${SIGNED_IN_COOKIE}=1`);
 }
 
-// 서버가 session 이 없거나 취소·만료됐을 때 보내는 401 문구입니다(backend/api/auth_dependency.py 의 UNAUTHORIZED_DETAIL).
-// 같은 401 이라도 틀린 비밀번호(/login, /me/password)는 문구가 달라 여기에 해당하지 않습니다.
-const SESSION_REJECTED_DETAIL = "로그인이 필요합니다";
 
 /** 서버가 session 을 거절했는데 표시 cookie 가 남아 있으면, 삭제하고 로그인 화면으로 보냅니다.
  *  삭제하지 않으면 SkipIfSignedIn 이 로그인 화면을 대시보드로 되돌려 빠져나올 수 없습니다.
@@ -78,6 +77,12 @@ function leaveExpiredSession(): void {
   if (!isSignedIn()) return;
   document.cookie = `${SIGNED_IN_COOKIE}=; Max-Age=0; path=/`;
   window.location.replace("/login");
+}
+
+/** 서버가 판정용으로 보내는 code 필드입니다. 없으면 null 입니다. 같은 401 이라도 틀린 비밀번호에는 code 가 없습니다. */
+function codeOf(body: unknown): string | null {
+  if (typeof body !== "object" || body === null || !("code" in body)) return null;
+  return typeof body.code === "string" ? body.code : null;
 }
 
 function detailOf(body: unknown): string | null {

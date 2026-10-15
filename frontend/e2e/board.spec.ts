@@ -14,7 +14,7 @@ test("남의 팀 게시판에는 글을 못 쓴다", async ({ page }) => {
 
   expect(response.status()).toBe(403);
   const body = (await response.json()) as { detail: string };
-  expect(body.detail).toBe("그 팀 소속이 아닙니다");
+  expect(body.detail).toBe("그 팀 소속이 아니에요");
 });
 
 // 로그아웃 endpoint 를 부르면 모든 검사가 공유하는 session 이 취소됩니다. 그래서 로그아웃하지 않고

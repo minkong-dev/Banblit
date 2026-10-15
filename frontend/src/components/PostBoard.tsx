@@ -105,7 +105,7 @@ function PostDetail(props: {
       <div className="comments">
         <p className="cap2">댓글 {comments.length}개</p>
         {comments.length === 0 ? (
-          <Empty text="아직 댓글이 없습니다" />
+          <Empty text="아직 댓글이 없어요" />
         ) : (
           <ul>
             {comments.map((comment) => (
