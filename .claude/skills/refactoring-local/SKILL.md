@@ -17,18 +17,23 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 | api (gateway) | `api/` | FastAPI app, router, 인증 dependency, rate limit. 도메인 판단 없음 | `app.py` |
 | db | `db/` | engine, model, commit, schedule 저장 | `pipeline.py` |
 | scheduling | `scheduling/` | CP-SAT 배정 계산. 시간대 없는 값만 받음(CLAUDE.md 6장) | `pipeline.py` |
-| services/<도메인> | `services/auth`, `period`, `board`, `notification`, `permission`, `reservation`, `room`, `roster`, `settings`, `unavailable`, `validation` | 도메인 1개씩 | 각 디렉토리의 `pipeline.py` |
-| jobs | `jobs/` | auto_assign 주기 실행 | `auto_assign.py` |
+| services/<도메인> | `services/auth`, `period`, `board`, `notification`, `permission`, `reservation`, `room`, `roster`, `settings`, `storage`, `unavailable`, `validation` | 도메인 1개씩. `storage` 는 첨부, 프로필 사진 파일 저장 | 각 디렉토리의 `pipeline.py` |
+| jobs | `jobs/` | auto_assign 주기 실행. 요청 대신 시계가 시작하는 두 번째 진입점이라 router 와 같이 services 의 `pipeline.py` 만 호출합니다 | `auto_assign.py` |
 | contract | `contract.py` | api 와 scheduling 이 공유하는 규격 선언. 계산, 분기 없음 | — |
-| 화면 routes | `frontend/src/routes/` | 주소 1개당 화면 1개 | — |
-| 화면 components | `frontend/src/components/` | 화면 공용 부품. `queries.ts` 가 서버 조회 규격 | — |
-| 화면 lib | `frontend/src/lib/` | 계산, 변환. React 에 의존하지 않음 | — |
+| 화면 routes | `frontend/src/routes/` | 주소 1개당 화면 1개 | 적용하지 않음 |
+| 화면 components | `frontend/src/components/` | 화면 공용 부품. `queries.ts` 가 조회 hook 과 queryKey | 적용하지 않음 |
+| 화면 lib | `frontend/src/lib/` | 계산, 변환. React 에 의존하지 않음. `contract.ts` 가 field 타입, `api.ts` 가 요청 함수 | `pipeline.ts`(서버 호출 조합) |
+
+화면 routes 와 components 는 시퀀스 파일을 두지 않습니다(사용자 결정 2026-10-12). 화면 1개의 호출 순서는 그 화면의 hook 이 정하고, 서버 호출 순서는 `lib/pipeline.ts` 가 정합니다.
 
 ## 통신 (2절)
 
 - **message broker 는 적용하지 않습니다.** 서버 1개 process 의 FastAPI 입니다. 모듈 간 통신은 api(gateway) 의 router 가 services 의 `pipeline.py` 를 호출하는 직접 호출입니다.
-- services 끼리의 직접 호출은 2절 예외입니다. 자리를 세어 둡니다. audit 때 목록을 갱신합니다.
-  - `services/period/pipeline.py run_period_assignment` → `services/notification/pipeline.py notify_assignment_updated`(2026-10-12). 확정 시간표가 바뀐 경우에만 알리는 판단이 저장과 같은 자리에 있어야 합니다.
+- services 끼리의 직접 호출은 2절 예외입니다. 상대 모듈의 `pipeline.py` 만 import 하고 기능 파일은 import 하지 않습니다. audit 때 숫자를 다시 셉니다.
+  - 2026-10-15 기준 26곳입니다. 대부분 공용 조회와 검증입니다(validation 9, permission 6, settings 4, roster 2, room 2, storage 2).
+  - 알림 2곳: reservation, unavailable 이 notification 의 `pipeline.py` 를 호출합니다. 예약 취소, 반려를 알리는 판단이 저장과 같은 자리에 있어야 합니다. 배정 변경 알림은 router(`api/routers/schedule.py`)가 호출합니다.
+  - period 가 reservation 의 `cancel_reservations_in_focus` 를 호출합니다. 집중 합주기간을 저장하는 transaction 안에서 겹치는 예약을 취소합니다.
+- services 가 `db/models.py` 의 ORM class 를 직접 import 하는 것은 예외입니다(사용자 결정 2026-10-12). ORM class 는 db 모듈의 규격 선언입니다.
 - 외부와 직접 통신하는 자리(timeout 필수)
 
 | 호출하는 쪽 | 대상 | timeout 위치 |
@@ -38,7 +43,7 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 | `frontend/src/lib/api.ts` | api | `REQUEST_TIMEOUT_MS`(AbortSignal.timeout), 업로드는 `UPLOAD_TIMEOUT_MS` |
 | `frontend/nginx.conf.template` | api(배포) | `proxy_read_timeout 30s`. 배정 계산 상한과 함께 변경 |
 
-- 규격 1세트: 서버는 `contract.py`, 화면은 `queries.ts`. 같은 field 를 다른 곳에 다시 선언하지 않습니다.
+- 규격 1세트: 서버는 `contract.py`, 화면은 field 타입이 `lib/contract.ts`, 조회 hook 과 queryKey 가 `components/queries.ts` 입니다. 같은 field 를 다른 곳에 다시 선언하지 않습니다.
 
 ## 테스트 위치 (3절)
 
@@ -73,7 +78,8 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 |---|---|---|---|
 | `routes/DayDialogParts.tsx RepeatFields` | 70 | 0 — 계산은 `lib/calendar` 에 있음 | 통과 |
 | `routes/SettingsMembers.tsx SetForm` | 100 | 1 — 저장 mutation | 통과 |
-| `routes/SettingsMembers.tsx SetRail`(수정 전) | 101 | 4 — 조회, 삭제 mutation, modal state 3개, 가로 스크롤 제어 | 위반 |
+| `routes/SettingsMembers.tsx SetRail`(2026-10-08) | 101 | 4 — 조회, 삭제 mutation, modal state 3개, 가로 스크롤 제어 | 위반 |
+| `routes/SettingsMembers.tsx SetRail`(2026-10-15) | 48 | 가로 스크롤은 `useRailScroll`, 서버 호출은 `lib/pipeline` | 통과 — 50줄 미만 |
 
 ## 문서 (9절)
 
@@ -89,7 +95,7 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 
 ## 다음 audit 에 올릴 항목 (사용자 결정 2026-10-08)
 
-- `services/*/pipeline.py` 12개가 재export 전용(함수 0개)입니다. 1절 시퀀스 파일 규칙대로 호출 순서와 가변값을 pipeline.py 에 모으는 작업을 올립니다.
+- `services/*/pipeline.py` 12개 중 5개(auth, board, period, roster, validation)에 순서 함수와 조절 값을 모았습니다(2026-10-14). 나머지 7개(notification, permission, reservation, room, settings, storage, unavailable)는 모을 순서나 조절 값이 없어 재export 만 합니다(사용자 결정 2026-10-12). 다시 올리지 않습니다.
 
 ## audit 기본 범위
 
