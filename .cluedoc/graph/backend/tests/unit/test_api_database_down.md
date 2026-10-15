@@ -29,3 +29,5 @@ flowchart LR
 - `test_database_down_answers_503_not_500`
 - `test_database_down_is_written_to_the_log`
 - `test_database_down_does_not_leak_internals_to_the_user`
+- `_time_out`
+- `test_a_lock_or_query_timeout_answers_503_and_asks_to_retry`

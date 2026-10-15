@@ -2,6 +2,7 @@ import logging
 
 import pytest
 from fastapi.testclient import TestClient
+from psycopg.errors import LockNotAvailable
 from sqlalchemy.exc import OperationalError
 
 from backend.api.app import app
@@ -50,3 +51,20 @@ def test_database_down_does_not_leak_internals_to_the_user() -> None:
         app.dependency_overrides.clear()
 
     assert "SELECT" not in response.json()["detail"]
+
+
+def _time_out() -> None:
+    raise OperationalError("SELECT 1 FOR UPDATE", {}, LockNotAvailable("canceling statement due to lock timeout"))
+
+
+def test_a_lock_or_query_timeout_answers_503_and_asks_to_retry() -> None:
+    """잠금이나 쿼리 실행이 상한을 넘으면 DB 연결 실패와 다른 문장으로 503 을 응답합니다."""
+    app.dependency_overrides[get_session] = _time_out
+    try:
+        response = TestClient(app).get("/periods/1/schedule")
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 503
+    assert "잠시 후 다시" in response.json()["detail"]
+    assert "연결" not in response.json()["detail"]

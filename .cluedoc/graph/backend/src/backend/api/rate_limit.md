@@ -10,8 +10,8 @@ kind: file
 ```mermaid
 flowchart LR
   backend_src_backend_api_rate_limit["rate_limit.py"]
+  backend_src_backend_api_app["app.py"] --> backend_src_backend_api_rate_limit
   backend_src_backend_api_routers_auth["auth.py"] --> backend_src_backend_api_rate_limit
-  backend_tests_conftest["conftest.py"] --> backend_src_backend_api_rate_limit
   backend_tests_unit_test_rate_limit["test_rate_limit.py"] --> backend_src_backend_api_rate_limit
 ```
 
@@ -21,13 +21,12 @@ flowchart LR
 
 ## imported by
 
+- [[graph/backend/src/backend/api/app|app.py]]
 - [[graph/backend/src/backend/api/routers/auth|auth.py]]
-- [[graph/backend/tests/conftest|conftest.py]]
 - [[graph/backend/tests/unit/test_rate_limit|test_rate_limit.py]]
 
 ## 함수와 호출
 
-- `reset_all`
 - `_trusted_proxy_count`
 - `caller_of`
 - `limit_guesses`

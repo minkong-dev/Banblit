@@ -11,6 +11,7 @@ kind: file
 flowchart LR
   backend_src_backend_api_job_runner["job_runner.py"]
   backend_src_backend_api_job_runner --> backend_src_backend_contract["contract.py"]
+  backend_src_backend_api_app["app.py"] --> backend_src_backend_api_job_runner
   backend_src_backend_api_routers_schedule["schedule.py"] --> backend_src_backend_api_job_runner
   backend_tests_unit_test_job_runner["test_job_runner.py"] --> backend_src_backend_api_job_runner
 ```
@@ -21,6 +22,7 @@ flowchart LR
 
 ## imported by
 
+- [[graph/backend/src/backend/api/app|app.py]]
 - [[graph/backend/src/backend/api/routers/schedule|schedule.py]]
 - [[graph/backend/tests/unit/test_job_runner|test_job_runner.py]]
 

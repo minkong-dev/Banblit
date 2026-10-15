@@ -45,14 +45,11 @@ from backend.db.pipeline import get_session
 
 router = APIRouter()
 
-# rate limit(같은 요청자가 지정된 시간 안에 보낼 수 있는 요청 횟수 제한)을 설정합니다. 비밀번호를
-# 하나씩 시도하는 것을 막지 못하면 짧은 비밀번호는 시도 횟수만 충분하면 맞힐 수 있습니다. 메일을
-# 전송하는 endpoint(API의 요청 주소 단위)는 상한을 더 낮게 설정합니다. 다른 사람의 주소로 메일을
-# 대량 발송하는 데 악용될 수 있기 때문입니다.
-_login_guard = Depends(limit_guesses(limit=10, window_seconds=300))
-_signup_guard = Depends(limit_guesses(limit=5, window_seconds=3600))
-_mail_guard = Depends(limit_guesses(limit=5, window_seconds=3600))
-_reset_guard = Depends(limit_guesses(limit=10, window_seconds=3600))
+# rate limit(같은 요청자가 지정된 시간 안에 보낼 수 있는 요청 횟수 제한)입니다. 횟수는 api/app.py 의 RATE_LIMITS 가 정합니다.
+_login_guard = Depends(limit_guesses("login"))
+_signup_guard = Depends(limit_guesses("signup"))
+_mail_guard = Depends(limit_guesses("mail"))
+_reset_guard = Depends(limit_guesses("reset"))
 
 # 로그인 상태 유지를 활성화한 사용자의 cookie(브라우저가 저장해 요청마다 함께 보내는 값) 수명입니다.
 # 비활성화한 사용자에게는 수명을 설정하지 않습니다 — 브라우저를 닫을 때 cookie가 삭제됩니다.

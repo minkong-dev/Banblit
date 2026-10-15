@@ -1,4 +1,4 @@
-from datetime import time
+from datetime import datetime, time
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -151,6 +151,7 @@ def create_period(
         req.second_run_at,
         _window_in(req.practice_window),
         _rule_in(req.assign_rule),
+        now=datetime.now(),
     )
     return _envelope(session, period)
 
@@ -177,6 +178,7 @@ def patch_period(
         req.second_run_at,
         _window_in(req.practice_window),
         _rule_in(req.assign_rule),
+        now=datetime.now(),
     )
     return _envelope(session, period)
 
@@ -202,7 +204,7 @@ def put_ensemble(
     period_id: int, req: EnsembleIn, session: Session = Depends(get_session)
 ) -> PeriodEnvelopeOut:
     period = set_ensemble(
-        session, period_id, req.starts_on, req.ends_on, req.room_id, req.starts_at, req.ends_at
+        session, period_id, req.starts_on, req.ends_on, req.room_id, req.starts_at, req.ends_at, datetime.now()
     )
     return _envelope(session, period)
 
@@ -215,7 +217,7 @@ def put_ensemble(
 def delete_ensemble_endpoint(
     period_id: int, session: Session = Depends(get_session)
 ) -> PeriodEnvelopeOut:
-    return _envelope(session, delete_ensemble(session, period_id))
+    return _envelope(session, delete_ensemble(session, period_id, datetime.now()))
 
 
 @router.put(
@@ -226,7 +228,7 @@ def delete_ensemble_endpoint(
 def put_ensemble_day(
     period_id: int, day: str, req: EnsembleDayIn, session: Session = Depends(get_session)
 ) -> PeriodEnvelopeOut:
-    period = set_ensemble_day(session, period_id, day, req.starts_at, req.ends_at)
+    period = set_ensemble_day(session, period_id, day, req.starts_at, req.ends_at, datetime.now())
     return _envelope(session, period)
 
 
@@ -238,4 +240,4 @@ def put_ensemble_day(
 def delete_ensemble_day_endpoint(
     period_id: int, day: str, session: Session = Depends(get_session)
 ) -> PeriodEnvelopeOut:
-    return _envelope(session, delete_ensemble_day(session, period_id, day))
+    return _envelope(session, delete_ensemble_day(session, period_id, day, datetime.now()))

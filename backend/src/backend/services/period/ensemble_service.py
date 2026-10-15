@@ -6,7 +6,7 @@
 """
 
 from collections import defaultdict
-from datetime import date, time
+from datetime import date, datetime, time
 
 from sqlalchemy import delete, or_, select
 from sqlalchemy.dialects.postgresql import insert
@@ -62,6 +62,7 @@ def set_ensemble(
     room_id: int,
     starts_at: str,
     ends_at: str,
+    now: datetime,
 ) -> Period:
     """기간에 전체 합주를 지정하거나 변경합니다. 새 날짜 범위 밖이 된 날짜별 시각은 삭제합니다."""
     period = get_period_or_raise(session, period_id)
@@ -82,23 +83,23 @@ def set_ensemble(
     for field, value in zip(ENSEMBLE_FIELDS, (starts, ends, room_id, start, end), strict=True):
         setattr(period, field, value)
     # 전체 합주 합주실·시각과 겹치게 된 예약의 취소까지 commit 1회로 저장합니다.
-    commit_with_cancellations(session, period)
+    commit_with_cancellations(session, period, now)
     return period
 
 
-def delete_ensemble(session: Session, period_id: int) -> Period:
+def delete_ensemble(session: Session, period_id: int, now: datetime) -> Period:
     """기간의 전체 합주 지정을 해제하고 날짜별 시각도 삭제합니다."""
     period = get_period_or_raise(session, period_id)
     session.execute(delete(EnsembleDay).where(EnsembleDay.period_id == period_id))
     for field in ENSEMBLE_FIELDS:
         setattr(period, field, None)
     # 전체 합주 날짜가 일반 집중 합주일로 돌아가, 그날 허용되던 예약이 거절 대상이 됩니다.
-    commit_with_cancellations(session, period)
+    commit_with_cancellations(session, period, now)
     return period
 
 
 def set_ensemble_day(
-    session: Session, period_id: int, day: str, starts_at: str, ends_at: str
+    session: Session, period_id: int, day: str, starts_at: str, ends_at: str, now: datetime
 ) -> Period:
     """전체 합주 날짜 하나의 시각을 기본 시각과 다르게 지정합니다. 이미 지정한 날짜면 덮어씁니다."""
     period = get_period_or_raise(session, period_id)
@@ -121,11 +122,11 @@ def set_ensemble_day(
         .values(period_id=period_id, day=target, **values)
         .on_conflict_do_update(index_elements=["period_id", "day"], set_=values)
     )
-    commit_with_cancellations(session, period)
+    commit_with_cancellations(session, period, now)
     return period
 
 
-def delete_ensemble_day(session: Session, period_id: int, day: str) -> Period:
+def delete_ensemble_day(session: Session, period_id: int, day: str, now: datetime) -> Period:
     """날짜 하나의 지정 시각을 삭제해 기본 시각으로 되돌립니다. 지정한 적 없는 날짜면 변경 없이 반환합니다."""
     period = get_period_or_raise(session, period_id)
     target = parse_calendar_date(day, "날짜")
@@ -133,7 +134,7 @@ def delete_ensemble_day(session: Session, period_id: int, day: str) -> Period:
         delete(EnsembleDay).where(EnsembleDay.period_id == period_id, EnsembleDay.day == target)
     )
     # 좁게 지정한 시각이 넓은 기본 시각으로 돌아가면, 그 사이에 잡힌 예약이 전체 합주 시각과 겹칠 수 있습니다.
-    commit_with_cancellations(session, period)
+    commit_with_cancellations(session, period, now)
     return period
 
 

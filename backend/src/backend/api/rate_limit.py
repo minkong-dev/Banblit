@@ -23,17 +23,6 @@ DEFAULT_TRUSTED_PROXY_COUNT = 1
 # IP 주소를 변경해 가며 요청하면 _seen 의 항목이 무한히 쌓입니다. 메모리를 고갈시키는 공격이 되므로 상한을 둡니다.
 DEFAULT_MAX_CALLERS = 10_000
 
-# 생성된 RateLimiter 전부입니다. 테스트는 한 process 에서 여러 요청을 연달아 보내므로, 테스트 사이에
-# reset_all 로 초기화해야 앞 테스트의 요청이 뒤 테스트를 차단하지 않습니다(tests/conftest.py).
-_LIMITERS: "list[RateLimiter]" = []
-
-
-def reset_all() -> None:
-    """모든 RateLimiter의 상태를 초기화합니다. 테스트 격리용이며 서버가 실행 중에는 호출하지 않습니다."""
-    for limiter in _LIMITERS:
-        limiter.clear()
-
-
 class RateLimiter:
     """호출 주소마다 최근 요청 횟수를 추적하여, 상한을 초과하면 대기할 초를 반환합니다."""
 
@@ -113,15 +102,14 @@ def caller_of(request: Request) -> str:
     return request.client.host if request.client is not None else "unknown"
 
 
-def limit_guesses(limit: int, window_seconds: float) -> Callable[[Request], None]:
-    """endpoint에 적용할 rate limiter를 생성합니다. 상한을 초과하면 429 상태를 반환합니다.
+def limit_guesses(name: str) -> Callable[[Request], None]:
+    """app.state.limiters 의 name 제한기로 요청을 세는 endpoint dependency 를 반환합니다. 상한을 초과하면 429 상태를 반환합니다.
 
-    각 limiter는 독립적인 상태를 유지하므로, 한 endpoint가 차단되어도 다른 endpoint는 그대로 열려 있습니다.
+    제한기는 이름마다 독립적인 상태를 유지하므로, 한 endpoint가 차단되어도 다른 endpoint는 그대로 열려 있습니다.
     """
-    limiter = RateLimiter(limit=limit, window_seconds=window_seconds)
-    _LIMITERS.append(limiter)
 
     def guard(request: Request) -> None:
+        limiter: RateLimiter = request.app.state.limiters[name]
         wait = limiter.check(caller_of(request), now=time.monotonic())
         if wait is None:
             return

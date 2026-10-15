@@ -21,6 +21,7 @@ flowchart LR
   backend_src_backend_services_reservation_reservation_service["reservation_service.py"] --> backend_src_backend_scheduling_pipeline
   backend_src_backend_services_validation_input["input.py"] --> backend_src_backend_scheduling_pipeline
   backend_tests_unit_test_clock_range["test_clock_range.py"] --> backend_src_backend_scheduling_pipeline
+  backend_tests_unit_test_scheduling_pipeline["test_scheduling_pipeline.py"] --> backend_src_backend_scheduling_pipeline
 ```
 
 ## imports
@@ -39,6 +40,7 @@ flowchart LR
 - [[graph/backend/src/backend/services/reservation/reservation_service|reservation_service.py]]
 - [[graph/backend/src/backend/services/validation/input|input.py]]
 - [[graph/backend/tests/unit/test_clock_range|test_clock_range.py]]
+- [[graph/backend/tests/unit/test_scheduling_pipeline|test_scheduling_pipeline.py]]
 
 ## 함수와 호출
 

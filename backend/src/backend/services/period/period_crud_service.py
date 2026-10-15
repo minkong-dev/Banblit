@@ -26,17 +26,17 @@ PERIOD_MESSAGES = {
 }
 
 
-def commit_with_cancellations(session: Session, period: Period) -> None:
-    """기간 변경과, 그 변경으로 거절 대상이 된 예약의 취소·알림을 commit 1회로 저장합니다.
+def commit_with_cancellations(session: Session, period: Period, now: datetime) -> None:
+    """기간 변경과, 그 변경으로 거절 대상이 된 now 이후 예약의 취소·알림을 commit 1회로 저장합니다.
 
     취소(cancel_reservations_in_focus)는 시작할 때 flush 하므로 기간 제약 위반이 그 flush 에서 발생합니다.
     commit_translating 의 action 안에서 실행해, 그 위반도 rollback 되고 PERIOD_MESSAGES 의 문장으로 변환됩니다.
     기간을 먼저 commit 하고 취소를 두 번째 commit 으로 저장하면, 두 번째 commit 이 실패했을 때 기간만 바뀌고
-    취소·알림은 저장되지 않았습니다.
+    취소·알림은 저장되지 않습니다.
     """
 
     def action() -> None:
-        cancel_reservations_in_focus(session, period, datetime.now())
+        cancel_reservations_in_focus(session, period, now)
         session.commit()
 
     commit_translating(session, PERIOD_MESSAGES, action)
@@ -116,6 +116,8 @@ def create_period(
     second_run_at: str,
     window: WindowIn | None = None,
     rule: AssignRuleIn | None = None,
+    *,
+    now: datetime,
 ) -> Period:
     """새 기간을 생성합니다. 경계에서 kind와 날짜 순서를 사람이 읽을 문장으로 검증합니다."""
     require_valid_kind(kind)
@@ -135,7 +137,7 @@ def create_period(
         **(AssignRuleIn() if rule is None else rule).columns(),
     )
     session.add(period)
-    commit_with_cancellations(session, period)
+    commit_with_cancellations(session, period, now)
     return period
 
 
@@ -180,6 +182,8 @@ def update_period(
     second_run_at: str | None,
     window: WindowIn | None = None,
     rule: AssignRuleIn | None = None,
+    *,
+    now: datetime,
 ) -> Period:
     """period_id의 기간에서 전달된 항목만 수정하여 저장하고, 수정된 기간을 반환합니다.
 
@@ -204,7 +208,7 @@ def update_period(
         changes.update(rule.columns())
     for field, value in changes.items():
         setattr(period, field, value)
-    commit_with_cancellations(session, period)
+    commit_with_cancellations(session, period, now)
     return period
 
 

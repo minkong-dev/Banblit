@@ -26,6 +26,7 @@ flowchart LR
   backend_src_backend_api_routers_schedule["schedule.py"] --> backend_src_backend_api_auth_dependency
   backend_src_backend_api_routers_settings["settings.py"] --> backend_src_backend_api_auth_dependency
   backend_src_backend_api_routers_unavailable["unavailable.py"] --> backend_src_backend_api_auth_dependency
+  backend_tests_unit_test_auth_dependency["test_auth_dependency.py"] --> backend_src_backend_api_auth_dependency
 ```
 
 ## imports
@@ -49,6 +50,7 @@ flowchart LR
 - [[graph/backend/src/backend/api/routers/schedule|schedule.py]]
 - [[graph/backend/src/backend/api/routers/settings|settings.py]]
 - [[graph/backend/src/backend/api/routers/unavailable|unavailable.py]]
+- [[graph/backend/tests/unit/test_auth_dependency|test_auth_dependency.py]]
 
 ## 함수와 호출
 

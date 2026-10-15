@@ -17,6 +17,7 @@ flowchart LR
   backend_src_backend_jobs_auto_assign --> backend_src_backend_services_period_pipeline["pipeline.py"]
   backend_tests_integration_db_test_auto_assign["test_auto_assign.py"] --> backend_src_backend_jobs_auto_assign
   backend_tests_integration_db_test_notifications["test_notifications.py"] --> backend_src_backend_jobs_auto_assign
+  backend_tests_unit_test_auto_assign_rules["test_auto_assign_rules.py"] --> backend_src_backend_jobs_auto_assign
 ```
 
 ## imports
@@ -31,6 +32,7 @@ flowchart LR
 
 - [[graph/backend/tests/integration/db/test_auto_assign|test_auto_assign.py]]
 - [[graph/backend/tests/integration/db/test_notifications|test_notifications.py]]
+- [[graph/backend/tests/unit/test_auto_assign_rules|test_auto_assign_rules.py]]
 
 ## 함수와 호출
 
@@ -41,4 +43,5 @@ flowchart LR
 - `_mark_ran`: `backend.db.models`
 - `enabled_from_env`
 - `interval_seconds_from_env`
+- `write_heartbeat`
 - `main`: `backend.db.pipeline`, `backend.services.board.pipeline`

@@ -13,7 +13,6 @@ from sqlalchemy import Engine, create_engine, select, text, update
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
-from backend.api.rate_limit import reset_all
 from backend.contract import DEFAULT_SESSION_MINUTES, DEFAULT_SLOT_MINUTES
 from backend.db.models import Base, Settings, TeamSlot
 from backend.scheduling.assignment import Assignment as EngineAssignment
@@ -289,4 +288,6 @@ def _forget_rate_limits() -> None:
     rate limiter 는 process 메모리에서 세므로, 초기화하지 않으면 이전 테스트가
     사용한 횟수가 다음 테스트에 남아 로그인 테스트부터 429 로 거부됩니다.
     """
-    reset_all()
+    from backend.api.app import app, make_limiters
+
+    app.state.limiters = make_limiters()
