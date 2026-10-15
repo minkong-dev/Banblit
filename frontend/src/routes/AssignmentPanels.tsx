@@ -13,8 +13,8 @@ import { appliedLabel, checkRunTimes, scoreLabel, slotCountLabel } from "../lib/
 import { say } from "../components/toast";
 import { LOADING_TEXT, loadState } from "../lib/loading";
 import type { Backup, Period, ScheduleReport } from "../lib/contract";
-import { WEEKDAY_NAMES, clockEndLabel, stampLabel } from "../lib/calendar";
-import { dayOf, hhmm } from "../lib/slots";
+import { WEEKDAY_NAMES, stampLabel } from "../lib/calendar";
+import { dayOf, timeRangeLabel } from "../lib/slots";
 import type { Session } from "../lib/slots";
 
 /** 팀마다 배정된 합주 총 시간을 표시합니다. 배정된 합주가 0건인 팀은 흐리게 표시합니다. */
@@ -68,7 +68,7 @@ export function AssignmentCalendar({ days, shown, colors }: {
                   {items.map((session, index) => (
                     <div className={`ses ${colors.get(session.team) ?? ""}`} key={index}>
                       {session.team}
-                      <small>{hhmm(session.start)}–{clockEndLabel(hhmm(session.end))}</small>
+                      <small>{timeRangeLabel(session.start, session.end)}</small>
                       <span className="out">{session.room}</span>
                     </div>
                   ))}

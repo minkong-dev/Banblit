@@ -8,7 +8,7 @@ import { entryClass, entryName, visible } from "../lib/dayEntries";
 import type { DayTab, Entry } from "../lib/dayEntries";
 import type { DayTeam } from "../lib/roster";
 import "../styles/calendar.css";
-import { MINUTES_PER_HOUR, WEEKDAY_NAMES, dayKey, dayWithWeekday, hoursLabel, isRangeFree, monthCells, slotLabel, takenGrid, withPastTaken } from "../lib/calendar";
+import { MINUTES_PER_HOUR, WEEKDAY_NAMES, dayKey, dayWithWeekday, hourLabel, hoursLabel, isRangeFree, monthCells, slotLabel, takenGrid, withPastTaken } from "../lib/calendar";
 
 type ViewProps = {
   tab: DayTab;
@@ -153,10 +153,6 @@ const WEEK_HOURS = Array.from(
   { length: WEEK_LAST_HOUR - WEEK_FIRST_HOUR + 1 },
   (_, i) => WEEK_FIRST_HOUR + i,
 );
-
-function hourLabel(hour: number): string {
-  return `${String(hour).padStart(2, "0")}:00`;
-}
 
 /** 주 보기입니다. dayKeys 는 일요일부터 7일치 날짜라 배열의 index 가 곧 요일입니다. */
 export function WeekView({

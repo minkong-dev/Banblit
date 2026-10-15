@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dayOf, hhmm, isoAt, mergeSessions, slotEndIndex, slotIndex, upcomingBookings } from "./slots";
+import { dayOf, dayTimeRangeLabel, hhmm, isoAt, mergeSessions, slotEndIndex, slotIndex, timeRangeLabel, upcomingBookings } from "./slots";
 import type { Session } from "./slots";
 
 const slot = (team: string, room: string, start: string, end: string): Session => ({
@@ -153,5 +153,12 @@ describe("upcomingBookings — 설정의 예약 탭이 보는 목록", () => {
     upcomingBookings(rows);
 
     expect(rows).toEqual(before);
+  });
+});
+
+describe("timeRangeLabel — 일정 시각", () => {
+  it("시작과 종료를 18:00–24:00 처럼 적고, 날짜를 붙일 수 있다", () => {
+    expect(timeRangeLabel("2026-10-15T18:00:00", "2026-10-16T00:00:00")).toBe("18:00–24:00");
+    expect(dayTimeRangeLabel("2026-10-15T18:00:00", "2026-10-15T20:00:00")).toBe("10월 15일 목요일 18:00–20:00");
   });
 });

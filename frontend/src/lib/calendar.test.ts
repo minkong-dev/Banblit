@@ -14,6 +14,7 @@ import {
   acceptsDrag,
   monthCells,
   roomBounds,
+  hourLabel,
   clockEndLabel,
   slotCountOf,
   slotLabel,
@@ -451,5 +452,12 @@ describe("slotCountOf — 여닫는 시각 사이의 칸 수", () => {
     const count = slotCountOf(10, 22);
     expect(slotLabel(count - 1, 10)).toBe("21:00");
     expect(slotLabel(count, 10)).toBe("22:00");
+  });
+});
+
+describe("hourLabel — 정시 표기", () => {
+  it("한 자리 시도 두 자리로 적는다", () => {
+    expect(hourLabel(9)).toBe("09:00");
+    expect(hourLabel(23)).toBe("23:00");
   });
 });

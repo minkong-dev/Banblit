@@ -181,6 +181,11 @@ export function focusedRanges(
     .sort((a, b) => a.from.localeCompare(b.from));
 }
 
+/** 정시 hour 를 "09:00" 으로 표시합니다. */
+export function hourLabel(hour: number): string {
+  return `${String(hour).padStart(2, "0")}:00`;
+}
+
 /** 종료 시간 "HH:MM" 을 표시합니다. 00:00 종료는 다음 날 00:00 이라 "24:00" 으로 표시합니다. */
 export function clockEndLabel(hhmm: string): string {
   return hhmm === "00:00" ? `${HOURS_PER_DAY}:00` : hhmm;

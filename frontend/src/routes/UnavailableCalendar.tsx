@@ -17,7 +17,7 @@ import type { Member, MemberUnavailable, Team } from "../lib/contract";
 import { loadState } from "../lib/loading";
 import { heatByMonth, heatByWeek, offMembersAt } from "../lib/unavailableMap";
 import "../styles/unavailable.css";
-import { MINUTES_PER_HOUR, WEEKDAY_NAMES, clockEndLabel, dayWithWeekday, monthCells, roomBounds, slotLabel } from "../lib/calendar";
+import { MINUTES_PER_HOUR, WEEKDAY_NAMES, clockEndLabel, dayWithWeekday, hourLabel, monthCells, roomBounds, slotLabel } from "../lib/calendar";
 import { memberLabel } from "../lib/roster";
 
 type Target = "member" | "team";
@@ -27,10 +27,6 @@ type Picked = { day: string; hour: number | null };
 /** 히트맵 칸의 색 단계(0~4)입니다. 0명은 0, 나머지는 비율을 4단계로 올림합니다. */
 function heatLevel(count: number, total: number): number {
   return count === 0 || total === 0 ? 0 : Math.ceil((count / total) * 4);
-}
-
-function hourLabel(hour: number): string {
-  return `${String(hour).padStart(2, "0")}:00`;
 }
 
 export function UnavailableCalendar({ times }: { times: MemberUnavailable[] }) {
