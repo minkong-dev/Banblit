@@ -33,6 +33,7 @@ flowchart LR
   frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_contract
   frontend_src_lib_roster_test["roster.test.ts"] --> frontend_src_lib_contract
   frontend_src_lib_roster["roster.ts"] --> frontend_src_lib_contract
+  frontend_src_lib_runs["runs.ts"] --> frontend_src_lib_contract
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_contract
@@ -79,6 +80,7 @@ flowchart LR
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/roster.test|roster.test.ts]]
 - [[graph/frontend/src/lib/roster|roster.ts]]
+- [[graph/frontend/src/lib/runs|runs.ts]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]

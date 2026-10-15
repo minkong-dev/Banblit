@@ -1,6 +1,7 @@
 """현재 배정안·배정 계산·스케줄링 기록 endpoint(API의 요청 주소 단위)입니다. 스케줄을 수정하는 endpoint 는 이 모듈에만 있습니다."""
 
 from collections.abc import Callable
+from dataclasses import asdict
 from datetime import date, datetime
 
 from fastapi import APIRouter, Depends
@@ -35,6 +36,7 @@ from backend.api.schemas import (
     JobOut,
     PeriodAssignIn,
     PeriodAssignOut,
+    RecordScoreOut,
     RoomSlotOut,
     ScheduleOut,
     ScheduleReportOut,
@@ -207,11 +209,23 @@ def read_period_backups(
 ) -> BackupsOut:
     return BackupsOut(
         backups=[
-            BackupOut(saved_at=round_["saved_at"], slot_count=round_["slot_count"])
+            BackupOut(
+                saved_at=round_["saved_at"],
+                slot_count=round_["slot_count"],
+                applied_at=round_["applied_at"],
+                score=_score_out(session, period, round_["saved_at"]),
+            )
             # 칸 수는 구간 길이를 칸 크기로 나눈 값입니다. 칸 크기는 저장소 설정이 결정합니다.
             for round_ in list_backup_rounds(session, period.id, slot_minutes(session))
         ]
     )
+
+
+def _score_out(session: Session, period: Period, saved_at: datetime) -> RecordScoreOut | None:
+    # 점수는 저장하지 않고 조회할 때마다 지금의 불가능 일정으로 매깁니다. 불가능 일정이 바뀌면 모든 기록의 점수가 함께 바뀝니다.
+    # ponytail: 기록마다 입력을 다시 읽어 최대 RECORD_KEEP 번 계산합니다. 목록이 느려지면 _prepare 결과를 한 번만 읽도록 묶습니다.
+    report = stored_report(session, period, list_backup_round(session, period.id, saved_at), date.today())
+    return None if report is None else RecordScoreOut(**asdict(report.score))
 
 
 # 스케줄링 기록 하나를 선택해 그 시간표와 보고를 봅니다. 없는 기록은 list_backup_round 가 ValueError 로 거절합니다.
@@ -244,7 +258,9 @@ def apply_period_record(
     session: Session = Depends(get_session),
 ) -> ApplyRecordOut:
     # 합주실·시각 충돌은 ValueError 를 발생시켜 422 로 응답합니다.
-    if not apply_record(session, period.id, saved_at):
+    # 확정 시각과 알림 시각을 같은 값으로 남깁니다.
+    now = datetime.now()
+    if not apply_record(session, period.id, saved_at, applied_at=now):
         raise ValueError("존재하지 않는 배정기록입니다")
-    notify_assignment_updated(session, period.id, datetime.now())
+    notify_assignment_updated(session, period.id, now)
     return ApplyRecordOut(applied=True)

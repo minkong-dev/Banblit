@@ -71,10 +71,23 @@ class PeriodAssignIn(BaseModel):
     room_ids: list[int] = Field(min_length=1, max_length=10)
 
 
+class RecordScoreOut(BaseModel):
+    """기록 하나의 점수입니다. 앞 항목이 우선하고, absences 만 적을수록 좋습니다."""
+
+    fewest: int
+    sessions: int
+    absences: int
+    joined: int
+
+
 class BackupOut(BaseModel):
     # 스케줄링 기록을 구분하는 값은 저장 시각입니다. assignment_backups에 별도 기록 번호가 없습니다.
     saved_at: datetime
     slot_count: int
+    # 마지막으로 적용한 시각입니다. 적용한 적 없으면 null 입니다.
+    applied_at: datetime | None
+    # 조회 시점의 불가능 일정으로 매긴 점수입니다. 집중 합주기간이 아니면 null 입니다.
+    score: RecordScoreOut | None
 
 
 class BackupsOut(BaseModel):

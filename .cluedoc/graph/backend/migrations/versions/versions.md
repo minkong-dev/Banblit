@@ -11,6 +11,7 @@ kind: directory
 - [[graph/backend/migrations/versions/5c3e8d1a7f20_reservation_cancelled_notification|5c3e8d1a7f20_reservation_cancelled_notification.py]]
 - [[graph/backend/migrations/versions/7e1a4c93d6f0_room_delete_permission|7e1a4c93d6f0_room_delete_permission.py]]
 - [[graph/backend/migrations/versions/9b2f5d81ac34_drop_notification_read_at|9b2f5d81ac34_drop_notification_read_at.py]]
+- [[graph/backend/migrations/versions/a3f1c8d2b905_backup_applied_at|a3f1c8d2b905_backup_applied_at.py]]
 - [[graph/backend/migrations/versions/a4e7c2d91b58_rejected_notification|a4e7c2d91b58_rejected_notification.py]]
 - [[graph/backend/migrations/versions/a5e2c19f74b8_session_minutes_setting|a5e2c19f74b8_session_minutes_setting.py]]
 - [[graph/backend/migrations/versions/b3f6a9c2d471_period_name|b3f6a9c2d471_period_name.py]]

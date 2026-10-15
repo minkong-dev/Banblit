@@ -542,7 +542,7 @@ def test_schedule_reports_the_slots_left_open_by_the_assignment(
 def test_backups_list_each_round_newest_first(
     api_client: TestClient, db_session: Session, head_login: dict[str, str]
 ) -> None:
-    """적용할 기록을 고르는 목록입니다. 저장 시각과 칸 수를 최신순으로 반환합니다."""
+    """적용할 기록을 고르는 목록입니다. 저장 시각, 칸 수, 확정 시각, 지금의 불가능 일정으로 매긴 점수를 최신순으로 반환합니다."""
     period_id = _period(db_session)
     team = Team(name="A")
     room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
@@ -583,8 +583,18 @@ def test_backups_list_each_round_newest_first(
     assert response.status_code == 200
     assert response.json() == {
         "backups": [
-            {"saved_at": "2026-08-02T21:00:00", "slot_count": 2},
-            {"saved_at": "2026-08-01T21:00:00", "slot_count": 1},
+            {
+                "saved_at": "2026-08-02T21:00:00",
+                "slot_count": 2,
+                "applied_at": None,
+                "score": {"fewest": 2, "sessions": 2, "absences": 0, "joined": 1},
+            },
+            {
+                "saved_at": "2026-08-01T21:00:00",
+                "slot_count": 1,
+                "applied_at": None,
+                "score": {"fewest": 1, "sessions": 1, "absences": 0, "joined": 0},
+            },
         ]
     }
 
