@@ -21,6 +21,7 @@ flowchart LR
   frontend_src_routes_DayDialog --> frontend_src_lib_dayEntries["dayEntries.ts"]
   frontend_src_routes_DayDialog --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_routes_DayDialog --> frontend_src_lib_roster["roster.ts"]
+  frontend_src_routes_DayDialog --> frontend_src_lib_slots["slots.ts"]
   frontend_src_routes_DayDialog --> frontend_src_routes_DayDialogParts["DayDialogParts.tsx"]
   frontend_src_routes_DayDialog --> frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"]
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_routes_DayDialog
@@ -39,6 +40,7 @@ flowchart LR
 - [[graph/frontend/src/lib/dayEntries|dayEntries.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/roster|roster.ts]]
+- [[graph/frontend/src/lib/slots|slots.ts]]
 - [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]
 - [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]
 

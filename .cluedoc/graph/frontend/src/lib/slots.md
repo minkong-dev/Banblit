@@ -14,8 +14,11 @@ flowchart LR
   frontend_src_lib_assignment["assignment.ts"] --> frontend_src_lib_slots
   frontend_src_lib_dayEntries["dayEntries.ts"] --> frontend_src_lib_slots
   frontend_src_lib_notifications["notifications.ts"] --> frontend_src_lib_slots
-  frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_slots
   frontend_src_lib_slots_test["slots.test.ts"] --> frontend_src_lib_slots
+  frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_lib_slots
+  frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_slots
+  frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_lib_slots
+  frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_lib_slots
 ```
 
 ## imports
@@ -27,5 +30,8 @@ flowchart LR
 - [[graph/frontend/src/lib/assignment|assignment.ts]]
 - [[graph/frontend/src/lib/dayEntries|dayEntries.ts]]
 - [[graph/frontend/src/lib/notifications|notifications.ts]]
-- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/slots.test|slots.test.ts]]
+- [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
+- [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
+- [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]
+- [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]

@@ -10,11 +10,15 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_lib_pipeline_test["pipeline.test.ts"]
+  frontend_src_lib_pipeline_test --> frontend_src_lib_api["api.ts"]
+  frontend_src_lib_pipeline_test --> frontend_src_lib_calendar["calendar.ts"]
   frontend_src_lib_pipeline_test --> frontend_src_lib_pipeline["pipeline.ts"]
 ```
 
 ## imports
 
+- [[graph/frontend/src/lib/api|api.ts]]
+- [[graph/frontend/src/lib/calendar|calendar.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 
 ## imported by

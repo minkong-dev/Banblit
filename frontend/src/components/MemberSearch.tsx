@@ -8,11 +8,11 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { getJSON } from "../lib/api";
-import { memberLabel, noMembersMessage } from "../lib/pipeline";
 import { loadState } from "../lib/loading";
 import type { Member } from "../lib/contract";
 import { Empty } from "./controls";
 import { SearchList } from "./SearchList";
+import { memberLabel, noMembersMessage } from "../lib/roster";
 
 export function MemberSearch(props: {
   onPick: (member: Member) => void;

@@ -10,9 +10,11 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_components_queries["queries.ts"]
+  frontend_src_components_queries --> frontend_src_lib_api["api.ts"]
   frontend_src_components_queries --> frontend_src_lib_contract["contract.ts"]
   frontend_src_components_queries --> frontend_src_lib_loading["loading.ts"]
   frontend_src_components_queries --> frontend_src_lib_pipeline["pipeline.ts"]
+  frontend_src_components_queries --> frontend_src_lib_roster["roster.ts"]
   frontend_src_components_queries --> frontend_src_lib_teamColors["teamColors.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_components_queries
   frontend_src_components_TeamSearch["TeamSearch.tsx"] --> frontend_src_components_queries
@@ -37,9 +39,11 @@ flowchart LR
 
 ## imports
 
+- [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
+- [[graph/frontend/src/lib/roster|roster.ts]]
 - [[graph/frontend/src/lib/teamColors|teamColors.ts]]
 
 ## imported by

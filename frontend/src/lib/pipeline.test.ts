@@ -1,31 +1,9 @@
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  addUnavailable,
-  cancelBooking,
-  checkAttachments,
-  checkPeriod,
-  ensembleSaveOrder,
-  expelMember,
-  findId,
-  isSignedIn,
-  loadReservationRows,
-  NO_REPEAT,
-  logOut,
-  openingHours,
-  PERIOD_DELETE_KEYS,
-  periodBody,
-  rejectBooking,
-  rejectUnavailable,
-  removeUnavailable,
-  requestPasswordReset,
-  ROOM_DELETE_KEYS,
-  saveSettings,
-  SCHEDULE_KEY,
-  resetPassword,
-  weekKeys,
-} from "./pipeline";
+import { addUnavailable, cancelBooking, checkAttachments, checkPeriod, ensembleSaveOrder, expelMember, findId, loadReservationRows, NO_REPEAT, logOut, openingHours, PERIOD_DELETE_KEYS, periodBody, rejectBooking, rejectUnavailable, removeUnavailable, requestPasswordReset, ROOM_DELETE_KEYS, saveSettings, SCHEDULE_KEY, resetPassword } from "./pipeline";
+import { isSignedIn } from "./api";
+import { weekKeys } from "./calendar";
 
 /** vitest 는 브라우저가 아니라 Node 에서 실행됩니다. document 를 기본으로 제공하지 않으므로
  *  api.test.ts 가 localStorage 를 mock 으로 만든 것과 같은 방식으로 만듭니다. */

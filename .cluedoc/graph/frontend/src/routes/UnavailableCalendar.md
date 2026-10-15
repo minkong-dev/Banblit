@@ -17,10 +17,12 @@ flowchart LR
   frontend_src_routes_UnavailableCalendar --> frontend_src_components_TeamSearch["TeamSearch.tsx"]
   frontend_src_routes_UnavailableCalendar --> frontend_src_components_controls["controls.tsx"]
   frontend_src_routes_UnavailableCalendar --> frontend_src_components_queries["queries.ts"]
+  frontend_src_routes_UnavailableCalendar --> frontend_src_lib_calendar["calendar.ts"]
   frontend_src_routes_UnavailableCalendar --> frontend_src_lib_contract["contract.ts"]
   frontend_src_routes_UnavailableCalendar --> frontend_src_lib_dayEntries["dayEntries.ts"]
   frontend_src_routes_UnavailableCalendar --> frontend_src_lib_loading["loading.ts"]
   frontend_src_routes_UnavailableCalendar --> frontend_src_lib_pipeline["pipeline.ts"]
+  frontend_src_routes_UnavailableCalendar --> frontend_src_lib_roster["roster.ts"]
   frontend_src_routes_UnavailableCalendar --> frontend_src_lib_unavailableMap["unavailableMap.ts"]
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_routes_UnavailableCalendar
 ```
@@ -34,10 +36,12 @@ flowchart LR
 - [[graph/frontend/src/components/TeamSearch|TeamSearch.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
+- [[graph/frontend/src/lib/calendar|calendar.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/dayEntries|dayEntries.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
+- [[graph/frontend/src/lib/roster|roster.ts]]
 - [[graph/frontend/src/lib/unavailableMap|unavailableMap.ts]]
 
 ## imported by

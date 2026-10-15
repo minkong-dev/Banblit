@@ -18,23 +18,8 @@ import { CheckIcon, CrossIcon, GoogleIcon, KakaoIcon } from "../components/icons
 import { usePage } from "../components/hooks";
 import { say, useToast } from "../components/toast";
 import "../styles/account.css";
-import {
-  cohortMessage,
-  departmentMessage,
-  emailMessage,
-  findId,
-  loginIdMessage,
-  passwordChecks,
-  personNameMessage,
-  logIn,
-  passwordMessage,
-  signupPasswordMessage,
-  requestPasswordReset,
-  resetPassword,
-  signUp,
-  strongPasswordMessage,
-  studentNoMessage,
-} from "../lib/pipeline";
+import { findId, logIn, requestPasswordReset, resetPassword, signUp } from "../lib/pipeline";
+import { cohortMessage, departmentMessage, emailMessage, loginIdMessage, passwordChecks, passwordMessage, personNameMessage, signupPasswordMessage, strongPasswordMessage, studentNoMessage } from "../lib/validate";
 
 
 // 사진은 화면에 고정하고 오른쪽 form 만 변경합니다. 화면 5개가 한 layout 을 공유합니다.

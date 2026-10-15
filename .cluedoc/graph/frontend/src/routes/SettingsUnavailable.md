@@ -22,6 +22,7 @@ flowchart LR
   frontend_src_routes_SettingsUnavailable --> frontend_src_lib_confirm["confirm.ts"]
   frontend_src_routes_SettingsUnavailable --> frontend_src_lib_contract["contract.ts"]
   frontend_src_routes_SettingsUnavailable --> frontend_src_lib_pipeline["pipeline.ts"]
+  frontend_src_routes_SettingsUnavailable --> frontend_src_lib_slots["slots.ts"]
   frontend_src_routes_SettingsUnavailable --> frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"]
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_routes_SettingsUnavailable
 ```
@@ -40,6 +41,7 @@ flowchart LR
 - [[graph/frontend/src/lib/confirm|confirm.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
+- [[graph/frontend/src/lib/slots|slots.ts]]
 - [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]
 
 ## imported by

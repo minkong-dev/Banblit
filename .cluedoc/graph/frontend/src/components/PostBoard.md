@@ -18,10 +18,12 @@ flowchart LR
   frontend_src_components_PostBoard --> frontend_src_components_RichText["RichText.tsx"]
   frontend_src_components_PostBoard --> frontend_src_components_controls["controls.tsx"]
   frontend_src_components_PostBoard --> frontend_src_components_hooks["hooks.ts"]
+  frontend_src_components_PostBoard --> frontend_src_lib_api["api.ts"]
+  frontend_src_components_PostBoard --> frontend_src_lib_boards["boards.ts"]
+  frontend_src_components_PostBoard --> frontend_src_lib_calendar["calendar.ts"]
   frontend_src_components_PostBoard --> frontend_src_lib_contract["contract.ts"]
   frontend_src_components_PostBoard --> frontend_src_lib_loading["loading.ts"]
   frontend_src_components_PostBoard --> frontend_src_lib_paging["paging.ts"]
-  frontend_src_components_PostBoard --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_routes_Board["Board.tsx"] --> frontend_src_components_PostBoard
   frontend_src_routes_Notices["Notices.tsx"] --> frontend_src_components_PostBoard
 ```
@@ -36,10 +38,12 @@ flowchart LR
 - [[graph/frontend/src/components/RichText|RichText.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/hooks|hooks.ts]]
+- [[graph/frontend/src/lib/api|api.ts]]
+- [[graph/frontend/src/lib/boards|boards.ts]]
+- [[graph/frontend/src/lib/calendar|calendar.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
 - [[graph/frontend/src/lib/paging|paging.ts]]
-- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 
 ## imported by
 

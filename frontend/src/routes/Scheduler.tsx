@@ -10,9 +10,7 @@ import { ClockIcon } from "../components/icons";
 import { getJSON } from "../lib/api";
 import { firstWhy } from "../lib/loading";
 import { monthRange, slotLabels, slotSteps } from "../lib/calendar";
-import {
-  boardListKey, focusedRanges, inRanges, loadMyBookings, loadReservationRows, loadSchedule, loadUnavailable, roomBounds, slotCountOf, stampLabel,
-} from "../lib/pipeline";
+import { loadMyBookings, loadReservationRows, loadSchedule, loadUnavailable } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
 import { MonthView, WeekView } from "../components/CalendarViews";
 import {
@@ -24,6 +22,8 @@ import { teamsOf } from "../lib/roster";
 import { useMe, useMyTeams, usePeriods, useRooms, useSlotMinutes } from "../components/queries";
 import "../styles/scheduler.css";
 import type { Post, ScheduleRow } from "../lib/contract";
+import { boardListKey } from "../lib/boards";
+import { focusedRanges, inRanges, roomBounds, slotCountOf, stampLabel } from "../lib/calendar";
 // 오른쪽 공지 칸에 표시할 최대 줄 수입니다. 전체 목록은 공지 화면(routes/Notices)이 표시합니다.
 const RECENT_NOTICES = 3;
 

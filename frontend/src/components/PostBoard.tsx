@@ -10,7 +10,6 @@ import type { Attachment, Post, PostComment } from "../lib/contract";
 import { loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
-import { boardActions, boardListKey, getJSON, stampLabel } from "../lib/pipeline";
 import { BackButton, Button, EditButton, Empty } from "./controls";
 import { Card, SectionHead } from "./Layout";
 import { idParam, useReturnFocus } from "./hooks";
@@ -19,6 +18,9 @@ import { AttachmentList } from "./PostAttachments";
 import { BlindPost, EditPost, RemovePost } from "./PostActions";
 import { CommentForm, CommentRow } from "./PostComments";
 import { RichTextView } from "./RichText";
+import { boardActions, boardListKey } from "../lib/boards";
+import { getJSON } from "../lib/api";
+import { stampLabel } from "../lib/calendar";
 
 /** 글 목록을 렌더합니다. 비어 있거나 로딩 중이어도 컨테이너는 유지합니다.
  *  컨테이너 높이를 측정해 한 page(페이지)에 표시할 글 개수를 계산하므로,

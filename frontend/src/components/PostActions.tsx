@@ -7,12 +7,14 @@ import { reason } from "../lib/api";
 import { askBlind, askDeletePost } from "../lib/confirm";
 import type { Post } from "../lib/contract";
 import { firstWhy } from "../lib/loading";
-import { BLINDED_KEY, checkPost, getJSON } from "../lib/pipeline";
+import { checkPost } from "../lib/pipeline";
 import { say } from "./toast";
 import { DeleteButton, FormFoot, IconButton, Why } from "./controls";
 import { EyeOffIcon } from "./icons";
 import { Modal } from "./Modal";
 import { RichText } from "./RichText";
+import { BLINDED_KEY } from "../lib/boards";
+import { getJSON } from "../lib/api";
 
 /** board_moderate 권한자에게만 표시되는 블라인드 버튼입니다. 글을 삭제하지 않고 목록·상세에서 가립니다.
  *  가린 글은 작성자 본인에게도 보이지 않고, 설정 화면의 블라인드 탭에서만 보이며 거기서 되돌립니다. */

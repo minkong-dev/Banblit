@@ -7,11 +7,8 @@ import type { CSSProperties } from "react";
 import { entryClass, entryName, visible } from "../lib/dayEntries";
 import type { DayTab, Entry } from "../lib/dayEntries";
 import type { DayTeam } from "../lib/roster";
-import {
-  dayKey, dayWithWeekday, hoursLabel, isRangeFree, MINUTES_PER_HOUR, monthCells, slotLabel, takenGrid, WEEKDAY_NAMES,
-  withPastTaken,
-} from "../lib/pipeline";
 import "../styles/calendar.css";
+import { MINUTES_PER_HOUR, WEEKDAY_NAMES, dayKey, dayWithWeekday, hoursLabel, isRangeFree, monthCells, slotLabel, takenGrid, withPastTaken } from "../lib/calendar";
 
 type ViewProps = {
   tab: DayTab;

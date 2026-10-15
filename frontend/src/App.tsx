@@ -21,7 +21,7 @@ import { SettingsIndex, SettingsPage } from "./routes/Settings";
 import { Teams } from "./routes/Teams";
 import { AppShell } from "./components/AppShell";
 import { ADMIN_MENU } from "./lib/adminMenu";
-import { isSignedIn } from "./lib/pipeline";
+import { isSignedIn } from "./lib/api";
 
 /** 로그인 뒤 화면들을 감쌉니다. 로그인 표시 cookie(브라우저가 저장해 요청마다 함께 보내는 값)가 없으면 감싼 화면을
  *  렌더링하지 않고 로그인으로 이동합니다. 서버도 session(서버가 보관하는 로그인 상태) 없는 요청은 401 로 거절하므로,

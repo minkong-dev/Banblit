@@ -14,10 +14,11 @@ import { askDeleteRoom } from "../lib/confirm";
 import type { Room } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
-import { checkRoom, clockEndLabel, openingHours } from "../lib/pipeline";
+import { checkRoom, openingHours } from "../lib/pipeline";
 import { say } from "../components/toast";
 import { Button, Cell, Empty, FormFoot, TimeRange } from "../components/controls";
 import { Row, useFirstField, useForm } from "./SettingsForm";
+import { clockEndLabel } from "../lib/calendar";
 
 const BLANK_ROOM = { name: "", opens_at: "18:00", closes_at: "23:00" };
 

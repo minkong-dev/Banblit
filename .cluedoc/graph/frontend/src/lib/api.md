@@ -11,15 +11,19 @@ kind: file
 flowchart LR
   frontend_src_lib_api["api.ts"]
   frontend_src_lib_api --> frontend_src_lib_contract["contract.ts"]
+  frontend_src_App["App.tsx"] --> frontend_src_lib_api
   frontend_src_components_Avatar["Avatar.tsx"] --> frontend_src_lib_api
   frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_lib_api
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_lib_api
   frontend_src_components_PostAttachments["PostAttachments.tsx"] --> frontend_src_lib_api
+  frontend_src_components_PostBoard["PostBoard.tsx"] --> frontend_src_lib_api
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_lib_api
   frontend_src_components_PostWriteForm["PostWriteForm.tsx"] --> frontend_src_lib_api
+  frontend_src_components_queries["queries.ts"] --> frontend_src_lib_api
   frontend_src_components_richTextEditor["richTextEditor.ts"] --> frontend_src_lib_api
   frontend_src_lib_api_test["api.test.ts"] --> frontend_src_lib_api
   frontend_src_lib_loading["loading.ts"] --> frontend_src_lib_api
+  frontend_src_lib_pipeline_test["pipeline.test.ts"] --> frontend_src_lib_api
   frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_api
   frontend_src_routes_Account["Account.tsx"] --> frontend_src_lib_api
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_api
@@ -43,15 +47,19 @@ flowchart LR
 
 ## imported by
 
+- [[graph/frontend/src/App|App.tsx]]
 - [[graph/frontend/src/components/Avatar|Avatar.tsx]]
 - [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
 - [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]
+- [[graph/frontend/src/components/PostBoard|PostBoard.tsx]]
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
 - [[graph/frontend/src/components/PostWriteForm|PostWriteForm.tsx]]
+- [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/components/richTextEditor|richTextEditor.ts]]
 - [[graph/frontend/src/lib/api.test|api.test.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
+- [[graph/frontend/src/lib/pipeline.test|pipeline.test.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]

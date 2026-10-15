@@ -5,18 +5,7 @@ import { Modal } from "../components/Modal";
 import { Dropdown } from "../components/Dropdown";
 import { Button, CloseButton } from "../components/controls";
 import { askCancel, askDelete } from "../lib/confirm";
-import {
-  addReservation,
-  addUnavailable,
-  editUnavailable,
-  NO_REPEAT,
-  cancelBooking,
-  dayWithWeekday,
-  isoAt,
-  loadTeamMembers,
-  removeUnavailable,
-  takenGrid,
-} from "../lib/pipeline";
+import { addReservation, addUnavailable, editUnavailable, NO_REPEAT, cancelBooking, loadTeamMembers, removeUnavailable } from "../lib/pipeline";
 import type { Repeat } from "../lib/pipeline";
 import { firstTaken, slotLabels, unitLabel } from "../lib/calendar";
 import { useMe, useSlotMinutes } from "../components/queries";
@@ -30,6 +19,8 @@ import {
   DayPeople, DayTimeline, MyEntriesList, RepeatFields, SlotPicker, repeatConflict,
 } from "./DayDialogParts";
 import type { SlotRange } from "./DayDialogParts";
+import { dayWithWeekday, takenGrid } from "../lib/calendar";
+import { isoAt } from "../lib/slots";
 
 function hourText(hour: number): string {
   return `${String(hour).padStart(2, "0")}:00`;

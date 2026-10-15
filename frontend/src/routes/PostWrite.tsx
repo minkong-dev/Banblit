@@ -8,12 +8,12 @@ import { Empty } from "../components/controls";
 import { SectionHead } from "../components/Layout";
 import { WriteForm } from "../components/PostWriteForm";
 import { can } from "../lib/account";
-import { boardListKey } from "../lib/pipeline";
 import { useMe, useMyTeams } from "../components/queries";
 import { stateText } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import type { Account } from "../lib/contract";
 import "../styles/board.css";
+import { boardListKey } from "../lib/boards";
 
 /** 공지사항 작성입니다. notice_write 권한이 있어야 form 이 보입니다. */
 export function NoticeWrite() {

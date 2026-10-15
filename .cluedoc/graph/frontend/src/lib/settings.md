@@ -14,6 +14,7 @@ flowchart LR
   frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_settings
   frontend_src_lib_settings_test["settings.test.ts"] --> frontend_src_lib_settings
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_settings
+  frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"] --> frontend_src_lib_settings
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_lib_settings
 ```
 
@@ -26,4 +27,5 @@ flowchart LR
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/settings.test|settings.test.ts]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
+- [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]

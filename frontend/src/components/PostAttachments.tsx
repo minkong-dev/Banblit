@@ -6,9 +6,10 @@ import type { ReactNode } from "react";
 import { apiUrl } from "../lib/api";
 import type { Attachment } from "../lib/contract";
 import { firstWhy } from "../lib/loading";
-import { fileSizeLabel, getJSON } from "../lib/pipeline";
 import { say } from "./toast";
 import { Button, Why } from "./controls";
+import { fileSizeLabel } from "../lib/boards";
+import { getJSON } from "../lib/api";
 
 /** 첨부파일 목록의 한 줄입니다. 등록 전(선택한 파일)과 등록 후(저장된 파일)가 같은 모양을 씁니다.
  *  href 가 있으면 이름이 다운로드 링크가 됩니다. 등록 전에는 받을 주소가 없어 넘기지 않습니다. */
