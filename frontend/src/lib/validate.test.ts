@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  cohortMessage,
+  optionalCohortMessage,
+  passwordMatchMessage,
+  passwordsMatch,
   PASSWORD_SYMBOLS,
   permissionSetProblem,
   departmentMessage,
@@ -240,5 +244,25 @@ describe("permissionSetProblem — 권한 집합을 저장할 수 없는 사유"
 
   it("이미 쓰인 이름이 없으면 중복을 판정하지 않는다", () => {
     expect(permissionSetProblem({ name: "운영자", description: "설명" }, [])).toBe("");
+  });
+});
+
+describe("optionalCohortMessage — 비워 둘 수 있는 기수", () => {
+  it("비어 있으면 통과하고, 값이 있으면 가입 화면과 같은 규칙으로 본다", () => {
+    expect(optionalCohortMessage(" ")).toBe("");
+    expect(optionalCohortMessage("46")).toBe("");
+    expect(optionalCohortMessage("101")).toBe(cohortMessage("101"));
+  });
+});
+
+describe("passwordMatchMessage — 두 번 입력한 비밀번호", () => {
+  it("같으면 빈 문자열, 다르면 사유를 반환한다", () => {
+    expect(passwordMatchMessage("Abcdef1!", "Abcdef1!")).toBe("");
+    expect(passwordMatchMessage("Abcdef1!", "Abcdef1?")).toBe("비밀번호가 일치하지 않아요.");
+  });
+
+  it("passwordsMatch 는 다시 입력한 값이 비어 있으면 일치로 보지 않는다", () => {
+    expect(passwordsMatch("", "")).toBe(false);
+    expect(passwordsMatch("Abcdef1!", "Abcdef1!")).toBe(true);
   });
 });

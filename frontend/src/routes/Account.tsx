@@ -19,7 +19,7 @@ import { usePage } from "../components/hooks";
 import { say, useToast } from "../components/toast";
 import "../styles/account.css";
 import { findId, logIn, requestPasswordReset, resetPassword, signUp } from "../lib/pipeline";
-import { cohortMessage, departmentMessage, emailMessage, loginIdMessage, passwordChecks, passwordMessage, personNameMessage, signupPasswordMessage, strongPasswordMessage, studentNoMessage } from "../lib/validate";
+import { cohortMessage, departmentMessage, emailMessage, loginIdMessage, passwordChecks, passwordMatchMessage, passwordMessage, passwordsMatch, personNameMessage, signupPasswordMessage, strongPasswordMessage, studentNoMessage } from "../lib/validate";
 
 
 // 사진은 화면에 고정하고 오른쪽 form 만 변경합니다. 화면 5개가 한 layout 을 공유합니다.
@@ -184,7 +184,7 @@ export function SignUp() {
         sno: studentNoMessage(fieldText(data, "sno")),
         mail2: emailMessage(fieldText(data, "mail2").trim()),
         pw2: signupPasswordMessage(password),
-        pw3: fieldText(data, "pw3") === password ? "" : "비밀번호가 일치하지 않아요.",
+        pw3: passwordMatchMessage(password, fieldText(data, "pw3")),
         cohort: cohortMessage(fieldText(data, "cohort")),
       };
     },
@@ -232,8 +232,8 @@ export function SignUp() {
             ))}
             {!matchShown ? null : (
               <Rule
-                ok={again !== "" && again === password}
-                text={again !== "" && again === password
+                ok={passwordsMatch(password, again)}
+                text={passwordsMatch(password, again)
                   ? "비밀번호가 일치해요"
                   : "비밀번호가 일치하지 않아요"}
               />
@@ -338,9 +338,7 @@ export function ResetPassword() {
         rpwNew: strongPasswordMessage(fresh),
         rpwAgain: !again
           ? "비밀번호를 다시 한 번 입력해주세요."
-          : again === fresh
-            ? ""
-            : "비밀번호가 일치하지 않아요.",
+          : passwordMatchMessage(fresh, again),
       };
     },
     async (data) => {

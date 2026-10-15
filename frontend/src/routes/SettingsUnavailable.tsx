@@ -22,8 +22,8 @@ import { loadAllUnavailable, rejectUnavailable, removeUnavailable } from "../lib
 import type { MemberUnavailable } from "../lib/contract";
 import { say } from "../components/toast";
 import { UnavailableCalendar } from "./UnavailableCalendar";
-import { clockEndLabel, dayWithWeekday } from "../lib/calendar";
-import { hhmm } from "../lib/slots";
+import { dayWithWeekday } from "../lib/calendar";
+import { dayTimeRangeLabel, timeRangeLabel } from "../lib/slots";
 
 // 전체 목록의 queryKey 입니다. 앞머리가 달력의 불가능 일정 조회와 같은 "unavailable" 이라, 반려·삭제 뒤 둘 다 다시 조회합니다.
 const LIST_KEY = [...UNAVAILABLE_KEY, "all"] as const;
@@ -38,7 +38,7 @@ function repeatEndLabel(row: MemberUnavailable): string {
 
 /** 표와 반려 modal 이 같이 쓰는 일정 한 줄입니다. "9월 14일 월요일 18:00–19:00" */
 function whenLabel(row: MemberUnavailable): string {
-  return `${dayWithWeekday(row.starts_at.slice(0, 10))} ${hhmm(row.starts_at)}–${clockEndLabel(hhmm(row.ends_at))}`;
+  return dayTimeRangeLabel(row.starts_at, row.ends_at);
 }
 
 export function UnavailableCards() {
@@ -131,7 +131,7 @@ function UnavailableTable({ rows, meId, canReject, onReject }: {
           <tr key={row.id}>
             <td>{row.member}</td>
             <td>{dayWithWeekday(row.starts_at.slice(0, 10))}</td>
-            <td>{hhmm(row.starts_at)}–{clockEndLabel(hhmm(row.ends_at))}</td>
+            <td>{timeRangeLabel(row.starts_at, row.ends_at)}</td>
             <td>{[repeatLabel(row.repeat_weekdays ?? 0), repeatEndLabel(row)].filter(Boolean).join(" ")}</td>
             {/* 이름을 입력하지 않은 일정은 달력과 같은 문구로 표시합니다. */}
             <td>{row.name ?? "불가능 일정"}</td>

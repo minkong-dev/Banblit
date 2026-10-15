@@ -148,3 +148,18 @@ export function studentNoMessage(value: string): string {
   if (!trimmed) return "학번을 입력해 주세요.";
   return /^\d{8}$/.test(trimmed) ? "" : "학번은 숫자 8자리여야 해요.";
 }
+
+/** 비워 둘 수 있는 기수 입력칸입니다. 비어 있으면 빈 문자열, 값이 있으면 cohortMessage 와 같은 규칙으로 봅니다. */
+export function optionalCohortMessage(value: string): string {
+  return value.trim() === "" ? "" : cohortMessage(value);
+}
+
+/** 두 번 입력한 비밀번호가 같으면 빈 문자열, 다르면 사유를 반환합니다. 서버는 새 비밀번호 1개만 받아 화면만 확인합니다. */
+export function passwordMatchMessage(password: string, again: string): string {
+  return again === password ? "" : "비밀번호가 일치하지 않아요.";
+}
+
+/** 다시 입력한 비밀번호가 비어 있지 않고 첫 입력과 같으면 true 입니다. 입력 중 표시(일치해요, 일치하지 않아요)에 씁니다. */
+export function passwordsMatch(password: string, again: string): boolean {
+  return again !== "" && again === password;
+}

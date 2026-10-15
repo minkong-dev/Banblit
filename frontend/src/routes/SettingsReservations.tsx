@@ -15,8 +15,8 @@ import { askCancel } from "../lib/confirm";
 import { cancelBooking, loadReservationRows, rejectBooking } from "../lib/pipeline";
 import { say } from "../components/toast";
 import { loadState } from "../lib/loading";
-import { clockEndLabel, dayKey, dayWithWeekday } from "../lib/calendar";
-import { hhmm, upcomingBookings } from "../lib/slots";
+import { dayKey, dayWithWeekday } from "../lib/calendar";
+import { dayTimeRangeLabel, timeRangeLabel, upcomingBookings } from "../lib/slots";
 import type { Booking } from "../lib/slots";
 
 // ponytail: 현재 기준 지정한 일수 범위 내의 예약만 표시합니다. 예약 목록 endpoint(API의 요청 주소 단위)가 합주실·날짜 범위 조건으로만 받으므로,
@@ -31,7 +31,7 @@ function whoLabel(booking: Booking): string {
 }
 
 function bookingLabel(booking: Booking): string {
-  return `${whoLabel(booking)} ${dayWithWeekday(booking.start.slice(0, 10))} ${hhmm(booking.start)}–${clockEndLabel(hhmm(booking.end))} 예약`;
+  return `${whoLabel(booking)} ${dayTimeRangeLabel(booking.start, booking.end)} 예약`;
 }
 
 export function ReservationCards() {
@@ -97,7 +97,7 @@ export function ReservationCards() {
             {bookings.map((booking) => (
               <tr key={booking.id}>
                 <td>{dayWithWeekday(booking.start.slice(0, 10))}</td>
-                <td>{hhmm(booking.start)}–{clockEndLabel(hhmm(booking.end))}</td>
+                <td>{timeRangeLabel(booking.start, booking.end)}</td>
                 <td>{booking.room}</td>
                 <td>{whoLabel(booking)}</td>
                 <td className="fill" />
@@ -131,7 +131,7 @@ export function ReservationCards() {
         <RejectDialog
           target="reservation"
           owner={rejecting.member}
-          subject={`${dayWithWeekday(rejecting.start.slice(0, 10))} ${hhmm(rejecting.start)}–${clockEndLabel(hhmm(rejecting.end))} ${rejecting.room}`}
+          subject={`${dayTimeRangeLabel(rejecting.start, rejecting.end)} ${rejecting.room}`}
           onReject={(text) => rejectBooking(rejecting.id, text)}
           onDone={() => {
             setRejecting(null);

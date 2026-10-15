@@ -1,7 +1,7 @@
 // 서버가 제공한 배정안을 화면이 읽을 형식으로 변환합니다. 이 파일의 함수는 모두 순수 계산이므로
 // 화면이나 서버와 상호작용하지 않습니다.
 
-import { shiftDay, slotLabel } from "./calendar";
+import { clockEndLabel, dayWithWeekday, shiftDay, slotLabel } from "./calendar";
 
 export type Session = {
   team: string;
@@ -85,4 +85,14 @@ export function isoAt(dayKey: string, index: number, openHour: number): string {
  *  사용자가 보려는 것이 "다음 예약이 무엇인지"라서 합주실보다 시각이 먼저입니다. */
 export function upcomingBookings(rows: readonly Booking[]): Booking[] {
   return [...rows].sort((a, b) => a.start.localeCompare(b.start));
+}
+
+/** 일정의 시작과 종료를 "18:00–24:00" 으로 적습니다. 다음 날 00:00 에 끝나는 일정은 24:00 입니다. */
+export function timeRangeLabel(start: string, end: string): string {
+  return `${hhmm(start)}–${clockEndLabel(hhmm(end))}`;
+}
+
+/** timeRangeLabel 앞에 시작 날짜를 붙입니다. "10월 15일 목요일 18:00–20:00" */
+export function dayTimeRangeLabel(start: string, end: string): string {
+  return `${dayWithWeekday(dayOf(start))} ${timeRangeLabel(start, end)}`;
 }

@@ -18,7 +18,7 @@ import { BackButton, Button, EditButton, FilePicker, MenuItem, Why } from "../co
 import { usePopoverRouteClose } from "../components/hooks";
 import { getJSON, reason, sendFile } from "../lib/api";
 import { roleLabel } from "../lib/account";
-import { personNameMessage } from "../lib/validate";
+import { optionalCohortMessage, passwordMatchMessage, personNameMessage } from "../lib/validate";
 import { say } from "../components/toast";
 import type { Account } from "../lib/contract";
 import { ME_KEY } from "../components/queries";
@@ -38,10 +38,9 @@ function draftOf(me: Account): Draft {
 function draftMessage(draft: Draft): string {
   const nameWhy = personNameMessage(draft.name);
   if (nameWhy !== "") return nameWhy;
-  const cohort = draft.cohort.trim();
-  if (cohort !== "" && !/^(100|[1-9][0-9]?)$/.test(cohort)) return "기수는 1부터 100 사이의 숫자로 입력해 주세요.";
-  if (draft.next !== draft.again) return "비밀번호가 일치하지 않아요.";
-  return "";
+  const cohortWhy = optionalCohortMessage(draft.cohort);
+  if (cohortWhy !== "") return cohortWhy;
+  return passwordMatchMessage(draft.next, draft.again);
 }
 
 // 프로필 사진 변경 popover 의 id 입니다.

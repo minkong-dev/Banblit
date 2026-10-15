@@ -19,12 +19,8 @@ import {
   DayPeople, DayTimeline, MyEntriesList, RepeatFields, SlotPicker, repeatConflict,
 } from "./DayDialogParts";
 import type { SlotRange } from "./DayDialogParts";
-import { dayWithWeekday, takenGrid } from "../lib/calendar";
+import { dayWithWeekday, hourLabel, takenGrid } from "../lib/calendar";
 import { isoAt } from "../lib/slots";
-
-function hourText(hour: number): string {
-  return `${String(hour).padStart(2, "0")}:00`;
-}
 
 export function DayDialog({
   dayKey, tab, teams, entries, myOff, myBookings, openHour, closeHour, slotCount, fixed, inFocus, ensemble, canEditEnsemble,
@@ -317,7 +313,7 @@ export function DayDialog({
     </div>
   );
 
-  const hint = `${roomsLabel || "합주실"} ${hourText(openHour)}–${hourText(closeHour)}`
+  const hint = `${roomsLabel || "합주실"} ${hourLabel(openHour)}–${hourLabel(closeHour)}`
     + ` ${unitLabel(slotMinutes)} ${inFocus ? "배정된 기간" : "배정 없음"}`;
 
   // 조회 전용 탭(all)은 카드 하나짜리 일반 modal 입니다. 버튼 줄이 없습니다.
