@@ -8,6 +8,7 @@ import type {
 import {
   dayKey,
   datesBetween,
+  clockEndLabel,
   dayLabel,
   dayWithWeekday,
   focusedRanges,
@@ -449,7 +450,7 @@ export {
 } from "./slots";
 export type { Booking, Session } from "./slots";
 export { dayKey, datesBetween, isRangeFree, MINUTES_PER_HOUR, monthCells, slotCountOf, slotLabel, takenGrid, weekKeys, withPastTaken };
-export { dayLabel, dayWithWeekday, stampLabel, WEEKDAY_NAMES };
+export { clockEndLabel, dayLabel, dayWithWeekday, stampLabel, WEEKDAY_NAMES };
 export { hoursLabel };
 export {
   cohortMessage,

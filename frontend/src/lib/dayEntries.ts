@@ -1,7 +1,7 @@
 // 달력 하루에 표시할 항목(Entry)을 서버 자료에서 만드는 계산입니다. 화면이나 서버와 상호작용하지 않습니다.
 
 import { dayWithWeekday, hasWeekday, repeatLabel, weekdayIndex } from "./calendar";
-import { dayOf, mergeSessions, slotIndex } from "./slots";
+import { dayOf, mergeSessions, slotEndIndex, slotIndex } from "./slots";
 import { LOADING_TEXT } from "./loading";
 import type { Session } from "./slots";
 import type { DayTeam } from "./roster";
@@ -118,7 +118,7 @@ export function ensembleByDay(
       room: rooms.find((room) => room.id === on.roomId)?.name,
       who: "전체 합주",
       a: slotIndex(`${day}T${on.startsAt}`, openHour),
-      b: slotIndex(`${day}T${on.endsAt}`, openHour),
+      b: slotEndIndex(`${day}T${on.endsAt}`, openHour),
     }];
   }
   return byDay;
@@ -140,7 +140,7 @@ export function assignedByDay(rows: ScheduleRow[], teams: DayTeam[], openHour: n
       team: team?.key ?? null,
       room: session.room,
       a: slotIndex(session.start, openHour),
-      b: slotIndex(session.end, openHour),
+      b: slotEndIndex(session.end, openHour),
     });
   }
   return byDay;
@@ -161,7 +161,7 @@ export function offByDay(times: Unavailable[], openHour: number, days: string[])
         who: item.name ?? "불가능 일정",
         note: item.reason ?? undefined,
         a: slotIndex(item.starts_at, openHour),
-        b: slotIndex(item.ends_at, openHour),
+        b: slotEndIndex(item.ends_at, openHour),
         // 반복으로 전개한 항목은 저장된 행이 아니므로 삭제할 수 없습니다. 원본 날짜에만 id 를 포함합니다.
         removeIds: day === dayOf(item.starts_at) ? [item.id] : undefined,
       });
@@ -182,7 +182,7 @@ export function allOffEntries(times: Unavailable[], openHour: number): Entry[] {
       who: item.name ?? "불가능 일정",
       note: item.reason ?? undefined,
       a: slotIndex(item.starts_at, openHour),
-      b: slotIndex(item.ends_at, openHour),
+      b: slotEndIndex(item.ends_at, openHour),
       removeIds: [item.id],
       day: dayOf(item.starts_at),
       repeat: repeatLabel(item.repeat_weekdays ?? 0) || undefined,
@@ -259,7 +259,7 @@ export function bookedByDay(
       // 예약자가 붙인 이름이 있으면 그 이름을, 없으면 팀 이름을, 팀도 없으면 예약자 이름을 씁니다.
       who: booking.name ?? booking.team ?? booking.member,
       a: slotIndex(booking.start, openHour),
-      b: slotIndex(booking.end, openHour),
+      b: slotEndIndex(booking.end, openHour),
       bookingId: booking.member_id === myMemberId ? booking.id : undefined,
     });
   }
@@ -275,7 +275,7 @@ export function allBookedEntries(rows: Reservation[], teams: DayTeam[], openHour
     room: booking.room,
     who: booking.name ?? booking.team ?? booking.member,
     a: slotIndex(booking.start, openHour),
-    b: slotIndex(booking.end, openHour),
+    b: slotEndIndex(booking.end, openHour),
     bookingId: booking.id,
     day: dayOf(booking.start),
   }));

@@ -14,7 +14,7 @@ import { askDeleteRoom } from "../lib/confirm";
 import type { Room } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
-import { checkRoom, openingHours } from "../lib/pipeline";
+import { checkRoom, clockEndLabel, openingHours } from "../lib/pipeline";
 import { say } from "../lib/toast";
 import { Button, Cell, Empty, FormFoot, TimeRange } from "../components/controls";
 import { Row, useFirstField, useForm } from "./SettingsForm";
@@ -102,7 +102,7 @@ export function RoomCard(props: {
               <Row
                 key={room.id}
                 title={room.name}
-                when={<><b>{room.opens_at}</b> 부터 <b>{room.closes_at}</b> 까지</>}
+                when={<><b>{room.opens_at}</b> 부터 <b>{clockEndLabel(room.closes_at)}</b> 까지</>}
                 span={` 하루 ${openingHours({ rooms: [room], days: 1, teams: 0, slotMinutes }).perDay}`}
                 editLabel={canEdit ? `${room.name} 수정` : undefined}
                 buttonRef={canEdit ? register(room.id) : undefined}

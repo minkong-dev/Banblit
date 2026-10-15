@@ -1,7 +1,7 @@
 // 서버가 제공한 배정안을 화면이 읽을 형식으로 변환합니다. 이 파일의 함수는 모두 순수 계산이므로
 // 화면이나 서버와 상호작용하지 않습니다.
 
-import { slotLabel } from "./calendar";
+import { shiftDay, slotLabel } from "./calendar";
 
 export type Session = {
   team: string;
@@ -59,6 +59,7 @@ export function hhmm(iso: string): string {
 }
 
 const MINUTES_PER_HOUR = 60;
+const HOURS_PER_DAY = 24;
 
 export function slotIndex(iso: string, openHour: number): number {
   // 여는 시각을 0 으로 두고 한 시간을 1 로 세는 칸 번호를 반환합니다. 정각이 아니면 분을 한 시간의
@@ -68,8 +69,15 @@ export function slotIndex(iso: string, openHour: number): number {
   return hour - openHour + minute / MINUTES_PER_HOUR;
 }
 
+/** slotIndex() 와 같고, 00:00 은 다음 날 00:00 인 종료 시간이라 24시로 셉니다. 구간의 종료 시간에만 사용합니다. */
+export function slotEndIndex(iso: string, openHour: number): number {
+  return hhmm(iso) === "00:00" ? HOURS_PER_DAY - openHour : slotIndex(iso, openHour);
+}
+
 export function isoAt(dayKey: string, index: number, openHour: number): string {
   // slotIndex()의 역함수입니다. 날짜와 칸 번호를 서버가 수신하는 ISO 문자열로 병합합니다. 소수 칸 번호는 분이 됩니다.
+  // 24시 이후의 칸 번호는 다음 날의 시각입니다.
+  if (openHour + index >= HOURS_PER_DAY) return `${shiftDay(dayKey, 1)}T${slotLabel(index - HOURS_PER_DAY, openHour)}:00`;
   return `${dayKey}T${slotLabel(index, openHour)}:00`;
 }
 
