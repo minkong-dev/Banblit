@@ -77,6 +77,10 @@ export function RichTextToolbar({ editor, used, disabled, postId, onLink }: {
   // 숨긴 파일 input 입니다. 도구 줄의 버튼이 click() 으로 엽니다.
   const mediaPick = useRef<HTMLInputElement>(null);
   const filePick = useRef<HTMLInputElement>(null);
+  // 파일은 글(postId)에 붙어 올라갑니다. 임시 저장본이 만들어지기 전에는 파일 넣기 버튼 2개를 비활성화합니다.
+  const noPost = disabled || postId === null;
+  // 비활성 사유는 마우스를 올리면 표시합니다. 편집기 전체가 비활성이면 사유를 붙이지 않습니다.
+  const noPostWhy = !disabled && postId === null ? "글을 준비하는 중이에요. 잠시 후 파일을 넣을 수 있어요." : undefined;
   return (
     <div className="rttools">
       <Tool editor={editor} label="실행취소" on={() => editor.chain().focus().undo().run()}><UndoIcon /></Tool>
@@ -177,14 +181,14 @@ export function RichTextToolbar({ editor, used, disabled, postId, onLink }: {
         <LinkIcon />
       </Tool>
       {/* 그림·소리·PDF 는 본문에 들어갑니다. drop 하거나 붙여넣어도 같습니다. */}
-      <IconButton label="그림 넣기" className="rtpick" icon={<ImageIcon />} disabled={disabled}
+      <IconButton label="그림 넣기" className="rtpick" icon={<ImageIcon />} disabled={noPost} title={noPostWhy}
         onClick={() => mediaPick.current?.click()} />
-      <FilePicker ref={mediaPick} multiple accept={ACCEPTED_MIME.join(",")} disabled={disabled}
+      <FilePicker ref={mediaPick} multiple accept={ACCEPTED_MIME.join(",")} disabled={noPost}
         onFiles={(picked) => void attach(editor, picked, null, postId)} />
       {/* 본문에 넣지 않고 첨부 목록에만 올립니다. 형식 제한은 서버의 허용 목록과 같습니다. */}
-      <IconButton label="파일 첨부" className="rtpick" icon={<ClipIcon />} disabled={disabled}
+      <IconButton label="파일 첨부" className="rtpick" icon={<ClipIcon />} disabled={noPost} title={noPostWhy}
         onClick={() => filePick.current?.click()} />
-      <FilePicker ref={filePick} multiple accept={ATTACHMENT_ACCEPT} disabled={disabled}
+      <FilePicker ref={filePick} multiple accept={ATTACHMENT_ACCEPT} disabled={noPost}
         onFiles={(picked) => void attach(editor, picked, null, postId, false)} />
     </div>
   );

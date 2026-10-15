@@ -10,7 +10,7 @@ export function slotCountLabel(count: number): string {
   return count === 0 ? "빈 배정기록" : `${count}건`;
 }
 
-/** 전송 전에 화면이 먼저 검증합니다. 서버도 같은 값을 다시 검증합니다.
+/** 전송 전에 화면이 먼저 검증합니다.
  *  형식은 검증하지 않습니다. <input type="time"> 이 유효한 "HH:MM" 또는 빈 값만 제공합니다. */
 export function checkRunTimes(first: string, second: string): string {
   if (first === "" || second === "") return "1차와 2차 스케줄링 시간을 모두 지정해주세요.";

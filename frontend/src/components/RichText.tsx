@@ -10,7 +10,7 @@ import FileHandler from "@tiptap/extension-file-handler";
 import TextAlign from "@tiptap/extension-text-align";
 import { TableKit } from "@tiptap/extension-table";
 import { BackgroundColor, Color, FontFamily, FontSize } from "@tiptap/extension-text-style";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   ACCEPTED_MIME, HeadingBackspace, Pdf, Weight, YoutubeTyped, attach,
@@ -34,6 +34,12 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
   invalid?: boolean;
   describedBy?: string;
 }) {
+  // onDrop, onPaste 는 편집기를 만들 때 1번 등록됩니다. 초안 번호는 mount 뒤에 도착하므로 ref 로 최신 postId 를 읽습니다.
+  // 편집기를 다시 만들지 않으므로 초안이 도착하기 전에 입력한 본문이 그대로 남습니다.
+  const postRef = useRef(postId);
+  useEffect(() => {
+    postRef.current = postId;
+  }, [postId]);
   const editor = useEditor({
     extensions: [
       // StarterKit 이 Link 를 이미 담고 있습니다. 따로 등록하면 같은 이름이 둘이 되어 하나가
@@ -80,10 +86,11 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
       }),
       // 본문에 파일을 drop 하거나 붙여넣으면 잡아서 올립니다. 그리는 것은 이 확장이 하지 않고,
       // 아래 attach 가 형식에 따라 노드를 넣습니다.
+      // eslint-disable-next-line react-hooks/refs -- postRef 는 drop, paste 가 발생할 때 읽습니다. render 중에는 읽지 않습니다.
       FileHandler.configure({
         allowedMimeTypes: ACCEPTED_MIME,
-        onDrop: (current, dropped, pos) => void attach(current, dropped, pos, postId),
-        onPaste: (current, pasted) => void attach(current, pasted, null, postId),
+        onDrop: (current, dropped, pos) => void attach(current, dropped, pos, postRef.current),
+        onPaste: (current, pasted) => void attach(current, pasted, null, postRef.current),
       }),
     ],
     content: value,
@@ -100,11 +107,7 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
         ...(describedBy === undefined ? {} : { "aria-describedby": describedBy }),
       },
     },
-    // postId 를 deps 에 넣습니다. 위 onDrop·onPaste 는 편집기를 만들 때의 postId 를 closure 로 붙잡는데,
-    // 글쓰기 화면은 초안 생성이 mount 뒤에 끝나 그 값이 null 로 고정됩니다. 그러면 파일을 drop 해도
-    // 올릴 글이 없다고 판정합니다. 초안 번호가 도착하면 편집기를 다시 만들고, 본문은 content 의 value 로
-    // 복원됩니다.
-  }, [postId]);
+  });
 
   // 바깥에서 값을 초기화하거나 다른 글로 변경했을 때만 편집기에 다시 넣습니다. 조건 없이 넣으면
   // 글자를 칠 때마다 편집기를 다시 채워 커서가 맨 앞으로 돌아갑니다.

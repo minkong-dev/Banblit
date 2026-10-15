@@ -278,5 +278,3 @@ function ProfileMenu() {
     </div>
   );
 }
-
-/** 오른쪽 목록 한 칸입니다. onOpen 이 있으면 제목이 클릭할 수 있는 버튼이 됩니다. */
