@@ -10,6 +10,7 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_routes_Notices["Notices.tsx"]
+  frontend_src_routes_Notices --> frontend_src_components_Layout["Layout.tsx"]
   frontend_src_routes_Notices --> frontend_src_components_PostBoard["PostBoard.tsx"]
   frontend_src_routes_Notices --> frontend_src_components_queries["queries.ts"]
   frontend_src_routes_Notices --> frontend_src_lib_account["account.ts"]
@@ -18,6 +19,7 @@ flowchart LR
 
 ## imports
 
+- [[graph/frontend/src/components/Layout|Layout.tsx]]
 - [[graph/frontend/src/components/PostBoard|PostBoard.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/lib/account|account.ts]]

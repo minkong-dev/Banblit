@@ -121,3 +121,20 @@ test("본문에 그림을 넣으면 미리보기로 보인다", async ({ page })
   await page.getByRole("button", { name: new RegExp(escapeRegExp(title)) }).click();
   await expect(page.locator(".rtview img")).toHaveAttribute("src", /\/api\/attachments\/\d+\/inline$/);
 });
+
+// 상세를 닫으면 키보드 초점이 그 글의 목록 버튼으로 돌아옵니다. 목록과 상세의 전환은 routes/Notices 가 정하고,
+// 초점 되돌리기는 components/PostBoard.tsx 의 usePostBoard 가 맡습니다.
+test("공지 상세를 닫으면 초점이 그 글의 목록 버튼으로 돌아온다", async ({ page }) => {
+  const title = `E2E 초점 ${Date.now()}`;
+  await page.goto("/notices/new");
+  await page.getByLabel("제목", { exact: true }).fill(title);
+  await page.getByLabel("내용").fill("초점 복귀 확인 글입니다.");
+  await page.getByRole("button", { name: "글쓰기" }).click();
+
+  const postButton = page.getByRole("button", { name: new RegExp(escapeRegExp(title)) });
+  await postButton.click();
+  await expect(page.getByRole("heading", { name: title, exact: true })).toBeFocused();
+  await page.getByRole("button", { name: "목록으로" }).click();
+
+  await expect(postButton).toBeFocused();
+});

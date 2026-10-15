@@ -6,7 +6,7 @@ import { useLocation } from "react-router-dom";
 
 /** 번호 하나로 열림 상태를 관리하고, id 마다 등록된 버튼을 Map 으로 기억했다가 닫힐 때
  *  그 버튼으로 초점을 되돌립니다. 설정 화면의 행 편집(routes/SettingsForm.tsx)과 게시판 상세
- *  전환(components/PostBoard.tsx)이 같은 구조라 이 훅 하나를 공유합니다.
+ *  전환(components/PostBoard.tsx 의 usePostBoard)이 같은 구조라 이 훅 하나를 공유합니다.
  *  openFocus 는 열릴 때 초점을 옮길 대상의 ref 입니다 — 아무 요소에도 연결하지 않으면
  *  focus() 호출이 아무 일도 하지 않으므로, 열 때 초점을 옮기지 않는 화면은 그대로 무시하면 됩니다. */
 export function useReturnFocus<Focus extends HTMLElement = HTMLElement>(
