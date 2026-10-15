@@ -674,6 +674,9 @@ class AssignmentBackup(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime)
     ends_at: Mapped[datetime] = mapped_column(DateTime)
     saved_at: Mapped[datetime] = mapped_column(DateTime)
+    # 이 기록을 마지막으로 현재 배정안에 적용한 시각입니다. 화면의 "n월 n일 확정" 표시입니다(사용자 결정 2026-10-15).
+    # 한 기록의 행은 같은 값을 가집니다. 적용한 적 없으면 NULL 입니다.
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     __table_args__ = (
         # 같은 기간의 배정기록을 saved_at 으로 구분하고 정렬하므로 두 열을 묶습니다.

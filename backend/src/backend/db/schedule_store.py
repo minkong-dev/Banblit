@@ -128,6 +128,8 @@ class BackupRound(TypedDict):
 
     saved_at: datetime
     slot_count: int
+    # 마지막으로 적용한 시각입니다. 적용한 적 없으면 None 입니다.
+    applied_at: datetime | None
 
 
 def list_backup_rounds(
@@ -143,21 +145,24 @@ def list_backup_rounds(
         func.extract("epoch", AssignmentBackup.ends_at - AssignmentBackup.starts_at)
     ) / 60
     rows = session.execute(
-        select(AssignmentBackup.saved_at, minutes)
+        select(AssignmentBackup.saved_at, minutes, func.max(AssignmentBackup.applied_at))
         .where(AssignmentBackup.period_id == period_id)
         .group_by(AssignmentBackup.saved_at)
         .order_by(AssignmentBackup.saved_at.desc())
     ).all()
     return [
-        BackupRound(saved_at=saved_at, slot_count=round(total / slot_minutes))
-        for saved_at, total in rows
+        BackupRound(saved_at=saved_at, slot_count=round(total / slot_minutes), applied_at=applied_at)
+        for saved_at, total, applied_at in rows
     ]
 
 
-def apply_record(session: Session, period_id: int, saved_at: datetime) -> bool:
-    """saved_at 의 스케줄링 기록을 현행으로 복사합니다. 기록은 목록에 남아 다시 적용할 수 있습니다.
+def apply_record(
+    session: Session, period_id: int, saved_at: datetime, applied_at: datetime | None = None
+) -> bool:
+    """saved_at 의 스케줄링 기록을 현행으로 복사하고 applied_at 을 확정 시각으로 남깁니다. 기록은 목록에 남아 다시 적용할 수 있습니다.
 
-    그 기록이 없으면 변경하지 않고 False 를 반환합니다. commit 까지 save_schedule 이 처리합니다.
+    applied_at 을 생략하면 지금 시각입니다. 그 기록이 없으면 변경하지 않고 False 를 반환합니다.
+    commit 까지 save_schedule 이 처리합니다.
     """
     batch = session.scalars(
         select(AssignmentBackup)
@@ -166,6 +171,9 @@ def apply_record(session: Session, period_id: int, saved_at: datetime) -> bool:
     ).all()
     if not batch:
         return False
+    stamp = applied_at or datetime.now()
+    for backup in batch:
+        backup.applied_at = stamp
     save_schedule(
         session,
         period_id,

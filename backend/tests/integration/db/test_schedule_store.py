@@ -144,8 +144,8 @@ def test_records_are_listed_newest_first_with_their_slot_counts(db_session: Sess
     )
 
     assert list_backup_rounds(db_session, period_id, slot_minutes=60) == [
-        {"saved_at": datetime(2026, 8, 3, 21, 0), "slot_count": 2},
-        {"saved_at": datetime(2026, 8, 2, 21, 0), "slot_count": 1},
+        {"saved_at": datetime(2026, 8, 3, 21, 0), "slot_count": 2, "applied_at": None},
+        {"saved_at": datetime(2026, 8, 2, 21, 0), "slot_count": 1, "applied_at": None},
     ]
 
 
@@ -172,6 +172,18 @@ def test_applying_a_record_replaces_the_current_schedule_and_keeps_the_record(db
     assert applied is True
     assert _current(db_session, period_id) == [datetime(2026, 8, 1, 20, 0)]
     assert _record_times(db_session, period_id) == [datetime(2026, 8, 1, 9, 0)]
+
+
+def test_an_applied_record_keeps_the_time_it_was_last_applied(db_session: Session) -> None:
+    # 한 번이라도 적용한 기록에는 확정 날짜가 붙습니다(사용자 결정 2026-10-15). 다시 적용하면 최근 시각으로 바뀝니다.
+    period_id, team_id, room_id = _scaffold(db_session)
+    save_record(db_session, period_id, [_row(team_id, room_id, 20)], saved_at=datetime(2026, 8, 1, 9, 0))
+
+    apply_record(db_session, period_id, datetime(2026, 8, 1, 9, 0), applied_at=datetime(2026, 8, 1, 10, 0))
+    apply_record(db_session, period_id, datetime(2026, 8, 1, 9, 0), applied_at=datetime(2026, 8, 2, 10, 0))
+
+    [record] = list_backup_rounds(db_session, period_id, slot_minutes=60)
+    assert record["applied_at"] == datetime(2026, 8, 2, 10, 0)
 
 
 def test_applying_a_missing_record_changes_nothing(db_session: Session) -> None:

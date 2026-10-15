@@ -10,13 +10,16 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_lib_runs["runs.ts"]
+  frontend_src_lib_runs --> frontend_src_lib_calendar["calendar.ts"]
+  frontend_src_lib_runs --> frontend_src_lib_contract["contract.ts"]
   frontend_src_lib_runs_test["runs.test.ts"] --> frontend_src_lib_runs
   frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_lib_runs
 ```
 
 ## imports
 
-- 없음
+- [[graph/frontend/src/lib/calendar|calendar.ts]]
+- [[graph/frontend/src/lib/contract|contract.ts]]
 
 ## imported by
 

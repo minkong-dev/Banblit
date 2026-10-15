@@ -38,5 +38,6 @@ flowchart LR
 - `test_records_are_listed_newest_first_with_their_slot_counts`: `backend.db.schedule_store`
 - `test_only_the_most_recent_records_are_kept`: `backend.db.schedule_store`
 - `test_applying_a_record_replaces_the_current_schedule_and_keeps_the_record`: `backend.db.schedule_store`
+- `test_an_applied_record_keeps_the_time_it_was_last_applied`: `backend.db.schedule_store`
 - `test_applying_a_missing_record_changes_nothing`: `backend.db.schedule_store`
 - `test_pruning_one_period_keeps_the_other_periods_records`: `backend.db.models`, `backend.db.schedule_store`

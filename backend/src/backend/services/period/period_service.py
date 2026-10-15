@@ -70,6 +70,22 @@ class Absence:
 
 
 @dataclass(frozen=True)
+class RecordScore:
+    """시간표 하나의 점수입니다. 엔진 목적식(scheduling/assignment.py 의 _objective)과 같은 4항목이고 앞 항목이 우선합니다.
+
+    기록마다 붙여 권한자가 적용할 기록을 고르는 근거로 씁니다. 점수로 자동 적용하지 않습니다(사용자 결정 2026-10-15).
+    """
+
+    # 가장 적게 받은 팀의 session 수입니다.
+    fewest: int
+    sessions: int
+    # session 마다 빠지는 인원의 합입니다. 적을수록 좋습니다.
+    absences: int
+    # 같은 팀이 같은 합주실에서 바로 이어 쓰는 session 쌍의 수입니다.
+    joined: int
+
+
+@dataclass(frozen=True)
 class ScheduleReport:
     """시간표 하나의 부족분과 불참자입니다. 저장하지 않고 볼 때마다 지금의 불가능 일정으로 계산합니다(사용자 결정 2026-10-12)."""
 
@@ -79,6 +95,7 @@ class ScheduleReport:
     # session 1회라도 빠지는 인원이 기간의 불참 허용 인원(max_absent_members)을 넘으면 True 입니다.
     # 적용 중인 배정안이 불가능 일정 변동으로 허용 인원을 넘었는지 화면이 경고하는 근거입니다(사용자 결정 2026-10-13).
     over_absent: bool
+    score: RecordScore
 
 
 @dataclass(frozen=True)
@@ -174,9 +191,15 @@ def schedule_report(
     missed: dict[tuple[int, int], int] = defaultdict(int)
     teams = {team.id: team for team in inputs.engine_teams}
     over_absent = False
+    counts: dict[int, int] = defaultdict(int)
+    starts: set[tuple[int, int, datetime]] = set()
+    ends: list[tuple[int, int, datetime]] = []
     for row in rows:
         hours[row["team_id"]] += (row["ends_at"] - row["starts_at"]).total_seconds() / 3600
         for piece in _sessions_of(row, inputs.session_minutes):
+            counts[row["team_id"]] += 1
+            starts.add((row["team_id"], row["room_id"], piece.start))
+            ends.append((row["team_id"], row["room_id"], piece.end))
             absent = absent_member_ids(teams[row["team_id"]], piece)
             over_absent = over_absent or len(absent) > inputs.max_absent
             for member_id in absent:
@@ -190,6 +213,15 @@ def schedule_report(
         ],
         absences=[_absence(inputs, team_id, member_id, count) for (team_id, member_id), count in sorted(missed.items())],
         over_absent=over_absent,
+        score=RecordScore(
+            # team_ids 에 든 팀 중 0회인 팀도 셉니다. 저장된 기록은 stored_report 가 모든 팀을 넘기므로, 일부 팀만 골라
+            # 연산한 기록은 fewest 가 0 이 됩니다. 결과 설명의 부족분과 같은 기준입니다.
+            # ponytail: 연산한 팀 목록을 기록에 저장하게 되면 그 목록으로 바꿉니다.
+            fewest=min((counts[team_id] for team_id in team_ids), default=0),
+            sessions=sum(counts.values()),
+            absences=sum(missed.values()),
+            joined=sum(1 for end in ends if end in starts),
+        ),
     )
 
 
