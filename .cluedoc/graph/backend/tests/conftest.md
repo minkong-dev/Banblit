@@ -11,7 +11,6 @@ kind: file
 flowchart LR
   backend_tests_conftest["conftest.py"]
   backend_tests_conftest --> backend_src_backend_api_app["app.py"]
-  backend_tests_conftest --> backend_src_backend_api_rate_limit["rate_limit.py"]
   backend_tests_conftest --> backend_src_backend_api_routers_reservations["reservations.py"]
   backend_tests_conftest --> backend_src_backend_contract["contract.py"]
   backend_tests_conftest --> backend_src_backend_db_models["models.py"]
@@ -23,7 +22,6 @@ flowchart LR
 ## imports
 
 - [[graph/backend/src/backend/api/app|app.py]]
-- [[graph/backend/src/backend/api/rate_limit|rate_limit.py]]
 - [[graph/backend/src/backend/api/routers/reservations|reservations.py]]
 - [[graph/backend/src/backend/contract|contract.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
@@ -46,4 +44,4 @@ flowchart LR
 - `account`
 - `poll_job`
 - `pytest_collection_modifyitems`
-- `_forget_rate_limits`: `backend.api.rate_limit`
+- `_forget_rate_limits`: `backend.api.app`

@@ -102,7 +102,7 @@ def test_removing_the_ensemble_cancels_the_reservations_it_used_to_allow(db_sess
     period, room, member = _ensemble_setup(db_session)
     row = _booking(db_session, room, member, 10, 12)
 
-    delete_ensemble(db_session, period.id)
+    delete_ensemble(db_session, period.id, datetime.now())
 
     assert _cancelled(db_session, row.id) is True
 
@@ -110,10 +110,10 @@ def test_removing_the_ensemble_cancels_the_reservations_it_used_to_allow(db_sess
 def test_removing_a_narrower_day_time_cancels_what_now_overlaps_the_default(db_session: Session) -> None:
     # 03-13 을 18~19시로 좁혀 두면 20~21시 예약이 가능합니다. 날짜별 시각을 지우면 기본 18~22시와 겹칩니다.
     period, room, member = _ensemble_setup(db_session)
-    set_ensemble_day(db_session, period.id, "2027-03-13", "18:00", "19:00")
+    set_ensemble_day(db_session, period.id, "2027-03-13", "18:00", "19:00", datetime.now())
     row = _booking(db_session, room, member, 20, 21)
 
-    delete_ensemble_day(db_session, period.id, "2027-03-13")
+    delete_ensemble_day(db_session, period.id, "2027-03-13", datetime.now())
 
     assert _cancelled(db_session, row.id) is True
 
@@ -136,7 +136,7 @@ def test_the_period_change_and_the_cancellations_are_saved_in_one_commit(
 
     monkeypatch.setattr(db_session, "commit", commit_failing_from_the_second_call)
 
-    delete_ensemble(db_session, period.id)
+    delete_ensemble(db_session, period.id, datetime.now())
 
     assert commits["count"] == 1
     assert _cancelled(db_session, row.id) is True

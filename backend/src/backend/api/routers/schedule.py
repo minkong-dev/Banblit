@@ -4,11 +4,11 @@ from collections.abc import Callable
 from dataclasses import asdict
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account, require_permission
-from backend.api.job_runner import Job, JobRunner, max_concurrent_jobs_from_env
+from backend.api.job_runner import Job, JobRunner
 from backend.services.notification.pipeline import notify_assignment_updated
 from backend.services.settings.pipeline import slot_minutes
 from backend.services.period.pipeline import (
@@ -54,11 +54,11 @@ from backend.scheduling.pipeline import RoomInterval
 
 router = APIRouter()
 
-# 배정 계산을 접수해 백그라운드 스레드에서 실행합니다. 프로세스에 하나만 둡니다. 요청마다 새로
-# 만들면 스레드 풀과 작업 기록이 요청마다 따로 생겨 동시 실행 상한도 작업 조회도 동작하지 않습니다.
-job_runner: JobRunner[PeriodRun] = JobRunner(
-    max_concurrent=max_concurrent_jobs_from_env()
-)
+def _jobs(request: Request) -> JobRunner[PeriodRun]:
+    # 배정 계산을 백그라운드 스레드에서 실행하는 실행기입니다. api/app.py 가 process 에 1개 만듭니다.
+    runner: JobRunner[PeriodRun] = request.app.state.job_runner
+    return runner
+
 
 def _period(period_id: int, session: Session = Depends(get_session)) -> Period:
     # 기간 존재 여부는 여러 endpoint(API의 요청 주소 단위)가 동일하게 검증합니다. 없으면 ValueError 를 발생시켜 422 로 응답합니다.
@@ -170,6 +170,7 @@ def assign_period_schedule(
     req: PeriodAssignIn,
     period: Period = Depends(_period),
     session_factory: Callable[[], Session] = Depends(get_session_factory),
+    jobs: JobRunner[PeriodRun] = Depends(_jobs),
 ) -> JobEnvelopeOut:
     # 팀·합주실 존재 여부나 배정 계산 자체는 접수를 거절할 이유가 아니라 백그라운드 작업의
     # 실패 원인이므로 compute 안에서 처리합니다.
@@ -182,7 +183,7 @@ def assign_period_schedule(
                 job_session, period.id, req.team_ids, req.room_ids, saved_at=datetime.now()
             )
 
-    return JobEnvelopeOut(job=_job_out(job_runner.submit(period.id, compute)))
+    return JobEnvelopeOut(job=_job_out(jobs.submit(period.id, compute)))
 
 
 # 응답에는 계산 결과와 부족분·불참자 보고가 포함됩니다. assign_read 권한이 조회합니다.
@@ -191,8 +192,8 @@ def assign_period_schedule(
     response_model=JobEnvelopeOut,
     dependencies=[Depends(require_permission("assign_read"))],
 )
-def read_job(job_id: str) -> JobEnvelopeOut:
-    job = job_runner.get(job_id)
+def read_job(job_id: str, jobs: JobRunner[PeriodRun] = Depends(_jobs)) -> JobEnvelopeOut:
+    job = jobs.get(job_id)
     if job is None:
         raise ValueError("존재하지 않는 작업입니다")
     return JobEnvelopeOut(job=_job_out(job))

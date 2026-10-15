@@ -10,6 +10,8 @@ kind: file
 ```mermaid
 flowchart LR
   backend_src_backend_api_app["app.py"]
+  backend_src_backend_api_app --> backend_src_backend_api_job_runner["job_runner.py"]
+  backend_src_backend_api_app --> backend_src_backend_api_rate_limit["rate_limit.py"]
   backend_src_backend_api_app --> backend_src_backend_api_routers_auth["auth.py"]
   backend_src_backend_api_app --> backend_src_backend_api_routers_boards["boards.py"]
   backend_src_backend_api_app --> backend_src_backend_api_routers_notifications["notifications.py"]
@@ -34,6 +36,8 @@ flowchart LR
 
 ## imports
 
+- [[graph/backend/src/backend/api/job_runner|job_runner.py]]
+- [[graph/backend/src/backend/api/rate_limit|rate_limit.py]]
 - [[graph/backend/src/backend/api/routers/auth|auth.py]]
 - [[graph/backend/src/backend/api/routers/boards|boards.py]]
 - [[graph/backend/src/backend/api/routers/notifications|notifications.py]]
@@ -66,6 +70,7 @@ flowchart LR
 
 ## 함수와 호출
 
+- `make_limiters`: `backend.api.rate_limit`
 - `_format_validation_error`
 - `handle_database_down`
 - `handle_integrity_error`

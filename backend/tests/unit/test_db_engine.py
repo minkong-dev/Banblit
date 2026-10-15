@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 from backend.db import engine as engine_module
@@ -11,7 +13,7 @@ def test_create_db_engine_applies_connect_and_pool_timeouts(
 
     기본값이 무한대이므로, DB 가 느려지면 대기 중인 요청이 connection pool 을 모두 차지합니다.
     """
-    captured: dict[str, object] = {}
+    captured: dict[str, Any] = {}
 
     def spy_create_engine(url: str, **options: object) -> str:
         captured["url"] = url
@@ -27,14 +29,14 @@ def test_create_db_engine_applies_connect_and_pool_timeouts(
     assert created == "engine"
     assert captured["url"] == "postgresql+psycopg://u:p@db:5432/x"
     assert captured["pool_timeout"] == 7
-    assert captured["connect_args"] == {"connect_timeout": 3}
+    assert captured["connect_args"]["connect_timeout"] == 3
 
 
 def test_create_db_engine_falls_back_to_default_timeouts(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """환경 변수가 없어도 기본값으로 시간 제한이 적용됩니다."""
-    captured: dict[str, object] = {}
+    captured: dict[str, Any] = {}
 
     def spy_create_engine(url: str, **options: object) -> str:
         captured.update(options)
@@ -47,9 +49,7 @@ def test_create_db_engine_falls_back_to_default_timeouts(
     create_db_engine("postgresql+psycopg://u:p@db:5432/x")
 
     assert captured["pool_timeout"] == engine_module.DEFAULT_POOL_TIMEOUT
-    assert captured["connect_args"] == {
-        "connect_timeout": engine_module.DEFAULT_CONNECT_TIMEOUT
-    }
+    assert captured["connect_args"]["connect_timeout"] == engine_module.DEFAULT_CONNECT_TIMEOUT
 
 
 def test_create_db_engine_rejects_useless_timeout_values(
@@ -61,7 +61,7 @@ def test_create_db_engine_rejects_useless_timeout_values(
     -- 형태의 값은 정수로 변환할 때 예외가 발생하여 서버 시작 자체가 실패합니다.
     """
     for bad in ("-5", "0", "--5", "5초", ""):
-        captured: dict[str, object] = {}
+        captured: dict[str, Any] = {}
 
         def spy_create_engine(url: str, **options: object) -> str:
             captured.update(options)
@@ -74,6 +74,23 @@ def test_create_db_engine_rejects_useless_timeout_values(
         create_db_engine("postgresql+psycopg://u:p@db:5432/x")
 
         assert captured["pool_timeout"] == engine_module.DEFAULT_POOL_TIMEOUT, bad
-        assert captured["connect_args"] == {
-            "connect_timeout": engine_module.DEFAULT_CONNECT_TIMEOUT
-        }, bad
+        assert captured["connect_args"]["connect_timeout"] == engine_module.DEFAULT_CONNECT_TIMEOUT, bad
+
+
+def test_create_db_engine_limits_query_and_lock_waits(monkeypatch: pytest.MonkeyPatch) -> None:
+    """쿼리 실행은 25초, 잠금 대기는 5초를 넘으면 DB 가 요청을 취소합니다. 멈춘 요청이 connection pool 을 차지하지 않습니다."""
+    captured: dict[str, Any] = {}
+
+    def spy_create_engine(url: str, **options: object) -> str:
+        captured.update(options)
+        return "engine"
+
+    monkeypatch.setattr(engine_module, "create_engine", spy_create_engine)
+    monkeypatch.delenv("DB_STATEMENT_TIMEOUT", raising=False)
+    monkeypatch.delenv("DB_LOCK_TIMEOUT", raising=False)
+
+    create_db_engine("postgresql+psycopg://u:p@db:5432/x")
+
+    connect_args = captured["connect_args"]
+    assert isinstance(connect_args, dict)
+    assert connect_args["options"] == "-c statement_timeout=25000 -c lock_timeout=5000"

@@ -53,6 +53,7 @@ flowchart LR
 
 ## 함수와 호출
 
+- `_jobs`
 - `_period`: `backend.services.period.pipeline`
 - `_row_out`: `backend.api.schemas`
 - `_report_out`: `backend.api.schemas`

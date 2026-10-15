@@ -53,6 +53,14 @@ services:
       TZ: ${TZ:-Asia/Seoul}
       AUTO_ASSIGN_ENABLED: "${AUTO_ASSIGN_ENABLED:-true}"
       AUTO_ASSIGN_INTERVAL_SECONDS: "${AUTO_ASSIGN_INTERVAL_SECONDS:-60}"
+    # 확인 1회가 끝날 때마다 jobs/auto_assign.py 가 heartbeat 파일을 갱신합니다. 확인 간격의 3배 동안 갱신이 없으면 unhealthy 입니다.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, sys, time; sys.exit(time.time() - os.path.getmtime('/tmp/auto-assign-heartbeat') > 3 * int(os.environ.get('AUTO_ASSIGN_INTERVAL_SECONDS', '60')))"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      # 첫 확인(배정 계산 최대 60초)이 끝나기 전에는 파일이 없으므로 세지 않습니다.
+      start_period: 180s
     depends_on:
       db:
         condition: service_healthy

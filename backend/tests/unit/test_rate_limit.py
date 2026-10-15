@@ -120,7 +120,8 @@ def test_caller_falls_back_when_there_is_no_peer() -> None:
 
 def test_endpoint_answers_429_with_how_long_to_wait() -> None:
     app = FastAPI()
-    guard = limit_guesses(limit=2, window_seconds=60)
+    app.state.limiters = {"try": RateLimiter(limit=2, window_seconds=60)}
+    guard = limit_guesses("try")
 
     @app.post("/try", dependencies=[Depends(guard)])
     def attempt() -> dict[str, bool]:

@@ -179,11 +179,12 @@ def assign(
     stall_seconds: float,
     daily_max_minutes: int | None = None,
     max_absent: int = 0,
+    num_workers: int = 0,
 ) -> Assignment:
     """각 팀에게 빈 합주실 session 을 target_sessions 회까지, 가장 적게 받은 팀부터 최대한 배정합니다.
 
     solver_time_limit_seconds 는 계산 1회의 상한이고, stall_seconds 는 더 나은 해가 나오지 않을 때 기다리는
-    시간입니다. 두 값 모두 pipeline.py 가 전달합니다.
+    시간이며, num_workers 는 계산에 쓰는 thread 수입니다(0 이면 OR-Tools 기본값인 코어 수). 세 값 모두 pipeline.py 가 전달합니다.
 
     session 은 session_minutes 동안 끊기지 않고 이어지는 구간 하나입니다. slot_minutes 는 칸 하나의
     크기(분)이고 session 이 시작할 수 있는 간격입니다. 두 값 모두 저장소 설정이 결정합니다.
@@ -215,7 +216,7 @@ def assign(
     joined = _back_to_back_pairs(model, chosen, room_sessions)
     _objective(model, chosen, absent, joined, teams, target_sessions, max_absent)
 
-    solver = _solve(model, solver_time_limit_seconds, stall_seconds)
+    solver = _solve(model, solver_time_limit_seconds, stall_seconds, num_workers)
 
     sessions_by_team: dict[int, list[RoomInterval]] = {}
     absences: dict[int, list[tuple[RoomInterval, list[int]]]] = {}
@@ -340,7 +341,9 @@ def _one_place_per_member(
             _at_most_one(model, present)
 
 
-def _solve(model: cp_model.CpModel, solver_time_limit_seconds: float, stall_seconds: float) -> cp_model.CpSolver:
+def _solve(
+    model: cp_model.CpModel, solver_time_limit_seconds: float, stall_seconds: float, num_workers: int
+) -> cp_model.CpSolver:
     """model 을 풀고 해를 담은 solver 를 반환합니다.
 
     모든 변수가 0 인 해가 항상 조건을 충족하므로 해가 없는 경우는 없습니다. 시간 상한 안에 해를 1개도 찾지
@@ -348,6 +351,7 @@ def _solve(model: cp_model.CpModel, solver_time_limit_seconds: float, stall_seco
     """
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = solver_time_limit_seconds
+    solver.parameters.num_workers = num_workers
     stopper = _StopWhenStalled(solver, stall_seconds)
     # 계산 중 오류가 나도 timer 를 취소합니다. 남겨 두면 끝난 계산에 timer 만료 시 stop_search 를 부릅니다.
     try:

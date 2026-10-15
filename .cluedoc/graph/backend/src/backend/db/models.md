@@ -74,6 +74,8 @@ flowchart LR
   backend_tests_integration_db_test_schedule_store["test_schedule_store.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_settings_endpoints["test_settings_endpoints.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_unavailable_endpoints["test_unavailable_endpoints.py"] --> backend_src_backend_db_models
+  backend_tests_unit_test_auth_dependency["test_auth_dependency.py"] --> backend_src_backend_db_models
+  backend_tests_unit_test_auto_assign_rules["test_auto_assign_rules.py"] --> backend_src_backend_db_models
   backend_tests_unit_test_period_input["test_period_input.py"] --> backend_src_backend_db_models
 ```
 
@@ -146,6 +148,8 @@ flowchart LR
 - [[graph/backend/tests/integration/db/test_schedule_store|test_schedule_store.py]]
 - [[graph/backend/tests/integration/db/test_settings_endpoints|test_settings_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_unavailable_endpoints|test_unavailable_endpoints.py]]
+- [[graph/backend/tests/unit/test_auth_dependency|test_auth_dependency.py]]
+- [[graph/backend/tests/unit/test_auto_assign_rules|test_auto_assign_rules.py]]
 - [[graph/backend/tests/unit/test_period_input|test_period_input.py]]
 
 ## 함수와 호출

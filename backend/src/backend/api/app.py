@@ -3,6 +3,7 @@ import logging
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from psycopg.errors import LockNotAvailable, QueryCanceled
 from sqlalchemy.exc import IntegrityError, OperationalError
 
 from backend.api.routers import (
@@ -18,6 +19,8 @@ from backend.api.routers import (
     settings,
     unavailable,
 )
+from backend.api.job_runner import JobRunner, max_concurrent_jobs_from_env
+from backend.api.rate_limit import RateLimiter
 from backend.db.pipeline import check_database
 
 logger = logging.getLogger(__name__)
@@ -41,6 +44,27 @@ if not _service_logs.handlers:
 
 app = FastAPI(title="Banblit Scheduling API")
 
+# 같은 요청자가 window 초 안에 보낼 수 있는 요청 횟수입니다. (횟수, window 초) 입니다. 비밀번호를 하나씩
+# 시도하는 것을 막지 못하면 짧은 비밀번호는 시도 횟수만 충분하면 맞힐 수 있습니다. 메일을 보내는 endpoint 는
+# 다른 사람의 주소로 메일을 대량 발송하는 데 쓰일 수 있어 상한을 더 낮게 둡니다.
+RATE_LIMITS: dict[str, tuple[int, float]] = {
+    "login": (10, 300),
+    "signup": (5, 3600),
+    "mail": (5, 3600),
+    "reset": (10, 3600),
+}
+
+
+def make_limiters() -> dict[str, RateLimiter]:
+    """RATE_LIMITS 마다 빈 제한기를 만듭니다. router 는 api/rate_limit.py 의 limit_guesses(이름) 으로 씁니다."""
+    return {name: RateLimiter(limit=limit, window_seconds=window) for name, (limit, window) in RATE_LIMITS.items()}
+
+
+# 요청 횟수와 배정 계산 작업은 process 메모리의 state 입니다. import 할 때가 아니라 app 을 만들 때 1번 생성합니다.
+# 요청마다 만들면 횟수가 매번 0 이 되고, 작업 실행기가 요청마다 생겨 동시 실행 상한과 작업 조회가 동작하지 않습니다.
+app.state.limiters = make_limiters()
+app.state.job_runner = JobRunner(max_concurrent=max_concurrent_jobs_from_env())
+
 
 def _format_validation_error(exc: RequestValidationError) -> str:
     # 형식 오류를 "어느 항목: 무엇이 문제" 형식으로 결합합니다. 내용 오류(엔진에서 거부)와
@@ -56,9 +80,14 @@ def _format_validation_error(exc: RequestValidationError) -> str:
 async def handle_database_down(
     request: Request, exc: OperationalError
 ) -> JSONResponse:
-    # 데이터베이스에 연결하지 못한 요청을 503으로 반환합니다. 사용자 입력 오류(422)나
-    # 서버 고장(500)과 구분하기 위해 사용합니다. 자세한 사유는 로그에만 남기고
-    # 화면에는 표시하지 않습니다.
+    # 데이터베이스에 연결하지 못했거나 쿼리, 잠금 대기가 상한(db/engine.py)을 넘은 요청을 503으로 반환합니다.
+    # 사용자 입력 오류(422)나 서버 고장(500)과 구분합니다. 자세한 사유는 로그에만 남깁니다.
+    if isinstance(exc.orig, (QueryCanceled, LockNotAvailable)):
+        logger.error("쿼리 또는 잠금 대기가 상한을 넘어 취소되었습니다 (%s): %s", request.url.path, exc)
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "요청이 몰려 처리하지 못했습니다. 잠시 후 다시 시도하십시오"},
+        )
     logger.error("데이터베이스에 연결하지 못했습니다 (%s): %s", request.url.path, exc)
     return JSONResponse(
         status_code=503,

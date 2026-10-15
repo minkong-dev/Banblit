@@ -10,6 +10,7 @@ import os
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
+from pathlib import Path
 from time import sleep
 
 from sqlalchemy import select
@@ -24,6 +25,8 @@ from backend.db.pipeline import get_session_factory
 logger = logging.getLogger(__name__)
 
 DEFAULT_INTERVAL_SECONDS = 60
+# 확인 1회가 끝날 때마다 시각을 쓰는 파일입니다. docker-compose.yml 의 auto-assign healthcheck 가 이 파일의 수정 시각을 봅니다.
+HEARTBEAT_FILE = Path("/tmp/auto-assign-heartbeat")
 _ENABLED_VARIABLE = "AUTO_ASSIGN_ENABLED"
 _INTERVAL_VARIABLE = "AUTO_ASSIGN_INTERVAL_SECONDS"
 
@@ -168,6 +171,11 @@ def interval_seconds_from_env() -> int:
     return seconds if seconds > 0 else DEFAULT_INTERVAL_SECONDS
 
 
+def write_heartbeat(path: Path, now: datetime) -> None:
+    """확인 1회가 끝난 시각 now 를 path 에 씁니다. 반복이 멈추면 이 파일이 갱신되지 않아 healthcheck 가 unhealthy 로 판정합니다."""
+    path.write_text(now.isoformat(timespec="seconds"))
+
+
 def main() -> None:
     """확인 간격마다 계산 시각이 지난 기간이 있는지 확인하는 무한 반복입니다. container 의 시작 명령입니다."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -190,6 +198,8 @@ def main() -> None:
                 removed = sweep_stale_drafts(session, datetime.now() - DRAFT_LIFETIME)
                 if removed > 0:
                     logger.info("버려진 초안 %d개를 삭제했습니다", removed)
+            # 확인이 끝까지 성공했을 때만 씁니다. DB 가 계속 끊겨 실패가 반복되면 healthcheck 가 unhealthy 로 드러냅니다.
+            write_heartbeat(HEARTBEAT_FILE, datetime.now())
         except Exception:  # noqa: BLE001 - DB 가 일시적으로 끊겨도 다음 확인 때 다시 시도
             logger.exception("자동 배정 확인이 실패했습니다")
         sleep(interval)
