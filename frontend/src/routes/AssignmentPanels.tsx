@@ -294,7 +294,7 @@ export function RunTimesPanel({ period, canManage }: { period: Period | null; ca
   return (
     <Panel title="스케줄링 시간" hint="지정한 시간에 스케줄링을 진행해요">
       <div className="times">
-        {/* 큰 시각 표시는 두지 않습니다(2026-10-07). 입력칸이 저장된 값을 보여 주고, 칸 위에 1차·2차를 작게 적습니다. */}
+        {/* 큰 시각 표시는 두지 않습니다(사용자 결정 2026-10-07). 입력칸이 저장된 값을 보여 주고, 칸 위에 1차·2차를 작게 적습니다. */}
         {period === null ? <div className="t">집중 합주기간을 생성해주세요</div> : (
           <>
             <div className="rows">
@@ -328,7 +328,7 @@ export function RunTimesPanel({ period, canManage }: { period: Period | null; ca
                 {save.isPending ? "변경사항 저장 중…" : "변경사항 저장"}
               </button>
             )}
-            {/* 안내는 패널 부제에 있습니다. 아래 줄은 검증 오류와 권한 없음일 때만 표시합니다(2026-10-07). */}
+            {/* 안내는 패널 부제에 있습니다. 아래 줄은 검증 오류와 권한 없음일 때만 표시합니다(사용자 결정 2026-10-07). */}
             {why === "" && canManage ? null : (
               <p>{why !== "" ? why : "스케줄링 시간 설정 권한이 있어야 시간을 지정할 수 있어요."}</p>
             )}

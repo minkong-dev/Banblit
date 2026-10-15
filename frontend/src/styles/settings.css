@@ -17,9 +17,9 @@ body[data-page="settings"] {
   .main > .card:only-child > .rows { flex: 1; min-height: 0; overflow: hidden; }
   .main > .card:only-child > .listfoot { margin-top: auto; }
 
-  /* 목록 줄의 구분(2026-10-07 지적): 줄마다 좌우 16px 안쪽에 두고 마우스를 올리면 배경이 바뀝니다.
+  /* 목록 줄의 구분(사용자 결정 2026-10-07): 줄마다 좌우 16px 안쪽에 두고 마우스를 올리면 배경이 바뀝니다.
      제목은 18px, 아래 줄은 13px 흐린 글자로 두어 제목과 설명의 크기 차이를 둡니다. */
-  /* 구역 제목 아래 선과 첫 줄, 줄과 줄, 마지막 줄과 아래 버튼 사이에 여백을 둡니다(2026-10-07 지적: 선에 붙이지 않음). */
+  /* 구역 제목 아래 선과 첫 줄, 줄과 줄, 마지막 줄과 아래 버튼 사이에 여백을 둡니다(사용자 결정 2026-10-07). */
   .rows { padding: 12px 0; }
   .rows li { padding: 18px 16px; margin: 8px 0; border-radius: 12px; transition: background-color .12s ease; }
   .listfoot { padding-top: 16px; }
@@ -59,7 +59,7 @@ body[data-page="settings"] {
   .fsec { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: -.02em; }
   /* 전체 합주 입력 묶음의 왼쪽 세이지 선은 달력의 전체 합주 막대와 같은 색으로 "기간 안의 설정"임을 표시합니다. */
   .fields .ensemble { display: flex; flex-direction: column; gap: 10px; margin-left: -17px; padding: 2px 0 2px 14px; border-left: 3px solid var(--green); }
-  /* 선 3px + 안쪽 여백 14px 만큼 왼쪽으로 내보내, 묶음 안 입력칸의 왼쪽선이 다른 줄의 1열과 같습니다(2026-10-07). */
+  /* 선 3px + 안쪽 여백 14px 만큼 왼쪽으로 내보내, 묶음 안 입력칸의 왼쪽선이 다른 줄의 1열과 같습니다(사용자 결정 2026-10-07). */
   .ensemble .teamdays { margin: 2px 0 0; font-size: 13px; color: var(--t2); }
 
   /* ===== 날짜별 전체 합주 시각 (SettingsEnsemble.tsx 의 EnsembleDays) =====
@@ -169,7 +169,7 @@ body[data-page="settings"] {
   /* ===== 멤버 표 =====
      표가 길어지면 표 구역이 아니라 화면(.main)이 통째로 스크롤합니다. */
   /* 표는 구역 제목(.sethead)과 같은 폭을 씁니다. 행 사이 선은 제목 아래 선과 같은 길이입니다.
-     첫 열과 끝 열은 표 가장자리에서 80px 안쪽에 둡니다(2026-10-07, 가장자리에 붙어 있다는 지적). */
+     첫 열과 끝 열은 표 가장자리에서 80px 안쪽에 둡니다(사용자 결정 2026-10-07). */
   .roster { padding: 0 0 18px; }
   .roster table { width: 100%; border-collapse: collapse; }
   .roster :is(th, td):first-child { padding-left: 80px; }
@@ -181,8 +181,7 @@ body[data-page="settings"] {
   }
   .roster td { padding: 11px 32px 11px 0; font-size: 14px; border-bottom: 1px solid var(--line); }
   /* 열은 표 폭 전체에 내용 길이 비율로 나뉩니다(브라우저 자동 배치). 빈 열(.fill)은 내용이 없어 폭을 거의 받지 않고,
-     끝 열(버튼)은 값 폭만 차지해 오른쪽 끝에 붙습니다. 전에는 열마다 width: 1% 로 왼쪽에 몰아넣고 .fill 이 남는 폭을
-     전부 차지해, 마지막 값 열과 버튼 사이가 크게 벌어졌습니다(2026-10-07 지적). */
+     끝 열(버튼)은 값 폭만 차지해 오른쪽 끝에 붙습니다. */
   .roster :is(th, td) { white-space: nowrap; }
   .roster :is(th, td):last-child { width: 1%; }
   /* 열마다 최소 폭을 글자 수(ch)로 정합니다. 글자 크기가 바뀌면 같이 바뀝니다. */
@@ -238,7 +237,7 @@ body[data-page="settings"] {
     .roster.members tbody td.fill { display: none; }
     .roster.members tbody td:nth-child(7) { grid-area: act; }
     /* 예약·블라인드·불가능 일정 표는 한 행을 한 묶음으로 쌓습니다 — 값들이 왼쪽에서 줄바꿈하며 이어지고, 버튼은 오른쪽 끝입니다.
-       전에는 표 모양을 유지하고 가로로 스크롤했는데, 양끝 여백 80px 과 열 간격 32px 이 휴대폰 폭에서는 첫 열부터 잘라냈습니다(2026-10-07). */
+       표 모양을 유지하면 양끝 여백 80px 과 열 간격 32px 때문에 휴대폰 폭에서 첫 열부터 잘립니다. */
     .roster:not(.members) table, .roster:not(.members) tbody { display: block; }
     .roster:not(.members) thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
     .roster:not(.members) tbody tr {

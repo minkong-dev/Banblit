@@ -42,7 +42,8 @@ server {
     # 첨부파일 1개의 크기 상한입니다. 화면의 MAX_ATTACHMENT_BYTES(frontend/src/lib/boards.ts)와 같은 값이어야 합니다.
     client_max_body_size 300m;
 
-    # 배정 계산은 조율안까지 포함하면 30초 이내에 응답합니다. 변경할 경우 화면의 timeout 과 함께 변경합니다.
+    # api 응답을 기다리는 상한입니다. 배정 계산은 job 으로 접수하고 바로 응답하므로 요청 1개는 30초를 넘지 않습니다.
+    # 변경할 경우 화면의 REQUEST_TIMEOUT_MS(frontend/src/lib/api.ts)와 함께 확인합니다.
     proxy_connect_timeout 5s;
     proxy_read_timeout 30s;
   }

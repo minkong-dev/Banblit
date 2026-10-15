@@ -64,7 +64,7 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .profwrap { display: contents; }
   /* popover="auto" 요소입니다. top layer(브라우저가 다른 요소 위에 그리는 계층)로 올라가면 DOM 상의
      조상이 기준이 아니라 뷰포트(화면 보이는 영역)가 기준이 되어, position: absolute 만으로는 .profbtn
-     위치를 알 수 없습니다(2026-09-29 e2e 스크린샷으로 발견 — 화면 바깥에 그려졌습니다). CSS anchor
+     위치를 알 수 없어 화면 바깥에 그려집니다. CSS anchor
      positioning(anchor-name/position-anchor/anchor())으로 .profbtn 을 직접 기준 삼습니다. */
   .pop {
     position: fixed; position-anchor: --profile-trigger;
@@ -158,7 +158,7 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   /* 탭은 면 없이 글자만 두고, 고른 탭은 본문색 글자 아래에 2px 코랄 가로선을 긋습니다. 나머지는 흐린 글자입니다.
      탭 줄은 사이드바 첫 메뉴 항목과 같은 높이(44px)라 두 글자의 세로 중심이 맞습니다. */
   .tabs { grid-column: 1; grid-row: 1; display: flex; gap: 26px; margin-bottom: 24px; flex-wrap: wrap; }
-  /* 선택 안 된 탭의 글자색은 --t2 입니다. --t3 는 밝은 화면에서 명도 대비 약 3:1 로 글자 기준 4.5:1 에 못 미칩니다(2026-09-30 리뷰). */
+  /* 선택 안 된 탭의 글자색은 --t2 입니다. --t3 는 밝은 화면에서 명도 대비 약 3:1 로 글자 기준 4.5:1 에 못 미칩니다. */
   .tab { padding: 0 2px; min-height: 44px; color: var(--t2); font-size: var(--fs-xl); font-weight: 600; letter-spacing: -.02em; box-shadow: inset 0 -2px 0 transparent; transition: color .15s ease, box-shadow .15s ease; }
   .tab:hover { color: var(--t1); }
   .tab[aria-selected="true"] { color: var(--t1); font-weight: 800; box-shadow: inset 0 -2px 0 var(--brand); }

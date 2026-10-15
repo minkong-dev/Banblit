@@ -60,7 +60,7 @@ function clockText(hhmm: string): string {
   return `${hour < 12 ? "오전" : "오후"} ${hour12}시${minute === 0 ? "" : ` ${minute}분`}`;
 }
 
-/** 목록 줄의 제목 아래 줄들입니다(2026-10-07 개발자님이 정한 구성).
+/** 목록 줄의 제목 아래 줄들입니다(사용자 결정 2026-10-07).
  *  총 합주기간 → 전체 합주기간(지정한 경우만) → 스케줄링 시간(집중 합주기간만) 순서입니다. */
 function PeriodLines({ period }: { period: Period }) {
   const { starts_on, ends_on, everyday, ensemble } = period;
@@ -86,8 +86,8 @@ function PeriodLines({ period }: { period: Period }) {
 }
 
 /** 기간 form 의 입력칸입니다. 집중 합주기간일 때만 계산 시각 입력칸 2개가 더 표시됩니다.
- *  종류(kind) 선택은 없습니다 — 상시 개방(open)은 서버가 아무 동작도 하지 않는 값이라 2026-10-07 에 공연명 입력으로
- *  바꿨습니다. 새 기간은 전부 집중 합주(focused)이고, 저장된 open 기간은 수정 form 에서 그 값을 유지합니다. */
+ *  종류(kind) 선택 대신 공연명 입력이 있습니다(사용자 결정 2026-10-07). 새 기간은 전부 집중 합주(focused)이고,
+ *  저장된 open 기간은 수정 form 에서 그 값을 유지합니다. */
 function PeriodFields(props: {
   form: PeriodBody;
   setForm: (next: PeriodBody) => void;

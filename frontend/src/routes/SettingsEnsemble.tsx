@@ -113,7 +113,7 @@ export function EnsembleFields(props: {
   );
 }
 
-/** 전체 합주를 지정할지 정하는 체크박스입니다. 기간 form 의 날짜 줄(시작일·종료일 옆)에 놓입니다(2026-10-07).
+/** 전체 합주를 지정할지 정하는 체크박스입니다. 기간 form 의 날짜 줄(시작일·종료일 옆)에 놓입니다(사용자 결정 2026-10-07).
  *  체크하면 form 아래 "전체 합주" 묶음(EnsembleFields)이 열립니다. */
 export function EnsembleToggle({ draft, setDraft, at }: {
   draft: EnsembleDraft;
