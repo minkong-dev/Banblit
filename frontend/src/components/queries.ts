@@ -9,7 +9,8 @@ import type { Member } from "../lib/contract";
 import { loadState, stillUnresolved } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { teamColorKey } from "../lib/teamColors";
-import type { Account, Period, Room, Team } from "../lib/contract";
+import { DEFAULT_SETTINGS } from "../lib/contract";
+import type { Account, Period, Room, Settings, Team } from "../lib/contract";
 import { getJSON } from "../lib/api";
 import { myTeamIds } from "../lib/roster";
 
@@ -75,18 +76,16 @@ export function useRooms(enabled = true) {
 }
 /** 저장소 전체 설정입니다. 칸 하나의 크기(slotMinutes)와 합주 1회 길이(sessionMinutes)입니다.
  *  칸은 합주를 시작할 수 있는 간격이고, 합주 길이는 한 번 시작하면 이어지는 시간입니다.
- *  아직 받지 못했으면 둘 다 60 입니다. 서버 기본값과 같은 값이라, 받는 사이에
- *  화면이 잠깐 다른 격자를 그리는 일이 없습니다. */
+ *  아직 받지 못했으면 DEFAULT_SETTINGS(lib/contract.ts)를 씁니다. */
 export function useSettings(): { slotMinutes: number; sessionMinutes: number; dailyMaxHours: number } {
   const query = useQuery({
     queryKey: SETTINGS_KEY,
-    queryFn: () => getJSON<{ slot_minutes: number; session_minutes: number; daily_max_hours: number }>("/settings"),
+    queryFn: () => getJSON<Settings>("/settings"),
   });
   return {
-    slotMinutes: query.data?.slot_minutes ?? 60,
-    sessionMinutes: query.data?.session_minutes ?? 60,
-    // 팀 하나가 하루에 배정받는 시간의 상한입니다. 서버 기본값(3)과 같게 둡니다.
-    dailyMaxHours: query.data?.daily_max_hours ?? 3,
+    slotMinutes: query.data?.slot_minutes ?? DEFAULT_SETTINGS.slot_minutes,
+    sessionMinutes: query.data?.session_minutes ?? DEFAULT_SETTINGS.session_minutes,
+    dailyMaxHours: query.data?.daily_max_hours ?? DEFAULT_SETTINGS.daily_max_hours,
   };
 }
 

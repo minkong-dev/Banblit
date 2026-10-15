@@ -35,11 +35,13 @@ flowchart LR
   frontend_src_lib_roster_test["roster.test.ts"] --> frontend_src_lib_contract
   frontend_src_lib_roster["roster.ts"] --> frontend_src_lib_contract
   frontend_src_lib_runs["runs.ts"] --> frontend_src_lib_contract
+  frontend_src_lib_settings["settings.ts"] --> frontend_src_lib_contract
   frontend_src_lib_unavailableMap_test["unavailableMap.test.ts"] --> frontend_src_lib_contract
   frontend_src_lib_unavailableMap["unavailableMap.ts"] --> frontend_src_lib_contract
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_contract
+  frontend_src_routes_DayDialogParts["DayDialogParts.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_PostWrite["PostWrite.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_lib_contract
@@ -86,11 +88,13 @@ flowchart LR
 - [[graph/frontend/src/lib/roster.test|roster.test.ts]]
 - [[graph/frontend/src/lib/roster|roster.ts]]
 - [[graph/frontend/src/lib/runs|runs.ts]]
+- [[graph/frontend/src/lib/settings|settings.ts]]
 - [[graph/frontend/src/lib/unavailableMap.test|unavailableMap.test.ts]]
 - [[graph/frontend/src/lib/unavailableMap|unavailableMap.ts]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
+- [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]
 - [[graph/frontend/src/routes/PostWrite|PostWrite.tsx]]
 - [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]

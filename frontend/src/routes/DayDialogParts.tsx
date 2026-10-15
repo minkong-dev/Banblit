@@ -15,6 +15,7 @@ import { entryClass, entryName, offWhenLabel } from "../lib/dayEntries";
 import type { Entry } from "../lib/dayEntries";
 import { cohortLabel } from "../lib/roster";
 import type { DayTeam } from "../lib/roster";
+import type { Member } from "../lib/contract";
 
 export type SlotRange = { a: number; b: number };
 
@@ -196,7 +197,7 @@ export function MyEntriesList({ title, empty, entries, teams, onRemove, onEdit, 
 
 /** 그날 합주에 참여하는 멤버 목록입니다. 명단 조회가 실패하면 그 사유를 대신 표시합니다. */
 export function DayPeople({ people, error }: {
-  people: { team: DayTeam; member: { id: number; name: string; cohort: number | null } }[];
+  people: { team: DayTeam; member: Member }[];
   error: unknown;
 }) {
   return (
