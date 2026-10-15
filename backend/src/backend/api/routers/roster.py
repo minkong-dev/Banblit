@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account, require_permission
-from backend.services.permission.pipeline import account_permissions
 from backend.services.roster.pipeline import assign_slot as assign_slot_row
 from backend.services.roster.pipeline import clear_slot as clear_slot_row
 from backend.services.roster.pipeline import create_team as create_team_row
@@ -15,6 +14,7 @@ from backend.services.roster.pipeline import (
     list_slots,
     list_teams,
     search_members,
+    team_slot_counts,
 )
 from backend.services.roster.pipeline import update_team as update_team_row
 from backend.api.schemas import (
@@ -156,9 +156,7 @@ def create_team(
     req: TeamCreateIn, session: Session = Depends(get_session)
 ) -> TeamEnvelopeOut:
     team = create_team_row(session, req.name, req.slots, req.color)
-    # 방금 생성된 포지션은 전부 비어 있으므로, 조회하지 않고 배정된 멤버 수를 0 으로 반환합니다.
-    slot_count = sum(count for count in req.slots.values() if count > 0)
-    return TeamEnvelopeOut(team=_team_out(team, slot_count, 0))
+    return TeamEnvelopeOut(team=_team_out(team, *team_slot_counts(session, team.id)))
 
 
 @router.patch(
@@ -170,9 +168,7 @@ def patch_team(
     team_id: int, req: TeamUpdateIn, session: Session = Depends(get_session)
 ) -> TeamEnvelopeOut:
     team = update_team_row(session, team_id, req.name, req.color)
-    rows = list_slots(session, team_id)
-    filled = sum(1 for _, member in rows if member is not None)
-    return TeamEnvelopeOut(team=_team_out(team, len(rows), filled))
+    return TeamEnvelopeOut(team=_team_out(team, *team_slot_counts(session, team_id)))
 
 
 @router.delete(
@@ -210,8 +206,8 @@ def put_slot_member(
     session: Session = Depends(get_session),
 ) -> SlotEnvelopeOut:
     """포지션에 멤버를 배정합니다. 포지션 구성 변경은 team_edit 권한, 멤버 배정은 member_add 권한으로 구분합니다."""
-    slot = assign_slot_row(session, team_id, slot_id, req.member_id)
-    return SlotEnvelopeOut(slot=_slot_out(slot, session.get(Member, req.member_id)))
+    slot, member = assign_slot_row(session, team_id, slot_id, req.member_id)
+    return SlotEnvelopeOut(slot=_slot_out(slot, member))
 
 
 @router.put("/teams/{team_id}/slot-members", response_model=SlotsOut)
@@ -230,15 +226,7 @@ def put_team_slot_members(
     member_remove 가 필요하고 자신의 해제에는 아무 권한도 필요하지 않아, 항목마다 다르기
     때문입니다. 자리마다 보내는 endpoint 2개와 같은 규칙입니다.
     """
-    held = account_permissions(session, requester.id)
-    assign_slot_members_rows(
-        session,
-        team_id,
-        [(entry.slot_id, entry.member_id) for entry in req.assignments],
-        may_seat="member_add" in held,
-        may_unseat="member_remove" in held,
-        requester_id=requester.id,
-    )
+    assign_slot_members_rows(session, team_id, [(entry.slot_id, entry.member_id) for entry in req.assignments], requester)
     rows = list_slots(session, team_id)
     return SlotsOut(slots=[_slot_out(slot, member) for slot, member in rows])
 
@@ -256,15 +244,7 @@ def delete_slot_member(
     member_remove 권한이 없어도 되기 때문입니다. 로그인만 검증한 뒤 함수 안에서 본인 여부와
     member_remove 권한을 확인합니다.
     """
-    slot = session.get(TeamSlot, slot_id)
-    if slot is None or slot.team_id != team_id:
-        raise HTTPException(status_code=422, detail="해당하는 포지션이 없습니다")
-
-    mine = slot.member_id == requester.id
-    if not mine and "member_remove" not in account_permissions(session, requester.id):
-        raise HTTPException(status_code=403, detail="관련된 권한을 가지고 있지 않습니다")
-
-    clear_slot_row(session, team_id, slot_id)
+    clear_slot_row(session, team_id, slot_id, requester)
 
 
 @router.delete("/members/{member_id}", status_code=204)

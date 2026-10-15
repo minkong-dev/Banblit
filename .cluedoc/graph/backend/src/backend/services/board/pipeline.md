@@ -10,15 +10,18 @@ kind: file
 ```mermaid
 flowchart LR
   backend_src_backend_services_board_pipeline["pipeline.py"]
+  backend_src_backend_services_board_pipeline --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_board_pipeline --> backend_src_backend_services_board_attachment_service["attachment_service.py"]
   backend_src_backend_services_board_pipeline --> backend_src_backend_services_board_board_service["board_service.py"]
   backend_src_backend_api_routers_boards["boards.py"] --> backend_src_backend_services_board_pipeline
   backend_src_backend_jobs_auto_assign["auto_assign.py"] --> backend_src_backend_services_board_pipeline
+  backend_tests_integration_db_test_attachment_endpoints["test_attachment_endpoints.py"] --> backend_src_backend_services_board_pipeline
   backend_tests_integration_db_test_board_endpoints["test_board_endpoints.py"] --> backend_src_backend_services_board_pipeline
 ```
 
 ## imports
 
+- [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/services/board/attachment_service|attachment_service.py]]
 - [[graph/backend/src/backend/services/board/board_service|board_service.py]]
 
@@ -26,4 +29,10 @@ flowchart LR
 
 - [[graph/backend/src/backend/api/routers/boards|boards.py]]
 - [[graph/backend/src/backend/jobs/auto_assign|auto_assign.py]]
+- [[graph/backend/tests/integration/db/test_attachment_endpoints|test_attachment_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_board_endpoints|test_board_endpoints.py]]
+
+## 함수와 호출
+
+- `save_attachment`: `backend.services.board.attachment_service.save_attachment`
+- `delete_post`: `backend.services.board.attachment_service`, `backend.services.board.board_service`

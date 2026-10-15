@@ -4,13 +4,13 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
 
 from backend.db.models import Attachment, Member, Post
-from backend.services.board import attachment_service
+from backend.services.board import pipeline as board_pipeline
 
 # account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 이 파일의 첫 호출이 헤드매니저입니다.
 from conftest import AccountFactory
@@ -333,7 +333,7 @@ def test_uploads_are_rejected_once_the_post_exceeds_the_total_size(
     상한을 실제 값(300MB)으로 시험하면 테스트가 300MB 를 디스크에 씁니다. 상한만 작게 교체하고
     판정 로직은 그대로 실행합니다.
     """
-    monkeypatch.setattr(attachment_service, "MAX_POST_BYTES", 20)
+    monkeypatch.setattr(board_pipeline, "MAX_POST_BYTES", 20)
     _, head = account("박서연", "head@example.com")
     post_id = _notice(api_client, head)
 
@@ -363,7 +363,7 @@ def test_one_file_larger_than_the_total_size_is_rejected(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """첫 파일 1개가 상한을 넘으면 거절하고, 디스크에 부분 파일을 남기지 않습니다."""
-    monkeypatch.setattr(attachment_service, "MAX_POST_BYTES", 20)
+    monkeypatch.setattr(board_pipeline, "MAX_POST_BYTES", 20)
     _, head = account("박서연", "head@example.com")
     post_id = _notice(api_client, head)
 
@@ -384,7 +384,7 @@ def test_deleting_an_attachment_frees_the_total_size(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """첨부를 삭제하면 합계가 줄어 같은 크기를 다시 업로드할 수 있습니다."""
-    monkeypatch.setattr(attachment_service, "MAX_POST_BYTES", 20)
+    monkeypatch.setattr(board_pipeline, "MAX_POST_BYTES", 20)
     _, head = account("박서연", "head@example.com")
     post_id = _notice(api_client, head)
 
@@ -426,7 +426,7 @@ def test_a_concurrent_upload_cannot_pass_the_total_size(
     B 는 A 가 commit 할 때까지 진행하지 못하고, commit 된 뒤 갱신된 합계를 읽어 거절합니다.
     잠금이 없으면 B 는 즉시 통과합니다.
     """
-    monkeypatch.setattr(attachment_service, "MAX_POST_BYTES", 20)
+    monkeypatch.setattr(board_pipeline, "MAX_POST_BYTES", 20)
     member_id, head = account("박서연", "head@example.com")
     post_id = _notice(api_client, head)
 
@@ -437,7 +437,7 @@ def test_a_concurrent_upload_cannot_pass_the_total_size(
             requester = session.get(Member, member_id)
             assert requester is not None
             try:
-                attachment_service.save_attachment(
+                board_pipeline.save_attachment(
                     session,
                     post_id,
                     "둘.pdf",
@@ -479,7 +479,7 @@ def test_a_concurrent_upload_cannot_pass_the_total_size(
     assert isinstance(outcome[0], ValueError), f"B 가 통과했습니다: {outcome[0]!r}"
 
     with Session(test_engine) as checking:
-        total = attachment_service._used_bytes(checking, post_id)
+        total = checking.scalars(select(func.coalesce(func.sum(Attachment.size), 0)).where(Attachment.post_id == post_id)).one()
     assert total <= 20, f"글 1개의 첨부 합계가 상한 20 을 넘었습니다: {total}"
 
 

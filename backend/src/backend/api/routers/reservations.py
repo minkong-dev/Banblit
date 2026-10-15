@@ -94,7 +94,7 @@ def create_reservation_endpoint(
     now: datetime = Depends(current_time),
 ) -> ReservationsOut:
     # 예약자는 요청 body(본문)가 아니라 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 확인한 requester 입니다. 다른 사람 이름으로 예약할 수 없습니다.
-    row, room_name, member_name, team_name = create_reservation(
+    row = create_reservation(
         session,
         req.room_id,
         requester,
@@ -104,7 +104,7 @@ def create_reservation_endpoint(
         req.ends_at,
         now,
     )
-    return _rows_out([(row, room_name, team_name, member_name)])
+    return _rows_out([row])
 
 
 @router.patch("/reservations/{reservation_id}", response_model=ReservationsOut)
@@ -116,7 +116,7 @@ def update_reservation_endpoint(
     now: datetime = Depends(current_time),
 ) -> ReservationsOut:
     # 응답은 새로 만들어진 행입니다. 옛 행은 취소 표시로 남고 목록에 나오지 않습니다.
-    row, room_name, member_name, team_name = update_reservation(
+    row = update_reservation(
         session,
         reservation_id,
         requester,
@@ -124,7 +124,7 @@ def update_reservation_endpoint(
         req.ends_at,
         now,
     )
-    return _rows_out([(row, room_name, team_name, member_name)])
+    return _rows_out([row])
 
 
 @router.delete("/reservations/{reservation_id}", status_code=204)

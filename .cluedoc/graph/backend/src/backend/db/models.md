@@ -28,8 +28,10 @@ flowchart LR
   backend_src_backend_services_auth_auth_service["auth_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_auth_auth_session["auth_session.py"] --> backend_src_backend_db_models
   backend_src_backend_services_auth_password_reset["password_reset.py"] --> backend_src_backend_db_models
+  backend_src_backend_services_auth_pipeline["pipeline.py"] --> backend_src_backend_db_models
   backend_src_backend_services_board_attachment_service["attachment_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_board_board_service["board_service.py"] --> backend_src_backend_db_models
+  backend_src_backend_services_board_pipeline["pipeline.py"] --> backend_src_backend_db_models
   backend_src_backend_services_notification_notification_service["notification_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_period_ensemble_service["ensemble_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_period_period_crud_service["period_crud_service.py"] --> backend_src_backend_db_models
@@ -39,6 +41,7 @@ flowchart LR
   backend_src_backend_services_reservation_reservation_service["reservation_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_room_room_service["room_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_roster_avatar_service["avatar_service.py"] --> backend_src_backend_db_models
+  backend_src_backend_services_roster_pipeline["pipeline.py"] --> backend_src_backend_db_models
   backend_src_backend_services_roster_roster_service["roster_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_settings_settings_service["settings_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_unavailable_unavailable_service["unavailable_service.py"] --> backend_src_backend_db_models
@@ -97,8 +100,10 @@ flowchart LR
 - [[graph/backend/src/backend/services/auth/auth_service|auth_service.py]]
 - [[graph/backend/src/backend/services/auth/auth_session|auth_session.py]]
 - [[graph/backend/src/backend/services/auth/password_reset|password_reset.py]]
+- [[graph/backend/src/backend/services/auth/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/board/attachment_service|attachment_service.py]]
 - [[graph/backend/src/backend/services/board/board_service|board_service.py]]
+- [[graph/backend/src/backend/services/board/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/notification/notification_service|notification_service.py]]
 - [[graph/backend/src/backend/services/period/ensemble_service|ensemble_service.py]]
 - [[graph/backend/src/backend/services/period/period_crud_service|period_crud_service.py]]
@@ -108,6 +113,7 @@ flowchart LR
 - [[graph/backend/src/backend/services/reservation/reservation_service|reservation_service.py]]
 - [[graph/backend/src/backend/services/room/room_service|room_service.py]]
 - [[graph/backend/src/backend/services/roster/avatar_service|avatar_service.py]]
+- [[graph/backend/src/backend/services/roster/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/roster/roster_service|roster_service.py]]
 - [[graph/backend/src/backend/services/settings/settings_service|settings_service.py]]
 - [[graph/backend/src/backend/services/unavailable/unavailable_service|unavailable_service.py]]

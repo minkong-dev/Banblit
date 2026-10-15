@@ -26,6 +26,7 @@ flowchart LR
   backend_src_backend_services_room_room_service["room_service.py"] --> backend_src_backend_services_validation_pipeline
   backend_src_backend_services_roster_roster_service["roster_service.py"] --> backend_src_backend_services_validation_pipeline
   backend_src_backend_services_unavailable_unavailable_service["unavailable_service.py"] --> backend_src_backend_services_validation_pipeline
+  backend_tests_unit_test_input["test_input.py"] --> backend_src_backend_services_validation_pipeline
 ```
 
 ## imports
@@ -49,3 +50,11 @@ flowchart LR
 - [[graph/backend/src/backend/services/room/room_service|room_service.py]]
 - [[graph/backend/src/backend/services/roster/roster_service|roster_service.py]]
 - [[graph/backend/src/backend/services/unavailable/unavailable_service|unavailable_service.py]]
+- [[graph/backend/tests/unit/test_input|test_input.py]]
+
+## 함수와 호출
+
+- `require_login_id`: `backend.services.validation.input.require_login_id`
+- `require_password`: `backend.services.validation.input.require_password`
+- `require_cohort`: `backend.services.validation.input.require_cohort`
+- `require_repeat_end`: `backend.services.validation.input.require_repeat_end`

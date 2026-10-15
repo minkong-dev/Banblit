@@ -23,7 +23,7 @@ from backend.db.models import (
     Team,
     UnavailableTime,
 )
-from backend.services.period.period_crud_service import ScheduleRow, get_period_or_raise
+from backend.services.period.period_crud_service import ScheduleRow, every_team_and_room, get_period_or_raise
 from backend.services.settings.pipeline import daily_max_hours, session_minutes, slot_minutes
 from backend.db.pipeline import AssignmentRow
 from backend.scheduling.pipeline import Assignment as EngineAssignment
@@ -237,8 +237,7 @@ def stored_report(
     # everyday 기간의 시간표를 날짜별로 보여 주게 되면 rows 를 on 날짜로 거릅니다.
     if period.kind != "focused" or not rows:
         return None
-    team_ids = list(session.scalars(select(Team.id).order_by(Team.id)).all())
-    room_ids = list(session.scalars(select(Room.id).order_by(Room.id)).all())
+    team_ids, room_ids = every_team_and_room(session)
     stored_rows = [
         AssignmentRow(team_id=team_id, room_id=room_id, starts_at=start, ends_at=end)
         for team_id, _, room_id, _, start, end in rows

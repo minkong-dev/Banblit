@@ -10,7 +10,6 @@ from backend.services.board.pipeline import (
     attachments_of_post,
     delete_attachment,
     list_attachments,
-    remove_post_files,
     save_attachment,
 )
 from backend.api.auth_dependency import require_account, require_permission
@@ -22,12 +21,12 @@ from backend.services.board.pipeline import (
     create_notice,
     create_team_post,
     delete_comment,
+    delete_post,
     get_post_with_comments,
     list_blinded_posts,
     list_notices,
     list_team_posts,
     publish_post,
-    require_post_author,
     set_post_blinded,
     update_comment,
     update_post,
@@ -367,9 +366,4 @@ def delete_post_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> None:
-    post = require_post_author(session, post_id, requester)
-    # attachments table 의 행이 삭제되기 전에 디스크의 파일부터 삭제합니다. 순서를 변경하면
-    # 어느 파일이 이 게시글의 파일이었는지 추적할 수 없게 되어, 아무도 삭제하지 못하는 파일이 남습니다.
-    remove_post_files(session, post_id)
-    session.delete(post)
-    session.commit()
+    delete_post(session, post_id, requester)

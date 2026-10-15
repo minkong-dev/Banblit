@@ -53,7 +53,7 @@ def account_permission_set_names(session: Session, member_id: int) -> list[str]:
     )
 
 
-def _is_full(permissions: list[str]) -> bool:
+def holds_every_permission(permissions: list[str]) -> bool:
     return set(PERMISSIONS) <= set(permissions)
 
 
@@ -193,7 +193,7 @@ def update_permission_set(
     """set_id permission set 의 이름·설명·활성화된 항목을 통째로 교체합니다. 모든 항목을 가진 마지막 permission set 의 항목은 끌 수 없습니다."""
     permission_set = _get_set_or_raise(session, set_id)
     cleaned = _clean_permissions(permissions)
-    if _is_full(permission_set.permissions) and not _is_full(cleaned):
+    if holds_every_permission(permission_set.permissions) and not holds_every_permission(cleaned):
         _require_another_full_set(session, set_id)
     permission_set.name = require_non_empty(name, "이름")
     permission_set.description = require_non_empty(description, "설명")
@@ -206,7 +206,7 @@ def delete_permission_set(session: Session, set_id: int) -> None:
     """set_id permission set 을 삭제합니다. 그 permission set 을 가졌던 멤버의 연결도 함께 삭제됩니다
     (member_permission_sets.permission_set_id 가 ON DELETE CASCADE 제약). 모든 항목을 가진 마지막 permission set 은 삭제할 수 없습니다."""
     permission_set = _get_set_or_raise(session, set_id)
-    if _is_full(permission_set.permissions):
+    if holds_every_permission(permission_set.permissions):
         _require_another_full_set(session, set_id)
     session.delete(permission_set)
     session.commit()

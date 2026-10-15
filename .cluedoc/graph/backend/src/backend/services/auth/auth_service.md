@@ -41,4 +41,5 @@ flowchart LR
 - `signup`: `backend.db.models`, `backend.db.pipeline`, `backend.services.permission.pipeline`, `backend.services.validation.pipeline`
 - `update_profile`: `backend.db.pipeline`, `backend.services.validation.pipeline`
 - `change_password`: `backend.services.validation.pipeline`
+- `delete_account`
 - `login`

@@ -51,4 +51,5 @@ flowchart LR
 - `assign_slot_members`: `backend.db.pipeline`
 - `_require_may_unseat`
 - `_require_may_seat`
+- `team_slot_counts`
 - `clear_slot`: `backend.db.pipeline`

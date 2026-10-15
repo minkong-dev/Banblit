@@ -12,7 +12,6 @@ flowchart LR
   backend_src_backend_contract["contract.py"]
   backend_src_backend_api_auth_dependency["auth_dependency.py"] --> backend_src_backend_contract
   backend_src_backend_api_job_runner["job_runner.py"] --> backend_src_backend_contract
-  backend_src_backend_api_routers_auth["auth.py"] --> backend_src_backend_contract
   backend_src_backend_api_schemas["schemas.py"] --> backend_src_backend_contract
   backend_src_backend_db_models["models.py"] --> backend_src_backend_contract
   backend_src_backend_jobs_auto_assign["auto_assign.py"] --> backend_src_backend_contract
@@ -39,7 +38,6 @@ flowchart LR
 
 - [[graph/backend/src/backend/api/auth_dependency|auth_dependency.py]]
 - [[graph/backend/src/backend/api/job_runner|job_runner.py]]
-- [[graph/backend/src/backend/api/routers/auth|auth.py]]
 - [[graph/backend/src/backend/api/schemas|schemas.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/jobs/auto_assign|auto_assign.py]]

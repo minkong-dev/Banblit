@@ -16,7 +16,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 
 from backend.db.models import Member
-from backend.services.roster import avatar_service
+from backend.services.roster import pipeline as roster_pipeline
 from conftest import AccountFactory
 
 Cookies = dict[str, str]
@@ -118,7 +118,7 @@ def test_a_photo_over_the_limit_is_refused_and_nothing_is_left_on_disk(
     _, cookies = account(*ME)
 
     refused = _upload(
-        api_client, cookies, data=b"0" * (avatar_service.MAX_AVATAR_BYTES + 1)
+        api_client, cookies, data=b"0" * (roster_pipeline.MAX_AVATAR_BYTES + 1)
     )
 
     assert refused.status_code == 422
@@ -181,7 +181,7 @@ def test_an_upload_during_another_session_does_not_leave_an_orphan_file(
         with Session(test_engine) as session:
             member = session.get(Member, member_id)
             assert member is not None
-            avatar_service.save_avatar(session, member, "둘.png", io.BytesIO(PNG))
+            roster_pipeline.save_avatar(session, member, "둘.png", io.BytesIO(PNG))
 
     with Session(test_engine) as locking:
         locked = locking.scalars(

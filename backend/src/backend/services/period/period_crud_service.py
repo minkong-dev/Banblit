@@ -1,7 +1,7 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from backend.services.validation.pipeline import (
@@ -223,6 +223,26 @@ def delete_period(session: Session, period_id: int) -> None:
 
 ScheduleRow = tuple[int, str, int, str, datetime, datetime]
 """(팀 id, 팀 이름, 합주실 id, 합주실명, 시작 시간, 종료 시간)"""
+
+
+def focused_periods_on(session: Session, day: date) -> list[Period]:
+    """day 가 기간 안에 포함되는 집중 합주기간을 번호 순서로 반환합니다. "매일" 기간은 종료일이 없어 시작일만 비교합니다."""
+    return list(
+        session.scalars(
+            select(Period)
+            .where(Period.kind == "focused")
+            .where(Period.starts_on <= day)
+            .where(or_(Period.everyday.is_(True), Period.ends_on >= day))
+            .order_by(Period.id)
+        ).all()
+    )
+
+
+def every_team_and_room(session: Session) -> tuple[list[int], list[int]]:
+    """등록된 모든 팀 번호와 합주실 번호를 번호 순서로 반환합니다. 자동 배정과 저장된 시간표의 결과 설명이 대상으로 씁니다."""
+    team_ids = list(session.scalars(select(Team.id).order_by(Team.id)).all())
+    room_ids = list(session.scalars(select(Room.id).order_by(Room.id)).all())
+    return team_ids, room_ids
 
 
 def get_period_or_raise(session: Session, period_id: int) -> Period:

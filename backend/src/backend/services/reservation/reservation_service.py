@@ -163,7 +163,7 @@ def create_reservation(
     starts_at: datetime,
     ends_at: datetime,
     created_at: datetime,
-) -> tuple[Reservation, str, str, str | None]:
+) -> ReservationRow:
     """예약 한 건을 만듭니다. 그 시간이 이미 차 있으면 commit 이 겹침 금지 제약에 걸려 거절됩니다.
 
     검증 과정에서 이미 조회한 합주실·멤버·팀의 이름을 함께 반환하므로, 호출자가 이름을
@@ -174,7 +174,7 @@ def create_reservation(
     )
     session.add(row)
     commit_translating(session, RESERVATION_MESSAGES)
-    return row, room.name, requester.name, team.name if team is not None else None
+    return row, room.name, team.name if team is not None else None, requester.name
 
 
 def list_reservations(
@@ -296,7 +296,7 @@ def update_reservation(
     starts_at: datetime,
     ends_at: datetime,
     moved_at: datetime,
-) -> tuple[Reservation, str, str, str | None]:
+) -> ReservationRow:
     """예약 한 건을 다른 구간으로 옮깁니다. 합주실·팀·이름·처음 잡은 시각(created_at)은 그대로 둡니다.
 
     옛 행을 취소 표시(cancelled_at=moved_at)로 두고 새 행을 만들어, 옮긴 이력이 DB 에 남습니다.
@@ -332,4 +332,4 @@ def update_reservation(
     team = None
     if moved.team_id is not None:
         team = session.get(Team, moved.team_id)
-    return moved, room.name, requester.name, team.name if team is not None else None
+    return moved, room.name, team.name if team is not None else None, requester.name

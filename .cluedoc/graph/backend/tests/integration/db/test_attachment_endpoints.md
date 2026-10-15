@@ -11,13 +11,13 @@ kind: file
 flowchart LR
   backend_tests_integration_db_test_attachment_endpoints["test_attachment_endpoints.py"]
   backend_tests_integration_db_test_attachment_endpoints --> backend_src_backend_db_models["models.py"]
-  backend_tests_integration_db_test_attachment_endpoints --> backend_src_backend_services_board_attachment_service["attachment_service.py"]
+  backend_tests_integration_db_test_attachment_endpoints --> backend_src_backend_services_board_pipeline["pipeline.py"]
 ```
 
 ## imports
 
 - [[graph/backend/src/backend/db/models|models.py]]
-- [[graph/backend/src/backend/services/board/attachment_service|attachment_service.py]]
+- [[graph/backend/src/backend/services/board/pipeline|pipeline.py]]
 
 ## imported by
 
@@ -45,7 +45,7 @@ flowchart LR
 - `test_uploads_are_rejected_once_the_post_exceeds_the_total_size`
 - `test_one_file_larger_than_the_total_size_is_rejected`
 - `test_deleting_an_attachment_frees_the_total_size`
-- `test_a_concurrent_upload_cannot_pass_the_total_size`: `backend.db.models`, `backend.services.board.attachment_service._used_bytes`, `backend.services.board.attachment_service.save_attachment`
+- `test_a_concurrent_upload_cannot_pass_the_total_size`: `backend.db.models`, `backend.services.board.pipeline.save_attachment`
 - `test_inline_serves_a_pdf_with_its_own_type`
 - `test_inline_refuses_a_format_that_must_not_render`
 - `test_inline_requires_read_permission`

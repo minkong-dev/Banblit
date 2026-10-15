@@ -12,13 +12,13 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 from time import sleep
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.services.board.pipeline import sweep_stale_drafts
-from backend.services.period.pipeline import period_days, run_period_assignment
+from backend.services.period.pipeline import every_team_and_room, focused_periods_on, period_days, run_period_assignment
 from backend.contract import RunSlot
-from backend.db.models import AssignmentRun, Period, Room, Team
+from backend.db.models import AssignmentRun, Period
 from backend.db.pipeline import get_session_factory
 
 logger = logging.getLogger(__name__)
@@ -74,13 +74,7 @@ def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
     # 오늘이 기간 안에 포함되는 집중 합주기간만 처리합니다. 상시 기간(kind="open")은 선착순
     # 예약으로 동작하므로 assign_period 가 거절합니다. everyday 가 켜진 기간은 종료일이 없으므로
     # 시작일만 지났으면 매일 처리합니다.
-    periods = session.scalars(
-        select(Period)
-        .where(Period.kind == "focused")
-        .where(Period.starts_on <= today)
-        .where(or_(Period.everyday.is_(True), Period.ends_on >= today))
-        .order_by(Period.id)
-    ).all()
+    periods = focused_periods_on(session, today)
     if not periods:
         return []
 
@@ -88,8 +82,7 @@ def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
     # 사용자가 버튼을 누를 때는 화면이 팀·합주실을 선택해 전송하지만 자동 실행에는 선택할
     # 사람이 없습니다. 등록된 모든 팀과 합주실을 대상으로 실행합니다. 일부만 실행하려면
     # 선택 목록을 저장하는 table(period_rooms 등)을 먼저 추가해야 합니다.
-    team_ids = list(session.scalars(select(Team.id).order_by(Team.id)).all())
-    room_ids = list(session.scalars(select(Room.id).order_by(Room.id)).all())
+    team_ids, room_ids = every_team_and_room(session)
 
     results: list[AutoRun] = []
     for period in periods:

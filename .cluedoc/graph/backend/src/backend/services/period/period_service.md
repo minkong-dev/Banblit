@@ -36,7 +36,7 @@ flowchart LR
 
 - `assign_period`: `backend.scheduling.pipeline`
 - `schedule_report`: `backend.scheduling.pipeline`
-- `stored_report`: `backend.db.pipeline`
+- `stored_report`: `backend.db.pipeline`, `backend.services.period.period_crud_service`
 - `_absence`
 - `_sessions_of`: `backend.scheduling.pipeline`
 - `_prepare`: `backend.services.period.period_input`, `backend.services.settings.pipeline`

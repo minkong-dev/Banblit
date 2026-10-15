@@ -30,7 +30,7 @@ services:
       SMTP_USER: "${SMTP_USER:-}"
       SMTP_PASSWORD: "${SMTP_PASSWORD:-}"
       MAIL_FROM: "${MAIL_FROM:-}"
-      # 메일에 담는 재설정 링크의 주소입니다. 비어 있으면 http://localhost:5173 을 씁니다.
+      # 메일에 담는 재설정 링크의 주소입니다. 비어 있으면 재설정 메일을 발송하지 않고 오류 로그를 남깁니다.
       APP_ORIGIN: "${APP_ORIGIN:-}"
       # 관리자코드입니다. 가입할 때 이 값을 입력한 계정이 권한 항목 전부를 받습니다. 비어 있으면 관리자 가입이 불가능합니다.
       ADMIN_SIGNUP_CODE: "${ADMIN_SIGNUP_CODE:-}"

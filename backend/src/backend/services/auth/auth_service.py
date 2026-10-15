@@ -106,8 +106,9 @@ def signup(
     cohort 를 받는 이유는 동명이인 때문입니다. 화면에서 두 사람을 구분하는 유일한 값이 이름 옆의 기수이므로, 가입 시 입력받지 않으면 나중에 채울 수 없습니다.
 
     admin_code 가 환경변수의 코드와 같으면 권한 항목이 모두 활성화된 permission set 을 부여합니다.
-    넣지 않았거나 다르면 권한 0개로 가입하고, 이미 권한을 가진 사람에게서 부여받습니다
-   . 틀린 코드로 가입을 거절하지 않습니다."""
+    넣지 않았거나 다르면 권한 0개로 가입하고, 이미 권한을 가진 사람에게서 부여받습니다.
+    틀린 코드로 가입을 거절하지 않습니다.
+    """
     clean_name = require_person_name(name)
     clean_department = require_department(department)
     clean_student_no = require_student_no(student_no)
@@ -154,6 +155,12 @@ def change_password(
         raise PermissionError("지금 비밀번호가 맞지 않습니다")
     require_password(next_password)
     member.password_hash = hash_password(next_password)
+    session.commit()
+
+
+def delete_account(session: Session, member: Member) -> None:
+    """member 를 삭제하고 commit 합니다. 글, 댓글, 예약은 함께 삭제되고 포지션은 비웁니다(db/models.py 의 ondelete)."""
+    session.delete(member)
     session.commit()
 
 

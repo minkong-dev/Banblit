@@ -13,7 +13,6 @@ flowchart LR
   backend_src_backend_services_roster_avatar_service --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_roster_avatar_service --> backend_src_backend_services_storage_pipeline["pipeline.py"]
   backend_src_backend_services_roster_pipeline["pipeline.py"] --> backend_src_backend_services_roster_avatar_service
-  backend_tests_integration_db_test_avatar_endpoints["test_avatar_endpoints.py"] --> backend_src_backend_services_roster_avatar_service
 ```
 
 ## imports
@@ -24,7 +23,6 @@ flowchart LR
 ## imported by
 
 - [[graph/backend/src/backend/services/roster/pipeline|pipeline.py]]
-- [[graph/backend/tests/integration/db/test_avatar_endpoints|test_avatar_endpoints.py]]
 
 ## 함수와 호출
 

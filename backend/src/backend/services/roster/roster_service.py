@@ -28,11 +28,6 @@ ROSTER_MESSAGES = {
     "team_slots_team_id_instrument_ordinal_key": "이미 있는 포지션입니다",
 }
 
-# 한 팀의 포지션 수 상한입니다. 배정 계산이 팀당 멤버를 최대 10명까지만 받으므로 그 값에 맞춥니다.
-# 이 값보다 크게 허용하면 포지션은 생성되지만 그 팀이 포함된 배정 계산이 실패합니다.
-MAX_SLOTS_PER_TEAM = 10
-
-
 def list_teams(session: Session) -> list[tuple[Team, int, int]]:
     """팀을 id 오름차순으로, 각 팀의 (전체 포지션 수, 멤버가 배정된 포지션 수)와 함께 반환합니다.
 
@@ -105,7 +100,7 @@ def list_members(
     return [(row, held[row.id]) for row in rows]
 
 
-def search_members(session: Session, query: str, limit: int = 200) -> list[Member]:
+def search_members(session: Session, query: str, limit: int) -> list[Member]:
     """이름으로 멤버를 검색합니다. 포지션에 배정할 멤버를 선택하는 검색 UI가 사용합니다.
 
     빈 검색어에는 명단 전체를 반환합니다. 화면이 목록을 그대로 펼쳐 스크롤로 훑을 수 있어야
@@ -141,8 +136,8 @@ def expel_member(session: Session, member_id: int, requester: Member) -> None:
     session.commit()
 
 
-def require_slot_counts(counts: dict[str, int]) -> dict[Instrument, int]:
-    """포지션마다 몇 자리인지를 받아 검증합니다. 0자리인 포지션은 자리를 생성하지 않으므로 제외합니다."""
+def require_slot_counts(counts: dict[str, int], max_slots: int) -> dict[Instrument, int]:
+    """포지션마다 몇 자리인지를 받아 검증합니다. 합계가 max_slots 를 넘으면 거부하고, 0자리인 포지션은 제외합니다."""
     checked: dict[Instrument, int] = {}
     for name, count in counts.items():
         if name not in INSTRUMENTS:
@@ -155,8 +150,8 @@ def require_slot_counts(counts: dict[str, int]) -> dict[Instrument, int]:
     total = sum(checked.values())
     if total == 0:
         raise ValueError("포지션을 하나 이상 선택해 주세요")
-    if total > MAX_SLOTS_PER_TEAM:
-        raise ValueError(f"한 팀의 포지션은 {MAX_SLOTS_PER_TEAM}개까지입니다")
+    if total > max_slots:
+        raise ValueError(f"한 팀의 포지션은 {max_slots}개까지입니다")
     return checked
 
 
@@ -197,7 +192,7 @@ def _require_known_color(color: str) -> str:
 
 
 def create_team(
-    session: Session, name: str, counts: dict[str, int], color: str | None = None
+    session: Session, name: str, counts: dict[str, int], max_slots: int, color: str | None = None
 ) -> Team:
     """팀을 생성하면서 포지션 자리를 함께 생성합니다.
 
@@ -210,7 +205,7 @@ def create_team(
     두 요청이 둘 다 통과하기 때문입니다.
     """
     clean_name = require_non_empty(name, "팀 이름")
-    checked = require_slot_counts(counts)
+    checked = require_slot_counts(counts, max_slots)
     if color is not None:
         _require_known_color(color)
 
@@ -220,11 +215,9 @@ def create_team(
     session.add(team)
     # 포지션을 생성하려면 팀의 id가 먼저 필요하므로 flush합니다 — 이름 중복은 이 지점에서 감지됩니다.
     commit_translating(session, ROSTER_MESSAGES, session.flush)
-    session.add_all(
-        TeamSlot(team_id=team.id, instrument=instrument, ordinal=ordinal)
-        for instrument, count in checked.items()
-        for ordinal in range(1, count + 1)
-    )
+    for instrument, count in checked.items():
+        for ordinal in range(1, count + 1):
+            session.add(TeamSlot(team_id=team.id, instrument=instrument, ordinal=ordinal))
     commit_translating(session, ROSTER_MESSAGES)
     return team
 
@@ -242,7 +235,7 @@ def update_team(session: Session, team_id: int, name: str, color: str | None = N
     return team
 
 
-def replace_slots(session: Session, team_id: int, counts: dict[str, int]) -> None:
+def replace_slots(session: Session, team_id: int, counts: dict[str, int], max_slots: int) -> None:
     """팀의 포지션 구성을 통째로 재구성합니다.
 
     포지션마다 필요한 자리 수만 받고, 그 수에 맞춰 포지션을 추가하거나 삭제합니다. 기존
@@ -252,13 +245,12 @@ def replace_slots(session: Session, team_id: int, counts: dict[str, int]) -> Non
     감소할 때는 번호가 큰 포지션부터 삭제합니다. 삭제되는 포지션에 배정된 멤버는 팀에서 제거됩니다.
     """
     get_team_or_raise(session, team_id)
-    checked = require_slot_counts(counts)
+    checked = require_slot_counts(counts, max_slots)
 
-    keep: set[tuple[str, int]] = {
-        (instrument, ordinal)
-        for instrument, count in checked.items()
-        for ordinal in range(1, count + 1)
-    }
+    keep: set[tuple[str, int]] = set()
+    for instrument, count in checked.items():
+        for ordinal in range(1, count + 1):
+            keep.add((instrument, ordinal))
     rows = session.scalars(
         select(TeamSlot).where(TeamSlot.team_id == team_id)
     ).all()
@@ -285,14 +277,15 @@ def delete_team(session: Session, team_id: int) -> None:
     commit_translating(session, ROSTER_MESSAGES)
 
 
-def assign_slot(session: Session, team_id: int, slot_id: int, member_id: int) -> TeamSlot:
-    """포지션에 멤버를 배정합니다. 기존에 배정된 멤버가 있으면 그 멤버는 제거됩니다."""
+def assign_slot(session: Session, team_id: int, slot_id: int, member_id: int) -> tuple[TeamSlot, Member]:
+    """포지션에 멤버를 배정하고 포지션과 멤버를 반환합니다. 기존에 배정된 멤버가 있으면 그 멤버는 제거됩니다."""
     slot = _get_slot_or_raise(session, team_id, slot_id)
-    if session.get(Member, member_id) is None:
+    member = session.get(Member, member_id)
+    if member is None:
         raise ValueError("존재하지 않는 사람입니다")
     slot.member_id = member_id
     commit_translating(session, ROSTER_MESSAGES)
-    return slot
+    return slot, member
 
 
 def assign_slot_members(
@@ -358,9 +351,17 @@ def _require_may_seat(session: Session, member_id: int, may_seat: bool) -> None:
         raise ValueError("존재하지 않는 사람입니다")
 
 
-def clear_slot(session: Session, team_id: int, slot_id: int) -> TeamSlot:
-    """포지션의 멤버 배정을 해제합니다. 포지션 자체는 유지됩니다 — 팀 구성이 변경된 것이 아니라 멤버 배정만 해제됩니다."""
+def team_slot_counts(session: Session, team_id: int) -> tuple[int, int]:
+    """팀의 (전체 포지션 수, 멤버가 배정된 포지션 수)를 반환합니다."""
+    rows = list_slots(session, team_id)
+    return len(rows), sum(1 for _, member in rows if member is not None)
+
+
+def clear_slot(session: Session, team_id: int, slot_id: int, requester_id: int, may_unseat: bool) -> TeamSlot:
+    """포지션의 멤버 배정을 해제합니다. 포지션 자체는 유지됩니다.
+    다른 사람의 자리이고 may_unseat 가 False 이면 PermissionError 를 발생시킵니다. 자신의 자리는 권한 없이 해제합니다."""
     slot = _get_slot_or_raise(session, team_id, slot_id)
+    _require_may_unseat(slot, requester_id, may_unseat)
     slot.member_id = None
     commit_translating(session, ROSTER_MESSAGES)
     return slot
