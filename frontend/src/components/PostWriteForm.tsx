@@ -4,15 +4,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
 import { reason } from "../lib/api";
-import type { Post } from "../lib/contract";
 import { formError } from "../lib/loading";
-import { checkAttachments, checkPost } from "../lib/pipeline";
+import { AttachmentFailed, checkAttachments, checkPost, createDraft, deletePost, publishWithAttachments } from "../lib/pipeline";
 import { say } from "./toast";
 import { Button, FilePicker, FormFoot } from "./controls";
 import { AttachmentRow } from "./PostAttachments";
 import { RichText } from "./RichText";
 import { ATTACHMENT_ACCEPT, ATTACHMENT_HINT } from "../lib/boards";
-import { getJSON, sendFile } from "../lib/api";
 
 /** 글 하나를 쓰는 form 입니다. 목록 화면이 아니라 작성 페이지(routes/PostWrite)가 사용합니다.
  *  목록 아래에 이어붙이지 않습니다 — 목록과 작성은 하는 일이 다르고, 붙이면 작성 화면을 주소로
@@ -45,29 +43,10 @@ export function WriteForm(props: {
   // 업로드 완료 후 입력 칸을 초기화하려면 DOM 요소에 직접 접근해야 합니다.
   const picker = useRef<HTMLInputElement>(null);
 
-  const uploadAll = async (postId: number): Promise<void> => {
-    // 선택한 순서대로 하나씩 업로드합니다. 한 번에 모두 보내면 개별 진행 상황을
-    // 사용자에게 표시할 수 없습니다.
-    for (const [index, file] of files.entries()) {
-      const nth = files.length === 1 ? "" : ` (${index + 1}/${files.length})`;
-      setStage(`${file.name} 업로드 중${nth} 0%`);
-      try {
-        await sendFile(`/posts/${postId}/attachments`, file, (percent) => {
-          setStage(`${file.name} 업로드 중${nth} ${percent}%`);
-        });
-      } catch (error) {
-        // 이미 업로드된 파일은 초안에 붙어 있습니다. 실패한 파일부터 남겨두어,
-        // 재시도 시 같은 파일을 두 번 업로드하지 않게 합니다.
-        // files 는 이 렌더 시점의 값입니다. 업로드 중에는 파일 선택 버튼과 입력칸이
-        // disabled={send.isPending} 이므로 그 사이 사용자가 목록을 수정할 수 없습니다.
-        setFiles(files.slice(index));
-        // 발행(publish)은 이 함수가 끝난 뒤에 실행됩니다. 여기서 error 를 발생시키면 발행에
-        // 도달하지 못해 글은 초안으로 남습니다.
-        throw new Error(
-          `"${file.name}" 을 업로드하지 못해 글을 발행하지 않았어요 — ${reason(error)}`,
-        );
-      }
-    }
+  /** index 번째 파일의 업로드 진행률을 "a.pdf 업로드 중 (1/2) 40%" 로 표시합니다. */
+  const showProgress = (index: number, percent: number): void => {
+    const nth = files.length === 1 ? "" : ` (${index + 1}/${files.length})`;
+    setStage(`${files[index].name} 업로드 중${nth} ${percent}%`);
   };
 
   // 화면이 열리면 빈 글을 먼저 만듭니다. 그래야 쓰는 중에 첨부를 올릴 수 있습니다.
@@ -78,12 +57,12 @@ export function WriteForm(props: {
     if (starting.current) return;
     starting.current = true;
     let made: number | null = null;
-    void getJSON<{ post: Post }>(draftPath, { method: "POST" })
-      .then(({ post }) => { made = post.id; setDraftId(post.id); })
+    void createDraft(draftPath)
+      .then((post) => { made = post.id; setDraftId(post.id); })
       .catch((error: unknown) => say(reason(error)));
     return () => {
       if (made !== null && !published.current) {
-        void getJSON(`/posts/${made}`, { method: "DELETE" }).catch(() => undefined);
+        void deletePost(made).catch(() => undefined);
       }
     };
   }, [draftPath]);
@@ -91,14 +70,14 @@ export function WriteForm(props: {
   const send = useMutation({
     mutationFn: async () => {
       if (draftId === null) throw new Error("글을 준비하는 중이에요. 잠시 후 다시 눌러주세요.");
-      // 첨부를 먼저 올리고 발행합니다. 순서를 뒤집으면 첨부가 실패했을 때 첨부 없는 글이 공개됩니다.
-      await uploadAll(draftId);
-      await getJSON(`/posts/${draftId}/publish`, {
-        // author_id 는 보내지 않습니다. 서버가 요청의 인증 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 작성자를 결정합니다.
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, body }),
-      });
+      try {
+        await publishWithAttachments(draftId, files, { title, body }, showProgress);
+      } catch (error) {
+        // 앞의 첨부는 이미 초안에 붙어 있으므로 실패한 파일부터 남깁니다. 다시 누르면 같은 파일을 두 번 올리지 않습니다.
+        // 업로드 중에는 파일 입력칸이 disabled 라 files 는 이 렌더 시점의 값과 같습니다.
+        if (error instanceof AttachmentFailed) setFiles(files.slice(error.index));
+        throw error;
+      }
       published.current = true;
     },
     onSuccess: () => {

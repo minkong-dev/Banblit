@@ -3,13 +3,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
-import { apiUrl } from "../lib/api";
 import type { Attachment } from "../lib/contract";
 import { firstWhy } from "../lib/loading";
 import { say } from "./toast";
 import { Button, Why } from "./controls";
 import { fileSizeLabel } from "../lib/boards";
-import { getJSON } from "../lib/api";
+import { attachmentDownloadUrl, deleteAttachment } from "../lib/pipeline";
 
 /** 첨부파일 목록의 한 줄입니다. 등록 전(선택한 파일)과 등록 후(저장된 파일)가 같은 모양을 씁니다.
  *  href 가 있으면 이름이 다운로드 링크가 됩니다. 등록 전에는 받을 주소가 없어 넘기지 않습니다. */
@@ -41,8 +40,7 @@ export function AttachmentList(props: {
   const client = useQueryClient();
 
   const remove = useMutation({
-    mutationFn: (attachmentId: number) =>
-      getJSON(`/attachments/${attachmentId}`, { method: "DELETE" }),
+    mutationFn: (attachmentId: number) => deleteAttachment(attachmentId),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: ["board", "post", postId] });
       say("첨부파일을 삭제했어요.");
@@ -62,7 +60,7 @@ export function AttachmentList(props: {
             size={file.size}
             // download attribute(속성)를 붙이면 브라우저가 파일을 inline(화면에 표시)하지 않고 다운로드합니다.
             // 이 주소는 받을 권한이 있는 사람에게만 표시합니다.
-            href={apiUrl(`/attachments/${file.id}`)}
+            href={attachmentDownloadUrl(file.id)}
             action={!canRemove ? undefined : (
               <Button
                 kind="ghost"

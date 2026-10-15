@@ -20,6 +20,7 @@ flowchart LR
   frontend_src_components_PostComments --> frontend_src_lib_confirm["confirm.ts"]
   frontend_src_components_PostComments --> frontend_src_lib_contract["contract.ts"]
   frontend_src_components_PostComments --> frontend_src_lib_loading["loading.ts"]
+  frontend_src_components_PostComments --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_components_PostBoard["PostBoard.tsx"] --> frontend_src_components_PostComments
 ```
 
@@ -35,6 +36,7 @@ flowchart LR
 - [[graph/frontend/src/lib/confirm|confirm.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
+- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 
 ## imported by
 

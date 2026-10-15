@@ -6,7 +6,7 @@ import { useState } from "react";
 import type { RefObject } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import type { Attachment, Post, PostComment } from "../lib/contract";
+import type { Post } from "../lib/contract";
 import { loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
@@ -19,7 +19,7 @@ import { BlindPost, EditPost, RemovePost } from "./PostActions";
 import { CommentForm, CommentRow } from "./PostComments";
 import { RichTextView } from "./RichText";
 import { boardActions, boardListKey } from "../lib/boards";
-import { getJSON } from "../lib/api";
+import { loadPost, loadPosts } from "../lib/pipeline";
 import { stampLabel } from "../lib/calendar";
 
 /** 글 목록을 렌더합니다. 비어 있거나 로딩 중이어도 컨테이너는 유지합니다.
@@ -69,10 +69,7 @@ function PostDetail(props: {
     queryKey: ["board", "post", postId],
     // attachment 들은 글 상세 조회 response(응답)에 포함되므로 따로 요청하지 않습니다.
     // 서버 정의는 `backend/src/backend/api/schemas.py` 의 `PostDetailOut` 를 참조합니다.
-    queryFn: () =>
-      getJSON<{ post: Post; comments: PostComment[]; attachments: Attachment[] }>(
-        `/posts/${postId}`,
-      ),
+    queryFn: () => loadPost(postId),
   });
 
   // isSuccess 로 분기해야 TypeScript 가 아래에서 detail.data 를 undefined 없이 좁혀줍니다.
@@ -166,7 +163,7 @@ export function PostBoard(props: {
 
   const posts = useQuery({
     queryKey,
-    queryFn: () => getJSON<{ posts: Post[] }>(listPath),
+    queryFn: async () => ({ posts: await loadPosts(listPath) }),
   });
   const list = posts.data?.posts ?? [];
   const state = loadState(posts);

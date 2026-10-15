@@ -7,11 +7,11 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { getJSON } from "../lib/api";
 import { loadState } from "../lib/loading";
 import type { Member } from "../lib/contract";
 import { Empty } from "./controls";
 import { SearchList } from "./SearchList";
+import { searchMembers } from "../lib/pipeline";
 import { memberLabel, noMembersMessage } from "../lib/roster";
 
 export function MemberSearch(props: {
@@ -25,8 +25,7 @@ export function MemberSearch(props: {
 
   const found = useQuery({
     queryKey: ["member-search", query],
-    queryFn: () =>
-      getJSON<{ members: Member[] }>(`/members/search?q=${encodeURIComponent(query)}`),
+    queryFn: async () => ({ members: await searchMembers(query) }),
     // 한 글자 넣을 때마다 조회가 새로 나갑니다. 이전 결과를 지우지 않고 두면 목록이
     // "불러오는 중…" 으로 사라졌다 돌아오지 않고, 다음 결과가 도착할 때 한 번에 바뀝니다.
     placeholderData: keepPreviousData,

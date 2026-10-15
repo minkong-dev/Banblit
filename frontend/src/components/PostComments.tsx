@@ -12,7 +12,7 @@ import { DeleteButton, EditButton, FormFoot, Why } from "./controls";
 import { Modal } from "./Modal";
 import { RichText, RichTextView } from "./RichText";
 import { commentMessage as checkComment } from "../lib/boards";
-import { getJSON } from "../lib/api";
+import { addComment, deleteComment, editComment } from "../lib/pipeline";
 import { stampLabel } from "../lib/calendar";
 
 /** 댓글을 새로 다는 form 입니다. 로그인하지 않았으면(authorId 가 null) 버튼이 비활성화됩니다. */
@@ -23,12 +23,7 @@ export function CommentForm(props: { postId: number; authorId: number | null }) 
   const [touched, setTouched] = useState(false);
 
   const send = useMutation({
-    mutationFn: () =>
-      getJSON<{ comment: PostComment }>(`/posts/${postId}/comments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body }),
-      }),
+    mutationFn: () => addComment(postId, body),
     onSuccess: () => {
       setBody("");
       setTouched(false);
@@ -90,17 +85,13 @@ export function CommentRow(props: {
   };
 
   const save = useMutation({
-    mutationFn: () =>
-      getJSON<{ comment: PostComment }>(`/comments/${comment.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ body }),
-      }),
+    mutationFn: () => editComment(comment.id, body),
     onSuccess: () => { setEditing(false); refresh(); say("댓글을 수정했어요."); },
     onError: (error) => setBad(reason(error)),
   });
 
   const remove = useMutation({
-    mutationFn: () => getJSON<null>(`/comments/${comment.id}`, { method: "DELETE" }),
+    mutationFn: () => deleteComment(comment.id),
     onSuccess: () => { refresh(); say("댓글을 삭제했어요."); },
     onError: (error) => say(reason(error)),
   });

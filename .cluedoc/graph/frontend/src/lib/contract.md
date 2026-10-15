@@ -18,7 +18,6 @@ flowchart LR
   frontend_src_components_PostAttachments["PostAttachments.tsx"] --> frontend_src_lib_contract
   frontend_src_components_PostBoard["PostBoard.tsx"] --> frontend_src_lib_contract
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_lib_contract
-  frontend_src_components_PostWriteForm["PostWriteForm.tsx"] --> frontend_src_lib_contract
   frontend_src_components_RejectDialog["RejectDialog.tsx"] --> frontend_src_lib_contract
   frontend_src_components_TeamSearch["TeamSearch.tsx"] --> frontend_src_lib_contract
   frontend_src_components_queries["queries.ts"] --> frontend_src_lib_contract
@@ -70,7 +69,6 @@ flowchart LR
 - [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]
 - [[graph/frontend/src/components/PostBoard|PostBoard.tsx]]
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
-- [[graph/frontend/src/components/PostWriteForm|PostWriteForm.tsx]]
 - [[graph/frontend/src/components/RejectDialog|RejectDialog.tsx]]
 - [[graph/frontend/src/components/TeamSearch|TeamSearch.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
