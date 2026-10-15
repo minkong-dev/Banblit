@@ -11,7 +11,7 @@ import { getJSON } from "../lib/api";
 import { firstWhy } from "../lib/loading";
 import { monthRange, slotLabels, slotSteps } from "../lib/calendar";
 import { loadMyBookings, loadReservationRows, loadScheduleRows, loadUnavailable } from "../lib/pipeline";
-import { DayDialog } from "./DayDialog";
+import { DayDialog, DayView } from "./DayDialog";
 import { MonthView, WeekView } from "../components/CalendarViews";
 import {
   allBookedEntries, allOffEntries, assignedByDay, bookedByDay, ensembleByDay, ensembleOn, listNote, memberCountLabel, mergeByDay, offByDay, visibleDays,
@@ -283,7 +283,21 @@ export function Scheduler() {
         </Panel>
       </div>
 
-      {openDay === null ? null : (
+      {openDay === null ? null : tab === "all" ? (
+        <DayView
+          dayKey={openDay}
+          teams={teams}
+          entries={entriesOf(openDay)}
+          openHour={open}
+          closeHour={close}
+          slotCount={slotCount}
+          inFocus={inFocus(openDay)}
+          ensemble={ensembleOn(periodList, openDay)}
+          canEditEnsemble={can(me, "period_edit")}
+          rooms={rooms.data?.rooms ?? []}
+          onClose={() => setOpenDay(null)}
+        />
+      ) : (
         <DayDialog
           dayKey={openDay}
           tab={tab}

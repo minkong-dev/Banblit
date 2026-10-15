@@ -1,16 +1,14 @@
 // 사이드바의 관리자 메뉴 항목입니다. 주소·이름·필요 권한을 한 곳에 모읍니다.
 //
 // 세 곳이 같은 목록을 봅니다 — 사이드바(components/AppShell.tsx)가 항목을 그리고,
-// 주소 표(App.tsx)가 항목마다 route 를 만들며, 화면(routes/Settings.tsx)이 권한을 확인합니다.
+// 주소 표(App.tsx)가 항목마다 route 를 만들며, routes/Settings.tsx 의 AdminArea 가 권한을 확인합니다.
 // 목록이 흩어져 있으면 항목을 추가할 때 세 곳 중 한 곳을 빠뜨립니다.
 //
-// 2026-10-05 에 설정 화면의 탭을 이 목록으로 옮겼습니다. 탭을 거쳐야 닿는 구조라 구역을 주소로
-// 바로 열 수 없었고, 사이드바의 "설정" 1개 뒤에 무엇이 있는지 보이지 않았습니다.
 // 자기 계정에 대한 설정은 권한이 필요 없으므로 이 목록이 아니라 프로필 화면(/profile)에 있습니다.
 
 import type { Permission } from "./contract";
 
-/** 관리자 메뉴 항목 1개가 담당하는 구역입니다. routes/Settings.tsx 가 이 값으로 무엇을 그릴지 정합니다. */
+/** 관리자 메뉴 항목 1개가 담당하는 구역입니다. routes/Settings.tsx 의 ADMIN_SCREENS 가 구역마다 화면을 정합니다. */
 export type AdminSection =
   | "rooms"
   | "periods"

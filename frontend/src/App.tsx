@@ -17,7 +17,7 @@ import { Notices } from "./routes/Notices";
 import { BoardWrite, NoticeWrite } from "./routes/PostWrite";
 import { Profile } from "./routes/Profile";
 import { Scheduler } from "./routes/Scheduler";
-import { SettingsIndex, SettingsPage } from "./routes/Settings";
+import { ADMIN_SCREENS, AdminArea, SettingsIndex } from "./routes/Settings";
 import { Teams } from "./routes/Teams";
 import { AppShell } from "./components/AppShell";
 import { ADMIN_MENU } from "./lib/adminMenu";
@@ -59,12 +59,12 @@ export function App() {
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route path="/scheduler" element={<Scheduler />} />
         <Route path="/admin" element={<Assignment />} />
-        {/* 관리자 메뉴 6개입니다. 주소와 필요 권한은 lib/adminMenu.ts 에 작성되어 있는 내용을 기준으로 하고, 권한이 없는
-            사람이 주소로 바로 들어오면 SettingsPage 가 /settings 로 돌려보냅니다. */}
+        {/* 관리자 메뉴 6개입니다. 주소와 필요 권한은 lib/adminMenu.ts, 구역별 화면은 routes/Settings.tsx 의 ADMIN_SCREENS 입니다.
+            권한이 없는 사람이 주소로 바로 들어오면 AdminArea 가 /settings 로 돌려보냅니다. */}
         {ADMIN_MENU.map((item) => (
-          // element 의 key 는 구역을 옮길 때 화면을 새로 마운트합니다. 모두 같은 SettingsPage 라 key 가 없으면
-          // React 가 같은 자리의 같은 컴포넌트로 보고 이전 구역의 state(검색어 등)를 그대로 넘깁니다.
-          <Route key={item.key} path={item.to} element={<SettingsPage key={item.key} section={item.key} />} />
+          // key 는 구역을 옮길 때 화면을 새로 마운트합니다. 합주실과 기간이 같은 SetupArea 라 key 가 없으면
+          // React 가 이전 구역의 state 를 그대로 넘깁니다.
+          <Route key={item.key} path={item.to} element={<AdminArea key={item.key} section={item.key}>{ADMIN_SCREENS[item.key]}</AdminArea>} />
         ))}
         {/* 관리자 메뉴를 구역별 주소로 분리하기 전의 주소입니다. 저장해 둔 링크가 끊기지 않게 둡니다. */}
         <Route path="/settings" element={<SettingsIndex />} />

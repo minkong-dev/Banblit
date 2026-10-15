@@ -31,7 +31,7 @@ export function DayDialog({
   /** 날짜별 전체 합주 시각을 변경할 수 있는지입니다. 서버 권한 항목 period_edit 과 같습니다. */
   canEditEnsemble: boolean;
   dayKey: string;
-  tab: DayTab;
+  tab: Exclude<DayTab, "all">;
   teams: DayTeam[];
   entries: Entry[];
   /** 로그인한 사용자가 등록한 불가능 일정 전부입니다(lib/dayEntries 의 allOffEntries). 선택한 날짜의 항목만이 아닙니다. */
@@ -93,18 +93,6 @@ export function DayDialog({
   // 예약 탭도 선택한 날짜가 아니라 내가 잡은 예약 전부(myBookings)를 나열합니다. 끝난 예약은 서버가 빼고 줍니다.
   const removable = tab === "me" ? myOff : myBookings;
 
-  const roomsLabel = [...new Set(booked.map((entry) => entry.room).filter(Boolean))].join(", ");
-
-  // 그날 뭔가 놓인 팀만 명단을 조회합니다. 프로필·권한 구역과 같은 query key(components/queries.ts 의 teamMembersKey)를
-  // 써서, 이미 받아 둔 명단이 있으면 서버를 다시 조회하지 않습니다.
-  const dayTeams = teams.filter((team) => booked.some((entry) => entry.team === team.key));
-  const rosters = useQueries({ queries: dayTeams.map((team) => teamMembersQuery(team.id)) });
-  // useQueries 는 queries 와 같은 순서로 결과를 반환하므로 rosters[index] 가 dayTeams[index] 의 명단입니다.
-  const dayPeople: { team: DayTeam; member: Member }[] = [];
-  for (const [index, team] of dayTeams.entries()) {
-    for (const member of rosters[index]?.data ?? []) dayPeople.push({ team, member });
-  }
-  const rosterError = rosters.find((query) => query.isError)?.error;
 
   /** 등록한 항목 하나를 삭제합니다. 예약은 번호 하나로 통째로 취소하고, 불가능 일정은 그 행의 id 로 삭제합니다. */
   const removeEntry = async (entry: Entry) => {
@@ -299,36 +287,8 @@ export function DayDialog({
     </div>
   );
 
-  // 전체 합주 날짜에서 권한이 있는 사람에게만 표시합니다. 다른 사람은 타임라인의 전체 합주 막대로 시각을 봅니다.
-  const ensembleEditor = ensemble === null || !canEditEnsemble ? null : (
-    <div className="ensday">
-      <p className="cap2">선택한 날짜의 전체 합주 시각</p>
-      <EnsembleDayEditor
-        key={`${ensemble.startsAt}-${ensemble.endsAt}`}
-        day={dayKey}
-        on={ensemble}
-        room={rooms.find((item) => item.id === ensemble.roomId)}
-      />
-    </div>
-  );
-
-  const hint = `${roomsLabel || "합주실"} ${hourLabel(openHour)}–${hourLabel(closeHour)}`
-    + ` ${unitLabel(slotMinutes)} ${inFocus ? "배정된 기간" : "배정 없음"}`;
-
-  // 조회 전용 탭(all)은 카드 하나짜리 일반 modal 입니다. 버튼 줄이 없습니다.
-  if (tab === "all") {
-    return (
-      <Modal title={dayName} hint={hint} onClose={onClose}>
-        {booked.length
-          ? <>
-              <DayTimeline list={booked} teams={teams} {...hours} />
-              {dayTeams.length === 0 ? null : <DayPeople people={dayPeople} error={rosterError} />}
-            </>
-          : <div className="blank"><b>현재 예약이 없어요</b></div>}
-        {ensembleEditor}
-      </Modal>
-    );
-  }
+  const ensembleEditor = <DayEnsemble ensemble={ensemble} canEdit={canEditEnsemble} dayKey={dayKey} rooms={rooms} />;
+  const hint = dayHint(booked, openHour, closeHour, slotMinutes, inFocus);
 
   // 내 일정·예약 탭은 카드 3장입니다. 제목과 닫기 버튼은 왼쪽 카드, 등록 버튼은 가운데 카드 안에 있습니다.
   return (
@@ -368,6 +328,70 @@ export function DayDialog({
           {...hours}
         />
       </section>
+    </Modal>
+  );
+}
+
+/** 하루 창 머리의 안내 한 줄입니다. "1번방 18:00–24:00 1시간 단위 배정된 기간" */
+function dayHint(booked: Entry[], openHour: number, closeHour: number, slotMinutes: number, inFocus: boolean): string {
+  const roomsLabel = [...new Set(booked.map((entry) => entry.room).filter(Boolean))].join(", ");
+  return `${roomsLabel || "합주실"} ${hourLabel(openHour)}–${hourLabel(closeHour)} ${unitLabel(slotMinutes)} ${inFocus ? "배정된 기간" : "배정 없음"}`;
+}
+
+/** 전체 합주 날짜의 시각 입력입니다. period_edit 권한이 있는 사람에게만 표시하고, 다른 사람은 타임라인의 막대로 봅니다. */
+function DayEnsemble({ ensemble, canEdit, dayKey, rooms }: {
+  ensemble: EnsembleOn | null; canEdit: boolean; dayKey: string; rooms: Room[];
+}) {
+  if (ensemble === null || !canEdit) return null;
+  return (
+    <div className="ensday">
+      <p className="cap2">선택한 날짜의 전체 합주 시각</p>
+      <EnsembleDayEditor
+        key={`${ensemble.startsAt}-${ensemble.endsAt}`}
+        day={dayKey}
+        on={ensemble}
+        room={rooms.find((item) => item.id === ensemble.roomId)}
+      />
+    </div>
+  );
+}
+
+/** 전체 일정 탭의 하루 창입니다. 그날의 배정, 예약, 전체 합주와 그 팀원을 보기만 합니다. 버튼 줄이 없는 카드 1장입니다. */
+export function DayView({ dayKey, teams, entries, openHour, closeHour, slotCount, inFocus, ensemble, canEditEnsemble, rooms, onClose }: {
+  dayKey: string;
+  teams: DayTeam[];
+  entries: Entry[];
+  openHour: number;
+  closeHour: number;
+  slotCount: number;
+  inFocus: boolean;
+  ensemble: EnsembleOn | null;
+  canEditEnsemble: boolean;
+  rooms: Room[];
+  onClose: () => void;
+}) {
+  const slotMinutes = useSlotMinutes();
+  const booked = entries.filter((entry) => entry.kind !== "off");
+  // 그날 뭔가 놓인 팀만 명단을 조회합니다. 프로필, 팀 화면과 같은 queryKey 라 이미 받은 명단은 다시 조회하지 않습니다.
+  const dayTeams = teams.filter((team) => booked.some((entry) => entry.team === team.key));
+  const rosters = useQueries({ queries: dayTeams.map((team) => teamMembersQuery(team.id)) });
+  // useQueries 는 queries 와 같은 순서로 결과를 반환하므로 rosters[index] 가 dayTeams[index] 의 명단입니다.
+  const dayPeople: { team: DayTeam; member: Member }[] = [];
+  for (const [index, team] of dayTeams.entries()) {
+    for (const member of rosters[index]?.data ?? []) dayPeople.push({ team, member });
+  }
+  const rosterError = rosters.find((query) => query.isError)?.error;
+  const hours = { openHour, closeHour, slotCount };
+
+  return (
+    <Modal title={dayWithWeekday(dayKey)} hint={dayHint(booked, openHour, closeHour, slotMinutes, inFocus)} onClose={onClose}>
+      {booked.length
+        ? <>
+            <DayTimeline list={booked} teams={teams} {...hours} />
+            {dayTeams.length === 0 ? null : <DayPeople people={dayPeople} error={rosterError} />}
+          </>
+        : <div className="blank"><b>현재 예약이 없어요</b></div>}
+      <DayEnsemble ensemble={ensemble} canEdit={canEditEnsemble} dayKey={dayKey} rooms={rooms} />
     </Modal>
   );
 }
