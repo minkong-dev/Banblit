@@ -33,6 +33,7 @@ flowchart LR
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_DayDialogParts["DayDialogParts.tsx"] --> frontend_src_lib_pipeline
+  frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"] --> frontend_src_lib_pipeline
@@ -72,6 +73,7 @@ flowchart LR
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
 - [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]
+- [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]

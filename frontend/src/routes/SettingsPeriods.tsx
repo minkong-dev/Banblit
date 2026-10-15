@@ -9,17 +9,15 @@ import { Card, SectionHead } from "../components/Layout";
 import { Button, Cell, Empty, FormFoot, TimeRange, Toggle } from "../components/controls";
 import { useReturnFocus } from "../components/hooks";
 import { Modal } from "../components/Modal";
-import { useSlotMinutes, useTeams } from "../components/queries";
-import { getJSON, reason } from "../lib/api";
+import { useRemoveRow, useSlotMinutes, useTeams } from "../components/queries";
 import { askDelete } from "../lib/confirm";
 import type { ClockRange, Period, PracticeWindow, Room } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
-import { checkPeriod, daysBetween, openingHours, periodBody, savePeriod } from "../lib/pipeline";
+import { checkPeriod, daysBetween, openingHours, periodBody, removePeriod, savePeriod } from "../lib/pipeline";
 import type { PeriodBody } from "../lib/pipeline";
 import { periodTitle } from "../lib/settings";
 import type { WindowPair } from "../lib/settings";
-import { say } from "../components/toast";
 import { EnsembleDays, EnsembleFields, EnsembleToggle, ensembleBody, ensembleDraft } from "./SettingsEnsemble";
 import { Row, useFirstField, useForm } from "./SettingsForm";
 import { assignRuleMessage as checkAssignRule, ensembleMessage as checkEnsemble, practiceWindowMessage as checkPracticeWindow } from "../lib/settings";
@@ -284,12 +282,7 @@ export function PeriodCard(props: {
   const { periods, rooms, state, canEdit, canCreate, canDelete, onSaved, onDeleted } = props;
   const { openId: editing, open, close, register } = useReturnFocus();
   const [making, setMaking] = useState(false);
-  // 기간을 삭제하면 서버가 그 기간의 배정 결과·계산 기록·스케줄링 기록을 함께 삭제합니다(외래 키 CASCADE).
-  const drop = useMutation({
-    mutationFn: (id: number) => getJSON(`/periods/${id}`, { method: "DELETE" }),
-    onSuccess: onDeleted,
-    onError: (error) => say(reason(error)),
-  });
+  const drop = useRemoveRow(removePeriod, onDeleted);
 
   return (
     <Card>
@@ -325,12 +318,8 @@ export function PeriodCard(props: {
                 buttonRef={canEdit ? register(period.id) : undefined}
                 onEdit={canEdit ? () => open(period.id) : undefined}
                 deleteLabel={canDelete ? `${period.starts_on} 부터의 기간을 삭제` : undefined}
-                // 삭제 요청이 진행 중이면 다시 누른 것을 무시합니다. 연속으로 누르면 같은 DELETE 가 여러 번 전송됩니다.
                 onDelete={canDelete
-                  ? () => {
-                    if (drop.isPending) return;
-                    if (askDelete(`${period.starts_on} 부터의 집중 합주기간과 그 배정 결과`)) drop.mutate(period.id);
-                  }
+                  ? () => drop(period.id, () => askDelete(`${period.starts_on} 부터의 집중 합주기간과 그 배정 결과`))
                   : undefined}
               />
             ),

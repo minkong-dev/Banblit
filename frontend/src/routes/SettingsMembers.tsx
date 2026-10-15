@@ -5,6 +5,7 @@
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 
 import { Card, SectionHead } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
@@ -20,7 +21,9 @@ import { PERMISSION_ITEMS, can } from "../lib/account";
 import { permissionSetProblem } from "../lib/validate";
 import { askDelete, askExpel } from "../lib/confirm";
 import { MEMBERS_KEY, SETS_KEY, refreshMemberArea, useMe } from "../components/queries";
-import { expelMember } from "../lib/pipeline";
+import {
+  expelMember, grantPermissionSet, loadPermissionSets, removePermissionSet, revokePermissionSet,
+} from "../lib/pipeline";
 import { LOADING_TEXT } from "../lib/loading";
 import type { MemberRow, Permission, PermissionSet } from "../lib/contract";
 
@@ -136,8 +139,7 @@ function GrantAdd(props: {
   const client = useQueryClient();
 
   const grant = useMutation({
-    mutationFn: (memberId: number) =>
-      getJSON<null>(`/members/${memberId}/permission-sets/${set.id}`, { method: "POST" }),
+    mutationFn: (memberId: number) => grantPermissionSet(memberId, set.id),
     onSuccess: () => { refreshMemberArea(client); onDone("권한을 부여했어요"); },
     onError: (error) => onDone(reason(error)),
   });
@@ -163,8 +165,7 @@ function GrantHolders(props: {
   const client = useQueryClient();
 
   const revoke = useMutation({
-    mutationFn: (memberId: number) =>
-      getJSON<null>(`/members/${memberId}/permission-sets/${set.id}`, { method: "DELETE" }),
+    mutationFn: (memberId: number) => revokePermissionSet(memberId, set.id),
     onSuccess: () => { refreshMemberArea(client); onDone("권한을 제거했어요"); },
     onError: (error) => onDone(reason(error)),
   });
@@ -275,37 +276,35 @@ function SetModals(props: {
   return <GrantHolders set={set} onClose={onClose} onDone={onDone} />;
 }
 
-/** permission set 카드 행입니다. 카드가 수평으로 배치되며, 한 화면에 모두 보이지 않으면 < > 버튼으로 넘깁니다. */
-function SetRail() {
-  const client = useQueryClient();
+/** 카드 목록을 카드 1장 너비만큼 가로로 스크롤합니다. track 은 목록(ul)에 연결합니다. 창 너비가 바뀌어도 누를 때마다 카드 너비를 다시 측정합니다. */
+function useRailScroll(): { track: RefObject<HTMLUListElement | null>; slide: (way: 1 | -1) => void } {
   const track = useRef<HTMLUListElement | null>(null);
-  const [open, setOpen] = useState<SetModal | null>(null);
-
-  const sets = useQuery({
-    queryKey: SETS_KEY,
-    queryFn: () => getJSON<{ permission_sets: PermissionSet[] }>("/permission-sets"),
-  });
-  const list = sets.data?.permission_sets ?? [];
-
-  const saved = (text: string): void => {
-    refreshMemberArea(client);
-    say(text);
-  };
-
-  const drop = useMutation({
-    mutationFn: (set: PermissionSet) =>
-      getJSON<null>(`/permission-sets/${set.id}`, { method: "DELETE" }),
-    onSuccess: () => saved("권한을 삭제했습니다"),
-    onError: (error) => say(reason(error)),
-  });
-
-  // 한 번에 카드 한 개 너비만큼 스크롤합니다. 창 너비가 변경되어도 카드를 다시 계산하여 사용합니다.
   const slide = (way: 1 | -1): void => {
     const box = track.current;
     if (box === null) return;
     const step = box.querySelector("li")?.getBoundingClientRect().width ?? 240;
     box.scrollBy({ left: way * (step + 12), behavior: "smooth" });
   };
+  return { track, slide };
+}
+
+/** permission set 카드 행입니다. 카드가 수평으로 배치되며, 한 화면에 모두 보이지 않으면 < > 버튼으로 넘깁니다. */
+function SetRail() {
+  const client = useQueryClient();
+  const { track, slide } = useRailScroll();
+  const [open, setOpen] = useState<SetModal | null>(null);
+  const sets = useQuery({ queryKey: SETS_KEY, queryFn: loadPermissionSets });
+  const list = sets.data ?? [];
+
+  const saved = (text: string): void => {
+    refreshMemberArea(client);
+    say(text);
+  };
+  const drop = useMutation({
+    mutationFn: (set: PermissionSet) => removePermissionSet(set.id),
+    onSuccess: () => saved("권한을 삭제했어요"),
+    onError: (error) => say(reason(error)),
+  });
 
   return (
     <Card>

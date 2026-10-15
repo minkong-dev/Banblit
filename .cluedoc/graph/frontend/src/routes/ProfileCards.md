@@ -19,6 +19,7 @@ flowchart LR
   frontend_src_routes_ProfileCards --> frontend_src_lib_account["account.ts"]
   frontend_src_routes_ProfileCards --> frontend_src_lib_api["api.ts"]
   frontend_src_routes_ProfileCards --> frontend_src_lib_contract["contract.ts"]
+  frontend_src_routes_ProfileCards --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_routes_ProfileCards --> frontend_src_lib_validate["validate.ts"]
   frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_routes_ProfileCards
 ```
@@ -34,6 +35,7 @@ flowchart LR
 - [[graph/frontend/src/lib/account|account.ts]]
 - [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
+- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/validate|validate.ts]]
 
 ## imported by

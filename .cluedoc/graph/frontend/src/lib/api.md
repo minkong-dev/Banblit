@@ -31,7 +31,6 @@ flowchart LR
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_api
   frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_lib_api
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_lib_api
-  frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_lib_api
   frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_lib_api
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_lib_api
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_lib_api
@@ -64,7 +63,6 @@ flowchart LR
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]
-- [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]
 - [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]

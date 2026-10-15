@@ -16,6 +16,7 @@ flowchart LR
   frontend_src_components_PostAttachments["PostAttachments.tsx"] --> frontend_src_components_toast
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_components_toast
   frontend_src_components_PostWriteForm["PostWriteForm.tsx"] --> frontend_src_components_toast
+  frontend_src_components_queries["queries.ts"] --> frontend_src_components_toast
   frontend_src_components_richTextEditor["richTextEditor.ts"] --> frontend_src_components_toast
   frontend_src_components_toast_test["toast.test.ts"] --> frontend_src_components_toast
   frontend_src_routes_Account["Account.tsx"] --> frontend_src_components_toast
@@ -26,9 +27,7 @@ flowchart LR
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_components_toast
   frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_components_toast
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_components_toast
-  frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_components_toast
   frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_components_toast
-  frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_components_toast
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_components_toast
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_components_toast
 ```
@@ -45,6 +44,7 @@ flowchart LR
 - [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
 - [[graph/frontend/src/components/PostWriteForm|PostWriteForm.tsx]]
+- [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/components/richTextEditor|richTextEditor.ts]]
 - [[graph/frontend/src/components/toast.test|toast.test.ts]]
 - [[graph/frontend/src/routes/Account|Account.tsx]]
@@ -55,8 +55,6 @@ flowchart LR
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]
-- [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]
 - [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]
-- [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]

@@ -16,7 +16,8 @@ import { Avatar } from "../components/Avatar";
 import { Card, SectionHead } from "../components/Layout";
 import { BackButton, Button, EditButton, FilePicker, MenuItem, Why } from "../components/controls";
 import { usePopoverRouteClose } from "../components/hooks";
-import { getJSON, reason, sendFile } from "../lib/api";
+import { reason } from "../lib/api";
+import { leaveAccount, resetAvatar, saveProfile, uploadAvatar } from "../lib/pipeline";
 import { roleLabel } from "../lib/account";
 import { profileDraftMessage } from "../lib/validate";
 import { say } from "../components/toast";
@@ -36,37 +37,39 @@ function draftOf(me: Account): Draft {
 // 프로필 사진 변경 popover 의 id 입니다.
 const PHOTO_MENU_ID = "photoMenu";
 
+/** 프로필 사진 업로드와 기본 이미지 적용 요청입니다. 성공하면 ME_KEY 를 다시 조회하고 결과를 toast 로 알립니다. */
+function useAvatarChange(): { upload: (file: File) => void; reset: () => void; busy: boolean } {
+  const client = useQueryClient();
+  const done = (text: string): void => {
+    void client.invalidateQueries({ queryKey: ME_KEY });
+    say(text);
+  };
+  const upload = useMutation({
+    mutationFn: uploadAvatar,
+    onSuccess: () => done("프로필 사진을 변경했어요."),
+    onError: (error) => say(reason(error)),
+  });
+  const reset = useMutation({
+    mutationFn: resetAvatar,
+    onSuccess: () => done("기본 이미지를 적용했어요."),
+    onError: (error) => say(reason(error)),
+  });
+  return { upload: upload.mutate, reset: reset.mutate, busy: upload.isPending || reset.isPending };
+}
+
 /** 큰 원형 사진과 그 위의 "프로필 사진 변경" 버튼입니다. 버튼을 누르면 말풍선 메뉴 2개를 표시합니다.
  *  업로드는 숨긴 파일 입력칸을 대신 누르고, 기본 이미지 적용은 올린 사진을 삭제해 이름 앞 두 글자로 되돌립니다. */
 function PhotoEdit({ me }: { me: Account }) {
-  const client = useQueryClient();
   const pick = useRef<HTMLInputElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   usePopoverRouteClose(PHOTO_MENU_ID);
-
-  function done(text: string): void {
-    void client.invalidateQueries({ queryKey: ME_KEY });
-    say(text);
-  }
+  const { upload, reset, busy } = useAvatarChange();
 
   function close(): void {
     document.getElementById(PHOTO_MENU_ID)?.hidePopover();
   }
 
-  const upload = useMutation({
-    mutationFn: (file: File) => sendFile<{ ok: boolean }>("/me/avatar", file, () => {}),
-    onSuccess: () => done("프로필 사진을 변경했어요."),
-    onError: (error) => say(reason(error)),
-  });
-
-  const reset = useMutation({
-    mutationFn: () => getJSON<null>("/me/avatar", { method: "DELETE" }),
-    onSuccess: () => done("기본 이미지를 적용했어요."),
-    onError: (error) => say(reason(error)),
-  });
-
-  const busy = upload.isPending || reset.isPending;
   return (
     <div className="photo">
       <button
@@ -76,7 +79,7 @@ function PhotoEdit({ me }: { me: Account }) {
         aria-controls={PHOTO_MENU_ID}
         aria-expanded={open}
         // 요청 중에는 disabled 가 아니라 aria-disabled 로 막습니다. 메뉴를 닫으면 초점이 이 버튼으로 돌아오는데,
-        // 초점을 가진 버튼이 disabled 가 되면 WebKit(Safari)은 초점을 body 로 옮깁니다(2026-09-30 WebKit e2e 로 발견).
+        // 초점을 가진 버튼이 disabled 가 되면 WebKit(Safari)은 초점을 body 로 옮깁니다.
         // preventDefault 가 popoverTarget 의 기본 동작(메뉴 열기)을 막습니다.
         aria-disabled={busy}
         onClick={(event) => { if (busy) event.preventDefault(); }}
@@ -96,19 +99,19 @@ function PhotoEdit({ me }: { me: Account }) {
           // 되돌리지 않으면 초점이 사라진 메뉴와 함께 문서 맨 앞으로 갑니다.
           // 메뉴 안의 버튼을 눌러 닫을 때는 그 버튼이 이미 초점을 갖고 있어, 브라우저가 popover 를
           // 숨기며 처리하는 초점 정리가 이 함수보다 나중에 실행되면 여기서 옮긴 초점을 덮어씁니다.
-          // requestAnimationFrame 으로 한 프레임 미뤄 브라우저의 정리가 끝난 뒤에 옮깁니다(2026-09-29 e2e 로 발견).
+          // requestAnimationFrame 으로 한 프레임 미뤄 브라우저의 정리가 끝난 뒤에 옮깁니다.
           if (event.newState === "closed") requestAnimationFrame(() => trigger.current?.focus());
         }}
       >
         <MenuItem onClick={() => { close(); pick.current?.click(); }}>프로필 사진 업로드</MenuItem>
-        <MenuItem onClick={() => { close(); reset.mutate(); }}>기본 이미지 적용</MenuItem>
+        <MenuItem onClick={() => { close(); reset(); }}>기본 이미지 적용</MenuItem>
       </div>
       <Avatar id={me.id} name={me.name} className="big" photo={me.avatar} />
       <FilePicker
         ref={pick}
         id="myPhoto"
         accept="image/jpeg,image/png,image/gif,image/webp"
-        onFiles={([file]) => upload.mutate(file)}
+        onFiles={([file]) => upload(file)}
       />
     </div>
   );
@@ -145,33 +148,11 @@ function DraftFields({ draft, onChange }: { draft: Draft; onChange: (next: Draft
   );
 }
 
-/** 저장 한 번에 바뀐 것만 보냅니다. 이름·기수가 그대로면 PATCH 를, 새 비밀번호가 비어 있으면 비밀번호 변경을 건너뜁니다.
- *  ponytail: 요청 2개를 차례로 보내 이름은 저장되고 비밀번호만 실패할 수 있습니다. 실패 사유는 화면에 표시하고
- *  편집 상태를 유지합니다. 한 번에 기록해야 하면 서버에 두 값을 함께 받는 endpoint 를 만듭니다. */
+/** 프로필 편집 저장입니다. 바뀐 값만 보내는 규칙은 lib/pipeline 의 saveProfile 에 있습니다. */
 function useSaveProfile(me: Account, onSaved: () => void) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (draft: Draft) => {
-      const cohort = draft.cohort.trim() === "" ? null : Number(draft.cohort);
-      const infoChanged = draft.name.trim() !== me.name || cohort !== me.cohort;
-      if (infoChanged) {
-        await getJSON<{ account: Account }>("/me", {
-          method: "PATCH",
-          body: JSON.stringify({ name: draft.name.trim(), cohort }),
-        });
-      }
-      if (draft.next === "") return;
-      try {
-        await getJSON<null>("/me/password", {
-          method: "POST",
-          body: JSON.stringify({ current: draft.current, next: draft.next }),
-        });
-      } catch (error) {
-        // 이름·기수가 이미 저장된 경우 그 사실을 함께 알립니다. 알리지 않으면 아무것도 저장되지 않은 것으로 읽힙니다.
-        if (!infoChanged) throw error;
-        throw new Error(`이름과 기수는 저장했지만 비밀번호는 변경하지 못했어요. ${reason(error)}`);
-      }
-    },
+    mutationFn: (draft: Draft) => saveProfile(me, draft),
     onSettled: () => { void client.invalidateQueries({ queryKey: ME_KEY }); },
     onSuccess: () => {
       say("프로필을 수정했어요.");
@@ -247,7 +228,7 @@ function Leave({ me }: { me: Account }) {
   const matched = typed.trim() === me.name;
 
   const leave = useMutation({
-    mutationFn: () => getJSON<null>("/me", { method: "DELETE" }),
+    mutationFn: leaveAccount,
     onSuccess: () => { void navigate("/"); },
     onError: (error) => say(reason(error)),
   });
