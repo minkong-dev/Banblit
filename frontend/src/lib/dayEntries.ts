@@ -171,7 +171,7 @@ export function offByDay(times: Unavailable[], openHour: number, days: string[])
       (byDay[day] ??= []).push({
         kind: "off",
         team: null,
-        who: item.name ?? "불가능 일정",
+        who: item.name ?? undefined,
         note: item.reason ?? undefined,
         a: slotIndex(item.starts_at, openHour),
         b: slotEndIndex(item.ends_at, openHour),
@@ -192,7 +192,7 @@ export function allOffEntries(times: Unavailable[], openHour: number): Entry[] {
     .map((item) => ({
       kind: "off" as const,
       team: null,
-      who: item.name ?? "불가능 일정",
+      who: item.name ?? undefined,
       note: item.reason ?? undefined,
       a: slotIndex(item.starts_at, openHour),
       b: slotEndIndex(item.ends_at, openHour),
