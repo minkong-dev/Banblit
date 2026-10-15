@@ -12,9 +12,9 @@ flowchart LR
   frontend_src_components_MemberSearch["MemberSearch.tsx"]
   frontend_src_components_MemberSearch --> frontend_src_components_SearchList["SearchList.tsx"]
   frontend_src_components_MemberSearch --> frontend_src_components_controls["controls.tsx"]
-  frontend_src_components_MemberSearch --> frontend_src_lib_api["api.ts"]
   frontend_src_components_MemberSearch --> frontend_src_lib_contract["contract.ts"]
   frontend_src_components_MemberSearch --> frontend_src_lib_loading["loading.ts"]
+  frontend_src_components_MemberSearch --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_components_MemberSearch --> frontend_src_lib_roster["roster.ts"]
   frontend_src_components_MemberPicker_test["MemberPicker.test.tsx"] --> frontend_src_components_MemberSearch
   frontend_src_components_MemberPicker["MemberPicker.tsx"] --> frontend_src_components_MemberSearch
@@ -26,9 +26,9 @@ flowchart LR
 
 - [[graph/frontend/src/components/SearchList|SearchList.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
-- [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
+- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/roster|roster.ts]]
 
 ## imported by

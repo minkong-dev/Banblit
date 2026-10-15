@@ -9,7 +9,8 @@ import type { useEditor } from "@tiptap/react";
 import Youtube from "@tiptap/extension-youtube";
 import { TextStyle } from "@tiptap/extension-text-style";
 
-import { apiUrl, reason, sendFile } from "../lib/api";
+import { reason } from "../lib/api";
+import { attachmentInlineUrl, uploadAttachment } from "../lib/pipeline";
 import { embedKind } from "../lib/richText";
 import { say } from "./toast";
 
@@ -143,12 +144,10 @@ export async function attach(
   }
   for (const file of files) {
     try {
-      const { attachment } = await sendFile<{ attachment: { id: number } }>(
-        `/posts/${postId}/attachments`, file, () => undefined,
-      );
+      const attachmentId = await uploadAttachment(postId, file, () => undefined);
       // 표시용 경로입니다. 다운로드 경로(/attachments/{id})는 모든 파일을 octet-stream 과
       // Content-Disposition: attachment 로 내보내므로 img·audio·iframe 이 표시하지 못합니다.
-      const src = apiUrl(`/attachments/${attachment.id}/inline`);
+      const src = attachmentInlineUrl(attachmentId);
       // chain 은 편집기 명령을 이어 붙이는 방식이고 마지막 run 이 실행합니다. run 을 부르지
       // 않으면 아무것도 적용되지 않습니다.
       const at = editor.chain().focus(pos ?? undefined);

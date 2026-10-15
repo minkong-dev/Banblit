@@ -1,10 +1,10 @@
 // lib 모듈의 시퀀스 파일입니다. 서버 호출과, 그 앞뒤에 어느 검증을 어느 순서로 호출할지만 이 파일에서 결정합니다.
 // 서버와 무관한 계산 함수는 다시 export 하지 않습니다. 화면은 그 함수가 있는 lib 파일에서 직접 import 합니다.
 
-import { getJSON } from "./api";
+import { apiUrl, getJSON, reason, sendFile } from "./api";
 import type {
-  Account, Ensemble, Me, Member, MemberUnavailable, Notification, Period, Reservation, ScheduleOut, ScheduleRow,
-  Unavailable,
+  Account, Attachment, Ensemble, Me, Member, MemberUnavailable, Notification, Period, Post, PostComment, Reservation,
+  ScheduleOut, ScheduleRow, Unavailable,
 } from "./contract";
 import {
   datesBetween,
@@ -491,3 +491,101 @@ export async function markNotificationsRead(): Promise<void> {
 }
 
 // 알림 문구 생성과 읽지 않은 개수 계산 사이에 순서 의존이 없어 그대로 export 합니다.
+
+// ===== 게시판 =====
+
+export type PostDetail = { post: Post; comments: PostComment[]; attachments: Attachment[] };
+
+export async function loadPosts(listPath: string): Promise<Post[]> {
+  const body = await getJSON<{ posts: Post[] }>(listPath);
+  return body.posts;
+}
+
+export function loadPost(postId: number): Promise<PostDetail> {
+  return getJSON<PostDetail>(`/posts/${postId}`);
+}
+
+/** draftPath(공지는 /notices/drafts, 팀 게시판은 /teams/{id}/posts/drafts)에 빈 초안을 만들고 반환합니다. */
+export async function createDraft(draftPath: string): Promise<Post> {
+  const body = await getJSON<{ post: Post }>(draftPath, { method: "POST" });
+  return body.post;
+}
+
+export async function editPost(postId: number, title: string, body: string): Promise<Post> {
+  const res = await getJSON<{ post: Post }>(`/posts/${postId}`, { method: "PATCH", body: JSON.stringify({ title, body }) });
+  return res.post;
+}
+
+/** 글과 그 첨부를 삭제합니다. 발행하지 않은 초안을 버릴 때도 씁니다. */
+export async function deletePost(postId: number): Promise<void> {
+  await getJSON(`/posts/${postId}`, { method: "DELETE" });
+}
+
+export async function blindPost(postId: number): Promise<void> {
+  await getJSON(`/posts/${postId}/blind`, { method: "PUT" });
+}
+
+export async function addComment(postId: number, body: string): Promise<PostComment> {
+  const res = await getJSON<{ comment: PostComment }>(`/posts/${postId}/comments`, { method: "POST", body: JSON.stringify({ body }) });
+  return res.comment;
+}
+
+export async function editComment(commentId: number, body: string): Promise<PostComment> {
+  const res = await getJSON<{ comment: PostComment }>(`/comments/${commentId}`, { method: "PATCH", body: JSON.stringify({ body }) });
+  return res.comment;
+}
+
+export async function deleteComment(commentId: number): Promise<void> {
+  await getJSON(`/comments/${commentId}`, { method: "DELETE" });
+}
+
+export async function deleteAttachment(attachmentId: number): Promise<void> {
+  await getJSON(`/attachments/${attachmentId}`, { method: "DELETE" });
+}
+
+export async function uploadAttachment(postId: number, file: File, onProgress: (percent: number) => void): Promise<number> {
+  const body = await sendFile<{ attachment: { id: number } }>(`/posts/${postId}/attachments`, file, onProgress);
+  return body.attachment.id;
+}
+
+/** 첨부를 내려받는 주소입니다. 서버가 attachment 로 내보내 브라우저가 저장합니다. */
+export function attachmentDownloadUrl(attachmentId: number): string {
+  return apiUrl(`/attachments/${attachmentId}`);
+}
+
+/** 첨부를 본문에 표시하는 주소입니다. img, audio, iframe 이 표시할 수 있는 형식으로 내보냅니다. */
+export function attachmentInlineUrl(attachmentId: number): string {
+  return apiUrl(`/attachments/${attachmentId}/inline`);
+}
+
+export async function searchMembers(query: string): Promise<Member[]> {
+  const body = await getJSON<{ members: Member[] }>(`/members/search?q=${encodeURIComponent(query)}`);
+  return body.members;
+}
+
+/** files 의 index 번째 첨부를 올리지 못했습니다. 그 앞의 첨부는 이미 초안에 붙어 있습니다. */
+export class AttachmentFailed extends Error {
+  constructor(readonly index: number, fileName: string, why: string) {
+    super(`"${fileName}" 을 업로드하지 못해 글을 발행하지 않았어요 — ${why}`);
+  }
+}
+
+/** 초안 draftId 에 files 를 순서대로 올린 뒤 글을 발행합니다. 첨부 하나라도 실패하면 AttachmentFailed 를 발생시키고 발행하지 않습니다. */
+export async function publishWithAttachments(
+  draftId: number,
+  files: File[],
+  post: { title: string; body: string },
+  onProgress: (index: number, percent: number) => void,
+): Promise<void> {
+  // 첨부를 먼저 올립니다. 발행을 먼저 하면 첨부가 실패했을 때 첨부 없는 글이 공개됩니다.
+  // 하나씩 올려야 파일마다 진행률을 표시할 수 있습니다.
+  for (const [index, file] of files.entries()) {
+    try {
+      await uploadAttachment(draftId, file, (percent) => onProgress(index, percent));
+    } catch (error) {
+      throw new AttachmentFailed(index, file.name, reason(error));
+    }
+  }
+  // author_id 는 보내지 않습니다. 서버가 요청의 cookie 로 작성자를 결정합니다.
+  await getJSON(`/posts/${draftId}/publish`, { method: "POST", body: JSON.stringify(post) });
+}

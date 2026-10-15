@@ -7,14 +7,13 @@ import { reason } from "../lib/api";
 import { askBlind, askDeletePost } from "../lib/confirm";
 import type { Post } from "../lib/contract";
 import { firstWhy } from "../lib/loading";
-import { checkPost } from "../lib/pipeline";
+import { blindPost, checkPost, deletePost, editPost } from "../lib/pipeline";
 import { say } from "./toast";
 import { DeleteButton, FormFoot, IconButton, Why } from "./controls";
 import { EyeOffIcon } from "./icons";
 import { Modal } from "./Modal";
 import { RichText } from "./RichText";
 import { BLINDED_KEY } from "../lib/boards";
-import { getJSON } from "../lib/api";
 
 /** board_moderate 권한자에게만 표시되는 블라인드 버튼입니다. 글을 삭제하지 않고 목록·상세에서 가립니다.
  *  가린 글은 작성자 본인에게도 보이지 않고, 설정 화면의 블라인드 탭에서만 보이며 거기서 되돌립니다. */
@@ -27,7 +26,7 @@ export function BlindPost(props: {
   const client = useQueryClient();
 
   const blind = useMutation({
-    mutationFn: () => getJSON(`/posts/${postId}/blind`, { method: "PUT" }),
+    mutationFn: () => blindPost(postId),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: listKey });
       void client.invalidateQueries({ queryKey: BLINDED_KEY });
@@ -62,7 +61,7 @@ export function RemovePost(props: {
   const client = useQueryClient();
 
   const remove = useMutation({
-    mutationFn: () => getJSON(`/posts/${postId}`, { method: "DELETE" }),
+    mutationFn: () => deletePost(postId),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: listKey });
       say("글을 삭제했어요.");
@@ -96,11 +95,7 @@ export function EditPost(props: {
   const [bad, setBad] = useState("");
 
   const send = useMutation({
-    mutationFn: () =>
-      getJSON<{ post: Post }>(`/posts/${post.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ title: title.trim(), body }),
-      }),
+    mutationFn: () => editPost(post.id, title.trim(), body),
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: listKey });
       void client.invalidateQueries({ queryKey: ["board", "post", post.id] });

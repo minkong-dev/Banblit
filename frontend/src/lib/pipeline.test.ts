@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { addUnavailable, cancelBooking, checkAttachments, checkPeriod, ensembleSaveOrder, expelMember, findId, loadReservationRows, NO_REPEAT, logOut, openingHours, PERIOD_DELETE_KEYS, periodBody, rejectBooking, rejectUnavailable, removeUnavailable, requestPasswordReset, ROOM_DELETE_KEYS, saveSettings, SCHEDULE_KEY, resetPassword } from "./pipeline";
 import { isSignedIn } from "./api";
+import { AttachmentFailed, publishWithAttachments } from "./pipeline";
 import { weekKeys } from "./calendar";
 
 /** vitest 는 브라우저가 아니라 Node 에서 실행됩니다. document 를 기본으로 제공하지 않으므로
@@ -505,5 +506,48 @@ describe("rejectBooking · rejectUnavailable", () => {
     expect(url).toBe("/api/members/3/unavailable/7/reject");
     expect(init?.method).toBe("POST");
     expect(sentBody(init)).toEqual({ reason: "리허설이에요" });
+  });
+});
+
+describe("publishWithAttachments — 첨부를 먼저 올리고 발행한다", () => {
+  /** XMLHttpRequest 대신 쓰는 가짜입니다. send 가 불리면 바로 성공하거나 실패합니다. */
+  function stubUpload(calls: string[], fail: boolean): void {
+    class FakeXhr {
+      status = fail ? 422 : 201;
+      responseText = JSON.stringify(fail ? { detail: "올릴 수 없는 파일 종류예요" } : { attachment: { id: 1 } });
+      upload = { onprogress: null as unknown };
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      ontimeout: (() => void) | null = null;
+      timeout = 0;
+      withCredentials = false;
+      open(_method: string, url: string): void { calls.push(`upload ${url}`); }
+      send(): void { this.onload?.(); }
+    }
+    vi.stubGlobal("XMLHttpRequest", FakeXhr);
+  }
+
+  it("첨부 2개를 순서대로 올린 뒤 발행을 요청한다", async () => {
+    const calls: string[] = [];
+    stubUpload(calls, false);
+    vi.stubGlobal("fetch", vi.fn((url: string) => { calls.push(`fetch ${url}`); return Promise.resolve(new Response("{}")); }));
+    const files = [new File(["a"], "a.pdf"), new File(["b"], "b.pdf")];
+
+    await publishWithAttachments(7, files, { title: "제목", body: "본문" }, () => undefined);
+
+    expect(calls).toEqual(["upload /api/posts/7/attachments", "upload /api/posts/7/attachments", "fetch /api/posts/7/publish"]);
+  });
+
+  it("첨부가 실패하면 발행하지 않고 실패한 파일의 순서를 알린다", async () => {
+    const calls: string[] = [];
+    stubUpload(calls, true);
+    vi.stubGlobal("fetch", vi.fn(() => { calls.push("fetch"); return Promise.resolve(new Response("{}")); }));
+
+    const failed = await publishWithAttachments(7, [new File(["a"], "a.exe")], { title: "t", body: "b" }, () => undefined)
+      .catch((error: unknown) => error);
+
+    expect(failed).toBeInstanceOf(AttachmentFailed);
+    expect((failed as AttachmentFailed).index).toBe(0);
+    expect(calls).not.toContain("fetch");
   });
 });

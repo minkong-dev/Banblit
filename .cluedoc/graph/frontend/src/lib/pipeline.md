@@ -17,10 +17,15 @@ flowchart LR
   frontend_src_lib_pipeline --> frontend_src_lib_jobs["jobs.ts"]
   frontend_src_lib_pipeline --> frontend_src_lib_settings["settings.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_pipeline
+  frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_lib_pipeline
   frontend_src_components_NotificationMenu["NotificationMenu.tsx"] --> frontend_src_lib_pipeline
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_lib_pipeline
+  frontend_src_components_PostAttachments["PostAttachments.tsx"] --> frontend_src_lib_pipeline
+  frontend_src_components_PostBoard["PostBoard.tsx"] --> frontend_src_lib_pipeline
+  frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_lib_pipeline
   frontend_src_components_PostWriteForm["PostWriteForm.tsx"] --> frontend_src_lib_pipeline
   frontend_src_components_queries["queries.ts"] --> frontend_src_lib_pipeline
+  frontend_src_components_richTextEditor["richTextEditor.ts"] --> frontend_src_lib_pipeline
   frontend_src_lib_pipeline_test["pipeline.test.ts"] --> frontend_src_lib_pipeline
   frontend_src_routes_Account["Account.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_pipeline
@@ -50,10 +55,15 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
+- [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
 - [[graph/frontend/src/components/NotificationMenu|NotificationMenu.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
+- [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]
+- [[graph/frontend/src/components/PostBoard|PostBoard.tsx]]
+- [[graph/frontend/src/components/PostComments|PostComments.tsx]]
 - [[graph/frontend/src/components/PostWriteForm|PostWriteForm.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
+- [[graph/frontend/src/components/richTextEditor|richTextEditor.ts]]
 - [[graph/frontend/src/lib/pipeline.test|pipeline.test.ts]]
 - [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
