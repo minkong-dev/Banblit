@@ -2,7 +2,8 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import { Empty } from "../components/controls";
 import { Tabs } from "../components/Layout";
-import { PostBoard } from "../components/PostBoard";
+import { Card } from "../components/Layout";
+import { PostDetail, PostListPanel, usePostBoard } from "../components/PostBoard";
 import { can } from "../lib/account";
 import { loadState } from "../lib/loading";
 import { useMe, useMyTeams, useTeams } from "../components/queries";
@@ -34,22 +35,36 @@ export function Board() {
               onSelect={(key) => void navigate(`/board/${key}`)}
             />
           ) : null}
-          <div className="main">
-            <PostBoard
-              key={current.id}
-              title={current.name}
-              hint="해당 팀에 소속된 멤버만 볼 수 있어요"
-              listPath={`/teams/${current.id}/posts`}
-              newPath={`/board/${current.id}/new`}
-              basePath={`/board/${current.id}`}
-              authorId={me?.id ?? null}
-              canWrite
-              canModerate={can(me, "board_moderate")}
-              emptyText="아직 등록된 글이 없어요"
-            />
-          </div>
+          {/* key 는 팀을 바꿀 때 쪽 번호와 초점 상태를 새로 시작합니다. */}
+          <TeamBoard key={current.id} teamId={current.id} teamName={current.name} meId={me?.id ?? null} canModerate={can(me, "board_moderate")} />
         </>
       )}
     </>
+  );
+}
+
+/** 팀 1개의 게시판입니다. 주소에 글 번호가 있으면 그 글의 상세를, 없으면 팀 글 목록을 표시합니다. 팀 소속 멤버는 모두 글을 씁니다. */
+function TeamBoard({ teamId, teamName, meId, canModerate }: { teamId: number; teamName: string; meId: number | null; canModerate: boolean }) {
+  const listPath = `/teams/${teamId}/posts`;
+  const { focus, listKey, backToList } = usePostBoard(`/board/${teamId}`, listPath);
+  return (
+    <div className="main">
+      <Card>
+        {focus.openId === null ? (
+          <PostListPanel
+            title={teamName}
+            hint="해당 팀에 소속된 멤버만 볼 수 있어요"
+            listPath={listPath}
+            newPath={`/board/${teamId}/new`}
+            canWrite
+            emptyText="아직 등록된 글이 없어요"
+            onOpen={focus.open}
+            buttonRef={focus.register}
+          />
+        ) : (
+          <PostDetail postId={focus.openId} authorId={meId} canModerate={canModerate} listKey={listKey} heading={focus.openFocus} onBack={backToList} />
+        )}
+      </Card>
+    </div>
   );
 }

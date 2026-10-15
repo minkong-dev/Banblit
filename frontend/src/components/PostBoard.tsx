@@ -1,8 +1,8 @@
-// 게시판 화면입니다. 글 목록과 상세를 한 카드 안에서 전환합니다. 공지사항과 팀 게시판이 함께 사용합니다.
+// 게시판 부품입니다. 글 목록 패널과 글 상세를 공지사항(routes/Notices)과 팀 게시판(routes/Board)이 함께 씁니다. 둘 중 무엇을 그릴지는 routes 가 정합니다.
 // 작성 form 은 자기 주소를 가진 화면(routes/PostWrite)이 맡고, 첨부·댓글·조치 부품은 Post*.tsx 가 각각 담당합니다.
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { RefObject } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -11,7 +11,7 @@ import { loadState } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { clampPage, pageCount, pageSlice } from "../lib/paging";
 import { BackButton, Button, EditButton, Empty } from "./controls";
-import { Card, SectionHead } from "./Layout";
+import { SectionHead } from "./Layout";
 import { idParam, useReturnFocus } from "./hooks";
 import { Pager } from "./Pager";
 import { AttachmentList } from "./PostAttachments";
@@ -53,7 +53,7 @@ function PostList(props: {
   );
 }
 
-function PostDetail(props: {
+export function PostDetail(props: {
   postId: number;
   /** 현재 사용자의 id. 미인증(로그인 전)이면 null이므로 글과 댓글을 작성할 수 없습니다. */
   authorId: number | null;
@@ -72,6 +72,11 @@ function PostDetail(props: {
     // 서버 정의는 `backend/src/backend/api/schemas.py` 의 `PostDetailOut` 를 참조합니다.
     queryFn: () => loadPost(postId),
   });
+  // 제목은 상세를 받은 뒤에 그려지므로, 받은 시점에 제목으로 초점을 옮깁니다. 다시 조회해도 isSuccess 가 그대로라 초점을 빼앗지 않습니다.
+  const loaded = detail.isSuccess;
+  useEffect(() => {
+    if (loaded) heading.current?.focus();
+  }, [loaded, heading]);
 
   // isSuccess 로 분기해야 TypeScript 가 아래에서 detail.data 를 undefined 없이 좁혀줍니다.
   // loadState(detail).kind === "ready" 는 같은 조건이지만 별개 값이라 좁히지 못합니다.
@@ -129,96 +134,57 @@ function PostDetail(props: {
   );
 }
 
-/** 글 목록, 상세 보기, 작성 폼, 댓글 작성을 통합한 게시판 컴포넌트입니다.
- *  공지사항 화면과 팀별 게시판이 이 컴포넌트를 재사용하며, listPath 와 writePath 만 달라집니다.
- *  열린 글은 주소의 :postId 가 정합니다(/notices/:postId, /board/:teamId/:postId). 글을 누르면 그 주소로
- *  이동하고, 목록으로 돌아가면 basePath 로 이동합니다. */
-export function PostBoard(props: {
+/** 게시판 화면의 열린 글과 초점 되돌리기입니다. 열린 글은 주소의 :postId 가 정합니다(/notices/:postId, /board/:teamId/:postId).
+ *  글을 열면 기록을 쌓고 닫으면 바꿔 끼웁니다(replace). 닫은 뒤 뒤로 가기가 닫은 글을 다시 열지 않습니다.
+ *  backToList 는 목록을 다시 조회하고 그 글의 목록 버튼으로 초점을 되돌립니다. 댓글 수가 바뀌었을 수 있기 때문입니다. */
+export function usePostBoard(basePath: string, listPath: string) {
+  const navigate = useNavigate();
+  const client = useQueryClient();
+  const { postId } = useParams();
+  const listKey = boardListKey(listPath);
+  const focus = useReturnFocus<HTMLHeadingElement>({
+    openId: idParam(postId),
+    setOpenId: (id) => void (id === null ? navigate(basePath, { replace: true }) : navigate(`${basePath}/${id}`)),
+  });
+  const backToList = (): void => {
+    void client.invalidateQueries({ queryKey: listKey });
+    focus.close();
+  };
+  return { focus, listKey, backToList };
+}
+
+/** 게시판 글 목록 패널입니다. 쪽 넘김과 글쓰기 버튼을 함께 표시합니다. 공지사항과 팀 게시판이 listPath, newPath 만 달리 씁니다. */
+export function PostListPanel(props: {
   title: string;
   hint: string;
   listPath: string;
   /** 글쓰기 버튼이 여는 작성 페이지의 주소입니다. */
   newPath: string;
-  /** 목록 화면의 주소입니다. 글 상세는 `${basePath}/${postId}` 입니다. */
-  basePath: string;
-  /** 현재 사용자의 id. 미인증(로그인 전)이면 null이므로 글과 댓글을 작성할 수 없습니다. */
-  authorId: number | null;
-  /** 글쓰기 버튼을 표시할지 여부입니다. 공지사항은 notice_write 권한이 있는 사람만,
-   *  팀 게시판은 팀에 소속한 사람만 글을 작성할 수 있습니다. */
+  /** 글쓰기 버튼을 표시할지 여부입니다. 공지사항은 notice_write 권한자, 팀 게시판은 팀 소속 멤버입니다. */
   canWrite: boolean;
-  /** board_moderate 권한 여부. 다른 사용자의 글·댓글·attachment 에도 삭제 버튼이 표시됩니다. */
-  canModerate: boolean;
   emptyText: string;
+  onOpen: (id: number) => void;
+  buttonRef: (id: number) => (el: HTMLButtonElement | null) => void;
 }) {
-  const { title, hint, listPath, newPath, basePath, authorId, canWrite, canModerate, emptyText } = props;
-  const queryKey = boardListKey(listPath);
-  const navigate = useNavigate();
-  const { postId } = useParams();
-  // 열 때는 기록을 쌓고 닫을 때는 바꿔 끼웁니다(replace). 닫은 뒤 뒤로 가기가 닫은 글을 다시 열지 않게 합니다.
-  const focus = useReturnFocus<HTMLHeadingElement>({
-    openId: idParam(postId),
-    setOpenId: (id) => void (id === null ? navigate(basePath, { replace: true }) : navigate(`${basePath}/${id}`)),
-  });
-  const client = useQueryClient();
+  const { title, hint, listPath, newPath, canWrite, emptyText, onOpen, buttonRef } = props;
   const [page, setPage] = useState(1);
-
-  const posts = useQuery({
-    queryKey,
-    queryFn: async () => ({ posts: await loadPosts(listPath) }),
-  });
+  const posts = useQuery({ queryKey: boardListKey(listPath), queryFn: async () => ({ posts: await loadPosts(listPath) }) });
   const list = posts.data?.posts ?? [];
   const state = loadState(posts);
-  // 글이 삭제되어 현재 page 가 범위를 벗어날 수 있으므로,
-  // render 마다 유효한 page 로 clamp(제한)합니다.
-  // 한 쪽에 PER_PAGE(10)개씩 보여 줍니다(lib/paging). 쪽 넘김 줄은 목록 바로 아래에 옵니다.
+  // 글이 삭제되어 현재 page 가 범위를 벗어날 수 있어 렌더마다 유효한 page 로 제한합니다. 한 쪽에 PER_PAGE(10)개입니다(lib/paging).
   const pages = pageCount(list.length);
   const shownPage = clampPage(page, pages);
-  const shown = pageSlice(list, shownPage);
-
-  // 목록으로 돌아올 때 query 를 invalidate(갱신 대기 상태로 표시)합니다.
-  // 댓글을 추가하고 돌아오면 목록의 댓글 개수도 최신 상태로 반영되어야 합니다.
-  const backToList = (): void => {
-    void client.invalidateQueries({ queryKey });
-    focus.close();
-  };
 
   return (
-    <Card>
-      {focus.openId === null ? (
-        <>
-          <SectionHead title={title} desc={hint} />
-          <PostList
-            posts={shown}
-            state={state}
-            emptyText={emptyText}
-            onOpen={focus.open}
-            buttonRef={focus.register}
-          />
-
-          {/* Pagination 과 글쓰기 버튼이 한 줄에 함께 표시됩니다. 페이지가 하나뿐이어도
-              pagination 을 렌더합니다. 그렇지 않으면 글이 추가·삭제될 때마다
-              글쓰기 버튼이 위아래로 움직여 UX 가 불안정합니다. */}
-          <div className="listfoot">
-            {state.kind !== "ready" || list.length === 0 ? null : (
-              <Pager page={shownPage} pages={pages} onPage={setPage} />
-            )}
-
-            {/* 작성은 이 목록이 아니라 자기 주소를 가진 화면이 맡습니다(routes/PostWrite). */}
-            {!canWrite ? null : (
-              <Button kind="go" to={newPath}>글쓰기</Button>
-            )}
-          </div>
-        </>
-      ) : (
-        <PostDetail
-          postId={focus.openId}
-          authorId={authorId}
-          canModerate={canModerate}
-          listKey={queryKey}
-          heading={focus.openFocus}
-          onBack={backToList}
-        />
-      )}
-    </Card>
+    <>
+      <SectionHead title={title} desc={hint} />
+      <PostList posts={pageSlice(list, shownPage)} state={state} emptyText={emptyText} onOpen={onOpen} buttonRef={buttonRef} />
+      {/* 쪽 넘김과 글쓰기 버튼이 한 줄입니다. 쪽이 1개여도 쪽 넘김을 그려, 글 수가 바뀔 때 글쓰기 버튼이 움직이지 않습니다. */}
+      <div className="listfoot">
+        {state.kind !== "ready" || list.length === 0 ? null : <Pager page={shownPage} pages={pages} onPage={setPage} />}
+        {/* 작성은 이 목록이 아니라 자기 주소를 가진 화면이 맡습니다(routes/PostWrite). */}
+        {!canWrite ? null : <Button kind="go" to={newPath}>글쓰기</Button>}
+      </div>
+    </>
   );
 }
