@@ -41,12 +41,12 @@ flowchart LR
 - `test_schedule_without_login_is_rejected`
 - `test_assign_needs_assign_run`
 - `test_schedule_reports_the_slots_left_open_by_the_assignment`: `backend.db.models`
-- `test_backups_list_each_round_newest_first`: `backend.db.models`
+- `test_records_list_each_round_newest_first`: `backend.db.models`
 - `test_backup_round_shows_the_schedule_of_that_round`: `backend.db.models`
 - `test_backup_round_that_never_happened_is_rejected`
 - `test_backup_round_needs_proposal_confirm`
-- `test_backups_of_unknown_period_are_rejected`
-- `test_backups_need_proposal_confirm`
+- `test_records_of_unknown_period_are_rejected`
+- `test_records_need_proposal_confirm`
 - `_blocked_team`: `backend.db.models`
 - `test_applying_a_short_record_makes_it_the_schedule`: `backend.db.models`
 - `test_the_old_proposal_confirm_endpoint_is_gone`

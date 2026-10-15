@@ -47,9 +47,9 @@ flowchart LR
 | GET | `/periods/{period_id}/schedule` | `read_schedule` |
 | POST | `/periods/{period_id}/assign` | `assign_period_schedule` |
 | GET | `/jobs/{job_id}` | `read_job` |
-| GET | `/periods/{period_id}/backups` | `read_period_backups` |
-| GET | `/periods/{period_id}/backups/{saved_at}` | `read_period_backup_round` |
-| POST | `/periods/{period_id}/backups/{saved_at}/apply` | `apply_period_record` |
+| GET | `/periods/{period_id}/records` | `read_period_records` |
+| GET | `/periods/{period_id}/records/{saved_at}` | `read_period_record_round` |
+| POST | `/periods/{period_id}/records/{saved_at}/apply` | `apply_period_record` |
 
 ## 함수와 호출
 
@@ -64,7 +64,7 @@ flowchart LR
 - `_job_out`: `backend.api.schemas`
 - `assign_period_schedule`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.services.period.pipeline`
 - `read_job`: `backend.api.auth_dependency`, `backend.api.schemas`
-- `read_period_backups`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.settings.pipeline`
+- `read_period_records`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.settings.pipeline`
 - `_score_out`: `backend.api.schemas`, `backend.services.period.pipeline`
-- `read_period_backup_round`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.services.period.pipeline`
+- `read_period_record_round`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.services.period.pipeline`
 - `apply_period_record`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.notification.pipeline`

@@ -19,6 +19,7 @@ flowchart LR
   frontend_src_routes_AssignmentPanels --> frontend_src_lib_calendar["calendar.ts"]
   frontend_src_routes_AssignmentPanels --> frontend_src_lib_contract["contract.ts"]
   frontend_src_routes_AssignmentPanels --> frontend_src_lib_loading["loading.ts"]
+  frontend_src_routes_AssignmentPanels --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_routes_AssignmentPanels --> frontend_src_lib_runs["runs.ts"]
   frontend_src_routes_AssignmentPanels --> frontend_src_lib_slots["slots.ts"]
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_routes_AssignmentPanels
@@ -35,6 +36,7 @@ flowchart LR
 - [[graph/frontend/src/lib/calendar|calendar.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
+- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/runs|runs.ts]]
 - [[graph/frontend/src/lib/slots|slots.ts]]
 

@@ -15,12 +15,11 @@ import { useEffect, useRef, useState } from "react";
 import {
   ACCEPTED_MIME, HeadingBackspace, Pdf, Weight, YoutubeTyped, attach,
 } from "./richTextEditor";
+import type { Editor } from "./richTextEditor";
 import { LinkDialog, RichTextToolbar } from "./RichTextToolbar";
 import { sanitizeBody, usedColors } from "../lib/richText";
 
-/** 본문을 작성하는 편집기입니다. value 는 HTML 이고, 편집할 때마다 onChange 로 HTML 을 넘깁니다.
- *  id 는 곁에 둔 label 의 htmlFor 가 가리키는 값입니다. */
-export function RichText({ id, label, postId, value, onChange, disabled = false, invalid = false, describedBy }: {
+type RichTextProps = {
   id: string;
   /** 본문에 넣을 파일을 올릴 글의 번호입니다. 초안이어도 됩니다. null 이면 drop 해도 올리지 않습니다
    *  — 올릴 곳이 없습니다(첨부 업로드가 POST /posts/{id}/attachments 입니다). */
@@ -33,7 +32,10 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
   disabled?: boolean;
   invalid?: boolean;
   describedBy?: string;
-}) {
+};
+
+/** 본문 편집기를 만듭니다. 바깥의 value 가 바뀌면 편집기 내용을 바꾸고, disabled 면 편집을 막습니다. */
+function useBodyEditor({ id, label, postId, value, onChange, disabled = false, invalid = false, describedBy }: RichTextProps): Editor | null {
   // onDrop, onPaste 는 편집기를 만들 때 1번 등록됩니다. 초안 번호는 mount 뒤에 도착하므로 ref 로 최신 postId 를 읽습니다.
   // 편집기를 다시 만들지 않으므로 초안이 도착하기 전에 입력한 본문이 그대로 남습니다.
   const postRef = useRef(postId);
@@ -121,15 +123,15 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
     editor?.setEditable(!disabled);
   }, [editor, disabled]);
 
-  // 파일을 창 안으로 끌어 오는 동안에만 안내를 표시합니다. dragenter 와 dragleave 는 자식 요소를 지날 때마다
-  // 번갈아 발생하므로 깊이를 세어 0 이 될 때만 내립니다.
-  // 네 가지 모두 capture 단계에서 듣습니다 — FileHandler 가 처리한 drop 은 stopPropagation 으로 전파를
-  // 멈추므로, bubble 단계에서 들으면 놓은 뒤에도 안내가 그대로 남습니다.
+  return editor;
+}
+
+// 파일을 창 안으로 끌어 오는 동안에만 안내를 표시합니다. dragenter 와 dragleave 는 자식 요소를 지날 때마다
+// 번갈아 발생하므로 깊이를 세어 0 이 될 때만 내립니다.
+// 네 가지 모두 capture 단계에서 듣습니다 — FileHandler 가 처리한 drop 은 stopPropagation 으로 전파를
+// 멈추므로, bubble 단계에서 들으면 놓은 뒤에도 안내가 그대로 남습니다.
+function useWindowDrag(): boolean {
   const [dragging, setDragging] = useState(false);
-  // 링크 modal 을 열어 둔 동안만 true 입니다.
-  const [linking, setLinking] = useState(false);
-  // 색 선택기의 "글에 사용한 색" 목록입니다. 본문이 바뀔 때마다 다시 셉니다.
-  const used = usedColors(value);
   useEffect(() => {
     let depth = 0;
     const hasFiles = (event: DragEvent): boolean => event.dataTransfer?.types.includes("Files") ?? false;
@@ -151,6 +153,38 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
       window.removeEventListener("dragend", end, true);
     };
   }, []);
+  return dragging;
+}
+
+/** 링크 창의 저장입니다. url 이 비어 있으면 선택한 글자의 링크를 해제합니다. */
+function saveLink(editor: Editor, text: string, url: string): void {
+  const chain = editor.chain().focus();
+  if (url === "") { chain.unsetLink().run(); return; }
+  const shown = text === "" ? url : text;
+  const picked = editor.state.doc.textBetween(
+    editor.state.selection.from, editor.state.selection.to, "",
+  );
+  // 표시할 텍스트를 바꾸지 않았고 선택한 글자가 있으면 그 글자에 링크만 겁니다.
+  // 서식(색·크기·굵기)은 그 글자에 이미 붙어 있으므로 그대로 남습니다.
+  if (picked !== "" && shown === picked) { chain.setLink({ href: url }).run(); return; }
+  // 그 밖에는 표시할 텍스트를 넣고 링크를 겁니다. 선택한 글자가 있으면 그것을 대체합니다.
+  chain.insertContent({
+    type: "text",
+    text: shown,
+    marks: [{ type: "link", attrs: { href: url } }],
+  }).run();
+}
+
+/** 본문을 작성하는 편집기입니다. value 는 HTML 이고, 편집할 때마다 onChange 로 HTML 을 넘깁니다.
+ *  id 는 곁에 둔 label 의 htmlFor 가 가리키는 값입니다. */
+export function RichText(props: RichTextProps) {
+  const { postId, value, disabled = false } = props;
+  const editor = useBodyEditor(props);
+  const dragging = useWindowDrag();
+  // 링크 modal 을 열어 둔 동안만 true 입니다.
+  const [linking, setLinking] = useState(false);
+  // 색 선택기의 "글에 사용한 색" 목록입니다. 본문이 바뀔 때마다 다시 셉니다.
+  const used = usedColors(value);
 
   if (editor === null) return null;
 
@@ -179,21 +213,7 @@ export function RichText({ id, label, postId, value, onChange, disabled = false,
           onClose={() => setLinking(false)}
           onSave={(text, url) => {
             setLinking(false);
-            const chain = editor.chain().focus();
-            if (url === "") { chain.unsetLink().run(); return; }
-            const shown = text === "" ? url : text;
-            const picked = editor.state.doc.textBetween(
-              editor.state.selection.from, editor.state.selection.to, "",
-            );
-            // 표시할 텍스트를 바꾸지 않았고 선택한 글자가 있으면 그 글자에 링크만 겁니다.
-            // 서식(색·크기·굵기)은 그 글자에 이미 붙어 있으므로 그대로 남습니다.
-            if (picked !== "" && shown === picked) { chain.setLink({ href: url }).run(); return; }
-            // 그 밖에는 표시할 텍스트를 넣고 링크를 겁니다. 선택한 글자가 있으면 그것을 대체합니다.
-            chain.insertContent({
-              type: "text",
-              text: shown,
-              marks: [{ type: "link", attrs: { href: url } }],
-            }).run();
+            saveLink(editor, text, url);
           }}
         />
       )}
