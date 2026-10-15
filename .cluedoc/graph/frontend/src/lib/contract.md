@@ -11,6 +11,7 @@ kind: file
 flowchart LR
   frontend_src_lib_contract["contract.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_contract
+  frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_lib_contract
   frontend_src_components_MemberPicker["MemberPicker.tsx"] --> frontend_src_lib_contract
   frontend_src_components_MemberSearch_test["MemberSearch.test.tsx"] --> frontend_src_lib_contract
   frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_lib_contract
@@ -64,6 +65,7 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
+- [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/components/MemberPicker|MemberPicker.tsx]]
 - [[graph/frontend/src/components/MemberSearch.test|MemberSearch.test.tsx]]
 - [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]

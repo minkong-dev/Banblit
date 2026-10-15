@@ -12,6 +12,7 @@ flowchart LR
   frontend_src_lib_calendar["calendar.ts"]
   frontend_src_components_CalendarBar["CalendarBar.tsx"] --> frontend_src_lib_calendar
   frontend_src_components_CalendarViews["CalendarViews.tsx"] --> frontend_src_lib_calendar
+  frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_lib_calendar
   frontend_src_components_NotificationMenu["NotificationMenu.tsx"] --> frontend_src_lib_calendar
   frontend_src_components_PostBoard["PostBoard.tsx"] --> frontend_src_lib_calendar
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_lib_calendar
@@ -44,6 +45,7 @@ flowchart LR
 
 - [[graph/frontend/src/components/CalendarBar|CalendarBar.tsx]]
 - [[graph/frontend/src/components/CalendarViews|CalendarViews.tsx]]
+- [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/components/NotificationMenu|NotificationMenu.tsx]]
 - [[graph/frontend/src/components/PostBoard|PostBoard.tsx]]
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]

@@ -12,10 +12,10 @@ flowchart LR
   frontend_src_lib_settings["settings.ts"]
   frontend_src_lib_settings --> frontend_src_lib_contract["contract.ts"]
   frontend_src_lib_settings --> frontend_src_lib_validate["validate.ts"]
+  frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_lib_settings
   frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_settings
   frontend_src_lib_settings_test["settings.test.ts"] --> frontend_src_lib_settings
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_settings
-  frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"] --> frontend_src_lib_settings
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_lib_settings
 ```
 
@@ -26,8 +26,8 @@ flowchart LR
 
 ## imported by
 
+- [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/settings.test|settings.test.ts]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
-- [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]

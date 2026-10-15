@@ -1,21 +1,13 @@
-// 집중 합주기간의 전체 합주 설정 부품입니다. 설정 화면의 기간 form 과 달력의 하루 dialog 가 사용합니다.
+// 집중 합주기간의 전체 합주 설정 부품입니다. 설정 화면의 기간 form 이 사용합니다. 날짜 하나의 시각 입력은 components/EnsembleDayEditor 입니다.
 
-import { useState } from "react";
-import type { ReactNode } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-
-import { Button, Cell, DateRange, FormFoot, TimeRange, Toggle } from "../components/controls";
+import { Cell, DateRange, TimeRange, Toggle } from "../components/controls";
 import { Dropdown } from "../components/Dropdown";
-import { PERIODS_KEY, useSlotMinutes } from "../components/queries";
+import { useSlotMinutes } from "../components/queries";
 import type { Period, Room } from "../lib/contract";
 import { ensembleOn } from "../lib/dayEntries";
-import type { EnsembleOn } from "../lib/dayEntries";
-import { formError } from "../lib/loading";
-import { clearEnsembleDay, saveEnsembleDay } from "../lib/pipeline";
 import type { EnsembleBody, PeriodBody } from "../lib/pipeline";
-import { say } from "../components/toast";
-import { ensembleTimeMessage as checkEnsembleTime } from "../lib/settings";
 import { datesBetween, dayLabel, focusedRanges } from "../lib/calendar";
+import { EnsembleDayEditor } from "../components/EnsembleDayEditor";
 
 /** 기간 form 이 보유하는 전체 합주 입력값입니다. on 이 false 면 저장할 때 전체 합주를 해제합니다. */
 export type EnsembleDraft = {
@@ -138,71 +130,6 @@ export function EnsembleToggle({ draft, setDraft, at }: {
 /** "2026-10-11" → "일". 날짜별 시각 행에서 날짜 옆에 붙는 요일 한 글자입니다. */
 function weekdayLetter(day: string): string {
   return "일월화수목금토"[new Date(`${day}T12:00:00`).getDay()];
-}
-
-/** 전체 합주 날짜 하나의 시각을 저장하거나 기본 시각으로 되돌립니다. 저장하면 기간 목록을 다시 조회해
- *  설정 화면과 달력이 같은 값을 표시합니다. picker 는 입력칸 앞에 붙는 날짜 선택입니다(설정 화면만 사용). */
-export function EnsembleDayEditor({ day, on, room, picker }: {
-  day: string;
-  on: EnsembleOn;
-  room: Room | undefined;
-  picker?: ReactNode;
-}) {
-  const client = useQueryClient();
-  const slotMinutes = useSlotMinutes();
-  const [times, setTimes] = useState({ starts: on.startsAt, ends: on.endsAt });
-
-  const done = (text: string) => () => {
-    void client.invalidateQueries({ queryKey: PERIODS_KEY });
-    say(text);
-  };
-  const save = useMutation({
-    mutationFn: () => saveEnsembleDay(on.periodId, day, times.starts, times.ends),
-    onSuccess: done(`${dayLabel(day)} 전체 합주 시각을 저장했어요.`),
-  });
-  const reset = useMutation({
-    mutationFn: () => clearEnsembleDay(on.periodId, day),
-    onSuccess: done(`${dayLabel(day)} 전체 합주 시각을 기본 시각으로 되돌렸어요.`),
-  });
-
-  const why = room === undefined
-    ? "전체 합주에 지정한 합주실을 찾을 수 없어요."
-    : checkEnsembleTime(times.starts, times.ends, room, slotMinutes);
-  const touched = times.starts !== on.startsAt || times.ends !== on.endsAt;
-  const bad = formError(touched, why, save.error ?? reset.error);
-  const pending = save.isPending || reset.isPending;
-  const at = (field: string): string => `ensday-${on.periodId}-${day}-${field}`;
-  const invalid = { "aria-invalid": bad !== "", "aria-describedby": bad === "" ? undefined : at("why") };
-
-  return (
-    <form
-      className="fields ensday"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (why === "") save.mutate();
-      }}
-    >
-      {picker}
-      <TimeRange
-        id={`ensday-${on.periodId}-${day}`}
-        labels={["시작 시간", "종료 시간"]}
-        value={[times.starts, times.ends]}
-        step={slotMinutes * 60}
-        invalid={invalid}
-        onChange={([starts, ends]) => setTimes({ starts, ends })}
-      />
-      <FormFoot
-        submitLabel="저장"
-        pending={save.isPending}
-        blocked={pending || why !== ""}
-        bad={bad}
-        whyId={at("why")}
-        extra={!on.custom ? undefined : (
-          <Button kind="ghost" disabled={pending} onClick={() => reset.mutate()}>기본 시각으로 되돌리기</Button>
-        )}
-      />
-    </form>
-  );
 }
 
 /** 설정 화면 기간 편집 행 아래에 붙는 날짜별 시각 구역입니다. 전체 합주 날짜 범위의 날짜를 전부 행으로 나열하고,
