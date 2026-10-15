@@ -79,7 +79,7 @@ class RecordScoreOut(BaseModel):
     joined: int
 
 
-class BackupOut(BaseModel):
+class RecordOut(BaseModel):
     # 스케줄링 기록을 구분하는 값은 저장 시각입니다. assignment_backups에 별도 기록 번호가 없습니다.
     saved_at: datetime
     slot_count: int
@@ -89,11 +89,11 @@ class BackupOut(BaseModel):
     score: RecordScoreOut | None
 
 
-class BackupsOut(BaseModel):
-    backups: list[BackupOut]
+class RecordsOut(BaseModel):
+    records: list[RecordOut]
 
 
-class BackupRoundOut(BaseModel):
+class RecordRoundOut(BaseModel):
     # 스케줄링 기록 1개의 시간표입니다. 현재 배정안(ScheduleOut)과 row(데이터베이스 행) 구조는 같지만
     # open_slots는 없습니다. 지나간 기록에 예약을 개방할 필요가 없습니다.
     rows: list[ScheduleRowOut]

@@ -29,9 +29,9 @@ from backend.api.schemas import (
     AbsenceOut,
     ApplyRecordOut,
     AssignmentOut,
-    BackupOut,
-    BackupRoundOut,
-    BackupsOut,
+    RecordOut,
+    RecordRoundOut,
+    RecordsOut,
     JobEnvelopeOut,
     JobOut,
     PeriodAssignIn,
@@ -201,16 +201,16 @@ def read_job(job_id: str, jobs: JobRunner[PeriodRun] = Depends(_jobs)) -> JobEnv
 
 # 스케줄링 기록 목록입니다. 기록을 보고 적용하는 권한(proposal_confirm) 하나로 검증합니다(사용자 결정 2026-10-13).
 @router.get(
-    "/periods/{period_id}/backups",
-    response_model=BackupsOut,
+    "/periods/{period_id}/records",
+    response_model=RecordsOut,
     dependencies=[Depends(require_permission("proposal_confirm"))],
 )
-def read_period_backups(
+def read_period_records(
     period: Period = Depends(_period), session: Session = Depends(get_session)
-) -> BackupsOut:
-    return BackupsOut(
-        backups=[
-            BackupOut(
+) -> RecordsOut:
+    return RecordsOut(
+        records=[
+            RecordOut(
                 saved_at=round_["saved_at"],
                 slot_count=round_["slot_count"],
                 applied_at=round_["applied_at"],
@@ -231,17 +231,17 @@ def _score_out(session: Session, period: Period, saved_at: datetime) -> RecordSc
 
 # 스케줄링 기록 하나를 선택해 그 시간표와 보고를 봅니다. 없는 기록은 list_backup_round 가 ValueError 로 거절합니다.
 @router.get(
-    "/periods/{period_id}/backups/{saved_at}",
-    response_model=BackupRoundOut,
+    "/periods/{period_id}/records/{saved_at}",
+    response_model=RecordRoundOut,
     dependencies=[Depends(require_permission("proposal_confirm"))],
 )
-def read_period_backup_round(
+def read_period_record_round(
     saved_at: datetime,
     period: Period = Depends(_period),
     session: Session = Depends(get_session),
-) -> BackupRoundOut:
+) -> RecordRoundOut:
     rows = list_backup_round(session, period.id, saved_at)
-    return BackupRoundOut(
+    return RecordRoundOut(
         rows=[_row_out(row) for row in rows],
         report=_stored_report_out(session, period, rows),
     )
@@ -249,7 +249,7 @@ def read_period_backup_round(
 
 # 스케줄링 기록 하나를 현재 배정안으로 적용합니다. 현재 배정안이 바뀌는 곳은 이 endpoint 하나라 알림도 여기서 남깁니다.
 @router.post(
-    "/periods/{period_id}/backups/{saved_at}/apply",
+    "/periods/{period_id}/records/{saved_at}/apply",
     response_model=ApplyRecordOut,
     dependencies=[Depends(require_permission("proposal_confirm"))],
 )

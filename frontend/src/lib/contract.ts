@@ -69,7 +69,7 @@ export type Ensemble = {
 export type EnsembleDay = { day: string; starts_at: string; ends_at: string };
 
 /** 스케줄링 기록(연산 결과) 하나입니다. 스케줄링 기록을 구분하는 값은 연산한 시각입니다. */
-export type Backup = {
+export type ScheduleRecord = {
   /** "2026-09-07T18:03:00" */
   saved_at: string;
   slot_count: number;
@@ -244,8 +244,8 @@ export type AssignOut = {
 /** GET /periods/{id}/schedule 응답입니다. 확정 시간표가 없으면 report 는 null 입니다. */
 export type ScheduleOut = { rows: ScheduleRow[]; report: ScheduleReport | null };
 
-/** GET /periods/{id}/backups/{saved_at} 응답입니다. */
-export type BackupRound = { rows: ScheduleRow[]; report: ScheduleReport | null };
+/** GET /periods/{id}/records/{saved_at} 응답입니다. */
+export type RecordRound = { rows: ScheduleRow[]; report: ScheduleReport | null };
 
 export type Post = {
   id: number;

@@ -104,7 +104,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
       throw new Error(`오늘 기간의 연산 결과가 쌓이지 않았습니다: ${finished.error ?? "배정 0건"}`);
     }
     // 연산 결과는 기록으로만 쌓이므로 적용해야 현재 배정안이 됩니다.
-    await call(context, "POST", `/api/periods/${today.id}/backups/${encodeURIComponent(savedAt)}/apply`);
+    await call(context, "POST", `/api/periods/${today.id}/records/${encodeURIComponent(savedAt)}/apply`);
 
     const tomorrow = dayFromToday(1);
     await createFocusedPeriod(context, tomorrow);

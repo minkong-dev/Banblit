@@ -47,15 +47,15 @@ describe("SCHEDULE_KEY — 두 화면의 서로 다른 schedule queryKey 를 접
 // 합주실 삭제는 assignments·assignment_backups·reservations 를 모두 지웁니다.
 
 describe("PERIOD_DELETE_KEYS — 기간 삭제로 CASCADE 삭제되는 캐시만 무효화한다", () => {
-  it("periods·schedule·backups·backup-round 는 무효화되고 reservations·rooms 는 남는다", () => {
+  it("periods·schedule·records·record-round 는 무효화되고 reservations·rooms 는 남는다", () => {
     const client = new QueryClient();
     const periods = ["periods"];
     const rooms = ["rooms"];
     const schedule = ["schedule", 1];
-    const backups = ["backups", 1];
-    const backupRound = ["backup-round", 1, "2026-01-01T00:00:00"];
+    const records = ["records", 1];
+    const recordRound = ["record-round", 1, "2026-01-01T00:00:00"];
     const reservations = ["reservations", [1], "2026-01-01", "2026-01-31"];
-    for (const key of [periods, rooms, schedule, backups, backupRound, reservations]) {
+    for (const key of [periods, rooms, schedule, records, recordRound, reservations]) {
       client.setQueryData(key, {});
     }
 
@@ -63,23 +63,23 @@ describe("PERIOD_DELETE_KEYS — 기간 삭제로 CASCADE 삭제되는 캐시만
 
     expect(client.getQueryState(periods)?.isInvalidated).toBe(true);
     expect(client.getQueryState(schedule)?.isInvalidated).toBe(true);
-    expect(client.getQueryState(backups)?.isInvalidated).toBe(true);
-    expect(client.getQueryState(backupRound)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(records)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(recordRound)?.isInvalidated).toBe(true);
     expect(client.getQueryState(reservations)?.isInvalidated).toBe(false);
     expect(client.getQueryState(rooms)?.isInvalidated).toBe(false);
   });
 });
 
 describe("ROOM_DELETE_KEYS — 합주실 삭제로 CASCADE 삭제되는 캐시만 무효화한다", () => {
-  it("rooms·schedule·backups·backup-round·reservations 가 모두 무효화되고 periods 는 남는다", () => {
+  it("rooms·schedule·records·record-round·reservations 가 모두 무효화되고 periods 는 남는다", () => {
     const client = new QueryClient();
     const periods = ["periods"];
     const rooms = ["rooms"];
     const schedule = ["schedule", 1];
-    const backups = ["backups", 1];
-    const backupRound = ["backup-round", 1, "2026-01-01T00:00:00"];
+    const records = ["records", 1];
+    const recordRound = ["record-round", 1, "2026-01-01T00:00:00"];
     const reservations = ["reservations", [1], "2026-01-01", "2026-01-31"];
-    for (const key of [periods, rooms, schedule, backups, backupRound, reservations]) {
+    for (const key of [periods, rooms, schedule, records, recordRound, reservations]) {
       client.setQueryData(key, {});
     }
 
@@ -87,8 +87,8 @@ describe("ROOM_DELETE_KEYS — 합주실 삭제로 CASCADE 삭제되는 캐시�
 
     expect(client.getQueryState(rooms)?.isInvalidated).toBe(true);
     expect(client.getQueryState(schedule)?.isInvalidated).toBe(true);
-    expect(client.getQueryState(backups)?.isInvalidated).toBe(true);
-    expect(client.getQueryState(backupRound)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(records)?.isInvalidated).toBe(true);
+    expect(client.getQueryState(recordRound)?.isInvalidated).toBe(true);
     expect(client.getQueryState(reservations)?.isInvalidated).toBe(true);
     expect(client.getQueryState(periods)?.isInvalidated).toBe(false);
   });
