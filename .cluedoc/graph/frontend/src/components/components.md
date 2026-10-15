@@ -45,3 +45,5 @@ kind: directory
 - [[graph/frontend/src/components/icons|icons.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/components/richTextEditor|richTextEditor.ts]]
+- [[graph/frontend/src/components/toast.test|toast.test.ts]]
+- [[graph/frontend/src/components/toast|toast.ts]]

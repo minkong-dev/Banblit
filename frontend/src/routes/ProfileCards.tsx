@@ -19,7 +19,7 @@ import { usePopoverRouteClose } from "../components/hooks";
 import { getJSON, reason, sendFile } from "../lib/api";
 import { roleLabel } from "../lib/account";
 import { personNameMessage } from "../lib/validate";
-import { say } from "../lib/toast";
+import { say } from "../components/toast";
 import type { Account } from "../lib/contract";
 
 /** 표시 상태의 한 줄입니다. 왼쪽 항목 이름, 오른쪽 값. */

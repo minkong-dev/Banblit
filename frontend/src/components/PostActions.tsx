@@ -8,7 +8,7 @@ import { askBlind, askDeletePost } from "../lib/confirm";
 import type { Post } from "../lib/contract";
 import { firstWhy } from "../lib/loading";
 import { BLINDED_KEY, checkPost, getJSON } from "../lib/pipeline";
-import { say } from "../lib/toast";
+import { say } from "./toast";
 import { DeleteButton, FormFoot, IconButton, Why } from "./controls";
 import { EyeOffIcon } from "./icons";
 import { Modal } from "./Modal";

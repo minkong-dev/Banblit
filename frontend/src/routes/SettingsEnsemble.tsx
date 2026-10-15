@@ -20,7 +20,7 @@ import {
   saveEnsembleDay,
 } from "../lib/pipeline";
 import type { EnsembleBody, PeriodBody } from "../lib/pipeline";
-import { say } from "../lib/toast";
+import { say } from "../components/toast";
 
 /** 기간 form 이 보유하는 전체 합주 입력값입니다. on 이 false 면 저장할 때 전체 합주를 해제합니다. */
 export type EnsembleDraft = {

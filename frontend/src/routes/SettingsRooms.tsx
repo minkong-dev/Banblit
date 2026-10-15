@@ -15,7 +15,7 @@ import type { Room } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { checkRoom, clockEndLabel, openingHours } from "../lib/pipeline";
-import { say } from "../lib/toast";
+import { say } from "../components/toast";
 import { Button, Cell, Empty, FormFoot, TimeRange } from "../components/controls";
 import { Row, useFirstField, useForm } from "./SettingsForm";
 

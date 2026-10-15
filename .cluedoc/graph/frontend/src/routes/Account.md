@@ -15,9 +15,9 @@ flowchart LR
   frontend_src_routes_Account --> frontend_src_components_controls["controls.tsx"]
   frontend_src_routes_Account --> frontend_src_components_hooks["hooks.ts"]
   frontend_src_routes_Account --> frontend_src_components_icons["icons.tsx"]
+  frontend_src_routes_Account --> frontend_src_components_toast["toast.ts"]
   frontend_src_routes_Account --> frontend_src_lib_api["api.ts"]
   frontend_src_routes_Account --> frontend_src_lib_pipeline["pipeline.ts"]
-  frontend_src_routes_Account --> frontend_src_lib_toast["toast.ts"]
   frontend_src_App["App.tsx"] --> frontend_src_routes_Account
 ```
 
@@ -28,9 +28,9 @@ flowchart LR
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/hooks|hooks.ts]]
 - [[graph/frontend/src/components/icons|icons.tsx]]
+- [[graph/frontend/src/components/toast|toast.ts]]
 - [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
-- [[graph/frontend/src/lib/toast|toast.ts]]
 
 ## imported by
 

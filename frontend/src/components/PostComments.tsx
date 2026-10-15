@@ -8,7 +8,7 @@ import { askDelete } from "../lib/confirm";
 import type { PostComment } from "../lib/contract";
 import { formError } from "../lib/loading";
 import { checkComment, getJSON, stampLabel } from "../lib/pipeline";
-import { say } from "../lib/toast";
+import { say } from "./toast";
 import { DeleteButton, EditButton, FormFoot, Why } from "./controls";
 import { Modal } from "./Modal";
 import { RichText, RichTextView } from "./RichText";

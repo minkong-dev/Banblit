@@ -26,7 +26,7 @@ import {
   sessionMinutesLabel,
   slotMinutesLabel,
 } from "../lib/settings";
-import { say } from "../lib/toast";
+import { say } from "../components/toast";
 import { BlindedCards } from "./SettingsBlinded";
 import { Cell, Why } from "../components/controls";
 import { MemberCards } from "./SettingsMembers";

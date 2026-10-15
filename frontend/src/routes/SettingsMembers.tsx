@@ -14,7 +14,7 @@ import { Modal } from "../components/Modal";
 import { SeatRow } from "../components/SeatRow";
 import { PersonIcon, PlusIcon } from "../components/icons";
 import { getJSON, reason } from "../lib/api";
-import { say } from "../lib/toast";
+import { say } from "../components/toast";
 import { cohortLabel } from "../lib/roster";
 import { PERMISSION_ITEMS, can } from "../lib/account";
 import { permissionSetProblem } from "../lib/validate";

@@ -8,7 +8,7 @@ import { NotificationMenu } from "./NotificationMenu";
 import { MoonIcon, SunIcon, WideMenuIcon } from "./icons";
 import { usePage, usePopoverRouteClose } from "./hooks";
 import { useMe, useMyTeamCohorts } from "./queries";
-import { useToast } from "../lib/toast";
+import { useToast } from "./toast";
 import { LOADING_TEXT } from "../lib/loading";
 import { Avatar } from "./Avatar";
 import { can, roleLabel, teamNavLabel } from "../lib/account";
