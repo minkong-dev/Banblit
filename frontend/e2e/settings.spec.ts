@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { E2E_ACCOUNT, E2E_MEMBER, E2E_ROOM, dayFromToday } from "./helpers";
+import { E2E_ACCOUNT, E2E_MEMBER, E2E_ROOM, E2E_TEAM, dayFromToday } from "./helpers";
 
 type Room = { id: number; name: string; opens_at: string };
 
@@ -132,6 +132,27 @@ test("불가능 일정 화면이 등록된 일정을 멤버 이름과 함께 보
   const row = page.locator("tr").filter({ hasText: E2E_ACCOUNT.name }).first();
   await expect(row).toBeVisible();
   await expect(row.getByRole("button", { name: /삭제$/ })).toBeVisible();
+});
+
+// 캘린더 보기에서 멤버를 고르면 그 멤버의 불가능 일정이 달력에, 팀을 고르면 시간별 불가능 팀원 수가 히트맵에 표시됩니다.
+// global-setup.ts 가 E2E 계정의 불가능 일정을 내일 1건 만들고, E2E_TEAM 은 E2E 계정과 E2E_MEMBER 2명입니다.
+test("불가능 일정 캘린더에서 멤버 달력과 팀 히트맵을 확인한다", async ({ page }) => {
+  const tomorrow = dayFromToday(1);
+  await page.goto("/unavailable");
+  await page.getByRole("button", { name: "캘린더로 보기" }).click();
+  // 내일이 다음 달이면 달을 넘깁니다.
+  if (tomorrow.slice(0, 7) !== dayFromToday(0).slice(0, 7)) await page.getByRole("button", { name: "다음 달" }).click();
+
+  await page.getByRole("button", { name: "멤버 선택" }).click();
+  await page.getByRole("dialog", { name: "멤버 선택" }).getByRole("button", { name: new RegExp(`^${E2E_ACCOUNT.name}`) }).click();
+  await expect(page.locator(".calview .ev").first()).toContainText("불가능 일정");
+
+  await page.getByRole("group", { name: "대상 종류" }).getByRole("button", { name: "팀" }).click();
+  await page.getByRole("button", { name: "팀 선택" }).click();
+  await page.getByRole("dialog", { name: "팀 선택" }).getByRole("button", { name: E2E_TEAM }).click();
+  const cell = page.getByRole("button", { name: /가장 많이 빠지는 시간 2명 중 1명/ }).first();
+  await cell.click();
+  await expect(page.locator(".heatnote")).toContainText(E2E_ACCOUNT.name);
 });
 
 // 다른 멤버의 불가능 일정은 반려 사유를 적어 삭제하고, 그 멤버에게 사유가 알림으로 갑니다.

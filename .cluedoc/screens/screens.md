@@ -20,6 +20,8 @@ sources:
   - "[[graph/frontend/src/lib/confirm]]"  # 삭제·취소·추방 전에 1회 확인하는 문구 — frontend/src/lib/confirm.ts
   - "[[graph/frontend/src/routes/Settings]]"  # 관리 구역과 계정 화면의 진입점 — 주소가 고른 구역 1개를 그림 — frontend/src/routes/Settings.tsx
   - "[[graph/frontend/src/routes/SettingsUnavailable]]"  # 전체 멤버의 불가능 일정 조회 구역 — frontend/src/routes/SettingsUnavailable.tsx
+  - "[[graph/frontend/src/routes/UnavailableCalendar]]"  # 불가능 일정의 멤버 달력과 팀 히트맵 — frontend/src/routes/UnavailableCalendar.tsx
+  - "[[graph/frontend/src/lib/unavailableMap]]"  # 시간별 불가능 팀원 수 계산 — frontend/src/lib/unavailableMap.ts
   - "[[graph/frontend/src/lib/adminMenu]]"  # 관리 구역의 이름·주소·필요 권한 목록. 사이드바·주소 표·화면이 함께 봅니다 — frontend/src/lib/adminMenu.ts
   - "[[graph/frontend/src/components/Brand]]"  # 심볼과 워드마크를 함께 그리는 로고 부품 — frontend/src/components/Brand.tsx
   - "[[graph/frontend/public/CI/CI]]"  # CI 가이드와 심볼 파일. 로고 규격의 기준입니다 — frontend/public/CI/
@@ -52,7 +54,7 @@ sources:
   - "[[graph/docker-compose.yml]]"  # web 컨테이너가 화면을 제공합니다 — docker-compose.yml
 ---
 
-> 문서 버전: 3.8.0 draft
+> 문서 버전: 3.9.0 draft
 
 ```mermaid
 flowchart LR
@@ -303,6 +305,7 @@ CSS 는 공용 `.btn`·`.ic`·`.why`·`.empty` 1벌(`shell.css`)만 남기고 `.
 | 타 멤버 글 삭제 및 블라인드 | 공지와 팀 게시판에서 다른 사용자의 글·댓글·첨부 옆에도 **삭제** 버튼이, 글에는 **블라인드** 버튼이 표시됩니다. 수정 버튼은 작성자에게만 표시됩니다. 2026-09-16부터 서버도 남의 글 수정을 거절합니다. 가려 둔 글은 관리 메뉴의 블라인드 화면에서 보고 되돌립니다 |
 | 타 멤버 예약 수정 및 취소 | 관리 메뉴에 **예약 화면**이 추가되었습니다. 오늘부터 90일 이내의 모든 멤버 예약을 날짜·시간·합주실·예약자 표로 조회합니다. 본인 예약은 **취소**, 다른 멤버의 예약은 **반려** 버튼입니다. 반려는 사유를 적는 창(`components/RejectDialog.tsx`)을 열고, 사유는 예약한 멤버에게 알림으로 갑니다(2026-10-07). 취소·반려하면 달력도 함께 다시 조회합니다 |
 | 타 멤버 불가능 일정 조회 (2026-10-05) | 관리 메뉴에 **불가능 일정 화면**이 추가되었습니다. 전체 멤버가 등록한 불가능 일정을 멤버·날짜·시간·반복·일정 이름·사유 표로 조회하고, 멤버 이름으로 좁힙니다. 본인 일정은 **삭제**, "타 멤버 불가능 일정 반려" 항목이 있으면 다른 멤버의 일정에 **반려** 버튼이 붙습니다. 반려는 예약과 같은 사유 입력 창을 쓰고, 사유는 그 멤버에게 알림으로 갑니다(2026-10-07). 등록과 수정은 본인만 할 수 있습니다 |
+| 불가능 일정 캘린더와 히트맵 (2026-10-15) | 불가능 일정 화면 제목 줄 오른쪽의 캘린더 아이콘과 목록 아이콘으로 보기 방식을 전환합니다. 캘린더 보기는 "멤버" 와 "팀" 중 하나를 고르고, 입력칸을 누르면 검색 modal 에서 대상을 선택합니다. 멤버는 대시보드와 같은 달 보기, 주 보기에 그 멤버의 불가능 일정만 표시합니다(반복 일정은 날짜마다 전개). 팀은 히트맵입니다. 주 보기 칸은 그 시간에 불가능 일정이 있는 팀원 수이고 색 4단계가 팀원 수 대비 비율입니다. 달 보기 칸은 그날 가장 많이 빠지는 시간의 인원입니다. 칸을 누르면 아래에 시간과 불가능한 팀원 이름(기수)을 표시하고 사유는 표시하지 않습니다(사용자 결정 2026-10-12). 시간 범위는 합주실 운영 시간 중 가장 넓은 범위입니다. 계산은 `lib/unavailableMap.test.ts`, 화면 흐름은 `e2e/settings.spec.ts` 의 "불가능 일정 캘린더에서 멤버 달력과 팀 히트맵을 확인한다" 가 확인합니다 |
 
 검증은 `lib/boards.ts`의 `boardActions` 함수가 수행합니다. 수정은 작성자만 가능하고, 삭제는 작성자이거나 권한자가 가능하며, 사용자 정보를 아직 확인하지 못했으면 수정·삭제 모두 불가합니다. 예약 탭이 90일까지만 표시하는 이유는 예약 목록을 제공하는 서버 endpoint가 합주실·날짜 범위로만 매개변수를 받기 때문입니다. 90일보다 먼 미래의 예약을 다루어야 하면 월간 페이지 네비게이션을 추가하거나 전체 목록을 반환하는 새로운 endpoint를 생성할 수 있습니다.
 

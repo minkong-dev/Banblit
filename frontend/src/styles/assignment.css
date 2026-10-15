@@ -4,7 +4,7 @@ body[data-page="admin"] {
   /* 오른쪽 칸은 자체 스크롤합니다. */
   .rail { overflow-y: auto; }
 
-  /* 캘린더. 머리줄의 높이는 대시보드 달력 머리줄(scheduler.css .calbar)과 같은 --head-h 이고 좌우 여백은 0 입니다. */
+  /* 캘린더. 머리줄의 높이는 대시보드 달력 머리줄(calendar.css .calbar)과 같은 --head-h 이고 좌우 여백은 0 입니다. */
   .calhead { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; min-height: var(--head-h); padding: 0; border-bottom: 1px solid var(--line); }
   .calhead b { font-size: 16.5px; font-weight: 700; }
   /* 날짜 범위 글자와 기간 드롭다운을 한 줄에 놓고 세로 가운데를 맞춥니다. 드롭다운이 block 이라 그대로 두면 글자 아래로 내려가
@@ -26,7 +26,7 @@ body[data-page="admin"] {
   .ses { border-radius: 6px; padding: 6px 9px 6px 11px; font-size: 12.5px; font-weight: 500; line-height: 1.35; }
   .ses small { display: block; font-weight: 400; font-size: 11.5px; color: var(--t2); }
   /* 팀 색은 .team-<색> class 가 --tc·--tc-tint 로 줍니다(lib/teamColors.ts). 옅은 바탕과 왼쪽 3px 선에만 쓰고
-     글자는 본문색입니다. 달력의 일정 막대(scheduler.css 의 .ev)와 같은 규칙입니다. */
+     글자는 본문색입니다. 달력의 일정 막대(calendar.css 의 .ev)와 같은 규칙입니다. */
   .ses { background: var(--tc-tint, var(--off-tint)); color: var(--t1); box-shadow: inset 3px 0 0 var(--tc, var(--off)); }
   .ses .out { display: block; font-size: 11.5px; color: var(--t2); text-decoration: none; margin-top: 3px; }
 

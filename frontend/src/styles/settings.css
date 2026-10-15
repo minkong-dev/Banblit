@@ -124,6 +124,9 @@ body[data-page="settings"] {
      정사각형 카드가 가로로 배치됩니다. 한 화면에 다 들어가지 않으면 ‹ › 로 넘깁니다.
      세로로 쌓으면 permission set 이 몇 개인지 한눈에 보이지 않습니다. */
   .sethead .railnav { margin-left: auto; display: flex; gap: 2px; }
+  /* 불가능 일정 구역의 캘린더, 목록 전환 아이콘입니다. 고른 쪽은 IconButton 의 aria-pressed 로 표시합니다. */
+  .sethead .viewswitch { margin-left: auto; display: flex; gap: 2px; }
+  .sethead .viewswitch .ic[aria-pressed="true"] { color: var(--brand); background: var(--brand-tint); }
   .sethead .railfilter {
     margin-left: auto; min-height: 40px; padding: 8px 12px;
     border: 1px solid var(--line-2); border-radius: 10px;

@@ -11,25 +11,12 @@ import {
 } from "../lib/calendar";
 import { NO_REPEAT } from "../lib/pipeline";
 import type { Repeat } from "../lib/pipeline";
-import { offWhenLabel } from "../lib/dayEntries";
+import { entryClass, entryName, offWhenLabel } from "../lib/dayEntries";
 import type { Entry } from "../lib/dayEntries";
 import { cohortLabel } from "../lib/roster";
 import type { DayTeam } from "../lib/roster";
 
 export type SlotRange = { a: number; b: number };
-
-/** 항목에 표시할 이름입니다. 불가능 일정은 일정 이름, 배정·예약은 팀 이름, 팀이 없으면 예약자 이름입니다. */
-export function entryName(entry: Entry, teams: DayTeam[]): string {
-  return entry.kind === "off"
-    ? entry.who ?? "불가능 일정"
-    : teams.find((team) => team.key === entry.team)?.name ?? entry.who ?? "개인";
-}
-
-/** 막대·항목의 색 class 입니다. 전체 합주는 팀이 아니라 전원의 일정이라 팀 색 대신 ens, 팀이 없는 항목은 off 입니다. */
-export function entryClass(entry: Entry): string {
-  if (entry.kind === "ensemble") return "ens";
-  return entry.team ?? "off";
-}
 
 function kindLabel(entry: Entry): string {
   if (entry.kind === "assign") return "자동 배정";

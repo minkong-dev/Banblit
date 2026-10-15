@@ -10,6 +10,7 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_lib_calendar["calendar.ts"]
+  frontend_src_components_CalendarBar["CalendarBar.tsx"] --> frontend_src_lib_calendar
   frontend_src_lib_assignment["assignment.ts"] --> frontend_src_lib_calendar
   frontend_src_lib_calendar_test["calendar.test.ts"] --> frontend_src_lib_calendar
   frontend_src_lib_dayEntries["dayEntries.ts"] --> frontend_src_lib_calendar
@@ -30,6 +31,7 @@ flowchart LR
 
 ## imported by
 
+- [[graph/frontend/src/components/CalendarBar|CalendarBar.tsx]]
 - [[graph/frontend/src/lib/assignment|assignment.ts]]
 - [[graph/frontend/src/lib/calendar.test|calendar.test.ts]]
 - [[graph/frontend/src/lib/dayEntries|dayEntries.ts]]

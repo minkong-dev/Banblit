@@ -13,6 +13,7 @@ flowchart LR
   frontend_src_components_controls --> frontend_src_components_icons["icons.tsx"]
   frontend_src_components_controls --> frontend_src_lib_loading["loading.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_components_controls
+  frontend_src_components_CalendarBar["CalendarBar.tsx"] --> frontend_src_components_controls
   frontend_src_components_ErrorBoundary["ErrorBoundary.tsx"] --> frontend_src_components_controls
   frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_components_controls
   frontend_src_components_Modal["Modal.tsx"] --> frontend_src_components_controls
@@ -25,6 +26,8 @@ flowchart LR
   frontend_src_components_PostWriteForm["PostWriteForm.tsx"] --> frontend_src_components_controls
   frontend_src_components_RejectDialog["RejectDialog.tsx"] --> frontend_src_components_controls
   frontend_src_components_RichTextToolbar["RichTextToolbar.tsx"] --> frontend_src_components_controls
+  frontend_src_components_SearchList["SearchList.tsx"] --> frontend_src_components_controls
+  frontend_src_components_TeamSearch["TeamSearch.tsx"] --> frontend_src_components_controls
   frontend_src_components_controls_test["controls.test.tsx"] --> frontend_src_components_controls
   frontend_src_routes_Account["Account.tsx"] --> frontend_src_components_controls
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_components_controls
@@ -48,6 +51,7 @@ flowchart LR
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_components_controls
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_components_controls
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_components_controls
+  frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_components_controls
 ```
 
 ## imports
@@ -58,6 +62,7 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
+- [[graph/frontend/src/components/CalendarBar|CalendarBar.tsx]]
 - [[graph/frontend/src/components/ErrorBoundary|ErrorBoundary.tsx]]
 - [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
 - [[graph/frontend/src/components/Modal|Modal.tsx]]
@@ -70,6 +75,8 @@ flowchart LR
 - [[graph/frontend/src/components/PostWriteForm|PostWriteForm.tsx]]
 - [[graph/frontend/src/components/RejectDialog|RejectDialog.tsx]]
 - [[graph/frontend/src/components/RichTextToolbar|RichTextToolbar.tsx]]
+- [[graph/frontend/src/components/SearchList|SearchList.tsx]]
+- [[graph/frontend/src/components/TeamSearch|TeamSearch.tsx]]
 - [[graph/frontend/src/components/controls.test|controls.test.tsx]]
 - [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
@@ -93,3 +100,4 @@ flowchart LR
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]
+- [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]

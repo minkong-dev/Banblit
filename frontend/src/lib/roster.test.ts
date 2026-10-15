@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   cohortLabel,
+  matchingTeams,
   memberLabel,
   myTeamIds,
   noMembersMessage,
@@ -203,5 +204,17 @@ describe("noMembersMessage", () => {
 
   it("검색어가 있으면 검색 결과가 없다고 알린다", () => {
     expect(noMembersMessage("박")).toBe("해당하는 사용자를 찾지 못했어요.");
+  });
+});
+
+describe("matchingTeams — 팀 검색", () => {
+  const teams = [{ id: 1, name: "새벽 네시" }, { id: 2, name: "산책" }, { id: 3, name: "네시 반" }];
+
+  it("빈 검색어는 전체를 이름 순서로 반환한다", () => {
+    expect(matchingTeams(teams, " ").map((team) => team.id)).toEqual([3, 2, 1]);
+  });
+
+  it("이름에 검색어가 포함된 팀만 반환한다", () => {
+    expect(matchingTeams(teams, "네시").map((team) => team.id)).toEqual([3, 1]);
   });
 });

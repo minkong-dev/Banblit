@@ -1,16 +1,17 @@
-// 달력 화면(routes/Scheduler)의 달 보기와 주 보기입니다. 값을 보유하지 않으며, 표시할 항목은 부모가 entriesOf 로 넘깁니다.
+// 달력의 달 보기와 주 보기입니다. 대시보드(routes/Scheduler)와 불가능 일정 화면(routes/UnavailableCalendar)이 씁니다.
+// 값을 보유하지 않으며, 표시할 항목은 부모가 entriesOf 로 넘깁니다.
 
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 
-import { visible } from "../lib/dayEntries";
+import { entryClass, entryName, visible } from "../lib/dayEntries";
 import type { DayTab, Entry } from "../lib/dayEntries";
 import type { DayTeam } from "../lib/roster";
 import {
   dayKey, dayWithWeekday, hoursLabel, isRangeFree, MINUTES_PER_HOUR, monthCells, slotLabel, takenGrid, WEEKDAY_NAMES,
   withPastTaken,
 } from "../lib/pipeline";
-import { entryClass, entryName } from "./DayDialogParts";
+import "../styles/calendar.css";
 
 type ViewProps = {
   tab: DayTab;
@@ -64,7 +65,7 @@ export function MonthView({
       <div className="dow">
         {WEEKDAY_NAMES.map((name) => <span key={name}>{name}</span>)}
       </div>
-      {/* key 로 달이나 탭이 바뀔 때 칸 묶음을 새로 그려 scheduler.css 의 넘김 움직임이 다시 재생되게 합니다. */}
+      {/* key 로 달이나 탭이 바뀔 때 칸 묶음을 새로 그려 calendar.css 의 넘김 움직임이 다시 재생되게 합니다. */}
       <div className="grid" key={`${year}-${month}-${tab}`}>
         {cells.map((day, index) => {
           if (day === null) return <div className="cell void" key={`void-${index}`} />;

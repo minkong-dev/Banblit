@@ -22,6 +22,7 @@ flowchart LR
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_components_Modal
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_components_Modal
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_components_Modal
+  frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_components_Modal
 ```
 
 ## imports
@@ -41,3 +42,4 @@ flowchart LR
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]
+- [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]
