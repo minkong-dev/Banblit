@@ -21,6 +21,7 @@ flowchart LR
   frontend_src_lib_assignment["assignment.ts"] --> frontend_src_lib_roster
   frontend_src_lib_dayEntries_test["dayEntries.test.ts"] --> frontend_src_lib_roster
   frontend_src_lib_dayEntries["dayEntries.ts"] --> frontend_src_lib_roster
+  frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_roster
   frontend_src_lib_roster_test["roster.test.ts"] --> frontend_src_lib_roster
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_roster
   frontend_src_routes_DayDialogParts["DayDialogParts.tsx"] --> frontend_src_lib_roster
@@ -47,6 +48,7 @@ flowchart LR
 - [[graph/frontend/src/lib/assignment|assignment.ts]]
 - [[graph/frontend/src/lib/dayEntries.test|dayEntries.test.ts]]
 - [[graph/frontend/src/lib/dayEntries|dayEntries.ts]]
+- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/roster.test|roster.test.ts]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
 - [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]

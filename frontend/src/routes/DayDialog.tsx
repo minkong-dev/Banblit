@@ -5,7 +5,7 @@ import { Modal } from "../components/Modal";
 import { Dropdown } from "../components/Dropdown";
 import { Button, CloseButton } from "../components/controls";
 import { askCancel, askDelete } from "../lib/confirm";
-import { addReservation, addUnavailable, editUnavailable, NO_REPEAT, cancelBooking, removeUnavailable } from "../lib/pipeline";
+import { addReservation, addUnavailable, editUnavailable, NO_REPEAT, cancelBooking, removeUnavailable, repeatConflict } from "../lib/pipeline";
 import type { Repeat } from "../lib/pipeline";
 import { firstTaken, slotLabels, unitLabel } from "../lib/calendar";
 import { teamMembersQuery, useMe, useSlotMinutes } from "../components/queries";
@@ -16,7 +16,7 @@ import { EnsembleDayEditor } from "./SettingsEnsemble";
 import type { DayTeam } from "../lib/roster";
 import { say } from "../components/toast";
 import {
-  DayPeople, DayTimeline, MyEntriesList, RepeatFields, SlotPicker, repeatConflict,
+  DayPeople, DayTimeline, MyEntriesList, RepeatFields, SlotPicker,
 } from "./DayDialogParts";
 import type { SlotRange } from "./DayDialogParts";
 import { dayWithWeekday, hourLabel, takenGrid } from "../lib/calendar";

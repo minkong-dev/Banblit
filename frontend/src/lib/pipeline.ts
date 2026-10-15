@@ -4,8 +4,10 @@
 import { apiUrl, getJSON, reason, sendFile } from "./api";
 import type {
   Account, Attachment, Ensemble, Me, Member, MemberUnavailable, Notification, Period, Post, PostComment, Reservation,
-  RoomInput, ScheduleOut, ScheduleRow, Settings, Unavailable,
+  RoomInput, ScheduleOut, ScheduleRow, Settings, Team, TeamSlot, Unavailable,
 } from "./contract";
+import { seatAssignments } from "./roster";
+import type { Seat } from "./roster";
 import {
   datesBetween,
   hoursLabel,
@@ -571,4 +573,50 @@ export async function publishWithAttachments(
   }
   // author_id 는 보내지 않습니다. 서버가 요청의 cookie 로 작성자를 결정합니다.
   await getJSON(`/posts/${draftId}/publish`, { method: "POST", body: JSON.stringify(post) });
+}
+
+/** 반복 설정을 저장할 수 없는 사유입니다. 저장할 수 있으면 빈 문자열입니다. 서버도 같은 규칙으로 다시 검증합니다. */
+export function repeatConflict(value: Repeat): string {
+  if (value.weekdays === 0) return "";
+  if (value.count !== null && value.until !== null) {
+    return "반복 횟수와 반복 종료일은 동시에 설정할 수 없어요. 하나를 비워주세요.";
+  }
+  return "";
+}
+
+/** 여러 기간의 시간표를 받습니다. 실패한 기간은 "기간 {번호}: {사유}" 로 failures 에 모으고 나머지 기간의 행은 rows 에 담습니다. */
+export async function loadScheduleRows(periodIds: number[]): Promise<{ rows: ScheduleRow[]; failures: string[] }> {
+  const rows: ScheduleRow[] = [];
+  const failures: string[] = [];
+  for (const id of periodIds) {
+    try {
+      rows.push(...(await loadSchedule(id)));
+    } catch (error) {
+      failures.push(`기간 ${id}: ${reason(error)}`);
+    }
+  }
+  return { rows, failures };
+}
+
+/** 팀 이름, 색, 포지션 수를 저장하고 저장된 팀을 반환합니다. team 이 null 이면 POST 1번, 아니면 바뀐 이름과 색만 PATCH 한 뒤 포지션을 PUT 합니다.
+ *  포지션 수를 줄이면 서버가 번호가 큰 자리부터 삭제하고 그 자리의 멤버도 팀에서 제외합니다. */
+export async function saveTeam(team: Team | null, name: string, color: string | null, counts: Record<string, number>): Promise<Team> {
+  if (team === null) {
+    const made = await getJSON<{ team: Team }>("/teams", { method: "POST", body: JSON.stringify({ name, slots: counts, color }) });
+    return made.team;
+  }
+  if (name !== team.name || color !== team.color) {
+    await getJSON(`/teams/${team.id}`, { method: "PATCH", body: JSON.stringify({ name, color }) });
+  }
+  await getJSON(`/teams/${team.id}/slots`, { method: "PUT", body: JSON.stringify({ slots: counts }) });
+  return { ...team, name, color: color ?? team.color };
+}
+
+/** 저장된 자리를 seats 와 같게 변경합니다. 바뀐 자리 전부를 요청 1번으로 보내고, 바뀐 자리가 없으면 보내지 않습니다.
+ *  서버가 transaction 1개로 처리하므로 실패하면 아무것도 반영되지 않습니다. */
+export async function saveSeats(teamId: number, seats: Seat[]): Promise<void> {
+  const saved = await getJSON<{ slots: TeamSlot[] }>(`/teams/${teamId}/slots`);
+  const assignments = seatAssignments(seats, saved.slots);
+  if (assignments.length === 0) return;
+  await getJSON(`/teams/${teamId}/slot-members`, { method: "PUT", body: JSON.stringify({ assignments }) });
 }

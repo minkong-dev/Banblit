@@ -19,7 +19,8 @@ import { loadState } from "../lib/loading";
 import { can, canManageTeams, teamNavLabel } from "../lib/account";
 import { INSTRUMENTS } from "../lib/contract";
 import { TEAM_COLORS, teamColorKey } from "../lib/teamColors";
-import { MAX_SLOTS_PER_TEAM, seatAssignments, seatKey, seatsOf, teamsShown } from "../lib/roster";
+import { MAX_SLOTS_PER_TEAM, seatKey, seatsOf, teamsShown } from "../lib/roster";
+import { saveSeats, saveTeam } from "../lib/pipeline";
 import type { Seat } from "../lib/roster";
 import type { Instrument, Member, Team, TeamSlot } from "../lib/contract";
 import "../styles/teams.css";
@@ -209,37 +210,6 @@ function startOf(team: Team, slots: TeamSlot[]): TeamStart {
   return { name: team.name, color: team.color, counts: countsOf(slots), members };
 }
 
-/** 팀 이름·색·포지션 수를 저장하고 저장된 팀을 반환합니다. team 이 null 이면 POST, 아니면 PATCH·PUT 입니다.
- *  수정할 때 포지션 수를 감소시키면 서버가 번호가 큰 자리부터 삭제하고 그 자리의 멤버도 팀에서 제외합니다. */
-async function writeTeam(team: Team | null, name: string, color: string | null, counts: Counts): Promise<Team> {
-  if (team === null) {
-    const made = await getJSON<{ team: Team }>("/teams", {
-      method: "POST",
-      body: JSON.stringify({ name, slots: counts, color }),
-    });
-    return made.team;
-  }
-  if (name !== team.name || color !== team.color) {
-    await getJSON(`/teams/${team.id}`, { method: "PATCH", body: JSON.stringify({ name, color }) });
-  }
-  await getJSON(`/teams/${team.id}/slots`, { method: "PUT", body: JSON.stringify({ slots: counts }) });
-  return { ...team, name, color: color ?? team.color };
-}
-
-/** 저장된 자리를 seats 와 같게 변경합니다. 변경된 자리 전부를 요청 1번으로 보냅니다.
- *
- *  자리마다 요청을 보내면 중간 요청이 실패했을 때 앞선 자리만 반영된 상태로 끝납니다. 서버가
- *  transaction 1개로 처리하므로, 실패하면 아무것도 반영되지 않습니다. */
-async function writeSeats(teamId: number, seats: Seat[]): Promise<void> {
-  const saved = await getJSON<{ slots: TeamSlot[] }>(`/teams/${teamId}/slots`);
-  const assignments = seatAssignments(seats, saved.slots);
-  if (assignments.length === 0) return;
-  await getJSON(`/teams/${teamId}/slot-members`, {
-    method: "PUT",
-    body: JSON.stringify({ assignments }),
-  });
-}
-
 /** 팀 창의 이름·색·포지션 인원 입력입니다. */
 function TeamFields(props: {
   name: string;
@@ -359,10 +329,10 @@ function TeamForm(props: TeamFormProps) {
 
   const save = useMutation({
     mutationFn: async () => {
-      const saved = await writeTeam(team ?? created, name.trim(), color, counts);
+      const saved = await saveTeam(team ?? created, name.trim(), color, counts);
       if (isNew) setCreated(saved);
       // 멤버 지정·삭제 권한이 둘 다 없으면 seats 가 서버 값과 같으므로 자리 목록을 조회하지 않습니다.
-      if (canAdd || canRemove) await writeSeats(saved.id, seats);
+      if (canAdd || canRemove) await saveSeats(saved.id, seats);
     },
     onSuccess: () => onDone(isNew ? `${name.trim()} 팀 생성을 완료했어요.` : `${name.trim()} 수정을 완료했어요.`),
     onError: (error) => setBad(reason(error)),

@@ -9,7 +9,7 @@ import {
   acceptsDrag, cellAt, dragRange, hasWeekday, REPEAT_WEEKDAY_NAMES, repeatLabel, slotLabels, slotSteps,
   toggleWeekday, weekdayIndex,
 } from "../lib/calendar";
-import { NO_REPEAT } from "../lib/pipeline";
+import { NO_REPEAT, repeatConflict } from "../lib/pipeline";
 import type { Repeat } from "../lib/pipeline";
 import { entryClass, entryName, offWhenLabel } from "../lib/dayEntries";
 import type { Entry } from "../lib/dayEntries";
@@ -301,11 +301,3 @@ export function RepeatFields({ dayKey, value, onChange }: {
   );
 }
 
-/** 반복 설정을 저장할 수 없는 사유입니다. 저장할 수 있으면 빈 문자열입니다. */
-export function repeatConflict(value: Repeat): string {
-  if (value.weekdays === 0) return "";
-  if (value.count !== null && value.until !== null) {
-    return "반복 횟수와 반복 종료일은 동시에 설정할 수 없어요. 하나를 비워주세요.";
-  }
-  return "";
-}
