@@ -1,7 +1,10 @@
 ---
 title: 데이터 저장소
 sources:
-  - "[[graph/backend/src/backend/db/engine]]"  # DATABASE_URL로 접속 엔진 생성 — backend/src/backend/db/engine.py
+  - "[[graph/backend/src/backend/db/engine]]"  # DATABASE_URL로 접속 엔진 생성, 쿼리와 잠금 대기 상한 — backend/src/backend/db/engine.py
+  - "[[graph/backend/src/backend/api/app]]"  # 상한 초과와 연결 실패를 503 으로 응답 — backend/src/backend/api/app.py
+  - "[[graph/backend/tests/unit/test_db_engine]]"  # 상한 값 검증 — backend/tests/unit/test_db_engine.py
+  - "[[graph/backend/tests/unit/test_api_database_down]]"  # 503 응답 — backend/tests/unit/test_api_database_down.py
   - "[[graph/backend/src/backend/db/models]]"  # table 정의와 권한 항목 20가지의 고정 목록 — backend/src/backend/db/models.py
   - "[[graph/backend/migrations/env]]"  # 마이그레이션이 접속할 주소를 정하는 규칙 — backend/migrations/env.py
   - backend/migrations/versions/072758eb0033_core_tables.py                  # 사람·포지션·팀·소속
@@ -29,7 +32,7 @@ sources:
   - backend/tests/integration/db/test_permission_migration.py  # 역할 열이 permission set으로 이전되었는지 확인
 ---
 
-> 문서 버전: 2.1.0 draft
+> 문서 버전: 2.2.0 draft
 
 ```mermaid
 erDiagram
@@ -201,6 +204,22 @@ erDiagram
 애플리케이션은 접속 주소 1개(환경변수로 전달)로 데이터베이스에 접속합니다. 이 값이 없으면 접속 시도 자체를 하지 않고 즉시 error를 발생시키는데, 접속 정보가 빠진 채로 error 없이 다른 DB에 접속하거나 원인을 알 수 없는 error가 나중에 발생하는 상황을 막기 위해서입니다.
 
 스키마를 변경하는 이력(마이그레이션)은 별도로 관리되며, 실행할 때마다 "지금 접속해야 할 주소가 명시적으로 지정되어 있는가"를 먼저 확인하고 없을 때만 접속 주소 환경변수를 대신 씁니다. 이 순서가 중요한 이유는 아래 트러블슈팅 1번에 있습니다.
+
+### 쿼리와 잠금 대기에 상한을 둡니다
+
+connection 마다 PostgreSQL 에 쿼리 1개의 실행 상한(statement_timeout, 기본 25초)과 다른 요청이 잡은 행 잠금을 기다리는 상한(lock_timeout, 기본 5초)을 설정합니다. 상한을 넘으면 DB 가 그 쿼리를 취소하고, api 는 500 이 아니라 503 과 "요청이 몰려 처리하지 못했어요" 문구로 응답합니다. DB 에 연결하지 못한 경우도 503 이고 문구만 다릅니다.
+
+```mermaid
+flowchart LR
+    Q[요청의 쿼리] --> L{행 잠금을 5초 안에 얻었는가}
+    L -- 아니요 --> C[DB 가 취소]
+    L -- 예 --> S{25초 안에 끝났는가}
+    S -- 아니요 --> C
+    S -- 예 --> OK[정상 응답]
+    C --> R[api 가 503 응답, 로그에 경로와 사유]
+```
+
+25초는 배포 nginx 의 응답 대기 30초보다 짧게 정한 값입니다. 길면 nginx 가 먼저 504 를 반환해 api 의 문구가 화면에 도착하지 않습니다. 두 상한은 환경변수(`DB_STATEMENT_TIMEOUT`, `DB_LOCK_TIMEOUT`)로 바꿀 수 있고, 0 이하 값은 시작할 때 거부합니다.
 
 ### TDD로 검증했습니다
 
