@@ -17,6 +17,7 @@ flowchart LR
   frontend_src_components_RichText["RichText.tsx"] --> frontend_src_components_richTextEditor
   frontend_src_components_RichTextColor["RichTextColor.tsx"] --> frontend_src_components_richTextEditor
   frontend_src_components_RichTextToolbar["RichTextToolbar.tsx"] --> frontend_src_components_richTextEditor
+  frontend_src_components_richTextEditor_test["richTextEditor.test.ts"] --> frontend_src_components_richTextEditor
 ```
 
 ## imports
@@ -31,3 +32,4 @@ flowchart LR
 - [[graph/frontend/src/components/RichText|RichText.tsx]]
 - [[graph/frontend/src/components/RichTextColor|RichTextColor.tsx]]
 - [[graph/frontend/src/components/RichTextToolbar|RichTextToolbar.tsx]]
+- [[graph/frontend/src/components/richTextEditor.test|richTextEditor.test.ts]]

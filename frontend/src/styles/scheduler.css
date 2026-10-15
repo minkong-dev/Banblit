@@ -200,7 +200,7 @@ body[data-page="scheduler"] {
     .avail.none .big, .avail.auto .big, .avail .yes, .avail .no { font-size: 11px; line-height: 1.25; white-space: normal; }
     .avail .yes svg { display: none; }
     .meter { display: none; }
-    /* 시작·끝 시간은 두 칸으로 나란히 두고, 취소 버튼과 안내 문구는 그 아래 한 줄씩 씁니다. */
+    /* 시작 시간과 종료 시간은 두 칸으로 나란히 두고, 취소 버튼과 안내 문구는 그 아래 한 줄씩 씁니다. */
     .timebar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px 16px; }
     .timebar .fld { flex-direction: column; align-items: stretch; gap: 6px; }
     .timebar > :not(.fld) { grid-column: 1 / -1; margin-left: 0; }
