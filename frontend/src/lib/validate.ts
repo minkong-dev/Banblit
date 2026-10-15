@@ -163,3 +163,12 @@ export function passwordMatchMessage(password: string, again: string): string {
 export function passwordsMatch(password: string, again: string): boolean {
   return again !== "" && again === password;
 }
+
+/** 프로필 편집을 저장하기 전에 이름, 기수, 새 비밀번호 일치 순서로 보고 첫 사유를 반환합니다. 모두 통과하면 빈 문자열입니다. */
+export function profileDraftMessage(draft: { name: string; cohort: string; next: string; again: string }): string {
+  const nameWhy = personNameMessage(draft.name);
+  if (nameWhy !== "") return nameWhy;
+  const cohortWhy = optionalCohortMessage(draft.cohort);
+  if (cohortWhy !== "") return cohortWhy;
+  return passwordMatchMessage(draft.next, draft.again);
+}

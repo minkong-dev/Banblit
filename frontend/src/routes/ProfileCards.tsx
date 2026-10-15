@@ -18,7 +18,7 @@ import { BackButton, Button, EditButton, FilePicker, MenuItem, Why } from "../co
 import { usePopoverRouteClose } from "../components/hooks";
 import { getJSON, reason, sendFile } from "../lib/api";
 import { roleLabel } from "../lib/account";
-import { optionalCohortMessage, passwordMatchMessage, personNameMessage } from "../lib/validate";
+import { profileDraftMessage } from "../lib/validate";
 import { say } from "../components/toast";
 import type { Account } from "../lib/contract";
 import { ME_KEY } from "../components/queries";
@@ -31,16 +31,6 @@ type Draft = { name: string; cohort: string; current: string; next: string; agai
 
 function draftOf(me: Account): Draft {
   return { name: me.name, cohort: me.cohort === null ? "" : String(me.cohort), current: "", next: "", again: "" };
-}
-
-/** 저장 전에 화면에서 먼저 보는 규칙입니다. 서버도 같은 규칙으로 다시 검증합니다.
- *  서버는 새 비밀번호 하나만 받으므로 두 번 입력한 값의 일치 여부는 화면만 확인할 수 있습니다. */
-function draftMessage(draft: Draft): string {
-  const nameWhy = personNameMessage(draft.name);
-  if (nameWhy !== "") return nameWhy;
-  const cohortWhy = optionalCohortMessage(draft.cohort);
-  if (cohortWhy !== "") return cohortWhy;
-  return passwordMatchMessage(draft.next, draft.again);
 }
 
 // 프로필 사진 변경 popover 의 id 입니다.
@@ -205,7 +195,7 @@ export function ProfileCard({ me, rows }: { me: Account; rows: InfoRow[] }) {
   }
 
   function submit(): void {
-    const why = draftMessage(draft);
+    const why = profileDraftMessage(draft);
     setBad(why);
     if (why === "") save.mutate(draft, { onError: (error) => setBad(reason(error)) });
   }

@@ -15,6 +15,7 @@ flowchart LR
   frontend_src_lib_pipeline --> frontend_src_lib_calendar["calendar.ts"]
   frontend_src_lib_pipeline --> frontend_src_lib_contract["contract.ts"]
   frontend_src_lib_pipeline --> frontend_src_lib_jobs["jobs.ts"]
+  frontend_src_lib_pipeline --> frontend_src_lib_roster["roster.ts"]
   frontend_src_lib_pipeline --> frontend_src_lib_settings["settings.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_pipeline
   frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_lib_pipeline
@@ -39,6 +40,7 @@ flowchart LR
   frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_lib_pipeline
+  frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_lib_pipeline
 ```
 
 ## imports
@@ -48,6 +50,7 @@ flowchart LR
 - [[graph/frontend/src/lib/calendar|calendar.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/jobs|jobs.ts]]
+- [[graph/frontend/src/lib/roster|roster.ts]]
 - [[graph/frontend/src/lib/settings|settings.ts]]
 
 ## imported by
@@ -75,3 +78,4 @@ flowchart LR
 - [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
+- [[graph/frontend/src/routes/Teams|Teams.tsx]]

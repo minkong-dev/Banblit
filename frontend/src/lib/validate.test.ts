@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   cohortMessage,
   optionalCohortMessage,
+  profileDraftMessage,
   passwordMatchMessage,
   passwordsMatch,
   PASSWORD_SYMBOLS,
@@ -264,5 +265,15 @@ describe("passwordMatchMessage — 두 번 입력한 비밀번호", () => {
   it("passwordsMatch 는 다시 입력한 값이 비어 있으면 일치로 보지 않는다", () => {
     expect(passwordsMatch("", "")).toBe(false);
     expect(passwordsMatch("Abcdef1!", "Abcdef1!")).toBe(true);
+  });
+});
+
+describe("profileDraftMessage — 프로필 편집 저장 전 검증", () => {
+  const draft = { name: "김민수", cohort: "46", next: "Abcdef1!", again: "Abcdef1!" };
+
+  it("이름, 기수, 비밀번호 일치 순서로 첫 사유를 반환한다", () => {
+    expect(profileDraftMessage(draft)).toBe("");
+    expect(profileDraftMessage({ ...draft, cohort: "0" })).toBe(cohortMessage("0"));
+    expect(profileDraftMessage({ ...draft, again: "x" })).toBe("비밀번호가 일치하지 않아요.");
   });
 });

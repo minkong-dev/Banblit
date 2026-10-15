@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { addUnavailable, cancelBooking, checkAttachments, checkPeriod, ensembleSaveOrder, expelMember, findId, loadReservationRows, NO_REPEAT, logOut, openingHours, periodBody, rejectBooking, rejectUnavailable, removeUnavailable, requestPasswordReset, saveSettings, resetPassword } from "./pipeline";
 import { isSignedIn } from "./api";
-import { AttachmentFailed, publishWithAttachments } from "./pipeline";
+import { AttachmentFailed, loadScheduleRows, publishWithAttachments, repeatConflict, saveSeats, saveTeam } from "./pipeline";
 import { weekKeys } from "./calendar";
 
 /** vitest 는 브라우저가 아니라 Node 에서 실행됩니다. document 를 기본으로 제공하지 않으므로
@@ -473,5 +473,58 @@ describe("publishWithAttachments — 첨부를 먼저 올리고 발행한다", (
     expect(failed).toBeInstanceOf(AttachmentFailed);
     expect((failed as AttachmentFailed).index).toBe(0);
     expect(calls).not.toContain("fetch");
+  });
+});
+
+describe("repeatConflict", () => {
+  it("반복이 아니면 통과하고, 횟수와 종료일을 함께 쓰면 거절한다", () => {
+    expect(repeatConflict({ weekdays: 0, count: 3, until: "2026-12-31" })).toBe("");
+    expect(repeatConflict({ weekdays: 1, count: 3, until: "2026-12-31" })).toContain("동시에");
+    expect(repeatConflict({ weekdays: 1, count: 3, until: null })).toBe("");
+  });
+});
+
+describe("loadScheduleRows — 기간 여러 개의 시간표", () => {
+  it("실패한 기간은 사유만 모으고 나머지 기간의 행은 반환한다", async () => {
+    vi.stubGlobal("fetch", vi.fn((url: string) => Promise.resolve(url.includes("/periods/2/")
+      ? new Response(JSON.stringify({ detail: "존재하지 않는 기간이에요" }), { status: 422 })
+      : new Response(JSON.stringify({ rows: [{ team_id: 1 }], open_slots: [], report: null })))));
+
+    const result = await loadScheduleRows([1, 2]);
+
+    expect(result.rows).toHaveLength(1);
+    expect(result.failures).toEqual(["기간 2: 존재하지 않는 기간이에요"]);
+  });
+});
+
+describe("saveTeam — 팀 저장", () => {
+  it("새 팀은 POST 1번으로 만든다", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn((url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? "GET"} ${url}`);
+      return Promise.resolve(new Response(JSON.stringify({ team: { id: 5, name: "A", color: "red" } })));
+    }));
+    expect((await saveTeam(null, "A", null, { 보컬: 1 })).id).toBe(5);
+    expect(calls).toEqual(["POST /api/teams"]);
+  });
+
+  it("이름과 색이 그대로면 PATCH 없이 포지션만 PUT 한다", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal("fetch", vi.fn((url: string, init?: RequestInit) => {
+      calls.push(`${init?.method ?? "GET"} ${url}`);
+      return Promise.resolve(new Response("{}"));
+    }));
+    const team = { id: 5, name: "A", color: "red", slot_count: 1, filled_count: 0 };
+    await saveTeam(team, "A", "red", { 보컬: 2 });
+    expect(calls).toEqual(["PUT /api/teams/5/slots"]);
+  });
+});
+
+describe("saveSeats — 자리 배정 저장", () => {
+  it("바뀐 자리가 없으면 저장 요청을 보내지 않는다", async () => {
+    const spy = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ slots: [] }))));
+    vi.stubGlobal("fetch", spy);
+    await saveSeats(5, []);
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });

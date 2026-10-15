@@ -10,7 +10,7 @@ import { ClockIcon } from "../components/icons";
 import { getJSON } from "../lib/api";
 import { firstWhy } from "../lib/loading";
 import { monthRange, slotLabels, slotSteps } from "../lib/calendar";
-import { loadMyBookings, loadReservationRows, loadSchedule, loadUnavailable } from "../lib/pipeline";
+import { loadMyBookings, loadReservationRows, loadScheduleRows, loadUnavailable } from "../lib/pipeline";
 import { DayDialog } from "./DayDialog";
 import { MonthView, WeekView } from "../components/CalendarViews";
 import {
@@ -21,24 +21,10 @@ import type { DayTab, Entry } from "../lib/dayEntries";
 import { teamsOf } from "../lib/roster";
 import { boardListKey, ME_KEY, PERIODS_KEY, RESERVATIONS_KEY, ROOMS_KEY, SCHEDULE_KEY, UNAVAILABLE_KEY, useMe, useMyTeams, usePeriods, useRooms, useSlotMinutes } from "../components/queries";
 import "../styles/scheduler.css";
-import type { Post, ScheduleRow } from "../lib/contract";
+import type { Post } from "../lib/contract";
 import { focusedRanges, inRanges, roomBounds, slotCountOf, stampLabel } from "../lib/calendar";
 // 오른쪽 공지 칸에 표시할 최대 줄 수입니다. 전체 목록은 공지 화면(routes/Notices)이 표시합니다.
 const RECENT_NOTICES = 3;
-
-/** 여러 기간의 시간표를 한 번에 받아, 실패한 기간은 사유만 모아 둡니다. */
-async function loadRows(periodIds: number[]): Promise<{ rows: ScheduleRow[]; failures: string[] }> {
-  const rows: ScheduleRow[] = [];
-  const failures: string[] = [];
-  for (const id of periodIds) {
-    try {
-      rows.push(...(await loadSchedule(id)));
-    } catch (error) {
-      failures.push(`기간 ${id}: ${error instanceof Error ? error.message : "알 수 없는 오류"}`);
-    }
-  }
-  return { rows, failures };
-}
 
 const TABS: readonly { key: DayTab; text: string }[] = [
   { key: "me", text: "내 일정" },
@@ -72,7 +58,7 @@ export function Scheduler() {
   // 기간 목록이 오기 전에는 어느 기간의 시간표를 받을지 알 수 없어 query를 비활성화합니다.
   const query = useQuery({
     queryKey: [...SCHEDULE_KEY, periodIds],
-    queryFn: () => loadRows(periodIds),
+    queryFn: () => loadScheduleRows(periodIds),
     enabled: periods.data !== undefined,
   });
   // 로그인한 사용자 id가 와야 그 사용자의 불가능 일정을 조회할 수 있습니다.
@@ -191,7 +177,7 @@ export function Scheduler() {
         </div>
       )}
 
-      {/* loadRows 는 기간 하나의 조회가 실패해도 나머지 기간의 시간표를 반환합니다. 그 기간만
+      {/* loadScheduleRows 는 기간 하나의 조회가 실패해도 나머지 기간의 시간표를 반환합니다. 그 기간만
           달력에서 빠지므로 빠진 사실을 따로 알립니다. 위 안내는 조회 자체가 실패한 경우입니다. */}
       {failures.length === 0 ? null : (
         <div className="cut">
