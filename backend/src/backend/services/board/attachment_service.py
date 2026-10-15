@@ -21,7 +21,7 @@ def _allowed_extension(name: str, allowed: frozenset[str]) -> str:
     """파일명 끝의 확장자를 소문자로 반환합니다. allowed 에 없으면 ValueError 를 발생시킵니다."""
     extension = Path(name).suffix.lstrip(".").lower()
     if extension not in allowed:
-        raise ValueError(f"올릴 수 없는 파일 종류입니다: {name}")
+        raise ValueError(f"올릴 수 없는 파일 종류예요: {name}")
     return extension
 
 
@@ -67,7 +67,7 @@ def save_attachment(
     # reservation_service.py 의 _get_own_reservation 이 사용합니다.
     session.scalars(select(Post).where(Post.id == post.id).with_for_update()).one()
     remaining = max_post_bytes - _used_bytes(session, post.id)
-    size = write_stream(stream, stored_path(stored_name), remaining, "이 글의 첨부 파일 크기 합계가 상한을 초과했습니다")
+    size = write_stream(stream, stored_path(stored_name), remaining, "이 글의 첨부 파일 크기 합계가 상한을 초과했어요")
 
     attachment = Attachment(
         post_id=post.id,
@@ -107,7 +107,7 @@ def list_attachments(
 def _get_or_raise(session: Session, attachment_id: int) -> Attachment:
     attachment = session.get(Attachment, attachment_id)
     if attachment is None:
-        raise ValueError("존재하지 않는 파일입니다")
+        raise ValueError("존재하지 않는 파일이에요")
     return attachment
 
 
@@ -119,7 +119,7 @@ def attachment_for_download(
     require_post_readable(session, attachment.post_id, requester)
     path = stored_path(attachment.stored_name)
     if not path.is_file():
-        raise ValueError("파일을 찾을 수 없습니다")
+        raise ValueError("파일을 찾을 수 없어요")
     return attachment, path
 
 
@@ -149,7 +149,7 @@ def attachment_for_inline(
     extension = attachment.stored_name.rsplit(".", 1)[-1].lower()
     content_type = INLINE_TYPES.get(extension)
     if content_type is None:
-        raise LookupError("본문에 표시할 수 없는 형식입니다")
+        raise LookupError("본문에 표시할 수 없는 형식이에요")
     return attachment, path, content_type
 
 

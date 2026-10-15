@@ -27,7 +27,7 @@ def test_a_range_closing_at_midnight_is_accepted() -> None:
 
 
 def test_a_range_with_equal_times_is_rejected() -> None:
-    with pytest.raises(ValueError, match="같을 수 없습니다"):
+    with pytest.raises(ValueError, match="같을 수 없어요"):
         require_clock_range(time(18, 0), time(18, 0), "합주실 운영 시간")
 
 

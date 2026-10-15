@@ -280,7 +280,7 @@ def _prepare(
 
     days = period_days(period, on)
     if not days:
-        raise ValueError("전체 합주 날짜뿐이라 팀별로 배정할 날짜가 없습니다")
+        raise ValueError("전체 합주 날짜뿐이라 팀별로 배정할 날짜가 없어요")
     window_start = datetime.combine(days[0], time())
     window_end = datetime.combine(days[-1], time.max)
     unavailable_by_member = _load_unavailable(session, list(roster.names), window_start, window_end)
@@ -313,11 +313,11 @@ def _check_request(session: Session, period_id: int, team_ids: list[int], room_i
     """배정 요청을 검증하고 기간을 반환합니다. 없는 기간, 상시 기간(kind="open"), 중복된 팀·합주실 번호는 ValueError 입니다."""
     period = get_period_or_raise(session, period_id)
     if period.kind != "focused":
-        raise ValueError("집중 합주기간에서만 자동 배정을 실행할 수 있습니다")
+        raise ValueError("집중 합주기간에서만 자동 배정을 실행할 수 있어요")
     if len(team_ids) != len(set(team_ids)):
-        raise ValueError("팀 id가 중복되었습니다")
+        raise ValueError("팀 id가 중복되었어요")
     if len(room_ids) != len(set(room_ids)):
-        raise ValueError("합주실 id가 중복되었습니다")
+        raise ValueError("합주실 id가 중복되었어요")
     return period
 
 
@@ -356,7 +356,7 @@ def _load_rooms(session: Session, room_ids: list[int]) -> list[Room]:
     missing = set(room_ids) - {room.id for room in rooms}
     if missing:
         raise ValueError(
-            f"존재하지 않는 합주실입니다: {', '.join(str(i) for i in sorted(missing))}"
+            f"존재하지 않는 합주실이에요: {', '.join(str(i) for i in sorted(missing))}"
         )
     return list(rooms)
 
@@ -369,7 +369,7 @@ def _load_team_names(session: Session, team_ids: list[int]) -> dict[int, str]:
     missing = set(team_ids) - set(names)
     if missing:
         raise ValueError(
-            f"존재하지 않는 팀입니다: {', '.join(str(i) for i in sorted(missing))}"
+            f"존재하지 않는 팀이에요: {', '.join(str(i) for i in sorted(missing))}"
         )
     return names
 

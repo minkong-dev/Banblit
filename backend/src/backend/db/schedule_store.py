@@ -61,7 +61,7 @@ class ScheduleConflict(ValueError):
 SCHEDULE_MESSAGES = {
     "assignments_no_overlap": (
         "다른 기간이거나 같은 기간의 동시 실행이 이미 같은 합주실의 같은 시간을 "
-        "쓰고 있습니다. 기간이 겹치지 않게 하거나 합주실을 나누십시오"
+        "쓰고 있어요. 기간이 겹치지 않게 하거나 합주실을 나눠주세요"
     ),
 }
 

@@ -103,3 +103,7 @@ JobStatus = Literal["queued", "running", "done", "failed"]
 # 자동 배정(jobs/auto_assign.py)과 실행 기록 table 의 CHECK 제약(db/models.py)이 같은 값을 씁니다.
 RunSlot = Literal["first", "second"]
 RUN_SLOTS: tuple[RunSlot, ...] = get_args(RunSlot)
+
+# 로그인 session 이 없거나 만료되어 401 로 거절할 때 응답 본문의 code 입니다. 화면(frontend/src/lib/contract.ts 의
+# SESSION_REJECTED_CODE)은 문구가 아니라 이 값으로 로그인 화면 이동을 판정하므로, 문구를 수정해도 판정이 바뀌지 않습니다.
+SESSION_REJECTED_CODE = "session_rejected"

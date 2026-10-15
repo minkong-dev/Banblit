@@ -15,6 +15,7 @@ flowchart LR
   backend_src_backend_api_auth_dependency --> backend_src_backend_db_pipeline["pipeline.py"]
   backend_src_backend_api_auth_dependency --> backend_src_backend_services_auth_pipeline["pipeline.py"]
   backend_src_backend_api_auth_dependency --> backend_src_backend_services_permission_pipeline["pipeline.py"]
+  backend_src_backend_api_app["app.py"] --> backend_src_backend_api_auth_dependency
   backend_src_backend_api_routers_auth["auth.py"] --> backend_src_backend_api_auth_dependency
   backend_src_backend_api_routers_boards["boards.py"] --> backend_src_backend_api_auth_dependency
   backend_src_backend_api_routers_notifications["notifications.py"] --> backend_src_backend_api_auth_dependency
@@ -39,6 +40,7 @@ flowchart LR
 
 ## imported by
 
+- [[graph/backend/src/backend/api/app|app.py]]
 - [[graph/backend/src/backend/api/routers/auth|auth.py]]
 - [[graph/backend/src/backend/api/routers/boards|boards.py]]
 - [[graph/backend/src/backend/api/routers/notifications|notifications.py]]

@@ -14,7 +14,11 @@ from backend.db.pipeline import get_session
 # 라우터는 require_account 를 Depends 로만 추가하고, cookie(브라우저가 저장해 두었다가 요청마다
 # 헤더에 함께 보내는 값)를 직접 참조하지 않습니다. 특정 권한이 필요한 endpoint 는
 # require_permission("권한 이름") 을 대신 추가합니다.
-UNAUTHORIZED_DETAIL = "로그인이 필요합니다"
+UNAUTHORIZED_DETAIL = "로그인이 필요해요"
+
+
+class SessionRejected(Exception):
+    """로그인 session 이 없거나 취소, 만료된 요청입니다. api/app.py 가 401 과 SESSION_REJECTED_CODE 로 응답합니다."""
 
 
 def require_account(
@@ -22,19 +26,19 @@ def require_account(
     session: Session = Depends(get_session),
 ) -> Member:
     if banblit_session is None:
-        raise HTTPException(status_code=401, detail=UNAUTHORIZED_DETAIL)
+        raise SessionRejected
 
     login_session = resolve_session(session, banblit_session, datetime.now())
     if login_session is None:
-        raise HTTPException(status_code=401, detail=UNAUTHORIZED_DETAIL)
+        raise SessionRejected
 
     account = session.get(Member, login_session.member_id)
     if account is None or account.password_hash is None:
-        raise HTTPException(status_code=401, detail=UNAUTHORIZED_DETAIL)
+        raise SessionRejected
     return account
 
 
-FORBIDDEN_DETAIL = "권한이 없습니다"
+FORBIDDEN_DETAIL = "권한이 없어요"
 
 
 def require_permission(permission: Permission) -> Callable[..., Member]:

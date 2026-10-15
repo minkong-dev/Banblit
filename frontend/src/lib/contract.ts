@@ -339,3 +339,6 @@ export type Notification = {
   target_starts_at: string | null;
   reason: string | null;
 };
+
+/** 로그인 session 이 거절된 401 응답의 code 입니다. 서버 쪽은 backend/src/backend/contract.py 의 SESSION_REJECTED_CODE 에 작성되어 있는 내용을 기준으로 합니다. */
+export const SESSION_REJECTED_CODE = "session_rejected";

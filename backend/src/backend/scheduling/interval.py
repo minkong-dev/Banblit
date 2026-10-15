@@ -20,7 +20,7 @@ class TimeInterval:
                 "시간대가 붙은 시각은 아직 지원하지 않습니다. 시간대 없는 시각을 넣으십시오"
             )
         if self.end <= self.start:
-            raise ValueError("시간 구간의 끝은 시작보다 뒤여야 합니다")
+            raise ValueError("시간 구간의 끝은 시작보다 뒤여야 해요")
 
 
 def day_window(day: date, starts: time, ends: time) -> TimeInterval:

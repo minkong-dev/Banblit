@@ -16,16 +16,16 @@ from backend.db.pipeline import commit_translating
 
 # 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 변경하는 단계별 기록)이 지정한 이름입니다.
 ROSTER_MESSAGES = {
-    "teams_name_key": "이미 있는 팀 이름입니다",
+    "teams_name_key": "이미 있는 팀 이름이에요",
     # 선택한 색이 겹친 경우와, 색을 선택하지 않은 요청 둘이 동시에 같은 남은 색을 받은 경우 모두 이 제약에 걸립니다.
-    "teams_color_key": "다른 팀이 쓰는 색입니다. 다시 시도하거나 다른 색을 선택해 주세요",
+    "teams_color_key": "다른 팀이 쓰는 색이에요. 다시 시도하거나 다른 색을 선택해 주세요",
     # 색을 선택하지 않았는데 남은 색이 없을 때 트리거가 붙이는 이름입니다(migration c3f7b2e84d19).
     "teams_color_exhausted": (
-        f"팀 색 {len(TEAM_COLORS)}개가 모두 쓰이고 있어 팀을 더 만들 수 없습니다. "
+        f"팀 색 {len(TEAM_COLORS)}개가 모두 쓰이고 있어 팀을 더 만들 수 없어요. "
         "쓰지 않는 팀을 삭제한 뒤 만들어 주세요"
     ),
-    "team_slots_team_id_member_id_key": "이미 그 팀의 다른 포지션에 있는 사람입니다",
-    "team_slots_team_id_instrument_ordinal_key": "이미 있는 포지션입니다",
+    "team_slots_team_id_member_id_key": "이미 그 팀의 다른 포지션에 있는 사람이에요",
+    "team_slots_team_id_instrument_ordinal_key": "이미 있는 포지션이에요",
 }
 
 def list_teams(session: Session) -> list[tuple[Team, int, int]]:
@@ -123,10 +123,10 @@ def expel_member(session: Session, member_id: int, requester: Member) -> None:
     그 보유자를 추방하면 권한을 부여할 사람이 0명이 됩니다.
     """
     if member_id == requester.id:
-        raise ValueError("자기 자신은 추방할 수 없습니다")
+        raise ValueError("자기 자신은 추방할 수 없어요")
     member = session.get(Member, member_id)
     if member is None:
-        raise ValueError("존재하지 않는 사람입니다")
+        raise ValueError("존재하지 않는 사람이에요")
     require_another_full_set_holder(session, member_id)
     session.delete(member)
     session.commit()
@@ -137,9 +137,9 @@ def require_slot_counts(counts: dict[str, int], max_slots: int) -> dict[Instrume
     checked: dict[Instrument, int] = {}
     for name, count in counts.items():
         if name not in INSTRUMENTS:
-            raise ValueError(f"알 수 없는 포지션입니다: {name}")
+            raise ValueError(f"알 수 없는 포지션이에요: {name}")
         if count < 0:
-            raise ValueError("포지션 수는 0보다 작을 수 없습니다")
+            raise ValueError("포지션 수는 0보다 작을 수 없어요")
         if count > 0:
             checked[name] = count
 
@@ -147,7 +147,7 @@ def require_slot_counts(counts: dict[str, int], max_slots: int) -> dict[Instrume
     if total == 0:
         raise ValueError("포지션을 하나 이상 선택해 주세요")
     if total > max_slots:
-        raise ValueError(f"한 팀의 포지션은 {max_slots}개까지입니다")
+        raise ValueError(f"한 팀의 포지션은 {max_slots}개까지예요")
     return checked
 
 
@@ -155,7 +155,7 @@ def get_team_or_raise(session: Session, team_id: int) -> Team:
     """team_id 의 팀을 반환합니다. 없으면 ValueError 입니다. 다른 모듈은 pipeline 을 통해 이 함수를 씁니다."""
     team = session.get(Team, team_id)
     if team is None:
-        raise ValueError("존재하지 않는 팀입니다")
+        raise ValueError("존재하지 않는 팀이에요")
     return team
 
 
@@ -169,21 +169,21 @@ def require_team_member(session: Session, team_id: int, member_id: int) -> None:
         )
     ).first()
     if row is None:
-        raise PermissionError("그 팀 소속이 아닙니다")
+        raise PermissionError("그 팀 소속이 아니에요")
 
 
 def _get_slot_or_raise(session: Session, team_id: int, slot_id: int) -> TeamSlot:
     slot = session.get(TeamSlot, slot_id)
     # slot_id 만 맞고 팀이 다르면 없는 포지션으로 처리합니다. 다른 팀의 포지션을 번호만으로 수정할 수 없습니다.
     if slot is None or slot.team_id != team_id:
-        raise ValueError("존재하지 않는 포지션입니다")
+        raise ValueError("존재하지 않는 포지션이에요")
     return slot
 
 
 def _require_known_color(color: str) -> str:
     """color 가 TEAM_COLORS 중 하나이면 그대로 반환하고, 아니면 ValueError 를 발생시킵니다."""
     if color not in TEAM_COLORS:
-        raise ValueError("알 수 없는 팀 색입니다")
+        raise ValueError("알 수 없는 팀 색이에요")
     return color
 
 
@@ -273,7 +273,7 @@ def assign_slot(session: Session, team_id: int, slot_id: int, member_id: int) ->
     slot = _get_slot_or_raise(session, team_id, slot_id)
     member = session.get(Member, member_id)
     if member is None:
-        raise ValueError("존재하지 않는 사람입니다")
+        raise ValueError("존재하지 않는 사람이에요")
     slot.member_id = member_id
     commit_translating(session, ROSTER_MESSAGES)
     return slot, member
@@ -331,15 +331,15 @@ def _require_may_unseat(slot: TeamSlot, requester_id: int, may_unseat: bool) -> 
     """자리의 배정을 해제할 수 있는지 검증합니다. 자신의 자리는 권한 없이 해제할 수 있습니다."""
     occupied_by_other = slot.member_id is not None and slot.member_id != requester_id
     if occupied_by_other and not may_unseat:
-        raise PermissionError("관련된 권한을 가지고 있지 않습니다")
+        raise PermissionError("관련된 권한을 가지고 있지 않아요")
 
 
 def _require_may_seat(session: Session, member_id: int, may_seat: bool) -> None:
     """자리에 사람을 배정할 수 있는지, 그리고 그 사람이 존재하는지 검증합니다."""
     if not may_seat:
-        raise PermissionError("관련된 권한을 가지고 있지 않습니다")
+        raise PermissionError("관련된 권한을 가지고 있지 않아요")
     if session.get(Member, member_id) is None:
-        raise ValueError("존재하지 않는 사람입니다")
+        raise ValueError("존재하지 않는 사람이에요")
 
 
 def team_slot_counts(session: Session, team_id: int) -> tuple[int, int]:

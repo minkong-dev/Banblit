@@ -23,7 +23,7 @@ test("공지에 글을 쓰고 댓글을 달 수 있다", async ({ page }) => {
   await expect(page).toHaveURL(/\/notices\/\d+$/);
   await page.reload();
   await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
-  await expect(page.getByText("아직 댓글이 없습니다")).toBeVisible();
+  await expect(page.getByText("아직 댓글이 없어요")).toBeVisible();
 
   await page.getByLabel("댓글 쓰기").fill(comment);
   await page.getByRole("button", { name: "댓글 달기" }).click();

@@ -158,3 +158,26 @@ describe("sendFile", () => {
     await expect(promise).rejects.toThrow("파일이 너무 큽니다");
   });
 });
+
+describe("getJSON — 로그인 만료", () => {
+  it("서버가 session_rejected code 를 보내면 표시 cookie 를 지우고 로그인 화면으로 이동한다", async () => {
+    const replace = vi.fn();
+    const doc = { cookie: "banblit_signed_in=1" };
+    vi.stubGlobal("document", doc);
+    vi.stubGlobal("window", { location: { replace } });
+    stubFetch(() => Promise.resolve(jsonResponse({ detail: "다시 로그인해주세요.", code: "session_rejected" }, 401)));
+
+    await expect(getJSON("/me")).rejects.toThrow("다시 로그인해주세요.");
+    expect(replace).toHaveBeenCalledWith("/login");
+  });
+
+  it("문구가 같아도 code 가 없으면 이동하지 않는다", async () => {
+    const replace = vi.fn();
+    vi.stubGlobal("document", { cookie: "banblit_signed_in=1" });
+    vi.stubGlobal("window", { location: { replace } });
+    stubFetch(() => Promise.resolve(jsonResponse({ detail: "로그인이 필요합니다" }, 401)));
+
+    await expect(getJSON("/login")).rejects.toThrow();
+    expect(replace).not.toHaveBeenCalled();
+  });
+});

@@ -95,13 +95,13 @@ def _build_room_slots(rooms: list[Room], slot_minutes: int) -> list[RoomInterval
         except ValueError as error:
             # generate_slots 가 발생시킨 error 에 합주실 번호를 붙여 다시 발생시킵니다.
             raise ValueError(
-                f"{room.id}번 합주실의 운영 시간이 잘못되었습니다: {error}"
+                f"{room.id}번 합주실의 운영 시간이 잘못되었어요: {error}"
             ) from error
         for interval in intervals:
             room_slot = RoomInterval(room_id=room.id, interval=interval)
             if room_slot in seen:
                 raise ValueError(
-                    f"{room.id}번 합주실의 운영 시간이 겹칩니다: "
+                    f"{room.id}번 합주실의 운영 시간이 겹쳐요: "
                     f"{interval.start} ~ {interval.end}"
                 )
             seen.add(room_slot)
@@ -144,27 +144,27 @@ def _covered_slots(
 def _validate(teams: list[Team], target_sessions: int, max_absent: int) -> None:
     """번호는 대상을 유일하게 식별해야 합니다. 중복되면 결과에서 대상을 구분할 수 없기 때문입니다."""
     if target_sessions < 0:
-        raise ValueError("팀당 배정 개수는 음수일 수 없습니다")
+        raise ValueError("팀당 배정 개수는 음수일 수 없어요")
     if max_absent < 0:
-        raise ValueError("불참 허용 인원은 음수일 수 없습니다")
+        raise ValueError("불참 허용 인원은 음수일 수 없어요")
 
     team_counts = Counter(team.id for team in teams)
     duplicated_teams = {team_id for team_id, count in team_counts.items() if count > 1}
     if duplicated_teams:
         raise ValueError(
-            f"팀 번호가 겹칩니다: {', '.join(str(i) for i in sorted(duplicated_teams))}"
+            f"팀 번호가 겹쳐요: {', '.join(str(i) for i in sorted(duplicated_teams))}"
         )
 
     for team in teams:
         if not team.members:
-            raise ValueError(f"{team.id}번 팀에 멤버가 없습니다")
+            raise ValueError(f"{team.id}번 팀에 멤버가 없어요")
         member_counts = Counter(member.id for member in team.members)
         duplicated_members = {
             member_id for member_id, count in member_counts.items() if count > 1
         }
         if duplicated_members:
             raise ValueError(
-                f"{team.id}번 팀 명단에 같은 사람이 두 번 있습니다: "
+                f"{team.id}번 팀 명단에 같은 사람이 두 번 있어요: "
                 f"{', '.join(str(i) for i in sorted(duplicated_members))}"
             )
 
@@ -359,7 +359,7 @@ def _solve(
     finally:
         stopper.cancel()
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
-        raise ValueError("배정 계산이 시간 상한 안에 끝나지 않았습니다")
+        raise ValueError("배정 계산이 시간 상한 안에 끝나지 않았어요")
     return solver
 
 

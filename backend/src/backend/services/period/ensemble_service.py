@@ -46,11 +46,11 @@ def _ensemble_times(
     require_clock_range(start, end, "전체 합주 시간")
     ensemble, opened = day_window(_ANY_DAY, start, end), day_window(_ANY_DAY, room.opens_at, room.closes_at)
     if ensemble.start < opened.start or ensemble.end > opened.end:
-        raise ValueError("전체 합주 시각은 합주실 운영 시간 안이어야 합니다")
+        raise ValueError("전체 합주 시각은 합주실 운영 시간 안이어야 해요")
     # 점유 단위는 60 의 약수라(settings CHECK) 분만 나누어 보면 격자 위인지 알 수 있습니다.
     minutes = slot_minutes(session)
     if start.minute % minutes or end.minute % minutes:
-        raise ValueError(f"전체 합주 시각은 {minutes}분 단위여야 합니다")
+        raise ValueError(f"전체 합주 시각은 {minutes}분 단위여야 해요")
     return start, end
 
 
@@ -109,10 +109,10 @@ def set_ensemble_day(
         period.ensemble_room_id,
     )
     if first is None or last is None or room_id is None:
-        raise ValueError("전체 합주가 지정되지 않은 기간입니다")
+        raise ValueError("전체 합주가 지정되지 않은 기간이에요")
     target = parse_calendar_date(day, "날짜")
     if not first <= target <= last:
-        raise ValueError("전체 합주 날짜 범위 밖의 날짜입니다")
+        raise ValueError("전체 합주 날짜 범위 밖의 날짜예요")
     start, end = _ensemble_times(session, get_room_or_raise(session, room_id), starts_at, ends_at)
 
     # 조회 후 INSERT 하면 같은 날짜를 동시에 저장하는 두 요청이 unique 제약에 걸리므로 한 문장으로 덮어씁니다.

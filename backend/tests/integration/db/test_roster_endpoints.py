@@ -308,7 +308,7 @@ def test_team_name_race_at_commit_time_is_translated_not_500(
 
     with Session(test_engine) as other:
         other.add(Team(name="청산"))
-        with pytest.raises(ValueError, match="이미 있는 팀 이름입니다"):
+        with pytest.raises(ValueError, match="이미 있는 팀 이름이에요"):
             commit_translating(other, ROSTER_MESSAGES)
 
 

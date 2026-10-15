@@ -183,7 +183,7 @@ def test_a_reservation_that_partly_overlaps_another_is_refused(
     )
 
     assert response.status_code == 422
-    assert "예약이 불가능합니다" in response.json()["detail"]
+    assert "예약이 불가능해요" in response.json()["detail"]
 
 
 def test_a_reservation_may_start_when_another_ends(
@@ -326,7 +326,7 @@ def test_reservation_creation_rejects_a_slot_already_taken(
     )
 
     assert second.status_code == 422
-    assert "예약이 불가능합니다" in second.json()["detail"]
+    assert "예약이 불가능해요" in second.json()["detail"]
     # slot(1시간 단위 시간 칸)이 겹쳐서 거절되었으므로 뒤의 slot 도 생성되지 않아야 합니다. 전체가 rollback 됩니다.
     remaining = api_client.get(
         f"/rooms/{room.id}/reservations",
@@ -571,7 +571,7 @@ def test_reservation_slot_race_at_commit_time_is_translated_not_500(
         create_reservation(
             session_a, room.id, member, None, None, slot_start, slot_end, created_at
         )
-        with pytest.raises(ValueError, match="예약이 불가능합니다"):
+        with pytest.raises(ValueError, match="예약이 불가능해요"):
             create_reservation(
                 session_b, room.id, member, None, None, slot_start, slot_end, created_at
             )
@@ -649,7 +649,7 @@ def test_moving_a_reservation_slot_onto_a_taken_time_keeps_the_original(
     )
 
     assert response.status_code == 422
-    assert "예약이 불가능합니다" in response.json()["detail"]
+    assert "예약이 불가능해요" in response.json()["detail"]
     listed = api_client.get(
         f"/rooms/{room.id}/reservations",
         params={"from": OPEN_DAY, "to": OPEN_DAY},

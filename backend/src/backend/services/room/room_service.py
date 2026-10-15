@@ -13,7 +13,7 @@ from backend.db.models import Room
 from backend.db.pipeline import commit_translating
 
 # 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 변경하는 단계별 기록)이 지정한 이름입니다.
-ROOM_MESSAGES = {"rooms_name_key": "이미 있는 합주실명입니다"}
+ROOM_MESSAGES = {"rooms_name_key": "이미 있는 합주실명이에요"}
 
 
 def list_rooms(session: Session) -> list[Room]:
@@ -83,5 +83,5 @@ def get_room_or_raise(session: Session, room_id: int) -> Room:
     """room_id 의 합주실을 반환합니다. 없으면 ValueError 입니다. 다른 모듈은 pipeline 을 통해 이 함수를 씁니다."""
     room = session.get(Room, room_id)
     if room is None:
-        raise ValueError("존재하지 않는 합주실입니다")
+        raise ValueError("존재하지 않는 합주실이에요")
     return room

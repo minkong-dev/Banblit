@@ -26,9 +26,9 @@ def generate_slots(
     # 60분이면 "정시"가 사람이 읽기에 자연스럽습니다. 그보다 작은 값일 때만 분을 적습니다.
     unit_text = "정시" if slot_minutes == 60 else f"{slot_minutes}분 단위"
     if not _is_on_grid(period.start, slot_minutes):
-        raise ValueError(f"운영 시간은 {unit_text}에 시작해야 합니다")
+        raise ValueError(f"운영 시간은 {unit_text}에 시작해야 해요")
     if not _is_on_grid(period.end, slot_minutes):
-        raise ValueError(f"운영 시간은 {unit_text}에 끝나야 합니다")
+        raise ValueError(f"운영 시간은 {unit_text}에 끝나야 해요")
 
     unit = timedelta(minutes=slot_minutes)
     slots: list[TimeInterval] = []
@@ -55,7 +55,7 @@ def generate_sessions(
     if session_minutes % slot_minutes != 0:
         raise ValueError(
             f"합주 1회 길이({session_minutes}분)는 "
-            f"칸 크기({slot_minutes}분)의 배수여야 합니다"
+            f"칸 크기({slot_minutes}분)의 배수여야 해요"
         )
 
     length = timedelta(minutes=session_minutes)

@@ -25,6 +25,7 @@ flowchart LR
   frontend_src_lib_account_test["account.test.ts"] --> frontend_src_lib_contract
   frontend_src_lib_account["account.ts"] --> frontend_src_lib_contract
   frontend_src_lib_adminMenu["adminMenu.ts"] --> frontend_src_lib_contract
+  frontend_src_lib_api["api.ts"] --> frontend_src_lib_contract
   frontend_src_lib_assignment_test["assignment.test.ts"] --> frontend_src_lib_contract
   frontend_src_lib_assignment["assignment.ts"] --> frontend_src_lib_contract
   frontend_src_lib_dayEntries_test["dayEntries.test.ts"] --> frontend_src_lib_contract
@@ -76,6 +77,7 @@ flowchart LR
 - [[graph/frontend/src/lib/account.test|account.test.ts]]
 - [[graph/frontend/src/lib/account|account.ts]]
 - [[graph/frontend/src/lib/adminMenu|adminMenu.ts]]
+- [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/assignment.test|assignment.test.ts]]
 - [[graph/frontend/src/lib/assignment|assignment.ts]]
 - [[graph/frontend/src/lib/dayEntries.test|dayEntries.test.ts]]

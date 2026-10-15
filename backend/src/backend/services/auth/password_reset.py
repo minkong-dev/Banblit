@@ -13,7 +13,7 @@ from backend.db.models import Member, PasswordResetToken
 
 RESET_SUBJECT = "[Banblit] 비밀번호 재설정"
 FIND_ID_SUBJECT = "[Banblit] 아이디 안내"
-BAD_TOKEN = "재설정 링크가 만료되었거나 이미 사용되었습니다"
+BAD_TOKEN = "재설정 링크가 만료되었거나 이미 사용되었어요"
 
 # 보낸 메일과 보내지 않은 메일의 사유를 남깁니다. 못 받았다는 문의가 들어왔을 때 수신 측 문제인지
 # 서버가 조건을 이유로 보내지 않은 것인지 구분하는 근거입니다. 계정은 번호로만 남깁니다 —
