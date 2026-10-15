@@ -150,3 +150,4 @@ flowchart LR
 
 - `_slot_minutes_sql`
 - `_in_sql`
+- `_clock_range_sql`

@@ -6,9 +6,8 @@ from sqlalchemy.orm import Session
 from backend.services.notification.pipeline import notify_rejected
 from backend.services.validation.pipeline import (
     require_reject_reason,
-    require_same_day,
     require_valid_slot_bounds,
-    require_within_room_hours,
+    require_within_room_window,
 )
 from backend.services.permission.pipeline import account_permissions
 from backend.services.room.pipeline import get_room_or_raise
@@ -16,6 +15,7 @@ from backend.services.roster.pipeline import get_team_or_raise, require_team_mem
 from backend.services.settings.pipeline import slot_minutes
 from backend.db.models import EnsembleDay, Member, Notification, Period, Reservation, Room, Team
 from backend.db.pipeline import commit_translating
+from backend.scheduling.pipeline import day_window
 
 # 선착순은 겹침 금지 제약이 commit 시점에 결정합니다. 먼저 commit 한 요청이 그 구간을 가져갑니다.
 # 제약 이름은 migration 이 지정한 이름입니다(c8e4a1b60d93_reservation_as_one_row.py).
@@ -104,7 +104,10 @@ def focus_refusal(
         select(EnsembleDay).where(EnsembleDay.period_id == period.id, EnsembleDay.day == day)
     ).first()
     start, end = (own.starts_at, own.ends_at) if own else (period.ensemble_starts_at, period.ensemble_ends_at)
-    if start is not None and end is not None and starts_at.time() < end and start < ends_at.time():
+    if start is None or end is None:
+        return None
+    ensemble = day_window(day, start, end)
+    if starts_at < ensemble.end and ensemble.start < ends_at:
         return "전체 합주 시간에는 예약할 수 없습니다"
     return None
 
@@ -132,10 +135,9 @@ def _planned_row(
     판정을 commit 시점의 겹침 금지 제약 하나에 맡깁니다.
     """
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
-    require_same_day(starts_at, ends_at)
     _require_not_started(starts_at, created_at)
     room = get_room_or_raise(session, room_id)
-    require_within_room_hours(room.opens_at, room.closes_at, starts_at, ends_at)
+    require_within_room_window(room.opens_at, room.closes_at, starts_at, ends_at)
     team = None
     if team_id is not None:
         team = get_team_or_raise(session, team_id)
@@ -309,9 +311,8 @@ def update_reservation(
     room = get_room_or_raise(session, old.room_id)
 
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
-    require_same_day(starts_at, ends_at)
     _require_not_started(starts_at, moved_at)
-    require_within_room_hours(room.opens_at, room.closes_at, starts_at, ends_at)
+    require_within_room_window(room.opens_at, room.closes_at, starts_at, ends_at)
     _require_not_in_focused_period(session, old.room_id, starts_at, ends_at)
 
     old.cancelled_at = moved_at

@@ -38,3 +38,7 @@ flowchart LR
 - [[graph/backend/tests/unit/test_rooms|test_rooms.py]]
 - [[graph/backend/tests/unit/test_slots|test_slots.py]]
 - [[graph/backend/tests/unit/test_validation|test_validation.py]]
+
+## 함수와 호출
+
+- `day_window`

@@ -32,6 +32,7 @@ from backend.contract import (
     DEFAULT_DAILY_MAX_HOURS,
     DEFAULT_SESSION_MINUTES,
     DEFAULT_SLOT_MINUTES,
+    LATEST_CLOSE_NEXT_DAY,
     MAX_SESSION_MINUTES,
     REJECT_TARGETS,
     SLOT_MINUTE_CHOICES,
@@ -107,6 +108,12 @@ def _slot_minutes_sql() -> str:
 def _in_sql(column: str, allowed: tuple[str, ...]) -> str:
     # column(데이터베이스의 열)과 허용 목록을 받아 "column IN ('a', 'b')" 형식으로 반환합니다.
     return "{} IN ({})".format(column, ", ".join(f"'{value}'" for value in allowed))
+
+
+def _clock_range_sql(starts: str, ends: str) -> str:
+    # 하루 중의 범위입니다. ends 가 starts 보다 늦거나, ends 가 LATEST_CLOSE_NEXT_DAY(다음 날 00:00)이면서 starts 와 다를 때 통과합니다.
+    midnight = f"'{LATEST_CLOSE_NEXT_DAY}'"
+    return f"({ends} > {starts} OR ({ends} = {midnight} AND {starts} <> {midnight}))"
 
 
 class Base(DeclarativeBase):
@@ -346,7 +353,7 @@ class Room(Base):
             "date_part('minute', closes_at) = 0"
             " AND date_part('second', closes_at) = 0"
         ),
-        CheckConstraint("closes_at > opens_at", name="rooms_closes_after_opens"),
+        CheckConstraint(_clock_range_sql("opens_at", "closes_at"), name="rooms_clock_range"),
     )
 
 
@@ -409,7 +416,7 @@ class Period(Base):
             name="periods_ensemble_within_period",
         ),
         CheckConstraint(
-            "ensemble_ends_at > ensemble_starts_at", name="periods_ensemble_times_order"
+            _clock_range_sql("ensemble_starts_at", "ensemble_ends_at"), name="periods_ensemble_times_order"
         ),
         # 평일·주말은 각각 한 쌍입니다. 한쪽만 채우면 종료 시간 없는 시간대가 되어 배정 구간을
         # 정할 수 없습니다. 두 쌍은 서로 독립입니다 — 평일만 정하고 주말은 개방시각 전체로 둘 수 있습니다.
@@ -419,8 +426,10 @@ class Period(Base):
             name="periods_practice_window_pairs",
         ),
         CheckConstraint(
-            "(practice_weekday_ends_at > practice_weekday_starts_at OR practice_weekday_starts_at IS NULL)"
-            " AND (practice_weekend_ends_at > practice_weekend_starts_at OR practice_weekend_starts_at IS NULL)",
+            f"({_clock_range_sql('practice_weekday_starts_at', 'practice_weekday_ends_at')}"
+            " OR practice_weekday_starts_at IS NULL)"
+            f" AND ({_clock_range_sql('practice_weekend_starts_at', 'practice_weekend_ends_at')}"
+            " OR practice_weekend_starts_at IS NULL)",
             name="periods_practice_window_order",
         ),
         CheckConstraint("target_hours_per_team > 0", name="periods_target_hours_positive"),
@@ -442,7 +451,7 @@ class EnsembleDay(Base):
 
     __table_args__ = (
         UniqueConstraint("period_id", "day"),
-        CheckConstraint("ends_at > starts_at"),
+        CheckConstraint(_clock_range_sql("starts_at", "ends_at"), name="ensemble_days_clock_range"),
     )
 
 

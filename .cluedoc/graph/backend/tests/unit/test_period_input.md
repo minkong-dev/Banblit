@@ -65,3 +65,5 @@ flowchart LR
 - `test_sessions_per_team_is_capped_by_days_times_the_daily_limit`: `backend.services.period.period_input`
 - `test_target_sessions_uses_the_automatic_value_when_no_hours_are_set`: `backend.services.period.period_input`
 - `test_target_sessions_converts_hours_and_is_capped_by_the_daily_limit`: `backend.services.period.period_input`
+- `test_a_room_closing_at_midnight_is_open_until_the_next_day`: `backend.services.period.period_input`
+- `test_a_window_until_midnight_meets_a_room_closing_at_midnight`: `backend.scheduling.interval`, `backend.services.period.period_input`

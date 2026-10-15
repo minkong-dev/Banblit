@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from backend.services.validation.pipeline import (
     parse_calendar_date,
     parse_clock,
+    require_clock_range,
     require_ends_not_before_starts,
     require_valid_kind,
 )
@@ -91,8 +92,7 @@ def _pair_columns(part: str, pair: ClockPair) -> dict[str, object]:
     starts = parse_clock(pair[0], f"{label} 합주 시작 시간")
     ends = parse_clock(pair[1], f"{label} 합주 종료 시간")
     # DB 의 CHECK 도 같은 조건을 봅니다. 여기서 먼저 보는 것은 어느 쪽이 잘못됐는지 알리기 위해서입니다.
-    if ends <= starts:
-        raise ValueError(f"{label} 합주 종료 시간은 시작 시간보다 늦어야 합니다")
+    require_clock_range(starts, ends, f"{label} 합주 시간")
     return {
         f"practice_{part}_starts_at": starts,
         f"practice_{part}_ends_at": ends,

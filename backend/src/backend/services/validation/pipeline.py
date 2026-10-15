@@ -7,7 +7,7 @@ from backend.services.validation.input import (
     format_created_at,
     parse_calendar_date,
     parse_clock,
-    require_closes_after_opens,
+    require_clock_range,
     require_cohort,
     require_department,
     require_email,
@@ -20,11 +20,10 @@ from backend.services.validation.input import (
     require_reject_reason,
     require_repeat_end,
     require_repeat_weekdays,
-    require_same_day,
     require_student_no,
     require_valid_kind,
     require_valid_slot_bounds,
-    require_within_room_hours,
+    require_within_room_window,
 )
 
 __all__ = [
@@ -33,7 +32,7 @@ __all__ = [
     "format_created_at",
     "parse_calendar_date",
     "parse_clock",
-    "require_closes_after_opens",
+    "require_clock_range",
     "require_cohort",
     "require_department",
     "require_email",
@@ -46,9 +45,8 @@ __all__ = [
     "require_reject_reason",
     "require_repeat_end",
     "require_repeat_weekdays",
-    "require_same_day",
     "require_student_no",
     "require_valid_kind",
     "require_valid_slot_bounds",
-    "require_within_room_hours",
+    "require_within_room_window",
 ]

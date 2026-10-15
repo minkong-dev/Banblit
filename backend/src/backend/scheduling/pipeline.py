@@ -7,7 +7,7 @@
 from backend.scheduling.assignment import Assignment, Room, RoomInterval
 from backend.scheduling.assignment import assign as assign_sessions
 from backend.scheduling.availability import Member, Team, absent_member_ids
-from backend.scheduling.interval import TimeInterval
+from backend.scheduling.interval import TimeInterval, day_window
 from backend.scheduling.slots import generate_sessions, generate_slots
 
 # solver 계산 1회에 허용하는 시간(초)입니다. 실측 최댓값(약 22초)의 약 3배입니다. 제한이 없으면
@@ -51,6 +51,7 @@ __all__ = [
     "Member",
     "Team",
     "TimeInterval",
+    "day_window",
     "absent_member_ids",
     "assign",
     "generate_slots",

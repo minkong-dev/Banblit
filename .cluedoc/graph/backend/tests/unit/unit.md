@@ -11,6 +11,7 @@ kind: directory
 - [[graph/backend/tests/unit/test_assignment|test_assignment.py]]
 - [[graph/backend/tests/unit/test_auth_password|test_auth_password.py]]
 - [[graph/backend/tests/unit/test_availability|test_availability.py]]
+- [[graph/backend/tests/unit/test_clock_range|test_clock_range.py]]
 - [[graph/backend/tests/unit/test_db_commit|test_db_commit.py]]
 - [[graph/backend/tests/unit/test_db_engine|test_db_engine.py]]
 - [[graph/backend/tests/unit/test_db_health|test_db_health.py]]

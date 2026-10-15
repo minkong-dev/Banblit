@@ -12,6 +12,7 @@ flowchart LR
   backend_src_backend_services_reservation_reservation_service["reservation_service.py"]
   backend_src_backend_services_reservation_reservation_service --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_reservation_reservation_service --> backend_src_backend_db_pipeline["pipeline.py"]
+  backend_src_backend_services_reservation_reservation_service --> backend_src_backend_scheduling_pipeline["pipeline.py"]
   backend_src_backend_services_reservation_reservation_service --> backend_src_backend_services_notification_pipeline["pipeline.py"]
   backend_src_backend_services_reservation_reservation_service --> backend_src_backend_services_permission_pipeline["pipeline.py"]
   backend_src_backend_services_reservation_reservation_service --> backend_src_backend_services_room_pipeline["pipeline.py"]
@@ -25,6 +26,7 @@ flowchart LR
 
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/db/pipeline|pipeline.py]]
+- [[graph/backend/src/backend/scheduling/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/notification/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/permission/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/room/pipeline|pipeline.py]]
@@ -40,7 +42,7 @@ flowchart LR
 
 - `_require_not_in_focused_period`
 - `cancel_reservations_in_focus`: `backend.db.models`
-- `focus_refusal`
+- `focus_refusal`: `backend.scheduling.pipeline`
 - `_require_not_started`
 - `_planned_row`: `backend.db.models`, `backend.services.room.pipeline`, `backend.services.roster.pipeline`, `backend.services.settings.pipeline`, `backend.services.validation.pipeline`
 - `create_reservation`: `backend.db.pipeline`

@@ -32,6 +32,7 @@ flowchart LR
 - `test_room_is_created_with_hh_mm_times`
 - `test_room_creation_rejects_off_grid_minutes`
 - `test_room_creation_rejects_closes_at_not_later_than_opens_at`
+- `test_room_closing_at_midnight_is_created`
 - `test_room_creation_rejects_a_duplicate_name`
 - `test_room_creation_rejects_a_whitespace_only_name`
 - `test_room_creation_trims_surrounding_whitespace_from_the_name`

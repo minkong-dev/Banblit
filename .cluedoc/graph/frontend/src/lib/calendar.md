@@ -17,6 +17,7 @@ flowchart LR
   frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_calendar
   frontend_src_lib_runs["runs.ts"] --> frontend_src_lib_calendar
   frontend_src_lib_slots["slots.ts"] --> frontend_src_lib_calendar
+  frontend_src_lib_unavailableMap["unavailableMap.ts"] --> frontend_src_lib_calendar
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_calendar
   frontend_src_routes_DayDialogParts["DayDialogParts.tsx"] --> frontend_src_lib_calendar
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_lib_calendar
@@ -36,6 +37,7 @@ flowchart LR
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/runs|runs.ts]]
 - [[graph/frontend/src/lib/slots|slots.ts]]
+- [[graph/frontend/src/lib/unavailableMap|unavailableMap.ts]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
 - [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]

@@ -82,7 +82,23 @@ def test_room_creation_rejects_closes_at_not_later_than_opens_at(
     )
 
     assert response.status_code == 422
-    assert "늦어야" in response.json()["detail"]
+    assert "00:00" in response.json()["detail"]
+
+
+def test_room_closing_at_midnight_is_created(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    # 00:00 마감은 다음 날 00:00 까지 운영하는 합주실입니다(사용자 결정 2026-10-12). DB CHECK 제약도 통과해야 합니다.
+    _, head = account(*HEAD)
+
+    response = api_client.post(
+        "/rooms",
+        json={"name": "1번방", "opens_at": "18:00", "closes_at": "00:00"},
+        cookies=head,
+    )
+
+    assert response.status_code == 201
+    assert response.json()["room"]["closes_at"] == "00:00"
 
 
 def test_room_creation_rejects_a_duplicate_name(

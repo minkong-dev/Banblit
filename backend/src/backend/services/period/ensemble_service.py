@@ -6,7 +6,7 @@
 """
 
 from collections import defaultdict
-from datetime import time
+from datetime import date, time
 
 from sqlalchemy import delete, or_, select
 from sqlalchemy.dialects.postgresql import insert
@@ -16,12 +16,17 @@ from backend.db.models import EnsembleDay, Period, Room
 from backend.services.validation.pipeline import (
     parse_calendar_date,
     parse_clock,
+    require_clock_range,
     require_ends_not_before_starts,
 )
 from backend.services.period.period_crud_service import commit_with_cancellations
 from backend.services.period.period_crud_service import get_period_or_raise
 from backend.services.room.pipeline import get_room_or_raise
 from backend.services.settings.pipeline import slot_minutes
+from backend.scheduling.pipeline import day_window
+
+# 하루 범위 2개를 비교할 때 쓰는 기준 날짜입니다. 시각만 비교하므로 어느 날짜든 결과가 같습니다.
+_ANY_DAY = date(2000, 1, 3)
 
 ENSEMBLE_FIELDS = (
     "ensemble_starts_on",
@@ -38,9 +43,9 @@ def _ensemble_times(
     """전체 합주 시작·종료 시간을 변환하고, 순서·합주실 운영 시간·점유 단위 격자를 검사합니다."""
     start = parse_clock(starts_at, "전체 합주 시작 시간")
     end = parse_clock(ends_at, "전체 합주 종료 시간")
-    if end <= start:
-        raise ValueError("전체 합주 종료 시간은 시작 시간보다 늦어야 합니다")
-    if start < room.opens_at or end > room.closes_at:
+    require_clock_range(start, end, "전체 합주 시간")
+    ensemble, opened = day_window(_ANY_DAY, start, end), day_window(_ANY_DAY, room.opens_at, room.closes_at)
+    if ensemble.start < opened.start or ensemble.end > opened.end:
         raise ValueError("전체 합주 시각은 합주실 운영 시간 안이어야 합니다")
     # 점유 단위는 60 의 약수라(settings CHECK) 분만 나누어 보면 격자 위인지 알 수 있습니다.
     minutes = slot_minutes(session)

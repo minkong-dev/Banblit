@@ -37,6 +37,7 @@ flowchart LR
 - `_focused_period`: `backend.db.models`
 - `test_reservation_endpoints_require_login`
 - `test_a_personal_reservation_is_created_as_one_row`
+- `test_a_reservation_until_midnight_fits_a_room_closing_at_midnight`: `backend.db.models`
 - `test_a_reservation_that_partly_overlaps_another_is_refused`
 - `test_a_reservation_may_start_when_another_ends`
 - `test_a_reservation_belongs_to_the_cookie_owner_not_the_first_account`

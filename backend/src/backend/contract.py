@@ -43,3 +43,8 @@ REJECT_TARGETS: tuple[str, ...] = ("reservation", "unavailable")
 # 반려 사유의 최대 글자 수입니다. 알림 한 칸에 표시하므로 문단 하나 분량으로 제한합니다.
 # 요청 검증(api/schemas.py)과 화면의 입력칸(frontend/src/lib/contract.ts)이 같은 값을 씁니다.
 REJECT_REASON_MAX_LENGTH = 300
+
+# 종료 시간이 시작 시간보다 이를 때 허용하는 유일한 종료 시간입니다. 이 값이면 다음 날 00:00 에 끝나는 범위로 봅니다
+# (사용자 결정 2026-10-12). 화면이 24:00 까지만 표시하므로 그 뒤의 시각은 거부합니다. DB CHECK 제약(db/models.py),
+# 입력 검증(services/validation/input.py), 화면(frontend/src/lib/settings.ts 의 LATEST_CLOSE_NEXT_DAY)이 같은 값을 씁니다.
+LATEST_CLOSE_NEXT_DAY = "00:00"
