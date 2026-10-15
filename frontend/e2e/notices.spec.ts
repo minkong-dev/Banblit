@@ -138,3 +138,26 @@ test("공지 상세를 닫으면 초점이 그 글의 목록 버튼으로 돌아
 
   await expect(postButton).toBeFocused();
 });
+
+// 파일은 글에 붙어 올라가므로 초안이 만들어지기 전에는 파일 넣기 버튼이 비활성입니다.
+// 초안 요청을 붙잡아 두고 확인한 뒤 풀어 주면, 그때 버튼이 활성화되어야 합니다. 그 사이에 쓴 본문은 남아 있어야 합니다.
+test("초안이 만들어지기 전에는 그림 넣기와 파일 첨부가 비활성이고, 그 사이에 쓴 본문은 남는다", async ({ page }) => {
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  await page.route("**/api/notices/drafts", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto("/notices/new");
+
+  const media = page.getByRole("button", { name: "그림 넣기" });
+  const file = page.getByRole("button", { name: "파일 첨부" });
+  await expect(media).toBeDisabled();
+  await expect(file).toBeDisabled();
+  await page.getByLabel("내용").fill("초안 전에 쓴 본문");
+
+  release();
+  await expect(media).toBeEnabled();
+  await expect(file).toBeEnabled();
+  await expect(page.getByLabel("내용")).toHaveText("초안 전에 쓴 본문");
+});

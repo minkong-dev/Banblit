@@ -17,8 +17,7 @@ export function readSavedTheme(): Theme {
   return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
-/** 선택한 값을 화면에 적용하고 다음에도 사용하도록 저장합니다.
- *  저장하지 못해도 화면에는 적용됩니다. 저장 실패보다 현재 화면이 변경되지 않는 것이 더 나쁩니다. */
+/** 선택한 값을 화면에 적용하고 다음에도 사용하도록 localStorage 에 저장합니다. 저장하지 못해도 화면에는 적용합니다. */
 export function applyTheme(theme: Theme): Theme {
   document.documentElement.dataset.theme = theme;
   try {

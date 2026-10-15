@@ -1,8 +1,7 @@
 // 사이드바의 관리자 메뉴 항목입니다. 주소·이름·필요 권한을 한 곳에 모읍니다.
 //
-// 세 곳이 같은 목록을 봅니다 — 사이드바(components/AppShell.tsx)가 항목을 그리고,
-// 주소 표(App.tsx)가 항목마다 route 를 만들며, routes/Settings.tsx 의 AdminArea 가 권한을 확인합니다.
-// 목록이 흩어져 있으면 항목을 추가할 때 세 곳 중 한 곳을 빠뜨립니다.
+// 사이드바(components/AppShell.tsx)가 항목을 그리고, 주소 표(App.tsx)가 항목마다 route 를 만들며,
+// routes/Settings.tsx 의 AdminArea 가 권한을 확인합니다. 항목을 추가할 때는 이 목록만 수정합니다.
 //
 // 자기 계정에 대한 설정은 권한이 필요 없으므로 이 목록이 아니라 프로필 화면(/profile)에 있습니다.
 
