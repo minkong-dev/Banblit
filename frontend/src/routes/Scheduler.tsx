@@ -11,7 +11,8 @@ import { getJSON } from "../lib/api";
 import { firstWhy } from "../lib/loading";
 import { monthRange, slotLabels, slotSteps } from "../lib/calendar";
 import { loadMyBookings, loadReservationRows, loadScheduleRows, loadUnavailable } from "../lib/pipeline";
-import { DayDialog, DayView } from "./DayDialog";
+import { BookDialog, DayView, OffDialog } from "./DayDialog";
+import type { DayProps } from "./DayDialog";
 import { MonthView, WeekView } from "../components/CalendarViews";
 import {
   allBookedEntries, allOffEntries, assignedByDay, bookedByDay, ensembleByDay, ensembleOn, listNote, memberCountLabel, mergeByDay, offByDay, visibleDays,
@@ -156,6 +157,20 @@ export function Scheduler() {
   };
 
   const inFocus = (key: string) => inRanges(focus, key);
+  // 하루 창 3개(DayView, OffDialog, BookDialog)가 함께 받는 값입니다.
+  const dayProps = (day: string): DayProps => ({
+    dayKey: day,
+    teams,
+    entries: entriesOf(day),
+    openHour: open,
+    closeHour: close,
+    slotCount,
+    inFocus: inFocus(day),
+    ensemble: ensembleOn(periodList, day),
+    canEditEnsemble: can(me, "period_edit"),
+    rooms: rooms.data?.rooms ?? [],
+    onClose: () => setOpenDay(null),
+  });
   const { label, endLabel } = slotLabels(open, close, slotCount);
   const range = from !== null && to !== null ? { from, to } : null;
 
@@ -206,7 +221,7 @@ export function Scheduler() {
               />
             </div>
             <div className="fld">
-              <label htmlFor="tTo">끝 시간</label>
+              <label htmlFor="tTo">종료 시간</label>
               <Dropdown
                 id="tTo"
                 value={to ?? ""}
@@ -284,38 +299,16 @@ export function Scheduler() {
       </div>
 
       {openDay === null ? null : tab === "all" ? (
-        <DayView
-          dayKey={openDay}
-          teams={teams}
-          entries={entriesOf(openDay)}
-          openHour={open}
-          closeHour={close}
-          slotCount={slotCount}
-          inFocus={inFocus(openDay)}
-          ensemble={ensembleOn(periodList, openDay)}
-          canEditEnsemble={can(me, "period_edit")}
-          rooms={rooms.data?.rooms ?? []}
-          onClose={() => setOpenDay(null)}
-        />
+        <DayView {...dayProps(openDay)} />
+      ) : tab === "me" ? (
+        <OffDialog {...dayProps(openDay)} myOff={allOffEntries(unavailableQuery.data ?? [], open)} onSaved={onSaved} />
       ) : (
-        <DayDialog
-          dayKey={openDay}
-          tab={tab}
-          teams={teams}
-          entries={entriesOf(openDay)}
-          myOff={allOffEntries(unavailableQuery.data ?? [], open)}
+        <BookDialog
+          {...dayProps(openDay)}
           myBookings={allBookedEntries(myBookingsQuery.data ?? [], teams, open)}
-          openHour={open}
-          closeHour={close}
-          slotCount={slotCount}
           fixed={range}
-          inFocus={inFocus(openDay)}
-          ensemble={ensembleOn(periodList, openDay)}
-          canEditEnsemble={can(me, "period_edit")}
           myName={me?.name ?? ""}
-          rooms={rooms.data?.rooms ?? []}
           onSaved={onSaved}
-          onClose={() => setOpenDay(null)}
         />
       )}
     </>

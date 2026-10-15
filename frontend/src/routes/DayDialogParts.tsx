@@ -108,14 +108,14 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
   );
 }
 
-/** 시작 시간과 종료 시간을 선택하는 입력입니다. 선택지는 설정의 slotMinutes 간격이고, lock 이면 이미 예약된
+/** 시작 시간과 종료 시간을 선택하는 입력입니다. 선택지는 설정의 slotMinutes 간격이고, grid 를 넘기면 이미 예약된
  *  칸의 시작 시간은 선택할 수 없게 차단합니다. 드래그를 못 쓰는 키보드 사용자의 입력 수단이기도 합니다. */
-export function SlotPicker({ prefix, range, onChange, grid, lock, slotMinutes, openHour, closeHour, slotCount }: HoursProps & {
+export function SlotPicker({ prefix, range, onChange, grid, slotMinutes, openHour, closeHour, slotCount }: HoursProps & {
   prefix: string;
   range: SlotRange;
   onChange: (next: SlotRange) => void;
-  grid: boolean[];
-  lock: boolean;
+  /** 이미 찬 칸(slotMinutes 길이)입니다. 예약 창만 넘깁니다. 불가능 일정은 찬 칸과 겹쳐도 등록할 수 있습니다. */
+  grid?: boolean[];
   slotMinutes: number;
 }) {
   const { label, endLabel } = slotLabels(openHour, closeHour, slotCount);
@@ -130,8 +130,8 @@ export function SlotPicker({ prefix, range, onChange, grid, lock, slotMinutes, o
           choices={steps.slice(0, -1).map((slot) => ({
             value: slot,
             // slot 은 한 시간 단위 위치이고 grid 는 slotMinutes 간격이라, cellAt 으로 grid 의 index 로 변환합니다.
-            label: `${label(slot)}${lock && grid[cellAt(slot, slotMinutes)] ? " (찼어요)" : ""}`,
-            disabled: lock && grid[cellAt(slot, slotMinutes)],
+            label: `${label(slot)}${grid?.[cellAt(slot, slotMinutes)] ? " (찼어요)" : ""}`,
+            disabled: grid?.[cellAt(slot, slotMinutes)] ?? false,
           }))}
           onChange={(next) => onChange({ ...range, a: next })}
         />
