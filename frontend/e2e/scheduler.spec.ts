@@ -147,3 +147,24 @@ test("예약 탭에서 지난 달의 날짜는 누를 수 없고 남은 시간�
   const enabled = await cells.evaluateAll((all) => all.filter((cell) => !(cell as HTMLButtonElement).disabled).length);
   expect(enabled, "누를 수 있는 지난 날짜 칸").toBe(0);
 });
+
+// 날짜 dialog 의 타임라인은 처음에 가장 이른 일정이 보이는 위치로 스크롤합니다(사용자 결정 2026-10-16).
+test("날짜 dialog 의 타임라인은 처음에 가장 이른 일정을 보여 준다", async ({ page }) => {
+  // 06:00 에 여는 합주실을 목록에 추가해 타임라인이 06:00 부터 시작하게 합니다.
+  await page.route(/\/api\/rooms$/, async (route) => {
+    const response = await route.fetch();
+    const body = await response.json() as { rooms: Record<string, unknown>[] };
+    const early = { ...body.rooms[0], id: 99_999, name: "E2E 이른 합주실", opens_at: "06:00:00", closes_at: "23:00:00" };
+    await route.fulfill({ response, json: { ...body, rooms: [...body.rooms, early] } });
+  });
+  await page.setViewportSize({ width: 1280, height: 640 });
+  const { withSchedule } = await findFocusedPeriods(page.request);
+  const row = withSchedule.rows[0];
+  const { year, month, day } = dateParts(row.start);
+
+  await page.goto("/scheduler");
+  await page.getByRole("tab", { name: "전체 일정" }).click();
+  await page.getByRole("button", { name: `${month}월 ${day}일 ${weekdayKr(year, month, day)}요일` }).click();
+
+  await expect(page.locator("dialog[open] .tl .evb").filter({ hasText: row.team }).first()).toBeInViewport();
+});
