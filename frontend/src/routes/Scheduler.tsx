@@ -287,7 +287,7 @@ export function Scheduler() {
           <ul>
             {myTeams.map((team) => (
               <li key={team.id}>
-                <button className="teamrow" onClick={() => void navigate(`/teams/${team.id}`)}>
+                <button className="teamrow" onClick={() => void navigate(`/board/${team.id}`)}>
                   <i style={{ background: `var(--${team.colorKey})` }} />
                   <b>{team.name}</b>
                   <small>{memberCountLabel(allTeams, team.id)}</small>
