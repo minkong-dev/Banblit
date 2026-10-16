@@ -9,8 +9,10 @@ import { Modal } from "./Modal";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 // jsdom 에 없는 showModal, close 를 open 속성 추가, 삭제로 대신합니다.
-HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) { this.setAttribute("open", ""); };
-HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) { this.removeAttribute("open"); };
+Object.assign(HTMLDialogElement.prototype, {
+  showModal(this: HTMLDialogElement) { this.setAttribute("open", ""); },
+  close(this: HTMLDialogElement) { this.removeAttribute("open"); },
+});
 
 function Probe({ seen }: { seen: boolean[] }) {
   const own = useRef<HTMLSpanElement>(null);

@@ -4,11 +4,10 @@ import hooks from "eslint-plugin-react-hooks";
 import globals from "globals";
 import ts from "typescript-eslint";
 
-// eslint . 로 돈다. 검사 대상은 화면 소스뿐이다 — dist 와 꾸러미는 우리가 쓴 것이 아니다.
+// lint 대상은 화면 소스입니다. dist 와 node_modules 는 제외합니다.
 export default [
-  // manual/ 은 매뉴얼 캡쳐 도구입니다. e2e/ 와 같은 이유로 제외합니다 — 타입 인식 린트가
-  // tsconfig.json 의 include 에 없는 파일을 거부합니다.
-  { ignores: ["dist/**", "node_modules/**", "prototypes/**", "manual/**"] },
+  // manual/ 은 매뉴얼 캡처 도구입니다. tsconfig.json 의 include 에 없어 타입 정보를 쓰는 lint 가 거부하므로 제외합니다.
+  { ignores: ["dist/**", "node_modules/**", "manual/**"] },
   js.configs.recommended,
   ...ts.configs.recommendedTypeChecked,
   {
@@ -24,14 +23,13 @@ export default [
     },
   },
   {
-    // 설정 파일은 타입 정보를 붙이지 않는다. tsconfig 가 이 파일들을 포함하지 않는다.
+    // 설정 파일은 타입 정보 없이 lint 합니다. eslint.config.js 는 tsconfig.json 의 include 에 없습니다.
     files: ["*.config.{js,ts}", "eslint.config.js"],
     ...ts.configs.disableTypeChecked,
   },
   {
-    // 검사 파일은 가짜 fetch 를 세우며 안 쓰는 매개변수를 밑줄로 받고, 실제 서버를
-    // 부르지 않아도 시그니처를 맞추려고 async 를 쓴다. 소스 코드 규칙과는 다르다.
-    files: ["src/**/*.test.ts"],
+    // 테스트 파일은 _ 로 시작하는 미사용 인자와 await 없는 async 함수(fetch mock)를 허용합니다.
+    files: ["src/**/*.test.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "@typescript-eslint/require-await": "off",

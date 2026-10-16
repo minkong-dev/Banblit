@@ -1,0 +1,15 @@
+# 배포용 화면 Docker image 의 build context 에서 제외하는 파일입니다. frontend/Dockerfile 의 COPY . . 가 읽습니다.
+# e2e/ 와 playwright.config.ts 는 tsconfig 의 include 라 npm run build 의 tsc -b 가 검사하므로 제외하지 않습니다.
+
+# host 에서 설치한 package 입니다. Docker image 안에서 npm ci 로 Linux 용을 설치합니다.
+node_modules/
+
+# build, 테스트, 매뉴얼 캡처의 결과 파일입니다.
+dist/
+test-results/
+playwright/
+tsconfig.tsbuildinfo
+
+# 사용자 매뉴얼 캡처 도구와 화면 이미지 원본입니다. 배포 화면에 쓰지 않습니다.
+manual/
+images-src/
