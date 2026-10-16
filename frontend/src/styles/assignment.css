@@ -29,7 +29,7 @@ body[data-page="admin"] {
      글자는 본문색입니다. 달력의 일정 막대(calendar.css 의 .ev)와 같은 규칙입니다. */
   .ses { background: var(--tc-tint, var(--off-tint)); color: var(--t1); box-shadow: inset 3px 0 0 var(--tc, var(--off)); }
   .ses .out { display: block; font-size: 11.5px; color: var(--t2); text-decoration: none; margin-top: 3px; }
-  .ses .ab { display: block; font-size: 11.5px; font-weight: 700; margin-top: 3px; }
+  .ses .ab { display: block; font-size: 11.5px; font-weight: 700; margin-top: 3px; word-break: keep-all; }
 
   /* 캘린더 아래 설명 */
   .under { padding: 20px 0 22px; }
@@ -113,6 +113,7 @@ body[data-page="admin"] {
     .ses { padding: 4px 4px 4px 6px; font-size: 10.5px; line-height: 1.3; overflow-wrap: anywhere; }
     .ses small { font-size: 10px; }
     .ses .out { display: none; }
+    .ses .ab { font-size: 10px; }
     .calhead { padding: 0 0 10px; gap: 10px; }
     .report h3 { font-size: 16px; }
   }

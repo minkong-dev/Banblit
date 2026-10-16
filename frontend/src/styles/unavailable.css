@@ -92,6 +92,12 @@
     .who { font-size: 10.5px; line-height: 1.25; }
     .hb { padding: 4px 3px; }
     .heatweek { grid-template-columns: 42px repeat(7, minmax(40px, 1fr)); }
+    /* 멤버 주 보기도 팀 주 보기와 같은 열 폭으로 7일을 한 화면에 표시합니다. */
+    .calbody .weekgrid { grid-template-columns: 42px repeat(7, minmax(0, 1fr)); }
+    .calbody .wt { padding-right: 5px; font-size: 10.5px; white-space: nowrap; }
+    /* 좁은 열에서는 막대에 일정 이름만 표시합니다. 시간은 막대 위치로 표시됩니다. */
+    .calbody .wcell .blk { padding: 4px 3px 4px 6px; font-size: 10.5px; line-height: 1.25; word-break: keep-all; }
+    .calbody .wcell .blk small { display: none; }
     .ht { padding-right: 5px; font-size: 10.5px; white-space: nowrap; }
     .offtl { grid-template-columns: 44px repeat(var(--lanes), minmax(120px, 1fr)); }
   }
