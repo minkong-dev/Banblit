@@ -1,7 +1,7 @@
 // 하루 dialog(routes/DayDialog)의 부품입니다. 서버를 호출하지 않습니다. 보유하는 값은 드래그 중 누른 위치 하나뿐입니다.
 
-import { useRef } from "react";
-import type { CSSProperties, PointerEvent } from "react";
+import { useEffect, useRef } from "react";
+import type { CSSProperties, PointerEvent, RefObject } from "react";
 
 import { Dropdown } from "../components/Dropdown";
 import { DeleteButton, EditButton, Toggle, Why } from "../components/controls";
@@ -26,6 +26,20 @@ function kindLabel(entry: Entry): string {
 }
 
 type HoursProps = { openHour: number; closeHour: number; slotCount: number };
+
+// 가장 이른 일정 막대 위에 남기는 여백(px)입니다.
+const FIRST_GAP = 12;
+
+/** 반환한 ref 의 스크롤 영역을 data-first 요소가 맨 위에 오도록 스크롤합니다. first 가 바뀔 때만 다시 스크롤합니다. */
+export function useScrollToFirst(first: number | null): RefObject<HTMLDivElement | null> {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const target = box.current?.querySelector<HTMLElement>("[data-first]");
+    if (!box.current || !target) return;
+    box.current.scrollTop += target.getBoundingClientRect().top - box.current.getBoundingClientRect().top - FIRST_GAP;
+  }, [first]);
+  return box;
+}
 
 /** 찬 칸이 걸치지 않는 구간만 pick 에 넘깁니다. 걸치면 아무것도 하지 않아 직전 구간이 남습니다. */
 function apply(pick: DragPick, next: SlotRange): void {
@@ -52,6 +66,9 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
   const { label, endLabel } = slotLabels(openHour, closeHour, slotCount);
   // 누른 위치(소수 칸 번호)입니다. null 이면 드래그 중이 아닙니다.
   const pressed = useRef<number | null>(null);
+  const first = list.length === 0 ? null : Math.min(...list.map((entry) => entry.a));
+  const firstIndex = list.findIndex((entry) => entry.a === first);
+  const box = useScrollToFirst(first);
 
   /** 포인터의 세로 위치를 소수 칸 번호로 변경합니다. 띠 높이가 slotCount 칸이므로 비율에 칸 수를 곱합니다. */
   const slotAt = (event: PointerEvent<HTMLDivElement>) => {
@@ -74,7 +91,7 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
   const onPointerEnd = () => { pressed.current = null; };
 
   return (
-    <div className="tlscroll"><div
+    <div className="tlscroll" ref={box}><div
       className={`tl${pick === undefined ? "" : " pickable"}`}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -87,6 +104,7 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
       {list.map((entry, index) => (
         <span
           className={`evb ${entryClass(entry)}`}
+          data-first={index === firstIndex ? "" : undefined}
           // "--from" 은 CSS 사용자 지정 속성(custom property)이라 React 의 CSSProperties 타입에 없으므로 as 로 타입을 단언합니다.
           style={{ "--from": entry.a, "--span": entry.b - entry.a } as CSSProperties}
           key={index}

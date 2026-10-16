@@ -22,6 +22,7 @@ import { dayHours, heatByMonth, offMembersOnDay, offRunsByDay, packColumns } fro
 import "../styles/unavailable.css";
 import { MINUTES_PER_HOUR, WEEKDAY_NAMES, clockEndLabel, dayKey, dayWithWeekday, hourLabel, monthCells, roomBounds } from "../lib/calendar";
 import { memberLabel } from "../lib/roster";
+import { useScrollToFirst } from "./DayDialogParts";
 
 type Target = "member" | "team";
 
@@ -242,18 +243,22 @@ function DayModal({ day, lanes, open, close, onClose }: {
       return { ...lane, bars: lane.bars.map((bar, at) => ({ ...bar, ...cols[at] })) };
     })
     .filter((lane) => lane.bars.length > 0);
+  const bars = shown.flatMap((lane) => lane.bars);
+  const first = bars.length === 0 ? null : Math.min(...bars.map((bar) => bar.from));
+  const firstId = bars.find((bar) => bar.from === first)?.item.id;
+  const box = useScrollToFirst(first);
 
   return (
     <Modal title={dayWithWeekday(day)} onClose={onClose}>
       {shown.length === 0 ? <Empty text="이날은 불가능 일정이 없어요." /> : (
-        <div className="offtl" style={{ "--lanes": shown.length, "--rows": rows.length } as CSSProperties}>
+        <div className="offtl" ref={box} style={{ "--lanes": shown.length, "--rows": rows.length } as CSSProperties}>
           <div className="hrs" aria-hidden="true">
             {rows.map((hour, i) => <span key={hour} style={{ "--i": i } as CSSProperties}>{hourLabel(hour)}</span>)}
           </div>
           {shown.map((lane) => (
             <div className="lane" key={lane.label}>
               {lane.bars.map(({ item, from, to, col, cols }) => (
-                <span className="evb off" key={item.id} style={{ "--from": from - open, "--span": to - from, "--col": col, "--cols": cols } as CSSProperties}>
+                <span className="evb off" key={item.id} data-first={item.id === firstId ? "" : undefined} style={{ "--from": from - open, "--span": to - from, "--col": col, "--cols": cols } as CSSProperties}>
                   <b>{item.member}</b>
                   <span>{item.name ?? "불가능 일정"}</span>
                   {item.reason === null || item.reason === "" ? null : <small>{item.reason}</small>}
