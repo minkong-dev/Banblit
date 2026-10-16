@@ -248,9 +248,6 @@ def _session_vars(
     max_absent: int,
 ) -> tuple[Chosen, Absent]:
     """팀마다 불참자가 max_absent 명 이하인 session 후보에 변수를 만들고, 팀당 선택 수가 target_sessions 이하라는 제약을 겁니다.
-
-    불참자가 상한을 넘는 session 에는 변수를 만들지 않습니다. 변수를 만든 뒤 0 으로 고정하는 것보다
-    model 의 변수·제약 수가 줄어 solve 시간이 짧아집니다.
     """
     chosen: Chosen = {}
     absent: Absent = {}
@@ -269,7 +266,7 @@ def _session_vars(
 
 
 def _indices_by_slot(covered: dict[int, list[RoomInterval]]) -> dict[RoomInterval, list[int]]:
-    """slot(칸)마다 그 칸을 차지하는 session 후보 번호 목록을 반환합니다. 후보끼리 겹치므로 칸 하나에 후보가 여럿입니다."""
+    """slot(칸)마다 그 칸을 차지하는 session 후보 번호 목록을 반환합니다. """
     indices_by_slot: dict[RoomInterval, list[int]] = defaultdict(list)
     for index, room_slots_of_session in covered.items():
         for room_slot in room_slots_of_session:
@@ -278,7 +275,7 @@ def _indices_by_slot(covered: dict[int, list[RoomInterval]]) -> dict[RoomInterva
 
 
 def _indices_by_interval(indices_by_slot: dict[RoomInterval, list[int]]) -> dict[TimeInterval, list[int]]:
-    """합주실 번호를 뺀 시간 구간마다 후보 번호 목록을 반환합니다. 합주실이 달라도 같은 시각을 한 묶음으로 봅니다."""
+    """합주실 번호를 뺀 시간 구간마다 후보 번호 목록을 반환합니다."""
     indices_by_interval: dict[TimeInterval, list[int]] = defaultdict(list)
     for room_slot, indices in indices_by_slot.items():
         indices_by_interval[room_slot.interval].extend(indices)
@@ -286,7 +283,7 @@ def _indices_by_interval(indices_by_slot: dict[RoomInterval, list[int]]) -> dict
 
 
 def _vars_of(chosen: Chosen, team_ids: list[int], indices: list[int]) -> list[cp_model.IntVar]:
-    """team_ids 의 팀과 indices 의 후보 조합 중 변수가 있는 것만 모아 반환합니다. 변수가 없는 조합은 그 팀이 쓸 수 없는 후보입니다."""
+    """team_ids 의 팀과 indices 의 후보 조합 중 변수가 있는 것만 모아 반환합니다."""
     variables: list[cp_model.IntVar] = []
     for team_id in team_ids:
         for index in indices:
@@ -307,7 +304,7 @@ def _one_team_per_slot(
 def _one_room_per_team(
     model: cp_model.CpModel, chosen: Chosen, teams: list[Team], indices_by_interval: dict[TimeInterval, list[int]]
 ) -> None:
-    """팀 하나는 같은 시각에 합주실 한 곳만 씁니다."""
+    """하나의 팀은 같은 시각에 합주실 한 곳에만 배정될 수 있습니다."""
     for indices in indices_by_interval.values():
         for team in teams:
             _at_most_one(model, _vars_of(chosen, [team.id], indices))
@@ -321,8 +318,6 @@ def _one_place_per_member(
     indices_by_interval: dict[TimeInterval, list[int]],
 ) -> None:
     """여러 팀에 속한 멤버는 같은 시각에 한 팀에만 있습니다. 팀이 하나뿐인 멤버는 제약이 필요 없습니다.
-
-    그 시각에 불가능 일정이 있는 멤버는 어느 팀에도 참석하지 않으므로, 그 후보는 이 멤버의 제약에서 뺍니다.
     """
     teams_by_member: dict[int, list[int]] = defaultdict(list)
     for team in teams:
