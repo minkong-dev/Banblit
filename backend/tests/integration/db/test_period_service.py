@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from backend.db.pipeline import apply_record
 from backend.services.period.pipeline import (
     assignment_rows,
+    every_team_and_room,
     open_slots_in_period,
     run_period_assignment,
     schedule_report,
@@ -232,6 +233,23 @@ def test_team_without_members_is_rejected(db_session: Session) -> None:
         run_period_assignment(
             db_session, period_id, [empty_team.id], [room_id], saved_at=SAVED_AT
         )
+
+
+def test_every_team_and_room_skips_teams_without_members(db_session: Session) -> None:
+    """자동 배정과 스케줄링 버튼이 쓰는 전체 팀 목록입니다. 멤버가 없는 팀이 들어가면 배정 계산 전체가 거절됩니다."""
+    seated = _team_with_member(db_session, "A", "김민수")
+    empty_team = Team(name="빈팀")
+    db_session.add(empty_team)
+    db_session.flush()
+    db_session.add(TeamSlot(team_id=empty_team.id, instrument="보컬", ordinal=1))
+    room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
+    db_session.flush()
+
+    team_ids, room_ids = every_team_and_room(db_session)
+
+    assert seated in team_ids
+    assert empty_team.id not in team_ids
+    assert room_id in room_ids
 
 
 def test_overlapping_period_room_conflict_is_rejected_not_500(

@@ -11,7 +11,7 @@ from backend.services.validation.pipeline import (
     require_ends_not_before_starts,
     require_valid_kind,
 )
-from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team
+from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team, TeamSlot
 from backend.services.reservation.pipeline import cancel_reservations_in_focus
 from backend.db.pipeline import commit_translating
 
@@ -243,8 +243,10 @@ def focused_periods_on(session: Session, day: date) -> list[Period]:
 
 
 def every_team_and_room(session: Session) -> tuple[list[int], list[int]]:
-    """등록된 모든 팀 번호와 합주실 번호를 번호 순서로 반환합니다. 자동 배정과 저장된 시간표의 결과 설명이 대상으로 씁니다."""
-    team_ids = list(session.scalars(select(Team.id).order_by(Team.id)).all())
+    """멤버가 1명 이상 배정된 팀 번호와 모든 합주실 번호를 번호 순서로 반환합니다. 자동 배정과 저장된 시간표의 결과 설명이 대상으로 씁니다.
+    멤버가 없는 팀은 제외합니다. 배정 계산은 멤버가 없는 팀이 1개라도 있으면 전체를 거절합니다."""
+    seated = select(TeamSlot.team_id).where(TeamSlot.member_id.is_not(None))
+    team_ids = list(session.scalars(select(Team.id).where(Team.id.in_(seated)).order_by(Team.id)).all())
     room_ids = list(session.scalars(select(Room.id).order_by(Room.id)).all())
     return team_ids, room_ids
 

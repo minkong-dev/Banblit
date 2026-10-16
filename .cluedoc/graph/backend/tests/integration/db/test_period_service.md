@@ -42,6 +42,7 @@ flowchart LR
 - `test_a_run_does_not_change_the_applied_schedule`: `backend.db.pipeline`, `backend.services.period.pipeline`
 - `test_unknown_period_is_rejected`: `backend.services.period.pipeline`
 - `test_team_without_members_is_rejected`: `backend.db.models`, `backend.services.period.pipeline`
+- `test_every_team_and_room_skips_teams_without_members`: `backend.db.models`, `backend.services.period.pipeline`
 - `test_overlapping_period_room_conflict_is_rejected_not_500`: `backend.db.pipeline`, `backend.services.period.pipeline`
 - `test_duplicate_team_id_is_rejected`: `backend.services.period.pipeline`
 - `test_duplicate_room_id_is_rejected`: `backend.services.period.pipeline`

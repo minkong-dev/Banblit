@@ -228,7 +228,7 @@ def schedule_report(
 def stored_report(
     session: Session, period: Period, rows: list[ScheduleRow], on: date
 ) -> ScheduleReport | None:
-    """저장된 시간표(현행 또는 스케줄링 기록 1개)의 보고입니다. 집중 합주기간이 아니거나 행이 없으면 None 입니다.
+    """저장된 시간표(현행 또는 스케줄링 기록 1개)의 보고입니다. 집중 합주기간이 아니거나, 행이 없거나, 멤버가 있는 팀이 없으면 None 입니다.
 
     저장된 시간표는 계산에 넣은 팀·합주실 목록을 보관하지 않으므로, 자동 배정(jobs/auto_assign.py)과 같이 모든 팀과
     모든 합주실을 기준으로 계산합니다.
@@ -238,6 +238,9 @@ def stored_report(
     if period.kind != "focused" or not rows:
         return None
     team_ids, room_ids = every_team_and_room(session)
+    # 멤버가 있는 팀이 없으면 목표 횟수를 계산할 수 없어 보고를 생략합니다. 시간표 행은 그대로 반환합니다.
+    if not team_ids:
+        return None
     stored_rows = [
         AssignmentRow(team_id=team_id, room_id=room_id, starts_at=start, ends_at=end)
         for team_id, _, room_id, _, start, end in rows

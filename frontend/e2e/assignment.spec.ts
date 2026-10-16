@@ -25,6 +25,13 @@ test.describe("배정 다시 계산", () => {
   test("다시 계산하면 연산 결과를 표시하고 현재 배정안은 그대로 둔다", async ({ page }) => {
     const { withSchedule } = await findFocusedPeriods(page.request);
     const originalRows = withSchedule.rows;
+    // 확정된 배정안에 없는 팀입니다. 멤버가 없는 팀은 계산에서 제외되므로 E2E 계정을 앉힙니다. 이 테스트가 끝나면 삭제합니다.
+    const created = await page.request.post("/api/teams", { data: { name: "E2E 확정안 밖 팀", slots: { 보컬: 1 } } });
+    expect(created.ok()).toBe(true);
+    const { team: outside } = (await created.json()) as { team: { id: number } };
+    const { account } = (await (await page.request.get("/api/me")).json()) as { account: { id: number } };
+    const { slots } = (await (await page.request.get(`/api/teams/${outside.id}/slots`)).json()) as { slots: { id: number }[] };
+    expect((await page.request.put(`/api/teams/${outside.id}/slots/${slots[0].id}`, { data: { member_id: account.id } })).ok()).toBe(true);
 
     await page.goto("/admin");
     // 기간 고르기는 기본 select 가 아니라 직접 그린 드롭다운입니다(components/Dropdown.tsx).
@@ -35,8 +42,18 @@ test.describe("배정 다시 계산", () => {
       .click();
     await expect(page.getByRole("heading", { name: "확정된 배정안이에요" })).toBeVisible();
 
+    // 확정된 배정안이 있어도 자동 배정(jobs/auto_assign.py)과 같이 전체 팀과 합주실을 계산에 넣습니다.
+    // 확정된 배정안에 없는 팀이 빠지면 그 팀은 다시 계산해도 배정받지 못합니다.
+    const assignRequest = page.waitForRequest((req) => req.method() === "POST" && req.url().endsWith(`/periods/${withSchedule.id}/assign`));
     const runButton = page.getByRole("button", { name: /^스케줄링/ });
     await runButton.click();
+    const sent = (await assignRequest).postDataJSON() as { team_ids: number[]; room_ids: number[] };
+    const { teams } = (await (await page.request.get("/api/teams")).json()) as { teams: { id: number; filled_count: number }[] };
+    const { rooms } = (await (await page.request.get("/api/rooms")).json()) as { rooms: { id: number }[] };
+    const sorted = (values: number[]): number[] => [...values].sort((a, b) => a - b);
+    expect(sorted(sent.team_ids)).toEqual(sorted(teams.filter((team) => team.filled_count > 0).map((team) => team.id)));
+    expect(sent.team_ids).toContain(outside.id);
+    expect(sorted(sent.room_ids)).toEqual(sorted(rooms.map((room) => room.id)));
     await expect(runButton).toHaveText("스케줄링 진행 중…");
     // 연산이 끝나면 연산 결과 보기로 넘어가 스케줄링 버튼이 사라지므로 토스트를 기다립니다.
     await expect(page.getByText("스케줄링 연산에 성공했어요")).toBeVisible({ timeout: ASSIGN_WAIT_MS });
@@ -48,6 +65,7 @@ test.describe("배정 다시 계산", () => {
     const key = (row: (typeof originalRows)[number]): string =>
       `${row.team_id}-${row.room_id}-${row.start}-${row.end}`;
     expect(new Set(restored.rows.map(key))).toEqual(new Set(originalRows.map(key)));
+    expect((await page.request.delete(`/api/teams/${outside.id}`)).ok()).toBe(true);
   });
 
   // 적용 버튼은 누르지 않습니다. 적용하면 이 기간이 현재 배정안을 갖게 되어 findFocusedPeriods 의
