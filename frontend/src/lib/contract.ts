@@ -225,11 +225,23 @@ export type Absence = {
   sessions: number;
 };
 
+/** session 1회에 불가능 일정이 있어 빠지는 팀원 1명입니다. */
+export type SessionAbsence = {
+  team_id: number;
+  team: string;
+  start: string;
+  end: string;
+  member_id: number;
+  member: string;
+  cohort: number | null;
+};
+
 /** 시간표 하나의 부족분과 불참자입니다. 조회하는 시점의 불가능 일정으로 계산합니다. */
 export type ScheduleReport = {
   target_hours: number;
   shortfalls: Shortfall[];
   absences: Absence[];
+  session_absences: SessionAbsence[];
   /** session 1회라도 빠지는 인원이 불참 허용 인원을 넘으면 true 입니다. */
   over_absent: boolean;
 };

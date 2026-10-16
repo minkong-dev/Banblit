@@ -5,7 +5,7 @@ import { datesBetween, stampLabel } from "./calendar";
 import { dayOf, mergeSessions } from "./slots";
 import type { Session } from "./slots";
 import { memberLabel } from "./roster";
-import type { ScheduleReport, ScheduleRow } from "./contract";
+import type { Absence, ScheduleReport, ScheduleRow, SessionAbsence } from "./contract";
 
 const MINUTES_PER_HOUR = 60;
 
@@ -58,8 +58,8 @@ export function hoursOf(sessions: Session[]): number {
   return sessions.reduce((sum, session) => sum + minutesOf(session), 0) / MINUTES_PER_HOUR;
 }
 
-/** 결과 설명의 문단 하나입니다. title 은 큰 굵은 글자, lines 는 1줄씩, tail 은 목록 뒤 문장입니다. */
-export type ReportParagraph = { title: string; lines: string[]; tail: string | null };
+/** 결과 설명의 문단 1개입니다. lines 는 1줄씩, groups 는 팀 이름과 그 팀의 줄 목록, tail 은 목록 뒤 문장입니다. */
+export type ReportParagraph = { title: string; lines: string[]; groups: { team: string; lines: string[] }[]; tail: string | null };
 
 /** 1.5 → "1.5", 3 → "3". 서버의 시간 값은 소수 1자리까지입니다. */
 function hoursText(hours: number): string {
@@ -73,17 +73,37 @@ export function reportLines(report: ScheduleReport): ReportParagraph[] {
     paragraphs.push({
       title: `팀 당 ${hoursText(report.target_hours)}시간을 배정받아야하나, 더 적게 배정받은 팀이 있어요.`,
       lines: report.shortfalls.map((item) => `${item.team} ${hoursText(item.assigned_hours)}시간 배정`),
+      groups: [],
       tail: null,
     });
   }
   if (report.absences.length > 0) {
     paragraphs.push({
       title: "일부 인원을 제외하고 진행해야하는 팀이 있어요.",
-      lines: report.absences.map((item) => `${item.team} ${item.position} ${memberLabel(item.member, item.cohort)}`),
+      lines: [],
+      groups: byTeam(report.absences),
       tail: "를 제외해야 연산이 가능했어요.",
     });
   }
   return paragraphs;
+}
+
+/** 불참자를 서버가 준 순서대로 팀마다 묶습니다. 줄은 "포지션 이름 (기수)" 입니다. */
+function byTeam(absences: Absence[]): { team: string; lines: string[] }[] {
+  const ids = [...new Set(absences.map((item) => item.team_id))];
+  return ids.map((id) => {
+    const own = absences.filter((item) => item.team_id === id);
+    return { team: own[0].team, lines: own.map((item) => `${item.position} ${memberLabel(item.member, item.cohort)}`) };
+  });
+}
+
+/** session 블록 시각 안에서 같은 팀의 불참자를 "이름 (기수)" 로 1번씩 쉼표로 이어 반환합니다. 없으면 빈 문자열입니다. */
+export function absentOf(session: Session, absences: SessionAbsence[]): string {
+  const inside = absences.filter(
+    (item) => item.team === session.team && item.start >= session.start && item.start < session.end,
+  );
+  const names = new Map(inside.map((item) => [item.member_id, memberLabel(item.member, item.cohort)]));
+  return [...names.values()].join(", ");
 }
 
 /** 배정안에 나온 팀 이름마다 팀 색 key 를 반환합니다. 색은 teams(서버의 팀 목록)에 저장된 팀 색입니다.

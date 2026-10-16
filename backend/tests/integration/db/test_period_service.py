@@ -470,6 +470,11 @@ def test_allowed_absence_is_reported_with_position_and_cohort(
     [absence] = result.report.absences
     assert (absence.team, absence.member, absence.cohort, absence.sessions) == ("A", "이영희", 23, 1)
     assert absence.position == "보컬"
+    # 캘린더 블록이 쓰는 session 별 불참자입니다. 빠지는 18시 session 1개만 있습니다.
+    [missing] = result.report.session_absences
+    assert (missing.team, missing.start, missing.end, missing.member, missing.cohort) == (
+        "A", datetime(2026, 8, 1, 18, 0), datetime(2026, 8, 1, 19, 0), "이영희", 23
+    )
 
 
 def test_the_report_flags_a_session_whose_absences_exceed_the_allowed_count(

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { dayRangeOf, hoursOf, reportLines, sessionsOfRows, tabKey, tabsOf, viewOf } from "./assignment";
-import type { Absence, ScheduleRow } from "./contract";
+import { absentOf, dayRangeOf, hoursOf, reportLines, sessionsOfRows, tabKey, tabsOf, viewOf } from "./assignment";
+import type { Absence, ScheduleRow, SessionAbsence } from "./contract";
 
 /** 검사용 시간표 한 줄입니다. sessionsOfRows 가 읽는 네 필드만 의미가 있고 id 는 자리를 채웁니다. */
 function row(team: string, room: string, start: string, end: string): ScheduleRow {
@@ -101,31 +101,42 @@ describe("reportLines — 캘린더 아래 결과 설명 문구", () => {
   };
 
   it("부족분과 불참자가 없으면 문단이 없다", () => {
-    expect(reportLines({ target_hours: 5, shortfalls: [], absences: [], over_absent: false })).toEqual([]);
+    expect(reportLines({ target_hours: 5, shortfalls: [], absences: [], session_absences: [], over_absent: false })).toEqual([]);
   });
 
   it("부족분 문단은 목표 시간 제목과 팀마다 1줄이다", () => {
-    expect(reportLines({ target_hours: 5, shortfalls: [shortfall], absences: [], over_absent: false })).toEqual([
+    expect(reportLines({ target_hours: 5, shortfalls: [shortfall], absences: [], session_absences: [], over_absent: false })).toEqual([
       {
         title: "팀 당 5시간을 배정받아야하나, 더 적게 배정받은 팀이 있어요.",
         lines: ["보컬팀 3시간 배정"],
+        groups: [],
         tail: null,
       },
     ]);
   });
 
-  it("불참자 문단은 팀, 포지션, 기수를 붙인 멤버 이름으로 1줄씩이고 끝 문장이 붙는다", () => {
-    expect(reportLines({ target_hours: 5, shortfalls: [], absences: [absence], over_absent: false })).toEqual([
+  it("불참자 문단은 팀마다 묶고, 팀 아래에 포지션과 기수를 붙인 멤버 이름을 1줄씩 쓴다", () => {
+    const other = { ...absence, member_id: 8, member: "이영희", cohort: null, position: "보컬" as const };
+    const third = { ...absence, team_id: 3, team: "기타팀", member_id: 9, member: "박철수", cohort: 13, position: "일렉" as const };
+    expect(reportLines({ target_hours: 5, shortfalls: [], absences: [absence, other, third], session_absences: [], over_absent: false })[0].groups).toEqual([
+      { team: "드럼팀", lines: ["드럼 김민수 (12기)", "보컬 이영희"] },
+      { team: "기타팀", lines: ["일렉 박철수 (13기)"] },
+    ]);
+  });
+
+  it("불참자 문단은 제목, 팀 묶음, 끝 문장이다", () => {
+    expect(reportLines({ target_hours: 5, shortfalls: [], absences: [absence], session_absences: [], over_absent: false })).toEqual([
       {
         title: "일부 인원을 제외하고 진행해야하는 팀이 있어요.",
-        lines: ["드럼팀 드럼 김민수 (12기)"],
+        lines: [],
+        groups: [{ team: "드럼팀", lines: ["드럼 김민수 (12기)"] }],
         tail: "를 제외해야 연산이 가능했어요.",
       },
     ]);
   });
 
   it("두 목록이 모두 있으면 부족분 문단이 먼저다", () => {
-    const got = reportLines({ target_hours: 1.5, shortfalls: [{ ...shortfall, assigned_hours: 0.5 }], absences: [absence], over_absent: false });
+    const got = reportLines({ target_hours: 1.5, shortfalls: [{ ...shortfall, assigned_hours: 0.5 }], absences: [absence], session_absences: [], over_absent: false });
     expect(got.map((paragraph) => paragraph.title)).toEqual([
       "팀 당 1.5시간을 배정받아야하나, 더 적게 배정받은 팀이 있어요.",
       "일부 인원을 제외하고 진행해야하는 팀이 있어요.",
@@ -141,5 +152,29 @@ describe("hoursOf", () => {
       { team: "B", room: "1", start: "2026-09-14T20:00:00", end: "2026-09-14T21:00:00" },
     ];
     expect(hoursOf(sessions)).toBe(2.5);
+  });
+});
+
+describe("absentOf — 배정 블록에 빠지는 멤버", () => {
+  const session = { team: "드럼팀", room: "1번방", start: "2026-09-14T18:00:00", end: "2026-09-14T20:00:00" };
+  const off = (member_id: number, member: string, cohort: number | null, start: string, end: string, team = "드럼팀"): SessionAbsence => ({
+    team_id: 2, team, start, end, member_id, member, cohort,
+  });
+
+  it("블록 안 session 의 불참자를 기수와 함께 1번씩 쉼표로 잇는다", () => {
+    const list = [
+      off(7, "김민수", 12, "2026-09-14T18:00:00", "2026-09-14T19:00:00"),
+      off(7, "김민수", 12, "2026-09-14T19:00:00", "2026-09-14T20:00:00"),
+      off(8, "이영희", null, "2026-09-14T19:00:00", "2026-09-14T20:00:00"),
+    ];
+    expect(absentOf(session, list)).toBe("김민수 (12기), 이영희");
+  });
+
+  it("다른 팀이나 블록 밖 시각은 제외하고, 없으면 빈 문자열이다", () => {
+    const list = [
+      off(7, "김민수", 12, "2026-09-14T18:00:00", "2026-09-14T19:00:00", "보컬팀"),
+      off(8, "이영희", null, "2026-09-14T20:00:00", "2026-09-14T21:00:00"),
+    ];
+    expect(absentOf(session, list)).toBe("");
   });
 });

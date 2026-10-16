@@ -36,12 +36,24 @@ class AbsenceOut(BaseModel):
     sessions: int
 
 
+class SessionAbsenceOut(BaseModel):
+    # session 1회에 빠지는 팀원 1명입니다.
+    team_id: int
+    team: str
+    start: datetime
+    end: datetime
+    member_id: int
+    member: str
+    cohort: int | None
+
+
 class ScheduleReportOut(BaseModel):
     """시간표 하나의 부족분과 불참자입니다. 두 목록이 모두 비면 그 시간표는 확정할 수 있는 결과입니다."""
 
     target_hours: float
     shortfalls: list[ShortfallOut]
     absences: list[AbsenceOut]
+    session_absences: list[SessionAbsenceOut]
     # session 1회라도 빠지는 인원이 불참 허용 인원을 넘으면 true 입니다. 화면이 현재 배정안 경고에 씁니다.
     over_absent: bool
 
@@ -77,7 +89,7 @@ class RecordScoreOut(BaseModel):
     sessions: int
     absences: int
     joined: int
-    # 100점 만점 점수입니다. 목표 횟수 달성 비율에서 불참 1명당 1점을 뺍니다.
+    # 100점 만점 점수입니다(record_points).
     points: int
 
 

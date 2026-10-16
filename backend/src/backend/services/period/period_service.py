@@ -70,6 +70,19 @@ class Absence:
 
 
 @dataclass(frozen=True)
+class SessionAbsence:
+    """session 1회에 불가능 일정이 있어 빠지는 팀원 1명입니다."""
+
+    team_id: int
+    team: str
+    start: datetime
+    end: datetime
+    member_id: int
+    member: str
+    cohort: int | None
+
+
+@dataclass(frozen=True)
 class RecordScore:
     """시간표 하나의 점수입니다. 엔진 목적식(scheduling/assignment.py 의 _objective)과 같은 4항목이고 앞 항목이 우선합니다.
 
@@ -83,11 +96,11 @@ class RecordScore:
     absences: int
     # 같은 팀이 같은 합주실에서 바로 이어 쓰는 session 쌍의 수입니다.
     joined: int
-    # 기록 목록 뱃지에 쓰는 100점 만점 점수입니다(record_points).
+    # 100점 만점 점수입니다(record_points).
     points: int
 
 
-# 불참 1명(session 1회 기준)마다 깎는 점수입니다(사용자 결정 2026-10-16).
+# session 1회에서 불참 1명당 감점입니다(사용자 결정 2026-10-16).
 ABSENCE_PENALTY = 1
 
 
@@ -106,6 +119,7 @@ class ScheduleReport:
     target_hours: float
     shortfalls: list[Shortfall]
     absences: list[Absence]
+    session_absences: list[SessionAbsence]
     # session 1회라도 빠지는 인원이 기간의 불참 허용 인원(max_absent_members)을 넘으면 True 입니다.
     # 적용 중인 배정안이 불가능 일정 변동으로 허용 인원을 넘었는지 화면이 경고하는 근거입니다(사용자 결정 2026-10-13).
     over_absent: bool
@@ -206,6 +220,7 @@ def schedule_report(
     teams = {team.id: team for team in inputs.engine_teams}
     over_absent = False
     counts: dict[int, int] = defaultdict(int)
+    by_session: list[SessionAbsence] = []
     starts: set[tuple[int, int, datetime]] = set()
     ends: list[tuple[int, int, datetime]] = []
     for row in rows:
@@ -218,6 +233,10 @@ def schedule_report(
             over_absent = over_absent or len(absent) > inputs.max_absent
             for member_id in absent:
                 missed[(row["team_id"], member_id)] += 1
+                by_session.append(SessionAbsence(
+                    team_id=row["team_id"], team=inputs.team_names[row["team_id"]], start=piece.start, end=piece.end,
+                    member_id=member_id, member=inputs.roster.names[member_id], cohort=inputs.roster.cohorts[member_id],
+                ))
     return ScheduleReport(
         target_hours=target_hours,
         shortfalls=[
@@ -226,6 +245,7 @@ def schedule_report(
             if hours[team_id] < target_hours
         ],
         absences=[_absence(inputs, team_id, member_id, count) for (team_id, member_id), count in sorted(missed.items())],
+        session_absences=by_session,
         over_absent=over_absent,
         score=RecordScore(
             # team_ids 에 든 팀 중 0회인 팀도 셉니다. 저장된 기록은 stored_report 가 모든 팀을 넘기므로, 일부 팀만 골라

@@ -9,11 +9,11 @@ import { Panel } from "../components/Layout";
 import { recordsKey, PERIODS_KEY } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
 import { loadRecords } from "../lib/pipeline";
-import { hoursOf, reportLines } from "../lib/assignment";
+import { absentOf, hoursOf, reportLines } from "../lib/assignment";
 import { appliedLabel, checkRunTimes, scoreLabel } from "../lib/runs";
 import { say } from "../components/toast";
 import { LOADING_TEXT, loadState } from "../lib/loading";
-import type { Period, ScheduleReport } from "../lib/contract";
+import type { Period, ScheduleReport, SessionAbsence } from "../lib/contract";
 import { WEEKDAY_NAMES, stampLabel } from "../lib/calendar";
 import { dayOf, timeRangeLabel } from "../lib/slots";
 import type { Session } from "../lib/slots";
@@ -36,10 +36,11 @@ function TeamCounts({ shown, colors }: { shown: Session[]; colors: Map<string, s
 }
 
 /** 달력 본문입니다. 요일 머리글과 날짜 칸을 표시하고, 칸마다 그날의 합주를 색 막대로 그립니다. */
-export function AssignmentCalendar({ days, shown, colors }: {
+export function AssignmentCalendar({ days, shown, colors, absences }: {
   days: string[];
   shown: Session[];
   colors: Map<string, string>;
+  absences: SessionAbsence[];
 }) {
   return (
     <>
@@ -71,6 +72,8 @@ export function AssignmentCalendar({ days, shown, colors }: {
                       {session.team}
                       <small>{timeRangeLabel(session.start, session.end)}</small>
                       <span className="out">{session.room}</span>
+                      {/* 불참자가 없어도 4번째 줄을 비워 두어 블록 높이를 같게 합니다. */}
+                      <b className="ab">{absentOf(session, absences) || "\u00a0"}</b>
                     </div>
                   ))}
                   {items.length ? null : <span className="free">합주 없음</span>}
@@ -94,7 +97,13 @@ function ScheduleReportBlock({ report }: { report: ScheduleReport | null }) {
         <section className={paragraph.tail === null ? "rp short" : "rp absent"} key={paragraph.title}>
           <h3>{paragraph.title}</h3>
           {/* 목록은 서버가 준 순서 그대로이고 다시 정렬되지 않아 index 를 key 로 씁니다. 같은 문구 2줄이 있어도 충돌하지 않습니다. */}
-          <ul>{paragraph.lines.map((line, index) => <li key={index}>{line}</li>)}</ul>
+          {paragraph.lines.length === 0 ? null : <ul>{paragraph.lines.map((line, index) => <li key={index}>{line}</li>)}</ul>}
+          {paragraph.groups.map((group) => (
+            <div className="grp" key={group.team}>
+              <b>{group.team}</b>
+              <ul>{group.lines.map((line, index) => <li key={index}>{line}</li>)}</ul>
+            </div>
+          ))}
           {paragraph.tail === null ? null : <p>{paragraph.tail}</p>}
         </section>
       ))}

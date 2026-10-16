@@ -180,7 +180,7 @@ export function Assignment() {
           {/* 요일 머리글과 날짜 칸을 한 요소로 묶습니다. 휴대폰 폭에서 달력만 가로로 스크롤할 때
               둘이 따로 스크롤되면 요일과 칸이 어긋납니다(styles/assignment.css). */}
           <div className="cal">
-            <AssignmentCalendar days={days} shown={shown} colors={colors} />
+            <AssignmentCalendar days={days} shown={shown} colors={colors} absences={report?.session_absences ?? []} />
           </div>
 
           <div className="under">
