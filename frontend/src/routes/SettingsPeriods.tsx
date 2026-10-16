@@ -9,12 +9,12 @@ import { Card, SectionHead } from "../components/Layout";
 import { Button, Cell, Empty, FormFoot, TimeRange, Toggle } from "../components/controls";
 import { useReturnFocus } from "../components/hooks";
 import { Modal } from "../components/Modal";
-import { useRemoveRow, useSlotMinutes, useTeams } from "../components/queries";
+import { useRemoveRow, useSlotMinutes } from "../components/queries";
 import { askDelete } from "../lib/confirm";
 import type { ClockRange, Period, PracticeWindow, Room } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
-import { checkPeriod, daysBetween, openingHours, periodBody, removePeriod, savePeriod } from "../lib/pipeline";
+import { checkPeriod, daysBetween, periodBody, removePeriod, savePeriod } from "../lib/pipeline";
 import type { PeriodBody } from "../lib/pipeline";
 import { periodTitle } from "../lib/settings";
 import type { WindowPair } from "../lib/settings";
@@ -97,10 +97,8 @@ function PeriodFields(props: {
   first: RefObject<HTMLInputElement | null>;
   /** 전체 합주 체크박스(EnsembleToggle). 날짜 줄의 "매일" 옆에 놓입니다 — 둘 다 날짜에 딸린 옵션입니다. */
   ensembleToggle: ReactNode;
-  /** 팀당 목표 시간 입력칸을 비웠을 때의 자동 계산값입니다. 예: "3.5시간". 계산할 수 없으면 null 입니다. */
-  autoHours: string | null;
 }) {
-  const { form, setForm, at, bad, whyId, first, ensembleToggle, autoHours } = props;
+  const { form, setForm, at, bad, whyId, first, ensembleToggle } = props;
   const rule = form.assign_rule;
   // 폼 하단 오류(bad)가 배정 규칙 때문일 때만 두 입력칸을 오류로 표시합니다.
   const ruleBad = bad !== "" && checkAssignRule(rule) !== "";
@@ -184,7 +182,7 @@ function PeriodFields(props: {
           </Cell>
           </div>
           <div className="frow">
-          {/* 빈칸이면 서버가 전체 시간 ÷ 팀 수로 계산합니다(사용자 결정 2026-10-12). */}
+          {/* 빈칸이면 서버가 목표를 자동으로 조정합니다(사용자 결정 2026-10-12). 목표값이라 자동값을 미리 표시하지 않습니다(사용자 결정 2026-10-16). */}
           <Cell label="팀당 목표 시간" htmlFor={at("target")}>
             <input
               id={at("target")}
@@ -192,7 +190,7 @@ function PeriodFields(props: {
               inputMode="numeric"
               min={1}
               step={1}
-              placeholder={autoHours === null ? "자동" : `자동 ${autoHours}`}
+              placeholder="미입력 시 자동 조정"
               aria-invalid={ruleBad}
               aria-describedby={ruleBad ? whyId : undefined}
               value={rule.target_hours ?? ""}
@@ -364,7 +362,6 @@ function PeriodForm(props: {
   const [draft, setDraft, draftTouched, resetDraft] = useForm(ensembleDraft(before, rooms));
   const first = useFirstField<HTMLInputElement>(onCancel !== undefined);
   const slotMinutes = useSlotMinutes();
-  const teams = useTeams();
 
   const withEnsemble = form.kind === "focused" && draft.on;
   const send = useMutation({
@@ -388,13 +385,6 @@ function PeriodForm(props: {
     || checkAssignRule(form.assign_rule)
     || (withEnsemble ? checkEnsemble(draft, periodBody(form), room, slotMinutes) : "");
 
-  // ponytail: 합주실 개방시각 전체 기준이라 팀별 합주 시간대, 전체 합주 날짜, session 길이로 남는 칸을 빼지 않습니다.
-  // 서버의 auto_sessions_per_team 과 차이가 나면 서버가 자동값을 함께 반환하게 수정합니다.
-  const teamCount = teams.data?.teams.length ?? 0;
-  const autoHours = form.everyday || teamCount === 0 || checkPeriod(form) !== ""
-    ? null
-    : openingHours({ rooms, days: daysBetween(form.starts_on, form.ends_on), teams: teamCount, slotMinutes }).perTeam;
-
   const at = (field: string): string => `${before === null ? "/periods" : `/periods/${before.id}`}-${field}`;
   const whyId = at("why");
   const bad = formError(touched || draftTouched, why, send.error);
@@ -411,7 +401,7 @@ function PeriodForm(props: {
         <div className="fields period">
           <h3 className="fsec">기간 기본설정</h3>
           <PeriodFields form={form} setForm={setForm} at={at} bad={bad} whyId={whyId} first={first}
-            ensembleToggle={<EnsembleToggle draft={draft} setDraft={setDraft} at={at} />} autoHours={autoHours} />
+            ensembleToggle={<EnsembleToggle draft={draft} setDraft={setDraft} at={at} />} />
           {withEnsemble ? (
             <div className="fgroup">
               <h4>전체 합주</h4>
