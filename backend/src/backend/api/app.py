@@ -20,7 +20,7 @@ from backend.api.routers import (
     unavailable,
 )
 from backend.api.auth_dependency import UNAUTHORIZED_DETAIL, SessionRejected
-from backend.api.job_runner import JobRunner, max_concurrent_jobs_from_env
+from backend.api.job_runner import MAX_CONCURRENT_JOBS, JobRunner
 from backend.api.rate_limit import RateLimiter
 from backend.contract import SESSION_REJECTED_CODE
 from backend.db.pipeline import check_database
@@ -65,7 +65,7 @@ def make_limiters() -> dict[str, RateLimiter]:
 # 요청 횟수와 배정 계산 작업은 process 메모리의 state 입니다. import 할 때가 아니라 app 을 만들 때 1번 생성합니다.
 # 요청마다 만들면 횟수가 매번 0 이 되고, 작업 실행기가 요청마다 생겨 동시 실행 상한과 작업 조회가 동작하지 않습니다.
 app.state.limiters = make_limiters()
-app.state.job_runner = JobRunner(max_concurrent=max_concurrent_jobs_from_env())
+app.state.job_runner = JobRunner(max_concurrent=MAX_CONCURRENT_JOBS)
 
 
 def _format_validation_error(exc: RequestValidationError) -> str:

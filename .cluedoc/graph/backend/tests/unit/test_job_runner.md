@@ -32,6 +32,3 @@ flowchart LR
 - `test_an_unexpected_error_does_not_leak_internal_detail`: `backend.api.job_runner`
 - `test_unknown_job_id_returns_none`: `backend.api.job_runner`
 - `test_extra_jobs_stay_queued_until_a_worker_frees_up`: `backend.api.job_runner`
-- `test_max_concurrent_jobs_from_env_reads_a_positive_integer`: `backend.api.job_runner`
-- `test_max_concurrent_jobs_from_env_falls_back_to_default`: `backend.api.job_runner`
-- `test_max_concurrent_jobs_from_env_falls_back_when_unset`: `backend.api.job_runner`

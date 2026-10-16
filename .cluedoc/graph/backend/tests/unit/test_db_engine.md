@@ -23,7 +23,6 @@ flowchart LR
 
 ## 함수와 호출
 
-- `test_create_db_engine_applies_connect_and_pool_timeouts`: `backend.db.engine`
-- `test_create_db_engine_falls_back_to_default_timeouts`: `backend.db.engine`
-- `test_create_db_engine_rejects_useless_timeout_values`: `backend.db.engine`
-- `test_create_db_engine_limits_query_and_lock_waits`: `backend.db.engine`
+- `_captured_options`: `backend.db.engine`
+- `test_create_db_engine_applies_fixed_connect_and_pool_timeouts`
+- `test_create_db_engine_limits_query_and_lock_waits`

@@ -25,5 +25,4 @@ flowchart LR
 
 ## 함수와 호출
 
-- `_timeout_seconds`
 - `create_db_engine`
