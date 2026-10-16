@@ -70,6 +70,7 @@ Permission = Literal[
     "member_expel",  # 멤버 추방(계정 삭제)
     "notice_write",  # 공지 작성
     "board_moderate",  # 다른 사용자의 글·댓글 삭제와 글 블라인드(수정은 작성자만 가능)
+    "board_read_all",  # 소속되지 않은 팀의 팀 게시판 조회(작성은 소속 팀만 가능)
     "reservation_manage",  # 다른 사용자의 예약 수정과 반려(사유를 담은 알림과 함께 취소)
     "unavailable_read",  # 다른 사용자의 불가능 일정 조회
     "unavailable_manage",  # 다른 사용자의 불가능 일정 반려(사유를 담은 알림과 함께 삭제. 등록·수정은 본인만 가능)

@@ -10,7 +10,7 @@ export function roleLabel(me: Account | null): string {
   return names.length === 0 ? "일반멤버" : names.join(", ");
 }
 
-/** 항목 20개와 그 한국어 이름·설명입니다. 순서는 서버가 고정한 선언 순서 그대로입니다.
+/** 권한 항목과 그 한국어 이름·설명입니다. 순서는 서버가 고정한 선언 순서 그대로입니다.
  *  설명은 권한을 켜면 무엇을 할 수 있게 되는지를 한 줄로 적습니다.
  *  예를 들어 이름만으로는 "되돌리기"가 무엇을 되돌리는지 명확하지 않기 때문입니다. */
 export const PERMISSION_ITEMS: readonly {
@@ -87,6 +87,11 @@ export const PERMISSION_ITEMS: readonly {
     key: "board_moderate",
     label: "타 멤버 글 삭제 및 블라인드",
     note: "본인의 글은 기본적으로 수정 및 삭제가 가능하고, 이 권한이 있다면 타 멤버의 글을 삭제하거나 블라인드할 수 있어요. 타 멤버의 글 내용은 이 권한으로도 수정할 수 없어요.",
+  },
+  {
+    key: "board_read_all",
+    label: "전체 팀 게시판 조회",
+    note: "팀에 소속되어 있지 않아도 모든 팀의 팀 게시판 글과 댓글을 볼 수 있어요. 글과 댓글 작성은 소속된 팀에서만 가능해요.",
   },
   {
     key: "reservation_manage",

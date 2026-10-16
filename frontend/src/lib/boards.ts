@@ -7,6 +7,14 @@ const TITLE_MAX = 200;
 const BODY_MAX = 20000;
 const COMMENT_MAX = 2000;
 
+/** 팀 게시판 탭에 표시하는 팀입니다. readsAll(board_read_all)이면 모든 팀이고, member 는 소속 팀이면 true 입니다. */
+export function readableBoards(
+  mine: { id: number; name: string }[], all: { id: number; name: string }[], readsAll: boolean,
+): { id: number; name: string; member: boolean }[] {
+  const ids = new Set(mine.map((team) => team.id));
+  return (readsAll ? all : mine).map((team) => ({ id: team.id, name: team.name, member: ids.has(team.id) }));
+}
+
 export function titleMessage(title: string): string {
   if (!title.trim()) return "제목을 입력해주세요.";
   return title.length > TITLE_MAX ? `제목은 ${TITLE_MAX}자 이내로 작성해주세요.` : "";

@@ -18,6 +18,7 @@ flowchart LR
   frontend_src_components_RichTextToolbar["RichTextToolbar.tsx"] --> frontend_src_lib_boards
   frontend_src_lib_boards_test["boards.test.ts"] --> frontend_src_lib_boards
   frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_boards
+  frontend_src_routes_Board["Board.tsx"] --> frontend_src_lib_boards
 ```
 
 ## imports
@@ -33,3 +34,4 @@ flowchart LR
 - [[graph/frontend/src/components/RichTextToolbar|RichTextToolbar.tsx]]
 - [[graph/frontend/src/lib/boards.test|boards.test.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
+- [[graph/frontend/src/routes/Board|Board.tsx]]

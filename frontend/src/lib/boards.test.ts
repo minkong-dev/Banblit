@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  readableBoards,
   attachmentMessage,
   boardActions,
   bodyMessage,
@@ -117,5 +118,21 @@ describe("boardActions — 글·댓글 하나에 무엇을 할 수 있는가", (
 
   it("아직 누구인지 모르면 권한이 있어도 아무것도 못 한다", () => {
     expect(boardActions(7, null, true)).toEqual({ canEdit: false, canDelete: false });
+  });
+});
+
+describe("readableBoards — 팀 게시판 탭", () => {
+  const mine = [{ id: 2, name: "B" }];
+  const all = [{ id: 1, name: "A" }, { id: 2, name: "B" }];
+
+  it("board_read_all 이 없으면 소속 팀만이고 전부 작성할 수 있다", () => {
+    expect(readableBoards(mine, all, false)).toEqual([{ id: 2, name: "B", member: true }]);
+  });
+
+  it("board_read_all 이 있으면 모든 팀이고 소속 팀만 작성할 수 있다", () => {
+    expect(readableBoards(mine, all, true)).toEqual([
+      { id: 1, name: "A", member: false },
+      { id: 2, name: "B", member: true },
+    ]);
   });
 });
