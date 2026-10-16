@@ -83,6 +83,20 @@ class RecordScore:
     absences: int
     # 같은 팀이 같은 합주실에서 바로 이어 쓰는 session 쌍의 수입니다.
     joined: int
+    # 기록 목록 뱃지에 쓰는 100점 만점 점수입니다(record_points).
+    points: int
+
+
+# 불참 1명(session 1회 기준)마다 깎는 점수입니다(사용자 결정 2026-10-16).
+ABSENCE_PENALTY = 1
+
+
+def record_points(team_sessions: list[int], target_sessions: int, absences: int) -> int:
+    """100 × (팀마다 목표까지만 센 session 수의 합 / 목표 session 합) − 불참 1명당 ABSENCE_PENALTY 점입니다. 0 미만은 0 입니다."""
+    target_total = target_sessions * len(team_sessions)
+    got = sum(min(count, target_sessions) for count in team_sessions)
+    share = 100 if target_total == 0 else round(100 * got / target_total)
+    return max(0, share - absences * ABSENCE_PENALTY)
 
 
 @dataclass(frozen=True)
@@ -221,6 +235,9 @@ def schedule_report(
             sessions=sum(counts.values()),
             absences=sum(missed.values()),
             joined=sum(1 for end in ends if end in starts),
+            points=record_points(
+                [counts[team_id] for team_id in team_ids], inputs.target_sessions, sum(missed.values())
+            ),
         ),
     )
 

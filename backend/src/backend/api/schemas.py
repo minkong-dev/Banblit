@@ -77,6 +77,8 @@ class RecordScoreOut(BaseModel):
     sessions: int
     absences: int
     joined: int
+    # 100점 만점 점수입니다. 목표 횟수 달성 비율에서 불참 1명당 1점을 뺍니다.
+    points: int
 
 
 class RecordOut(BaseModel):

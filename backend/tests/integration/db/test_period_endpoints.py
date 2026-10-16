@@ -544,6 +544,10 @@ def test_records_list_each_round_newest_first(
 ) -> None:
     """적용할 기록을 고르는 목록입니다. 저장 시각, 칸 수, 확정 시각, 지금의 불가능 일정으로 매긴 점수를 최신순으로 반환합니다."""
     period_id = _period(db_session)
+    # 목표를 팀당 2시간(2회)으로 지정해, 1회만 받은 기록의 점수가 50점이 되게 합니다.
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    period.target_hours_per_team = 2
     team = Team(name="A")
     member = Member(name="김민수")
     room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
@@ -590,13 +594,13 @@ def test_records_list_each_round_newest_first(
                 "saved_at": "2026-08-02T21:00:00",
                 "slot_count": 2,
                 "applied_at": None,
-                "score": {"fewest": 2, "sessions": 2, "absences": 0, "joined": 1},
+                "score": {"fewest": 2, "sessions": 2, "absences": 0, "joined": 1, "points": 100},
             },
             {
                 "saved_at": "2026-08-01T21:00:00",
                 "slot_count": 1,
                 "applied_at": None,
-                "score": {"fewest": 1, "sessions": 1, "absences": 0, "joined": 0},
+                "score": {"fewest": 1, "sessions": 1, "absences": 0, "joined": 0, "points": 50},
             },
         ]
     }
