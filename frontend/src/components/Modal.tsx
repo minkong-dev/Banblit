@@ -5,7 +5,7 @@
 // 브라우저 <dialog> 를 showModal() 로 엽니다. backdrop(배경 어두움), focus(키보드 입력을 받는
 // 요소 상태) 관리, Esc 닫기는 모두 브라우저가 자동으로 처리하므로 따로 구현하지 않습니다.
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useLayoutEffect, useRef } from "react";
 import { CloseButton } from "./controls";
 
 export function Modal({ title, hint, foot, panes, children, onClose }: {
@@ -25,7 +25,8 @@ export function Modal({ title, hint, foot, panes, children, onClose }: {
   // 서로의 aria-labelledby 를 잘못 참조합니다.
   const titleId = useId();
 
-  useEffect(() => {
+  // 자식의 useEffect 보다 먼저 실행되도록 useLayoutEffect 로 엽니다. 자식은 열린 dialog 에서 위치를 측정합니다.
+  useLayoutEffect(() => {
     dialog.current?.showModal();
   }, []);
 

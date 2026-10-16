@@ -13,6 +13,7 @@ flowchart LR
   frontend_src_components_Modal --> frontend_src_components_controls["controls.tsx"]
   frontend_src_components_MemberPicker_test["MemberPicker.test.tsx"] --> frontend_src_components_Modal
   frontend_src_components_MemberPicker["MemberPicker.tsx"] --> frontend_src_components_Modal
+  frontend_src_components_Modal_test["Modal.test.tsx"] --> frontend_src_components_Modal
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_components_Modal
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_components_Modal
   frontend_src_components_RejectDialog["RejectDialog.tsx"] --> frontend_src_components_Modal
@@ -33,6 +34,7 @@ flowchart LR
 
 - [[graph/frontend/src/components/MemberPicker.test|MemberPicker.test.tsx]]
 - [[graph/frontend/src/components/MemberPicker|MemberPicker.tsx]]
+- [[graph/frontend/src/components/Modal.test|Modal.test.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
 - [[graph/frontend/src/components/RejectDialog|RejectDialog.tsx]]

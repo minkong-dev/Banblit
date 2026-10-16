@@ -164,7 +164,12 @@ test("날짜 dialog 의 타임라인은 처음에 가장 이른 일정을 보여
 
   await page.goto("/scheduler");
   await page.getByRole("tab", { name: "전체 일정" }).click();
-  await page.getByRole("button", { name: `${month}월 ${day}일 ${weekdayKr(year, month, day)}요일` }).click();
-
-  await expect(page.locator("dialog[open] .tl .evb").filter({ hasText: row.team }).first()).toBeInViewport();
+  const cell = page.getByRole("button", { name: `${month}월 ${day}일 ${weekdayKr(year, month, day)}요일` });
+  const block = page.locator("dialog[open] .tl .evb").filter({ hasText: row.team }).first();
+  await cell.click();
+  await expect(block).toBeInViewport();
+  // 다시 열면 일정 목록이 cache 에 있어 dialog 가 열리기 전에 목록이 준비됩니다.
+  await page.locator("dialog[open]").getByRole("button", { name: "닫기" }).click();
+  await cell.click();
+  await expect(block).toBeInViewport();
 });

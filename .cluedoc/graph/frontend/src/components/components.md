@@ -23,6 +23,7 @@ kind: directory
 - [[graph/frontend/src/components/MemberPicker|MemberPicker.tsx]]
 - [[graph/frontend/src/components/MemberSearch.test|MemberSearch.test.tsx]]
 - [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
+- [[graph/frontend/src/components/Modal.test|Modal.test.tsx]]
 - [[graph/frontend/src/components/Modal|Modal.tsx]]
 - [[graph/frontend/src/components/NotificationMenu|NotificationMenu.tsx]]
 - [[graph/frontend/src/components/Pager.test|Pager.test.tsx]]
