@@ -11,12 +11,8 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    // Vite 는 낯선 Host 헤더를 기본으로 막는다. e2e 컨테이너는 이 서비스를
-    // localhost 가 아니라 "web"(컨테이너 사이 서비스 이름)으로 부르므로 허용해 둔다.
-    allowedHosts: ["web"],
-    // 윈도우 폴더를 컨테이너에 걸면 파일이 바뀌었다는 알림이 컨테이너 안까지
-    // 오지 않는다. 그러면 개발 서버가 이미 고친 코드를 계속 물고 있어, 고쳐도
-    // 화면이 안 바뀌는 것을 코드 문제로 오진하게 된다. 직접 들여다보게 한다.
+    // Windows 폴더를 volume 으로 연결하면 파일 변경 이벤트가 container 에 전달되지 않습니다.
+    // 300ms 마다 polling(주기적으로 파일을 다시 확인하는 방식)합니다.
     watch: { usePolling: true, interval: 300 },
     proxy: {
       [API_PREFIX]: {

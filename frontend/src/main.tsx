@@ -7,6 +7,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { App } from "./App";
 import { applyTheme, readSavedTheme } from "./lib/theme";
 import { teamColorCss } from "./lib/teamColors";
+// 본문 편집기 글꼴 선택지의 Pretendard Variable 입니다. dynamic-subset 은 화면에 나온 글자만 내려받습니다.
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import "./styles/base.css";
 
