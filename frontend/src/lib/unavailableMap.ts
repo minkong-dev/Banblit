@@ -79,7 +79,7 @@ export function offRuns(
   return runs;
 }
 
-/** dayKeys 순서로 날짜마다 offRuns 입니다. 주 보기 히트맵이 날짜 열 하나에 묶음 블록을 그릴 때 씁니다. */
+/** dayKeys 순서로 날짜마다 offRuns 를 반환합니다. */
 export function offRunsByDay(
   times: Unavailable[], memberIds: number[], dayKeys: string[], open: number, close: number,
 ): OffRun[][] {
@@ -87,7 +87,7 @@ export function offRunsByDay(
 }
 
 /** item 이 day 안에서 차지하는 시각 범위(소수 시간)입니다. 반복 일정은 그날 반복되는 회차를 쓰고, 전날 회차가 자정을 넘으면 0 부터입니다.
- *  그날에 없으면 null 입니다. 하루 타임라인이 막대를 놓을 때 씁니다. */
+ *  그날에 없으면 null 입니다. */
 export function dayHours(item: Unavailable, day: string): { from: number; to: number } | null {
   const length = (isoMinutes(item.ends_at) - isoMinutes(item.starts_at)) / MINUTES_PER_HOUR;
   const start = (isoMinutes(item.starts_at) - isoMinutes(`${item.starts_at.slice(0, 10)}T00:00`)) / MINUTES_PER_HOUR;
