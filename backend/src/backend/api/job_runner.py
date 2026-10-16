@@ -10,7 +10,6 @@ ponytail: 완료된 작업 기록을 삭제하지 않습니다. 하루 2번의 �
 """
 
 import logging
-import os
 import uuid
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
@@ -24,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 ResultT = TypeVar("ResultT")
 
-DEFAULT_MAX_CONCURRENT_JOBS = 2
+MAX_CONCURRENT_JOBS = 2
 
 
 @dataclass(frozen=True)
@@ -101,12 +100,3 @@ class JobRunner(Generic[ResultT]):
         # 화면에는 고정 문장을 반환합니다.
         message = str(error) if isinstance(error, ValueError) else "배정 계산 중 오류가 발생했어요"
         return replace(base, status="failed", error=message, finished_at=entry.finished_at)
-
-
-def max_concurrent_jobs_from_env() -> int:
-    # ASSIGN_MAX_CONCURRENT_JOBS 환경변수를 읽습니다. 숫자가 아니거나 0 이하이면 기본값을 반환합니다.
-    try:
-        value = int(os.environ.get("ASSIGN_MAX_CONCURRENT_JOBS", ""))
-    except ValueError:
-        return DEFAULT_MAX_CONCURRENT_JOBS
-    return value if value > 0 else DEFAULT_MAX_CONCURRENT_JOBS

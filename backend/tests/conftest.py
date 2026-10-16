@@ -256,8 +256,8 @@ def poll_job(api_client: TestClient) -> Callable[[str], dict[str, Any]]:
 
 
 # 외부와 실제로 통신해야 하는 테스트는 tests/integration/<의존 대상>/ 아래에 둡니다.
-# 폴더 이름이 곧 marker 이름입니다. llm, broker 가 생기면 폴더를 하나 더 만듭니다.
-EXTERNAL_DEPENDENCIES = ("db", "llm", "broker")
+# 폴더 이름이 곧 marker 이름입니다. llm 테스트가 생기면 폴더를 하나 더 만듭니다.
+EXTERNAL_DEPENDENCIES = ("db", "llm")
 
 _DB_FIXTURES = {"test_engine", "db_session", "api_client"}
 

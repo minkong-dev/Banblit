@@ -8,50 +8,23 @@ from alembic import context
 
 from backend.db.models import Base
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
-attributes_url = config.attributes.get("sqlalchemy.url")
-if attributes_url:
-    # 호출자(conftest 등)가 Config.attributes 로 명시적으로 지정한 접속 주소를
-    # 우선 사용합니다. 이 분기가 없으면 아래 DATABASE_URL 환경변수가 그 주소를 항상 덮어써,
-    # 코드로 지정한 대상(예: 테스트 전용 DB)에 migration 이 적용되지 않습니다.
-    config.set_main_option("sqlalchemy.url", attributes_url)
-else:
-    database_url = os.environ.get("DATABASE_URL")
-    if database_url:
-        config.set_main_option("sqlalchemy.url", database_url)
+# 접속 주소는 호출자(tests/conftest.py 등)가 Config.attributes 로 지정한 값이 우선이고, 없으면 DATABASE_URL 환경변수입니다.
+database_url = config.attributes.get("sqlalchemy.url") or os.environ.get("DATABASE_URL")
+if not database_url:
+    raise RuntimeError("DATABASE_URL 환경변수가 존재하지 않습니다. docker compose run --rm dev alembic 으로 실행하십시오.")
+config.set_main_option("sqlalchemy.url", database_url)
 
-# Interpret the config file for Python logging.
-# This line sets up loggers basically.
 if config.config_file_name is not None:
-    # disable_existing_loggers 를 False 로 두지 않으면 이 설정을 읽는 순간 이미 생성된
-    # logger 가 모두 비활성화됩니다. migration 을 호출한 서버·테스트가 그 이후로 로그를
-    # 남기지 못하므로 기존 logger 는 유지합니다.
+    # disable_existing_loggers=False 이면 migration 을 호출한 서버와 테스트의 logger 를 유지합니다.
     fileConfig(config.config_file_name, disable_existing_loggers=False)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
+# autogenerate 가 비교하는 model 정의입니다.
 target_metadata = Base.metadata
-
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
 
 
 def run_migrations_offline() -> None:
-    """Run migrations in 'offline' mode.
-
-    This configures the context with just a URL
-    and not an Engine, though an Engine is acceptable
-    here as well.  By skipping the Engine creation
-    we don't even need a DBAPI to be available.
-
-    Calls to context.execute() here emit the given string to the
-    script output.
-
-    """
+    # DB 에 접속하지 않고 SQL 문을 출력합니다(alembic upgrade --sql).
     url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
@@ -65,12 +38,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
+    # DB 에 접속해 migration 을 적용합니다.
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",

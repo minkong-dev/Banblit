@@ -25,7 +25,3 @@ flowchart LR
 - [[graph/backend/src/backend/api/app|app.py]]
 - [[graph/backend/src/backend/api/routers/schedule|schedule.py]]
 - [[graph/backend/tests/unit/test_job_runner|test_job_runner.py]]
-
-## 함수와 호출
-
-- `max_concurrent_jobs_from_env`

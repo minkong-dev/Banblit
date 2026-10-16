@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 import pytest
 
-from backend.api.job_runner import DEFAULT_MAX_CONCURRENT_JOBS, JobRunner, max_concurrent_jobs_from_env
+from backend.api.job_runner import JobRunner
 
 
 def _wait_until(predicate: Callable[[], bool], timeout: float = 5.0) -> None:
@@ -134,28 +134,3 @@ def test_extra_jobs_stay_queued_until_a_worker_frees_up() -> None:
     done = runner.get(second.id)
     assert done is not None
     assert done.result == "second"
-
-
-def test_max_concurrent_jobs_from_env_reads_a_positive_integer(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setenv("ASSIGN_MAX_CONCURRENT_JOBS", "5")
-
-    assert max_concurrent_jobs_from_env() == 5
-
-
-@pytest.mark.parametrize("bad", ["0", "-1", "많이", ""])
-def test_max_concurrent_jobs_from_env_falls_back_to_default(
-    monkeypatch: pytest.MonkeyPatch, bad: str
-) -> None:
-    monkeypatch.setenv("ASSIGN_MAX_CONCURRENT_JOBS", bad)
-
-    assert max_concurrent_jobs_from_env() == DEFAULT_MAX_CONCURRENT_JOBS
-
-
-def test_max_concurrent_jobs_from_env_falls_back_when_unset(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv("ASSIGN_MAX_CONCURRENT_JOBS", raising=False)
-
-    assert max_concurrent_jobs_from_env() == DEFAULT_MAX_CONCURRENT_JOBS
