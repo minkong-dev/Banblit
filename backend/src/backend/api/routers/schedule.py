@@ -41,6 +41,7 @@ from backend.api.schemas import (
     ScheduleOut,
     ScheduleReportOut,
     ScheduleRowOut,
+    SessionAbsenceOut,
     ShortfallOut,
 )
 from backend.db.models import Period
@@ -86,6 +87,7 @@ def _report_out(report: ScheduleReport) -> ScheduleReportOut:
             )
             for a in report.absences
         ],
+        session_absences=[SessionAbsenceOut(**asdict(item)) for item in report.session_absences],
         over_absent=report.over_absent,
     )
 
