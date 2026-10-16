@@ -355,3 +355,11 @@ export function repeatLabel(mask: number): string {
   const days = REPEAT_WEEKDAY_NAMES.filter((_, index) => hasWeekday(mask, index));
   return `매주 ${days.join(" ")}`;
 }
+
+/** key 가 든 주를 주 보기로 열 때의 weekKeys shift 입니다. year년 month월 15일이 든 주가 0 입니다. */
+export function weekShiftFor(year: number, month: number, key: string): number {
+  const base = new Date(`${weekKeys(year, month, 0)[0]}T12:00:00`);
+  const sunday = new Date(`${key}T12:00:00`);
+  sunday.setDate(sunday.getDate() - sunday.getDay());
+  return Math.round((sunday.getTime() - base.getTime()) / (DAYS_PER_WEEK * 24 * 60 * 60 * 1000));
+}

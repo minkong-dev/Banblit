@@ -155,10 +155,11 @@ const WEEK_HOURS = Array.from(
 );
 
 /** 주 보기입니다. dayKeys 는 일요일부터 7일치 날짜라 배열의 index 가 곧 요일입니다.
- *  onOpen 을 넘기면 칸이 버튼이 되고, 칸을 누르면 그 칸의 날짜로 onOpen 을 호출합니다. */
+ *  onOpen 을 넘기면 칸이 버튼이 되고, 칸을 누르면 그 칸의 날짜로 onOpen 을 호출합니다.
+ *  hours 를 넘기면 그 시각 줄만 그립니다(불가능 일정 화면은 운영 시간만). 기본은 하루 24줄입니다. */
 export function WeekView({
-  dayKeys, closeHour, tab, teams, entriesOf, openHour, slotCount, onOpen,
-}: ViewProps & { dayKeys: string[]; closeHour: number; onOpen?: (key: string) => void }) {
+  dayKeys, closeHour, tab, teams, entriesOf, openHour, slotCount, onOpen, hours = WEEK_HOURS,
+}: ViewProps & { dayKeys: string[]; closeHour: number; onOpen?: (key: string) => void; hours?: number[] }) {
   const label = (index: number) => slotLabel(index, openHour);
   const endLabel = (index: number) => (index >= slotCount ? `${closeHour}:00` : label(index));
 
@@ -190,7 +191,7 @@ export function WeekView({
             {WEEKDAY_NAMES[index]}<b>{Number(key.slice(8, 10))}</b>
           </div>
         ))}
-        {WEEK_HOURS.map((hour) => (
+        {hours.map((hour) => (
           <Fragment key={hour}>
             <div className="wt" data-hour={hour}>{hourLabel(hour)}</div>
             {dayKeys.map((key) => {

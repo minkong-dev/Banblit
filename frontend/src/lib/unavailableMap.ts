@@ -6,7 +6,8 @@ import type { Unavailable } from "./contract";
 import { repeatDays } from "./dayEntries";
 
 const MINUTES_PER_HOUR = 60;
-const MINUTES_PER_DAY = 24 * MINUTES_PER_HOUR;
+const HOURS_PER_DAY = 24;
+const MINUTES_PER_DAY = HOURS_PER_DAY * MINUTES_PER_HOUR;
 
 /** "2026-10-12T18:30:00" 을 1970-01-01 00:00 부터의 분으로 변환합니다. 시간대를 적용하지 않습니다. */
 function isoMinutes(iso: string): number {
@@ -76,4 +77,43 @@ export function offRuns(
     }
   }
   return runs;
+}
+
+/** dayKeys 순서로 날짜마다 offRuns 입니다. 주 보기 히트맵이 날짜 열 하나에 묶음 블록을 그릴 때 씁니다. */
+export function offRunsByDay(
+  times: Unavailable[], memberIds: number[], dayKeys: string[], open: number, close: number,
+): OffRun[][] {
+  return dayKeys.map((day) => offRuns(times, memberIds, day, open, close));
+}
+
+/** item 이 day 안에서 차지하는 시각 범위(소수 시간)입니다. 반복 일정은 그날 반복되는 회차를 쓰고, 전날 회차가 자정을 넘으면 0 부터입니다.
+ *  그날에 없으면 null 입니다. 하루 타임라인이 막대를 놓을 때 씁니다. */
+export function dayHours(item: Unavailable, day: string): { from: number; to: number } | null {
+  const length = (isoMinutes(item.ends_at) - isoMinutes(item.starts_at)) / MINUTES_PER_HOUR;
+  const start = (isoMinutes(item.starts_at) - isoMinutes(`${item.starts_at.slice(0, 10)}T00:00`)) / MINUTES_PER_HOUR;
+  if (repeatDays(item, [day]).includes(day)) return { from: start, to: Math.min(HOURS_PER_DAY, start + length) };
+  const spill = start + length - HOURS_PER_DAY;
+  if (spill > 0 && repeatDays(item, [shiftDay(day, -1)]).length > 0) return { from: 0, to: Math.min(HOURS_PER_DAY, spill) };
+  return null;
+}
+
+/** 겹치는 막대를 옆으로 나눌 열 번호(col)와, 그 막대가 속한 겹침 묶음의 열 수(cols)입니다. 결과는 입력 순서입니다.
+ *  끝난 열은 다시 씁니다. 겹치지 않는 막대는 { col: 0, cols: 1 } 입니다. */
+export function packColumns(bars: { from: number; to: number }[]): { col: number; cols: number }[] {
+  const order = bars.map((_, index) => index).sort((a, b) => bars[a].from - bars[b].from);
+  const placed: { col: number; cols: number }[] = bars.map(() => ({ col: 0, cols: 1 }));
+  let group: number[] = [];
+  let ends: number[] = [];
+  const flush = () => group.forEach((index) => { placed[index] = { ...placed[index], cols: ends.length }; });
+  for (const index of order) {
+    const { from, to } = bars[index];
+    if (group.length > 0 && from >= Math.max(...ends)) { flush(); group = []; ends = []; }
+    const free = ends.findIndex((end) => end <= from);
+    const col = free === -1 ? ends.length : free;
+    ends = ends.map((end, at) => (at === col ? to : end)).concat(free === -1 ? [to] : []);
+    placed[index] = { col, cols: 1 };
+    group = [...group, index];
+  }
+  flush();
+  return placed;
 }

@@ -27,6 +27,7 @@ kind: directory
 - [[graph/backend/tests/unit/test_period_input|test_period_input.py]]
 - [[graph/backend/tests/unit/test_permission_rules|test_permission_rules.py]]
 - [[graph/backend/tests/unit/test_rate_limit|test_rate_limit.py]]
+- [[graph/backend/tests/unit/test_record_points|test_record_points.py]]
 - [[graph/backend/tests/unit/test_reservation_rules|test_reservation_rules.py]]
 - [[graph/backend/tests/unit/test_rooms|test_rooms.py]]
 - [[graph/backend/tests/unit/test_roster_rules|test_roster_rules.py]]
