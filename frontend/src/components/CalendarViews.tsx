@@ -116,7 +116,7 @@ export function MonthView({
               <>
                 {list.slice(0, 3).map((entry, i) => (
                   <span className={`ev ${entryClass(entry)}`} key={i}>
-                    {entryName(entry, teams)}
+                    <span className="nm">{entryName(entry, teams)}</span>
                     <time>{label(entry.a)}</time>
                   </span>
                 ))}
@@ -154,10 +154,11 @@ const WEEK_HOURS = Array.from(
   (_, i) => WEEK_FIRST_HOUR + i,
 );
 
-/** 주 보기입니다. dayKeys 는 일요일부터 7일치 날짜라 배열의 index 가 곧 요일입니다. */
+/** 주 보기입니다. dayKeys 는 일요일부터 7일치 날짜라 배열의 index 가 곧 요일입니다.
+ *  onOpen 을 넘기면 칸이 버튼이 되고, 칸을 누르면 그 칸의 날짜로 onOpen 을 호출합니다. */
 export function WeekView({
-  dayKeys, closeHour, tab, teams, entriesOf, openHour, slotCount,
-}: ViewProps & { dayKeys: string[]; closeHour: number }) {
+  dayKeys, closeHour, tab, teams, entriesOf, openHour, slotCount, onOpen,
+}: ViewProps & { dayKeys: string[]; closeHour: number; onOpen?: (key: string) => void }) {
   const label = (index: number) => slotLabel(index, openHour);
   const endLabel = (index: number) => (index >= slotCount ? `${closeHour}:00` : label(index));
 
@@ -197,21 +198,26 @@ export function WeekView({
               // 18:10 시작이면 18시 줄에 1/6 만큼 내려간 자리입니다.
               const entry = visible(entriesOf(key), tab, teams)
                 .find((item) => Math.floor(item.a) + openHour === hour);
+              const block = entry === undefined ? null : (
+                <span className={`blk ${entryClass(entry)}`}
+                  style={{ "--offset": entry.a - Math.floor(entry.a), "--span": entry.b - entry.a } as CSSProperties}>
+                  {entryName(entry, teams)}
+                  {/* 합주실명을 함께 표시합니다. 맞닿은 두 slot 이 따로 렌더링되는 유일한 이유가
+                      합주실이 다른 것인데, 합주실을 표시하지 않으면 왜 나뉘었는지 알 수 없습니다. */}
+                  <small>
+                    {label(entry.a)}–{endLabel(entry.b)}
+                    {entry.room === undefined ? "" : ` ${entry.room}`}
+                  </small>
+                </span>
+              );
+              if (onOpen === undefined) return <div className="wcell" key={`${key}-${hour}`}>{block}</div>;
+              // aria-label 이 버튼 안의 글자를 대신하므로 칸의 일정 이름을 함께 넣습니다.
+              const name = entry === undefined ? "" : `, ${entryName(entry, teams)}`;
               return (
-                <div className="wcell" key={`${key}-${hour}`}>
-                  {entry === undefined ? null : (
-                    <span className={`blk ${entryClass(entry)}`}
-                      style={{ "--offset": entry.a - Math.floor(entry.a), "--span": entry.b - entry.a } as CSSProperties}>
-                      {entryName(entry, teams)}
-                      {/* 합주실명을 함께 표시합니다. 맞닿은 두 slot 이 따로 렌더링되는 유일한 이유가
-                          합주실이 다른 것인데, 합주실을 표시하지 않으면 왜 나뉘었는지 알 수 없습니다. */}
-                      <small>
-                        {label(entry.a)}–{endLabel(entry.b)}
-                        {entry.room === undefined ? "" : ` ${entry.room}`}
-                      </small>
-                    </span>
-                  )}
-                </div>
+                <button type="button" className="wcell" key={`${key}-${hour}`}
+                  aria-label={`${dayWithWeekday(key)} ${hourLabel(hour)}${name}`} onClick={() => onOpen(key)}>
+                  {block}
+                </button>
               );
             })}
           </Fragment>

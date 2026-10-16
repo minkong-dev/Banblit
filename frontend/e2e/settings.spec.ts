@@ -146,13 +146,19 @@ test("불가능 일정 캘린더에서 멤버 달력과 팀 히트맵을 확인�
   await page.getByRole("button", { name: "멤버 선택" }).click();
   await page.getByRole("dialog", { name: "멤버 선택" }).getByRole("button", { name: new RegExp(`^${E2E_ACCOUNT.name}`) }).click();
   await expect(page.locator(".calview .ev").first()).toContainText("불가능 일정");
+  // 날짜를 누르면 그날 일정을 modal 로 엽니다.
+  await page.locator(".calview .cell").filter({ has: page.locator(".ev") }).first().click();
+  await expect(page.getByRole("dialog")).toContainText("18:00–22:00");
+  await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
 
   await page.getByRole("group", { name: "대상 종류" }).getByRole("button", { name: "팀" }).click();
   await page.getByRole("button", { name: "팀 선택" }).click();
   await page.getByRole("dialog", { name: "팀 선택" }).getByRole("button", { name: E2E_TEAM }).click();
-  const cell = page.getByRole("button", { name: /가장 많이 빠지는 시간 2명 중 1명/ }).first();
+  // 칸에는 빠지는 팀원 이름을 쓰고, 칸을 누르면 그날 상세를 modal 로 엽니다.
+  const cell = page.getByRole("button", { name: new RegExp(`불가능 팀원 ${E2E_ACCOUNT.name}`) }).first();
   await cell.click();
-  await expect(page.locator(".heatnote")).toContainText(E2E_ACCOUNT.name);
+  await expect(page.getByRole("dialog")).toContainText(E2E_ACCOUNT.name);
+  await expect(page.getByRole("dialog")).toContainText("2명 중 1명");
 });
 
 // 다른 멤버의 불가능 일정은 반려 사유를 적어 삭제하고, 그 멤버에게 사유가 알림으로 갑니다.
