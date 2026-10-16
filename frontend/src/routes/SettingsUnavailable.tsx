@@ -10,7 +10,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { Button, Empty, IconButton, SearchInput } from "../components/controls";
-import { BulletListIcon, CalendarIcon } from "../components/icons";
+import { BulletListIcon, CalendarIcon, SearchIcon } from "../components/icons";
+import "../styles/unavailable.css";
 import { Card, SectionHead } from "../components/Layout";
 import { RejectDialog } from "../components/RejectDialog";
 import { UNAVAILABLE_KEY, useMe } from "../components/queries";
@@ -66,11 +67,14 @@ export function UnavailableCards() {
       </SectionHead>
 
       {calendar ? <UnavailableCalendar times={rows} /> : (
-      <div className="roster">
-        <label className="find" htmlFor="findMember">
-          <span>멤버 이름</span>
-          <SearchInput id="findMember" label="멤버 이름" value={keyword} placeholder="이름으로 찾기" onChange={setKeyword} />
-        </label>
+      <div className="roster unavail">
+        {/* 캘린더 보기의 대상 선택 줄(.unavbar)과 같은 높이, 같은 자리에 둡니다. */}
+        <div className="unavbar">
+          <label className="pickfield">
+            <SearchIcon aria-hidden="true" />
+            <SearchInput label="멤버 이름" value={keyword} placeholder="멤버 이름으로 찾기" onChange={setKeyword} />
+          </label>
+        </div>
 
         {list.isError ? <Empty text={reason(list.error)} /> : null}
         <UnavailableTable

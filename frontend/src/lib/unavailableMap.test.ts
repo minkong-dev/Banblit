@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Unavailable } from "./contract";
-import { heatByMonth, heatByWeek, offMembersAt } from "./unavailableMap";
+import { heatByMonth, heatByWeek, offMembersAt, offMembersOnDay, offRuns } from "./unavailableMap";
 
 const MONDAY_BIT = 1;
 
@@ -51,5 +51,33 @@ describe("heatByMonth — 하루 최대 인원", () => {
     const both = [...TIMES, off(5, 1, "2026-10-13T20:00:00", "2026-10-13T21:00:00")];
     expect(heatByMonth(both, TEAM, ["2026-10-12", "2026-10-13", "2026-10-14"], 18, 24))
       .toEqual({ "2026-10-12": 1, "2026-10-13": 2, "2026-10-14": 0 });
+  });
+});
+
+describe("offMembersOnDay — 그날 한 시간이라도 빠지는 팀원", () => {
+  it("open 부터 close 전까지 불가능 일정이 있는 팀원을 팀 명단 순서로 반환한다", () => {
+    const both = [...TIMES, off(5, 1, "2026-10-13T20:00:00", "2026-10-13T21:00:00")];
+    expect(offMembersOnDay(both, TEAM, "2026-10-13", 18, 24)).toEqual([1, 2]);
+  });
+
+  it("운영 시간 밖의 일정은 세지 않는다", () => {
+    expect(offMembersOnDay(TIMES, TEAM, "2026-10-12", 20, 24)).toEqual([]);
+  });
+});
+
+describe("offRuns — 빠지는 팀원이 같은 연속 시간 묶음", () => {
+  it("팀원 구성이 같은 시간끼리 묶고, 아무도 빠지지 않는 시간은 제외한다", () => {
+    expect(offRuns(TIMES, TEAM, "2026-10-13", 17, 22)).toEqual([
+      { from: 19, to: 21, ids: [2] },
+    ]);
+  });
+
+  it("팀원 구성이 바뀌는 시각에서 묶음을 나눈다", () => {
+    const both = [...TIMES, off(5, 1, "2026-10-13T20:00:00", "2026-10-13T22:00:00")];
+    expect(offRuns(both, TEAM, "2026-10-13", 18, 23)).toEqual([
+      { from: 19, to: 20, ids: [2] },
+      { from: 20, to: 21, ids: [1, 2] },
+      { from: 21, to: 22, ids: [1] },
+    ]);
   });
 });

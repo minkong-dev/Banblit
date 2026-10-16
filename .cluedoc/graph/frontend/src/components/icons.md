@@ -25,6 +25,7 @@ flowchart LR
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_components_icons
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_components_icons
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_components_icons
+  frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_components_icons
 ```
 
 ## imports
@@ -48,3 +49,4 @@ flowchart LR
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]
+- [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]

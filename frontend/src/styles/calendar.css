@@ -54,7 +54,9 @@
   .cell.pickable:hover { background: var(--brand-tint); }
 
   .ev { display: flex; align-items: center; gap: 7px; padding: 5px 8px 5px 10px; border-radius: 6px; font-size: 12.5px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; }
-  .ev time { font-size: 11.5px; color: var(--t2); margin-left: auto; }
+  .ev time { flex: none; font-size: 11.5px; color: var(--t2); margin-left: auto; }
+  /* 이름이 길면 말줄임표로 자르고 시작 시간은 항상 남깁니다. */
+  .ev .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   /* 팀 색은 .team-<색> class 가 --tc·--tc-tint 로 줍니다(lib/teamColors.ts). 색이 없는 팀은 불가능 일정과 같은 회색입니다.
      팀 색은 옅은 바탕(--tc-tint)과 왼쪽 3px 선(--tc)에만 쓰고 글자는 본문색(--t1)입니다. 글자까지 팀 색으로 쓰면
      밝은 팀 색(노랑·하늘)은 옅은 바탕과 대비가 3:1 미만이라 읽히지 않습니다.

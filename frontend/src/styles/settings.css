@@ -193,18 +193,6 @@ body[data-page="settings"] {
   .roster tr:last-child td { border-bottom: none; }
   .rosterfoot { padding: 12px 0; text-align: center; font-size: 13px; color: var(--t3); }
 
-  /* 표를 이름으로 좁히는 입력칸입니다. 표 위에 두어 표를 가리지 않습니다. */
-  /* 라벨을 입력칸 위에 두는 모양과 입력칸의 테두리·초점 표시는 다른 구역의 입력칸(shell.css 의 .fields)과 같습니다. */
-  .roster .find { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 16px 0 14px; }
-  .roster .find span { font-size: 12.5px; color: var(--t3); white-space: nowrap; }
-  .roster .find input {
-    width: min(260px, 100%); min-height: 44px; padding: 10px 12px;
-    border: 1px solid var(--line-2); border-radius: var(--r-md);
-    background: var(--card); color: var(--t1); font: inherit; font-size: 14px;
-    transition: border-color .16s ease, box-shadow .16s ease;
-  }
-  .roster .find input:hover { border-color: var(--t3); }
-  .roster .find input:focus-visible { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-tint); }
 
   @media (max-width: 1240px) {
     .page:not(:has(.rail)) { grid-template-columns: minmax(0, 1fr); column-gap: 0; }

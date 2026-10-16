@@ -48,3 +48,32 @@ export function heatByMonth(
   const week = heatByWeek(times, memberIds, dayKeys, open, close);
   return Object.fromEntries(dayKeys.map((day, i) => [day, Math.max(0, ...week[i])]));
 }
+
+/** day 의 open 시부터 close 시 전까지 한 시간이라도 불가능 일정이 있는 팀원 번호를 memberIds 순서로 반환합니다. */
+export function offMembersOnDay(
+  times: Unavailable[], memberIds: number[], day: string, open: number, close: number,
+): number[] {
+  const off = new Set(offRuns(times, memberIds, day, open, close).flatMap((run) => run.ids));
+  return memberIds.filter((id) => off.has(id));
+}
+
+/** 빠지는 팀원이 같은 연속 시간 1묶음입니다. from 시부터 to 시 전까지입니다. */
+export type OffRun = { from: number; to: number; ids: number[] };
+
+/** day 의 open 시부터 close 시 전까지, 빠지는 팀원 구성이 같은 연속 시간을 묶어 반환합니다. 아무도 빠지지 않는 시간은 제외합니다. */
+export function offRuns(
+  times: Unavailable[], memberIds: number[], day: string, open: number, close: number,
+): OffRun[] {
+  const runs: OffRun[] = [];
+  for (let hour = open; hour < close; hour += 1) {
+    const ids = offMembersAt(times, memberIds, day, hour);
+    if (ids.length === 0) continue;
+    const last = runs.at(-1);
+    if (last !== undefined && last.to === hour && last.ids.join() === ids.join()) {
+      runs[runs.length - 1] = { ...last, to: hour + 1 };
+    } else {
+      runs.push({ from: hour, to: hour + 1, ids });
+    }
+  }
+  return runs;
+}
