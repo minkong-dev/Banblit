@@ -33,10 +33,12 @@
 .calview {
   display: flex; flex-direction: column;
 
-  /* 달력 높이는 창 높이에 맞춰 제한합니다. 대시보드처럼 창 바닥까지 채우지 않습니다. */
-  .calbody { height: min(68vh, 620px); display: flex; flex-direction: column; min-height: 0; container-type: inline-size; }
-  /* 주 보기 히트맵은 운영 시간 줄 수만큼만 차지합니다. */
-  .calbody:has(.heatweek) { height: auto; }
+  /* 달 보기는 창 높이에서 위쪽 머리(제목·대상 선택·달 이동)와 아래 범례를 뺀 만큼 씁니다. 주 보기(멤버 시간표·팀 히트맵)는 운영 시간 줄 수만큼만 차지하고 안쪽 스크롤이 없습니다. */
+  .calbody { height: max(32rem, calc(100dvh - 22rem)); display: flex; flex-direction: column; min-height: 0; container-type: inline-size; }
+  .calbody:has(.heatweek, .weekscroll) { height: auto; }
+  /* calendar.css 의 :is(body[data-page="scheduler"], .calview) 규칙보다 우선하도록 .calbody 를 붙입니다. */
+  .calbody .weekscroll { flex: none; overflow: visible; }
+  .calbody .weekgrid { min-width: 0; --slot-min: 52px; grid-auto-rows: var(--slot-min); min-height: 0; }
   .calview > .empty { padding: 32px 0; }
 
   /* 멤버 달력의 주 보기 칸은 누르면 그날 상세를 엽니다(CalendarViews 의 WeekView onOpen). */
@@ -44,41 +46,55 @@
   button.wcell:hover { background: var(--card-2); }
 
   /* 달 보기 칸(.cell)의 배경 규칙(calendar.css)보다 우선하도록 칸 종류를 함께 적습니다. */
-  :is(.hc, .cell, i).heat-1 { background: color-mix(in oklab, var(--brand) 18%, var(--card)); }
-  :is(.hc, .cell, i).heat-2 { background: color-mix(in oklab, var(--brand) 40%, var(--card)); }
-  :is(.hc, .cell, i).heat-3 { background: color-mix(in oklab, var(--brand) 66%, var(--card)); }
-  :is(.hc, .cell, i).heat-4 { background: var(--brand); color: var(--brand-on); }
+  :is(.hb, .cell, i).heat-1 { background: color-mix(in oklab, var(--brand) 18%, var(--card)); }
+  :is(.hb, .cell, i).heat-2 { background: color-mix(in oklab, var(--brand) 40%, var(--card)); }
+  :is(.hb, .cell, i).heat-3 { background: color-mix(in oklab, var(--brand) 66%, var(--card)); }
+  :is(.hb, .cell, i).heat-4 { background: var(--brand); color: var(--brand-on); }
 
-  .heatweek { flex: 1; overflow: auto; display: grid; grid-template-columns: 56px repeat(7, minmax(44px, 1fr)); grid-auto-rows: minmax(52px, auto); align-content: start; }
+  /* 팀 시간표입니다. 1행은 요일 머리, 2행부터 운영 시간 1시간씩(--rows 줄)이고 줄 높이는 멤버 시간표와 같습니다.
+     빈 칸(.hc)이 격자이고 묶음 블록(.hb)이 같은 grid 위에 행을 걸쳐 놓입니다. 블록은 여백 없이 칸 경계에 맞추고 칸과 같은 2px 바탕색 선으로 구분합니다. */
+  .heatweek { display: grid; grid-template-columns: 56px repeat(7, minmax(44px, 1fr)); grid-template-rows: auto repeat(var(--rows), 52px); align-content: start; }
   .hrow { display: contents; }
   .hh { position: sticky; top: 0; z-index: 1; background: var(--bg); padding: 12px 0 10px; text-align: center; font-size: var(--fs-xs); color: var(--t3); border-bottom: 1px solid var(--line); }
   .hh b { display: block; font-size: var(--fs-xl); font-weight: 800; color: var(--t1); margin-top: 2px; }
   .hh.sun, .hh.sun b { color: var(--red); }
+  .hh.today { box-shadow: inset 0 0 0 2px var(--brand); }
   .ht { font-size: 11.5px; color: var(--t3); text-align: right; padding: 4px 9px 0 0; }
-  .hc { display: flex; align-items: flex-start; min-width: 0; padding: 6px 8px; text-align: left; border-top: 1px solid var(--line); border-left: 2px solid var(--bg); }
-  .hc:not(.heat-1, .heat-2, .heat-3, .heat-4):hover { background: var(--card-2); }
+  .hc { padding: 0; border: none; border-top: 1px solid var(--line); border-left: 2px solid var(--bg); background: none; cursor: pointer; }
+  .hc:hover { background: var(--card-2); }
+  .hb { z-index: 1; margin: 0; padding: 7px 10px; min-width: 0; display: flex; align-items: flex-start;
+    border: none; border-top: 2px solid var(--bg); border-left: 2px solid var(--bg); border-radius: 0; text-align: left; color: var(--t1); cursor: pointer; overflow: hidden; }
+  .hb:hover { filter: brightness(.94); }
   /* 팀원 이름은 칸 안에서 줄을 바꾸고, 넘치면 말줄임표로 자릅니다. 전부는 칸을 눌러 modal 에서 봅니다. */
   .who { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden;
     font-size: 12.5px; font-weight: 600; line-height: 1.35; word-break: keep-all; text-align: left; }
+  .hb .who { -webkit-line-clamp: 6; }
   .cell .who { margin-top: auto; -webkit-line-clamp: 3; }
 
   .heatscale { display: flex; align-items: center; gap: 4px; padding: 12px 0 0; font-size: 12.5px; color: var(--t2); }
   .heatscale span:first-child { margin-right: 8px; color: var(--t1); font-weight: 600; }
   .heatscale i { width: 24px; height: 10px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--line); }
 
+  /* 하루 타임라인 modal 입니다. 왼쪽 시각 칸과 멤버 열(--lanes 개)이고, 열마다 운영 시간 줄(--rows)을 같은 높이(--slot-h)로 긋습니다.
+     막대(.evb)는 열 안에서 --from 줄부터 --span 줄만큼이고, 글자는 멤버·일정 이름·사유입니다. */
+  .offtl { --slot-h: 3.4rem; --gutter: 50px; padding-top: 10px; display: grid; grid-template-columns: var(--gutter) repeat(var(--lanes), minmax(140px, 1fr)); max-height: 60vh; overflow: auto; }
+  .offtl .hrs { position: relative; height: calc(var(--rows) * var(--slot-h)); }
+  .offtl .hrs span { position: absolute; right: 8px; top: calc(var(--i) * var(--slot-h) - 8px); font-size: 12px; color: var(--t3); font-variant-numeric: tabular-nums; }
+  .offtl .lane { position: relative; height: calc(var(--rows) * var(--slot-h)); border-left: 1px solid var(--line);
+    background-image: repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px var(--slot-h)); }
+  /* 겹치는 막대는 열(--col / --cols)로 나눠 옆에 놓습니다. */
+  .offtl .evb { position: absolute; left: calc(4px + (100% - 8px) * var(--col, 0) / var(--cols, 1)); width: calc((100% - 8px) / var(--cols, 1) - 2px); top: calc(var(--from, 0) * var(--slot-h)); height: calc(var(--span, 1) * var(--slot-h) - 2px);
+    display: flex; flex-direction: column; gap: 2px; border-radius: var(--r-sm); padding: 7px 10px 7px 12px; font-size: 13px; line-height: 1.35; overflow: hidden; }
+  .offtl .evb b { font-weight: 700; color: var(--t1); }
+  .offtl .evb small { font-size: 11.5px; color: var(--t2); white-space: pre-wrap; }
+
   @media (max-width: 767px) {
     /* 좁은 창의 달 보기 줄 높이는 calendar.css 가 칸 너비로 정하므로 상자 높이를 고정하지 않습니다. */
     .calbody { height: auto; }
     .who { font-size: 10.5px; line-height: 1.25; }
-    .hc { padding: 4px 3px; }
+    .hb { padding: 4px 3px; }
     .heatweek { grid-template-columns: 42px repeat(7, minmax(40px, 1fr)); }
     .ht { padding-right: 5px; font-size: 10.5px; white-space: nowrap; }
+    .offtl { grid-template-columns: 44px repeat(var(--lanes), minmax(120px, 1fr)); }
   }
 }
-
-/* 칸을 누르면 여는 하루 상세 modal 의 목록입니다. 시간, 내용, 인원 순서로 한 줄입니다. */
-.offday { list-style: none; margin: 0; padding: 0; display: grid; }
-.offday li { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: baseline; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
-.offday li:last-child { border-bottom: none; }
-.offday time { font-weight: 700; font-variant-numeric: tabular-nums; }
-.offday small { font-size: var(--fs-sm); color: var(--t2); white-space: nowrap; }

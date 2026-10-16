@@ -1,10 +1,11 @@
 // 불가능 일정 구역의 캘린더 보기입니다. 멤버 1명의 불가능 일정을 달력으로, 팀 1개의 불가능 일정을 히트맵으로 표시합니다.
-// 히트맵 칸에는 그 시간(달 보기는 그날)에 불가능 일정이 있는 팀원 이름을 쓰고, 칸 색은 같은 시간에 빠지는 팀원 비율입니다.
-// 달 보기, 주 보기 모두 칸을 누르면 그날의 상세를 modal 로 표시합니다.
-// 사유는 표시하지 않습니다(사용자 결정 2026-10-12). 시간 범위는 합주실 운영 시간 중 가장 넓은 범위입니다(roomBounds).
+// 달 보기, 주 보기 모두 칸을 누르면 그날의 타임라인을 modal 로 표시합니다. 막대에는 멤버, 일정 이름, 사유를 씁니다(사용자 결정 2026-10-16).
+// 히트맵 주 보기는 빠지는 팀원 구성이 같은 연속 시간을 블록 하나로 묶어 이름을 한 번만 씁니다. 블록 색은 같은 시간에 빠지는 팀원 비율입니다.
+// 달 보기 칸에는 그날 한 시간이라도 빠지는 팀원 이름을 씁니다. 시간 범위는 합주실 운영 시간 중 가장 넓은 범위입니다(roomBounds).
 
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import type { CSSProperties } from "react";
 
 import { CalendarBar, useCalendarCursor } from "../components/CalendarBar";
 import { MonthView, WeekView } from "../components/CalendarViews";
@@ -14,14 +15,13 @@ import { MemberSearch } from "../components/MemberSearch";
 import { Modal } from "../components/Modal";
 import { teamMembersQuery, useRooms } from "../components/queries";
 import { TeamSearch } from "../components/TeamSearch";
-import { offByDay, repeatDays, visibleDays } from "../lib/dayEntries";
+import { offByDay, visibleDays } from "../lib/dayEntries";
 import type { Member, MemberUnavailable, Team } from "../lib/contract";
 import { loadState } from "../lib/loading";
-import { heatByMonth, offMembersAt, offMembersOnDay, offRuns } from "../lib/unavailableMap";
+import { dayHours, heatByMonth, offMembersOnDay, offRunsByDay, packColumns } from "../lib/unavailableMap";
 import "../styles/unavailable.css";
-import { MINUTES_PER_HOUR, WEEKDAY_NAMES, clockEndLabel, dayWithWeekday, hourLabel, monthCells, roomBounds } from "../lib/calendar";
+import { MINUTES_PER_HOUR, WEEKDAY_NAMES, clockEndLabel, dayKey, dayWithWeekday, hourLabel, monthCells, roomBounds } from "../lib/calendar";
 import { memberLabel } from "../lib/roster";
-import { timeRangeLabel } from "../lib/slots";
 
 type Target = "member" | "team";
 
@@ -87,48 +87,31 @@ export function UnavailableCalendar({ times }: { times: MemberUnavailable[] }) {
 
 type ViewArgs = { cursor: ReturnType<typeof useCalendarCursor>; open: number; close: number };
 
-/** 멤버 1명의 불가능 일정 달력입니다. 대시보드의 달 보기와 주 보기를 그대로 쓰고, 칸을 누르면 그날 일정을 modal 로 표시합니다. */
+/** 멤버 1명의 불가능 일정 달력입니다. 대시보드의 달 보기와 주 보기를 그대로 쓰고, 주 보기는 운영 시간 줄만 그립니다. */
 function MemberCalendar({ times, cursor, open, close }: ViewArgs & { times: MemberUnavailable[] }) {
   const [day, setDay] = useState<string | null>(null);
   const days = cursor.week ? cursor.weekDayKeys : visibleDays(cursor.year, cursor.month);
   const byDay = offByDay(times, open, days);
   const entriesOf = (key: string) => byDay[key] ?? [];
   const view = { tab: "me" as const, teams: [], entriesOf, openHour: open, slotCount: close - open, slotMinutes: MINUTES_PER_HOUR };
+  const hours = Array.from({ length: close - open }, (_, i) => open + i);
 
   return (
     <>
       <div className="calbody">
         {cursor.week
-          ? <WeekView dayKeys={cursor.weekDayKeys} closeHour={close} onOpen={setDay} {...view} />
+          ? <WeekView dayKeys={cursor.weekDayKeys} closeHour={close} hours={hours} onOpen={setDay} {...view} />
           : <MonthView year={cursor.year} month={cursor.month} range={null} inFocus={() => false} onOpen={setDay} {...view} />}
       </div>
-      {day === null ? null : <MemberDay day={day} times={times} onClose={() => setDay(null)} />}
+      {day === null ? null : (
+        <DayModal day={day} open={open} close={close} onClose={() => setDay(null)}
+          lanes={[{ label: times[0]?.member ?? "", items: times }]} />
+      )}
     </>
   );
 }
 
-/** 멤버 1명의 하루 불가능 일정 modal 입니다. 반복 일정은 그날 반복되는 것만 포함하고, 시작 시간순입니다. */
-function MemberDay({ day, times, onClose }: { day: string; times: MemberUnavailable[]; onClose: () => void }) {
-  const items = times
-    .filter((item) => repeatDays(item, [day]).includes(day))
-    .sort((a, b) => a.starts_at.slice(11).localeCompare(b.starts_at.slice(11)));
-  return (
-    <Modal title={dayWithWeekday(day)} hint={items.length === 0 ? undefined : `${items[0].member} 님의 불가능 일정이에요.`} onClose={onClose}>
-      {items.length === 0 ? <Empty text="이날은 불가능 일정이 없어요." /> : (
-        <ul className="offday">
-          {items.map((item) => (
-            <li key={item.id}>
-              <time>{timeRangeLabel(item.starts_at, item.ends_at)}</time>
-              <span>{item.name ?? "불가능 일정"}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Modal>
-  );
-}
-
-/** 팀 1개의 히트맵입니다. 주 보기는 요일 × 시간 칸, 달 보기는 날짜 칸이고, 칸마다 빠지는 팀원 이름을 씁니다. */
+/** 팀 1개의 히트맵입니다. 주 보기는 요일 × 시간 시간표에 묶음 블록, 달 보기는 날짜 칸에 그날 빠지는 팀원 이름입니다. */
 function TeamHeat({ times, team, cursor, open, close }: ViewArgs & { times: MemberUnavailable[]; team: Team }) {
   const [day, setDay] = useState<string | null>(null);
   const roster = useQuery(teamMembersQuery(team.id));
@@ -159,9 +142,8 @@ function TeamHeat({ times, team, cursor, open, close }: ViewArgs & { times: Memb
       </div>
       <HeatScale />
       {day === null ? null : (
-        <Modal title={dayWithWeekday(day)} hint={`${team.name} 팀원 ${ids.length}명 중 불가능 일정이 있는 팀원이에요.`} onClose={() => setDay(null)}>
-          <TeamDay runs={offRuns(times, ids, day, open, close)} total={ids.length} labelOf={labelOf} />
-        </Modal>
+        <DayModal day={day} open={open} close={close} onClose={() => setDay(null)}
+          lanes={ids.map((id) => ({ label: labelOf(id), items: times.filter((item) => item.member_id === id) }))} />
       )}
     </>
   );
@@ -174,27 +156,38 @@ type HeatArgs = {
 
 function WeekHeat({ dayKeys, times, ids, open, close, nameOf, onPick }: HeatArgs & { dayKeys: string[] }) {
   const hours = Array.from({ length: close - open }, (_, i) => open + i);
+  const runs = offRunsByDay(times, ids, dayKeys, open, close);
+  // grid 의 1행은 요일 머리, 2행부터 open 시입니다. 열 1은 시각, 열 2부터 일요일입니다.
+  // 블록이 행·열을 지정하므로 격자 칸도 전부 지정합니다. 자동 배치에 맡기면 블록이 먼저 차지한 칸을 피해 밀립니다.
+  const rowOf = (hour: number) => hour - open + 2;
   return (
-    <div className="heatweek" aria-label="요일별 시간별 불가능 팀원">
+    <div className="heatweek" aria-label="요일별 시간별 불가능 팀원" style={{ "--rows": hours.length } as CSSProperties}>
       <div className="hh" />
       {dayKeys.map((key, index) => (
-        <div className={index === 0 ? "hh sun" : "hh"} key={key}>{WEEKDAY_NAMES[index]}<b>{Number(key.slice(8, 10))}</b></div>
+        <div className={["hh", index === 0 ? "sun" : "", key === dayKey(new Date()) ? "today" : ""].filter(Boolean).join(" ")} key={key}>
+          {WEEKDAY_NAMES[index]}<b>{Number(key.slice(8, 10))}</b>
+        </div>
       ))}
       {hours.map((hour) => (
         <div className="hrow" key={hour}>
-          <div className="ht">{hourLabel(hour)}</div>
-          {dayKeys.map((key) => {
-            const names = offMembersAt(times, ids, key, hour).map(nameOf);
-            return (
-              <button key={key} className={`hc heat-${heatLevel(names.length, ids.length)}`}
-                aria-label={`${dayWithWeekday(key)} ${hourLabel(hour)}, 불가능 팀원 ${names.length === 0 ? "없음" : names.join(", ")}`}
-                onClick={() => onPick(key)}>
-                <span className="who">{names.join(", ")}</span>
-              </button>
-            );
-          })}
+          <div className="ht" style={{ gridColumn: 1, gridRow: rowOf(hour) }}>{hourLabel(hour)}</div>
+          {dayKeys.map((key, col) => (
+            <button key={key} type="button" className="hc" style={{ gridColumn: col + 2, gridRow: rowOf(hour) }}
+              aria-label={`${dayWithWeekday(key)} ${hourLabel(hour)}`} onClick={() => onPick(key)} />
+          ))}
         </div>
       ))}
+      {runs.flatMap((dayRuns, col) => dayRuns.map((run) => {
+        const names = run.ids.map(nameOf);
+        return (
+          <button key={`${dayKeys[col]}-${run.from}`} type="button" className={`hb heat-${heatLevel(run.ids.length, ids.length)}`}
+            style={{ gridColumn: col + 2, gridRow: `${rowOf(run.from)} / ${rowOf(run.to)}` }}
+            aria-label={`${dayWithWeekday(dayKeys[col])} ${hoursRangeLabel(run.from, run.to)}, 불가능 팀원 ${names.join(", ")}`}
+            onClick={() => onPick(dayKeys[col])}>
+            <span className="who">{names.join(", ")}</span>
+          </button>
+        );
+      }))}
     </div>
   );
 }
@@ -226,19 +219,52 @@ function MonthHeat({ year, month, times, ids, open, close, nameOf, onPick }: Hea
   );
 }
 
-/** 팀 1개의 하루 상세입니다. 빠지는 팀원이 같은 연속 시간을 한 줄로 묶습니다. */
-function TeamDay({ runs, total, labelOf }: { runs: ReturnType<typeof offRuns>; total: number; labelOf: (id: number) => string }) {
-  if (runs.length === 0) return <Empty text="이날은 불가능 일정이 있는 팀원이 없어요." />;
+/** 하루 타임라인 modal 입니다. 왼쪽에 시각, 멤버마다 한 열이고 그날 일정이 있는 멤버 열만 그립니다.
+ *  막대의 위치와 길이가 시간을 나타내므로 글자로는 멤버, 일정 이름, 사유만 씁니다. */
+function DayModal({ day, lanes, open, close, onClose }: {
+  day: string; lanes: { label: string; items: MemberUnavailable[] }[]; open: number; close: number; onClose: () => void;
+}) {
+  const rows = Array.from({ length: close - open }, (_, i) => open + i);
+  const shown = lanes
+    .map((lane) => ({
+      label: lane.label,
+      bars: lane.items.flatMap((item) => {
+        const at = dayHours(item, day);
+        if (at === null) return [];
+        // 운영 시간 밖은 자릅니다. 전부 밖이면 그리지 않습니다.
+        const from = Math.max(at.from, open);
+        const to = Math.min(at.to, close);
+        return to <= from ? [] : [{ item, from, to }];
+      }),
+    }))
+    // 같은 팀원의 일정끼리 겹치면 열을 나눠 옆에 놓습니다.
+    .map((lane) => {
+      const cols = packColumns(lane.bars);
+      return { ...lane, bars: lane.bars.map((bar, at) => ({ ...bar, ...cols[at] })) };
+    })
+    .filter((lane) => lane.bars.length > 0);
+
   return (
-    <ul className="offday">
-      {runs.map((run) => (
-        <li key={run.from}>
-          <time>{hoursRangeLabel(run.from, run.to)}</time>
-          <span>{run.ids.map(labelOf).join(", ")}</span>
-          <small>{total}명 중 {run.ids.length}명</small>
-        </li>
-      ))}
-    </ul>
+    <Modal title={dayWithWeekday(day)} onClose={onClose}>
+      {shown.length === 0 ? <Empty text="이날은 불가능 일정이 없어요." /> : (
+        <div className="offtl" style={{ "--lanes": shown.length, "--rows": rows.length } as CSSProperties}>
+          <div className="hrs" aria-hidden="true">
+            {rows.map((hour, i) => <span key={hour} style={{ "--i": i } as CSSProperties}>{hourLabel(hour)}</span>)}
+          </div>
+          {shown.map((lane) => (
+            <div className="lane" key={lane.label}>
+              {lane.bars.map(({ item, from, to, col, cols }) => (
+                <span className="evb off" key={item.id} style={{ "--from": from - open, "--span": to - from, "--col": col, "--cols": cols } as CSSProperties}>
+                  <b>{item.member}</b>
+                  <span>{item.name ?? "불가능 일정"}</span>
+                  {item.reason === null || item.reason === "" ? null : <small>{item.reason}</small>}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
   );
 }
 

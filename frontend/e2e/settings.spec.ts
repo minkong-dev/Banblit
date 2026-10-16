@@ -146,19 +146,25 @@ test("불가능 일정 캘린더에서 멤버 달력과 팀 히트맵을 확인�
   await page.getByRole("button", { name: "멤버 선택" }).click();
   await page.getByRole("dialog", { name: "멤버 선택" }).getByRole("button", { name: new RegExp(`^${E2E_ACCOUNT.name}`) }).click();
   await expect(page.locator(".calview .ev").first()).toContainText("불가능 일정");
-  // 날짜를 누르면 그날 일정을 modal 로 엽니다.
+  // 날짜를 누르면 그날 타임라인을 modal 로 엽니다. 막대에는 멤버와 일정 이름이 있고 시각 글자는 왼쪽 눈금뿐입니다.
   await page.locator(".calview .cell").filter({ has: page.locator(".ev") }).first().click();
-  await expect(page.getByRole("dialog")).toContainText("18:00–22:00");
+  const bar = page.getByRole("dialog").locator(".offtl .evb").first();
+  await expect(bar).toContainText(E2E_ACCOUNT.name);
+  await expect(bar).toContainText("불가능 일정");
   await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
 
   await page.getByRole("group", { name: "대상 종류" }).getByRole("button", { name: "팀" }).click();
   await page.getByRole("button", { name: "팀 선택" }).click();
   await page.getByRole("dialog", { name: "팀 선택" }).getByRole("button", { name: E2E_TEAM }).click();
-  // 칸에는 빠지는 팀원 이름을 쓰고, 칸을 누르면 그날 상세를 modal 로 엽니다.
-  const cell = page.getByRole("button", { name: new RegExp(`불가능 팀원 ${E2E_ACCOUNT.name}`) }).first();
-  await cell.click();
-  await expect(page.getByRole("dialog")).toContainText(E2E_ACCOUNT.name);
-  await expect(page.getByRole("dialog")).toContainText("2명 중 1명");
+  // 달 보기 칸에는 빠지는 팀원 이름을 쓰고, 누르면 그날 타임라인을 modal 로 엽니다. 일정이 있는 팀원 열만 그립니다.
+  await page.getByRole("button", { name: new RegExp(`불가능 팀원 ${E2E_ACCOUNT.name}`) }).first().click();
+  await expect(page.getByRole("dialog").locator(".offtl .lane")).toHaveCount(1);
+  await expect(page.getByRole("dialog").locator(".offtl .evb")).toContainText(E2E_ACCOUNT.name);
+  await page.getByRole("dialog").getByRole("button", { name: "닫기" }).click();
+  // 주 보기는 빠지는 팀원 구성이 같은 연속 시간을 블록 하나로 묶습니다. 내일이 든 주로 이동해 확인합니다.
+  await page.getByRole("group", { name: "레이아웃 변경" }).getByRole("button", { name: "주" }).click();
+  if (!(await page.locator(".hb").filter({ hasText: E2E_ACCOUNT.name }).count())) await page.getByRole("button", { name: "다음 주" }).click();
+  await expect(page.locator(".hb").filter({ hasText: E2E_ACCOUNT.name })).toHaveCount(1);
 });
 
 // 다른 멤버의 불가능 일정은 반려 사유를 적어 삭제하고, 그 멤버에게 사유가 알림으로 갑니다.

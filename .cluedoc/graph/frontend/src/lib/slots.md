@@ -19,7 +19,6 @@ flowchart LR
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_slots
   frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_lib_slots
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_lib_slots
-  frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_lib_slots
 ```
 
 ## imports
@@ -36,4 +35,3 @@ flowchart LR
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
 - [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
-- [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]

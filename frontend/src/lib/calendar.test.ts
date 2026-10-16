@@ -13,6 +13,7 @@ import {
   withPastTaken,
   acceptsDrag,
   monthCells,
+  weekShiftFor,
   roomBounds,
   hourLabel,
   clockEndLabel,
@@ -459,5 +460,15 @@ describe("hourLabel — 정시 표기", () => {
   it("한 자리 시도 두 자리로 적는다", () => {
     expect(hourLabel(9)).toBe("09:00");
     expect(hourLabel(23)).toBe("23:00");
+  });
+});
+
+describe("weekShiftFor — 날짜가 든 주로 가는 주 보기 이동량", () => {
+  it("그 달 15일이 든 주는 0, 앞뒤 주는 음수와 양수다", () => {
+    // 2026-10-15 는 목요일이고 그 주는 10/11(일)~10/17(토)입니다.
+    expect(weekShiftFor(2026, 9, "2026-10-11")).toBe(0);
+    expect(weekShiftFor(2026, 9, "2026-10-17")).toBe(0);
+    expect(weekShiftFor(2026, 9, "2026-10-01")).toBe(-2);
+    expect(weekShiftFor(2026, 9, "2026-10-31")).toBe(2);
   });
 });

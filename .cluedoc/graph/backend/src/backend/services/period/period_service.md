@@ -17,6 +17,7 @@ flowchart LR
   backend_src_backend_services_period_period_service --> backend_src_backend_services_period_period_input["period_input.py"]
   backend_src_backend_services_period_period_service --> backend_src_backend_services_settings_pipeline["pipeline.py"]
   backend_src_backend_services_period_pipeline["pipeline.py"] --> backend_src_backend_services_period_period_service
+  backend_tests_unit_test_record_points["test_record_points.py"] --> backend_src_backend_services_period_period_service
 ```
 
 ## imports
@@ -31,9 +32,11 @@ flowchart LR
 ## imported by
 
 - [[graph/backend/src/backend/services/period/pipeline|pipeline.py]]
+- [[graph/backend/tests/unit/test_record_points|test_record_points.py]]
 
 ## 함수와 호출
 
+- `record_points`
 - `assign_period`: `backend.scheduling.pipeline`
 - `schedule_report`: `backend.scheduling.pipeline`
 - `stored_report`: `backend.db.pipeline`, `backend.services.period.period_crud_service`

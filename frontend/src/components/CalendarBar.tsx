@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 
-import { currentMonth, weekKeys, weekLabel } from "../lib/calendar";
+import { currentMonth, dayKey, weekKeys, weekLabel, weekShiftFor } from "../lib/calendar";
 import { NavButton } from "./controls";
 import "../styles/calendar.css";
 
@@ -18,11 +18,11 @@ export type CalendarCursor = {
   shift: (step: number) => void;
 };
 
-/** 달력의 표시 위치입니다. 달을 이동하면 주 보기는 그 달 15일이 포함된 주로 돌아갑니다. */
+/** 달력의 표시 위치입니다. 주 보기는 처음에 오늘이 든 주이고, 달을 이동하면 그 달 15일이 포함된 주로 돌아갑니다. */
 export function useCalendarCursor(): CalendarCursor {
   const [week, setWeek] = useState(false);
   const [cursor, setCursor] = useState(currentMonth);
-  const [weekShift, setWeekShift] = useState(0);
+  const [weekShift, setWeekShift] = useState(() => weekShiftFor(cursor.year, cursor.month, dayKey(new Date())));
   const shift = (step: number) => {
     if (week) {
       setWeekShift(weekShift + step);
