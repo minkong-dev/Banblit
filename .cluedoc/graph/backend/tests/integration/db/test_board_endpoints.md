@@ -80,3 +80,6 @@ flowchart LR
 - `test_another_member_cannot_read_my_draft`
 - `test_writing_a_notice_draft_needs_the_permission`
 - `test_stale_drafts_are_swept_but_fresh_ones_stay`: `backend.services.board.pipeline`
+- `_reader`: `backend.db.models`
+- `test_board_read_all_reads_a_team_board_without_membership`
+- `test_board_read_all_does_not_allow_writing_on_a_team_board`

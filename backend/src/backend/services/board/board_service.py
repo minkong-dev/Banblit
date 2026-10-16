@@ -20,8 +20,9 @@ def _get_post_or_raise(session: Session, post_id: int) -> Post:
     return post
 
 
-def require_post_readable(session: Session, post_id: int, requester: Member) -> Post:
+def require_post_readable(session: Session, post_id: int, requester: Member, *, any_team: bool = False) -> Post:
     """post_id 의 게시글을 반환합니다. 팀 게시판 게시글이면 requester 가 해당 팀 소속이어야 합니다.
+    any_team 이 True 이고 requester 가 board_read_all 을 가지면 팀 소속을 확인하지 않습니다.
 
     공지사항(team_id 가 None 인 경우)은 로그인한 사람 누구나 읽으므로 팀 소속을 확인하지 않습니다.
     """
@@ -32,13 +33,17 @@ def require_post_readable(session: Session, post_id: int, requester: Member) -> 
     if post.published_at is None and post.author_id != requester.id:
         # 아직 쓰는 중인 초안입니다. 쓰는 사람만 봅니다.
         raise PermissionError("존재하지 않는 글이에요")
-    if post.team_id is not None:
+    if post.team_id is not None and not (any_team and _reads_all(session, requester)):
         require_team_member(session, post.team_id, requester.id)
     return post
 
 
 def _moderates(session: Session, requester: Member) -> bool:
     return "board_moderate" in account_permissions(session, requester.id)
+
+
+def _reads_all(session: Session, requester: Member) -> bool:
+    return "board_read_all" in account_permissions(session, requester.id)
 
 
 def delete_post_row(session: Session, post: Post) -> None:
@@ -225,7 +230,8 @@ def sweep_stale_drafts(session: Session, older_than: datetime) -> int:
 
 def list_team_posts(session: Session, team_id: int, requester: Member) -> list[PostRow]:
     get_team_or_raise(session, team_id)
-    require_team_member(session, team_id, requester.id)
+    if not _reads_all(session, requester):
+        require_team_member(session, team_id, requester.id)
     return _posts_with_author_and_count(session, team_id=team_id)
 
 
@@ -260,7 +266,7 @@ def get_post_with_comments(
     session: Session, post_id: int, requester: Member
 ) -> tuple[Post, str, list[CommentRow]]:
     """게시글 하나(작성자 이름 포함)와 댓글 목록(생성된 순서대로, 작성자 이름 포함)을 반환합니다."""
-    post = require_post_readable(session, post_id, requester)
+    post = require_post_readable(session, post_id, requester, any_team=True)
     post_author = session.scalar(select(Member.name).where(Member.id == post.author_id)) or ""
 
     comment_rows = session.execute(

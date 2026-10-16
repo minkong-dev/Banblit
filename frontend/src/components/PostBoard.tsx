@@ -59,12 +59,14 @@ export function PostDetail(props: {
   authorId: number | null;
   /** board_moderate 권한 여부. 다른 사용자의 글·댓글·attachment 에도 삭제 버튼이 표시됩니다. */
   canModerate: boolean;
+  /** false 이면 댓글 입력칸을 표시하지 않습니다. 기본값은 true 입니다. */
+  canComment?: boolean;
   /** 글 삭제 후 갱신해야 하는 목록의 queryKey 입니다. */
   listKey: readonly unknown[];
   heading: RefObject<HTMLHeadingElement | null>;
   onBack: () => void;
 }) {
-  const { postId, authorId, canModerate, listKey, heading, onBack } = props;
+  const { postId, authorId, canModerate, canComment = true, listKey, heading, onBack } = props;
   const [editing, setEditing] = useState(false);
   const detail = useQuery({
     queryKey: postKey(postId),
@@ -125,7 +127,7 @@ export function PostDetail(props: {
         )}
       </div>
 
-      <CommentForm postId={post.id} authorId={authorId} />
+      {canComment ? <CommentForm postId={post.id} authorId={authorId} /> : null}
 
       {!editing ? null : (
         <EditPost post={post} listKey={listKey} onClose={() => setEditing(false)} />

@@ -100,7 +100,7 @@ def list_attachments(
     session: Session, post_id: int, requester: Member
 ) -> list[Attachment]:
     """게시글을 읽을 수 있는 requester 에게 그 게시글의 첨부 파일 목록을 반환합니다."""
-    require_post_readable(session, post_id, requester)
+    require_post_readable(session, post_id, requester, any_team=True)
     return attachments_of_post(session, post_id)
 
 
@@ -116,7 +116,7 @@ def attachment_for_download(
 ) -> tuple[Attachment, Path]:
     """게시글을 읽을 수 있는 requester 에게 (Attachment 행, 디스크 경로) 튜플을 반환합니다."""
     attachment = _get_or_raise(session, attachment_id)
-    require_post_readable(session, attachment.post_id, requester)
+    require_post_readable(session, attachment.post_id, requester, any_team=True)
     path = stored_path(attachment.stored_name)
     if not path.is_file():
         raise ValueError("파일을 찾을 수 없어요")

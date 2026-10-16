@@ -147,6 +147,7 @@ export type Permission =
   | "member_expel"
   | "notice_write"
   | "board_moderate"
+  | "board_read_all"
   | "reservation_manage"
   | "unavailable_read"
   | "unavailable_manage"

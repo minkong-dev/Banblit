@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.db.models import Comment, Member, Post, Team, TeamSlot
+from backend.db.models import Comment, Member, MemberPermissionSet, PermissionSet, Post, Team, TeamSlot
 
 # account fixture(테스트마다 준비해 주는 값)를 호출한 순서가 곧 역할입니다. 이 파일의 첫 호출이 헤드매니저입니다.
 from backend.services.board.pipeline import sweep_stale_drafts
@@ -259,6 +259,7 @@ def test_team_posts_read_requires_team_membership(
     api_client: TestClient, db_session: Session, account: AccountFactory
 ) -> None:
     team = _team(db_session, "새벽 네시")
+    account("박서연", "head@example.com")
     _, outsider = account("이도현", "b@example.com")
 
     response = api_client.get(f"/teams/{team.id}/posts", cookies=outsider)
@@ -847,3 +848,60 @@ def test_stale_drafts_are_swept_but_fresh_ones_stay(
     assert removed == 1
     assert db_session.get(Post, old_id) is None
     assert db_session.get(Post, fresh_id) is not None
+
+
+# ===== 소속 없이 모든 팀 게시판 조회 (권한 항목 board_read_all) =====
+# 이 권한은 조회만 엽니다. 글과 댓글 작성은 그 팀 소속만 할 수 있습니다.
+
+
+def _reader(session: Session, member_id: int) -> None:
+    permission_set = PermissionSet(name="게시판 열람", description="", permissions=["board_read_all"])
+    session.add(permission_set)
+    session.flush()
+    session.add(MemberPermissionSet(member_id=member_id, permission_set_id=permission_set.id))
+    session.commit()
+
+
+def test_board_read_all_reads_a_team_board_without_membership(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    team = _team(db_session, "새벽 네시")
+    author_id, author = account("박서연", "a@example.com")
+    _join(db_session, author_id, team)
+    db_session.commit()
+    post_id = api_client.post(
+        f"/teams/{team.id}/posts", json={"title": "제목", "body": "내용"}, cookies=author
+    ).json()["post"]["id"]
+    api_client.post(f"/posts/{post_id}/comments", json={"body": "댓글"}, cookies=author)
+    reader_id, reader = account("이도현", "b@example.com")
+    _reader(db_session, reader_id)
+
+    listed = api_client.get(f"/teams/{team.id}/posts", cookies=reader)
+    detail = api_client.get(f"/posts/{post_id}", cookies=reader)
+    attachments = api_client.get(f"/posts/{post_id}/attachments", cookies=reader)
+
+    assert listed.status_code == 200
+    assert [post["id"] for post in listed.json()["posts"]] == [post_id]
+    assert detail.status_code == 200
+    assert [comment["body"] for comment in detail.json()["comments"]] == ["댓글"]
+    assert attachments.status_code == 200
+
+
+def test_board_read_all_does_not_allow_writing_on_a_team_board(
+    api_client: TestClient, db_session: Session, account: AccountFactory
+) -> None:
+    team = _team(db_session, "새벽 네시")
+    author_id, author = account("박서연", "a@example.com")
+    _join(db_session, author_id, team)
+    db_session.commit()
+    post_id = api_client.post(
+        f"/teams/{team.id}/posts", json={"title": "제목", "body": "내용"}, cookies=author
+    ).json()["post"]["id"]
+    reader_id, reader = account("이도현", "b@example.com")
+    _reader(db_session, reader_id)
+
+    post = api_client.post(f"/teams/{team.id}/posts", json={"title": "제목", "body": "내용"}, cookies=reader)
+    comment = api_client.post(f"/posts/{post_id}/comments", json={"body": "댓글"}, cookies=reader)
+
+    assert post.status_code == 403
+    assert comment.status_code == 403
