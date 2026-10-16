@@ -62,16 +62,20 @@ body[data-page="admin"] {
 
   /* 오른쪽 칸의 스케줄링 기록 목록입니다. 줄 전체가 버튼입니다. 대시보드 오른쪽 목록(scheduler.css .panel li button)과
      같은 모양이고, 표시 중인 스케줄링 기록은 사이드바의 현재 화면과 같이 왼쪽 2px 코랄 선으로 표시합니다. */
+  /* 날짜·점수·확정을 한 줄에 놓고, 기록마다 위아래 여백을 넓게 둡니다(사용자 결정 2026-10-16). */
   .panel .round {
-    display: block; width: 100%; text-align: left;
-    padding: 12px 0; border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px; width: 100%; text-align: left;
+    padding: 20px 0; border-bottom: 1px solid var(--line);
     transition: color .15s ease;
   }
   .panel .round:hover { color: var(--brand-press); }
   .panel .round.on { padding-left: 10px; box-shadow: inset 2px 0 0 var(--brand); }
   .panel .round.on b { font-weight: 700; }
-  .panel .round b { display: block; font-size: 14px; font-weight: 500; }
-  .panel .round small { font-size: 12.5px; color: var(--t3); }
+  .panel .round b { font-size: 14px; font-weight: 500; margin-right: 2px; }
+  /* 점수·확정은 배경색이 있는 뱃지입니다(사용자 결정 2026-10-16). 점수는 코랄, 확정은 초록입니다. */
+  .panel .round .badge { padding: 2px 8px; border-radius: var(--r-pill); font-size: 12px; font-weight: 700; }
+  .panel .round .badge.score { background: var(--brand-tint); color: var(--brand-press); }
+  .panel .round .badge.applied { background: var(--green-tint); color: var(--green); }
   .panel li.empty { padding: 12px 0; font-size: 13.5px; color: var(--t3); line-height: 1.7; }
 
   /* 오른쪽 칸의 계산 시각. 여백은 설정 화면 오른쪽 칸(settings.css .read)과 같은 값입니다. */

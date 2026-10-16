@@ -10,7 +10,7 @@ import { recordsKey, PERIODS_KEY } from "../components/queries";
 import { getJSON, reason } from "../lib/api";
 import { loadRecords } from "../lib/pipeline";
 import { hoursOf, reportLines } from "../lib/assignment";
-import { appliedLabel, checkRunTimes, scoreLabel, slotCountLabel } from "../lib/runs";
+import { appliedLabel, checkRunTimes, scoreLabel } from "../lib/runs";
 import { say } from "../components/toast";
 import { LOADING_TEXT, loadState } from "../lib/loading";
 import type { Period, ScheduleReport } from "../lib/contract";
@@ -245,9 +245,8 @@ export function PastRunsPanel({ periodId, canView, roundAt, onSelect }: {
             onClick={() => onSelect(record.saved_at)}
           >
             <b>{stampLabel(record.saved_at)}</b>
-            <small>{slotCountLabel(record.slot_count)}</small>
-            {record.score === null ? null : <small>{scoreLabel(record.score)}</small>}
-            {record.applied_at === null ? null : <small>{appliedLabel(record.applied_at)}</small>}
+            {record.score === null ? null : <span className="badge score">{scoreLabel(record.score)}</span>}
+            {record.applied_at === null ? null : <span className="badge applied">{appliedLabel(record.applied_at)}</span>}
           </button>
         </li>
       ));

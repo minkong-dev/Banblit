@@ -1,16 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { appliedLabel, checkRunTimes, scoreLabel, slotCountLabel } from "./runs";
-
-describe("slotCountLabel", () => {
-  test("칸 수를 사람이 읽는 말로 바꾼다", () => {
-    expect(slotCountLabel(48)).toBe("48건");
-  });
-
-  test("한 칸도 없는 배정기록은 비어 있다고 말한다", () => {
-    expect(slotCountLabel(0)).toBe("빈 배정기록");
-  });
-});
+import { appliedLabel, checkRunTimes, scoreLabel } from "./runs";
 
 describe("checkRunTimes", () => {
   test("서로 다른 두 시각은 통과한다", () => {
@@ -30,10 +20,8 @@ describe("checkRunTimes", () => {
 });
 
 describe("scoreLabel", () => {
-  test("점수 4항목을 우선순위 순서로 적는다", () => {
-    expect(scoreLabel({ fewest: 2, sessions: 6, absences: 1, joined: 3 })).toBe(
-      "팀 최소 2회 · 전체 6회 · 불참 1회 · 연속 3쌍",
-    );
+  test("100점 만점 점수만 적는다", () => {
+    expect(scoreLabel({ fewest: 2, sessions: 6, absences: 1, joined: 3, points: 92 })).toBe("92점");
   });
 
   test("점수가 없으면 빈 문자열이다", () => {
