@@ -182,7 +182,7 @@ function PeriodFields(props: {
           </Cell>
           </div>
           <div className="frow">
-          {/* 빈칸이면 서버가 목표를 자동으로 조정합니다(사용자 결정 2026-10-12). 목표값이라 자동값을 미리 표시하지 않습니다(사용자 결정 2026-10-16). */}
+          {/* 빈칸이면 서버가 목표를 자동으로 조정합니다(사용자 결정 2026-10-12). */}
           <Cell label="팀당 목표 시간" htmlFor={at("target")}>
             <input
               id={at("target")}

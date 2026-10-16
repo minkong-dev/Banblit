@@ -158,7 +158,7 @@ function WeekHeat({ dayKeys, times, ids, open, close, nameOf, onPick }: HeatArgs
   const hours = Array.from({ length: close - open }, (_, i) => open + i);
   const runs = offRunsByDay(times, ids, dayKeys, open, close);
   // grid 의 1행은 요일 머리, 2행부터 open 시입니다. 열 1은 시각, 열 2부터 일요일입니다.
-  // 블록이 행·열을 지정하므로 격자 칸도 전부 지정합니다. 자동 배치에 맡기면 블록이 먼저 차지한 칸을 피해 밀립니다.
+  // 블록이 행과 열을 지정하므로 격자 칸도 전부 행과 열을 지정합니다. 지정하지 않으면 격자 칸이 블록을 피해 밀립니다.
   const rowOf = (hour: number) => hour - open + 2;
   return (
     <div className="heatweek" aria-label="요일별 시간별 불가능 팀원" style={{ "--rows": hours.length } as CSSProperties}>
@@ -219,8 +219,7 @@ function MonthHeat({ year, month, times, ids, open, close, nameOf, onPick }: Hea
   );
 }
 
-/** 하루 타임라인 modal 입니다. 왼쪽에 시각, 멤버마다 한 열이고 그날 일정이 있는 멤버 열만 그립니다.
- *  막대의 위치와 길이가 시간을 나타내므로 글자로는 멤버, 일정 이름, 사유만 씁니다. */
+/** 하루 타임라인 modal 입니다. 그날 일정이 있는 멤버마다 열 1개이고, 막대에는 멤버, 일정 이름, 사유만 표시합니다. */
 function DayModal({ day, lanes, open, close, onClose }: {
   day: string; lanes: { label: string; items: MemberUnavailable[] }[]; open: number; close: number; onClose: () => void;
 }) {
