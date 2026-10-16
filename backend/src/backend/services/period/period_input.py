@@ -8,7 +8,6 @@ from backend.scheduling.pipeline import Team as EngineTeam
 from backend.scheduling.pipeline import TimeInterval, day_window, generate_slots
 
 DAY = timedelta(days=1)
-WEEK = timedelta(days=7)
 # 반복을 전개할 때 시작일로부터 계산할 최대 기간입니다. 고른 요일이 없거나 종료일이 잘못 들어와도
 # 무한히 돌지 않게 하는 상한입니다. 5년이면 이 서비스의 어떤 조회 범위보다 넓습니다.
 MAX_REPEAT_SPAN = timedelta(days=365 * 5)

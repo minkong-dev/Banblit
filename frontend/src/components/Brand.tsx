@@ -1,4 +1,4 @@
-// 로고입니다. CI 가이드(public/CI/BANBLIT_CI_GUIDE.pdf) 02 LOCKUP 의 A(수평)이고,
+// 로고입니다. CI 가이드(docs/BANBLIT_CI_GUIDE.pdf) 02 LOCKUP 의 A(수평)이고,
 // 심볼 파일과 워드마크 글자를 함께 그립니다.
 //
 // 담는 상자는 이 부품이 만들지 않습니다. 상단바·계정 화면·랜딩 화면이 각자 다른 크기와 색으로
