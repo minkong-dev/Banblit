@@ -545,9 +545,12 @@ def test_records_list_each_round_newest_first(
     """적용할 기록을 고르는 목록입니다. 저장 시각, 칸 수, 확정 시각, 지금의 불가능 일정으로 매긴 점수를 최신순으로 반환합니다."""
     period_id = _period(db_session)
     team = Team(name="A")
+    member = Member(name="김민수")
     room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
-    db_session.add_all([team, room])
+    db_session.add_all([team, member, room])
     db_session.flush()
+    # 보고와 점수는 멤버가 있는 팀만 계산합니다(every_team_and_room).
+    seat(db_session, team.id, member.id)
     db_session.add_all(
         [
             AssignmentBackup(
@@ -605,9 +608,12 @@ def test_backup_round_shows_the_schedule_of_that_round(
     """배정기록을 누르면 그때의 시간표가 나옵니다 — 다른 배정기록의 칸은 섞이지 않습니다."""
     period_id = _period(db_session)
     team = Team(name="A")
+    member = Member(name="김민수")
     room = Room(name="1번방", opens_at=time(18, 0), closes_at=time(23, 0))
-    db_session.add_all([team, room])
+    db_session.add_all([team, member, room])
     db_session.flush()
+    # 보고와 점수는 멤버가 있는 팀만 계산합니다(every_team_and_room).
+    seat(db_session, team.id, member.id)
     db_session.add_all(
         [
             AssignmentBackup(

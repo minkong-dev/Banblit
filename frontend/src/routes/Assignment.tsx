@@ -53,7 +53,7 @@ function useShownSchedule(activePeriodId: number | null, roundAt: string | null)
   const roundSessions = useMemo(() => sessionsOfRows(roundRows), [roundRows]);
   const shown = roundAt !== null ? roundSessions : confirmed;
   const report = (roundAt !== null ? round.data?.report : schedule.data?.report) ?? null;
-  return { schedule, rows, round, confirmed, shown, report };
+  return { schedule, round, confirmed, shown, report };
 }
 
 /** 스케줄링 연산과 기록 적용 요청입니다. 둘 다 성공하면 현재 배정안, 기록 목록, 기록 결과 설명을 다시 조회합니다.
@@ -124,17 +124,12 @@ export function Assignment() {
 
   // 선택한 스케줄링 기록입니다. view 값 하나를 사용하므로 달력, 아래 설명, 탭이 값 하나로 결정됩니다.
   const roundAt = view.kind === "round" ? view.at : null;
-  const { schedule, rows, round, confirmed, shown, report } = useShownSchedule(activePeriodId, roundAt);
+  const { schedule, round, confirmed, shown, report } = useShownSchedule(activePeriodId, roundAt);
 
-  // 확정된 시간표에 나온 id를 재계산에 그대로 넘깁니다. 아직 아무것도 확정되지 않았으면
-  // 목록 endpoint(API의 요청 주소 단위)가 준 전체를 사용합니다.
-  const uniqueSorted = (values: number[]) => [...new Set(values)].sort((a, b) => a - b);
-  const teamIds = rows.length
-    ? uniqueSorted(rows.map((row) => row.team_id))
-    : (teams.data?.teams ?? []).map((team) => team.id);
-  const roomIds = rows.length
-    ? uniqueSorted(rows.map((row) => row.room_id))
-    : (rooms.data?.rooms ?? []).map((room) => room.id);
+  // 자동 배정(jobs/auto_assign.py)과 같이 멤버가 있는 전체 팀과 전체 합주실을 계산에 넣습니다. 확정된 배정안에
+  // 나온 팀만 넣으면 그 뒤에 만든 팀과 합주실은 다시 계산해도 배정받지 못합니다. 멤버가 없는 팀이 들어가면 서버가 계산 전체를 거절합니다.
+  const teamIds = (teams.data?.teams ?? []).filter((team) => team.filled_count > 0).map((team) => team.id);
+  const roomIds = (rooms.data?.rooms ?? []).map((room) => room.id);
 
   const { recompute, confirm } = useRunAndApply(activePeriodId, roundAt, canConfirm, setView);
 
@@ -150,7 +145,7 @@ export function Assignment() {
   // 계산 권한(assign_run)이 없으면 버튼 줄 자체를 표시하지 않습니다.
   const actions = !canRun ? null : (
     <div className="act">
-      <Button kind="go" pending={recompute.isPending} pendingLabel="스케줄링 진행 중…" disabled={activePeriodId === null}
+      <Button kind="go" pending={recompute.isPending} pendingLabel="스케줄링 진행 중…" disabled={activePeriodId === null || teamIds.length === 0 || roomIds.length === 0}
         onClick={() => recompute.mutate({ team_ids: teamIds, room_ids: roomIds })}>
         스케줄링
       </Button>

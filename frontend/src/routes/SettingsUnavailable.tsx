@@ -70,10 +70,10 @@ export function UnavailableCards() {
       <div className="roster unavail">
         {/* 캘린더 보기의 대상 선택 줄(.unavbar)과 같은 높이, 같은 자리에 둡니다. */}
         <div className="unavbar">
-          <label className="pickfield">
+          <div className="pickfield">
             <SearchIcon aria-hidden="true" />
             <SearchInput label="멤버 이름" value={keyword} placeholder="멤버 이름으로 찾기" onChange={setKeyword} />
-          </label>
+          </div>
         </div>
 
         {list.isError ? <Empty text={reason(list.error)} /> : null}
