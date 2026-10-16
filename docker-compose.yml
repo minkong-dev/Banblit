@@ -10,14 +10,15 @@ x-backend-image: &backend-image
   image: banblit-backend:prod
 
 x-database-url: &database-url postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+# container 시간대입니다. 시각에 시간대를 붙이지 않으므로 이 값이 기준이고, 모든 service 가 같은 값이어야 합니다.
+x-tz: &tz ${TZ:-Asia/Seoul}
 
 services:
   api:
     <<: *backend-image
     environment:
       DATABASE_URL: *database-url
-      # container 시간대입니다. 이 저장소는 시각에 시간대를 붙이지 않으므로(CLAUDE.md 6장) 이 값이 기준입니다.
-      TZ: ${TZ:-Asia/Seoul}
+      TZ: *tz
       # 로그인 session cookie 의 Secure 입니다. 배포는 https 이므로 true, 개발용 override 가 false 로 덮어씁니다.
       COOKIE_SECURE: "true"
       # api 앞의 reverse proxy 개수입니다. 배포는 caddy, web(nginx), api 순서이므로 2, 개발용 override 가 1로 덮어씁니다.
@@ -37,6 +38,13 @@ services:
     volumes:
       # 게시판 첨부파일입니다. 경로는 위 ATTACHMENT_DIR 과 같은 값이어야 합니다.
       - banblit-attachments:${ATTACHMENT_DIR:-/var/lib/banblit/attachments}
+    # /health 가 DB 연결까지 확인합니다. 실패하면 unhealthy 입니다.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     depends_on:
       db:
         condition: service_healthy
@@ -50,7 +58,7 @@ services:
     environment:
       DATABASE_URL: *database-url
       # api 와 같은 시간대여야 합니다. 다르면 지정한 시각과 다른 시각에 배정이 실행됩니다.
-      TZ: ${TZ:-Asia/Seoul}
+      TZ: *tz
       AUTO_ASSIGN_ENABLED: "${AUTO_ASSIGN_ENABLED:-true}"
       AUTO_ASSIGN_INTERVAL_SECONDS: "${AUTO_ASSIGN_INTERVAL_SECONDS:-60}"
     # 확인 1회가 끝날 때마다 jobs/auto_assign.py 가 heartbeat 파일을 갱신합니다. 확인 간격의 3배 동안 갱신이 없으면 unhealthy 입니다.
@@ -79,11 +87,12 @@ services:
       API_ORIGIN: http://api:8000
       # 이 값이 없으면 nginx 가 설정 파일의 $$uri, $$host 까지 빈 값으로 치환합니다.
       NGINX_ENVSUBST_FILTER: "^API_ORIGIN$$"
-    # 외부 요청은 caddy 만 받습니다. localhost 로 묶어 서버 안에서 SSH 로 확인할 수 있게 둡니다.
+    # 127.0.0.1 에만 bind 합니다. 외부 요청은 caddy 가 받고, 서버 안에서 curl 로 확인합니다.
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:80"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     restart: unless-stopped
 
   # reverse proxy 입니다. 인증서를 자동으로 받고 갱신하며 https 로 요청을 받습니다. 설정은 deploy/Caddyfile 입니다.
@@ -116,7 +125,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB: ${POSTGRES_DB}
       PGPASSWORD: ${POSTGRES_PASSWORD}
-      TZ: ${TZ:-Asia/Seoul}
+      TZ: *tz
       BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-6}
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
     volumes:
@@ -124,19 +133,27 @@ services:
       # 백업 파일은 volume 이 아니라 host 폴더에 저장합니다.
       - ${BACKUP_DIR:-./backups}:/backups
       - banblit-attachments:/attachments:ro
+    # 백업 1회가 성공할 때마다 deploy/backup.sh 가 /tmp/backup-ok 를 갱신합니다. 백업 간격의 2배 동안 갱신이 없으면 unhealthy 입니다.
+    healthcheck:
+      test: ["CMD-SHELL", "test -n \"$(find /tmp/backup-ok -mmin -$((BACKUP_INTERVAL_HOURS * 120)) 2>/dev/null)\""]
+      interval: 10m
+      timeout: 10s
+      retries: 1
+      # 첫 백업이 끝나기 전에는 파일이 없으므로 세지 않습니다.
+      start_period: 1h
     depends_on:
       db:
         condition: service_healthy
     restart: unless-stopped
 
-  # 데이터베이스입니다. host 포트를 열지 않습니다(이 PC 의 다른 PostgreSQL 과 5432 충돌). 접속은 container 내부망(db:5432)으로만 합니다.
+  # 데이터베이스입니다. host 포트를 열지 않고 container 내부망(db:5432)으로만 접속합니다.
   db:
     image: postgres:17
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      TZ: ${TZ:-Asia/Seoul}
+      TZ: *tz
     volumes:
       - banblit-db-data:/var/lib/postgresql/data
     healthcheck:

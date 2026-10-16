@@ -1,7 +1,7 @@
-# 컨테이너 안에서 도는 shell script 는 줄바꿈을 LF 로 고정한다.
-# Windows 에서 클론하면 git 이 CRLF 로 바꾸는데, 그 파일을 리눅스 컨테이너가 실행하면
-# 첫 줄의 `#!/bin/sh\r` 을 그런 실행 파일이 없다며 거절한다.
+# shell script 의 줄바꿈을 LF 로 지정합니다. CRLF 이면 리눅스 container 가 첫 줄의 #!/bin/sh\r 을 실행하지 못합니다.
 *.sh text eol=lf
+# 확장자가 없는 git hook 도 shell script 입니다.
+.githooks/* text eol=lf
 
-# PowerShell 은 Windows 에서만 돈다. CRLF 로 둔다.
+# PowerShell script 의 줄바꿈을 CRLF 로 지정합니다.
 *.ps1 text eol=crlf
