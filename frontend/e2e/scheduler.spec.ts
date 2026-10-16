@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { E2E_ACCOUNT, dateParts, dayFromToday, findFocusedPeriods, weekdayKr } from "./helpers";
+import { E2E_ACCOUNT, E2E_TEAM, dateParts, dayFromToday, findFocusedPeriods, weekdayKr } from "./helpers";
 
 test("달력이 실제 데이터로 그려진다", async ({ page }) => {
   // global-setup 이 오늘 날짜에 배정을 저장하므로 달력을 넘기지 않아도 그 칸이 이번 달에 있습니다.
@@ -172,4 +172,14 @@ test("날짜 dialog 의 타임라인은 처음에 가장 이른 일정을 보여
   await page.locator("dialog[open]").getByRole("button", { name: "닫기" }).click();
   await cell.click();
   await expect(block).toBeInViewport();
+});
+
+test("대시보드의 내 팀을 누르면 그 팀 게시판으로, 로고를 누르면 대시보드로 이동한다", async ({ page }) => {
+  await page.goto("/scheduler");
+  await page.locator(".teamrow", { hasText: E2E_TEAM }).click();
+  await expect(page).toHaveURL(/\/board\/\d+$/);
+  await expect(page.locator(".sethead b")).toHaveText(E2E_TEAM);
+
+  await page.getByRole("link", { name: "banblit 홈" }).click();
+  await expect(page).toHaveURL(/\/scheduler$/);
 });

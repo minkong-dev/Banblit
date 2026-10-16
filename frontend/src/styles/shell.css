@@ -29,7 +29,7 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   /* CI 가이드 02 LOCKUP 의 A(수평)입니다. 심볼 높이 = 워드마크 대문자 높이 × 2.4 이고,
      심볼 둘레에는 심볼 높이 × 0.35 만큼의 여백을 둡니다(06 CLEAR SPACE). gap 과 margin-right 가
      그 여백입니다. 심볼은 기본형이고, 최소 크기 24px 보다 큰 30px 로 그립니다. */
-  .logo { display: flex; align-items: center; gap: 11px; margin-right: auto; padding-left: 2px; }
+  .logo { display: flex; align-items: center; gap: 11px; margin-right: auto; padding-left: 2px; color: inherit; text-decoration: none; }
   .logo .mark { width: 36px; height: 30px; flex: none; }
   /* 워드마크입니다. 글꼴은 Fredoka 뿐이고 대체 글꼴을 두지 않습니다 — 다른 글꼴로 그려진
      워드마크는 CI 위반입니다(base.css 의 @font-face 가 font-display: block 입니다). */
@@ -111,21 +111,24 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   :is(.side, .drawer) .cap { font-size: var(--fs-xs); font-weight: 500; letter-spacing: .08em; color: var(--t3); }
   :is(.side, .drawer) .sep { border-top: 1px solid var(--line); }
 
-  /* 휴대폰 메뉴 판입니다(Material Design 모달 드로어). 왼쪽에서 밀려 나오고 뒤는 어두워집니다.
-     popover 의 기본 배치(화면 가운데)를 왼쪽 끝 세로 전체로 바꿉니다. */
+  /* 휴대폰 메뉴 판입니다(Material Design 모달 드로어). .drawer 는 화면 전체를 덮어 판 바깥을 누른 click 을 받고,
+     .sheet 가 왼쪽에서 밀려 나오는 판입니다. */
   .menubtn { display: none; }
   .drawer {
-    position: fixed; inset: 0 auto 0 0; margin: 0;
-    width: min(300px, 84vw); height: 100dvh; max-height: none;
-    padding: 64px 14px 20px; border: none; border-radius: 0 20px 20px 0;
-    display: flex; flex-direction: column; gap: 18px; overflow-y: auto;
-    background: var(--card); color: var(--t1); box-shadow: var(--shadow-up);
-    transform: translateX(-100%);
-    transition: transform .22s cubic-bezier(.22,1,.36,1), overlay .22s allow-discrete, display .22s allow-discrete;
+    position: fixed; inset: 0; margin: 0; padding: 0; border: none;
+    width: 100%; height: 100dvh; max-width: none; max-height: none; background: transparent;
+    transition: overlay .22s allow-discrete, display .22s allow-discrete;
   }
   .drawer:not(:popover-open) { display: none; }
-  .drawer:popover-open { transform: none; }
-  @starting-style { .drawer:popover-open { transform: translateX(-100%); } }
+  .drawer .sheet {
+    position: relative; width: min(300px, 84vw); height: 100%;
+    padding: 64px 14px 20px; border-radius: 0 20px 20px 0;
+    display: flex; flex-direction: column; gap: 18px; overflow-y: auto;
+    background: var(--card); color: var(--t1); box-shadow: var(--shadow-up);
+    transform: translateX(-100%); transition: transform .22s cubic-bezier(.22,1,.36,1);
+  }
+  .drawer:popover-open .sheet { transform: none; }
+  @starting-style { .drawer:popover-open .sheet { transform: translateX(-100%); } }
   .drawer::backdrop { background: rgba(10,14,20,.45); }
   .drawer .x { position: absolute; top: 12px; right: 12px; width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px; color: var(--t2); }
   .drawer .x svg { width: 22px; height: 22px; }

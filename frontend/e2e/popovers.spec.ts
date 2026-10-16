@@ -86,3 +86,26 @@ test("프로필 사진 변경 popover 가 닫히면 초점이 여는 버튼으�
   await expect(menu).toBeHidden();
   await expect(trigger).toBeFocused();
 });
+
+test.describe("휴대폰 메뉴", () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+  test("메뉴 바깥을 누르면 메뉴만 닫히고 아래에 있는 버튼은 눌리지 않는다", async ({ page }) => {
+    await page.goto("/scheduler");
+    await page.getByRole("button", { name: "메뉴 열기" }).click();
+    const drawer = page.getByRole("dialog", { name: "메뉴" });
+    await expect(drawer).toBeVisible();
+    // 메뉴 바깥 요소가 받은 click 을 셉니다.
+    await page.evaluate(() => {
+      (window as { outside?: number }).outside = 0;
+      document.addEventListener("click", (event) => {
+        if (!(event.target as HTMLElement).closest(".drawer")) (window as { outside?: number }).outside! += 1;
+      }, true);
+    });
+
+    await page.touchscreen.tap(370, 420);
+
+    await expect(drawer).toBeHidden();
+    expect(await page.evaluate(() => (window as { outside?: number }).outside)).toBe(0);
+  });
+});

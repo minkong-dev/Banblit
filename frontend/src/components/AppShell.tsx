@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useLayoutEffect, useState } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 import { BrandLockup } from "./Brand";
 import { Button, CloseButton, IconButton, MenuItem } from "./controls";
@@ -157,7 +157,7 @@ export function AppShell() {
         <div className="in">
           {/* 휴대폰(767px 이하)에서만 보입니다. 넓은 창에서는 사이드바가 늘 보이므로 CSS 가 숨깁니다. */}
           <IconButton className="menubtn" label="메뉴 열기" icon={<WideMenuIcon />} popoverTarget={MENU_ID} />
-          <div className="logo"><BrandLockup /></div>
+          <Link className="logo" to="/scheduler" aria-label="banblit 홈"><BrandLockup /></Link>
           <ThemeButton />
           <NotificationMenu />
           <ProfileMenu />
@@ -192,19 +192,23 @@ export function AppShell() {
         <div className="page" id={PAGE_ID} tabIndex={-1}><Outlet /></div>
       </div>
 
-      {/* 휴대폰 메뉴 판입니다(Material Design 모달 드로어). popover="auto" 라 바깥을 누르거나 Esc 를 누르면 브라우저가 닫습니다.
-          링크는 popoverTarget 을 걸 수 없어서(버튼만 가능) 링크를 누르면 여기서 닫습니다. */}
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- 링크를 눌렀을 때 판을 닫습니다. 키보드의 Enter 는 click 으로 전달되고 Escape 는 브라우저가 처리합니다. */}
+      {/* 휴대폰 메뉴 판입니다(Material Design 모달 드로어). .drawer 가 화면 전체를 덮으므로 판(.sheet) 바깥을 누른 click 은
+          .drawer 가 받아 판을 닫고, 판 아래 버튼에는 전달되지 않습니다. 링크를 누를 때도 닫습니다. Esc 는 브라우저가 닫습니다. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- 링크와 판 바깥을 눌렀을 때 판을 닫습니다. Escape 는 popover="auto" 가 처리합니다. */}
       <div
         id={MENU_ID}
         popover="auto"
         className="drawer"
         role="dialog"
         aria-label="메뉴"
-        onClick={(event) => { if ((event.target as HTMLElement).closest("a")) event.currentTarget.hidePopover(); }}
+        onClick={(event) => {
+          if (event.target === event.currentTarget || (event.target as HTMLElement).closest("a")) event.currentTarget.hidePopover();
+        }}
       >
-        <CloseButton className="x" label="메뉴 닫기" popoverTarget={MENU_ID} popoverTargetAction="hide" />
-        <MenuItems nav={nav} managerNav={managerNav} />
+        <div className="sheet">
+          <CloseButton className="x" label="메뉴 닫기" popoverTarget={MENU_ID} popoverTargetAction="hide" />
+          <MenuItems nav={nav} managerNav={managerNav} />
+        </div>
       </div>
 
       <div className={toast ? "toast on" : "toast"} role="status" aria-live="polite">
