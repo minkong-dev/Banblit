@@ -9,7 +9,7 @@ set -eu
 INTERVAL_HOURS="${BACKUP_INTERVAL_HOURS:-6}"
 KEEP_DAYS="${BACKUP_KEEP_DAYS:-14}"
 # pg_dump 와 tar 1회의 제한 시간(초)입니다. 초과하면 실패로 처리하고 .part 파일을 삭제합니다.
-STEP_TIMEOUT="${BACKUP_STEP_TIMEOUT:-1800}"
+STEP_TIMEOUT=1800
 OUT=/backups
 ATTACHMENTS=/attachments
 
@@ -50,8 +50,10 @@ fi
 
 while true; do
     stamp=$(date -u +%Y%m%dT%H%M%SZ)
-    dump_db "db-$stamp" || true
-    dump_files "files-$stamp" || true
+    # 2개 모두 성공했을 때만 성공 시각을 갱신합니다. docker-compose.yml 의 backup healthcheck 가 이 파일을 읽습니다.
+    if dump_db "db-$stamp" && dump_files "files-$stamp"; then
+        touch /tmp/backup-ok
+    fi
 
     # KEEP_DAYS 가 지난 백업을 삭제합니다.
     find "$OUT" -name 'db-*.sql.gz' -mtime "+$KEEP_DAYS" -delete

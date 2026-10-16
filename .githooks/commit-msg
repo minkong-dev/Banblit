@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# 커밋 메시지 형식을 검사합니다(CLAUDE.md 7장).
+# 커밋 메시지 형식을 검사합니다. 허용 scope 는 아래 SCOPES 입니다.
 #
 #   <scope>: <imperative summary>
 #

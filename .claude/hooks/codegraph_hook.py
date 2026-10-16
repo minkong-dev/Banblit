@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+# codegraph.py 1회의 제한 시간(초)입니다. 평소 1초 이내입니다.
+TIMEOUT_SECONDS = 20
 
 
 def main() -> int:
@@ -21,9 +23,14 @@ def main() -> int:
         return 0
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
     # -I 는 환경변수를 무시하므로 출력 인코딩은 -X utf8 로 지정합니다.
-    result = subprocess.run([sys.executable, "-I", "-X", "utf8", str(ROOT / "scripts" / "codegraph.py")],
-                            capture_output=True, text=True, encoding="utf-8", errors="replace", env=env)
     sys.stderr.reconfigure(encoding="utf-8")
+    try:
+        result = subprocess.run([sys.executable, "-I", "-X", "utf8", str(ROOT / "scripts" / "codegraph.py")],
+                                capture_output=True, text=True, encoding="utf-8", errors="replace", env=env,
+                                timeout=TIMEOUT_SECONDS)
+    except subprocess.TimeoutExpired:
+        print(f"codegraph 갱신 시간이 초과되었습니다. {TIMEOUT_SECONDS}초 이내에 응답하여야합니다.", file=sys.stderr)
+        return 0
     if result.returncode != 0:
         print(f"codegraph 갱신 실패: {result.stderr.strip()[-300:]}", file=sys.stderr)
     else:

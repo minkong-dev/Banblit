@@ -11,6 +11,9 @@ x-backend-dev: &backend-dev
     - ./backend:/app
 
 x-database-url: &database-url postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+x-tz: &tz ${TZ:-Asia/Seoul}
+# 개발 화면 주소(Vite 개발 서버)입니다.
+x-dev-origin: &dev-origin http://localhost:5173
 
 services:
   api:
@@ -26,7 +29,7 @@ services:
       # SMTP 가 없을 때 메일 본문(재설정 링크)을 기록에 남깁니다. 개발 전용입니다.
       MAIL_LOG_BODY: "true"
       # 재설정 메일에 넣는 사이트 주소입니다. 배포는 .env 의 APP_ORIGIN 을 씁니다.
-      APP_ORIGIN: http://localhost:5173
+      APP_ORIGIN: *dev-origin
     restart: "no"
 
   # 자동 배정입니다. 개발에서는 기본값 false 입니다. 켜져 있으면 테스트가 생성한 기간을 이 service 가 다시 계산해 결과가 달라집니다.
@@ -52,17 +55,19 @@ services:
       - banblit-web-modules:/app/node_modules
     environment:
       # 개발은 build arg 가 없으므로 여기서 지정합니다. 없으면 index.html 에 %VITE_APP_ORIGIN% 문자열이 그대로 남습니다.
-      VITE_APP_ORIGIN: http://localhost:5173
+      VITE_APP_ORIGIN: *dev-origin
     restart: "no"
 
   # 개발 작업용입니다. 테스트와 migration 을 이 service 에서 실행합니다.
+  # profile 이 있어 docker compose up 에는 실행되지 않고, docker compose run --rm dev 로만 실행합니다.
   dev:
     <<: *backend-dev
+    profiles: ["dev"]
     environment:
       DATABASE_URL: *database-url
       # 테스트도 배포와 같은 시간대에서 실행합니다.
-      TZ: ${TZ:-Asia/Seoul}
-      APP_ORIGIN: http://localhost:5173
+      TZ: *tz
+      APP_ORIGIN: *dev-origin
     depends_on:
       db:
         condition: service_healthy
@@ -77,12 +82,12 @@ services:
     command: sh -c "python scripts/reset_e2e_db.py && alembic upgrade head && uvicorn backend.api.app:app --host 0.0.0.0 --port 8000"
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/banblit_e2e
-      TZ: ${TZ:-Asia/Seoul}
+      TZ: *tz
       # dev 서버의 첨부파일 volume 과 분리합니다. container 를 다시 생성하면 함께 삭제됩니다.
       ATTACHMENT_DIR: /tmp/banblit-e2e-attachments
       # 테스트가 전체 권한 계정을 생성할 때 쓰는 값입니다. 같은 값이 frontend/e2e/helpers.ts 에 있습니다.
       ADMIN_SIGNUP_CODE: e2e-admin-code
-      APP_ORIGIN: http://localhost:5173
+      APP_ORIGIN: *dev-origin
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 2s
@@ -110,7 +115,7 @@ services:
       # Vite 개발 서버가 /api 요청을 전달할 주소입니다(frontend/vite.config.ts).
       API_ORIGIN: http://e2e-api:8000
       # 링크 미리보기 태그의 절대 주소입니다. 테스트는 이 값이 치환되었는지만 확인합니다.
-      VITE_APP_ORIGIN: http://localhost:5173
+      VITE_APP_ORIGIN: *dev-origin
     depends_on:
       e2e-api:
         condition: service_healthy
@@ -134,7 +139,7 @@ services:
       - ./docs:/docs
     environment:
       API_ORIGIN: http://e2e-api:8000
-      VITE_APP_ORIGIN: http://localhost:5173
+      VITE_APP_ORIGIN: *dev-origin
     depends_on:
       e2e-api:
         condition: service_healthy

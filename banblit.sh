@@ -108,7 +108,7 @@ health_url() {
   fi
 }
 
-docker_alive() { docker info >/dev/null 2>&1; }
+docker_alive() { timeout 10 docker info >/dev/null 2>&1; }
 
 # 윈도우에서 Docker 엔진이 응답하지 않을 경우 Docker Desktop 을 실행하고 응답할 때까지 기다립니다.
 start_docker_desktop() {
@@ -178,6 +178,13 @@ assert_deploy_env() {
     missing=1
   fi
 
+  if [ -z "$(env_value APP_ORIGIN)" ]; then
+    fail "APP_ORIGIN 값이 비어 있습니다."
+    note "  .env 에 서비스 주소(https://도메인)를 작성해주십시오."
+    note "  비어 있으면 링크 미리보기 주소가 localhost 가 되고, 재설정 메일이 발송되지 않습니다."
+    missing=1
+  fi
+
   if [ -z "$(env_value SMTP_HOST)" ]; then
     note "SMTP_HOST 가 비어 있습니다."
     note "SMTP 정보가 없을 경우 비밀번호 재설정 및 아이디 찾기 진행시,"
@@ -233,7 +240,7 @@ migrate_db() {
   step "migration 을 최신으로 업데이트합니다."
   note "Database 가 정상 응답을 반환할 때까지 기다린 후 업데이트합니다."
   if [ "$MODE" = 'deploy' ]; then
-    "${COMPOSE[@]}" up -d db
+    "${COMPOSE[@]}" up -d --wait db
     backup_db
   fi
   assert_revision_known

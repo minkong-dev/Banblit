@@ -1,53 +1,51 @@
-# CLAUDE.md 8-1: push 제외 대상
+# push 하지 않는 PC 전용 권한 목록입니다.
 .claude/settings.local.json
 
-# 삭제 대신 옮겨두는 곳 (rm 금지 — mv trash/)
+# 파일을 삭제하는 대신 이동하는 폴더입니다. push 하지 않습니다.
 trash/
 
-# CLAUDE.md 8장: 비밀값 — 환경 변수 파일은 절대 포함하지 않는다
+# 비밀값이 들어 있는 환경변수 파일입니다. 비밀값이 없는 견본 .env.example 만 커밋합니다.
 .env
 .env.*
-# 예외: 비밀값 없는 견본 파일은 커밋한다
 !.env.example
 
-# 파이썬 산출물 (가상환경·캐시)
+# Python 가상환경과 cache 입니다.
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
 
-# refactor-audit 스킬이 만드는 임시 검사 결과. 쓰임이 끝나면 trash/ 로 옮긴다.
+# refactoring audit 이 생성하는 검수 화면과 결과 파일입니다. 사용이 끝나면 trash/ 로 이동합니다.
 AUDIT.md
+AUDIT.html
+AUDIT.result.json
 
-# 화면 산출물 (내려받은 꾸러미·빌드 결과)
+# npm package 와 build 결과입니다.
 node_modules/
 frontend/dist/
 
-# TypeScript 증분 빌드 기록. 빌드할 때마다 바뀐다.
+# TypeScript 증분 build 기록입니다. build 할 때마다 변경됩니다.
 frontend/tsconfig.tsbuildinfo
 
-# 브라우저 도구가 만드는 프로필 캐시. 100MB 단위로 커진다.
-.chrome-tmp/
-
-# Playwright 실행 산출물 (실패 화면·추적 파일·보고서)
+# Playwright 실행 결과(실패 화면, 추적 파일, 보고서)입니다.
 frontend/test-results/
 frontend/playwright-report/
-# E2E 계정의 로그인 cookie (frontend/e2e/global-setup.ts 가 실행마다 새로 씀)
+# E2E 계정의 로그인 cookie 입니다. frontend/e2e/global-setup.ts 가 실행마다 생성합니다.
 frontend/playwright/.auth/
 
-# banblit.ps1 check 가 남기는 전체 출력. 판정만 화면에 내고 원문은 여기 쌓인다.
+# banblit.sh check 가 저장하는 pytest, mypy 전체 출력입니다.
 .logs/
 
-# 백업 파일. docker-compose.yml 의 BACKUP_DIR 기본값이 ./backups 라 .env 에 값이 없으면
+# 백업 파일입니다. docker-compose.yml 의 BACKUP_DIR 기본값이 ./backups 라 .env 에 값이 없으면
 # 저장소 안에 생성됩니다. DB 전체와 첨부 파일이 들어 있습니다.
 backups/
 
-# 매뉴얼 캡쳐 계정의 로그인 cookie (frontend/manual/seed.ts 가 실행마다 새로 씀)
+# 매뉴얼 캡처 계정의 로그인 cookie 입니다. frontend/manual/seed.ts 가 실행마다 생성합니다.
 frontend/manual/.auth/
 
-# 매뉴얼 결과물. docker compose --profile manual run --rm manual 이 원고에서 다시 만듭니다(COMMAND.md 15-1).
+# 매뉴얼 결과물입니다. docker compose --profile manual run --rm manual 이 원고에서 다시 생성합니다(COMMAND.md 15-1).
 docs/manual/shots/
 docs/manual/*.pdf
 
-# Obsidian 이 .cluedoc/ 를 vault 로 열 때 만드는 설정 폴더입니다.
+# Obsidian 이 .cluedoc/ 를 vault 로 열 때 생성하는 설정 폴더입니다.
 .cluedoc/.obsidian/
