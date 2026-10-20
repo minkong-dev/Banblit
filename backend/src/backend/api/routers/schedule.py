@@ -16,6 +16,8 @@ from backend.services.period.pipeline import (
     PeriodRun,
     ScheduleReport,
     open_slots_in_period,
+    require_not_closed,
+    require_not_fixed,
     run_period_assignment,
     stored_report,
 )
@@ -175,7 +177,8 @@ def assign_period_schedule(
     jobs: JobRunner[PeriodRun] = Depends(_jobs),
 ) -> JobEnvelopeOut:
     # 팀·합주실 존재 여부나 배정 계산 자체는 접수를 거절할 이유가 아니라 백그라운드 작업의
-    # 실패 원인이므로 compute 안에서 처리합니다.
+    # 실패 원인이므로 compute 안에서 처리합니다. 마감된 기간은 접수부터 거절합니다.
+    require_not_closed(period, datetime.now())
     def compute() -> PeriodRun:
         # 요청을 받은 스레드의 session 을 그대로 전달하지 않습니다. SQLAlchemy Session 은
         # 스레드끼리 공유하면 안 되므로, 백그라운드 스레드 전용 session 을 새로 엽니다.
@@ -263,6 +266,7 @@ def apply_period_record(
     # 합주실·시각 충돌은 ValueError 를 발생시켜 422 로 응답합니다.
     # 확정 시각과 알림 시각을 같은 값으로 남깁니다.
     now = datetime.now()
+    require_not_fixed(period)
     if not apply_record(session, period.id, saved_at, applied_at=now):
         raise ValueError("존재하지 않는 배정기록이에요")
     notify_assignment_updated(session, period.id, now)

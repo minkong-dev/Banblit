@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.services.notification.pipeline import notify_rejected
+from backend.services.period.pipeline import require_unavailable_open
 from backend.services.validation.pipeline import (
     require_reject_reason,
     require_repeat_end,
@@ -71,8 +72,10 @@ def create_unavailable(
     repeat_until: date | None,
     reason: str | None,
     name: str | None,
+    now: datetime,
 ) -> UnavailableTime:
-    """불가능 일정 하나를 생성합니다. 본인 여부, 시작시간과 종료시간의 순서, slot(점유 단위 길이의 시간 칸) 격자, 반복 조건을 검증합니다."""
+    """불가능 일정 하나를 생성합니다. 본인 여부, 시작시간과 종료시간의 순서, slot(점유 단위 길이의 시간 칸) 격자, 반복 조건,
+    now 기준으로 마감된 집중 합주기간에 걸리지 않는지를 검증합니다."""
     _require_self(member_id, requester)
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_repeat_weekdays(repeat_weekdays)
@@ -89,6 +92,7 @@ def create_unavailable(
         reason=(reason or "").strip() or None,
         name=(name or "").strip() or None,
     )
+    require_unavailable_open(session, [row], now)
     session.add(row)
     session.commit()
     return row
@@ -106,6 +110,7 @@ def update_unavailable(
     repeat_until: date | None,
     reason: str | None,
     name: str | None,
+    now: datetime,
 ) -> UnavailableTime:
     """member_id 본인의 불가능 일정 하나를 수정합니다. 검증 항목은 생성과 같습니다.
 
@@ -118,6 +123,16 @@ def update_unavailable(
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     require_repeat_weekdays(repeat_weekdays)
     require_repeat_end(repeat_weekdays, repeat_count, repeat_until)
+    # 저장된 값과 새 값을 함께 검증합니다. 저장된 값이 마감된 기간에 걸리면 기간 밖으로 옮기는 수정도 막습니다.
+    changed = UnavailableTime(
+        member_id=member_id,
+        starts_at=starts_at,
+        ends_at=ends_at,
+        repeat_weekdays=repeat_weekdays or None,
+        repeat_count=repeat_count,
+        repeat_until=repeat_until,
+    )
+    require_unavailable_open(session, [row, changed], now)
 
     row.starts_at = starts_at
     row.ends_at = ends_at
@@ -150,6 +165,7 @@ def reject_unavailable(
     row = session.get(UnavailableTime, time_id, with_for_update=True)
     if row is None or row.member_id != member_id:
         raise ValueError("존재하지 않는 일정이에요")
+    require_unavailable_open(session, [row], rejected_at)
     if row.member_id != requester.id:
         notify_rejected(session, row.member_id, "unavailable", row.starts_at, trimmed, rejected_at)
     session.delete(row)
@@ -157,12 +173,16 @@ def reject_unavailable(
 
 
 def delete_unavailable(
-    session: Session, member_id: int, requester: Member, time_id: int
+    session: Session, member_id: int, requester: Member, time_id: int, now: datetime
 ) -> None:
-    """member_id 본인의 불가능 일정만 삭제합니다. 다른 사용자의 불가능 일정을 지정하면 없는 시간으로 처리합니다."""
+    """member_id 본인의 불가능 일정만 삭제합니다. 다른 사용자의 불가능 일정을 지정하면 없는 시간으로 처리합니다.
+
+    now 기준으로 마감된 집중 합주기간에 걸리는 일정이면 ValueError 입니다.
+    """
     _require_self(member_id, requester)
     row = session.get(UnavailableTime, time_id)
     if row is None or row.member_id != member_id:
         raise ValueError("존재하지 않는 일정이에요")
+    require_unavailable_open(session, [row], now)
     session.delete(row)
     session.commit()

@@ -6,6 +6,7 @@ from backend.services.notification.notification_service import (
     list_notifications,
     mark_all_read,
     notify_assignment_updated,
+    notify_everyone,
     notify_rejected,
     notify_reservations_cancelled,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "list_notifications",
     "mark_all_read",
     "notify_assignment_updated",
+    "notify_everyone",
     "notify_rejected",
     "notify_reservations_cancelled",
 ]

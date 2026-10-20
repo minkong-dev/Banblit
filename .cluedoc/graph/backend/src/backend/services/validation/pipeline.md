@@ -19,6 +19,7 @@ flowchart LR
   backend_src_backend_services_auth_auth_service["auth_service.py"] --> backend_src_backend_services_validation_pipeline
   backend_src_backend_services_auth_password_reset["password_reset.py"] --> backend_src_backend_services_validation_pipeline
   backend_src_backend_services_board_board_service["board_service.py"] --> backend_src_backend_services_validation_pipeline
+  backend_src_backend_services_period_close_service["close_service.py"] --> backend_src_backend_services_validation_pipeline
   backend_src_backend_services_period_ensemble_service["ensemble_service.py"] --> backend_src_backend_services_validation_pipeline
   backend_src_backend_services_period_period_crud_service["period_crud_service.py"] --> backend_src_backend_services_validation_pipeline
   backend_src_backend_services_permission_permission_service["permission_service.py"] --> backend_src_backend_services_validation_pipeline
@@ -43,6 +44,7 @@ flowchart LR
 - [[graph/backend/src/backend/services/auth/auth_service|auth_service.py]]
 - [[graph/backend/src/backend/services/auth/password_reset|password_reset.py]]
 - [[graph/backend/src/backend/services/board/board_service|board_service.py]]
+- [[graph/backend/src/backend/services/period/close_service|close_service.py]]
 - [[graph/backend/src/backend/services/period/ensemble_service|ensemble_service.py]]
 - [[graph/backend/src/backend/services/period/period_crud_service|period_crud_service.py]]
 - [[graph/backend/src/backend/services/permission/permission_service|permission_service.py]]

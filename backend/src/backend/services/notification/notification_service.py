@@ -3,7 +3,8 @@ from datetime import datetime
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from backend.db.models import Assignment, Notification, TeamSlot
+from backend.contract import NotificationKind
+from backend.db.models import Assignment, Member, Notification, TeamSlot
 
 
 def notify_assignment_updated(
@@ -33,6 +34,14 @@ def notify_assignment_updated(
     )
     session.commit()
     return len(member_ids)
+
+
+def notify_everyone(session: Session, kind: NotificationKind, created_at: datetime, reason: str | None = None) -> None:
+    """전체 멤버에게 kind 알림을 1개씩 추가합니다. reason 은 확정 해제 사유입니다. commit 은 부르는 쪽이 합니다."""
+    member_ids = session.scalars(select(Member.id).order_by(Member.id)).all()
+    session.add_all(
+        Notification(member_id=member_id, kind=kind, created_at=created_at, reason=reason) for member_id in member_ids
+    )
 
 
 def notify_reservations_cancelled(session: Session, member_ids: set[int], created_at: datetime) -> None:

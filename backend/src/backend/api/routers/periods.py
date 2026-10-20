@@ -11,7 +11,9 @@ from backend.services.period.pipeline import (
     AssignRuleIn,
     WindowIn,
     delete_period,
+    get_period_or_raise,
     list_periods,
+    unfix_period,
     update_period,
 )
 from backend.services.period.pipeline import (
@@ -36,6 +38,7 @@ from backend.api.schemas import (
     PeriodUpdateIn,
     PracticeWindowIn,
     PracticeWindowOut,
+    UnfixIn,
 )
 from backend.db.models import EnsembleDay, Period
 from backend.db.pipeline import get_session
@@ -123,6 +126,8 @@ def _period_out(period: Period, days: list[EnsembleDay]) -> PeriodOut:
             max_consecutive_hours=period.max_consecutive_hours,
         ),
         ensemble=_ensemble_out(period, days),
+        closes_at=period.closes_at,
+        fixed_at=period.fixed_at,
     )
 
 
@@ -164,6 +169,7 @@ def create_period(
         _window_in(req.practice_window),
         _rule_in(req.assign_rule),
         now=datetime.now(),
+        closes_at=req.closes_at,
     )
     return _envelope(session, period)
 
@@ -191,7 +197,22 @@ def patch_period(
         _window_in(req.practice_window),
         _rule_in(req.assign_rule),
         now=datetime.now(),
+        # 보내지 않은 closes_at 과 null 로 보낸 closes_at 을 구분합니다. 보내지 않으면 저장된 마감 일시를 유지합니다.
+        closes_at=req.closes_at if "closes_at" in req.model_fields_set else "keep",
     )
+    return _envelope(session, period)
+
+
+# 확정 해제는 스케줄링 기록 확정과 같은 권한입니다. 마감 일시도 함께 비워 기간을 다시 엽니다(사용자 결정 2026-10-20).
+@router.post(
+    "/periods/{period_id}/unfix",
+    response_model=PeriodEnvelopeOut,
+    dependencies=[Depends(require_permission("proposal_confirm"))],
+)
+def unfix_period_endpoint(
+    period_id: int, req: UnfixIn, session: Session = Depends(get_session)
+) -> PeriodEnvelopeOut:
+    period = unfix_period(session, get_period_or_raise(session, period_id), req.reason, datetime.now())
     return _envelope(session, period)
 
 

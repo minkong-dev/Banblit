@@ -89,6 +89,7 @@ def create_unavailable_endpoint(
         req.repeat_until,
         req.reason,
         req.name,
+        datetime.now(),
     )
     return UnavailableEnvelopeOut(time=_unavailable_out(row))
 
@@ -118,6 +119,7 @@ def update_unavailable_endpoint(
         req.repeat_until,
         req.reason,
         req.name,
+        datetime.now(),
     )
     return UnavailableEnvelopeOut(time=_unavailable_out(row))
 
@@ -141,4 +143,4 @@ def delete_unavailable_endpoint(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> None:
-    delete_unavailable(session, member_id, requester, time_id)
+    delete_unavailable(session, member_id, requester, time_id, datetime.now())

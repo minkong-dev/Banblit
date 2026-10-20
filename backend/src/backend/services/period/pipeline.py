@@ -5,7 +5,18 @@ from datetime import datetime
 
 from sqlalchemy.orm import Session
 
-from backend.db.pipeline import save_record
+from backend.db.models import Period
+from backend.db.pipeline import apply_record, save_record
+from backend.services.notification.pipeline import notify_everyone
+from backend.services.period.close_service import (
+    is_closed,
+    periods_to_fix,
+    require_naive_close,
+    require_not_closed,
+    require_not_fixed,
+    require_unavailable_open,
+    unfix_period,
+)
 from backend.services.period.ensemble_service import (
     days_by_period,
     delete_ensemble,
@@ -66,7 +77,32 @@ def run_period_assignment(
     return PeriodRun(computed, report, record_saved_at=saved_at)
 
 
+def fix_closed_period(
+    session: Session, period: Period, team_ids: list[int], room_ids: list[int], now: datetime
+) -> None:
+    """마감 일시가 지난 period 를 마지막 불가능 일정으로 1회 계산해 현재 배정안으로 적용하고 확정한 뒤, 전체 멤버에게 알립니다(사용자 결정 2026-10-20).
+
+    배정할 날짜가 없거나 계산 결과가 비면 적용 없이 확정만 합니다.
+    """
+    # 확정 뒤에는 기록 적용을 받지 않으므로 계산 결과를 관리자 확인 없이 바로 적용합니다.
+    if period_days(period, now.date()):
+        run = run_period_assignment(session, period.id, team_ids, room_ids, saved_at=now)
+        if run.record_saved_at is not None:
+            apply_record(session, period.id, run.record_saved_at, applied_at=now)
+    period.fixed_at = now
+    notify_everyone(session, "assignment_fixed", now)
+    session.commit()
+
+
 __all__ = [
+    "fix_closed_period",
+    "is_closed",
+    "periods_to_fix",
+    "require_naive_close",
+    "require_not_closed",
+    "require_not_fixed",
+    "require_unavailable_open",
+    "unfix_period",
     "every_team_and_room",
     "focused_periods_on",
     "days_by_period",

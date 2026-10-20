@@ -33,10 +33,12 @@ flowchart LR
   backend_src_backend_services_board_board_service["board_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_board_pipeline["pipeline.py"] --> backend_src_backend_db_models
   backend_src_backend_services_notification_notification_service["notification_service.py"] --> backend_src_backend_db_models
+  backend_src_backend_services_period_close_service["close_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_period_ensemble_service["ensemble_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_period_period_crud_service["period_crud_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_period_period_input["period_input.py"] --> backend_src_backend_db_models
   backend_src_backend_services_period_period_service["period_service.py"] --> backend_src_backend_db_models
+  backend_src_backend_services_period_pipeline["pipeline.py"] --> backend_src_backend_db_models
   backend_src_backend_services_permission_permission_service["permission_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_reservation_reservation_service["reservation_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_room_room_service["room_service.py"] --> backend_src_backend_db_models
@@ -62,6 +64,7 @@ flowchart LR
   backend_tests_integration_db_test_member_expel_endpoints["test_member_expel_endpoints.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_notifications["test_notifications.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_password_reset_endpoints["test_password_reset_endpoints.py"] --> backend_src_backend_db_models
+  backend_tests_integration_db_test_period_close["test_period_close.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_period_crud_endpoints["test_period_crud_endpoints.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_period_endpoints["test_period_endpoints.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_period_ensemble_endpoints["test_period_ensemble_endpoints.py"] --> backend_src_backend_db_models
@@ -107,10 +110,12 @@ flowchart LR
 - [[graph/backend/src/backend/services/board/board_service|board_service.py]]
 - [[graph/backend/src/backend/services/board/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/notification/notification_service|notification_service.py]]
+- [[graph/backend/src/backend/services/period/close_service|close_service.py]]
 - [[graph/backend/src/backend/services/period/ensemble_service|ensemble_service.py]]
 - [[graph/backend/src/backend/services/period/period_crud_service|period_crud_service.py]]
 - [[graph/backend/src/backend/services/period/period_input|period_input.py]]
 - [[graph/backend/src/backend/services/period/period_service|period_service.py]]
+- [[graph/backend/src/backend/services/period/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/permission/permission_service|permission_service.py]]
 - [[graph/backend/src/backend/services/reservation/reservation_service|reservation_service.py]]
 - [[graph/backend/src/backend/services/room/room_service|room_service.py]]
@@ -136,6 +141,7 @@ flowchart LR
 - [[graph/backend/tests/integration/db/test_member_expel_endpoints|test_member_expel_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_notifications|test_notifications.py]]
 - [[graph/backend/tests/integration/db/test_password_reset_endpoints|test_password_reset_endpoints.py]]
+- [[graph/backend/tests/integration/db/test_period_close|test_period_close.py]]
 - [[graph/backend/tests/integration/db/test_period_crud_endpoints|test_period_crud_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_period_endpoints|test_period_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_period_ensemble_endpoints|test_period_ensemble_endpoints.py]]

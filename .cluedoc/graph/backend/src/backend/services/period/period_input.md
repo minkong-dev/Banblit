@@ -12,6 +12,7 @@ flowchart LR
   backend_src_backend_services_period_period_input["period_input.py"]
   backend_src_backend_services_period_period_input --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_period_period_input --> backend_src_backend_scheduling_pipeline["pipeline.py"]
+  backend_src_backend_services_period_close_service["close_service.py"] --> backend_src_backend_services_period_period_input
   backend_src_backend_services_period_period_service["period_service.py"] --> backend_src_backend_services_period_period_input
   backend_tests_unit_test_period_input["test_period_input.py"] --> backend_src_backend_services_period_period_input
 ```
@@ -23,6 +24,7 @@ flowchart LR
 
 ## imported by
 
+- [[graph/backend/src/backend/services/period/close_service|close_service.py]]
 - [[graph/backend/src/backend/services/period/period_service|period_service.py]]
 - [[graph/backend/tests/unit/test_period_input|test_period_input.py]]
 

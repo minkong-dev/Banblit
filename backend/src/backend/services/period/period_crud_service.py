@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from datetime import date, datetime
+from typing import Literal
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
@@ -16,6 +17,7 @@ from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team, 
 from backend.services.settings.pipeline import session_minutes
 from backend.services.reservation.pipeline import cancel_reservations_in_focus
 from backend.db.pipeline import commit_translating
+from backend.services.period.close_service import require_naive_close
 
 # 위반될 수 있는 제약과 그때 표시할 문장입니다. 제약 이름은 migration b5e1d9a37c42·d9a4c6e1f207 이 지정했습니다.
 # 전체 합주 설정(services/period/ensemble_service.py)도 이 문장을 씁니다.
@@ -150,9 +152,11 @@ def create_period(
     rule: AssignRuleIn | None = None,
     *,
     now: datetime,
+    closes_at: datetime | None = None,
 ) -> Period:
-    """새 기간을 생성합니다. 경계에서 kind와 날짜 순서를 사람이 읽을 문장으로 검증합니다."""
+    """새 기간을 생성합니다. 경계에서 kind와 날짜 순서, closes_at(마감 일시)의 시간대 유무를 사람이 읽을 문장으로 검증합니다."""
     require_valid_kind(kind)
+    require_naive_close(closes_at)
     starts = parse_calendar_date(starts_on, "시작일")
     ends = parse_calendar_date(ends_on, "종료일")
     require_ends_not_before_starts(starts, ends)
@@ -167,6 +171,7 @@ def create_period(
         second_run_at=parse_clock(second_run_at, "2차 연산 시각"),
         **(WindowIn() if window is None else window).columns(),
         **(AssignRuleIn() if rule is None else rule).columns(session_minutes(session)),
+        closes_at=closes_at,
     )
     session.add(period)
     commit_with_cancellations(session, period, now)
@@ -216,8 +221,12 @@ def update_period(
     rule: AssignRuleIn | None = None,
     *,
     now: datetime,
+    closes_at: datetime | None | Literal["keep"] = "keep",
 ) -> Period:
     """period_id의 기간에서 전달된 항목만 수정하여 저장하고, 수정된 기간을 반환합니다.
+
+    closes_at 이 "keep" 이면 저장된 마감 일시를 그대로 두고, None 이면 마감 일시를 비웁니다.
+    확정된 기간의 마감 일시를 다른 값으로 변경하면 ValueError 입니다.
 
     window 가 None 이면 저장된 시간대를 그대로 둡니다. 지우려면 두 쌍이 None 인 WindowIn 을
     넘깁니다. "보내지 않음"과 "지움"을 구분해야, 다른 값만 고치는 요청이 시간대를 지우지 않습니다.
@@ -238,6 +247,11 @@ def update_period(
         changes.update(window.columns())
     if rule is not None:
         changes.update(rule.columns(session_minutes(session)))
+    if closes_at != "keep" and closes_at != period.closes_at:
+        require_naive_close(closes_at)
+        if period.fixed_at is not None:
+            raise ValueError("확정된 기간은 마감 일시를 변경할 수 없어요. 확정을 해제한 뒤 변경해주세요")
+        changes["closes_at"] = closes_at
     for field, value in changes.items():
         setattr(period, field, value)
     commit_with_cancellations(session, period, now)

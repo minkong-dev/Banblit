@@ -12,6 +12,7 @@ flowchart LR
   backend_src_backend_jobs___init__["__init__.py"]
   backend_tests_integration_db_test_auto_assign["test_auto_assign.py"] --> backend_src_backend_jobs___init__
   backend_tests_integration_db_test_notifications["test_notifications.py"] --> backend_src_backend_jobs___init__
+  backend_tests_integration_db_test_period_close["test_period_close.py"] --> backend_src_backend_jobs___init__
   backend_tests_unit_test_auto_assign_rules["test_auto_assign_rules.py"] --> backend_src_backend_jobs___init__
 ```
 
@@ -23,4 +24,5 @@ flowchart LR
 
 - [[graph/backend/tests/integration/db/test_auto_assign|test_auto_assign.py]]
 - [[graph/backend/tests/integration/db/test_notifications|test_notifications.py]]
+- [[graph/backend/tests/integration/db/test_period_close|test_period_close.py]]
 - [[graph/backend/tests/unit/test_auto_assign_rules|test_auto_assign_rules.py]]
