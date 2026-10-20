@@ -17,6 +17,7 @@ flowchart LR
   backend_src_backend_jobs_auto_assign --> backend_src_backend_services_period_pipeline["pipeline.py"]
   backend_tests_integration_db_test_auto_assign["test_auto_assign.py"] --> backend_src_backend_jobs_auto_assign
   backend_tests_integration_db_test_notifications["test_notifications.py"] --> backend_src_backend_jobs_auto_assign
+  backend_tests_integration_db_test_period_close["test_period_close.py"] --> backend_src_backend_jobs_auto_assign
   backend_tests_unit_test_auto_assign_rules["test_auto_assign_rules.py"] --> backend_src_backend_jobs_auto_assign
 ```
 
@@ -32,12 +33,14 @@ flowchart LR
 
 - [[graph/backend/tests/integration/db/test_auto_assign|test_auto_assign.py]]
 - [[graph/backend/tests/integration/db/test_notifications|test_notifications.py]]
+- [[graph/backend/tests/integration/db/test_period_close|test_period_close.py]]
 - [[graph/backend/tests/unit/test_auto_assign_rules|test_auto_assign_rules.py]]
 
 ## 함수와 호출
 
 - `due_slots`
 - `run_due_assignments`: `backend.services.period.pipeline`
+- `_fix_closed`: `backend.services.period.pipeline`
 - `_ran_slots_today`
 - `_run_one`: `backend.services.period.pipeline`
 - `_mark_ran`: `backend.db.models`

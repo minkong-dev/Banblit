@@ -22,6 +22,7 @@ kind: directory
 - [[graph/backend/tests/integration/db/test_migration_chain|test_migration_chain.py]]
 - [[graph/backend/tests/integration/db/test_notifications|test_notifications.py]]
 - [[graph/backend/tests/integration/db/test_password_reset_endpoints|test_password_reset_endpoints.py]]
+- [[graph/backend/tests/integration/db/test_period_close|test_period_close.py]]
 - [[graph/backend/tests/integration/db/test_period_crud_endpoints|test_period_crud_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_period_endpoints|test_period_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_period_ensemble_endpoints|test_period_ensemble_endpoints.py]]

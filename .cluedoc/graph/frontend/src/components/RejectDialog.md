@@ -15,6 +15,7 @@ flowchart LR
   frontend_src_components_RejectDialog --> frontend_src_lib_contract["contract.ts"]
   frontend_src_components_RejectDialog --> frontend_src_lib_loading["loading.ts"]
   frontend_src_components_RejectDialog --> frontend_src_lib_notifications["notifications.ts"]
+  frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_components_RejectDialog
   frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_components_RejectDialog
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_components_RejectDialog
 ```
@@ -29,5 +30,6 @@ flowchart LR
 
 ## imported by
 
+- [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]
 - [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]

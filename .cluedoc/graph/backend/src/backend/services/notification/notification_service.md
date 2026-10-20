@@ -10,12 +10,14 @@ kind: file
 ```mermaid
 flowchart LR
   backend_src_backend_services_notification_notification_service["notification_service.py"]
+  backend_src_backend_services_notification_notification_service --> backend_src_backend_contract["contract.py"]
   backend_src_backend_services_notification_notification_service --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_notification_pipeline["pipeline.py"] --> backend_src_backend_services_notification_notification_service
 ```
 
 ## imports
 
+- [[graph/backend/src/backend/contract|contract.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 
 ## imported by
@@ -25,6 +27,7 @@ flowchart LR
 ## 함수와 호출
 
 - `notify_assignment_updated`: `backend.db.models`
+- `notify_everyone`: `backend.db.models`
 - `notify_reservations_cancelled`: `backend.db.models`
 - `notify_rejected`: `backend.db.models`
 - `list_notifications`

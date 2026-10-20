@@ -13,6 +13,7 @@ flowchart LR
   backend_src_backend_services_period_period_crud_service --> backend_src_backend_contract["contract.py"]
   backend_src_backend_services_period_period_crud_service --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_period_period_crud_service --> backend_src_backend_db_pipeline["pipeline.py"]
+  backend_src_backend_services_period_period_crud_service --> backend_src_backend_services_period_close_service["close_service.py"]
   backend_src_backend_services_period_period_crud_service --> backend_src_backend_services_reservation_pipeline["pipeline.py"]
   backend_src_backend_services_period_period_crud_service --> backend_src_backend_services_settings_pipeline["pipeline.py"]
   backend_src_backend_services_period_period_crud_service --> backend_src_backend_services_validation_pipeline["pipeline.py"]
@@ -26,6 +27,7 @@ flowchart LR
 - [[graph/backend/src/backend/contract|contract.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/db/pipeline|pipeline.py]]
+- [[graph/backend/src/backend/services/period/close_service|close_service.py]]
 - [[graph/backend/src/backend/services/reservation/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/settings/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/validation/pipeline|pipeline.py]]
@@ -42,9 +44,9 @@ flowchart LR
 - `require_session_fits`
 - `_pair_columns`: `backend.services.validation.pipeline`
 - `list_periods`
-- `create_period`: `backend.db.models`, `backend.services.settings.pipeline`, `backend.services.validation.pipeline`
+- `create_period`: `backend.db.models`, `backend.services.period.close_service`, `backend.services.settings.pipeline`, `backend.services.validation.pipeline`
 - `_validated_changes`: `backend.services.validation.pipeline`
-- `update_period`: `backend.services.settings.pipeline`
+- `update_period`: `backend.services.period.close_service`, `backend.services.settings.pipeline`
 - `delete_period`
 - `focused_periods_on`
 - `every_team_and_room`

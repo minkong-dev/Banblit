@@ -365,6 +365,10 @@ class Period(Base):
     max_consecutive_hours: Mapped[int] = mapped_column(
         SmallInteger, default=DEFAULT_MAX_CONSECUTIVE_HOURS, server_default=str(DEFAULT_MAX_CONSECUTIVE_HOURS)
     )
+    # 마감 일시와 확정 시각입니다(사용자 결정 2026-10-20). closes_at 이 지나면 그 기간 날짜의 불가능 일정을 막고,
+    # jobs/auto_assign.py 가 1회 계산해 적용한 시각을 fixed_at 에 남깁니다. closes_at 이 null 이면 마감 없이 계속 계산합니다.
+    closes_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    fixed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     # 집중 합주기간끼리의 날짜 겹침 금지 제약(EXCLUDE)은 Reservation 의 겹침 금지 제약과 같이 migration 에만
     # 둡니다(migrations/versions/b5e1d9a37c42_focused_period_no_overlap.py).
@@ -409,6 +413,7 @@ class Period(Base):
         CheckConstraint(
             "max_consecutive_hours BETWEEN 1 AND daily_max_hours", name="periods_max_consecutive_within_daily"
         ),
+        CheckConstraint("fixed_at IS NULL OR closes_at IS NOT NULL", name="periods_fixed_needs_close"),
     )
 
 
@@ -708,6 +713,8 @@ class Notification(Base):
             "(kind = 'rejected') = (target IS NOT NULL AND target_starts_at IS NOT NULL AND reason IS NOT NULL)",
             name="notifications_rejected_fields",
         ),
+        # 확정 해제 알림은 해제 사유를 reason 에 담습니다. 사유가 없으면 화면이 해제 이유를 표시할 수 없습니다.
+        CheckConstraint("kind <> 'assignment_unfixed' OR reason IS NOT NULL", name="notifications_unfixed_reason"),
     )
 
 

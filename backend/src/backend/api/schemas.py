@@ -256,6 +256,10 @@ class PeriodOut(BaseModel):
     assign_rule: AssignRuleOut
     # 전체 합주를 지정하지 않은 기간은 null 입니다.
     ensemble: EnsembleOut | None
+    # 마감 일시입니다. 지정하지 않은 기간은 null 입니다.
+    closes_at: datetime | None
+    # 마감 일시가 지나 배정을 확정한 시각입니다. 확정되지 않은 기간은 null 입니다.
+    fixed_at: datetime | None
 
 
 class EnsembleIn(BaseModel):
@@ -291,6 +295,8 @@ class PeriodCreateIn(BaseModel):
     practice_window: PracticeWindowIn | None = None
     # 생략하면 목표 시간 자동, 불참 허용 0명입니다.
     assign_rule: AssignRuleIn | None = None
+    # 생략하면 마감 일시가 없는 기간입니다. 시간대를 붙이면 422 입니다.
+    closes_at: datetime | None = None
 
 
 class PeriodUpdateIn(BaseModel):
@@ -305,6 +311,8 @@ class PeriodUpdateIn(BaseModel):
     practice_window: PracticeWindowIn | None = None
     # 보내지 않으면 저장된 배정 규칙을 그대로 둡니다.
     assign_rule: AssignRuleIn | None = None
+    # 보내지 않으면 저장된 마감 일시를 그대로 두고, null 을 보내면 비웁니다. router 가 model_fields_set 으로 구분합니다.
+    closes_at: datetime | None = None
 
 
 class TeamOut(BaseModel):
@@ -727,6 +735,13 @@ class RejectIn(BaseModel):
     """다른 멤버의 예약·불가능 일정을 반려할 때 받는 본문입니다. 두 대상이 같은 본문을 씁니다."""
 
     # 앞뒤 공백 제거와 빈 사유 거부는 service 가 합니다(validation 의 require_reject_reason).
+    reason: str = Field(max_length=REJECT_REASON_MAX_LENGTH)
+
+
+class UnfixIn(BaseModel):
+    """기간의 확정을 해제할 때 받는 본문입니다. 사유 길이 상한은 반려 사유와 같습니다."""
+
+    # 앞뒤 공백 제거와 빈 사유 거부는 service 가 합니다(period 의 unfix_period).
     reason: str = Field(max_length=REJECT_REASON_MAX_LENGTH)
 
 

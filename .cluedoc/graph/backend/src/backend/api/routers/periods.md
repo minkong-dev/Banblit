@@ -39,6 +39,7 @@ flowchart LR
 | GET | `/periods` | `read_periods` |
 | POST | `/periods` | `create_period` |
 | PATCH | `/periods/{period_id}` | `patch_period` |
+| POST | `/periods/{period_id}/unfix` | `unfix_period_endpoint` |
 | DELETE | `/periods/{period_id}` | `delete_period_endpoint` |
 | PUT | `/periods/{period_id}/ensemble` | `put_ensemble` |
 | DELETE | `/periods/{period_id}/ensemble` | `delete_ensemble_endpoint` |
@@ -56,6 +57,7 @@ flowchart LR
 - `read_periods`: `backend.api.schemas`, `backend.services.period.pipeline`
 - `create_period`: `backend.api.auth_dependency`, `backend.services.period.pipeline`
 - `patch_period`: `backend.api.auth_dependency`, `backend.services.period.pipeline`
+- `unfix_period_endpoint`: `backend.api.auth_dependency`, `backend.services.period.pipeline`
 - `delete_period_endpoint`: `backend.api.auth_dependency`, `backend.services.period.pipeline`
 - `put_ensemble`: `backend.api.auth_dependency`, `backend.services.period.pipeline`
 - `delete_ensemble_endpoint`: `backend.api.auth_dependency`, `backend.services.period.pipeline`

@@ -17,7 +17,15 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.services.board.pipeline import sweep_stale_drafts
-from backend.services.period.pipeline import every_team_and_room, focused_periods_on, period_days, run_period_assignment
+from backend.services.period.pipeline import (
+    every_team_and_room,
+    fix_closed_period,
+    focused_periods_on,
+    is_closed,
+    period_days,
+    periods_to_fix,
+    run_period_assignment,
+)
 from backend.contract import RunSlot
 from backend.db.models import AssignmentRun, Period
 from backend.db.pipeline import get_session_factory
@@ -74,18 +82,20 @@ def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
     시각을 대입할 수 있습니다.
     """
     today = now.date()
-    # 오늘이 기간 안에 포함되는 집중 합주기간만 처리합니다. 상시 기간(kind="open")은 선착순
-    # 예약으로 동작하므로 assign_period 가 거절합니다. everyday 가 켜진 기간은 종료일이 없으므로
-    # 시작일만 지났으면 매일 처리합니다.
-    periods = focused_periods_on(session, today)
-    if not periods:
-        return []
-
-    ran_by_period = _ran_slots_today(session, [period.id for period in periods], today)
     # 사용자가 버튼을 누를 때는 화면이 팀·합주실을 선택해 전송하지만 자동 실행에는 선택할
     # 사람이 없습니다. 등록된 모든 팀과 합주실을 대상으로 실행합니다. 일부만 실행하려면
     # 선택 목록을 저장하는 table(period_rooms 등)을 먼저 추가해야 합니다.
     team_ids, room_ids = every_team_and_room(session)
+    # 마감 일시가 지난 기간을 먼저 확정합니다. 마감된 기간은 아래 periods 에서 제외해 다시 계산하지 않습니다.
+    _fix_closed(session, now, team_ids, room_ids)
+    # 오늘이 기간 안에 포함되는 집중 합주기간만 처리합니다. 상시 기간(kind="open")은 선착순
+    # 예약으로 동작하므로 assign_period 가 거절합니다. everyday 가 켜진 기간은 종료일이 없으므로
+    # 시작일만 지났으면 매일 처리합니다.
+    periods = [period for period in focused_periods_on(session, today) if not is_closed(period, now)]
+    if not periods:
+        return []
+
+    ran_by_period = _ran_slots_today(session, [period.id for period in periods], today)
 
     results: list[AutoRun] = []
     for period in periods:
@@ -96,6 +106,16 @@ def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
             continue
         results.append(_run_one(session, period.id, now, slots, team_ids, room_ids))
     return results
+
+
+def _fix_closed(session: Session, now: datetime, team_ids: list[int], room_ids: list[int]) -> None:
+    # 마감 일시가 지난 기간을 1개씩 확정합니다. 한 기간이 실패해도 다음 기간을 계속 처리하고, 실패한 기간은 다음 확인 때 다시 시도합니다.
+    for period in periods_to_fix(session, now):
+        try:
+            fix_closed_period(session, period, team_ids, room_ids, now)
+        except Exception:  # noqa: BLE001 - 한 기간의 확정이 실패해도 다음 기간을 계속 처리합니다
+            session.rollback()
+            logger.exception("자동 확정이 실패했습니다 (period=%s)", period.id)
 
 
 def _ran_slots_today(

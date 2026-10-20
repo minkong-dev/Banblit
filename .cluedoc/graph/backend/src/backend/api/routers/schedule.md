@@ -67,4 +67,4 @@ flowchart LR
 - `read_period_records`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.settings.pipeline`
 - `_score_out`: `backend.api.schemas`, `backend.services.period.pipeline`
 - `read_period_record_round`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.services.period.pipeline`
-- `apply_period_record`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.notification.pipeline`
+- `apply_period_record`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.notification.pipeline`, `backend.services.period.pipeline`

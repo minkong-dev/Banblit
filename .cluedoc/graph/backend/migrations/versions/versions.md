@@ -18,6 +18,7 @@ kind: directory
 - [[graph/backend/migrations/versions/b3f6a9c2d471_period_name|b3f6a9c2d471_period_name.py]]
 - [[graph/backend/migrations/versions/b5d2e9f17a03_clock_ranges_past_midnight|b5d2e9f17a03_clock_ranges_past_midnight.py]]
 - [[graph/backend/migrations/versions/b6f3d24a89e1_practice_window|b6f3d24a89e1_practice_window.py]]
+- [[graph/backend/migrations/versions/b6f3d8a2c915_period_close_and_fix|b6f3d8a2c915_period_close_and_fix.py]]
 - [[graph/backend/migrations/versions/c4a8e70b52d9_slot_minutes_allowed_list|c4a8e70b52d9_slot_minutes_allowed_list.py]]
 - [[graph/backend/migrations/versions/c4e8a2f6b913_board_read_all_permission|c4e8a2f6b913_board_read_all_permission.py]]
 - [[graph/backend/migrations/versions/c7d2e5a18f40_assign_rule_and_record_kind|c7d2e5a18f40_assign_rule_and_record_kind.py]]

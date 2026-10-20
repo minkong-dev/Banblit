@@ -95,7 +95,9 @@ INSTRUMENTS: tuple[Instrument, ...] = get_args(Instrument)
 # 수정할 필요가 없습니다.
 # reservation_cancelled: 집중 합주기간이 생기거나 넓어져 예약이 취소되었습니다(services/reservation/reservation_service.py).
 # rejected: 관리 권한자가 예약이나 불가능 일정을 사유와 함께 반려했습니다(services/notification/notification_service.py).
-NotificationKind = Literal["assignment_updated", "reservation_cancelled", "rejected"]
+# assignment_fixed: 마감 일시가 지나 배정이 확정되었습니다(jobs/auto_assign.py). 전체 멤버에게 갑니다.
+# assignment_unfixed: 스케줄링 기록 확정 권한자가 사유와 함께 확정을 해제했습니다(api/routers/schedule.py). 전체 멤버에게 갑니다.
+NotificationKind = Literal["assignment_updated", "reservation_cancelled", "rejected", "assignment_fixed", "assignment_unfixed"]
 NOTIFICATION_KINDS: tuple[NotificationKind, ...] = get_args(NotificationKind)
 
 # 배정 계산 작업의 상태입니다. 작업 실행(api/job_runner.py)과 응답(api/schemas.py)이 같은 값을 씁니다.
