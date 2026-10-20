@@ -248,7 +248,7 @@ export function OffDialog(props: EditProps & {
       form={
         <div className="col">
           <h3>{editing === null ? "불가능 일정을 추가할 수 있어요." : "불가능 일정을 수정하고 있어요."}</h3>
-          <p className="sub">타임라인을 드래그하거나 시간을 선택해주세요.</p>
+          <p className="sub"><span className="tlhint">타임라인을 드래그하거나 </span>시간을 선택해주세요.</p>
           <p className="cap2">날짜</p>
           <b className="dayline">{day.dayName}</b>
           <p className="cap2">시간</p>
@@ -373,7 +373,7 @@ export function BookDialog(props: EditProps & {
       form={
         <div className="col">
           <h3>합주실 예약</h3>
-          <p className="sub">{fixed ? "해당 선택한 시간으로 예약할게요." : "타임라인을 드래그하거나 시각을 선택해요."}</p>
+          <p className="sub">{fixed ? "해당 선택한 시간으로 예약할게요." : <><span className="tlhint">타임라인을 드래그하거나 </span>시각을 선택해요.</>}</p>
           <p className="cap2">날짜</p>
           <b className="dayline">{day.dayName}</b>
           {/* 합주실을 먼저 선택합니다. 아래 시각 선택이 그 합주실의 예약된 slot 만 차단합니다. */}

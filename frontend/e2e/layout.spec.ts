@@ -327,10 +327,38 @@ test("휴대폰에서 modal 은 화면 전체를 차지하고 하루 dialog 안�
   expect(dayDialog).toEqual({ width: dayDialog.vw, height: dayDialog.vh, top: 0, vw: dayDialog.vw, vh: dayDialog.vh });
   const innerScrollers = await phone.locator("dialog[open]").evaluate((dialog) =>
     [...dialog.querySelectorAll<HTMLElement>(":not(textarea)")]
-      .filter((el) => ["auto", "scroll"].includes(getComputedStyle(el).overflowY))
+      .filter((el) => el.getClientRects().length > 0 && ["auto", "scroll"].includes(getComputedStyle(el).overflowY))
       .map((el) => el.className));
   expect(innerScrollers).toEqual([]);
   await touch.close();
+});
+
+// 카드가 세로로 쌓이는 폭(960px 이하)에서는 내 일정, 예약 탭의 하루 dialog 에 타임라인을 표시하지 않습니다(사용자 결정 2026-10-20).
+test("카드가 세로로 쌓이는 폭에서는 하루 dialog 에 타임라인이 없다", async ({ page }) => {
+  const { year, month, day } = dateParts(`${dayFromToday(3)}T00:00:00`);
+  const openDay = async (tab: "내 일정" | "예약") => {
+    await page.goto("/scheduler");
+    if (tab === "예약") await page.getByRole("tab", { name: "예약" }).click();
+    if (month !== new Date().getMonth() + 1) await page.getByRole("button", { name: "다음 달" }).click();
+    await page.getByRole("button", { name: `${month}월 ${day}일 ${weekdayKr(year, month, day)}요일` }).first().click();
+    await page.locator("dialog[open]").waitFor();
+  };
+  for (const { width, shown } of [{ width: 1100, shown: true }, { width: 960, shown: false }, { width: 390, shown: false }]) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const tab of ["내 일정", "예약"] as const) {
+      await openDay(tab);
+      const timeline = page.locator("dialog[open] .tlscroll");
+      if (shown) await expect(timeline, `${width}px ${tab}`).toBeVisible();
+      else await expect(timeline, `${width}px ${tab}`).toBeHidden();
+    }
+    // 내 일정 탭 안내문은 타임라인이 없으면 시간 선택만 안내합니다.
+    await openDay("내 일정");
+    const hint = await page.locator("dialog[open] .col .sub").innerText();
+    expect(hint, `${width}px`).toBe(shown ? "타임라인을 드래그하거나 시간을 선택해주세요." : "시간을 선택해주세요.");
+    await openDay("예약");
+    const bookHint = await page.locator("dialog[open] .col .sub").first().innerText();
+    expect(bookHint, `${width}px 예약`).toBe(shown ? "타임라인을 드래그하거나 시각을 선택해요." : "시각을 선택해요.");
+  }
 });
 
 test("글쓰기 화면은 아무것도 입력하지 않으면 오류를 표시하지 않는다", async ({ page }) => {
