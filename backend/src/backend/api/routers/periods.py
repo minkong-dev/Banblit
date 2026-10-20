@@ -95,7 +95,14 @@ def _window_in(req: PracticeWindowIn | None) -> WindowIn | None:
 
 def _rule_in(req: AssignRuleBody | None) -> AssignRuleIn | None:
     # 보내지 않았으면 None 을 그대로 넘겨 저장된 배정 규칙을 유지합니다.
-    return None if req is None else AssignRuleIn(target_hours=req.target_hours, max_absent=req.max_absent)
+    if req is None:
+        return None
+    return AssignRuleIn(
+        target_hours=req.target_hours,
+        max_absent=req.max_absent,
+        daily_max_hours=req.daily_max_hours,
+        max_consecutive_hours=req.max_consecutive_hours,
+    )
 
 
 def _period_out(period: Period, days: list[EnsembleDay]) -> PeriodOut:
@@ -109,7 +116,12 @@ def _period_out(period: Period, days: list[EnsembleDay]) -> PeriodOut:
         first_run_at=format_clock(period.first_run_at),
         second_run_at=format_clock(period.second_run_at),
         practice_window=_window_out(period),
-        assign_rule=AssignRuleOut(target_hours=period.target_hours_per_team, max_absent=period.max_absent_members),
+        assign_rule=AssignRuleOut(
+            target_hours=period.target_hours_per_team,
+            max_absent=period.max_absent_members,
+            daily_max_hours=period.daily_max_hours,
+            max_consecutive_hours=period.max_consecutive_hours,
+        ),
         ensemble=_ensemble_out(period, days),
     )
 

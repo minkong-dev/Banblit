@@ -31,6 +31,5 @@ flowchart LR
 - `_row`
 - `slot_minutes`
 - `session_minutes`
-- `daily_max_hours`
 - `set_settings`
 - `_check_fits`

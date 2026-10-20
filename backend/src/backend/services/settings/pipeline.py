@@ -2,14 +2,12 @@
 # api와 다른 service 모듈은 이 모듈 안의 다른 파일을 직접 import 하지 않고 이 파일만 참조합니다.
 
 from backend.services.settings.settings_service import (
-    daily_max_hours,
     session_minutes,
     set_settings,
     slot_minutes,
 )
 
 __all__ = [
-    "daily_max_hours",
     "session_minutes",
     "set_settings",
     "slot_minutes",

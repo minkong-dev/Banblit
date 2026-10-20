@@ -11,7 +11,9 @@ from backend.services.validation.pipeline import (
     require_ends_not_before_starts,
     require_valid_kind,
 )
+from backend.contract import DEFAULT_DAILY_MAX_HOURS, DEFAULT_MAX_CONSECUTIVE_HOURS, MAX_DAILY_HOURS
 from backend.db.models import Assignment, AssignmentBackup, Period, Room, Team, TeamSlot
+from backend.services.settings.pipeline import session_minutes
 from backend.services.reservation.pipeline import cancel_reservations_in_focus
 from backend.db.pipeline import commit_translating
 
@@ -68,18 +70,48 @@ class WindowIn:
 
 @dataclass(frozen=True)
 class AssignRuleIn:
-    """배정 규칙입니다. target_hours 가 None 이면 팀당 목표 시간은 전체 시간 ÷ 팀 수입니다(사용자 결정 2026-10-12)."""
+    """배정 규칙입니다. target_hours 가 None 이면 팀당 목표 시간은 전체 시간 ÷ 팀 수입니다(사용자 결정 2026-10-12).
+
+    daily_max_hours 는 팀 1개가 하루에 받는 시간의 상한, max_consecutive_hours 는 끊기지 않고 이어지는 시간의 상한입니다(사용자 결정 2026-10-20).
+    """
 
     target_hours: int | None = None
     max_absent: int = 0
+    daily_max_hours: int = DEFAULT_DAILY_MAX_HOURS
+    max_consecutive_hours: int = DEFAULT_MAX_CONSECUTIVE_HOURS
 
-    def columns(self) -> dict[str, object]:
-        """저장할 열 두 개를 반환합니다. DB 의 CHECK 도 같은 조건을 보지만, 어느 값이 잘못됐는지 알리기 위해 먼저 봅니다."""
+    def columns(self, session_length: int) -> dict[str, object]:
+        """저장할 열 네 개를 반환합니다. DB 의 CHECK 도 같은 조건을 보지만, 어느 값이 잘못됐는지 알리기 위해 먼저 봅니다.
+
+        session_length 는 설정의 합주 1회 길이(분)입니다. 하루 상한이 이보다 짧으면 하루에 들어가는 합주가 0회라 거절합니다.
+        """
         if self.target_hours is not None and self.target_hours <= 0:
             raise ValueError("팀당 목표 시간은 1시간 이상이어야 해요")
         if self.max_absent < 0:
             raise ValueError("불참 허용 인원은 0명 이상이어야 해요")
-        return {"target_hours_per_team": self.target_hours, "max_absent_members": self.max_absent}
+        if not 1 <= self.daily_max_hours <= MAX_DAILY_HOURS:
+            raise ValueError(f"팀당 하루 최대는 1~{MAX_DAILY_HOURS}시간이어야 해요")
+        if not 1 <= self.max_consecutive_hours <= self.daily_max_hours:
+            raise ValueError("최대 연속은 1시간 이상, 팀당 하루 최대 이하여야 해요")
+        require_session_fits(session_length, self.daily_max_hours, self.max_consecutive_hours)
+        return {
+            "target_hours_per_team": self.target_hours,
+            "max_absent_members": self.max_absent,
+            "daily_max_hours": self.daily_max_hours,
+            "max_consecutive_hours": self.max_consecutive_hours,
+        }
+
+
+def require_session_fits(session_length: int, daily_max_hours: int, max_consecutive_hours: int) -> None:
+    """합주 1회(session_length 분)가 팀당 하루 최대나 최대 연속보다 길면 ValueError 를 발생시킵니다.
+
+    길면 하루에 들어가는 합주가 0회라, error 없이 모든 팀이 빈 배정을 받습니다.
+    """
+    for label, hours in (("팀당 하루 최대", daily_max_hours), ("최대 연속", max_consecutive_hours)):
+        if session_length > hours * 60:
+            raise ValueError(
+                f"합주 1회({session_length}분)가 {label}({hours}시간)보다 길어요. {label}를 늘리거나 합주 길이를 줄여주세요"
+            )
 
 
 def _pair_columns(part: str, pair: ClockPair) -> dict[str, object]:
@@ -134,7 +166,7 @@ def create_period(
         first_run_at=parse_clock(first_run_at, "1차 연산 시각"),
         second_run_at=parse_clock(second_run_at, "2차 연산 시각"),
         **(WindowIn() if window is None else window).columns(),
-        **(AssignRuleIn() if rule is None else rule).columns(),
+        **(AssignRuleIn() if rule is None else rule).columns(session_minutes(session)),
     )
     session.add(period)
     commit_with_cancellations(session, period, now)
@@ -205,7 +237,7 @@ def update_period(
     if window is not None:
         changes.update(window.columns())
     if rule is not None:
-        changes.update(rule.columns())
+        changes.update(rule.columns(session_minutes(session)))
     for field, value in changes.items():
         setattr(period, field, value)
     commit_with_cancellations(session, period, now)

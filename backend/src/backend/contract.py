@@ -30,12 +30,13 @@ DEFAULT_SESSION_MINUTES = 60
 # 하루 운영 시간보다 긴 값이 저장되어, 배정할 수 있는 자리가 하나도 없는 설정이 조용히 만들어집니다.
 MAX_SESSION_MINUTES = 240
 
-# 팀 하나가 하루에 배정받는 시간의 상한(시간)으로 고를 수 있는 값과 기본값입니다.
-# 상한이 없으면 배정 계산이 연속 배정을 최대화하면서 팀의 시간을 하루에 전부 몰아 7시간 연속 같은 배정이 나옵니다.
-# API(api/schemas.py), DB CHECK 제약(db/models.py), 화면(frontend/src/lib/settings.ts)이 같은 값을 씁니다.
-DailyMaxHours = Literal[1, 2, 3]
-DAILY_MAX_HOUR_CHOICES: tuple[DailyMaxHours, ...] = get_args(DailyMaxHours)
-DEFAULT_DAILY_MAX_HOURS = 3
+# 기간마다 정하는 팀 1개의 하루 배정 시간 상한(periods.daily_max_hours)과 끊기지 않고 이어지는 시간의 상한
+# (periods.max_consecutive_hours)입니다. 단위는 시간이고 1 이상 MAX_DAILY_HOURS 이하, 연속 상한은 하루 상한 이하입니다
+# (사용자 결정 2026-10-20). 상한이 없으면 배정 계산이 연속 배정을 최대화하면서 팀의 시간을 하루에 전부 몰아 7시간 연속
+# 같은 배정이 나옵니다. API(api/schemas.py), DB CHECK 제약(db/models.py), 화면(frontend/src/lib/settings.ts)이 같은 값을 씁니다.
+MAX_DAILY_HOURS = 12
+DEFAULT_DAILY_MAX_HOURS = 2
+DEFAULT_MAX_CONSECUTIVE_HOURS = 2
 
 # 반려할 수 있는 대상입니다. 관리 권한자가 다른 멤버의 예약을 취소하거나 불가능 일정을 삭제하면
 # 사유를 담은 알림이 원래 등록한 멤버에게 갑니다. 알림 table 의 CHECK 제약(db/models.py), 알림 응답

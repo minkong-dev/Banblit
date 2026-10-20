@@ -14,6 +14,7 @@ flowchart LR
   frontend_e2e_assignment_spec["assignment.spec.ts"] --> frontend_e2e_helpers
   frontend_e2e_board_spec["board.spec.ts"] --> frontend_e2e_helpers
   frontend_e2e_global_setup["global-setup.ts"] --> frontend_e2e_helpers
+  frontend_e2e_layout_spec["layout.spec.ts"] --> frontend_e2e_helpers
   frontend_e2e_notices_spec["notices.spec.ts"] --> frontend_e2e_helpers
   frontend_e2e_profile_card_spec["profile-card.spec.ts"] --> frontend_e2e_helpers
   frontend_e2e_scheduler_spec["scheduler.spec.ts"] --> frontend_e2e_helpers
@@ -31,6 +32,7 @@ flowchart LR
 - [[graph/frontend/e2e/assignment.spec|assignment.spec.ts]]
 - [[graph/frontend/e2e/board.spec|board.spec.ts]]
 - [[graph/frontend/e2e/global-setup|global-setup.ts]]
+- [[graph/frontend/e2e/layout.spec|layout.spec.ts]]
 - [[graph/frontend/e2e/notices.spec|notices.spec.ts]]
 - [[graph/frontend/e2e/profile-card.spec|profile-card.spec.ts]]
 - [[graph/frontend/e2e/scheduler.spec|scheduler.spec.ts]]

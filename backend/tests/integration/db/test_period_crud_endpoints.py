@@ -588,19 +588,19 @@ def test_period_name_is_saved_on_create_and_patch_and_defaults_to_empty(
 def test_a_new_period_has_the_automatic_assign_rule(
     api_client: TestClient, account: AccountFactory
 ) -> None:
-    """정하지 않으면 목표 시간은 자동(null), 불참 허용은 0명입니다. 지금까지의 동작과 같습니다."""
+    """정하지 않으면 목표 시간은 자동(null), 불참 허용은 0명, 팀당 하루 최대와 최대 연속은 2시간입니다(사용자 결정 2026-10-20)."""
     _, head = account(*HEAD)
 
     period = api_client.post("/periods", json=_BASE, cookies=head).json()["period"]
 
-    assert period["assign_rule"] == {"target_hours": None, "max_absent": 0}
+    assert period["assign_rule"] == {"target_hours": None, "max_absent": 0, "daily_max_hours": 2, "max_consecutive_hours": 2}
 
 
 def test_patching_other_fields_keeps_the_assign_rule(
     api_client: TestClient, account: AccountFactory
 ) -> None:
     _, head = account(*HEAD)
-    rule = {"target_hours": 6, "max_absent": 2}
+    rule = {"target_hours": 6, "max_absent": 2, "daily_max_hours": 3, "max_consecutive_hours": 1}
     period = api_client.post(
         "/periods", json={**_BASE, "assign_rule": rule}, cookies=head
     ).json()["period"]
@@ -610,6 +610,66 @@ def test_patching_other_fields_keeps_the_assign_rule(
     ).json()["period"]
 
     assert patched["assign_rule"] == rule
+
+
+def test_a_consecutive_limit_above_the_daily_limit_is_refused(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    # 연속 상한은 하루 상한 이하여야 합니다. 하루 2시간에 연속 3시간은 뜻이 없습니다.
+    _, head = account(*HEAD)
+
+    response = api_client.post(
+        "/periods",
+        json={**_BASE, "assign_rule": {"target_hours": None, "max_absent": 0, "daily_max_hours": 2, "max_consecutive_hours": 3}},
+        cookies=head,
+    )
+
+    assert response.status_code == 422
+
+
+def test_a_daily_limit_outside_one_to_twelve_hours_is_refused(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    _, head = account(*HEAD)
+    for hours in (0, 13):
+        response = api_client.post(
+            "/periods",
+            json={**_BASE, "assign_rule": {"target_hours": None, "max_absent": 0, "daily_max_hours": hours, "max_consecutive_hours": 1}},
+            cookies=head,
+        )
+        assert response.status_code == 422, hours
+
+
+def test_a_daily_limit_shorter_than_one_session_is_refused(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    # 하루 상한이 합주 1회보다 짧으면 하루에 들어가는 합주가 0회라, 모든 팀이 빈 배정을 받습니다.
+    _, head = account(*HEAD)
+    assert api_client.patch("/settings", json={"session_minutes": 120}, cookies=head).status_code == 200
+
+    response = api_client.post(
+        "/periods",
+        json={**_BASE, "assign_rule": {"target_hours": None, "max_absent": 0, "daily_max_hours": 1, "max_consecutive_hours": 1}},
+        cookies=head,
+    )
+
+    assert response.status_code == 422
+
+
+def test_a_consecutive_limit_shorter_than_one_session_is_refused(
+    api_client: TestClient, account: AccountFactory
+) -> None:
+    # 연속 상한이 합주 1회보다 짧으면 이어 쓸 수 있는 합주가 0회라, 모든 팀이 빈 배정을 받습니다.
+    _, head = account(*HEAD)
+    assert api_client.patch("/settings", json={"session_minutes": 120}, cookies=head).status_code == 200
+
+    response = api_client.post(
+        "/periods",
+        json={**_BASE, "assign_rule": {"target_hours": None, "max_absent": 0, "daily_max_hours": 2, "max_consecutive_hours": 1}},
+        cookies=head,
+    )
+
+    assert response.status_code == 422
 
 
 def test_a_zero_target_hours_is_refused(

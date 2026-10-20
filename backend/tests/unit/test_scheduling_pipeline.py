@@ -17,10 +17,11 @@ def test_assign_passes_the_solver_limits(monkeypatch: pytest.MonkeyPatch) -> Non
 
     monkeypatch.setattr(pipeline, "assign_sessions", spy)
 
-    assert pipeline.assign([], [], 2, 60, 60, daily_max_minutes=120, max_absent=1) == "assignment"
+    assert pipeline.assign([], [], 2, 60, 60, daily_max_minutes=120, max_consecutive_minutes=60, max_absent=1) == "assignment"
     assert captured["args"][5:7] == (pipeline.SOLVER_TIME_LIMIT_SECONDS, pipeline.STALL_SECONDS)
     assert captured["num_workers"] == pipeline.SOLVER_WORKERS
-    assert captured["daily_max_minutes"] == 120 and captured["max_absent"] == 1
+    assert captured["daily_max_minutes"] == 120 and captured["max_consecutive_minutes"] == 60
+    assert captured["max_absent"] == 1
 
 
 def test_the_solver_uses_at_most_half_of_the_cores() -> None:

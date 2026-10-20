@@ -14,6 +14,7 @@ flowchart LR
   backend_src_backend_api_routers_schedule["schedule.py"] --> backend_src_backend_services_settings_pipeline
   backend_src_backend_api_routers_settings["settings.py"] --> backend_src_backend_services_settings_pipeline
   backend_src_backend_services_period_ensemble_service["ensemble_service.py"] --> backend_src_backend_services_settings_pipeline
+  backend_src_backend_services_period_period_crud_service["period_crud_service.py"] --> backend_src_backend_services_settings_pipeline
   backend_src_backend_services_period_period_service["period_service.py"] --> backend_src_backend_services_settings_pipeline
   backend_src_backend_services_reservation_reservation_service["reservation_service.py"] --> backend_src_backend_services_settings_pipeline
   backend_src_backend_services_unavailable_unavailable_service["unavailable_service.py"] --> backend_src_backend_services_settings_pipeline
@@ -28,6 +29,7 @@ flowchart LR
 - [[graph/backend/src/backend/api/routers/schedule|schedule.py]]
 - [[graph/backend/src/backend/api/routers/settings|settings.py]]
 - [[graph/backend/src/backend/services/period/ensemble_service|ensemble_service.py]]
+- [[graph/backend/src/backend/services/period/period_crud_service|period_crud_service.py]]
 - [[graph/backend/src/backend/services/period/period_service|period_service.py]]
 - [[graph/backend/src/backend/services/reservation/reservation_service|reservation_service.py]]
 - [[graph/backend/src/backend/services/unavailable/unavailable_service|unavailable_service.py]]

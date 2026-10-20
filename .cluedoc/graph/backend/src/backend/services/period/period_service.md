@@ -42,7 +42,7 @@ flowchart LR
 - `stored_report`: `backend.db.pipeline`, `backend.services.period.period_crud_service`
 - `_absence`
 - `_sessions_of`: `backend.scheduling.pipeline`
-- `_prepare`: `backend.services.period.period_input`, `backend.services.settings.pipeline`
+- `_prepare`: `backend.services.period.period_crud_service`, `backend.services.period.period_input`, `backend.services.settings.pipeline`
 - `_check_request`: `backend.services.period.period_crud_service`
 - `practice_window`: `backend.services.period.period_input`
 - `period_days`: `backend.services.period.period_input`

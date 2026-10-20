@@ -9,6 +9,7 @@ kind: directory
 - [[graph/backend/migrations/versions/11ab2762cdc9_daily_max_hours|11ab2762cdc9_daily_max_hours.py]]
 - [[graph/backend/migrations/versions/3c9d41b7e2a5_assignment_period_indexes|3c9d41b7e2a5_assignment_period_indexes.py]]
 - [[graph/backend/migrations/versions/5c3e8d1a7f20_reservation_cancelled_notification|5c3e8d1a7f20_reservation_cancelled_notification.py]]
+- [[graph/backend/migrations/versions/7d3c9a1e5b24_period_daily_and_consecutive_limits|7d3c9a1e5b24_period_daily_and_consecutive_limits.py]]
 - [[graph/backend/migrations/versions/7e1a4c93d6f0_room_delete_permission|7e1a4c93d6f0_room_delete_permission.py]]
 - [[graph/backend/migrations/versions/9b2f5d81ac34_drop_notification_read_at|9b2f5d81ac34_drop_notification_read_at.py]]
 - [[graph/backend/migrations/versions/a3f1c8d2b905_backup_applied_at|a3f1c8d2b905_backup_applied_at.py]]

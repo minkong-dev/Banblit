@@ -17,6 +17,7 @@ flowchart LR
   backend_src_backend_db_models["models.py"] --> backend_src_backend_contract
   backend_src_backend_jobs_auto_assign["auto_assign.py"] --> backend_src_backend_contract
   backend_src_backend_scheduling_slots["slots.py"] --> backend_src_backend_contract
+  backend_src_backend_services_period_period_crud_service["period_crud_service.py"] --> backend_src_backend_contract
   backend_src_backend_services_permission_permission_service["permission_service.py"] --> backend_src_backend_contract
   backend_src_backend_services_roster_roster_service["roster_service.py"] --> backend_src_backend_contract
   backend_src_backend_services_settings_settings_service["settings_service.py"] --> backend_src_backend_contract
@@ -45,6 +46,7 @@ flowchart LR
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/jobs/auto_assign|auto_assign.py]]
 - [[graph/backend/src/backend/scheduling/slots|slots.py]]
+- [[graph/backend/src/backend/services/period/period_crud_service|period_crud_service.py]]
 - [[graph/backend/src/backend/services/permission/permission_service|permission_service.py]]
 - [[graph/backend/src/backend/services/roster/roster_service|roster_service.py]]
 - [[graph/backend/src/backend/services/settings/settings_service|settings_service.py]]
