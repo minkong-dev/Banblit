@@ -109,7 +109,7 @@ const withEnsemble: Period = {
   first_run_at: "09:00",
   second_run_at: "21:00",
   practice_window: { weekday: null, weekend: null },
-  assign_rule: { target_hours: null, max_absent: 0 },
+  assign_rule: { target_hours: null, max_absent: 0, daily_max_hours: 2, max_consecutive_hours: 2 },
   ensemble: {
     starts_on: "2026-09-11",
     ends_on: "2026-09-13",

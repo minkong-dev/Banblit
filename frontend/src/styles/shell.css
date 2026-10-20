@@ -349,25 +349,37 @@ html[data-theme="dark"] body[data-shell] { color-scheme: dark; }
   .notes .notepop::before { display: none; }
 }
 
+/* iOS 는 글자 크기 16px 미만 입력칸에 초점이 가면 화면을 확대하고 되돌리지 않습니다. 터치 기기에서만 16px 로 올립니다.
+   화면마다 입력칸 글자 크기를 정하는 규칙(.fields input 의 font: inherit 등)보다 우선해야 해 !important 를 씁니다. */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
 /* ===== 모달 =====
    너비는 창 폭에 비례합니다. 좁은 창에서는 560px, 창 폭의 36% 가 그보다 크면 36% 를 씁니다.
-   어느 경우든 창보다 40px 좁습니다(휴대폰). 고정 560px 이면 넓은 모니터에서 모달이 화면의 1/5 로 작게 보입니다. */
-dialog { width: min(max(560px, 36vw), calc(100vw - 40px)); max-height: 92vh; padding: 0; border: none; border-radius: 22px; background: var(--card); color: var(--t1); box-shadow: var(--shadow-up); overflow: hidden; }
+   어느 경우든 창보다 40px 좁습니다(휴대폰). 고정 560px 이면 넓은 모니터에서 모달이 화면의 1/5 로 작게 보입니다.
+   높이는 dvh(주소창, 키보드를 뺀 보이는 높이)입니다. vh 는 휴대폰에서 주소창이 숨은 높이라 아래쪽 버튼이 화면 밖으로 밀립니다. */
+dialog { width: min(max(560px, 36vw), calc(100vw - 40px)); max-height: 92dvh; padding: 0; border: none; border-radius: 22px; background: var(--card); color: var(--t1); box-shadow: var(--shadow-up); overflow: hidden; }
 /* 카드 여러 장으로 보이는 dialog(하루 dialog 의 내 일정·예약 탭)입니다. 배경·그림자·모서리는 카드(.pane)가 갖고,
    dialog 는 카드를 3열로 세우는 투명한 grid 틀입니다. 높이를 고정해 내용이 적은 카드도 같은 높이로 늘립니다(사용자 결정).
    카드 3장은 서로 다른 내용이라 각자 스크롤합니다. dialog 하나로 묶어 스크롤하면 왼쪽 타임라인을
    보려고 오른쪽 목록까지 함께 움직입니다. dialog 의 크기와 위치는 고정입니다.
 */
 /* 3장 틀의 너비도 창 폭에 비례합니다. 좁은 창에서는 1320px, 창 폭의 80% 가 그보다 크면 80% 입니다. */
-dialog.panes { width: min(max(1320px, 80vw), calc(100vw - 40px)); height: 92vh; max-height: none; background: transparent; box-shadow: none; overflow: visible; }
+dialog.panes { width: min(max(1320px, 80vw), calc(100vw - 40px)); height: 92dvh; max-height: none; background: transparent; box-shadow: none; overflow: visible; }
 /* 카드 3장의 폭은 같습니다(사용자 결정). */
 dialog.panes[open] { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(14px, 1.8vw, 24px); align-items: stretch; }
 /* 1열로 쌓이면 카드는 내용만큼만 차지하고 dialog 가 스크롤합니다. */
 /* 1열로 쌓이면 카드는 내용 높이만큼 차지하고 dialog 가 스크롤합니다. 줄 높이를 내용(max-content)으로 고정하지 않으면
-   grid 가 카드를 dialog 높이(92vh) 안에 맞추려고 줄여, 가운데 입력 카드가 잘리고 버튼 줄이 입력칸을 가립니다. */
+   grid 가 카드를 dialog 높이(92dvh) 안에 맞추려고 줄여, 가운데 입력 카드가 잘리고 버튼 줄이 입력칸을 가립니다. */
 @media (max-width: 960px) {
-  dialog.panes { height: auto; max-height: 92vh; overflow-y: auto; }
+  dialog.panes { height: auto; max-height: 92dvh; overflow-y: auto; }
   dialog.panes[open] { grid-template-columns: 1fr; grid-auto-rows: max-content; }
+}
+/* 좁음(767px 이하)에서는 modal 이 화면 전체를 차지합니다. 화면보다 작은 modal 은 한 번에 보이는 내용이 modal 크기로 제한됩니다. */
+@media (max-width: 767px) {
+  dialog, dialog.panes { width: 100vw; max-width: none; height: 100dvh; max-height: none; margin: 0; border-radius: 0; }
+  dialog.panes { padding: 12px; background: var(--bg); overflow-y: auto; }
 }
 /* 열렸을 때만 flex 로 배치합니다. dialog 자체에 display 를 지정하면 닫혀 있어도 표시됩니다.
    브라우저가 dialog:not([open]) 에 display:none 을 적용하는 방식이라 그 규칙을 덮어쓰기 때문입니다.

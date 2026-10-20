@@ -15,21 +15,36 @@ import {
   periodTitle,
 } from "./settings";
 
-describe("assignRuleMessage — 팀당 목표 시간과 불참 허용 인원", () => {
-  it("목표 시간 자동(null)과 불참 0명은 통과한다", () => {
-    expect(assignRuleMessage({ target_hours: null, max_absent: 0 })).toBe("");
+const RULE = { target_hours: null, max_absent: 0, daily_max_hours: 2, max_consecutive_hours: 2 };
+
+describe("assignRuleMessage — 팀당 목표 시간, 불참 허용 인원, 하루 최대, 최대 연속", () => {
+  it("목표 시간 자동(null), 불참 0명, 하루 최대 2시간, 최대 연속 2시간은 통과한다", () => {
+    expect(assignRuleMessage(RULE)).toBe("");
+  });
+
+  it("하루 최대는 1~12 의 정수여야 한다", () => {
+    expect(assignRuleMessage({ ...RULE, daily_max_hours: 0, max_consecutive_hours: 0 })).not.toBe("");
+    expect(assignRuleMessage({ ...RULE, daily_max_hours: 13 })).not.toBe("");
+    expect(assignRuleMessage({ ...RULE, daily_max_hours: Number.NaN })).not.toBe("");
+    expect(assignRuleMessage({ ...RULE, daily_max_hours: 12, max_consecutive_hours: 12 })).toBe("");
+  });
+
+  it("최대 연속은 1 이상이고 하루 최대 이하여야 한다", () => {
+    expect(assignRuleMessage({ ...RULE, max_consecutive_hours: 3 })).not.toBe("");
+    expect(assignRuleMessage({ ...RULE, max_consecutive_hours: 0 })).not.toBe("");
+    expect(assignRuleMessage({ ...RULE, max_consecutive_hours: 1 })).toBe("");
   });
 
   it("목표 시간은 1 이상의 정수여야 한다", () => {
-    expect(assignRuleMessage({ target_hours: 0, max_absent: 0 })).not.toBe("");
-    expect(assignRuleMessage({ target_hours: 1.5, max_absent: 0 })).not.toBe("");
-    expect(assignRuleMessage({ target_hours: 4, max_absent: 0 })).toBe("");
+    expect(assignRuleMessage({ ...RULE, target_hours: 0 })).not.toBe("");
+    expect(assignRuleMessage({ ...RULE, target_hours: 1.5 })).not.toBe("");
+    expect(assignRuleMessage({ ...RULE, target_hours: 4 })).toBe("");
   });
 
   it("불참 허용 인원은 0 이상의 정수여야 하고 빈칸(NaN)은 거부한다", () => {
-    expect(assignRuleMessage({ target_hours: null, max_absent: -1 })).not.toBe("");
-    expect(assignRuleMessage({ target_hours: null, max_absent: Number.NaN })).not.toBe("");
-    expect(assignRuleMessage({ target_hours: null, max_absent: 2 })).toBe("");
+    expect(assignRuleMessage({ ...RULE, max_absent: -1 })).not.toBe("");
+    expect(assignRuleMessage({ ...RULE, max_absent: Number.NaN })).not.toBe("");
+    expect(assignRuleMessage({ ...RULE, max_absent: 2 })).toBe("");
   });
 });
 

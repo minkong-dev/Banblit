@@ -92,21 +92,35 @@ test("집중 합주기간에 전체 합주를 지정하고 날짜별 시각을 �
   await expect.poll(saved).toBeUndefined();
 });
 
-// 팀 하나가 하루에 배정받는 시간의 상한입니다(2026-09-28 사용자 결정). 점유 단위 카드에서 1~3시간 중 고릅니다.
-test("점유 단위 카드에서 팀당 하루 최대 배정 시간을 1~3시간 중 선택하고 저장한다", async ({ page }) => {
-  await page.goto("/rooms");
-  const pick = page.locator("#dailyMax");
-  await expect(pick).toHaveText(/3시간/);
-  await pick.click();
-  await expect(page.getByRole("option")).toHaveText(["1시간", "2시간", "3시간"]);
-  await page.getByRole("option", { name: "2시간" }).click();
-  await expect(pick).toHaveText(/2시간/);
-  await page.reload();
-  await expect(page.locator("#dailyMax")).toHaveText(/2시간/);
-  // 다른 검사가 기본값을 전제로 하므로 되돌립니다.
-  await page.locator("#dailyMax").click();
-  await page.getByRole("option", { name: "3시간" }).click();
-  await expect(page.locator("#dailyMax")).toHaveText(/3시간/);
+// 팀당 하루 최대와 최대 연속은 기간마다 정합니다(사용자 결정 2026-10-20). 기본값은 둘 다 2시간이고 1~12시간을 받습니다.
+test("새 집중 합주기간 form 에서 팀당 하루 최대와 최대 연속 시간을 저장한다", async ({ page }) => {
+  const [starts, ends] = [20, 21].map(dayFromToday);
+  const saved = async () => {
+    const { periods } = (await (await page.request.get("/api/periods")).json()) as {
+      periods: { starts_on: string; assign_rule: { daily_max_hours: number; max_consecutive_hours: number } }[];
+    };
+    return periods.find((item) => item.starts_on === starts);
+  };
+
+  await page.goto("/periods");
+  await page.getByRole("button", { name: "+ 새 집중 합주기간" }).click();
+  const dialog = page.getByRole("dialog", { name: "새 집중 합주기간" });
+  await dialog.getByLabel("시작일", { exact: true }).fill(starts);
+  await dialog.getByLabel("종료일", { exact: true }).fill(ends);
+  await expect(dialog.getByLabel("팀당 하루 최대")).toHaveValue("2");
+  await expect(dialog.getByLabel("최대 연속")).toHaveValue("2");
+  // 연속 상한이 하루 상한보다 크면 저장 버튼이 막힙니다.
+  await dialog.getByLabel("최대 연속").fill("3");
+  await expect(dialog.getByRole("button", { name: "기간 추가" })).toBeDisabled();
+  await dialog.getByLabel("팀당 하루 최대").fill("4");
+  await dialog.getByRole("button", { name: "기간 추가" }).click();
+  await expect(dialog).toHaveCount(0);
+
+  expect((await saved())?.assign_rule).toMatchObject({ daily_max_hours: 4, max_consecutive_hours: 3 });
+
+  page.once("dialog", (confirm) => void confirm.accept());
+  await page.getByRole("button", { name: `${starts} 부터의 기간을 삭제` }).click();
+  await expect.poll(saved).toBeUndefined();
 });
 
 // 카드는 넘치는 내용을 잘라 냅니다. 드롭다운 목록이 카드 안에 갇히면 아래 선택지가 잘려 누를 수 없습니다.

@@ -82,7 +82,7 @@ export function useRooms(enabled = true) {
 /** 저장소 전체 설정입니다. 칸 하나의 크기(slotMinutes)와 합주 1회 길이(sessionMinutes)입니다.
  *  칸은 합주를 시작할 수 있는 간격이고, 합주 길이는 한 번 시작하면 이어지는 시간입니다.
  *  아직 받지 못했으면 DEFAULT_SETTINGS(lib/contract.ts)를 씁니다. */
-export function useSettings(): { slotMinutes: number; sessionMinutes: number; dailyMaxHours: number } {
+export function useSettings(): { slotMinutes: number; sessionMinutes: number } {
   const query = useQuery({
     queryKey: SETTINGS_KEY,
     queryFn: () => getJSON<Settings>("/settings"),
@@ -90,7 +90,6 @@ export function useSettings(): { slotMinutes: number; sessionMinutes: number; da
   return {
     slotMinutes: query.data?.slot_minutes ?? DEFAULT_SETTINGS.slot_minutes,
     sessionMinutes: query.data?.session_minutes ?? DEFAULT_SETTINGS.session_minutes,
-    dailyMaxHours: query.data?.daily_max_hours ?? DEFAULT_SETTINGS.daily_max_hours,
   };
 }
 
