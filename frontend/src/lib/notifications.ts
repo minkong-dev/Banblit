@@ -10,6 +10,7 @@ import type { Notification, RejectTarget } from "./contract";
 const TEXT: Record<string, string> = {
   assignment_updated: "합주 일정이 업데이트 되었어요.",
   reservation_cancelled: "예약이 집중 합주기간과 겹쳐 취소되었어요.",
+  assignment_fixed: "합주 배정이 확정되었어요.",
 };
 
 // 반려 대상의 이름입니다. 알림 문장과 반려 사유 modal(components/RejectDialog.tsx)이 같이 씁니다.
@@ -28,6 +29,10 @@ function rejectedText(target: RejectTarget, startsAt: string, reason: string): s
 export function notificationText(item: Notification): string {
   if (item.kind === "rejected" && item.target !== null && item.target_starts_at !== null && item.reason !== null) {
     return rejectedText(item.target, item.target_starts_at, item.reason);
+  }
+  if (item.kind === "assignment_unfixed" && item.reason !== null) {
+    return `합주 배정의 확정이 해제되었어요. 사유는 다음과 같아요.
+${item.reason}`;
   }
   // 서버가 더 최신 버전이라 클라이언트가 인식하지 못하는 종류를 보낼 수 있습니다.
   // 그때 kind 를 그대로 표시하면 화면에 개발 용어가 나오므로, 종류를 특정하지 않는 문장으로 대체합니다.

@@ -9,12 +9,13 @@ import { Card, SectionHead } from "../components/Layout";
 import { Button, Cell, Empty, FormFoot, TimeRange, Toggle } from "../components/controls";
 import { useReturnFocus } from "../components/hooks";
 import { Modal } from "../components/Modal";
+import { ReasonDialog } from "../components/RejectDialog";
 import { useRemoveRow, useSlotMinutes } from "../components/queries";
 import { askDelete } from "../lib/confirm";
 import type { ClockRange, Period, PracticeWindow, Room } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
-import { checkPeriod, daysBetween, periodBody, removePeriod, savePeriod } from "../lib/pipeline";
+import { checkPeriod, daysBetween, periodBody, removePeriod, savePeriod, unfixPeriod } from "../lib/pipeline";
 import type { PeriodBody } from "../lib/pipeline";
 import { MAX_DAILY_HOURS, periodTitle } from "../lib/settings";
 import type { WindowPair } from "../lib/settings";
@@ -34,13 +35,14 @@ const BLANK_PERIOD: PeriodBody = {
   second_run_at: "21:00",
   practice_window: NO_WINDOW,
   assign_rule: { target_hours: null, max_absent: 0, daily_max_hours: 2, max_consecutive_hours: 2 },
+  closes_at: null,
 };
 
 /** 기간 form 이 수정하는 값만 추립니다. 목록에서 받은 기간에는 id·ensemble 이 함께 있어 그대로 보내면 요청 본문에 섞입니다. */
 function periodFields(period: Period): PeriodBody {
   const { kind, name, starts_on, ends_on, everyday, first_run_at, second_run_at } = period;
   return { kind, name, starts_on, ends_on, everyday, first_run_at, second_run_at,
-    practice_window: period.practice_window, assign_rule: period.assign_rule };
+    practice_window: period.practice_window, assign_rule: period.assign_rule, closes_at: period.closes_at };
 }
 
 /** 시간대 한 쌍을 입력칸 두 개로 펼칩니다. 정하지 않은 쌍은 빈 칸 두 개입니다. */
@@ -61,8 +63,9 @@ function clockText(hhmm: string): string {
 }
 
 /** 목록 줄의 제목 아래 줄들입니다(사용자 결정 2026-10-07).
- *  총 합주기간 → 전체 합주기간(지정한 경우만) → 스케줄링 시간(집중 합주기간만) 순서입니다. */
-function PeriodLines({ period }: { period: Period }) {
+ *  총 합주기간, 전체 합주기간(지정한 경우만), 스케줄링 시간(집중 합주기간만), 마감 일시(지정한 경우만) 순서입니다.
+ *  onUnfixed 가 있으면 확정된 기간에 확정 해제 버튼을 표시합니다. */
+function PeriodLines({ period, onUnfixed }: { period: Period; onUnfixed?: () => void }) {
   const { starts_on, ends_on, everyday, ensemble } = period;
   return (
     <>
@@ -81,6 +84,34 @@ function PeriodLines({ period }: { period: Period }) {
       {period.kind !== "focused" ? null : (
         <div>스케줄링 시간 {clockText(period.first_run_at)}, {clockText(period.second_run_at)}</div>
       )}
+      {period.closes_at === null ? null : (
+        <div>
+          마감 일시 <b>{period.closes_at.slice(0, 10)} {period.closes_at.slice(11, 16)}</b>
+          {period.fixed_at === null ? null : ", 배정 확정"}
+          {period.fixed_at === null || onUnfixed === undefined ? null : <UnfixButton period={period} onDone={onUnfixed} />}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** 확정 해제 버튼과 사유 modal 입니다. 해제하면 마감 일시도 비워지고 사유가 전체 멤버에게 알림으로 갑니다(사용자 결정 2026-10-20). */
+function UnfixButton({ period, onDone }: { period: Period; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button kind="ghost" aria-label={`${periodTitle(period)} 확정 해제`} onClick={() => setOpen(true)}>확정 해제</Button>
+      {!open ? null : (
+        <ReasonDialog
+          title="확정 해제"
+          hint="확정을 해제하면 마감 일시도 비워지고, 사유가 전체 멤버에게 알림으로 가요."
+          subject={periodTitle(period)}
+          action="해제"
+          onSubmit={(reason) => unfixPeriod(period.id, reason)}
+          onDone={() => { setOpen(false); onDone(); }}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </>
   );
 }
@@ -95,10 +126,12 @@ function PeriodFields(props: {
   bad: string;
   whyId: string;
   first: RefObject<HTMLInputElement | null>;
+  /** 확정된 기간이면 마감 일시를 변경할 수 없습니다. 서버도 거절합니다. */
+  fixed: boolean;
   /** 전체 합주 체크박스(EnsembleToggle). 날짜 줄의 "매일" 옆에 놓입니다 — 둘 다 날짜에 딸린 옵션입니다. */
   ensembleToggle: ReactNode;
 }) {
-  const { form, setForm, at, bad, whyId, first, ensembleToggle } = props;
+  const { form, setForm, at, bad, whyId, first, fixed, ensembleToggle } = props;
   const rule = form.assign_rule;
   // 폼 하단 오류(bad)가 배정 규칙 때문일 때만 두 입력칸을 오류로 표시합니다.
   const ruleBad = bad !== "" && checkAssignRule(rule) !== "";
@@ -178,6 +211,18 @@ function PeriodFields(props: {
               type="time"
               value={form.second_run_at}
               onChange={(event) => setForm({ ...form, second_run_at: event.target.value })}
+            />
+          </Cell>
+          </div>
+          <div className="frow">
+          {/* 선택 입력입니다. 지나면 서버가 마지막 불가능 일정으로 1회 계산해 배정을 확정합니다(사용자 결정 2026-10-20). */}
+          <Cell label="마감 일시" htmlFor={at("closes")}>
+            <input
+              id={at("closes")}
+              type="datetime-local"
+              disabled={fixed}
+              value={form.closes_at?.slice(0, 16) ?? ""}
+              onChange={(event) => setForm({ ...form, closes_at: event.target.value === "" ? null : event.target.value })}
             />
           </Cell>
           </div>
@@ -312,9 +357,9 @@ function WindowFields(props: {
 
 export function PeriodCard(props: {
   periods: Period[]; rooms: Room[]; state: LoadState; canEdit: boolean; canCreate: boolean; canDelete: boolean;
-  onSaved: () => void; onDeleted: () => void;
+  canUnfix: boolean; onSaved: () => void; onDeleted: () => void; onUnfixed: () => void;
 }) {
-  const { periods, rooms, state, canEdit, canCreate, canDelete, onSaved, onDeleted } = props;
+  const { periods, rooms, state, canEdit, canCreate, canDelete, canUnfix, onSaved, onDeleted, onUnfixed } = props;
   const { openId: editing, open, close, register } = useReturnFocus();
   const [making, setMaking] = useState(false);
   const drop = useRemoveRow(removePeriod, onDeleted);
@@ -347,7 +392,7 @@ export function PeriodCard(props: {
               <Row
                 key={period.id}
                 title={periodTitle(period)}
-                when={<PeriodLines period={period} />}
+                when={<PeriodLines period={period} onUnfixed={canUnfix ? onUnfixed : undefined} />}
                 span=""
                 editLabel={canEdit ? `${period.starts_on} 부터의 기간을 수정` : undefined}
                 buttonRef={canEdit ? register(period.id) : undefined}
@@ -438,6 +483,7 @@ function PeriodForm(props: {
         <div className="fields period">
           <h3 className="fsec">기간 기본설정</h3>
           <PeriodFields form={form} setForm={setForm} at={at} bad={bad} whyId={whyId} first={first}
+            fixed={before?.fixed_at != null}
             ensembleToggle={<EnsembleToggle draft={draft} setDraft={setDraft} at={at} />} />
           {withEnsemble ? (
             <div className="fgroup">

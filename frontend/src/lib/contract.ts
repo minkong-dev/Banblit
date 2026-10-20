@@ -29,6 +29,10 @@ export type Period = {
   assign_rule: AssignRule;
   /** 전체 합주를 지정하지 않은 기간은 null 입니다. */
   ensemble: Ensemble | null;
+  /** 마감 일시입니다. 지나면 서버가 배정을 확정합니다. 지정하지 않은 기간은 null 입니다. "2026-09-13T21:00:00" */
+  closes_at: string | null;
+  /** 배정을 확정한 시각입니다. 확정되지 않은 기간은 null 입니다. */
+  fixed_at: string | null;
 };
 
 /** 기간의 배정 규칙입니다. target_hours 가 null 이면 팀당 목표 시간은 전체 시간 ÷ 팀 수입니다.
@@ -348,10 +352,10 @@ export const REJECT_REASON_MAX_LENGTH = 300;
  *  (lib/notifications.ts). 목록에 있는 알림은 전부 읽지 않은 알림입니다. */
 export type Notification = {
   id: number;
-  kind: "assignment_updated" | "reservation_cancelled" | "rejected";
+  kind: "assignment_updated" | "reservation_cancelled" | "rejected" | "assignment_fixed" | "assignment_unfixed";
   /** "2026-09-14T18:00:00" */
   created_at: string;
-  /** 아래 3개는 kind 가 rejected 일 때만 값이 있고 그 밖에는 null 입니다. 서버 쪽 짝은
+  /** 아래 3개는 kind 가 rejected 일 때만 값이 있고 그 밖에는 null 입니다. 단 reason 은 assignment_unfixed 일 때 해제 사유입니다. 서버 쪽 짝은
    *  backend/src/backend/api/schemas.py 의 NotificationOut 입니다. */
   target: RejectTarget | null;
   /** 반려된 예약·불가능 일정의 시작 시간입니다. "2026-09-14T18:00:00" */

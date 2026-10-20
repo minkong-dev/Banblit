@@ -123,6 +123,39 @@ test("새 집중 합주기간 form 에서 팀당 하루 최대와 최대 연속 
   await expect.poll(saved).toBeUndefined();
 });
 
+// 마감 일시는 선택 입력입니다. 지나면 서버가 배정을 확정합니다(사용자 결정 2026-10-20).
+test("마감 일시를 지정하면 목록에 표시되고, 비우고 저장하면 마감 일시가 없는 기간이 된다", async ({ page }) => {
+  const [starts, ends, closes] = [24, 25, 23].map(dayFromToday);
+  const saved = async () => {
+    const { periods } = (await (await page.request.get("/api/periods")).json()) as {
+      periods: { starts_on: string; closes_at: string | null }[];
+    };
+    return periods.find((item) => item.starts_on === starts);
+  };
+
+  await page.goto("/periods");
+  await page.getByRole("button", { name: "+ 새 집중 합주기간" }).click();
+  const dialog = page.getByRole("dialog", { name: "새 집중 합주기간" });
+  await dialog.getByLabel("시작일", { exact: true }).fill(starts);
+  await dialog.getByLabel("종료일", { exact: true }).fill(ends);
+  await dialog.getByLabel("마감 일시").fill(`${closes}T21:00`);
+  await dialog.getByRole("button", { name: "기간 추가" }).click();
+  await expect(dialog).toHaveCount(0);
+
+  expect((await saved())?.closes_at).toBe(`${closes}T21:00:00`);
+  await expect(page.locator(".rows li").filter({ hasText: starts }).getByText(`마감 일시 ${closes} 21:00`)).toBeVisible();
+
+  await page.getByRole("button", { name: `${starts} 부터의 기간을 수정` }).click();
+  const editing = page.locator("li.editing");
+  await editing.getByLabel("마감 일시").fill("");
+  await editing.getByRole("button", { name: "저장" }).click();
+  await expect.poll(async () => (await saved())?.closes_at).toBeNull();
+
+  page.once("dialog", (confirm) => void confirm.accept());
+  await page.getByRole("button", { name: `${starts} 부터의 기간을 삭제` }).click();
+  await expect.poll(saved).toBeUndefined();
+});
+
 // 카드는 넘치는 내용을 잘라 냅니다. 드롭다운 목록이 카드 안에 갇히면 아래 선택지가 잘려 누를 수 없습니다.
 test("카드 안의 드롭다운 목록이 카드에 잘리지 않고 모든 선택지를 누를 수 있다", async ({ page }) => {
   await page.goto("/rooms");

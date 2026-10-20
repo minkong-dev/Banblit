@@ -44,6 +44,17 @@ describe("notificationText", () => {
     );
   });
 
+  // 마감 일시가 지나 서버가 배정을 확정하면 전체 멤버에게 갑니다(사용자 결정 2026-10-20).
+  it("배정 확정 알림을 사람이 읽을 문장으로 바꾼다", () => {
+    expect(notificationText(row(1, "assignment_fixed"))).toBe("합주 배정이 확정되었어요.");
+  });
+
+  it("확정 해제 알림은 해제 사유를 다음 줄에 그대로 쓴다", () => {
+    expect(notificationText({ ...row(1, "assignment_unfixed"), reason: "팀 하나가 해체되었어요" })).toBe(
+      "합주 배정의 확정이 해제되었어요. 사유는 다음과 같아요.\n팀 하나가 해체되었어요",
+    );
+  });
+
   it("모르는 종류가 와도 종류 이름을 그대로 내보이지 않는다", () => {
     const text = notificationText({ ...row(1), kind: "something_new" as Notification["kind"] });
     expect(text).not.toContain("something_new");
