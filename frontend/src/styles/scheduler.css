@@ -131,9 +131,9 @@ body[data-page="scheduler"] {
   .fld3 > textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
   .fld3 > :focus-visible, .pick select:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
   .people .none { margin: 0; font-size: 13.5px; color: var(--t3); line-height: 1.6; }
-  /* 1열로 쌓이면 카드는 내용만큼만 차지합니다. 타임라인만 상한을 둡니다. */
+  /* 1열로 쌓이면 카드는 내용만큼만 차지하고, 타임라인과 안내문의 타임라인 문구(.tlhint)는 표시하지 않습니다(사용자 결정 2026-10-20). 시간은 가운데 카드의 시작 시간, 종료 시간으로 선택합니다. */
   @media (max-width: 960px) {
-    .pane .tlscroll { max-height: 42vh; }
+    .pane .tlscroll, .pane .tlhint { display: none; }
   }
 
   .people { margin-top: 22px; }
@@ -183,7 +183,7 @@ body[data-page="scheduler"] {
      배치했으므로, 그대로 두면 2열이 새로 생겨 달력이 반으로 좁아집니다. 오른쪽 칸을 달력 아래(1열 4행)로 옮깁니다. */
   @media (max-width: 767px) {
     /* 하루 dialog 는 dialog 하나만 스크롤합니다. 카드 안쪽까지 스크롤하면 한 번에 보이는 내용이 카드 크기로 제한됩니다. */
-    .pane .tlscroll, .pane .col, .pane .people { max-height: none; overflow: visible; }
+    .pane .col, .pane .people { overflow: visible; }
     .rail { grid-column: 1; grid-row: 4; }
     /* 오른쪽 칸이 달력 아래에 붙으므로 달력을 창 높이까지 늘리지 않습니다. 칸은 너비 비율대로만 둡니다. */
     .page { height: auto; }
