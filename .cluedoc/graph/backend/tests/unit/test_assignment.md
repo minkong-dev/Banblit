@@ -39,6 +39,8 @@ flowchart LR
 - `test_sessions_skip_only_the_unavailable_hour`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
 - `test_assignment_stops_when_no_better_solution_comes`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
 - `test_a_team_gets_no_more_than_the_daily_limit_on_one_day`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
+- `test_a_team_is_not_assigned_more_consecutive_hours_than_the_limit`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
+- `_runs`
 - `_counts`
 - `test_short_of_room_still_returns_the_fairest_assignment`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`
 - `test_no_member_is_absent_when_absence_is_not_allowed`: `backend.scheduling.assignment`, `backend.scheduling.availability`, `backend.scheduling.interval`

@@ -369,9 +369,13 @@ def test_applying_an_older_record_makes_exactly_that_record_the_schedule(
     가장 최근 기록이 적용되는 결함을 아래 목록 전체 일치 assert 가 검출합니다.
     """
     period_id = _period(db_session)
+    # 2번방은 1칸만 엽니다. 팀당 하루 상한 3시간 안에 두 방의 칸이 전부 들어가야 S2 가 모든 칸을 받습니다.
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    period.daily_max_hours = 3
+    period.max_consecutive_hours = 3
     team_id = _team_with_member(db_session, "A", "김민수")
     room_1 = Room(name="1번방", opens_at=time(18, 0), closes_at=time(20, 0))
-    # 2번방은 1칸만 엽니다. 팀당 하루 상한(기본 3시간) 안에 두 방의 칸이 전부 들어가야 S2 가 모든 칸을 받습니다.
     room_2 = Room(name="2번방", opens_at=time(20, 0), closes_at=time(21, 0))
     db_session.add_all([room_1, room_2])
     db_session.flush()

@@ -52,6 +52,8 @@ flowchart LR
 - `test_allowed_absence_is_reported_with_position_and_cohort`: `backend.db.models`, `backend.services.period.pipeline`
 - `test_the_report_flags_a_session_whose_absences_exceed_the_allowed_count`: `backend.db.models`, `backend.services.period.pipeline`
 - `test_target_hours_of_the_period_replace_the_automatic_target`: `backend.services.period.pipeline`
+- `test_the_period_daily_limit_caps_each_team_per_day`: `backend.services.period.pipeline`
+- `test_the_period_consecutive_limit_splits_a_team_s_hours`: `backend.services.period.pipeline`
 - `test_open_slots_come_from_the_saved_schedule_without_recomputing`: `backend.db.pipeline`, `backend.services.period.pipeline`
 - `test_open_slots_are_empty_when_nothing_is_assigned`: `backend.services.period.pipeline`
 - `test_an_everyday_period_assigns_only_the_day_of_the_run`: `backend.services.period.pipeline`

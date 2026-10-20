@@ -3,8 +3,14 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, NaiveDatetime, model_validator
 
-from backend.contract import PERMISSIONS, DailyMaxHours, Instrument, JobStatus, NotificationKind, Permission, SlotMinutes
-from backend.contract import MAX_SESSION_MINUTES, REJECT_REASON_MAX_LENGTH
+from backend.contract import PERMISSIONS, Instrument, JobStatus, NotificationKind, Permission, SlotMinutes
+from backend.contract import (
+    DEFAULT_DAILY_MAX_HOURS,
+    DEFAULT_MAX_CONSECUTIVE_HOURS,
+    MAX_DAILY_HOURS,
+    MAX_SESSION_MINUTES,
+    REJECT_REASON_MAX_LENGTH,
+)
 
 class RoomSlotOut(BaseModel):
     # 배정의 slot(점유 단위 길이의 시간 칸)입니다. 합주실은 DB의 번호와 이름을 함께 반환합니다.
@@ -212,17 +218,27 @@ class PracticeWindowIn(BaseModel):
 
 
 class AssignRuleOut(BaseModel):
-    """배정 규칙입니다. target_hours 가 null 이면 팀당 목표 시간은 전체 시간 ÷ 팀 수입니다."""
+    """배정 규칙입니다. target_hours 가 null 이면 팀당 목표 시간은 전체 시간 ÷ 팀 수입니다.
+
+    daily_max_hours 는 팀 1개가 하루에 배정받는 시간의 상한, max_consecutive_hours 는 끊기지 않고 이어지는 시간의 상한(시간)입니다.
+    """
 
     target_hours: int | None
     max_absent: int
+    daily_max_hours: int
+    max_consecutive_hours: int
 
 
 class AssignRuleIn(BaseModel):
-    """배정 규칙 전체를 한 번에 대체합니다. PATCH 에서 보내지 않으면 저장값을 그대로 둡니다(PracticeWindowIn 과 같은 방식)."""
+    """배정 규칙 전체를 한 번에 대체합니다. PATCH 에서 보내지 않으면 저장값을 그대로 둡니다(PracticeWindowIn 과 같은 방식).
+
+    max_consecutive_hours 가 daily_max_hours 이하인지는 services/period/period_crud_service.py 의 AssignRuleIn 이 판정합니다.
+    """
 
     target_hours: int | None = Field(default=None, gt=0)
     max_absent: int = Field(default=0, ge=0, le=32767)
+    daily_max_hours: int = Field(default=DEFAULT_DAILY_MAX_HOURS, ge=1, le=MAX_DAILY_HOURS)
+    max_consecutive_hours: int = Field(default=DEFAULT_MAX_CONSECUTIVE_HOURS, ge=1, le=MAX_DAILY_HOURS)
 
 
 class PeriodOut(BaseModel):
@@ -638,8 +654,6 @@ class SettingsOut(BaseModel):
     slot_minutes: int
     # 합주 1회가 이어지는 길이(분)입니다.
     session_minutes: int
-    # 팀 하나가 하루에 배정받는 시간의 상한(시간)입니다.
-    daily_max_hours: int
 
 
 class SettingsUpdateIn(BaseModel):
@@ -655,13 +669,11 @@ class SettingsUpdateIn(BaseModel):
     # 칸의 배수인지는 저장된 칸 크기를 함께 봐야 알 수 있어 services/settings/settings_service.py 가 판정합니다.
     # 여기서는 값 하나만으로 판정할 수 있는 범위만 봅니다.
     session_minutes: int | None = Field(default=None, ge=1, le=MAX_SESSION_MINUTES)
-    # 허용 값은 contract.py 의 DailyMaxHours 에 작성되어 있는 내용을 기준으로 합니다.
-    daily_max_hours: DailyMaxHours | None = None
 
     @model_validator(mode="after")
     def _at_least_one(self) -> "SettingsUpdateIn":
         # 빈 요청을 200 으로 받으면 이름을 잘못 적은 요청이 조용히 무시됩니다.
-        if self.slot_minutes is None and self.session_minutes is None and self.daily_max_hours is None:
+        if self.slot_minutes is None and self.session_minutes is None:
             raise ValueError("바꿀 값을 하나 이상 보내주세요")
         return self
 

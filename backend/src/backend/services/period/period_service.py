@@ -23,8 +23,13 @@ from backend.db.models import (
     Team,
     UnavailableTime,
 )
-from backend.services.period.period_crud_service import ScheduleRow, every_team_and_room, get_period_or_raise
-from backend.services.settings.pipeline import daily_max_hours, session_minutes, slot_minutes
+from backend.services.period.period_crud_service import (
+    ScheduleRow,
+    every_team_and_room,
+    get_period_or_raise,
+    require_session_fits,
+)
+from backend.services.settings.pipeline import session_minutes, slot_minutes
 from backend.db.pipeline import AssignmentRow
 from backend.scheduling.pipeline import Assignment as EngineAssignment
 from backend.scheduling.pipeline import Room as EngineRoom
@@ -167,6 +172,7 @@ class _Inputs:
     slot_minutes: int
     session_minutes: int
     daily_max_minutes: int
+    max_consecutive_minutes: int
     target_sessions: int
     max_absent: int
 
@@ -191,6 +197,7 @@ def assign_period(
         inputs.slot_minutes,
         inputs.session_minutes,
         inputs.daily_max_minutes,
+        max_consecutive_minutes=inputs.max_consecutive_minutes,
         max_absent=inputs.max_absent,
     )
     return PeriodAssignResult(
@@ -328,7 +335,9 @@ def _prepare(
     engine_rooms = build_engine_rooms(rooms, days, practice_window(period))
     unit = slot_minutes(session)
     length = session_minutes(session)
-    daily_max_minutes = daily_max_hours(session) * 60
+    daily_max_minutes = period.daily_max_hours * 60
+    # 기간을 저장한 뒤 설정의 합주 1회 길이가 늘었을 수 있어 계산 직전에 다시 검증합니다.
+    require_session_fits(length, period.daily_max_hours, period.max_consecutive_hours)
     # 목표 시간을 지정한 기간은 자동값을 계산하지 않습니다. 자동값 계산은 자리가 없으면 거부하기 때문입니다.
     auto = 0 if period.target_hours_per_team is not None else auto_sessions_per_team(
         engine_rooms, len(team_ids), unit, length
@@ -342,6 +351,7 @@ def _prepare(
         slot_minutes=unit,
         session_minutes=length,
         daily_max_minutes=daily_max_minutes,
+        max_consecutive_minutes=period.max_consecutive_hours * 60,
         target_sessions=target_sessions(
             period.target_hours_per_team, auto, len(days), daily_max_minutes, length
         ),

@@ -188,6 +188,33 @@ def test_a_team_gets_no_more_than_the_daily_limit_on_one_day() -> None:
     assert all(_is_one_run(day) for day in by_day.values())
 
 
+def test_a_team_is_not_assigned_more_consecutive_hours_than_the_limit() -> None:
+    # 하루 상한 4시간, 연속 상한 2시간이면 4시간을 같은 날 안에서 2시간씩 떨어뜨려 배정합니다.
+    room = Room(id=1, open_period=TimeInterval(_at(10), _at(20)))
+    team = Team(id=10, members=[Member(id=1, unavailable=[])])
+
+    from backend.scheduling.assignment import assign as assign_sessions
+
+    result = assign_sessions(
+        [team], [room], 4, 60, 60, 10.0, 1.0, daily_max_minutes=240, max_consecutive_minutes=120
+    )
+
+    intervals = sorted((session.interval for session in result.sessions_by_team[10]), key=lambda i: i.start)
+    assert len(intervals) == 4
+    assert max(len(run) for run in _runs(intervals)) == 2
+
+
+def _runs(intervals: list[TimeInterval]) -> list[list[TimeInterval]]:
+    """시작 시간 순서의 구간을 이어진 묶음으로 나눕니다."""
+    runs: list[list[TimeInterval]] = []
+    for interval in intervals:
+        if runs and runs[-1][-1].end == interval.start:
+            runs[-1].append(interval)
+        else:
+            runs.append([interval])
+    return runs
+
+
 def _counts(result: Assignment) -> list[int]:
     return sorted(len(sessions) for sessions in result.sessions_by_team.values())
 

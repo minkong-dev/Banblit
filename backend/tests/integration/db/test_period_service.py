@@ -534,6 +534,40 @@ def test_target_hours_of_the_period_replace_the_automatic_target(
     assert len(result.computed.assignment.sessions_by_team[team_id]) == 1
 
 
+def test_the_period_daily_limit_caps_each_team_per_day(db_session: Session) -> None:
+    # 합주실 3칸, 팀 1개면 자동 목표는 3회입니다. 기간의 하루 상한이 1시간이면 그날 1회만 받습니다.
+    period_id = _period(db_session)
+    team_id = _team_with_member(db_session, "A", "김민수")
+    room_id = _room(db_session, "1번방", time(18, 0), time(21, 0))
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    period.daily_max_hours = 1
+    period.max_consecutive_hours = 1
+    db_session.flush()
+
+    result = run_period_assignment(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
+
+    assert len(result.computed.assignment.sessions_by_team[team_id]) == 1
+
+
+def test_the_period_consecutive_limit_splits_a_team_s_hours(db_session: Session) -> None:
+    # 합주실 4칸, 하루 상한 4시간, 연속 상한 1시간이면 붙은 두 칸은 받지 못해 18시·20시처럼 떨어진 2회만 받습니다.
+    period_id = _period(db_session)
+    team_id = _team_with_member(db_session, "A", "김민수")
+    room_id = _room(db_session, "1번방", time(18, 0), time(22, 0))
+    period = db_session.get(Period, period_id)
+    assert period is not None
+    period.daily_max_hours = 4
+    period.max_consecutive_hours = 1
+    db_session.flush()
+
+    result = run_period_assignment(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
+
+    starts = sorted(session.interval.start for session in result.computed.assignment.sessions_by_team[team_id])
+    assert len(starts) == 2
+    assert starts[1] - starts[0] >= timedelta(hours=2)
+
+
 def test_open_slots_come_from_the_saved_schedule_without_recomputing(
     db_session: Session,
 ) -> None:

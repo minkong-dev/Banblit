@@ -56,4 +56,8 @@ flowchart LR
 - `test_period_name_is_saved_on_create_and_patch_and_defaults_to_empty`
 - `test_a_new_period_has_the_automatic_assign_rule`
 - `test_patching_other_fields_keeps_the_assign_rule`
+- `test_a_consecutive_limit_above_the_daily_limit_is_refused`
+- `test_a_daily_limit_outside_one_to_twelve_hours_is_refused`
+- `test_a_daily_limit_shorter_than_one_session_is_refused`
+- `test_a_consecutive_limit_shorter_than_one_session_is_refused`
 - `test_a_zero_target_hours_is_refused`

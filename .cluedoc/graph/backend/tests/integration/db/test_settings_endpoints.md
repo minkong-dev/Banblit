@@ -40,5 +40,3 @@ flowchart LR
 - `test_a_slot_size_that_would_break_the_saved_session_length_is_refused`
 - `test_a_patch_with_no_value_is_refused`
 - `test_the_database_rejects_a_session_length_that_is_not_a_whole_number_of_slots`
-- `test_the_daily_limit_per_team_starts_at_three_hours_and_takes_one_to_three`
-- `test_the_daily_limit_cannot_be_shorter_than_one_session`

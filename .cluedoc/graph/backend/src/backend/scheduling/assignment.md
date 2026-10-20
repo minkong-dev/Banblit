@@ -51,6 +51,7 @@ flowchart LR
 - `_solve`
 - `_picked_indices`
 - `_limit_per_day`
+- `_limit_consecutive`
 - `_back_to_back_pairs`
 - `_objective`
 - `_at_most_one`

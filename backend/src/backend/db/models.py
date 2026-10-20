@@ -28,13 +28,14 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 # 칸 크기와 합주 1회 길이는 db·api·services·scheduling 이 같은 값을 참조해야 하므로 공유 규격
 # 파일에 1세트만 둡니다.
 from backend.contract import (
-    DAILY_MAX_HOUR_CHOICES,
     DEFAULT_DAILY_MAX_HOURS,
+    DEFAULT_MAX_CONSECUTIVE_HOURS,
     DEFAULT_SESSION_MINUTES,
     DEFAULT_SLOT_MINUTES,
     Instrument,
     INSTRUMENTS,
     LATEST_CLOSE_NEXT_DAY,
+    MAX_DAILY_HOURS,
     MAX_SESSION_MINUTES,
     NOTIFICATION_KINDS,
     NotificationKind,
@@ -113,11 +114,6 @@ class Settings(Base):
         default=DEFAULT_SESSION_MINUTES,
         server_default=text(str(DEFAULT_SESSION_MINUTES)),
     )
-    # 팀 하나가 하루에 배정받는 시간의 상한(시간)입니다. 배정 계산이 이 값을 넘겨 한 날에 몰지 않습니다.
-    daily_max_hours: Mapped[int] = mapped_column(
-        default=DEFAULT_DAILY_MAX_HOURS,
-        server_default=text(str(DEFAULT_DAILY_MAX_HOURS)),
-    )
 
     __table_args__ = (
         CheckConstraint("id = 1"),
@@ -132,10 +128,6 @@ class Settings(Base):
             " AND session_minutes % slot_minutes = 0"
             f" AND session_minutes <= {MAX_SESSION_MINUTES}",
             name="settings_session_minutes_fits_slots",
-        ),
-        CheckConstraint(
-            f"daily_max_hours BETWEEN {min(DAILY_MAX_HOUR_CHOICES)} AND {max(DAILY_MAX_HOUR_CHOICES)}",
-            name="settings_daily_max_hours_range",
         ),
     )
 
@@ -366,6 +358,13 @@ class Period(Base):
     target_hours_per_team: Mapped[int | None] = mapped_column(nullable=True)
     # session 1회에서 불가능 일정 때문에 빠져도 되는 팀원 수의 상한입니다. 0 이면 팀 전원이 가능한 시간만 배정합니다.
     max_absent_members: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+    # 팀 1개가 하루에 배정받는 시간의 상한과 끊기지 않고 이어지는 시간의 상한(시간)입니다(사용자 결정 2026-10-20).
+    daily_max_hours: Mapped[int] = mapped_column(
+        SmallInteger, default=DEFAULT_DAILY_MAX_HOURS, server_default=str(DEFAULT_DAILY_MAX_HOURS)
+    )
+    max_consecutive_hours: Mapped[int] = mapped_column(
+        SmallInteger, default=DEFAULT_MAX_CONSECUTIVE_HOURS, server_default=str(DEFAULT_MAX_CONSECUTIVE_HOURS)
+    )
 
     # 집중 합주기간끼리의 날짜 겹침 금지 제약(EXCLUDE)은 Reservation 의 겹침 금지 제약과 같이 migration 에만
     # 둡니다(migrations/versions/b5e1d9a37c42_focused_period_no_overlap.py).
@@ -406,6 +405,10 @@ class Period(Base):
         ),
         CheckConstraint("target_hours_per_team > 0", name="periods_target_hours_positive"),
         CheckConstraint("max_absent_members >= 0", name="periods_max_absent_not_negative"),
+        CheckConstraint(f"daily_max_hours BETWEEN 1 AND {MAX_DAILY_HOURS}", name="periods_daily_max_hours_range"),
+        CheckConstraint(
+            "max_consecutive_hours BETWEEN 1 AND daily_max_hours", name="periods_max_consecutive_within_daily"
+        ),
     )
 
 

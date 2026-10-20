@@ -32,6 +32,7 @@ def assign(
     slot_minutes: int,
     session_minutes: int,
     daily_max_minutes: int | None = None,
+    max_consecutive_minutes: int | None = None,
     max_absent: int = 0,
 ) -> Assignment:
     """teams 를 rooms 에 target_sessions 회까지 배정합니다. 자리가 모자라도 가장 나은 배정안을 반환합니다."""
@@ -46,6 +47,7 @@ def assign(
         SOLVER_TIME_LIMIT_SECONDS,
         STALL_SECONDS,
         daily_max_minutes=daily_max_minutes,
+        max_consecutive_minutes=max_consecutive_minutes,
         max_absent=max_absent,
         num_workers=SOLVER_WORKERS,
     )

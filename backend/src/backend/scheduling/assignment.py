@@ -19,7 +19,7 @@ CP-SAT 모델은 4가지로 이루어집니다.
 import threading
 from collections import Counter, defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from ortools.sat.python import cp_model
 
@@ -178,6 +178,7 @@ def assign(
     solver_time_limit_seconds: float,
     stall_seconds: float,
     daily_max_minutes: int | None = None,
+    max_consecutive_minutes: int | None = None,
     max_absent: int = 0,
     num_workers: int = 0,
 ) -> Assignment:
@@ -191,6 +192,9 @@ def assign(
 
     max_absent 는 session 1회에서 불가능 일정 때문에 빠져도 되는 팀원 수의 상한입니다. 0 이면 팀 전원이
     가능한 session 만 씁니다.
+
+    daily_max_minutes 는 팀 하나가 하루에 받는 시간의 상한, max_consecutive_minutes 는 끊기지 않고 이어지는
+    시간의 상한입니다. None 이면 그 상한을 두지 않습니다.
 
     칸 하나에는 팀 하나만 배정됩니다. 팀 하나는 같은 시간에 여러 합주실을 동시에 사용할 수 없으며,
     여러 팀에 속한 멤버도 같은 시간에 한 곳에만 있을 수 있습니다. 모든 팀에 0회를 배정하는 해가 항상
@@ -213,6 +217,8 @@ def assign(
     _one_place_per_member(model, chosen, absent, teams, indices_by_interval)
     if daily_max_minutes is not None:
         _limit_per_day(model, chosen, room_sessions, daily_max_minutes // session_minutes)
+    if max_consecutive_minutes is not None:
+        _limit_consecutive(model, chosen, room_sessions, max_consecutive_minutes // session_minutes, session_minutes)
     joined = _back_to_back_pairs(model, chosen, room_sessions)
     _objective(model, chosen, absent, joined, teams, target_sessions, max_absent)
 
@@ -381,6 +387,31 @@ def _limit_per_day(
         # 그날의 후보가 most 개 이하이면 "합이 most 이하" 제약은 항상 충족되므로 추가하지 않습니다.
         if len(variables) > most:
             model.add(cp_model.LinearExpr.sum(variables) <= most)
+
+
+def _limit_consecutive(
+    model: cp_model.CpModel,
+    chosen: Chosen,
+    room_sessions: list[RoomInterval],
+    most: int,
+    session_minutes: int,
+) -> None:
+    """팀마다 끊기지 않고 이어지는 session 수를 most 이하로 묶습니다. 합주실을 옮겨 이어지는 것도 이어진 것으로 봅니다.
+
+    시작 시각 t 마다 t, t+1회, …, t+most회 의 (most+1)개 시작 시각에 걸린 변수의 합이 most 이하입니다.
+    같은 시각의 후보는 _one_room_per_team 이 1개로 묶으므로, 이 합이 most+1 이면 그 팀이 (most+1)회를 이어 쓴 것입니다.
+    """
+    step = timedelta(minutes=session_minutes)
+    by_start: dict[tuple[int, datetime], list[cp_model.IntVar]] = defaultdict(list)
+    for (team_id, index), var in chosen.items():
+        by_start[(team_id, room_sessions[index].interval.start)].append(var)
+    for (team_id, start), first in by_start.items():
+        chain = list(first)
+        for count in range(1, most + 1):
+            chain.extend(by_start.get((team_id, start + count * step), []))
+        # 걸린 시작 시각이 most 개 이하이면 "합이 most 이하" 제약은 항상 충족되므로 추가하지 않습니다.
+        if len(chain) > most:
+            model.add(cp_model.LinearExpr.sum(chain) <= most)
 
 
 def _back_to_back_pairs(
