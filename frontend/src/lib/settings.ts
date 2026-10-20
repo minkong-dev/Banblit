@@ -3,6 +3,7 @@
 // 호출 순서는 pipeline.ts가 결정합니다.
 
 import { DEFAULT_SETTINGS } from "./contract";
+import type { AssignRule } from "./contract";
 import { uniqueNameMessage } from "./validate";
 
 // 칸 하나의 크기는 저장소 설정이 결정합니다(GET /settings 의 slot_minutes). 부르는 쪽이 설정에서 읽어 넘기고, 생략하면 기본값입니다.
@@ -18,9 +19,8 @@ export const LATEST_CLOSE_NEXT_DAY = "00:00";
  *  서버 쪽은 backend/src/backend/api/schemas.py 의 SettingsUpdateIn 과 settings 의 CHECK 에 작성되어 있는 내용을 기준으로 합니다. */
 export const SLOT_MINUTE_CHOICES = [5, 10, 12, 15, 20, 30, 60] as const;
 
-// 팀 하나가 하루에 배정받는 시간의 상한(시간)으로 고를 수 있는 값입니다.
-// 서버 쪽은 backend/src/backend/contract.py 의 DAILY_MAX_HOUR_CHOICES 에 작성되어 있는 내용을 기준으로 합니다.
-export const DAILY_MAX_HOUR_CHOICES = [1, 2, 3] as const;
+/** 팀당 하루 최대 시간과 최대 연속 시간의 상한(시간)입니다. 서버 쪽은 backend/src/backend/contract.py 의 MAX_DAILY_HOURS 에 작성되어 있는 내용을 기준으로 합니다. */
+export const MAX_DAILY_HOURS = 12;
 
 /** 선택지에 표시할 문구입니다. 60분은 "1시간" 이 자연스럽습니다. */
 export function slotMinutesLabel(minutes: number): string {
@@ -132,14 +132,20 @@ function windowPairMessage(pair: WindowPair, label: string, slotMinutes: number)
 const MAX_ABSENT_LIMIT = 32767;
 
 /** 배정 규칙을 검증합니다. 서버 쪽은 backend/src/backend/api/schemas.py 의 AssignRuleIn 에 작성되어 있는 내용을 기준으로 합니다.
- *  입력칸을 비우면 max_absent 가 NaN 입니다. */
-export function assignRuleMessage(rule: { target_hours: number | null; max_absent: number }): string {
-  const { target_hours, max_absent } = rule;
+ *  입력칸을 비우면 그 값이 NaN 입니다. */
+export function assignRuleMessage(rule: AssignRule): string {
+  const { target_hours, max_absent, daily_max_hours, max_consecutive_hours } = rule;
   if (target_hours !== null && (!Number.isInteger(target_hours) || target_hours < 1)) {
-    return "팀당 목표 시간은 1 이상의 정수로 입력해주세요.";
+    return "팀당 목표 시간은 1 이상의 숫자만 입력해주세요.";
   }
   if (!Number.isInteger(max_absent) || max_absent < 0 || max_absent > MAX_ABSENT_LIMIT) {
-    return "불참 허용 인원은 0 이상의 정수로 입력해주세요.";
+    return "불참 허용 인원은 0 이상의 숫자만 입력해주세요.";
+  }
+  if (!Number.isInteger(daily_max_hours) || daily_max_hours < 1 || daily_max_hours > MAX_DAILY_HOURS) {
+    return `팀당 하루 최대 배정시간은 1~${MAX_DAILY_HOURS} 사이의 숫자만 입력해주세요.`;
+  }
+  if (!Number.isInteger(max_consecutive_hours) || max_consecutive_hours < 1 || max_consecutive_hours > daily_max_hours) {
+    return "연속 배정시간은 1 이상, 팀당 하루 최대 배정시간 사이의 숫자만 입력해주세요.";
   }
   return "";
 }

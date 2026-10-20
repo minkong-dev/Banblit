@@ -16,7 +16,7 @@ import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { checkPeriod, daysBetween, periodBody, removePeriod, savePeriod } from "../lib/pipeline";
 import type { PeriodBody } from "../lib/pipeline";
-import { periodTitle } from "../lib/settings";
+import { MAX_DAILY_HOURS, periodTitle } from "../lib/settings";
 import type { WindowPair } from "../lib/settings";
 import { EnsembleDays, EnsembleFields, EnsembleToggle, ensembleBody, ensembleDraft } from "./SettingsEnsemble";
 import { Row, useFirstField, useForm } from "./SettingsForm";
@@ -33,7 +33,7 @@ const BLANK_PERIOD: PeriodBody = {
   first_run_at: "09:00",
   second_run_at: "21:00",
   practice_window: NO_WINDOW,
-  assign_rule: { target_hours: null, max_absent: 0 },
+  assign_rule: { target_hours: null, max_absent: 0, daily_max_hours: 2, max_consecutive_hours: 2 },
 };
 
 /** 기간 form 이 수정하는 값만 추립니다. 목록에서 받은 기간에는 id·ensemble 이 함께 있어 그대로 보내면 요청 본문에 섞입니다. */
@@ -214,6 +214,43 @@ function PeriodFields(props: {
               onChange={(event) => setForm({
                 ...form,
                 assign_rule: { ...rule, max_absent: event.target.value === "" ? Number.NaN : Number(event.target.value) },
+              })}
+            />
+          </Cell>
+          </div>
+          <div className="frow">
+          {/* 팀 1개가 하루에 배정받는 시간의 상한과, 끊기지 않고 이어지는 시간의 상한입니다(사용자 결정 2026-10-20). 최대 연속은 하루 최대 이하입니다. */}
+          <Cell label="팀당 하루 최대 배정시간" htmlFor={at("daily")}>
+            <input
+              id={at("daily")}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={MAX_DAILY_HOURS}
+              step={1}
+              value={Number.isNaN(rule.daily_max_hours) ? "" : rule.daily_max_hours}
+              aria-invalid={ruleBad}
+              aria-describedby={ruleBad ? whyId : undefined}
+              onChange={(event) => setForm({
+                ...form,
+                assign_rule: { ...rule, daily_max_hours: event.target.value === "" ? Number.NaN : Number(event.target.value) },
+              })}
+            />
+          </Cell>
+          <Cell label="최대 연속 배정시간" htmlFor={at("consecutive")}>
+            <input
+              id={at("consecutive")}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={MAX_DAILY_HOURS}
+              step={1}
+              value={Number.isNaN(rule.max_consecutive_hours) ? "" : rule.max_consecutive_hours}
+              aria-invalid={ruleBad}
+              aria-describedby={ruleBad ? whyId : undefined}
+              onChange={(event) => setForm({
+                ...form,
+                assign_rule: { ...rule, max_consecutive_hours: event.target.value === "" ? Number.NaN : Number(event.target.value) },
               })}
             />
           </Cell>

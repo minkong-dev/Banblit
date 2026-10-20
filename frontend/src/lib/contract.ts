@@ -32,8 +32,14 @@ export type Period = {
 };
 
 /** 기간의 배정 규칙입니다. target_hours 가 null 이면 팀당 목표 시간은 전체 시간 ÷ 팀 수입니다.
- *  max_absent 는 session 1회에서 불가능 일정 때문에 빠져도 되는 팀원 수의 상한입니다. */
-export type AssignRule = { target_hours: number | null; max_absent: number };
+ *  max_absent 는 session 1회에서 불가능 일정 때문에 빠져도 되는 팀원 수의 상한입니다.
+ *  daily_max_hours 는 팀 1개가 하루에 배정받는 시간의 상한, max_consecutive_hours 는 끊기지 않고 이어지는 시간의 상한입니다(시간). */
+export type AssignRule = {
+  target_hours: number | null;
+  max_absent: number;
+  daily_max_hours: number;
+  max_consecutive_hours: number;
+};
 
 /** 팀별 합주를 배정할 수 있는 하루 중의 시간대입니다. 합주실 개방시각과는 다른 값입니다 —
  *  합주실이 09시에 열어도 팀별 합주는 17시부터만 배정할 수 있습니다. 실제 배정 구간은
@@ -357,10 +363,10 @@ export type Notification = {
 export const SESSION_REJECTED_CODE = "session_rejected";
 
 /** GET, PATCH /settings 의 응답입니다. 서버 쪽은 backend/src/backend/api/schemas.py 의 SettingsOut 에 작성되어 있는 내용을 기준으로 합니다. */
-export type Settings = { slot_minutes: number; session_minutes: number; daily_max_hours: number };
+export type Settings = { slot_minutes: number; session_minutes: number };
 
 /** 설정을 아직 받지 못했을 때 쓰는 값입니다. 서버 기본값(backend/src/backend/contract.py)과 같아 받는 사이에 격자가 바뀌지 않습니다. */
-export const DEFAULT_SETTINGS: Settings = { slot_minutes: 60, session_minutes: 60, daily_max_hours: 3 };
+export const DEFAULT_SETTINGS: Settings = { slot_minutes: 60, session_minutes: 60 };
 
 /** 합주실을 만들거나 수정할 때 보내는 값입니다. */
 export type RoomInput = Pick<Room, "name" | "opens_at" | "closes_at">;

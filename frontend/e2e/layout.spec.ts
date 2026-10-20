@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { E2E_STATE_PATH, dateParts, dayFromToday, weekdayKr } from "./helpers";
 
 // 본문은 사이드바를 뺀 폭을 전부 씁니다. 최대 폭(예전 1440px)으로 묶어 가운데 두면 넓은 모니터에서
 // 양옆이 회색으로 비고, 글쓰기·PDF 처럼 넓을수록 좋은 화면이 좁게 나옵니다.
@@ -44,13 +45,13 @@ test("긴 글쓰기 화면은 페이지 전체가 스크롤하고 상단바·사
   expect(Math.abs(edges.sideBottom - edges.viewport)).toBeLessThanOrEqual(1);
 });
 
-// 모달도 창 폭에 비례합니다. 좁은 창에서는 최소 560px(창보다 넓으면 창 폭 - 40px), 넓은 창에서는 창 폭의 36% 입니다.
+// 모달도 창 폭에 비례합니다. 좁은 창에서는 최소 560px, 넓은 창에서는 창 폭의 36%, 767px 이하에서는 창 폭 전체입니다.
 // 고정 560px 이면 2560px 창에서 모달이 화면의 1/5 로 작게 보입니다.
 test("모달 너비가 창 폭에 따라 달라진다", async ({ page }) => {
   const cases = [
     { width: 1100, expected: 560 },
     { width: 2560, expected: 2560 * 0.36 },
-    { width: 390, expected: 390 - 40 },
+    { width: 390, expected: 390 },
   ];
   for (const { width, expected } of cases) {
     await page.setViewportSize({ width, height: 900 });
@@ -284,6 +285,52 @@ test("기준 휴대폰 폭에서 날짜 dialog 의 입력 카드가 잘리지 �
   await expect(col).toBeVisible();
   const clipped = await col.evaluate((el) => el.scrollHeight - el.clientHeight);
   expect(clipped).toBeLessThanOrEqual(1);
+});
+
+// iOS 는 글자 크기 16px 미만 입력칸에 초점이 가면 화면을 확대하고 되돌리지 않습니다. 터치 기기에서는 입력칸이 16px 이상입니다.
+test("터치 기기에서 modal 입력칸의 글자 크기가 16px 이상이다", async ({ browser }) => {
+  const touch = await browser.newContext({
+    viewport: PHONES[0], hasTouch: true, isMobile: true, baseURL: "http://localhost:5173", storageState: E2E_STATE_PATH,
+  });
+  const phone = await touch.newPage();
+  await phone.goto("/periods");
+  await phone.getByRole("button", { name: "+ 새 집중 합주기간" }).click();
+  const sizes = await phone.locator("dialog[open]").evaluate((dialog) =>
+    [...dialog.querySelectorAll("input, select, textarea")].map((el) => parseFloat(getComputedStyle(el).fontSize)));
+  expect(Math.min(...sizes)).toBeGreaterThanOrEqual(16);
+  await touch.close();
+});
+
+// 화면보다 작은 modal 은 한 번에 보이는 내용이 modal 크기로 제한됩니다. 휴대폰에서는 modal 이 화면 전체를 차지하고,
+// 하루 dialog 안에 따로 스크롤되는 영역을 두지 않습니다.
+test("휴대폰에서 modal 은 화면 전체를 차지하고 하루 dialog 안에 따로 스크롤되는 영역이 없다", async ({ browser }) => {
+  const touch = await browser.newContext({
+    viewport: PHONES[0], hasTouch: true, isMobile: true, baseURL: "http://localhost:5173", storageState: E2E_STATE_PATH,
+  });
+  const phone = await touch.newPage();
+  // 여는 animation(scale .985 에서 1)이 끝난 뒤의 크기를 잽니다.
+  const fillsScreen = () => phone.locator("dialog[open]").evaluate(async (dialog) => {
+    await Promise.all(dialog.getAnimations().map((animation) => animation.finished));
+    const r = dialog.getBoundingClientRect();
+    return { width: Math.round(r.width), height: Math.round(r.height), top: Math.round(r.top), vw: innerWidth, vh: innerHeight };
+  });
+  await phone.goto("/periods");
+  await phone.getByRole("button", { name: "+ 새 집중 합주기간" }).click();
+  const period = await fillsScreen();
+  expect(period).toEqual({ width: period.vw, height: period.vh, top: 0, vw: period.vw, vh: period.vh });
+
+  const { year, month, day } = dateParts(`${dayFromToday(3)}T00:00:00`);
+  await phone.goto("/scheduler");
+  if (month !== new Date().getMonth() + 1) await phone.getByRole("button", { name: "다음 달" }).click();
+  await phone.getByRole("button", { name: `${month}월 ${day}일 ${weekdayKr(year, month, day)}요일` }).first().click();
+  const dayDialog = await fillsScreen();
+  expect(dayDialog).toEqual({ width: dayDialog.vw, height: dayDialog.vh, top: 0, vw: dayDialog.vw, vh: dayDialog.vh });
+  const innerScrollers = await phone.locator("dialog[open]").evaluate((dialog) =>
+    [...dialog.querySelectorAll<HTMLElement>(":not(textarea)")]
+      .filter((el) => ["auto", "scroll"].includes(getComputedStyle(el).overflowY))
+      .map((el) => el.className));
+  expect(innerScrollers).toEqual([]);
+  await touch.close();
 });
 
 test("글쓰기 화면은 아무것도 입력하지 않으면 오류를 표시하지 않는다", async ({ page }) => {
