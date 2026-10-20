@@ -110,8 +110,10 @@ function SetupArea({ tab }: { tab: "rooms" | "periods" }) {
             canEdit={can(me, "period_edit")}
             canCreate={can(me, "period_create")}
             canDelete={can(me, "period_delete")}
+            canUnfix={can(me, "proposal_confirm")}
             onSaved={saved(["periods"], "집중 합주기간을 등록했어요.")}
             onDeleted={saved(PERIOD_DELETE_KEYS, "집중 합주기간을 삭제했어요.")}
+            onUnfixed={saved(["periods", "notifications"], "확정을 해제했어요.")}
           />
         )}
       </div>

@@ -66,7 +66,7 @@ export function ensembleSaveOrder(
   return inside ? ["ensemble", "period"] : ["period", "ensemble"];
 }
 
-export type PeriodBody = Omit<Period, "id" | "ensemble">;
+export type PeriodBody = Omit<Period, "id" | "ensemble" | "fixed_at">;
 export type EnsembleBody = Omit<Ensemble, "days">;
 
 /** 기간과 전체 합주를 ensembleSaveOrder 순서로 저장합니다. 요청 사이에 실패하면 앞 요청은 저장된 채로 남고,
@@ -340,6 +340,12 @@ export async function rejectBooking(reservationId: number, reason: string): Prom
  *  unavailable_manage 권한이 필요합니다. */
 export async function rejectUnavailable(memberId: number, timeId: number, reason: string): Promise<void> {
   await sendReject(`/members/${memberId}/unavailable/${timeId}/reject`, reason);
+}
+
+/** 확정된 기간의 확정과 마감 일시를 사유와 함께 해제합니다. 전체 멤버에게 사유를 담은 알림이 갑니다.
+ *  proposal_confirm 권한이 필요합니다. */
+export async function unfixPeriod(periodId: number, reason: string): Promise<void> {
+  await getJSON(`/periods/${periodId}/unfix`, { method: "POST", body: JSON.stringify({ reason }) });
 }
 
 /** 자신이 등록한 불가능 일정 하나를 삭제합니다. 다른 사용자의 일정은 서버가 없는 일정과 같게 거절합니다. */

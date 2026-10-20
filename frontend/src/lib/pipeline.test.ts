@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { addUnavailable, cancelBooking, checkAttachments, checkPeriod, ensembleSaveOrder, expelMember, findId, loadReservationRows, NO_REPEAT, logOut, openingHours, periodBody, rejectBooking, rejectUnavailable, removeUnavailable, requestPasswordReset, saveSettings, resetPassword } from "./pipeline";
+import { addUnavailable, cancelBooking, checkAttachments, checkPeriod, ensembleSaveOrder, expelMember, findId, loadReservationRows, NO_REPEAT, logOut, openingHours, periodBody, rejectBooking, rejectUnavailable, removeUnavailable, unfixPeriod, requestPasswordReset, saveSettings, resetPassword } from "./pipeline";
 import { isSignedIn } from "./api";
 import { AttachmentFailed, loadScheduleRows, publishWithAttachments, repeatConflict, saveSeats, saveTeam } from "./pipeline";
 import { weekKeys } from "./calendar";
@@ -430,6 +430,17 @@ describe("rejectBooking · rejectUnavailable", () => {
     expect(url).toBe("/api/members/3/unavailable/7/reject");
     expect(init?.method).toBe("POST");
     expect(sentBody(init)).toEqual({ reason: "리허설이에요" });
+  });
+
+  it("확정 해제는 사유를 실어 기간의 unfix 주소로 POST 한다", async () => {
+    const spy = stubFetch();
+
+    await unfixPeriod(5, "팀 하나가 해체되었어요");
+
+    const [url, init] = spy.mock.calls[0];
+    expect(url).toBe("/api/periods/5/unfix");
+    expect(init?.method).toBe("POST");
+    expect(sentBody(init)).toEqual({ reason: "팀 하나가 해체되었어요" });
   });
 });
 
