@@ -11,6 +11,7 @@ sources:
   - "[[graph/frontend/src/routes/SettingsBlinded]]"  # 블라인드 구역 — 가려 둔 글과 되돌리기 — frontend/src/routes/SettingsBlinded.tsx
   - "[[graph/frontend/src/components/Modal]]"  # 모든 화면이 함께 쓰는 Modal 컴포넌트 — frontend/src/components/Modal.tsx
   - "[[graph/frontend/src/components/controls]]"  # 버튼·체크·시작/종료 쌍·검색·파일 선택·문구 등 본질이 같은 요소 1벌 — frontend/src/components/controls.tsx
+  - "[[graph/frontend/src/components/Popover]]"  # popover="auto" 팝업 1개와 경로 변경 시 닫기 — frontend/src/components/Popover.tsx
   - "[[graph/frontend/src/components/MemberSearch]]"  # 창 위에 겹쳐 뜨는 멤버 검색 창의 입력칸과 목록 — frontend/src/components/MemberSearch.tsx
   - "[[graph/frontend/src/styles/base.css]]"  # 색·본문 최대 폭 같은 모든 화면 공통 값 — frontend/src/styles/base.css
   - "[[graph/frontend/src/styles/shell.css]]"  # 상단바·사이드바·카드·입력칸 등 모든 화면이 함께 쓰는 스타일 — frontend/src/styles/shell.css
@@ -54,7 +55,7 @@ sources:
   - "[[graph/docker-compose.yml]]"  # web 컨테이너가 화면을 제공합니다 — docker-compose.yml
 ---
 
-> 문서 버전: 3.9.0 draft
+> 문서 버전: 3.10.0 draft
 
 ```mermaid
 flowchart LR
@@ -227,10 +228,14 @@ flowchart LR
 | `SearchInput`, `FilePicker` | 검색칸, 숨긴 파일 input(여는 버튼이 `ref.click()`). 같은 파일을 다시 골라도 감지되도록 선택 뒤 값을 비웁니다 | `type=search` 2곳, `label>input[file]` 과 `rtpick` |
 | `Why`, `Empty` | 오류 문구(`role="alert"`), 빈 목록·불러오는 중·실패 문구(`stateText`) | `<p className="why">` 14곳, `.empty` 24곳 |
 | `FormFoot`, `MenuItem`, `Cell` | 취소·저장 줄(form 이면 `type=submit`, modal 이면 `onSubmit`), 팝업 메뉴 항목, 입력칸 label | `ModalFormFoot`·`FormTail`, `.act`, 설정 화면의 `Cell` |
+| `Segmented` (2026-10-21) | 항목 2개 이상 중 1개 선택. 선택한 항목에 `aria-pressed` | 달력의 월, 주 전환과 불가능 일정 캘린더의 멤버, 팀 전환(`.seg` 2곳) |
+| `Popover` (2026-10-21, `components/Popover.tsx`) | `popover="auto"` 팝업 1개. 열림 여부를 boolean 으로 전달하고, 경로가 바뀌면 닫습니다(`usePopoverRouteClose`) | 알림, 프로필 카드, 프로필 사진 변경, 글자색 팝업 4곳. 휴대폰 메뉴와 랜딩 메뉴는 링크를 누르면 닫는 동작이 달라 대상이 아닙니다 |
 
 CSS 는 공용 `.btn`·`.ic`·`.why`·`.empty` 1벌(`shell.css`)만 남기고 `.primary`·`.ghost`·`.listfoot .new` 를 없앴습니다. modal 아래 줄과 목록 아래 줄은 `.mfoot .btn`·`.listfoot .btn` 이 자리만 정합니다.
 
 **어떻게 확인했나.** `frontend/src/components/controls.test.tsx` 가 요소마다 깨지면 잡히는 검사 1개씩(13개)을 가집니다 — class·aria·pending·Link 전환·Range 의 id 와 onChange·FilePicker 의 값 비우기. 구현 전에 실패를 확인했습니다. 화면까지는 `frontend/e2e` 86개가 통과했고, 글 작성 폼의 파일 첨부 버튼 hover 문제(2026-10-07 접수)는 `label` 로 감싸던 구조가 없어져 원인 자체가 사라졌습니다.
+
+2026-10-21 에 `Segmented`, `Popover` 를 추가했습니다. `controls.test.tsx` 의 "Segmented — 2개 이상 중 1개 선택" 과 `components/Popover.test.tsx`(jsdom 렌더링, toggle 의 newState 전달)가 구현 전에 실패하는 것을 확인했습니다. 실행 명령은 `docker compose run --rm --no-deps web npm test`(604개 통과), e2e 는 COMMAND.md 의 `--profile e2e` 2줄(97개 통과)입니다.
 
 ### 글과 팀의 상세는 주소로 엽니다 (2026-10-08)
 
