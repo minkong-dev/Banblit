@@ -74,6 +74,24 @@ export function MenuItem({ className, ...rest }: ComponentProps<"button">) {
   return <button {...rest} type="button" className={className === undefined ? "act" : `act ${className}`} />;
 }
 
+/** 항목 2개 이상 중 1개를 선택하는 버튼 묶음입니다. 선택한 항목에 aria-pressed 를 붙입니다. */
+export function Segmented<T extends string>({ label, items, value, onChange }: {
+  label: string;
+  items: readonly { key: T; text: string }[];
+  value: T;
+  onChange: (key: T) => void;
+}) {
+  return (
+    <div className="seg" role="group" aria-label={label}>
+      {items.map((item) => (
+        <button key={item.key} type="button" aria-pressed={item.key === value} onClick={() => onChange(item.key)}>
+          {item.text}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 // ===== 입력 =====
 
 /** 켜고 끄는 항목 1개입니다. check 는 제출 시 적용되는 체크 표시, switch 는 즉시 적용되는 스위치(role="switch")입니다.

@@ -10,8 +10,8 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_components_NotificationMenu["NotificationMenu.tsx"]
+  frontend_src_components_NotificationMenu --> frontend_src_components_Popover["Popover.tsx"]
   frontend_src_components_NotificationMenu --> frontend_src_components_controls["controls.tsx"]
-  frontend_src_components_NotificationMenu --> frontend_src_components_hooks["hooks.ts"]
   frontend_src_components_NotificationMenu --> frontend_src_components_icons["icons.tsx"]
   frontend_src_components_NotificationMenu --> frontend_src_components_queries["queries.ts"]
   frontend_src_components_NotificationMenu --> frontend_src_lib_calendar["calendar.ts"]
@@ -23,8 +23,8 @@ flowchart LR
 
 ## imports
 
+- [[graph/frontend/src/components/Popover|Popover.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
-- [[graph/frontend/src/components/hooks|hooks.ts]]
 - [[graph/frontend/src/components/icons|icons.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/lib/calendar|calendar.ts]]

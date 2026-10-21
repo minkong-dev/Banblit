@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { Avatar } from "../components/Avatar";
 import { Card, SectionHead } from "../components/Layout";
 import { BackButton, Button, EditButton, FilePicker, MenuItem, Why } from "../components/controls";
-import { usePopoverRouteClose } from "../components/hooks";
+import { Popover } from "../components/Popover";
 import { reason } from "../lib/api";
 import { leaveAccount, resetAvatar, saveProfile, uploadAvatar } from "../lib/pipeline";
 import { roleLabel } from "../lib/account";
@@ -61,7 +61,6 @@ function PhotoEdit({ me }: { me: Account }) {
   const pick = useRef<HTMLInputElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  usePopoverRouteClose(PHOTO_MENU_ID);
   const { upload, reset, busy } = useAvatarChange();
 
   function close(): void {
@@ -85,25 +84,24 @@ function PhotoEdit({ me }: { me: Account }) {
       >
         프로필 사진 변경
       </button>
-      <div
+      <Popover
         id={PHOTO_MENU_ID}
-        popover="auto"
-        className="pop"
+        label="프로필 사진 변경"
         role="group"
-        aria-label="프로필 사진 변경"
-        onToggle={(event) => {
-          setOpen(event.newState === "open");
+        className="pop"
+        onOpenChange={(next) => {
+          setOpen(next);
           // 팝업이 닫히면 초점을 여는 버튼으로 되돌립니다. popover 는 이 동작을 대신해주지 않습니다.
           // 되돌리지 않으면 초점이 사라진 메뉴와 함께 문서 맨 앞으로 갑니다.
           // 메뉴 안의 버튼을 눌러 닫을 때는 그 버튼이 이미 초점을 갖고 있어, 브라우저가 popover 를
           // 숨기며 처리하는 초점 정리가 이 함수보다 나중에 실행되면 여기서 옮긴 초점을 덮어씁니다.
           // requestAnimationFrame 으로 한 프레임 미뤄 브라우저의 정리가 끝난 뒤에 옮깁니다.
-          if (event.newState === "closed") requestAnimationFrame(() => trigger.current?.focus());
+          if (!next) requestAnimationFrame(() => trigger.current?.focus());
         }}
       >
         <MenuItem onClick={() => { close(); pick.current?.click(); }}>프로필 사진 업로드</MenuItem>
         <MenuItem onClick={() => { close(); reset(); }}>기본 이미지 적용</MenuItem>
-      </div>
+      </Popover>
       <Avatar id={me.id} name={me.name} className="big" photo={me.avatar} />
       <FilePicker
         ref={pick}
