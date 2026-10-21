@@ -1,14 +1,16 @@
 // 배정 화면(routes/Assignment)의 부품입니다. 오른쪽 칸 2개는 자기 서버 호출을 직접 가집니다.
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { Button, Empty } from "../components/controls";
 import { Panel } from "../components/Layout";
-import { recordsKey, PERIODS_KEY } from "../components/queries";
+import { recordsKey, NOTIFICATIONS_KEY, PERIODS_KEY } from "../components/queries";
+import { ReasonDialog } from "../components/RejectDialog";
 import { getJSON, reason } from "../lib/api";
-import { loadRecords } from "../lib/pipeline";
+import { loadRecords, unfixPeriod } from "../lib/pipeline";
+import { periodTitle } from "../lib/settings";
 import { absentOf, hoursOf, reportLines } from "../lib/assignment";
 import { appliedLabel, checkRunTimes, scoreLabel } from "../lib/runs";
 import { say } from "../components/toast";
@@ -344,5 +346,36 @@ export function RunTimesPanel({ period, canManage }: { period: Period | null; ca
         )}
       </div>
     </Panel>
+  );
+}
+
+/** 확정 해제 버튼과 사유 modal 입니다. 해제하면 마감 일시도 비워지고 사유가 전체 멤버에게 알림으로 갑니다(사용자 결정 2026-10-20). */
+export function UnfixButton({ period }: { period: Period }) {
+  const [open, setOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  // 해제되면 이 버튼이 사라지므로 focus 를 같은 머리줄의 기간 드롭다운으로 이동합니다.
+  async function done(): Promise<void> {
+    const dropdown = buttonRef.current?.closest(".calhead")?.querySelector<HTMLElement>(".ddbtn");
+    setOpen(false);
+    say("확정을 해제했어요.");
+    await Promise.all([PERIODS_KEY, NOTIFICATIONS_KEY].map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+    dropdown?.focus();
+  }
+  return (
+    <>
+      <Button ref={buttonRef} kind="ghost" className="unfix" aria-label={`${periodTitle(period)} 확정 해제`} onClick={() => setOpen(true)}>확정 해제</Button>
+      {!open ? null : (
+        <ReasonDialog
+          title="확정 해제"
+          hint="확정을 해제하면 마감 일시도 비워지고, 사유가 전체 멤버에게 알림으로 가요."
+          subject={periodTitle(period)}
+          action="해제"
+          onSubmit={(text) => unfixPeriod(period.id, text)}
+          onDone={() => { void done(); }}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
   );
 }

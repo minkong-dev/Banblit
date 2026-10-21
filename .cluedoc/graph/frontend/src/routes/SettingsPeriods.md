@@ -12,7 +12,6 @@ flowchart LR
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"]
   frontend_src_routes_SettingsPeriods --> frontend_src_components_Layout["Layout.tsx"]
   frontend_src_routes_SettingsPeriods --> frontend_src_components_Modal["Modal.tsx"]
-  frontend_src_routes_SettingsPeriods --> frontend_src_components_RejectDialog["RejectDialog.tsx"]
   frontend_src_routes_SettingsPeriods --> frontend_src_components_controls["controls.tsx"]
   frontend_src_routes_SettingsPeriods --> frontend_src_components_hooks["hooks.ts"]
   frontend_src_routes_SettingsPeriods --> frontend_src_components_queries["queries.ts"]
@@ -30,7 +29,6 @@ flowchart LR
 
 - [[graph/frontend/src/components/Layout|Layout.tsx]]
 - [[graph/frontend/src/components/Modal|Modal.tsx]]
-- [[graph/frontend/src/components/RejectDialog|RejectDialog.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/hooks|hooks.ts]]
 - [[graph/frontend/src/components/queries|queries.ts]]
