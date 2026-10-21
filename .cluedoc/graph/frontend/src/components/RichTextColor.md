@@ -10,7 +10,7 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_components_RichTextColor["RichTextColor.tsx"]
-  frontend_src_components_RichTextColor --> frontend_src_components_hooks["hooks.ts"]
+  frontend_src_components_RichTextColor --> frontend_src_components_Popover["Popover.tsx"]
   frontend_src_components_RichTextColor --> frontend_src_components_icons["icons.tsx"]
   frontend_src_components_RichTextColor --> frontend_src_components_richTextEditor["richTextEditor.ts"]
   frontend_src_components_RichTextColor --> frontend_src_lib_richText["richText.ts"]
@@ -19,7 +19,7 @@ flowchart LR
 
 ## imports
 
-- [[graph/frontend/src/components/hooks|hooks.ts]]
+- [[graph/frontend/src/components/Popover|Popover.tsx]]
 - [[graph/frontend/src/components/icons|icons.tsx]]
 - [[graph/frontend/src/components/richTextEditor|richTextEditor.ts]]
 - [[graph/frontend/src/lib/richText|richText.ts]]

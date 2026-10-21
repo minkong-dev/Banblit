@@ -4,8 +4,10 @@
 import { useState } from "react";
 
 import { currentMonth, dayKey, weekKeys, weekLabel, weekShiftFor } from "../lib/calendar";
-import { NavButton } from "./controls";
+import { NavButton, Segmented } from "./controls";
 import "../styles/calendar.css";
+
+const LAYOUTS = [{ key: "month", text: "월" }, { key: "week", text: "주" }] as const;
 
 export type CalendarCursor = {
   week: boolean;
@@ -42,10 +44,7 @@ export function CalendarBar({ cursor }: { cursor: CalendarCursor }) {
       <NavButton dir="prev" className="navb" label={week ? "저번 주" : "저번 달"} onClick={() => shift(-1)} />
       <span className="ml">{week ? weekLabel(weekDayKeys) : `${year}년 ${month + 1}월`}</span>
       <NavButton dir="next" className="navb" label={week ? "다음 주" : "다음 달"} onClick={() => shift(1)} />
-      <div className="seg" role="group" aria-label="레이아웃 변경">
-        <button aria-pressed={!week} onClick={() => setWeek(false)}>월</button>
-        <button aria-pressed={week} onClick={() => setWeek(true)}>주</button>
-      </div>
+      <Segmented label="레이아웃 변경" items={LAYOUTS} value={week ? "week" : "month"} onChange={(key) => setWeek(key === "week")} />
     </div>
   );
 }

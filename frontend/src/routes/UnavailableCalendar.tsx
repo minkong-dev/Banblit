@@ -9,7 +9,7 @@ import type { CSSProperties } from "react";
 
 import { CalendarBar, useCalendarCursor } from "../components/CalendarBar";
 import { MonthView, WeekView } from "../components/CalendarViews";
-import { Empty } from "../components/controls";
+import { Empty, Segmented } from "../components/controls";
 import { SearchIcon } from "../components/icons";
 import { MemberSearch } from "../components/MemberSearch";
 import { Modal } from "../components/Modal";
@@ -25,6 +25,7 @@ import { memberLabel } from "../lib/roster";
 import { useScrollToFirst } from "./DayDialogParts";
 
 type Target = "member" | "team";
+const TARGETS = [{ key: "member", text: "멤버" }, { key: "team", text: "팀" }] as const satisfies readonly { key: Target; text: string }[];
 
 /** 히트맵 칸의 색 단계(0~4)입니다. 0명은 0, 나머지는 비율을 4단계로 올림합니다. */
 function heatLevel(count: number, total: number): number {
@@ -52,10 +53,7 @@ export function UnavailableCalendar({ times }: { times: MemberUnavailable[] }) {
   return (
     <div className="calview">
       <div className="unavbar">
-        <div className="seg" role="group" aria-label="대상 종류">
-          <button aria-pressed={target === "member"} onClick={() => setTarget("member")}>멤버</button>
-          <button aria-pressed={target === "team"} onClick={() => setTarget("team")}>팀</button>
-        </div>
+        <Segmented label="대상 종류" items={TARGETS} value={target} onChange={setTarget} />
         <button className="pickfield" aria-haspopup="dialog" aria-label={target === "member" ? "멤버 선택" : "팀 선택"} onClick={() => setPicking(true)}>
           <SearchIcon aria-hidden="true" />
           {chosen === null || chosenLabel === null

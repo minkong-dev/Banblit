@@ -6,7 +6,8 @@ import { BrandLockup } from "./Brand";
 import { Button, CloseButton, IconButton, MenuItem } from "./controls";
 import { NotificationMenu } from "./NotificationMenu";
 import { MoonIcon, SunIcon, WideMenuIcon } from "./icons";
-import { usePage, usePopoverRouteClose } from "./hooks";
+import { usePage } from "./hooks";
+import { Popover } from "./Popover";
 import { ME_KEY, TEAMS_KEY, useMe, useMyTeamCohorts } from "./queries";
 import { useToast } from "./toast";
 import { LOADING_TEXT } from "../lib/loading";
@@ -238,7 +239,6 @@ function ThemeButton() {
  *  "프로필 설정"은 이 프로필 카드에서 `/profile`로 들어가는 유일한 입구입니다. */
 function ProfileMenu() {
   const [open, setOpen] = useState(false);
-  usePopoverRouteClose(PROFILE_POP_ID);
   const navigate = useNavigate();
   const { me } = useMe();
   const teams = useMyTeamCohorts();
@@ -265,14 +265,7 @@ function ProfileMenu() {
         <span className="nm">{name}</span>
         <span className="ar" aria-hidden="true">▾</span>
       </button>
-      <div
-        id={PROFILE_POP_ID}
-        popover="auto"
-        className="pop"
-        role="dialog"
-        aria-label="내 프로필"
-        onToggle={(event) => setOpen(event.newState === "open")}
-      >
+      <Popover id={PROFILE_POP_ID} label="내 프로필" className="pop" onOpenChange={setOpen}>
         <div className="who">
           <Avatar id={me?.id ?? null} name={name} photo={me?.avatar ?? null} />
           <div><b>{name}</b><small>{sub}</small></div>
@@ -291,7 +284,7 @@ function ProfileMenu() {
           프로필 설정<span>›</span>
         </MenuItem>
         <MenuItem className="quit" onClick={() => void handleLogOut()}>로그아웃</MenuItem>
-      </div>
+      </Popover>
     </div>
   );
 }

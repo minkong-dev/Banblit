@@ -3,7 +3,7 @@
 
 import { useId, useRef, useState } from "react";
 
-import { usePopoverRouteClose } from "./hooks";
+import { Popover } from "./Popover";
 import { PaletteIcon } from "./icons";
 import type { Editor } from "./richTextEditor";
 import { PALETTE } from "../lib/richText";
@@ -77,7 +77,6 @@ export function ColorPanel({ editor, used, disabled }: {
 }) {
   const [open, setOpen] = useState(false);
   const popId = useId();
-  usePopoverRouteClose(popId);
   const color = String(editor.getAttributes("textStyle").color ?? "#191f28");
   const background = String(editor.getAttributes("textStyle").backgroundColor ?? "#ffffff");
   return (
@@ -86,14 +85,7 @@ export function ColorPanel({ editor, used, disabled }: {
         <PaletteIcon />
         <i className="rtcolorbar" style={{ background: color, borderColor: background }} aria-hidden="true" />
       </button>
-      <div
-        id={popId}
-        popover="auto"
-        className="rtcolorpop"
-        role="dialog"
-        aria-label="글자색과 배경색"
-        onToggle={(event) => setOpen(event.newState === "open")}
-      >
+      <Popover id={popId} label="글자색과 배경색" className="rtcolorpop" onOpenChange={setOpen}>
         <ColorColumn
           title="글자색"
           resetLabel="기본값으로 설정"
@@ -110,7 +102,7 @@ export function ColorPanel({ editor, used, disabled }: {
           used={used}
           onPick={(next) => editor.chain().focus().setBackgroundColor(next).run()}
         />
-      </div>
+      </Popover>
     </div>
   );
 }

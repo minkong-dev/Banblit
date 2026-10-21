@@ -20,6 +20,11 @@ html { overflow: auto; }
    한 낱말이 칸보다 길 때(긴 주소·이메일)만 글자 단위로 끊습니다. */
 body { margin: 0; word-break: keep-all; overflow-wrap: break-word; }
 [hidden] { display: none !important; }
+/* 누르는 요소에서 더블탭 확대를 끕니다. 탭이 지연 없이 click 으로 전달됩니다. */
+button, a, input, select, textarea, label, summary { touch-action: manipulation; }
+/* 선택한 글자, 입력 커서, 브라우저 기본 입력 요소(radio, range)의 색입니다. */
+::selection { background: light-dark(var(--coral-soft), var(--coral-soft-dark)); }
+:root { caret-color: var(--coral); accent-color: var(--coral); }
 
 /* 스크롤 막대를 감춥니다. 스크롤은 그대로 동작하고 막대만 표시하지 않습니다. 화면 곳곳이
    각자 스크롤하는 구조라, 막대가 보이면 영역마다 회색 줄이 생깁니다. */

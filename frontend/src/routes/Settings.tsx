@@ -25,7 +25,7 @@ import {
 } from "../lib/settings";
 import { say } from "../components/toast";
 import { BlindedCards } from "./SettingsBlinded";
-import { Cell, Why } from "../components/controls";
+import { Cell, Empty, Why } from "../components/controls";
 import { MemberCards } from "./SettingsMembers";
 import { PeriodCard } from "./SettingsPeriods";
 import { ReservationCards } from "./SettingsReservations";
@@ -50,9 +50,7 @@ export function SettingsIndex() {
   return (
     <div className="main">
       <Card>
-        <div className="empty">
-          설정할 수 있는 항목이 없어요. 내 계정은 프로필 화면에서 수정해요.
-        </div>
+        <Empty as="div" text="설정할 수 있는 항목이 없어요. 내 계정은 프로필 화면에서 수정해요." />
       </Card>
     </div>
   );

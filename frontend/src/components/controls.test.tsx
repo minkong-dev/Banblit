@@ -6,7 +6,7 @@ import type { ReactElement } from "react";
 
 import {
   BackButton, Button, CloseButton, DateRange, DeleteButton, EditButton, Empty, FormFoot,
-  IconButton, MenuItem, NavButton, SearchInput, TimeRange, Toggle, Why, FilePicker,
+  IconButton, MenuItem, NavButton, SearchInput, Segmented, TimeRange, Toggle, Why, FilePicker,
 } from "./controls";
 import { ChevronLeftIcon, ChevronRightIcon, CloseIcon, PencilIcon, TrashIcon } from "./icons";
 
@@ -143,6 +143,22 @@ describe("SearchInput·MenuItem·Why·Empty", () => {
     expect(li.type).toBe("li");
     expect(li.props.children).toBe("없어요");
     expect(li.props.className).toBe("empty");
+  });
+});
+
+describe("Segmented — 2개 이상 중 1개 선택", () => {
+  it("선택한 항목만 aria-pressed 이고 누르면 그 key 로 onChange 를 호출한다", () => {
+    const onChange = vi.fn();
+    const items = [{ key: "month", text: "월" }, { key: "week", text: "주" }] as const;
+    const el = Segmented({ label: "레이아웃 변경", items, value: "week", onChange }) as El;
+    expect(el.props.role).toBe("group");
+    expect(el.props["aria-label"]).toBe("레이아웃 변경");
+    expect(el.props.className).toBe("seg");
+    const [month, week] = kids(el);
+    expect(month.props["aria-pressed"]).toBe(false);
+    expect(week.props["aria-pressed"]).toBe(true);
+    (month.props.onClick as () => void)();
+    expect(onChange).toHaveBeenCalledWith("month");
   });
 });
 

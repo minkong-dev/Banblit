@@ -208,8 +208,12 @@ body[data-page="board"] {
   margin: 0; grid-template-columns: repeat(2, auto); gap: 16px;
   padding: 14px; border-radius: 12px; background: var(--card);
   border: 1px solid var(--line); box-shadow: var(--shadow-up);
+  opacity: 0; transform: translateY(-6px) scale(.98); transform-origin: top left;
+  transition: opacity .16s ease, transform .16s ease, overlay .16s allow-discrete, display .16s allow-discrete;
 }
-.rtcolorpop:popover-open { display: grid; }
+.rtcolorpop:popover-open { display: grid; opacity: 1; transform: none; }
+@starting-style { .rtcolorpop:popover-open { opacity: 0; transform: translateY(-6px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .rtcolorpop { transform: none; transition-duration: .01ms; } }
 /* 칸 폭은 팔레트 격자(16px 8칸 + 간격)가 정합니다. 고정 폭을 주면 격자가 칸을 넘쳐
    제목과 버튼이 격자와 어긋납니다. */
 .rtcol { display: flex; flex-direction: column; gap: 6px; width: max-content; }

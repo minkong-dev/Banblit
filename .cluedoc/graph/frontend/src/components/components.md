@@ -28,6 +28,8 @@ kind: directory
 - [[graph/frontend/src/components/NotificationMenu|NotificationMenu.tsx]]
 - [[graph/frontend/src/components/Pager.test|Pager.test.tsx]]
 - [[graph/frontend/src/components/Pager|Pager.tsx]]
+- [[graph/frontend/src/components/Popover.test|Popover.test.tsx]]
+- [[graph/frontend/src/components/Popover|Popover.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
 - [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]
 - [[graph/frontend/src/components/PostBoard|PostBoard.tsx]]

@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { Empty, IconButton, MenuItem } from "./controls";
 import { BellIcon } from "./icons";
-import { usePopoverRouteClose } from "./hooks";
+import { Popover } from "./Popover";
 import { loadState } from "../lib/loading";
 import { loadNotifications, markNotificationsRead } from "../lib/pipeline";
 import { notificationText, unreadCount } from "../lib/notifications";
@@ -18,7 +18,6 @@ const NOTES_POP_ID = "notesPop";
  *  어느 화면에 있든 배정이 변경되었음을 알 수 있어야 합니다. */
 export function NotificationMenu() {
   const [open, setOpen] = useState(false);
-  usePopoverRouteClose(NOTES_POP_ID);
   const queryClient = useQueryClient();
 
   // 이 query(서버 조회)는 항상 현재 로그인한 사람의 알림만 반환합니다.
@@ -77,14 +76,7 @@ export function NotificationMenu() {
         )}
       />
 
-      <div
-        id={NOTES_POP_ID}
-        popover="auto"
-        className="notepop"
-        role="dialog"
-        aria-label="알림"
-        onToggle={(event) => setOpen(event.newState === "open")}
-      >
+      <Popover id={NOTES_POP_ID} label="알림" className="notepop" onOpenChange={setOpen}>
         <div className="nhead">
           <b>알림</b>
           {unread === 0 ? null : (
@@ -92,7 +84,7 @@ export function NotificationMenu() {
           )}
         </div>
         {body}
-      </div>
+      </Popover>
     </div>
   );
 }
