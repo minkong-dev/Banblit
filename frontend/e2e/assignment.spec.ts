@@ -101,3 +101,40 @@ test("배정 결과는 횟수 없이 팀별 시간만 표시한다", async ({ pa
   for (const text of await counts.allTextContents()) expect(text).not.toMatch(/\d+번/);
   for (const text of await page.locator("p.sub").allTextContents()) expect(text).not.toMatch(/\d+(번|회)/);
 });
+
+// 확정 해제는 배정 결과 확인 화면에서만 합니다(사용자 결정 2026-10-21). 기간 화면에는 "배정 확정" 글자만 남습니다.
+test.describe("확정 해제", () => {
+  const CLOSED_AT = "2026-01-01T21:00:00";
+
+  // 집중 합주기간 전부를 마감, 확정된 상태로 응답합니다.
+  test.beforeEach(async ({ page }) => {
+    await page.route(/\/api\/periods$/, async (route) => {
+      const response = await route.fetch();
+      const body = await response.json() as { periods: Record<string, unknown>[] };
+      const periods = body.periods.map((period) => period.kind === "focused"
+        ? { ...period, closes_at: CLOSED_AT, fixed_at: CLOSED_AT }
+        : period);
+      await route.fulfill({ response, json: { ...body, periods } });
+    });
+  });
+
+  test("배정 결과 확인 화면에서 사유를 입력해 확정을 해제한다", async ({ page }) => {
+    let sent: unknown = null;
+    await page.route(/\/api\/periods\/\d+\/unfix$/, async (route) => {
+      sent = route.request().postDataJSON();
+      await route.fulfill({ json: { period: null } });
+    });
+    await page.goto("/admin");
+    await page.getByRole("button", { name: /확정 해제$/ }).click();
+    const dialog = page.getByRole("dialog", { name: "확정 해제" });
+    await dialog.getByLabel("해제 사유").fill("팀 하나가 해체되었어요");
+    await dialog.getByRole("button", { name: "해제하기" }).click();
+    await expect.poll(() => sent).toEqual({ reason: "팀 하나가 해체되었어요" });
+  });
+
+  test("기간 화면에는 확정 해제 버튼이 없다", async ({ page }) => {
+    await page.goto("/periods");
+    await expect(page.getByText("배정 확정").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: /확정 해제$/ })).toHaveCount(0);
+  });
+});

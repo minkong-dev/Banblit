@@ -13,7 +13,7 @@ import { recordRoundKey, recordRoundsKey, recordsKey, SCHEDULE_KEY, useMe, usePe
 import { can } from "../lib/account";
 import { NOW, colorsOf, dayRangeOf, sessionsOfRows, tabKey, tabsOf, viewOf } from "../lib/assignment";
 import type { View } from "../lib/assignment";
-import { AssignmentCalendar, AssignmentStatus, PastRunsPanel, RunTimesPanel } from "./AssignmentPanels";
+import { AssignmentCalendar, AssignmentStatus, PastRunsPanel, RunTimesPanel, UnfixButton } from "./AssignmentPanels";
 import "../styles/assignment.css";
 import type { AssignOut, ScheduleRow } from "../lib/contract";
 // 조회 결과가 아직 없을 때 사용하는 빈 목록입니다. 같은 배열을 계속 사용해야 useMemo 의 의존성이 변하지 않습니다.
@@ -175,6 +175,7 @@ export function Assignment() {
                 onChange={(next) => { setPeriodId(next); setView(NOW); }}
               />
             </span>
+            {activePeriod === null || activePeriod.fixed_at === null || !canConfirm ? null : <UnfixButton period={activePeriod} />}
           </div>
 
           {/* 요일 머리글과 날짜 칸을 한 요소로 묶습니다. 휴대폰 폭에서 달력만 가로로 스크롤할 때

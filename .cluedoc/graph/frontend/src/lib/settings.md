@@ -15,6 +15,7 @@ flowchart LR
   frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_lib_settings
   frontend_src_lib_pipeline["pipeline.ts"] --> frontend_src_lib_settings
   frontend_src_lib_settings_test["settings.test.ts"] --> frontend_src_lib_settings
+  frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_lib_settings
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_settings
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_lib_settings
 ```
@@ -29,5 +30,6 @@ flowchart LR
 - [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/settings.test|settings.test.ts]]
+- [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]

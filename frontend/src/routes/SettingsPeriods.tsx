@@ -9,13 +9,12 @@ import { Card, SectionHead } from "../components/Layout";
 import { Button, Cell, Empty, FormFoot, TimeRange, Toggle } from "../components/controls";
 import { useReturnFocus } from "../components/hooks";
 import { Modal } from "../components/Modal";
-import { ReasonDialog } from "../components/RejectDialog";
 import { useRemoveRow, useSlotMinutes } from "../components/queries";
 import { askDelete } from "../lib/confirm";
 import type { ClockRange, Period, PracticeWindow, Room } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
-import { checkPeriod, daysBetween, periodBody, removePeriod, savePeriod, unfixPeriod } from "../lib/pipeline";
+import { checkPeriod, daysBetween, periodBody, removePeriod, savePeriod } from "../lib/pipeline";
 import type { PeriodBody } from "../lib/pipeline";
 import { MAX_DAILY_HOURS, periodTitle } from "../lib/settings";
 import type { WindowPair } from "../lib/settings";
@@ -64,8 +63,8 @@ function clockText(hhmm: string): string {
 
 /** 목록 줄의 제목 아래 줄들입니다(사용자 결정 2026-10-07).
  *  총 합주기간, 전체 합주기간(지정한 경우만), 스케줄링 시간(집중 합주기간만), 마감 일시(지정한 경우만) 순서입니다.
- *  onUnfixed 가 있으면 확정된 기간에 확정 해제 버튼을 표시합니다. */
-function PeriodLines({ period, onUnfixed }: { period: Period; onUnfixed?: () => void }) {
+ *  확정 해제는 배정 결과 확인 화면에서 합니다(사용자 결정 2026-10-21). */
+function PeriodLines({ period }: { period: Period }) {
   const { starts_on, ends_on, everyday, ensemble } = period;
   return (
     <>
@@ -88,29 +87,7 @@ function PeriodLines({ period, onUnfixed }: { period: Period; onUnfixed?: () => 
         <div>
           마감 일시 <b>{period.closes_at.slice(0, 10)} {period.closes_at.slice(11, 16)}</b>
           {period.fixed_at === null ? null : ", 배정 확정"}
-          {period.fixed_at === null || onUnfixed === undefined ? null : <UnfixButton period={period} onDone={onUnfixed} />}
         </div>
-      )}
-    </>
-  );
-}
-
-/** 확정 해제 버튼과 사유 modal 입니다. 해제하면 마감 일시도 비워지고 사유가 전체 멤버에게 알림으로 갑니다(사용자 결정 2026-10-20). */
-function UnfixButton({ period, onDone }: { period: Period; onDone: () => void }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Button kind="ghost" aria-label={`${periodTitle(period)} 확정 해제`} onClick={() => setOpen(true)}>확정 해제</Button>
-      {!open ? null : (
-        <ReasonDialog
-          title="확정 해제"
-          hint="확정을 해제하면 마감 일시도 비워지고, 사유가 전체 멤버에게 알림으로 가요."
-          subject={periodTitle(period)}
-          action="해제"
-          onSubmit={(reason) => unfixPeriod(period.id, reason)}
-          onDone={() => { setOpen(false); onDone(); }}
-          onClose={() => setOpen(false)}
-        />
       )}
     </>
   );
@@ -357,9 +334,9 @@ function WindowFields(props: {
 
 export function PeriodCard(props: {
   periods: Period[]; rooms: Room[]; state: LoadState; canEdit: boolean; canCreate: boolean; canDelete: boolean;
-  canUnfix: boolean; onSaved: () => void; onDeleted: () => void; onUnfixed: () => void;
+  onSaved: () => void; onDeleted: () => void;
 }) {
-  const { periods, rooms, state, canEdit, canCreate, canDelete, canUnfix, onSaved, onDeleted, onUnfixed } = props;
+  const { periods, rooms, state, canEdit, canCreate, canDelete, onSaved, onDeleted } = props;
   const { openId: editing, open, close, register } = useReturnFocus();
   const [making, setMaking] = useState(false);
   const drop = useRemoveRow(removePeriod, onDeleted);
@@ -392,7 +369,7 @@ export function PeriodCard(props: {
               <Row
                 key={period.id}
                 title={periodTitle(period)}
-                when={<PeriodLines period={period} onUnfixed={canUnfix ? onUnfixed : undefined} />}
+                when={<PeriodLines period={period} />}
                 span=""
                 editLabel={canEdit ? `${period.starts_on} 부터의 기간을 수정` : undefined}
                 buttonRef={canEdit ? register(period.id) : undefined}
