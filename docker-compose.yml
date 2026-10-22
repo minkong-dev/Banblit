@@ -97,7 +97,9 @@ services:
       - "127.0.0.1:${WEB_PORT:-8080}:80"
     # nginx 를 거쳐 api 의 /health 가 응답하는지 확인합니다. nginx 설정 오류와 api 연결 실패를 함께 잡습니다.
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/api/health"]
+      # localhost 가 아니라 127.0.0.1 입니다. nginx 는 IPv4 만 열고(frontend/nginx.conf.template 의 listen 80),
+      # localhost 가 IPv6(::1)로 풀리면 연결이 거절되어 container 가 unhealthy 가 됩니다.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/api/health"]
       interval: 10s
       timeout: 5s
       retries: 3
