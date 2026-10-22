@@ -3,7 +3,6 @@
 # 계산·판단이 필요하면 이 파일이 아니라 호출하는 쪽에 둡니다.
 
 from datetime import date, datetime, time
-from typing import Literal, get_args
 
 from sqlalchemy import (
     BigInteger,
@@ -40,10 +39,12 @@ from backend.contract import (
     NOTIFICATION_KINDS,
     NotificationKind,
     Permission,
+    PERIOD_KINDS,
     PERMISSIONS,
     REJECT_TARGETS,
     RUN_SLOTS,
     SLOT_MINUTE_CHOICES,
+    TEAM_COLORS,
 )
 
 # CHECK 제약 문구는 위 목록에서 그대로 생성합니다. 목록과 제약이 분리되지 않도록 합니다.
@@ -51,24 +52,9 @@ _PERMISSION_ARRAY_SQL = "ARRAY[{}]::text[]".format(
     ", ".join(f"'{name}'" for name in PERMISSIONS)
 )
 
-# 팀 색입니다. @radix-ui/colors 의 이름 25개 중 바로 옆 색과 거의 같은 5개(ruby, violet, bronze, cyan, grass)를
-# 뺀 20개입니다. 순서가 곧 자동 배정 순서입니다. 화면 쪽 짝은 frontend/src/lib/teamColors.ts 입니다.
-TeamColor = Literal[
-    "tomato", "red", "crimson", "pink", "plum", "purple", "iris", "indigo", "blue", "sky",
-    "teal", "jade", "green", "mint", "lime", "yellow", "amber", "orange", "gold", "brown",
-]
-
-TEAM_COLORS: tuple[TeamColor, ...] = get_args(TeamColor)
-
 _TEAM_COLOR_ARRAY_SQL = "ARRAY[{}]::text[]".format(
     ", ".join(f"'{name}'" for name in TEAM_COLORS)
 )
-
-# 기간의 종류입니다. 집중 합주기간(focused)만 자동 배정이 실행됩니다.
-PeriodKind = Literal["open", "focused"]
-PERIOD_KINDS: tuple[PeriodKind, ...] = get_args(PeriodKind)
-
-
 
 
 def _slot_minutes_sql() -> str:

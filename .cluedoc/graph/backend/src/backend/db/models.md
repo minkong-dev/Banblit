@@ -24,7 +24,6 @@ flowchart LR
   backend_src_backend_api_routers_schedule["schedule.py"] --> backend_src_backend_db_models
   backend_src_backend_api_routers_unavailable["unavailable.py"] --> backend_src_backend_db_models
   backend_src_backend_db_schedule_store["schedule_store.py"] --> backend_src_backend_db_models
-  backend_src_backend_jobs_auto_assign["auto_assign.py"] --> backend_src_backend_db_models
   backend_src_backend_services_auth_auth_service["auth_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_auth_auth_session["auth_session.py"] --> backend_src_backend_db_models
   backend_src_backend_services_auth_password_reset["password_reset.py"] --> backend_src_backend_db_models
@@ -47,7 +46,6 @@ flowchart LR
   backend_src_backend_services_roster_roster_service["roster_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_settings_settings_service["settings_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_unavailable_unavailable_service["unavailable_service.py"] --> backend_src_backend_db_models
-  backend_src_backend_services_validation_input["input.py"] --> backend_src_backend_db_models
   backend_tests_conftest["conftest.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_assign_jobs["test_assign_jobs.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_attachment_endpoints["test_attachment_endpoints.py"] --> backend_src_backend_db_models
@@ -101,7 +99,6 @@ flowchart LR
 - [[graph/backend/src/backend/api/routers/schedule|schedule.py]]
 - [[graph/backend/src/backend/api/routers/unavailable|unavailable.py]]
 - [[graph/backend/src/backend/db/schedule_store|schedule_store.py]]
-- [[graph/backend/src/backend/jobs/auto_assign|auto_assign.py]]
 - [[graph/backend/src/backend/services/auth/auth_service|auth_service.py]]
 - [[graph/backend/src/backend/services/auth/auth_session|auth_session.py]]
 - [[graph/backend/src/backend/services/auth/password_reset|password_reset.py]]
@@ -124,7 +121,6 @@ flowchart LR
 - [[graph/backend/src/backend/services/roster/roster_service|roster_service.py]]
 - [[graph/backend/src/backend/services/settings/settings_service|settings_service.py]]
 - [[graph/backend/src/backend/services/unavailable/unavailable_service|unavailable_service.py]]
-- [[graph/backend/src/backend/services/validation/input|input.py]]
 - [[graph/backend/tests/conftest|conftest.py]]
 - [[graph/backend/tests/integration/db/test_assign_jobs|test_assign_jobs.py]]
 - [[graph/backend/tests/integration/db/test_attachment_endpoints|test_attachment_endpoints.py]]

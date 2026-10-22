@@ -1,4 +1,4 @@
-"""jobs/auto_assign.py 의 DB 없는 판정을 검증합니다. 계산 시각 판정, 환경변수 해석, 상태 확인용 heartbeat 파일입니다."""
+"""jobs/auto_assign.py 의 DB 없는 판정을 검증합니다. 계산 시각 판정(services/period/pipeline.py 의 due_slots), 환경변수 해석, 상태 확인용 heartbeat 파일입니다."""
 
 from datetime import datetime, time
 from pathlib import Path
@@ -7,6 +7,7 @@ import pytest
 
 from backend.db.models import Period
 from backend.jobs import auto_assign
+from backend.services.period.pipeline import due_slots
 
 
 def _period() -> Period:
@@ -16,9 +17,9 @@ def _period() -> Period:
 def test_only_passed_and_unrun_slots_are_due() -> None:
     period = _period()
 
-    assert auto_assign.due_slots(period, datetime(2026, 10, 15, 8, 59), set()) == ()
-    assert auto_assign.due_slots(period, datetime(2026, 10, 15, 21, 0), set()) == ("first", "second")
-    assert auto_assign.due_slots(period, datetime(2026, 10, 15, 21, 0), {"first"}) == ("second",)
+    assert due_slots(period, datetime(2026, 10, 15, 8, 59), set()) == ()
+    assert due_slots(period, datetime(2026, 10, 15, 21, 0), set()) == ("first", "second")
+    assert due_slots(period, datetime(2026, 10, 15, 21, 0), {"first"}) == ("second",)
 
 
 def test_the_job_is_enabled_unless_switched_off(monkeypatch: pytest.MonkeyPatch) -> None:

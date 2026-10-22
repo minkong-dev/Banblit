@@ -58,9 +58,9 @@ _KEEP_MAX_AGE = int(KEEP_TTL.total_seconds())
 
 
 def _cookie_secure() -> bool:
-    # 개발 환경은 HTTP 이므로 Secure 플래그를 활성화하면 브라우저가 cookie 를 저장하지 않습니다.
-    # docker-compose.yml 의 배포 기본값에만 COOKIE_SECURE=true 를 설정하고, 개발 환경 override 파일은 false 로 재설정합니다.
-    return os.environ.get("COOKIE_SECURE", "false").lower() == "true"
+    # 환경변수가 없으면 배포 값(true)입니다. 개발 환경은 HTTP 라 Secure cookie 를 브라우저가 저장하지 않으므로
+    # docker-compose.override.yml 이 COOKIE_SECURE=false 로 덮어씁니다.
+    return os.environ.get("COOKIE_SECURE", "true").lower() == "true"
 
 
 def _set_session_cookies(response: Response, token: str, keep: bool = False) -> None:

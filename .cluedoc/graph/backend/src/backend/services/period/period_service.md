@@ -10,6 +10,7 @@ kind: file
 ```mermaid
 flowchart LR
   backend_src_backend_services_period_period_service["period_service.py"]
+  backend_src_backend_services_period_period_service --> backend_src_backend_contract["contract.py"]
   backend_src_backend_services_period_period_service --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_period_period_service --> backend_src_backend_db_pipeline["pipeline.py"]
   backend_src_backend_services_period_period_service --> backend_src_backend_scheduling_pipeline["pipeline.py"]
@@ -22,6 +23,7 @@ flowchart LR
 
 ## imports
 
+- [[graph/backend/src/backend/contract|contract.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/db/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/scheduling/pipeline|pipeline.py]]
@@ -45,6 +47,9 @@ flowchart LR
 - `_prepare`: `backend.services.period.period_crud_service`, `backend.services.period.period_input`, `backend.services.settings.pipeline`
 - `_check_request`: `backend.services.period.period_crud_service`
 - `practice_window`: `backend.services.period.period_input`
+- `due_slots`
+- `ran_slots_today`
+- `mark_ran`: `backend.db.models`
 - `period_days`: `backend.services.period.period_input`
 - `_load_rooms`
 - `_load_team_names`

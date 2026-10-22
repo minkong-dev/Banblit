@@ -7,27 +7,27 @@ run_period_assignment 를 직접 호출하므로 서버가 실행 중이 아니�
 
 import logging
 import os
-from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from time import sleep
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from backend.services.board.pipeline import sweep_stale_drafts
 from backend.services.period.pipeline import (
+    due_slots,
     every_team_and_room,
     fix_closed_period,
     focused_periods_on,
     is_closed,
+    mark_ran,
     period_days,
     periods_to_fix,
+    ran_slots_today,
     run_period_assignment,
 )
 from backend.contract import RunSlot
-from backend.db.models import AssignmentRun, Period
 from backend.db.pipeline import get_session_factory
 
 logger = logging.getLogger(__name__)
@@ -47,26 +47,6 @@ class AutoRun:
     run_on: date
     slots: tuple[RunSlot, ...]
     error: str | None
-
-
-def due_slots(
-    period: Period, now: datetime, already_ran: set[str]
-) -> tuple[RunSlot, ...]:
-    # period 의 두 계산 시각 중 now 까지 지났고 아직 실행하지 않은 시각을 반환합니다.
-    # 어제 놓친 시각은 검사하지 않습니다. 배정은 기간 전체를 다시 계산하는 작업이므로 어제 시각을
-    # 지금 실행하는 것과 오늘 시각을 지금 실행하는 것은 결과가 같습니다.
-    today = now.date()
-    schedule: list[tuple[RunSlot, time]] = [
-        ("first", period.first_run_at),
-        ("second", period.second_run_at),
-    ]
-    due: list[RunSlot] = []
-    for slot, run_at in schedule:
-        if slot in already_ran:
-            continue
-        if datetime.combine(today, run_at) <= now:
-            due.append(slot)
-    return tuple(due)
 
 
 # 쓰다 만 초안을 남겨 두는 기간입니다. 화면은 나갈 때 삭제하지만 탭을 닫거나 연결이 끊기면
@@ -95,7 +75,7 @@ def run_due_assignments(session: Session, now: datetime) -> list[AutoRun]:
     if not periods:
         return []
 
-    ran_by_period = _ran_slots_today(session, [period.id for period in periods], today)
+    ran_by_period = ran_slots_today(session, [period.id for period in periods], today)
 
     results: list[AutoRun] = []
     for period in periods:
@@ -116,21 +96,6 @@ def _fix_closed(session: Session, now: datetime, team_ids: list[int], room_ids: 
         except Exception:  # noqa: BLE001 - 한 기간의 확정이 실패해도 다음 기간을 계속 처리합니다
             session.rollback()
             logger.exception("자동 확정이 실패했습니다 (period=%s)", period.id)
-
-
-def _ran_slots_today(
-    session: Session, period_ids: list[int], today: date
-) -> dict[int, set[str]]:
-    # 오늘 이미 실행한 (기간, 계산 시각)을 기간별 집합으로 수집합니다.
-    rows = session.execute(
-        select(AssignmentRun.period_id, AssignmentRun.slot)
-        .where(AssignmentRun.period_id.in_(period_ids))
-        .where(AssignmentRun.run_on == today)
-    ).all()
-    ran: dict[int, set[str]] = defaultdict(set)
-    for period_id, slot in rows:
-        ran[period_id].add(slot)
-    return ran
 
 
 def _run_one(
@@ -154,22 +119,8 @@ def _run_one(
     # 그 시각이 다시 실행되지 않기 때문입니다. 다시 실행해도 스케줄링 기록이 1개 더 쌓일 뿐
     # 현재 배정안은 바뀌지 않습니다.
     # 기록 저장은 run_period_assignment 안에서 이미 commit 되었습니다.
-    _mark_ran(session, period_id, now, slots)
+    mark_ran(session, period_id, now, slots)
     return AutoRun(period_id, now.date(), slots, error=None)
-
-
-def _mark_ran(
-    session: Session, period_id: int, now: datetime, slots: tuple[RunSlot, ...]
-) -> None:
-    # (기간, 날짜, 계산 시각)을 assignment_runs 에 기록합니다. 세 열에 unique 제약이
-    # 있어 같은 시각이 중복으로 기록되지 않습니다.
-    for slot in slots:
-        session.add(
-            AssignmentRun(
-                period_id=period_id, run_on=now.date(), slot=slot, ran_at=now
-            )
-        )
-    session.commit()
 
 
 def enabled_from_env() -> bool:

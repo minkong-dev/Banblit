@@ -16,7 +16,6 @@ flowchart LR
   backend_src_backend_api_routers_schedule --> backend_src_backend_db_models["models.py"]
   backend_src_backend_api_routers_schedule --> backend_src_backend_db_pipeline["pipeline.py"]
   backend_src_backend_api_routers_schedule --> backend_src_backend_scheduling_pipeline["pipeline.py"]
-  backend_src_backend_api_routers_schedule --> backend_src_backend_services_notification_pipeline["pipeline.py"]
   backend_src_backend_api_routers_schedule --> backend_src_backend_services_period_pipeline["pipeline.py"]
   backend_src_backend_api_routers_schedule --> backend_src_backend_services_settings_pipeline["pipeline.py"]
   backend_src_backend_api_app["app.py"] --> backend_src_backend_api_routers_schedule
@@ -31,7 +30,6 @@ flowchart LR
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/db/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/scheduling/pipeline|pipeline.py]]
-- [[graph/backend/src/backend/services/notification/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/period/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/settings/pipeline|pipeline.py]]
 
@@ -67,4 +65,4 @@ flowchart LR
 - `read_period_records`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.settings.pipeline`
 - `_score_out`: `backend.api.schemas`, `backend.services.period.pipeline`
 - `read_period_record_round`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.services.period.pipeline`
-- `apply_period_record`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.db.pipeline`, `backend.services.notification.pipeline`, `backend.services.period.pipeline`
+- `apply_period_record`: `backend.api.auth_dependency`, `backend.api.schemas`, `backend.services.period.pipeline`

@@ -1,4 +1,9 @@
-from backend.services.period.period_service import record_points
+from backend.services.period.period_service import record_points as _record_points
+from backend.services.period.pipeline import ABSENCE_PENALTY
+
+
+def record_points(team_sessions: list[int], target_sessions: int, absences: int) -> int:
+    return _record_points(team_sessions, target_sessions, absences, ABSENCE_PENALTY)
 
 
 def test_full_target_and_no_absence_is_100() -> None:

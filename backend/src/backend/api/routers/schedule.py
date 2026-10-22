@@ -9,15 +9,14 @@ from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account, require_permission
 from backend.api.job_runner import Job, JobRunner
-from backend.services.notification.pipeline import notify_assignment_updated
 from backend.services.settings.pipeline import slot_minutes
 from backend.services.period.pipeline import (
     PeriodAssignResult,
     PeriodRun,
     ScheduleReport,
+    apply_saved_record,
     open_slots_in_period,
     require_not_closed,
-    require_not_fixed,
     run_period_assignment,
     stored_report,
 )
@@ -48,7 +47,6 @@ from backend.api.schemas import (
 )
 from backend.db.models import Period
 from backend.db.pipeline import (
-    apply_record,
     get_session,
     get_session_factory,
     list_backup_rounds,
@@ -252,7 +250,7 @@ def read_period_record_round(
     )
 
 
-# 스케줄링 기록 1개를 현재 배정안으로 적용합니다. 현재 배정안을 변경하는 endpoint 는 이 endpoint 1개이므로 알림도 이 endpoint 가 생성합니다.
+# 스케줄링 기록 1개를 현재 배정안으로 적용합니다. 확정 여부 검증, 적용, 알림의 순서는 services/period/pipeline.py 의 apply_saved_record 에 있습니다.
 @router.post(
     "/periods/{period_id}/records/{saved_at}/apply",
     response_model=ApplyRecordOut,
@@ -263,11 +261,6 @@ def apply_period_record(
     period: Period = Depends(_period),
     session: Session = Depends(get_session),
 ) -> ApplyRecordOut:
-    # 합주실·시각 충돌은 ValueError 를 발생시켜 422 로 응답합니다.
-    # 확정 시각과 알림 시각을 같은 값으로 남깁니다.
-    now = datetime.now()
-    require_not_fixed(period)
-    if not apply_record(session, period.id, saved_at, applied_at=now):
-        raise ValueError("존재하지 않는 배정기록이에요")
-    notify_assignment_updated(session, period.id, now)
+    # 확정된 기간, 존재하지 않는 기록, 합주실·시각 충돌은 ValueError 를 발생시켜 422 로 응답합니다.
+    apply_saved_record(session, period, saved_at, datetime.now())
     return ApplyRecordOut(applied=True)

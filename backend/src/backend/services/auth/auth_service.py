@@ -1,6 +1,5 @@
 import hashlib
 import hmac
-import os
 import secrets
 
 from sqlalchemy import select
@@ -11,7 +10,6 @@ from backend.services.validation.pipeline import (
     require_department,
     require_email,
     require_login_id,
-    require_non_empty,
     require_person_name,
     require_password,
     require_student_no,
@@ -67,19 +65,13 @@ def _needs_rehash(stored: str) -> bool:
     return (int(n_text), int(r_text), int(p_text)) != (_SCRYPT_N, _SCRYPT_R, _SCRYPT_P)
 
 
-# 관리자코드를 담은 환경변수의 이름입니다. 값은 개발자가 결정하고 .env 에 둡니다(저장소에 넣지 않습니다).
-ADMIN_CODE_VARIABLE = "ADMIN_SIGNUP_CODE"
+def _matches_admin_code(given: str, expected: str) -> bool:
+    """가입 요청이 보낸 코드 given 이 운영자가 설정한 코드 expected 와 같은지 판단합니다.
 
-
-
-def _matches_admin_code(given: str) -> bool:
-    """가입 요청이 보낸 코드가 환경변수의 코드와 같은지 판단합니다.
-
-    환경변수가 비어 있으면 어떤 값도 통과시키지 않습니다.
+    expected 가 비어 있으면 어떤 값도 통과시키지 않습니다.
 
     두 값을 UTF-8 바이트로 변환해 hmac.compare_digest 로 비교합니다.
     """
-    expected = os.environ.get(ADMIN_CODE_VARIABLE, "")
     if expected == "":
         return False
     return hmac.compare_digest(given.encode(), expected.encode())
@@ -94,13 +86,14 @@ def signup(
     login_id: str,
     password: str,
     cohort: int,
-    admin_code: str | None = None,
+    admin_code: str | None,
+    expected_code: str,
 ) -> Member:
     """새 계정을 생성합니다. 이름 중복은 허용합니다. 이메일이나 아이디가 같거나 이름, 학과, 학번, 기수가 모두 같은 계정이 있으면 거부합니다.
 
     cohort(기수)는 화면이 동명이인을 구분하는 값입니다.
 
-    admin_code 가 환경변수의 코드와 같으면 권한 항목이 모두 활성화된 permission set 을 부여합니다.
+    admin_code 가 expected_code(환경변수 ADMIN_SIGNUP_CODE 의 값, auth/pipeline.py 가 읽습니다)와 같으면 권한 항목이 모두 활성화된 permission set 을 부여합니다.
     넣지 않았거나 다르면 권한 0개로 가입하고, 이미 권한을 가진 사람에게서 부여받습니다.
     코드가 일치하지 않아도 가입을 거절하지 않습니다.
     """
@@ -124,7 +117,7 @@ def signup(
     session.add(member)
     # 이메일 제약과 신원 제약 위반은 아래 commit 이 아니라 이 flush 에서 감지됩니다.
     commit_translating(session, MEMBER_MESSAGES, session.flush)
-    if admin_code is not None and _matches_admin_code(admin_code):
+    if admin_code is not None and _matches_admin_code(admin_code, expected_code):
         grant_full_permissions(session, member.id)
     commit_translating(session, MEMBER_MESSAGES)
     return member
