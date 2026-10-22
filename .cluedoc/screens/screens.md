@@ -54,7 +54,7 @@ sources:
   - "[[graph/docker-compose.yml]]"  # web 컨테이너가 화면을 제공합니다 — docker-compose.yml
 ---
 
-> 문서 버전: 3.11.0 draft
+> 문서 버전: 3.11.1 draft
 
 ```mermaid
 flowchart LR
@@ -108,7 +108,7 @@ flowchart LR
 | 주소 | 화면 | 서버에 연동되었나 |
 | --- | --- | --- |
 | `/` | 랜딩 — 서비스 소개 | 연동할 필요가 없습니다 |
-| `/login` `/signup` `/find-id` `/find-password` `/reset-password` | 계정 화면 5개 | 예. 5개 모두 연동되었습니다. 소셜 로그인 2가지만 미구현입니다 |
+| `/login` `/signup` `/find-id` `/find-password` `/reset-password` | 계정 화면 5개 | 예. 5개 모두 연동되었습니다. 소셜 로그인 2가지는 프로필에서 연결한 계정으로 로그인합니다 |
 | `/scheduler` | 달력에 확정된 합주 일정과 알림 | 예. 저장된 시간표와 내 알림을 조회하여 표시합니다 |
 | `/admin` | 현재 배정안, 스케줄링 기록, 결과 설명, 스케줄링 | 예. 조회하고, 연산하고, 기록을 적용합니다 |
 | `/rooms` `/periods` `/members` `/reservations` `/blinded` `/unavailable` | 관리 구역 6개. 각자 다른 권한 항목을 요구하고, 가진 권한의 구역만 사이드바의 관리자 메뉴에 표시됩니다 | 예. 조회하고, 생성하고, 수정합니다 |

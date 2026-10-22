@@ -4,6 +4,8 @@ sources:
   - "[[graph/backend/src/backend/api/routers/auth]]"  # 가입, 로그인, 로그아웃, 내 계정 endpoint와 cookie를 응답에 추가하는 위치 — backend/src/backend/api/routers/auth.py
   - "[[graph/backend/src/backend/services/auth/auth_session]]"  # session을 생성, 검증, 종료하는 위치 — backend/src/backend/services/auth/auth_session.py
   - "[[graph/backend/src/backend/services/auth/auth_service]]"  # 가입, 로그인 판정과 비밀번호 보관 형식 — backend/src/backend/services/auth/auth_service.py
+  - "[[graph/backend/src/backend/services/auth/social_login]]"  # 소셜 로그인 제공자 설정, 인가 주소, code 를 사용자 번호로 교환, 연결 행 저장 — backend/src/backend/services/auth/social_login.py
+  - "[[graph/backend/tests/integration/db/test_social_endpoints]]"  # 연결, 소셜 로그인, 연결 없는 계정 거절, 1계정 1연결, 연결 해제 시나리오 — backend/tests/integration/db/test_social_endpoints.py
   - "[[graph/backend/src/backend/api/auth_dependency]]"  # 요청을 보낸 사람이 누구인지 확인하고, 해당 endpoint가 요구하는 항목이 활성화되었는지 판정하는 단일 위치 — backend/src/backend/api/auth_dependency.py
   - "[[graph/backend/src/backend/services/permission/permission_service]]"  # permission set 생성, 수정, 삭제, 부여, 회수와 합집합 계산 — backend/src/backend/services/permission/permission_service.py
   - "[[graph/backend/src/backend/api/routers/permissions]]"  # permission set을 다루는 6개 endpoint — backend/src/backend/api/routers/permissions.py
@@ -45,7 +47,7 @@ sources:
   - "[[graph/docker-compose.override.yml]]"  # 개발용 cookie 설정 — docker-compose.override.yml
 ---
 
-> 문서 버전: 3.2.1 draft
+> 문서 버전: 3.3.0 draft
 
 ```mermaid
 flowchart TD
@@ -165,7 +167,7 @@ cookie만 삭제하는 방식과는 다릅니다. cookie를 삭제하면 그 브
   카카오로 계속하기
 ```
 
-"로그인 상태 유지"는 아직 아무것도 변경하지 않습니다. 활성화하든 비활성화하든 유지 기간은 7일로 같습니다. 소셜 로그인 2줄도 자리만 확보한 상태이고 아직 연결되지 않았습니다.
+"로그인 상태 유지"는 아직 아무것도 변경하지 않습니다. 활성화하든 비활성화하든 유지 기간은 7일로 같습니다. 소셜 로그인 2줄은 프로필에서 연결한 계정으로만 로그인합니다. 아래 "소셜 로그인은 가입 뒤 연결로만 씁니다" 에서 다룹니다.
 
 **가입할 때 지정하는 값.** 이름, 이메일, 비밀번호, 그리고 맡는 포지션입니다. 포지션은 지정된 목록에서 선택하며 1개 이상 선택할 수 있습니다. 팀마다 다른 포지션을 맡는 경우는 [[teams/teams|팀과 포지션]]에서 다룹니다.
 
@@ -277,6 +279,32 @@ flowchart TD
 
 **아이디 찾기는 이름과 이메일이 함께 맞을 때만** 그 주소로 안내 메일을 보냅니다. 화면에 아이디를 표시하지 않습니다. 표시하면 이름과 이메일을 맞힌 사람 누구에게나 그 계정의 아이디가 넘어갑니다. 이름 1개만으로 찾게 두지 않는 이유는 동아리에 동명이인이 있어서입니다. 이름만으로 조회하면 다른 사용자의 이메일을 알아낼 수 있습니다. 메일함 주인만 볼 수 있는 메일로 보내면 아무 정보도 유출되지 않습니다.
 
+### 소셜 로그인은 가입 뒤 연결로만 씁니다 (2026-10-22)
+
+```mermaid
+flowchart LR
+    A[아이디, 비밀번호로 가입] --> B[프로필의 연결된 계정<br/>구글, 카카오 연결]
+    B --> C[로그인 화면의<br/>구글로 계속하기, 카카오로 계속하기]
+    D[연결하지 않은 소셜 계정] -. 로그인 거절 .-> C
+```
+
+**소셜 계정으로는 가입하지 못합니다**(사용자 결정 2026-10-22). 사람을 구분하는 값(이름, 학과, 학번, 기수)을 제공자가 주지 않기 때문입니다. 아이디로 가입한 뒤 프로필의 "연결된 계정" 카드에서 구글, 카카오를 각각 연결하고, 그 다음부터 로그인 화면의 2줄로 로그인합니다. 연결하지 않은 소셜 계정으로 로그인하면 "연결된 계정이 존재하지 않아요. 가입 후 프로필에서 연결해주세요." 를 표시합니다. 이메일이 같다고 자동으로 연결하지 않습니다. 제공자의 이메일은 확인되지 않은 값이라 남의 계정에 들어가는 경로가 됩니다.
+
+**흐름은 OAuth 2.0(제공자의 로그인으로 사용자 번호를 확인하는 규약)의 authorization code 방식입니다.** 연결과 로그인은 같은 endpoint 2개를 씁니다.
+
+| 단계 | endpoint | 하는 일 |
+| --- | --- | --- |
+| 시작 | `GET /social/{provider}/start` | state(제공자 이름과 무작위 문자열)를 10분짜리 httponly cookie 에 두고 제공자의 로그인 화면으로 redirect 합니다. callback 은 제공자 이름까지 비교합니다 |
+| 돌아옴 | `GET /social/{provider}/callback?code&state` | state 가 cookie 와 같을 때만 code 를 제공자의 token 으로 교환하고 사용자 번호를 조회합니다. 로그인 session 이 있으면 그 계정에 연결하고 `/profile?social=linked` 로, 없으면 연결된 계정으로 로그인해 `/scheduler` 로 보냅니다. 실패는 `?social=failed&detail=code` 로 돌아갑니다. code 는 unlinked, taken, already, provider 4가지이고 화면이 문구로 바꿉니다. 문장을 주소에 붙이면 아무 문장이나 담은 링크가 앱의 toast 로 표시되므로 code 만 붙입니다 |
+| 해제 | `DELETE /me/social/{provider}` | 연결 행을 삭제합니다. 비밀번호 로그인이 항상 남아 있어 마지막 연결을 해제해도 계정이 잠기지 않습니다 |
+| 목록 | `GET /social`, `GET /me` 의 `linked_social` | 환경변수가 설정된 제공자, 내가 연결한 제공자입니다. 화면은 설정된 제공자의 버튼만 활성화합니다 |
+
+저장하는 값은 제공자 이름과 제공자가 발급한 사용자 번호뿐입니다(`social_accounts` table). 소셜 계정 1개는 멤버 1명에게만, 멤버 1명은 제공자마다 1개만 연결됩니다(unique 제약 2개). 계정을 삭제하거나 추방하면 연결 행도 함께 삭제됩니다. 제공자와의 HTTP 요청은 표준 라이브러리 `urllib` 로 보내고 timeout 은 10초입니다(`services/auth/pipeline.py` 의 `SOCIAL_HTTP_TIMEOUT`).
+
+**설정 값은 `.env` 의 4-1절입니다.** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `KAKAO_CLIENT_ID`, `KAKAO_CLIENT_SECRET` 과 `APP_ORIGIN` 입니다. 제공자 콘솔에 등록하는 redirect 주소는 `<APP_ORIGIN>/api/social/<provider>/callback` 입니다. 값이 비어 있는 제공자는 `GET /social` 에 포함되지 않고 그 제공자의 endpoint 는 404 로 응답합니다.
+
+**어떻게 확인했나.** 설정된 제공자만 목록에 오르고 설정되지 않은 제공자의 시작이 404 인지, 시작이 state cookie 와 함께 제공자 주소로 redirect 하는지, state 가 cookie 와 다르면 실패로 돌아가는지, 로그인한 사람이 연결한 뒤 로그아웃하고 그 소셜 계정으로 로그인되는지, 연결하지 않은 소셜 계정의 로그인이 code 와 함께 거절되고 session cookie 를 받지 않는지, 같은 소셜 계정을 2번째 멤버가 연결하면 거절되는지, 같은 멤버가 같은 제공자를 2번 연결하면 거절되는지, 사용자가 동의를 거절해 code 없이 돌아오거나 state cookie 가 없거나 비 ASCII state 가 오면 실패로 돌아가는지, google 의 state 가 kakao callback 에서 거절되는지, 카카오가 client id 만으로 활성화되는지, 해제 뒤 `/me` 의 목록이 비고 2번째 해제가 422 인지를 `backend/tests/integration/db/test_social_endpoints.py` 에 담았습니다. 제공자 응답은 `social_user_id` 를 대체해 흉내 냅니다. 인가 주소의 매개변수와 token 교환, 카카오의 정수 번호를 문자열로 저장하는 변환, access token 이 없는 응답의 거절, 제공자의 4xx, 연결 끊김, timeout, 객체가 아닌 본문이 전부 같은 문장의 실패가 되는지는 `backend/tests/unit/test_social_login.py` 가 확인합니다. 화면이 callback 의 query 를 문구로 바꾸는 규칙은 `frontend/src/lib/account.test.ts` 가 확인합니다. 실제 Google, 카카오와의 통신은 client id 를 받은 뒤 배포 주소에서 수동으로 확인합니다.
+
 ### 프로필 사진은 계정 1개에 1장입니다 (2026-09-23)
 
 사진 파일은 게시판 첨부와 **같은 폴더**(`ATTACHMENT_DIR`)에 저장합니다. 저장하는 방식도 같습니다 —
@@ -338,8 +366,6 @@ commit 하기 전의 파일명을 읽어, 각자 새 파일을 남긴 채 같은
 ```
 
 전화번호는 가입에서 받지 않는 값이라, 그대로 두면 이 화면만 따로 전화번호를 수집하고 문자 발송 업체와 계약해야 했습니다. 확정 시안과 현재가 다른 부분이 이 화면이라는 사실을 이 문단이 기록합니다.
-
-**소셜 로그인은 미구현입니다.** 로그인 화면 아래 2줄은 여전히 자리만 확보한 상태입니다. 배포 주소가 결정되어야 소셜 로그인 제공자에 등록하고 redirect URL(로그인 후 돌아올 주소)을 지정할 수 있습니다.
 
 **table이 1개 추가되었습니다.** 재설정 token을 저장하는 table이며, DB에서 어떤 제약이 적용되어 있는지는 [[database-layer/database-layer|데이터 저장소]]에서 다룹니다.
 
@@ -594,12 +620,12 @@ flowchart TD
 
 입력이 잘못되었다는 안내는 그 입력칸 옆에 표시합니다. 무엇이 잘못되었는지를 화면 위쪽에 모아 표시하면 수정해야 할 입력칸을 사람이 다시 찾아야 하기 때문입니다. 비밀번호는 길이가 부족한 경우와 비어 있는 경우를 다른 문구로 안내하고, 비밀번호 확인은 "다시 입력해 달라"와 "일치하지 않는다"를 구분합니다. 같은 오류라도 사람이 해야 할 일이 다르기 때문입니다.
 
-5개 화면 모두 서버 endpoint에 연결되었습니다. 가입, 로그인, 로그아웃과 "지금 로그인한 사람"에 이어, 아이디 찾기, 비밀번호 찾기, 재설정 3개 화면도 위에서 지정한 대로 실제로 메일을 발송하고 비밀번호를 변경합니다. 아직 연결되지 않은 부분은 소셜 로그인 2줄뿐이고, 화면의 현재 상태는 [[screens/screens|화면]]에서 함께 다룹니다.
+5개 화면 모두 서버 endpoint에 연결되었습니다. 가입, 로그인, 로그아웃과 "지금 로그인한 사람"에 이어, 아이디 찾기, 비밀번호 찾기, 재설정 3개 화면도 위에서 지정한 대로 실제로 메일을 발송하고 비밀번호를 변경합니다. 소셜 로그인 2줄은 프로필에서 연결한 구글, 카카오 계정으로 로그인하고, 화면의 현재 상태는 [[screens/screens|화면]]에서 함께 다룹니다.
 
 ## Conclusion
 
 계정과 권한은 다른 모든 기능의 바탕입니다. 로그인 상태를 서버가 직접 보관하도록 변경하면서 문서에만 있던 역할 구분이 모든 endpoint에서 실제 판정이 되었고, 로그인 없이 호출할 수 있는 endpoint는 서버 상태 확인과 가입, 로그인, 로그아웃 4개뿐입니다.
 
-그다음에 판정의 단위가 변경되었습니다. 2개 값 역할을 삭제하고 항목을 활성화하고 비활성화하는 permission set으로 이전했고, 그 항목을 다시 동작 1개에 1개씩 20개로 분할했습니다. 헤드매니저는 그 20개를 모두 활성화한 사람을 부르는 이름일 뿐이고, 권한 이전은 다음 사람에게 모두 활성화된 permission set을 부여한 뒤 자기 permission set을 회수하는 2단계입니다. 모두 활성화된 permission set 은 마지막 1개를 삭제하거나 항목을 비활성화할 수 없고, 화면의 역할 문구는 가진 permission set 의 이름입니다. 계정 쪽에 남은 미구현은 소셜 로그인 2줄뿐입니다.
+그다음에 판정의 단위가 변경되었습니다. 2개 값 역할을 삭제하고 항목을 활성화하고 비활성화하는 permission set으로 이전했고, 그 항목을 다시 동작 1개에 1개씩 20개로 분할했습니다. 헤드매니저는 그 20개를 모두 활성화한 사람을 부르는 이름일 뿐이고, 권한 이전은 다음 사람에게 모두 활성화된 permission set을 부여한 뒤 자기 permission set을 회수하는 2단계입니다. 모두 활성화된 permission set 은 마지막 1개를 삭제하거나 항목을 비활성화할 수 없고, 화면의 역할 문구는 가진 permission set 의 이름입니다. 소셜 로그인은 가입을 대신하지 않고, 가입한 계정에 연결한 구글, 카카오로 로그인하는 2번째 수단입니다.
 
 지금의 판정이 게시판에서 어떻게 쓰이는지는 [[boards/boards|게시판과 공지]]에서, 사람이 어떻게 팀의 포지션을 맡는지는 [[teams/teams|팀과 포지션]]에서 이어서 다룹니다.
