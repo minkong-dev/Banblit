@@ -14,13 +14,15 @@ import { Avatar } from "../components/Avatar";
 import { Card, SectionHead } from "../components/Layout";
 import { BackButton, Button, EditButton, Empty, FilePicker, MenuItem, Why } from "../components/controls";
 import { Popover } from "../components/Popover";
-import { ME_KEY, teamMembersQuery, useMe } from "../components/queries";
+import { useSocialNotice } from "../components/hooks";
+import { GoogleIcon, KakaoIcon } from "../components/icons";
+import { ME_KEY, teamMembersQuery, useMe, useSocialProviders } from "../components/queries";
 import { say } from "../components/toast";
 import { reason } from "../lib/api";
-import { roleLabel } from "../lib/account";
-import type { Account, Member } from "../lib/contract";
+import { SOCIAL_PROVIDERS, roleLabel } from "../lib/account";
+import type { Account, Member, SocialProvider } from "../lib/contract";
 import { LOADING_TEXT } from "../lib/loading";
-import { leaveAccount, resetAvatar, saveProfile, uploadAvatar } from "../lib/pipeline";
+import { leaveAccount, resetAvatar, saveProfile, socialStartUrl, unlinkSocial, uploadAvatar } from "../lib/pipeline";
 import { cohortLabel } from "../lib/roster";
 import { profileDraftMessage } from "../lib/validate";
 import "../styles/profile.css";
@@ -254,6 +256,36 @@ function Leave({ me }: { me: Account }) {
   );
 }
 
+/** 연결된 소셜 계정 카드입니다. 제공자마다 1줄이고, 연결되어 있으면 "연결 해제", 아니면 서버의 시작 주소로 가는 "연결" 입니다.
+ *  환경변수가 설정되지 않은 제공자는 연결할 수 없으므로 줄을 표시하지 않습니다. */
+function LinkedAccounts({ linked }: { linked: SocialProvider[] }) {
+  const queryClient = useQueryClient();
+  const enabled = useSocialProviders();
+  const unlink = useMutation({
+    mutationFn: unlinkSocial,
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: ME_KEY }); },
+    onError: (error) => say(reason(error)),
+  });
+  const rows = SOCIAL_PROVIDERS.filter((row) => enabled.includes(row.key) || linked.includes(row.key));
+  if (rows.length === 0) return null;
+  return (
+    <Card>
+      <SectionHead title="연결된 계정" desc="연결한 소셜 계정으로도 로그인할 수 있어요" />
+      <ul className="linked">
+        {rows.map(({ key, label }) => (
+          <li key={key}>
+            <span className={`mark ${key}`}>{key === "google" ? <GoogleIcon /> : <KakaoIcon />}</span>
+            <span className="name">{label}</span>
+            {linked.includes(key)
+              ? <Button kind="ghost" pending={unlink.isPending && unlink.variables === key} pendingLabel="해제하는 중…" onClick={() => unlink.mutate(key)}>연결 해제</Button>
+              : <a className="btn" href={socialStartUrl(key)}>연결</a>}
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 /** 프로필 카드가 소속 팀 줄에 표시하는 값입니다. teamName 은 팀 이름, text 는 그 팀에서의 기수입니다. */
 type Affiliation = { teamName: string; text: string };
 
@@ -288,8 +320,9 @@ function useMyAffiliations(
 /** 프로필을 표시하고 수정합니다. 카드 하나가 평소에는 값을 표시하고, 오른쪽 위 편집을 누르면 입력칸으로 전환합니다.
  *  테마는 상단바의 버튼이 전환합니다. */
 export function Profile() {
-  const { me, meState, teamIds, teams } = useMe();
+  const { me, meState, teamIds, teams, linkedSocial } = useMe();
   const affiliations = useMyAffiliations(me, teamIds, teams);
+  useSocialNotice();
   // meState 로 구분하지 않으면 조회가 실패해도 "불러오는 중…" 이 그대로 남아 사용자가
   // 기다리기만 합니다.
   if (me === null) {
@@ -303,5 +336,10 @@ export function Profile() {
     { label: "기수", text: cohortLabel(me.cohort) },
     ...affiliations.map((row) => ({ label: row.teamName, text: row.text })),
   ];
-  return <div className="main"><ProfileCard me={me} rows={rows} /></div>;
+  return (
+    <div className="main">
+      <ProfileCard me={me} rows={rows} />
+      <LinkedAccounts linked={linkedSocial} />
+    </div>
+  );
 }

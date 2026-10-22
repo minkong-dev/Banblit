@@ -1,6 +1,29 @@
 // 현재 로그인한 계정과 관련하여 화면이 하는 판단과 표시입니다. 서버를 호출하지 않습니다.
 
-import type { Account, Permission } from "./contract";
+import type { Account, Permission, SocialProvider } from "./contract";
+
+/** 소셜 로그인 제공자의 화면 이름입니다. 순서가 버튼 순서입니다. */
+export const SOCIAL_PROVIDERS: readonly { key: SocialProvider; label: string }[] = [
+  { key: "google", label: "구글" },
+  { key: "kakao", label: "카카오" },
+];
+
+/** 소셜 로그인 실패의 code 와 문구입니다. 서버 쪽은 backend/src/backend/services/auth/social_login.py 의 SocialError 에 작성되어 있는 내용을 기준으로 합니다. */
+const SOCIAL_FAILURES: Record<string, string> = {
+  unlinked: "연결된 계정이 존재하지 않아요. 가입 후 프로필에서 연결해주세요.",
+  taken: "이미 다른 계정에 연결된 소셜 계정이에요.",
+  already: "이미 연결된 제공자예요.",
+  provider: "소셜 로그인 제공자의 응답을 받지 못했어요. 잠시 후 다시 시도해주세요.",
+};
+
+/** 소셜 로그인 callback 이 화면 주소에 붙인 social, detail query 를 toast 문구로 바꿉니다. 해당 없으면 빈 문자열입니다.
+ *  detail 은 문장이 아니라 code 입니다. 주소에 아무 문장이나 넣은 링크가 앱의 toast 로 표시되지 않게 합니다. 모르는 code 는 기본 문구입니다. */
+export function socialNotice(result: string | null, detail: string | null): string {
+  if (result === "signed_in") return "로그인했어요";
+  if (result === "linked") return "소셜 계정을 연결했어요";
+  if (result === "failed") return SOCIAL_FAILURES[detail ?? ""] ?? "소셜 로그인에 실패했어요. 다시 시도해주세요.";
+  return "";
+}
 
 /** 프로필 카드에 표시하는 역할 이름입니다. 가진 permission set(권한 집합)의 이름을 ", " 로 이어 표시하고,
  *  하나도 없으면 "일반멤버", 아직 계정을 받지 못했으면 빈 문자열을 반환합니다. */

@@ -2,7 +2,10 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
+
+import { socialNotice } from "../lib/account";
+import { say } from "./toast";
 
 /** 번호 하나로 열림 상태를 관리하고, id 마다 등록된 버튼을 Map 으로 기억했다가 닫힐 때
  *  그 버튼으로 초점을 되돌립니다. 설정 화면의 행 편집(routes/SettingsForm.tsx)과 게시판 상세
@@ -145,4 +148,20 @@ export function usePage(page: string): void {
       delete document.body.dataset.page;
     };
   }, [page]);
+}
+
+/** 소셜 로그인 callback 이 붙인 ?social=, ?detail= 을 toast 로 1회 표시하고 주소에서 삭제합니다.
+ *  삭제하지 않으면 새로고침마다 같은 문구가 다시 표시됩니다. 로그인 화면(routes/Account)과 프로필 화면(routes/Profile)이 같이 씁니다. */
+export function useSocialNotice(): void {
+  const [params, setParams] = useSearchParams();
+  const notice = socialNotice(params.get("social"), params.get("detail"));
+  useEffect(() => {
+    if (notice === "") return;
+    say(notice);
+    setParams((next) => {
+      next.delete("social");
+      next.delete("detail");
+      return next;
+    }, { replace: true });
+  }, [notice, setParams]);
 }

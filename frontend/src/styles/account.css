@@ -130,13 +130,13 @@ body[data-page="account"] {
   .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--edge); }
 
   .social { display: flex; flex-direction: column; gap: 10px; }
-  .social button {
+  .social button, .social a {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     width: 100%; min-height: 54px; border-radius: 999px;
-    font-size: 15px; font-weight: 600;
+    font-size: 15px; font-weight: 600; text-decoration: none; color: inherit;
     transition: background-color .16s ease, border-color .16s ease, transform .12s ease;
   }
-  .social button:active { transform: scale(.985); }
+  .social button:active, .social a:active { transform: scale(.985); }
   .social button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
   .social .google { background: var(--paper); border: 1px solid var(--edge-2); }
   .social .google:hover { background: var(--paper-2); border-color: var(--ink-3); }

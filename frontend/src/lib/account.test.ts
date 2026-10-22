@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PERMISSION_ITEMS, can, roleLabel, teamNavLabel } from "./account";
+import { PERMISSION_ITEMS, can, roleLabel, socialNotice, teamNavLabel } from "./account";
 import type { Account } from "./contract";
 
 function accountWith(
@@ -74,5 +74,15 @@ describe("PERMISSION_ITEMS", () => {
 
   it("항목마다 한국어 이름이 있다", () => {
     expect(PERMISSION_ITEMS.every((item) => item.label !== "")).toBe(true);
+  });
+});
+
+describe("socialNotice", () => {
+  it("callback 의 결과를 문구로 바꾸고, 실패 code 는 표의 문구로, 모르는 값은 기본 문구로 표시합니다", () => {
+    expect(socialNotice("linked", null)).toBe("소셜 계정을 연결했어요");
+    expect(socialNotice("failed", "taken")).toBe("이미 다른 계정에 연결된 소셜 계정이에요.");
+    expect(socialNotice("failed", "비밀번호가 유출되었어요")).toBe("소셜 로그인에 실패했어요. 다시 시도해주세요.");
+    expect(socialNotice("failed", null)).toBe("소셜 로그인에 실패했어요. 다시 시도해주세요.");
+    expect(socialNotice(null, null)).toBe("");
   });
 });

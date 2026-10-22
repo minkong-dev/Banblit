@@ -17,7 +17,7 @@ function render(permissions: Permission[] | null): string {
       id: 1, name: "김민수", email: "a@b.c", login_id: "minsu1", avatar: null, role: "member",
       permissions, permission_sets: [], cohort: 46, department: null,
     };
-    client.setQueryData<Me>(ME_KEY, { account, teams: [] });
+    client.setQueryData<Me>(ME_KEY, { account, teams: [], linked_social: [] });
   }
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>

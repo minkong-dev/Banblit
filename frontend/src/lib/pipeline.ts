@@ -4,7 +4,7 @@
 import { apiUrl, getJSON, reason, sendFile } from "./api";
 import type {
   Account, Attachment, RecordRound, ScheduleRecord, Ensemble, Me, Member, MemberRow, MemberUnavailable, Notification, Period, PermissionSet, PermissionSetInput, Post, PostComment, Reservation,
-  Room, RoomInput, ScheduleOut, ScheduleRow, Settings, Team, TeamSlot, Unavailable,
+  Room, RoomInput, ScheduleOut, ScheduleRow, Settings, SocialProvider, Team, TeamSlot, Unavailable,
 } from "./contract";
 import { seatAssignments } from "./roster";
 import type { Seat } from "./roster";
@@ -761,6 +761,21 @@ export async function saveProfile(
 /** 회원 탈퇴입니다. 서버가 계정과 작성한 글, 댓글, 예약을 삭제합니다. */
 export async function leaveAccount(): Promise<void> {
   await getJSON<null>("/me", { method: "DELETE" });
+}
+
+/** 환경변수가 설정되어 사용할 수 있는 소셜 로그인 제공자입니다. 로그인 화면과 프로필이 이 목록의 버튼만 표시합니다. */
+export async function loadSocialProviders(): Promise<SocialProvider[]> {
+  const { providers } = await getJSON<{ providers: SocialProvider[] }>("/social");
+  return providers;
+}
+
+/** 소셜 로그인을 시작하는 서버 주소입니다. fetch 가 아니라 링크로 이동합니다. 서버가 제공자 화면으로 redirect 합니다. */
+export function socialStartUrl(provider: SocialProvider): string {
+  return apiUrl(`/social/${provider}/start`);
+}
+
+export async function unlinkSocial(provider: SocialProvider): Promise<void> {
+  await getJSON<null>(`/me/social/${provider}`, { method: "DELETE" });
 }
 
 /** permission set 전부를 조회합니다. 카드마다 그 권한을 가진 멤버 목록이 함께 옵니다. */
