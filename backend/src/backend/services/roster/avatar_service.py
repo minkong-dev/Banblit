@@ -1,4 +1,4 @@
-"""프로필 사진을 저장·삭제합니다. 계정 1개에 사진 1장입니다.
+"""프로필 사진을 저장하고 삭제합니다. 계정 1개에 사진 1장입니다.
 
 저장 폴더, 조각 단위 쓰기, 경로 조작 방지는 services/storage 를 씁니다. 받는 확장자는 그림 5종이고,
 크기 상한은 부르는 쪽이 max_bytes 로 넘깁니다.
@@ -27,7 +27,7 @@ ALLOWED_IMAGE_TYPES: dict[str, str] = {
 def _image_extension(name: str) -> str:
     extension = Path(name).suffix.lstrip(".").lower()
     if extension not in ALLOWED_IMAGE_TYPES:
-        raise ValueError("프로필 사진은 jpg·png·gif·webp 만 올릴 수 있어요")
+        raise ValueError("프로필 사진은 jpg, png, gif, webp 만 올릴 수 있어요")
     return extension
 
 
@@ -55,8 +55,7 @@ def save_avatar(session: Session, member: Member, filename: str, stream: BinaryI
     # 그러면 어디에서도 참조하지 않는 파일이 디스크에 쌓입니다. attachment_service.save_attachment 가
     # 같은 방식으로 글 행을 잠급니다.
     locked = session.scalars(
-        # populate_existing 이 없으면 이 session 이 앞서 읽어 둔 값을 그대로 돌려줍니다. 잠금을
-        # 기다린 의미가 없어져, 기다리는 동안 다른 session 이 바꾼 파일명을 보지 못합니다.
+        # populate_existing 은 이 session 이 앞서 읽은 값을 DB 의 현재 값으로 갱신합니다.
         select(Member)
         .where(Member.id == member.id)
         .with_for_update()
@@ -76,18 +75,16 @@ def save_avatar(session: Session, member: Member, filename: str, stream: BinaryI
         # 저장에 실패하면 방금 쓴 파일이 어느 행에서도 참조되지 않은 채 남습니다.
         stored_path(stored_name).unlink(missing_ok=True)
         raise
-    # 새 사진을 저장한 뒤에 지웁니다. 먼저 지우면 저장에 실패했을 때 두 장 모두 없어집니다.
+    # 새 사진을 저장한 뒤에 이전 사진을 삭제합니다.
     if previous:
         stored_path(previous).unlink(missing_ok=True)
 
 
 def delete_avatar(session: Session, member: Member) -> None:
     """사진을 삭제합니다. 사진이 없으면 아무것도 하지 않습니다."""
-    # 저장과 같은 이유로 행을 잠급니다 — 올리는 요청과 지우는 요청이 겹치면 지워야 할 파일명을
-    # 잘못 읽습니다.
+    # 저장과 같이 행을 잠급니다.
     locked = session.scalars(
-        # populate_existing 이 없으면 이 session 이 앞서 읽어 둔 값을 그대로 돌려줍니다. 잠금을
-        # 기다린 의미가 없어져, 기다리는 동안 다른 session 이 바꾼 파일명을 보지 못합니다.
+        # populate_existing 은 이 session 이 앞서 읽은 값을 DB 의 현재 값으로 갱신합니다.
         select(Member)
         .where(Member.id == member.id)
         .with_for_update()

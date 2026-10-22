@@ -343,8 +343,8 @@ def view_attachment(
         headers={
             "X-Content-Type-Options": "nosniff",
             "Content-Disposition": "inline",
-            # 이 응답 문서가 다른 자원을 불러오지 못하게 막습니다. sandbox 토큰은 넣지 않습니다 —
-            # 브라우저 내장 PDF 뷰어가 동작하지 않습니다. object-src 는 그 뷰어에 필요합니다.
+            # 이 응답 문서가 다른 자원을 불러오지 못하게 합니다. sandbox 토큰을 추가할 경우 브라우저 내장 PDF 뷰어가
+            # 동작하지 않으므로 추가하지 않습니다. object-src 는 PDF 뷰어가 사용합니다.
             # frame-ancestors 는 외부 사이트가 이 응답을 자기 페이지의 frame 에 끼워 넣는 것을 막습니다.
             "Content-Security-Policy": "default-src 'none'; object-src 'self'; img-src 'self'; frame-ancestors 'self'",
         },

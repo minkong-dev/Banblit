@@ -24,7 +24,7 @@ from backend.db.pipeline import get_session
 
 router = APIRouter()
 
-# permission set(권한 집합)을 생성·수정·삭제하는 권한과 사람에게 부여·회수하는 권한을 구분합니다. 해당
+# 권한 세트(permission set)를 생성, 수정, 삭제하는 권한과 멤버에게 부여, 회수하는 권한을 구분합니다. 해당
 # 권한이 없으면 자신의 권한도 다른 사람의 권한도 수정할 수 없습니다. 본인 여부로 구분하는 예외는 두지 않습니다.
 _manage_only = Depends(require_permission("permission_manage"))
 _grant_only = Depends(require_permission("permission_grant"))

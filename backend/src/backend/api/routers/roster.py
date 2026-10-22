@@ -139,8 +139,8 @@ def search_member_list(
     q: str = Query(default="", max_length=100),
     session: Session = Depends(get_session),
 ) -> MemberSearchOut:
-    """포지션에 배정할 멤버를 이름으로 검색합니다. 빈 검색어에는 명단 전체를 이름 순으로 반환합니다.
-    화면이 목록을 펼쳐 두고 스크롤로 고를 수 있어야 하기 때문입니다."""
+    """포지션에 배정할 멤버를 이름으로 검색합니다. 검색어가 빈 문자열일 경우 명단 전체를 이름 순으로 반환합니다.
+    화면이 목록을 펼친 상태에서 스크롤로 선택하기 위해서입니다."""
     return MemberSearchOut(
         members=[_member_out(member) for member in search_members(session, q)]
     )
@@ -217,14 +217,9 @@ def put_team_slot_members(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> SlotsOut:
-    """팀 화면의 저장 버튼 1번이 보내는 자리 배정 전체를 transaction 1개로 저장합니다.
+    """팀 화면의 저장 버튼 1번이 보내는 자리 배정 전체를 transaction 1개로 저장합니다. 전부 반영하거나 아무것도 반영하지 않습니다.
 
-    자리마다 PUT 과 DELETE 를 따로 보내면 중간 요청이 실패했을 때 앞선 요청만 반영된 상태로
-    끝납니다. 이 endpoint 는 전부 반영하거나 아무것도 반영하지 않습니다.
-
-    dependencies 에서 권한을 검증하지 않습니다. 배정에는 member_add, 다른 사람의 해제에는
-    member_remove 가 필요하고 자신의 해제에는 아무 권한도 필요하지 않아, 항목마다 다르기
-    때문입니다. 자리마다 보내는 endpoint 2개와 같은 규칙입니다.
+    권한은 항목마다 다르므로 함수 안에서 검증합니다. 배정은 member_add, 다른 사람의 해제는 member_remove 가 필요하고, 자신의 해제는 권한이 필요하지 않습니다.
     """
     assign_slot_members_rows(session, team_id, [(entry.slot_id, entry.member_id) for entry in req.assignments], requester)
     rows = list_slots(session, team_id)

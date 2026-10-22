@@ -55,7 +55,7 @@ def generate_sessions(
     if session_minutes % slot_minutes != 0:
         raise ValueError(
             f"합주 1회 길이({session_minutes}분)는 "
-            f"칸 크기({slot_minutes}분)의 배수여야 해요"
+            f"시간 단위({slot_minutes}분)의 배수여야 해요"
         )
 
     length = timedelta(minutes=session_minutes)

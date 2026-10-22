@@ -1,11 +1,8 @@
 """rate limit(같은 요청자가 지정된 시간 안에 보낼 수 있는 요청 횟수 제한)입니다.
 
-로그인처럼 값을 시도해 보는 endpoint(API의 요청 주소 단위)에 적용합니다. 비밀번호를 하나씩
-시도하는 것을 막지 못하면 짧은 비밀번호는 시도 횟수만 충분하면 맞힐 수 있습니다.
+로그인처럼 값을 시도하는 endpoint(API의 요청 주소 단위)에 적용합니다.
 
-요청을 세는 위치는 process 메모리입니다. API 서버를 여러 대로 확장하면 서버마다 따로 세므로
-실제 상한은 서버 대수만큼 커집니다. 현재는 1대로 실행하므로 그대로 두고, 확장할 때 저장소를
-외부(예: Redis)로 옮깁니다.
+요청 횟수는 process 메모리에 셉니다. API 서버를 2대 이상으로 실행할 경우 서버마다 따로 세므로 실제 상한은 서버 대수만큼 커집니다.
 """
 
 import os
@@ -15,8 +12,8 @@ from collections.abc import Callable
 
 from fastapi import HTTPException, Request
 
-# api 앞에 있는 reverse proxy 의 개수를 담은 환경변수의 이름입니다. 배포는 Caddy → nginx → api 이므로 2,
-# 개발은 nginx(또는 Vite) 하나이므로 기본값 1입니다(docker-compose.yml).
+# api 앞에 있는 reverse proxy 개수를 담은 환경변수의 이름입니다. 배포는 Caddy, nginx, api 순서라 2(docker-compose.yml),
+# 개발은 nginx 또는 Vite 1개라 1(docker-compose.override.yml)입니다.
 _PROXY_COUNT_VARIABLE = "TRUSTED_PROXY_COUNT"
 DEFAULT_TRUSTED_PROXY_COUNT = 1
 
@@ -42,7 +39,7 @@ class RateLimiter:
     def check(self, caller: str, now: float) -> int | None:
         """통과할 경우 None을, 차단할 경우 몇 초 뒤 재시도할 수 있는지를 반환합니다.
 
-        차단된 요청은 계산하지 않습니다 — 계산하면 계속 요청하는 동안 window가 밀려 영구적으로 차단됩니다.
+        차단된 요청은 hits 에 추가하지 않습니다. 추가할 경우 요청을 계속 보내는 동안 가장 오래된 요청 시각이 window 를 벗어나지 않아 차단이 해제되지 않습니다.
         """
         hits = self._seen.get(caller)
         if hits is None:
@@ -103,9 +100,9 @@ def caller_of(request: Request) -> str:
 
 
 def limit_guesses(name: str) -> Callable[[Request], None]:
-    """app.state.limiters 의 name 제한기로 요청을 세는 endpoint dependency 를 반환합니다. 상한을 초과하면 429 상태를 반환합니다.
+    """app.state.limiters 의 name RateLimiter 로 요청을 세는 endpoint dependency 를 반환합니다. 상한을 초과하면 429 HTTPException 을 발생시킵니다.
 
-    제한기는 이름마다 독립적인 상태를 유지하므로, 한 endpoint가 차단되어도 다른 endpoint는 그대로 열려 있습니다.
+    RateLimiter 는 이름마다 따로 세므로, endpoint 1개가 차단되어도 다른 endpoint 는 차단되지 않습니다.
     """
 
     def guard(request: Request) -> None:
@@ -116,7 +113,7 @@ def limit_guesses(name: str) -> Callable[[Request], None]:
         # 남은 시도 횟수를 알려주지 않습니다 — 상한을 알면 그 아래로 조절하여 계속 요청합니다.
         raise HTTPException(
             status_code=429,
-            detail="요청이 너무 잦습니다. 잠시 뒤에 다시 시도해 주세요.",
+            detail="요청이 너무 많아요. 잠시 후 다시 시도해주세요",
             headers={"Retry-After": str(wait)},
         )
 

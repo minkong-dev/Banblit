@@ -127,7 +127,7 @@ def set_post_blinded(
 ) -> None:
     """글을 가리거나(blinded_at 에 시각) 되돌립니다(None). 권한 판정은 endpoint 가 합니다.
 
-    가릴 때는 requester 를 함께 남기고, 되돌릴 때는 시각과 함께 null 로 변경합니다. 권한자가 여럿일 때 사후에
+    가릴 때는 requester 를 함께 남기고, 되돌릴 때는 시각과 함께 null 로 변경합니다. 권한자가 2명 이상일 때 사후에
     누가 처리했는지 확인하기 위해서입니다.
 
     require_post_readable 을 거치지 않습니다. 그 함수는 가려진 글을 없는 글로 거절하므로, 거치면
@@ -159,8 +159,7 @@ def create_notice(
         body=clean_body,
         author_id=requester.id,
         created_at=created_at,
-        # 이 함수는 제목과 본문을 이미 받았으므로 만드는 즉시 발행합니다. 초안으로 시작하는 경로는
-        # create_draft 이고, 그쪽은 작성 페이지가 씁니다.
+        # 제목과 본문을 받은 즉시 발행합니다. 초안으로 시작하는 경로는 create_draft 입니다.
         published_at=created_at,
     )
     session.add(post)

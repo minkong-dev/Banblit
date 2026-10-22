@@ -16,9 +16,7 @@ from backend.scheduling.slots import generate_sessions, generate_slots
 # 오래 걸리는 입력 하나가 worker 를 무한정 점유합니다.
 SOLVER_TIME_LIMIT_SECONDS = 60.0
 
-# 더 나은 배정안이 이 시간(초) 동안 나오지 않으면 계산을 멈춥니다. 최선인지는 solver 가 끝까지 증명하지 못하므로,
-# 이 값이 없으면 계산마다 SOLVER_TIME_LIMIT_SECONDS 를 전부 씁니다. 운영 규모(팀 13개, 14일) 측정에서 3, 5, 10초가 모두
-# 같은 배정을 냈고(dev_history/2026-10-15.md), 입력이 커질 때의 여유를 두어 5초입니다.
+# 더 나은 배정안이 이 시간(초) 동안 나오지 않으면 계산을 중단합니다. 이 값이 없으면 계산마다 SOLVER_TIME_LIMIT_SECONDS 를 전부 사용합니다.
 STALL_SECONDS = 5.0
 
 # 계산에 쓰는 thread 수의 상한입니다. 배정 계산은 api 와 같은 process 에서 돌므로 코어 전부를 쓰면 일반 요청이 느려집니다. 코어 수의 절반입니다.

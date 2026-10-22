@@ -27,14 +27,8 @@ from backend.db.pipeline import check_database
 
 logger = logging.getLogger(__name__)
 
-# uvicorn 은 자기 logger 만 설정하고 root logger 는 설정하지 않습니다. 그대로 두면 backend 의
-# 기록이 어디로도 출력되지 않고 사라집니다. backend 아래 모든 logger 의 기록을 컨테이너
-# 기록(표준 오류)으로 내보냅니다. root 에 붙이지 않는 이유는 SQLAlchemy 가 실행한 SQL 전부를
-# INFO 로 출력하기 때문입니다.
-#
-# 수준(level)은 여기에서 올리지 않습니다. 여기에서 올리면 backend 아래 모든 모듈의 INFO 가
-# 함께 통과하는데, mailer 의 INFO 에는 개발 환경용 메일 본문(재설정 token 포함)이 들어 있습니다.
-# INFO 를 남겨야 하는 모듈이 자기 logger 의 수준을 직접 올립니다(services/auth/password_reset.py).
+# backend 아래 모든 logger 의 기록을 container 의 표준 오류로 출력합니다. uvicorn 은 root logger 를 설정하지 않습니다.
+# 이 파일은 level 을 설정하지 않습니다. INFO 가 필요한 모듈은 자기 logger 의 level 을 설정합니다(services/auth/password_reset.py).
 _service_logs = logging.getLogger("backend")
 if not _service_logs.handlers:
     # 이 모듈이 두 번 적재되면 handler 가 2개가 되어 같은 기록이 2줄씩 출력됩니다.
@@ -58,7 +52,7 @@ RATE_LIMITS: dict[str, tuple[int, float]] = {
 
 
 def make_limiters() -> dict[str, RateLimiter]:
-    """RATE_LIMITS 마다 빈 제한기를 만듭니다. router 는 api/rate_limit.py 의 limit_guesses(이름) 으로 씁니다."""
+    """RATE_LIMITS 의 이름마다 빈 RateLimiter 를 생성합니다. router 는 api/rate_limit.py 의 limit_guesses(이름) 으로 참조합니다."""
     return {name: RateLimiter(limit=limit, window_seconds=window) for name, (limit, window) in RATE_LIMITS.items()}
 
 
@@ -109,17 +103,14 @@ async def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONR
     )
 
 
-# 서비스 함수가 발생시키는 exception(예외) 두 가지를 처리합니다. 어느 endpoint(API의 요청
-# 주소 단위)에서 발생하든 응답은 같습니다. ValueError(규칙 위반)는 422, PermissionError(권한
-# 부족)는 403이며, 둘 다 detail 에 사용자가 읽을 수 있는 문장 하나를 포함합니다. 라우터는 이 두
-# exception 을 처리하지 않으며, 다른 상태 코드가 필요한 endpoint(로그인 실패 401 등)만 직접
-# 처리합니다.
 @app.exception_handler(SessionRejected)
 async def handle_session_rejected(request: Request, exc: SessionRejected) -> JSONResponse:
-    # 같은 401 이라도 틀린 비밀번호와 구분하도록 code 를 붙입니다. 화면은 이 code 를 받으면 로그인 화면으로 이동합니다.
+    # 같은 401 이라도 잘못된 비밀번호와 구분하도록 code 를 추가합니다. 화면은 이 code 를 받으면 로그인 화면으로 이동합니다.
     return JSONResponse(status_code=401, content={"detail": UNAUTHORIZED_DETAIL, "code": SESSION_REJECTED_CODE})
 
 
+# ValueError 는 422, PermissionError 는 403 으로 응답하고 detail 에 exception 의 문장 1개를 담습니다.
+# 다른 상태 코드가 필요한 endpoint(로그인 실패 401 등)는 router 가 직접 처리합니다.
 @app.exception_handler(ValueError)
 async def handle_value_error(request: Request, exc: ValueError) -> JSONResponse:
     return JSONResponse(status_code=422, content={"detail": str(exc)})
@@ -155,10 +146,7 @@ def health() -> JSONResponse:
     )
 
 
-# 도메인 라우터를 추가합니다. 각 라우터는 table(데이터베이스의 행과 열로 이루어진 데이터 구조)
-# 하나와 그 table 의 CRUD 만 처리하므로 room_service·period_crud_service·roster_service·
-# board_service 와 같은 경계로 나누었습니다. 추가 순서는 응답에 영향을 주지 않습니다.
-# 요청 주소가 서로 겹치지 않기 때문입니다.
+# 도메인 router 를 추가합니다. 요청 주소가 서로 겹치지 않으므로 추가 순서는 응답에 영향을 주지 않습니다.
 app.include_router(rooms.router)
 app.include_router(periods.router)
 app.include_router(roster.router)

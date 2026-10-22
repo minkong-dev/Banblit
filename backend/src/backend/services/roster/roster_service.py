@@ -19,7 +19,7 @@ ROSTER_MESSAGES = {
     "teams_name_key": "이미 있는 팀 이름이에요",
     # 선택한 색이 겹친 경우와, 색을 선택하지 않은 요청 둘이 동시에 같은 남은 색을 받은 경우 모두 이 제약에 걸립니다.
     "teams_color_key": "다른 팀이 쓰는 색이에요. 다시 시도하거나 다른 색을 선택해 주세요",
-    # 색을 선택하지 않았는데 남은 색이 없을 때 트리거가 붙이는 이름입니다(migration c3f7b2e84d19).
+    # 색을 선택하지 않았는데 남은 색이 없을 때 트리거가 붙이는 이름입니다(migration 080a74e46f56).
     "teams_color_exhausted": (
         f"팀 색 {len(TEAM_COLORS)}개가 모두 쓰이고 있어 팀을 더 만들 수 없어요. "
         "쓰지 않는 팀을 삭제한 뒤 만들어 주세요"
@@ -43,7 +43,7 @@ def list_teams(session: Session) -> list[tuple[Team, int, int]]:
 
 
 def list_slots(session: Session, team_id: int) -> list[tuple[TeamSlot, Member | None]]:
-    """팀의 포지션을 포지션·번호 순으로, 그 포지션에 배정된 멤버와 함께 반환합니다.
+    """팀의 포지션을 포지션, 번호 순으로, 그 포지션에 배정된 멤버와 함께 반환합니다.
 
     빈 포지션도 함께 포함합니다. 화면이 비어 있는 포지션을 표시해야 하므로 제외하면 안 됩니다.
     """
@@ -71,7 +71,7 @@ def list_my_teams(session: Session, member_id: int) -> list[tuple[Team, TeamSlot
 def list_members(
     session: Session, after: int | None, limit: int
 ) -> list[tuple[Member, list[str]]]:
-    """모든 멤버를 번호순으로 반환합니다. 각 멤버가 가진 권한 묶음 이름도 함께 포함됩니다.
+    """모든 멤버를 번호순으로 반환합니다. 각 멤버가 가진 권한 세트 이름도 함께 포함됩니다.
 
     무한 스크롤이므로 페이지 번호가 아니라 "마지막으로 받은 번호 이후"로 이어서 받습니다 —
     조회하는 중에 멤버가 추가되거나 삭제되어도 이미 조회한 행이 다시 나오거나 건너뛰지 않습니다.
@@ -115,7 +115,7 @@ def search_members(session: Session, query: str, limit: int) -> list[Member]:
 def expel_member(session: Session, member_id: int, requester: Member) -> None:
     """member_id 의 계정을 삭제합니다. 추방은 계정 삭제와 같습니다.
 
-    탈퇴(routers/auth.py 의 leave)와 같은 삭제 규칙을 따릅니다. 글·댓글·예약·session 은 함께 삭제되고,
+    탈퇴(routers/auth.py 의 leave)와 같은 삭제 규칙을 따릅니다. 글, 댓글, 예약, session 은 함께 삭제되고,
     포지션은 member_id 만 None 이 됩니다(db/models.py 의 ondelete). 자기 자신은 추방할 수 없습니다.
     자기 계정은 탈퇴로만 삭제해야 마지막 헤드매니저가 실수로 사라지지 않습니다.
 
@@ -290,16 +290,12 @@ def assign_slot_members(
     """자리 여러 개의 배정을 transaction 1개로 저장합니다.
 
     wanted 는 (slot_id, member_id) 목록이고 member_id 가 None 이면 그 자리의 배정을 해제합니다.
-    자리마다 따로 저장하면 중간에서 실패했을 때 앞선 자리만 반영된 상태로 끝납니다. 이 함수는
-    전부 검증한 뒤 한 번만 commit 하므로 그 상태가 발생하지 않습니다.
+    전부 검증한 뒤 commit 1회로 저장합니다.
 
-    권한은 항목마다 판단합니다. 자리에 사람을 앉히려면 may_seat, 다른 사람을 내리려면 may_unseat
-    가 True 여야 합니다. 자신을 내리는 항목은 두 값과 무관하게 통과합니다 — 자리마다 보내는
-    DELETE endpoint 와 같은 규칙입니다.
+    권한은 항목마다 판단합니다. 자리에 사람을 배치하려면 may_seat, 다른 사람의 배치를 해제하려면 may_unseat 가 True 여야 합니다.
+    자신의 배치를 해제하는 항목은 두 값과 무관하게 통과합니다.
 
-    권한이 없으면 PermissionError, 없는 자리나 없는 사람이면 ValueError 를 발생시킵니다. 두 경우
-    모두 session 을 rollback 합니다. rollback 하지 않으면 앞선 항목의 변경이 session 에 남아,
-    같은 session 으로 조회하는 코드가 저장되지 않은 값을 읽습니다.
+    권한이 없으면 PermissionError, 존재하지 않는 자리나 사람이면 ValueError 를 발생시킵니다. 두 경우 모두 session 을 rollback 합니다.
     """
     try:
         slots = [

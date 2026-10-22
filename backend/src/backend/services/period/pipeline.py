@@ -1,5 +1,5 @@
 # period 모듈의 시퀀스 파일이자 공개 interface(다른 모듈에서 접근하는 진입점)입니다.
-# api·jobs와 다른 service 모듈은 이 모듈 안의 다른 파일을 직접 import 하지 않고
+# api, jobs 와 다른 service 모듈은 이 모듈 안의 다른 파일을 직접 import 하지 않고
 # 이 파일만 참조합니다.
 from datetime import datetime
 
@@ -60,10 +60,10 @@ def run_period_assignment(
     room_ids: list[int],
     saved_at: datetime,
 ) -> PeriodRun:
-    """배정을 계산해 스케줄링 기록으로 쌓습니다. 현재 배정안은 바꾸지 않고 알리지도 않습니다(사용자 결정 2026-10-13).
+    """배정을 계산해 스케줄링 기록으로 저장합니다. 현재 배정안은 변경하지 않고 알리지도 않습니다(사용자 결정 2026-10-13).
 
-    현재 배정안은 관리자가 기록을 적용할 때만 바뀝니다(api 의 apply_period_record).
-    수동 실행(api)과 자동 실행(jobs)이 이 함수 하나를 부릅니다. saved_at 은 저장 시각이자 everyday 기간의 배정 날짜입니다.
+    현재 배정안은 관리자가 기록을 적용할 때만 변경됩니다(api 의 apply_period_record).
+    수동 실행(api)과 자동 실행(jobs)이 이 함수를 호출합니다. saved_at 은 저장 시각이자 everyday 기간의 배정 날짜입니다.
     """
     computed = assign_period(session, period_id, team_ids, room_ids, saved_at)
     rows = assignment_rows(computed.assignment)

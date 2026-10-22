@@ -47,7 +47,7 @@ router = APIRouter()
 
 
 def _ensemble_out(period: Period, days: list[EnsembleDay]) -> EnsembleOut | None:
-    # 다섯 열은 CHECK 로 함께 채워지거나 함께 비지만, 타입 검사기가 알 수 있게 전부 확인합니다.
+    # 5개 열은 CHECK 제약(periods_ensemble_all_or_none)으로 전부 값이 있거나 전부 null 입니다. mypy 가 None 이 아님을 추론하도록 5개를 전부 확인합니다.
     starts_on, ends_on, room_id = (
         period.ensemble_starts_on,
         period.ensemble_ends_on,
@@ -203,7 +203,7 @@ def patch_period(
     return _envelope(session, period)
 
 
-# 확정 해제는 스케줄링 기록 확정과 같은 권한입니다. 마감 일시도 함께 비워 기간을 다시 엽니다(사용자 결정 2026-10-20).
+# 확정 해제는 스케줄링 기록 확정과 같은 권한(proposal_confirm)입니다. 마감 일시(closes_at)도 함께 삭제해 기간을 다시 엽니다(사용자 결정 2026-10-20).
 @router.post(
     "/periods/{period_id}/unfix",
     response_model=PeriodEnvelopeOut,

@@ -20,8 +20,7 @@ def read_settings(session: Session = Depends(get_session)) -> SettingsOut:
     )
 
 
-# 수정은 합주실 운영을 맡은 사람의 일이라 room_edit 를 씁니다. 권한 항목을 새로 만들지 않는 이유는
-# 권한 항목이 늘면 권한 항목을 다루는 서버 코드도 같이 늘기 때문입니다(db/models.py 의 Permission).
+# 수정은 합주실 운영 권한인 room_edit 로 검증합니다.
 @router.patch(
     "/settings",
     response_model=SettingsOut,

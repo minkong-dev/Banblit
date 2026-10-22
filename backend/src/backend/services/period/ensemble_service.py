@@ -1,8 +1,7 @@
 """집중 합주기간의 전체 합주 설정을 저장합니다.
 
-전체 합주 날짜 범위가 기간 안인지, 집중 합주기간인지는 periods 의 CHECK 가 검사합니다(migration d9a4c6e1f207).
-기간 수정(PATCH)도 같은 조건을 어길 수 있어 한 곳에서 거절하기 위해서입니다. 이 파일은 형식·시각 순서·
-합주실 운영 시간·점유 단위 격자만 검사합니다.
+전체 합주 날짜 범위가 기간 안인지, 집중 합주기간인지는 periods 의 CHECK 가 검사합니다(migration 080a74e46f56).
+이 파일은 형식, 시각 순서, 합주실 운영 시간, 점유 단위 격자만 검사합니다.
 """
 
 from collections import defaultdict
@@ -40,7 +39,7 @@ ENSEMBLE_FIELDS = (
 def _ensemble_times(
     session: Session, room: Room, starts_at: str, ends_at: str
 ) -> tuple[time, time]:
-    """전체 합주 시작·종료 시간을 변환하고, 순서·합주실 운영 시간·점유 단위 격자를 검사합니다."""
+    """전체 합주 시작 시간과 종료 시간을 변환하고, 순서, 합주실 운영 시간, 점유 단위 격자를 검사합니다."""
     start = parse_clock(starts_at, "전체 합주 시작 시간")
     end = parse_clock(ends_at, "전체 합주 종료 시간")
     require_clock_range(start, end, "전체 합주 시간")
@@ -82,7 +81,7 @@ def set_ensemble(
     )
     for field, value in zip(ENSEMBLE_FIELDS, (starts, ends, room_id, start, end), strict=True):
         setattr(period, field, value)
-    # 전체 합주 합주실·시각과 겹치게 된 예약의 취소까지 commit 1회로 저장합니다.
+    # 전체 합주의 합주실, 시각과 겹치게 된 예약의 취소까지 commit 1회로 저장합니다.
     commit_with_cancellations(session, period, now)
     return period
 
