@@ -26,6 +26,7 @@ def notify_assignment_updated(
     if not member_ids:
         return 0
 
+    # add_all 은 반복 가능한 값이면 받으므로 list 를 만들지 않고 generator 를 전달합니다.
     session.add_all(
         Notification(
             member_id=member_id, kind="assignment_updated", created_at=created_at
@@ -95,8 +96,8 @@ def mark_all_read(session: Session, member_id: int) -> None:
     """해당 멤버의 알림을 전부 삭제합니다. 다른 멤버의 알림은 삭제하지 않습니다.
 
     읽음 표시만 남기고 행을 보존하면 삭제되는 경로가 없어 행이 쌓이기만 합니다. 알림은 배정 1회마다
-    배정받은 팀의 멤버 전원에게 1행씩 생성되고, 조회는 상한 없이 전 행을 반환하며 화면은 20초마다
-    다시 조회합니다(main.tsx 의 LIVE_REFETCH_MS). 읽은 알림을 다시 볼 경로는 없으므로 삭제합니다.
+    배정받은 팀의 멤버 전원에게 1행씩 생성되고, 조회는 상한 없이 전 행을 반환하며 화면은 주기적으로
+    다시 조회합니다. 읽은 알림을 다시 볼 경로는 없으므로 삭제합니다.
     """
     session.execute(delete(Notification).where(Notification.member_id == member_id))
     session.commit()

@@ -5,7 +5,6 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-from fastapi import HTTPException
 
 from backend.api import auth_dependency
 from backend.db.models import Member
@@ -47,10 +46,11 @@ def test_a_signed_up_member_passes(monkeypatch: pytest.MonkeyPatch) -> None:
     assert auth_dependency.require_account("token", _FakeSession(member)) is member  # type: ignore[arg-type]
 
 
-def test_a_missing_permission_is_403(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_missing_permission_raises_permission_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    # PermissionError 는 api/app.py 의 handler 가 403 으로 응답합니다.
     monkeypatch.setattr(auth_dependency, "account_permissions", lambda *_: ["room_edit"])
     member = Member(id=7, name="김민수")
     auth_dependency.ensure_permission(_FakeSession(member), member, "room_edit")  # type: ignore[arg-type]
-    with pytest.raises(HTTPException) as caught:
+    with pytest.raises(PermissionError) as caught:
         auth_dependency.ensure_permission(_FakeSession(member), member, "room_delete")  # type: ignore[arg-type]
-    assert caught.value.status_code == 403
+    assert str(caught.value) == auth_dependency.FORBIDDEN_DETAIL

@@ -6,6 +6,7 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
 from backend.db.commit import commit_translating
+# engine.py 의 check_database 는 Engine 을 인자로 받고, 이 파일은 인자 없는 같은 이름의 함수를 공개합니다. 이름이 겹치므로 _ 를 붙여 가져옵니다.
 from backend.db.engine import DependencyStatus, check_database as _check_database, create_db_engine
 from backend.db.schedule_store import (
     AssignmentRow,
@@ -18,7 +19,8 @@ from backend.db.schedule_store import (
 
 
 # db 모듈의 진입점 파일입니다. api 는 db 안의 다른 파일을 직접 호출하지 않고 이 파일만
-# 참조합니다. save_schedule·save_record·apply_record·list_backup_rounds·AssignmentRow·
+# 참조합니다. __all__ 은 이 모듈이 공개하는 이름의 목록입니다. 재공개한 이름을 ruff 가 미사용 import 로 판정하지 않게 하고,
+# from ... import * 가 가져가는 이름을 이 목록으로 제한합니다. save_schedule·save_record·apply_record·list_backup_rounds·AssignmentRow·
 # BackupRound 는 schedule_store.py 에서 정의한 것을 그대로 재공개합니다.
 __all__ = [
     "get_engine",
@@ -51,6 +53,8 @@ def get_engine() -> Engine:
     return _engine_for(url)
 
 
+# yield 가 있는 함수는 generator 입니다. FastAPI 는 yield 까지 실행해 session 을 endpoint 에 전달하고, 응답 뒤 나머지를 실행해
+# with 블록을 닫습니다. 반환 타입 Iterator[Session] 은 Session 을 1개 내어 주는 generator 라는 뜻입니다.
 def get_session() -> Iterator[Session]:
     # get_engine 으로 Engine 을 획득하여 Session 을 열고, 요청 처리가 끝나면 닫습니다.
     # session 을 닫지 않으면 connection 이 pool 에 반납되지 않아 다음 요청이 pool 대기에서

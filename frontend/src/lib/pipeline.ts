@@ -740,7 +740,7 @@ export async function saveProfile(
   }
   if (draft.next === "") return;
   try {
-    await getJSON<null>("/me/password", { method: "POST", body: JSON.stringify({ current: draft.current, next: draft.next }) });
+    await getJSON<null>("/me/password", { method: "POST", body: JSON.stringify({ current: draft.current, new_password: draft.next }) });
   } catch (error) {
     if (!infoChanged) throw error;
     throw new Error(`이름과 기수는 저장했지만 비밀번호는 변경하지 못했어요. ${reason(error)}`);

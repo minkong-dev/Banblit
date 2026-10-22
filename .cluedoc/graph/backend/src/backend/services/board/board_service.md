@@ -46,7 +46,7 @@ flowchart LR
 - `create_notice`: `backend.db.models`, `backend.services.validation.pipeline`
 - `create_draft`: `backend.db.models`, `backend.services.roster.pipeline`
 - `publish_post`: `backend.services.validation.pipeline`
-- `sweep_stale_drafts`
+- `stale_drafts`
 - `list_team_posts`: `backend.services.roster.pipeline`
 - `create_team_post`: `backend.db.models`, `backend.services.roster.pipeline`, `backend.services.validation.pipeline`
 - `get_post_with_comments`

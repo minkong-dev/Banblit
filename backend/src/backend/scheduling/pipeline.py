@@ -1,4 +1,4 @@
-# scheduling 모듈의 시퀀스 파일이자 공개 interface(다른 모듈에서 접근하는 진입점)입니다.
+# scheduling 모듈의 시퀀스 파일(모듈 안 함수의 호출 순서와 조절 값을 모아 두는 파일)이자 공개 interface(다른 모듈에서 접근하는 진입점)입니다.
 # api 와 services 는 scheduling 내의 다른 파일을 직접 호출하지 않고 이 파일만 참조합니다.
 #
 # 이 모듈 안에서만 쓰는 조절 값은 이 파일이 정의하고, 기능 파일(slots·assignment)은
@@ -20,6 +20,7 @@ SOLVER_TIME_LIMIT_SECONDS = 60.0
 STALL_SECONDS = 5.0
 
 # 계산에 쓰는 thread 수의 상한입니다. 배정 계산은 api 와 같은 process 에서 돌므로 코어 전부를 쓰면 일반 요청이 느려집니다. 코어 수의 절반입니다.
+# os.cpu_count() 는 코어 수를 알 수 없으면 None 을 반환하므로 그때는 2 로 두고, 1코어에서도 1 이 되게 max 로 받칩니다.
 SOLVER_WORKERS = max(1, (os.cpu_count() or 2) // 2)
 
 

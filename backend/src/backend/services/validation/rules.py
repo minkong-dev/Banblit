@@ -12,8 +12,11 @@ from backend.scheduling.pipeline import TimeInterval, day_window, generate_slots
 
 CLOCK_FORMAT = "%H:%M"
 DATE_FORMAT = "%Y-%m-%d"
+# r"..." 은 역슬래시를 escape 로 해석하지 않는 raw 문자열입니다. 정규식은 "공백과 @ 가 아닌 글자 1개 이상, @,
+# 같은 글자 1개 이상, ., 같은 글자 2개 이상" 을 허용합니다.
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$")
 # 이메일과 비밀번호가 받는 글자입니다. 눈에 보이는 ASCII 문자(공백부터 물결표까지)만 허용합니다.
+# \x20 은 공백(ASCII 32), \x7E 는 물결표 ~(ASCII 126)이고 그 사이가 영어 글자, 숫자, 기호 전부입니다.
 # 한글은 메일 서버가 SMTPUTF8 을 지원해야 전달되고, 제어문자는 헤더, 기록에 보이지 않는 채로
 # 남습니다. 화면(validate.ts 의 ASCII_ONLY)도 같은 범위를 참조합니다.
 PRINTABLE_ASCII = re.compile(r"^[\x20-\x7E]*$")
@@ -81,6 +84,7 @@ def require_login_id(value: str, min_length: int, max_length: int) -> str:
     normalized = value.strip().lower()
     if not LOGIN_ID_PATTERN.match(normalized):
         raise ValueError("아이디는 영어 소문자와 숫자만 사용 가능해요")
+    # a <= b <= c 는 a <= b and b <= c 와 같습니다(연쇄 비교).
     if not min_length <= len(normalized) <= max_length:
         raise ValueError(f"아이디는 {min_length}자 이상 {max_length}자 이하로 입력해주세요")
     return normalized
@@ -192,6 +196,7 @@ def require_clock_range(starts: time, ends: time, label: str) -> None:
     """하루 중의 범위 1개를 검증합니다. ends 가 starts 보다 이르면 LATEST_CLOSE_NEXT_DAY(다음 날 00:00)만 허용합니다."""
     if ends == starts:
         raise ValueError(f"{label}의 시작 시간과 종료 시간은 같을 수 없어요")
+    # time.fromisoformat 은 "HH:MM" 또는 "HH:MM:SS" 문자열을 time 으로 변환합니다.
     if ends < starts and ends != time.fromisoformat(LATEST_CLOSE_NEXT_DAY):
         raise ValueError(f"{label}의 종료 시간은 시작 시간보다 늦거나 {LATEST_CLOSE_NEXT_DAY} 이어야 해요")
 
@@ -206,8 +211,10 @@ def require_ends_not_before_starts(starts_on: date, ends_on: date) -> None:
 def require_valid_slot_bounds(
     starts_at: datetime, ends_at: datetime, slot_minutes: int
 ) -> None:
-    """TimeInterval, generate_slots 이 이미 수행하는 시간대, 순서, 격자 검증을 재사용합니다.
+    """구간이 slot 격자에 맞는지 검증합니다. 검사 3개는 scheduling 이 하는 검사와 같습니다.
 
+    TimeInterval 생성이 시간대가 붙었거나 ends_at 이 starts_at 보다 이르지 않은 구간을, generate_slots 가 시작 시간과
+    종료 시간이 slot_minutes 격자 위가 아닌 구간을 ValueError 로 거절합니다. 반환되는 칸 목록은 쓰지 않습니다.
     slot_minutes 는 저장소 설정이 결정하는 칸 하나의 크기(분)입니다.
     """
     generate_slots(TimeInterval(start=starts_at, end=ends_at), slot_minutes)
@@ -227,7 +234,8 @@ def require_within_room_window(
     raise ValueError("합주실 운영 시간 안에서만 예약할 수 있어요")
 
 
-# 요일 집합이 가질 수 있는 최댓값입니다. 월요일 1 부터 일요일 64 까지 일곱 개를 전부 더한 값입니다.
+# 요일 집합이 가질 수 있는 최댓값입니다. 0b 는 2진수 표기로, bit 7개가 전부 1 인 127 입니다.
+# 월요일 1 부터 일요일 64 까지 일곱 개를 전부 더한 값입니다.
 ALL_WEEKDAYS = 0b1111111
 
 

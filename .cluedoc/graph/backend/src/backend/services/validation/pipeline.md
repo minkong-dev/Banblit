@@ -10,7 +10,7 @@ kind: file
 ```mermaid
 flowchart LR
   backend_src_backend_services_validation_pipeline["pipeline.py"]
-  backend_src_backend_services_validation_pipeline --> backend_src_backend_services_validation_input["input.py"]
+  backend_src_backend_services_validation_pipeline --> backend_src_backend_services_validation_rules["rules.py"]
   backend_src_backend_api_routers_boards["boards.py"] --> backend_src_backend_services_validation_pipeline
   backend_src_backend_api_routers_notifications["notifications.py"] --> backend_src_backend_services_validation_pipeline
   backend_src_backend_api_routers_periods["periods.py"] --> backend_src_backend_services_validation_pipeline
@@ -32,7 +32,7 @@ flowchart LR
 
 ## imports
 
-- [[graph/backend/src/backend/services/validation/input|input.py]]
+- [[graph/backend/src/backend/services/validation/rules|rules.py]]
 
 ## imported by
 
@@ -56,7 +56,7 @@ flowchart LR
 
 ## 함수와 호출
 
-- `require_login_id`: `backend.services.validation.input.require_login_id`
-- `require_password`: `backend.services.validation.input.require_password`
-- `require_cohort`: `backend.services.validation.input.require_cohort`
-- `require_repeat_end`: `backend.services.validation.input.require_repeat_end`
+- `require_login_id`: `backend.services.validation.rules.require_login_id`
+- `require_password`: `backend.services.validation.rules.require_password`
+- `require_cohort`: `backend.services.validation.rules.require_cohort`
+- `require_repeat_end`: `backend.services.validation.rules.require_repeat_end`

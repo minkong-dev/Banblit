@@ -14,7 +14,7 @@ from backend.services.period.period_input import (
     expand_unavailable,
     target_sessions,
 )
-from backend.contract import RunSlot
+from backend.contract import RUN_SLOTS, RunSlot
 from backend.db.models import (
     Assignment,
     AssignmentRun,
@@ -33,6 +33,8 @@ from backend.services.period.period_crud_service import (
 )
 from backend.services.settings.pipeline import session_minutes, slot_minutes
 from backend.db.pipeline import AssignmentRow
+# scheduling 의 Assignment, Room, Team 은 엔진 입력, 출력용 dataclass 이고 db 의 같은 이름 class 는 ORM model 입니다.
+# 이 파일은 둘 다 쓰므로 엔진 쪽에 Engine 접두사를 붙여 구분합니다.
 from backend.scheduling.pipeline import Assignment as EngineAssignment
 from backend.scheduling.pipeline import Room as EngineRoom
 from backend.scheduling.pipeline import Team as EngineTeam
@@ -107,6 +109,8 @@ class RecordScore:
     points: int
 
 
+# 공식은 사용자 결정(2026-10-15)입니다. 목표 달성률을 100점으로 두고 불참 1명마다 absence_penalty 점을 뺍니다.
+# absence_penalty 는 services/period/pipeline.py 의 ABSENCE_PENALTY 가 전달합니다.
 def record_points(team_sessions: list[int], target_sessions: int, absences: int, absence_penalty: int) -> int:
     """100 × (팀마다 목표까지만 센 session 수의 합 / 목표 session 합) − 불참 1명당 absence_penalty 점입니다. 0 미만은 0 입니다."""
     target_total = target_sessions * len(team_sessions)
@@ -255,7 +259,7 @@ def schedule_report(
         over_absent=over_absent,
         score=RecordScore(
             # team_ids 에 든 팀 중 0회인 팀도 셉니다. stored_report 가 모든 팀을 전달하므로, 팀 목록 중 1개 이상을 제외하고
-            # 연산한 기록은 fewest 가 0 이 됩니다. 결과 설명의 부족분과 같은 기준입니다.
+            # 연산한 기록은 fewest 가 0 이 됩니다(의도한 동작). 결과 설명의 부족분과 같은 기준입니다.
             # ponytail: 연산한 팀 목록을 기록에 저장하게 되면 그 목록으로 변경합니다.
             fewest=min((counts[team_id] for team_id in team_ids), default=0),
             sessions=sum(counts.values()),
@@ -286,6 +290,7 @@ def stored_report(
         return None
     stored_rows = [
         AssignmentRow(team_id=team_id, room_id=room_id, starts_at=start, ends_at=end)
+        # ScheduleRow 의 팀 이름과 합주실 이름(2번째, 4번째)은 쓰지 않으므로 _ 로 받습니다.
         for team_id, _, room_id, _, start, end in rows
     ]
     return schedule_report(session, period.id, team_ids, room_ids, stored_rows, on, absence_penalty)
@@ -338,6 +343,7 @@ def _prepare(
     # 기간을 저장한 뒤 설정의 합주 1회 길이가 늘었을 수 있어 계산 직전에 다시 검증합니다.
     require_session_fits(length, period.daily_max_hours, period.max_consecutive_hours)
     # 목표 시간을 지정한 기간은 자동값을 계산하지 않습니다. 자동값 계산은 자리가 없으면 거부하기 때문입니다.
+    # 이때 auto 는 target_sessions 가 읽지 않는 자리이므로 0 으로 둡니다.
     auto = 0 if period.target_hours_per_team is not None else auto_sessions_per_team(
         engine_rooms, len(team_ids), unit, length
     )
@@ -387,7 +393,7 @@ def practice_window(period: Period) -> PracticeWindow:
 
 
 def due_slots(
-    period: Period, now: datetime, already_ran: set[str]
+    period: Period, now: datetime, already_ran: set[RunSlot]
 ) -> tuple[RunSlot, ...]:
     # period 의 두 계산 시각 중 now 까지 지났고 아직 실행하지 않은 시각을 반환합니다.
     # 어제 놓친 시각은 검사하지 않습니다. 배정은 기간 전체를 다시 계산하는 작업이므로 어제 시각을
@@ -408,16 +414,18 @@ def due_slots(
 
 def ran_slots_today(
     session: Session, period_ids: list[int], today: date
-) -> dict[int, set[str]]:
+) -> dict[int, set[RunSlot]]:
     # 오늘 이미 실행한 (기간, 계산 시각)을 기간별 집합으로 수집합니다.
     rows = session.execute(
         select(AssignmentRun.period_id, AssignmentRun.slot)
         .where(AssignmentRun.period_id.in_(period_ids))
         .where(AssignmentRun.run_on == today)
     ).all()
-    ran: dict[int, set[str]] = defaultdict(set)
+    ran: dict[int, set[RunSlot]] = defaultdict(set)
     for period_id, slot in rows:
-        ran[period_id].add(slot)
+        # assignment_runs.slot 열은 Text 라 str 로 읽힙니다. 저장하는 쪽(mark_ran)이 RunSlot 만 쓰므로 RunSlot 으로 좁힙니다.
+        if slot in RUN_SLOTS:
+            ran[period_id].add(slot)
     return ran
 
 

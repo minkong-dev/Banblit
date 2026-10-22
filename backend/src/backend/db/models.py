@@ -48,6 +48,7 @@ from backend.contract import (
 )
 
 # CHECK 제약 문구는 위 목록에서 그대로 생성합니다. 목록과 제약이 분리되지 않도록 합니다.
+# ::text[] 는 PostgreSQL 의 형 변환 문법으로, ARRAY[...] 를 text 배열로 지정합니다.
 _PERMISSION_ARRAY_SQL = "ARRAY[{}]::text[]".format(
     ", ".join(f"'{name}'" for name in PERMISSIONS)
 )
@@ -76,6 +77,10 @@ def _clock_range_sql(starts: str, ends: str) -> str:
 
 
 class Base(DeclarativeBase):
+    # 모든 model 의 부모입니다. 본문은 없지만 SQLAlchemy 가 이 class 를 상속한 model 전부를 1개의 metadata 에 모읍니다.
+    # Alembic 의 autogenerate 와 테스트의 create_all 이 이 metadata 를 읽습니다.
+    # Mapped[타입] 은 열의 Python 타입 선언이고, mapped_column(...) 은 그 열의 DB 속성(기본 키, 외래 키, 기본값, 제약)입니다.
+    # ForeignKey 의 ondelete="CASCADE" 는 참조하는 행이 삭제될 때 이 행도 DB 가 함께 삭제한다는 뜻입니다.
     pass
 
 
@@ -188,6 +193,7 @@ class Team(Base):
     color 는 TEAM_COLORS 중 하나이고 다른 팀과 겹칠 수 없습니다. 값을 주지 않고 INSERT 하면 DB 트리거
     (teams_pick_color)가 다른 팀이 쓰지 않는 첫 색을 채웁니다(migration c3f7b2e84d19). FetchedValue 는
     그 값을 DB 가 결정한다고 ORM 에 알려, INSERT 뒤 채워진 색을 다시 읽게 합니다.
+    trigger 함수와 trigger 는 이 파일이 아니라 migration c3f7b2e84d19 에만 정의되어 있습니다. 변경할 때는 새 migration 으로 교체합니다.
     """
 
     __tablename__ = "teams"
@@ -233,7 +239,7 @@ class UnavailableTime(Base):
 
     반복은 repeat_weekdays 하나로 저장합니다. 어느 요일에 반복할지를 담고, 매일 반복은 일곱 요일을
     전부 고른 것과 같습니다. 끝나는 조건은 repeat_count(횟수)나 repeat_until(종료일) 중 하나이고,
-    둘 다 지정하면 경계에서 거부합니다(services/validation/input.py 의 require_repeat_end).
+    둘 다 지정하면 경계에서 거부합니다(services/validation/rules.py 의 require_repeat_end).
 
     reason 은 사용자가 입력하는 사유입니다. 엔진은 사용하지 않고 화면에만 표시합니다. null 을 허용합니다.
     name 은 캘린더에 표시할 이름입니다. 비어 있으면 화면이 "불가능 일정"으로 표시합니다.
@@ -248,9 +254,10 @@ class UnavailableTime(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime)
     ends_at: Mapped[datetime] = mapped_column(DateTime)
     # 반복할 요일의 집합입니다. 월요일이 1, 화요일이 2, 수요일이 4 … 일요일이 64 이고 더해서 저장합니다.
+    # 2의 거듭제곱으로 두면 요일 7개의 어떤 조합도 합계 1개(bit 집합)로 저장되고, 포함 여부는 AND 연산 1번으로 확인합니다.
     # date.weekday() 와 같은 순서입니다. null 이거나 0 이면 반복하지 않습니다. 일곱 요일 전부(127)가 매일 반복입니다.
     repeat_weekdays: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
-    # 반복 횟수입니다. 시작 회차를 포함해 셉니다. repeat_until 과 동시에 지정할 수 없습니다(services/validation/input.py).
+    # 반복 횟수입니다. 선택한 요일 전부를 1세트로 하는 주 단위이고 시작 주를 포함해 셉니다. repeat_until 과 동시에 지정할 수 없습니다(services/validation/rules.py).
     repeat_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     repeat_until: Mapped[date | None] = mapped_column(Date, nullable=True)
     reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -285,7 +292,9 @@ class Room(Base):
 class Period(Base):
     """기간입니다. kind 가 open 이면 선착순 예약 기간, focused 이면 자동 배정 대상인 집중 합주기간입니다.
 
-    everyday 는 집중 합주기간의 "매일" 옵션이고, first_run_at, second_run_at 은 하루 2회 계산 시각입니다.
+    everyday 는 집중 합주기간의 "매일" 옵션입니다. 켜면 종료일 없이 매일 반복되는 기간이라 ends_on 을 쓰지 않습니다.
+    first_run_at, second_run_at 은 하루 2회 계산 시각입니다.
+    전체 합주는 모든 팀이 같은 합주실에 함께 모이는 합주이고, 팀별 합주는 팀 1개가 배정받는 합주입니다.
     ensemble_* 5개 열은 전체 합주 설정이고 전부 값이 있거나 전부 null 입니다. 날짜마다 다른 시각은 ensemble_days 가 저장합니다.
     practice_* 4개 열은 팀별 합주를 배정할 수 있는 시간대이고 평일(월~금), 주말(토, 일)이 각각 1쌍입니다.
     null 인 쪽은 합주실 개방 시간 전체를 씁니다.
@@ -296,6 +305,7 @@ class Period(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     kind: Mapped[str] = mapped_column(Text)
     # 공연명입니다. 화면의 기간 목록 제목이고, 빈 문자열이면 화면이 종류 이름을 표시합니다.
+    # 공연명입니다. 열 이름은 다른 table 과 같이 name 으로 두고, 화면 문구만 "공연명" 입니다.
     name: Mapped[str] = mapped_column(Text, default="", server_default="")
     starts_on: Mapped[date] = mapped_column(Date)
     ends_on: Mapped[date] = mapped_column(Date)
@@ -333,6 +343,7 @@ class Period(Base):
     __table_args__ = (
         CheckConstraint(_in_sql("kind", PERIOD_KINDS)),
         CheckConstraint("ends_on >= starts_on"),
+        # num_nulls 는 인자 중 null 의 개수입니다. 0 이면 전부 값이 있고 5 이면 전부 null 이라, 일부만 있는 행을 거절합니다.
         CheckConstraint(
             "num_nulls(ensemble_starts_on, ensemble_ends_on, ensemble_room_id,"
             " ensemble_starts_at, ensemble_ends_at) IN (0, 5)",
@@ -344,6 +355,7 @@ class Period(Base):
         ),
         CheckConstraint(
             "ensemble_starts_on IS NULL OR (ensemble_starts_on >= starts_on"
+            # everyday 기간은 ends_on 을 쓰지 않으므로(매일 반복) 전체 합주 종료일을 ends_on 으로 제한하지 않습니다.
             " AND ensemble_ends_on >= ensemble_starts_on AND (everyday OR ensemble_ends_on <= ends_on))",
             name="periods_ensemble_within_period",
         ),
@@ -392,6 +404,8 @@ class EnsembleDay(Base):
     )
 
 
+# 배정 table 3개: AssignmentRun 은 계산이 완료되었다는 사실(언제, 어느 회차), Assignment 는 현재 적용된 배정 구간,
+# AssignmentBackup 은 적용 전의 연산 결과(화면 문구 "스케줄링 기록")입니다. 이름의 Backup 은 현행 table 에 복사하기 전의 보관본이라는 뜻입니다.
 class AssignmentRun(Base):
     """자동 배정이 완료된 계산 1회의 기록입니다. 같은 기간·같은 날짜·같은 계산 시각은 1개만 저장됩니다.
 
@@ -453,7 +467,7 @@ class Post(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     # index 를 둡니다. 공지 목록(team_id IS NULL)과 팀 게시판 목록(team_id = 값) 모두
-    # 이 열 하나로 필터링하므로, btree index 하나를 두 조회가 모두 사용합니다. PostgreSQL 의 btree 는
+    # 이 열 하나로 필터링하므로, btree index 하나를 두 조회가 모두 사용합니다. btree 는 PostgreSQL 의 기본 index 종류(정렬된 트리)입니다. PostgreSQL 의 btree 는
     # NULL 도 index 에 포함하므로 IS NULL 조회에도 사용됩니다.
     team_id: Mapped[int | None] = mapped_column(
         ForeignKey("teams.id", ondelete="CASCADE"), nullable=True, index=True
@@ -487,7 +501,7 @@ class Post(Base):
             "published_at IS NULL OR length(trim(body)) > 0", name="posts_published_body"
         ),
         # 목록 조회는 전부 blinded_at IS NULL 과 published_at IS NOT NULL 을 붙입니다.
-        # 부분 index 라 목록에 나오는 행만 담습니다.
+        # postgresql_where 가 있는 부분(partial) index 라 조건에 맞는 행만 담아 목록에 나오는 행만 index 에 있습니다.
         Index(
             "ix_posts_visible",
             "team_id",
@@ -669,7 +683,7 @@ class Notification(Base):
 
 class PasswordResetToken(Base):
     """비밀번호 재설정 token 하나입니다. sessions table 과 같은 구조로 원문이 아니라 해시만
-    저장합니다. DB 가 유출되어도 해시 값으로는 비밀번호를 변경할 수 없습니다.
+    저장합니다. token_hash 는 메일로 보낸 token 원문의 해시이고, 재설정 요청의 token 을 같은 방식으로 해시해 이 열과 비교합니다(services/auth/password_reset.py). DB 가 유출되어도 해시 값으로는 비밀번호를 변경할 수 없습니다.
 
     used_at 이 설정되거나 expires_at 이 지나면 무효입니다. 한 번 사용하면 무효가 되므로 sessions 의
     revoked_at 과 달리 열 이름이 used_at 입니다.

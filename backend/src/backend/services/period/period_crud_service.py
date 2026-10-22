@@ -43,13 +43,13 @@ def commit_with_cancellations(session: Session, period: Period, now: datetime) -
     commit_translating(session, PERIOD_MESSAGES, action)
 
 
-# 팀별 합주 시간대 한 쌍입니다. 시각 두 개를 "HH:MM" 문자열로 받습니다. None 이면 그 쌍을 지정하지
-# 않았다는 뜻이고, 그날은 합주실 개방시각 전체를 씁니다.
+# 팀별 합주 시간대 한 쌍입니다. 시각 두 개를 "HH:MM" 문자열로 받습니다. | None 은 이 별칭의 값이 None 일 수도
+# 있다는 뜻입니다. None 이면 그 쌍을 지정하지 않았다는 뜻이고, 그날은 합주실 개방시각 전체를 씁니다.
 ClockPair = tuple[str, str] | None
 
 
 @dataclass(frozen=True)
-class WindowIn:
+class WindowInput:
     """팀별 합주를 배정할 수 있는 하루 중의 시간대입니다. 평일(월~금)과 주말(토요일, 일요일)이 서로 독립입니다."""
 
     weekday: ClockPair = None
@@ -57,6 +57,8 @@ class WindowIn:
 
     def columns(self) -> dict[str, object]:
         """저장할 열 네 개를 반환합니다. 정하지 않은 쌍은 두 열 모두 None 입니다."""
+        # dict 앞의 ** 는 그 dict 의 항목을 펼쳐 넣습니다. 두 dict 의 key 는 practice_weekday_*, practice_weekend_* 로 겹치지 않습니다.
+        # 겹치면 뒤에 펼친 값이 앞의 값을 덮습니다.
         return {
             **_pair_columns("weekday", self.weekday),
             **_pair_columns("weekend", self.weekend),
@@ -64,7 +66,7 @@ class WindowIn:
 
 
 @dataclass(frozen=True)
-class AssignRuleIn:
+class AssignRuleInput:
     """배정 규칙입니다. target_hours 가 None 이면 팀당 목표 시간은 전체 시간 ÷ 팀 수입니다(사용자 결정 2026-10-12).
 
     daily_max_hours 는 팀 1개가 하루에 받는 시간의 상한, max_consecutive_hours 는 끊기지 않고 이어지는 시간의 상한입니다(사용자 결정 2026-10-20).
@@ -141,8 +143,9 @@ def create_period(
     everyday: bool,
     first_run_at: str,
     second_run_at: str,
-    window: WindowIn | None = None,
-    rule: AssignRuleIn | None = None,
+    window: WindowInput | None = None,
+    rule: AssignRuleInput | None = None,
+    # * 뒤의 now, closes_at 은 keyword 로만 전달합니다. 위치 인자가 많아 순서를 틀려도 타입 검사에 걸리지 않기 때문입니다.
     *,
     now: datetime,
     closes_at: datetime | None = None,
@@ -162,8 +165,9 @@ def create_period(
         everyday=everyday,
         first_run_at=parse_clock(first_run_at, "1차 연산 시각"),
         second_run_at=parse_clock(second_run_at, "2차 연산 시각"),
-        **(WindowIn() if window is None else window).columns(),
-        **(AssignRuleIn() if rule is None else rule).columns(session_minutes(session)),
+        # 두 columns() 가 반환하는 key 는 서로도, 위아래의 keyword 와도 겹치지 않습니다. 겹치면 TypeError 입니다.
+        **(WindowInput() if window is None else window).columns(),
+        **(AssignRuleInput() if rule is None else rule).columns(session_minutes(session)),
         closes_at=closes_at,
     )
     session.add(period)
@@ -210,10 +214,11 @@ def update_period(
     everyday: bool | None,
     first_run_at: str | None,
     second_run_at: str | None,
-    window: WindowIn | None = None,
-    rule: AssignRuleIn | None = None,
+    window: WindowInput | None = None,
+    rule: AssignRuleInput | None = None,
     *,
     now: datetime,
+    # Literal["keep"] 은 문자열 "keep" 1개만 허용하는 타입입니다. None(마감 삭제)과 "전달하지 않음"을 구분하는 표식입니다.
     closes_at: datetime | None | Literal["keep"] = "keep",
 ) -> Period:
     """period_id의 기간에서 전달된 항목만 수정하여 저장하고, 수정된 기간을 반환합니다.
@@ -221,7 +226,7 @@ def update_period(
     closes_at 이 "keep" 이면 저장된 마감 일시를 그대로 두고, None 이면 마감 일시를 삭제합니다.
     확정된 기간의 마감 일시를 다른 값으로 변경하면 ValueError 입니다.
 
-    window 가 None 이면 저장된 시간대를 그대로 둡니다. 시간대를 삭제하려면 두 쌍이 None 인 WindowIn 을 전달합니다.
+    window 가 None 이면 저장된 시간대를 그대로 둡니다. 시간대를 삭제하려면 두 쌍이 None 인 WindowInput 을 전달합니다.
     """
     period = get_period_or_raise(session, period_id)
 
@@ -244,6 +249,8 @@ def update_period(
         if period.fixed_at is not None:
             raise ValueError("확정된 기간은 마감 일시를 변경할 수 없어요. 확정을 해제한 뒤 변경해주세요")
         changes["closes_at"] = closes_at
+    # changes 의 key 는 Period 의 열 이름입니다. _validated_changes 의 5개, name, everyday, closes_at,
+    # WindowInput.columns() 의 practice_* 4개, AssignRuleInput.columns() 의 4개 중 전달된 항목만 들어 있습니다.
     for field, value in changes.items():
         setattr(period, field, value)
     commit_with_cancellations(session, period, now)
@@ -263,8 +270,8 @@ def delete_period(session: Session, period_id: int) -> None:
 
 # ── 조회 ─────────────────────────────────────────────────────────────────────
 
+# ScheduleRow 의 각 자리는 (팀 id, 팀 이름, 합주실 id, 합주실명, 시작 시간, 종료 시간) 입니다.
 ScheduleRow = tuple[int, str, int, str, datetime, datetime]
-"""(팀 id, 팀 이름, 합주실 id, 합주실명, 시작 시간, 종료 시간)"""
 
 
 def focused_periods_on(session: Session, day: date) -> list[Period]:

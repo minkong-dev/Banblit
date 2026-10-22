@@ -141,7 +141,7 @@ export type MyTeam = {
 /** /me 응답 전체입니다. 현재 로그인한 계정과 그 계정이 배정된 자리 목록입니다. */
 export type Me = { account: Account; teams: MyTeam[] };
 
-/** 할 수 있는 일 22가지입니다. 서버 쪽은 backend/src/backend/db/models.py 의 Permission 에 작성되어 있는 내용을 기준으로 합니다 */
+/** 할 수 있는 일 23가지입니다. 서버 쪽은 backend/src/backend/contract.py 의 Permission 에 작성되어 있는 내용을 기준으로 합니다 */
 export type Permission =
   | "room_create"
   | "room_edit"
@@ -223,7 +223,7 @@ export type ScheduleRow = {
 
 export type Slot = { room_id: number; room: string; start: string; end: string };
 
-export type AssignmentOut = { slots_by_team: Record<string, Slot[]> };
+export type AssignmentOut = { sessions_by_team: Record<string, Slot[]> };
 
 /** 목표 시간보다 적게 배정받은 팀 하나입니다. */
 export type Shortfall = { team_id: number; team: string; assigned_hours: number };

@@ -84,10 +84,12 @@ def create_unavailable(
         member_id=member_id,
         starts_at=starts_at,
         ends_at=ends_at,
+        # x or None 은 x 가 거짓(0, None)이면 None 입니다. 요일 bitmask 0 을 "반복 없음" 인 None 으로 저장합니다.
         repeat_weekdays=repeat_weekdays or None,
         repeat_count=repeat_count,
         repeat_until=repeat_until,
         # 공백만 입력한 것은 미입력과 같게 처리합니다. 화면에 빈 줄을 표시하지 않기 위함입니다.
+        # (r or "").strip() or None 은 None 과 빈 문자열, 공백만 있는 문자열을 전부 None 으로 저장합니다.
         reason=(reason or "").strip() or None,
         name=(name or "").strip() or None,
     )
@@ -160,7 +162,8 @@ def reject_unavailable(
     if "unavailable_manage" not in account_permissions(session, requester.id):
         raise PermissionError("다른 멤버의 불가능 일정을 반려할 권한이 없어요")
     trimmed = require_reject_reason(reason)
-    # 행을 잠급니다. 같은 일정을 두 사람이 동시에 반려하면 알림이 2개 가거나 두 번째 삭제가 500 이 됩니다.
+    # with_for_update=True 는 SELECT ... FOR UPDATE 로 time_id 의 행 1개를 transaction 이 끝날 때까지 잠급니다.
+    # 같은 일정을 두 사람이 동시에 반려하면 알림이 2개 가거나 두 번째 삭제가 500 이 됩니다.
     row = session.get(UnavailableTime, time_id, with_for_update=True)
     if row is None or row.member_id != member_id:
         raise ValueError("존재하지 않는 일정이에요")

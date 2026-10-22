@@ -50,7 +50,7 @@ flowchart LR
 - `create_reservation`: `backend.db.pipeline`
 - `list_reservations`: `backend.services.room.pipeline`
 - `list_my_reservations`
-- `_get_own_reservation`: `backend.services.permission.pipeline`
+- `_get_manageable_reservation`: `backend.services.permission.pipeline`
 - `cancel_reservation`
 - `reject_reservation`: `backend.services.notification.pipeline`, `backend.services.permission.pipeline`, `backend.services.validation.pipeline`
 - `update_reservation`: `backend.db.models`, `backend.db.pipeline`, `backend.services.room.pipeline`, `backend.services.settings.pipeline`, `backend.services.validation.pipeline`

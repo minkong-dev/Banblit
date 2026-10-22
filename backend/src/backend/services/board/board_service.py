@@ -20,6 +20,7 @@ def _get_post_or_raise(session: Session, post_id: int) -> Post:
     return post
 
 
+# 매개변수 목록의 * 뒤에 오는 인자는 keyword 로만 전달할 수 있습니다(any_team=True). 위치로 전달하면 TypeError 입니다.
 def require_post_readable(session: Session, post_id: int, requester: Member, *, any_team: bool = False) -> Post:
     """post_id 의 게시글을 반환합니다. 팀 게시판 게시글이면 requester 가 해당 팀 소속이어야 합니다.
     any_team 이 True 이고 requester 가 board_read_all 을 가지면 팀 소속을 확인하지 않습니다.
@@ -31,8 +32,9 @@ def require_post_readable(session: Session, post_id: int, requester: Member, *, 
         # 가려진 글과 없는 글을 같은 문장으로 거절합니다. 문장을 나누면 글이 있다는 사실이 드러납니다.
         raise ValueError("존재하지 않는 글이에요")
     if post.published_at is None and post.author_id != requester.id:
-        # 아직 쓰는 중인 초안입니다. 쓰는 사람만 봅니다.
-        raise PermissionError("존재하지 않는 글이에요")
+        # 아직 쓰는 중인 초안입니다. 쓰는 사람만 봅니다. 없는 글과 같은 ValueError(422)로 거절합니다.
+        # PermissionError(403)로 나누면 상태 코드만으로 그 번호의 초안이 있다는 사실이 드러납니다.
+        raise ValueError("존재하지 않는 글이에요")
     if post.team_id is not None and not (any_team and _reads_all(session, requester)):
         require_team_member(session, post.team_id, requester.id)
     return post
@@ -107,6 +109,7 @@ def list_blinded_posts(session: Session) -> list[PostRow]:
     """
     # 가린 사람은 작성자와 다른 행이므로 members 를 한 번 더 join 합니다. 그 계정이 삭제되면
     # blinded_by_id 가 비므로 바깥 join(isouter)으로 붙입니다.
+    # aliased 는 같은 table 을 한 SELECT 에서 2번 join 하기 위한 별칭입니다. 별칭 없이 Member 를 2번 join 하면 SQL 이 두 행을 구분하지 못합니다.
     blinder = aliased(Member)
     rows = session.execute(
         select(Post, Member.name, blinder.name)
@@ -211,20 +214,18 @@ def publish_post(
     return post, requester.name
 
 
-def sweep_stale_drafts(session: Session, older_than: datetime) -> int:
-    """older_than 이전에 만들어진 초안을 삭제하고 삭제한 개수를 반환합니다.
+def stale_drafts(session: Session, older_than: datetime) -> list[Post]:
+    """older_than 이전에 만들어진 초안을 반환합니다. 삭제는 pipeline.sweep_stale_drafts 가 첨부 파일과 함께 수행합니다.
 
     화면은 쓰지 않고 나갈 때 초안을 삭제하지만, 탭을 닫거나 연결이 끊기면 그 요청이 가지 않습니다.
     남은 행은 목록에 표시되지 않아 삭제되지 않고 계속 누적되므로 주기적으로 삭제합니다
     (jobs/auto_assign.py 가 확인할 때마다 함께 호출합니다).
     """
-    stale = session.scalars(
-        select(Post).where(Post.published_at.is_(None), Post.created_at < older_than)
-    ).all()
-    for post in stale:
-        session.delete(post)
-    session.commit()
-    return len(stale)
+    return list(
+        session.scalars(
+            select(Post).where(Post.published_at.is_(None), Post.created_at < older_than)
+        ).all()
+    )
 
 
 def list_team_posts(session: Session, team_id: int, requester: Member) -> list[PostRow]:

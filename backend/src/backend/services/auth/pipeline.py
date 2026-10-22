@@ -1,6 +1,6 @@
-# auth 모듈의 시퀀스 파일이자 공개 interface(다른 모듈에서 접근하는 진입점)입니다.
-# api, jobs, scripts 와 다른 service 모듈은 이 모듈 안의 다른 파일을 직접 import 하지 않고
-# 이 파일만 참조합니다. 로그인 유지 기간처럼 운영자가 조절하는 값은 이 파일에만 둡니다.
+# auth 모듈의 시퀀스 파일(모듈 안 함수의 호출 순서와 조절 값을 모아 두는 파일)이자 공개 interface(다른 모듈에서 접근하는 진입점)입니다.
+# api, jobs, 저장소 루트의 scripts/(seed_load.py 등 운영 script)와 다른 service 모듈은 이 모듈 안의 다른 파일을
+# 직접 import 하지 않고 이 파일만 참조합니다. 로그인 유지 기간처럼 운영자가 조절하는 값은 이 파일에만 둡니다.
 
 import os
 from datetime import datetime, timedelta
@@ -53,7 +53,11 @@ def sign_up(
     admin_code: str | None,
     now: datetime,
 ) -> tuple[Member, str]:
-    """계정을 만들고 바로 로그인한 session token 을 함께 반환합니다."""
+    """계정을 만들고 바로 로그인한 session token 을 함께 반환합니다.
+
+    auth_service.signup 은 계정 행만 만들고, 이 함수는 그 위에 session 까지 만듭니다. API 의 가입은 이 함수를,
+    script 로 계정만 만들 때는 signup 을 씁니다.
+    """
     # 관리자코드는 배포마다 다른 값이라 환경변수로 받습니다. 비어 있으면 signup 이 어떤 코드도 통과시키지 않습니다.
     expected_code = os.environ.get(ADMIN_CODE_VARIABLE, "")
     # 계정 생성이 commit 된 뒤에 session 을 만듭니다. session 행이 member 번호를 외래 키로 참조합니다.

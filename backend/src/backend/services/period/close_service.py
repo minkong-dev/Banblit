@@ -16,7 +16,11 @@ def require_naive_close(closes_at: datetime | None) -> None:
 
 
 def is_closed(period: Period, now: datetime) -> bool:
-    """period 의 마감 일시가 now 이전이면 True 를 반환합니다. 마감 일시가 없으면 False 입니다."""
+    """period 의 마감 일시가 now 이전이면 True 를 반환합니다. 마감 일시가 없으면 False 입니다.
+
+    closed(마감)는 closes_at 이 지난 상태이고, fixed(확정)는 마감 뒤 jobs/auto_assign.py 가 1회 계산해 fixed_at 을 기록한 상태입니다.
+    마감되었지만 아직 확정되지 않은 짧은 구간이 있습니다.
+    """
     return period.closes_at is not None and period.closes_at <= now
 
 

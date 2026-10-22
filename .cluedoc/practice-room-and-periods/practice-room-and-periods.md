@@ -5,7 +5,7 @@ sources:
   - "[[graph/backend/src/backend/contract]]"  # slot 길이, 합주 1회 길이의 기본값과 선택 가능한 값 — backend/src/backend/contract.py
   - "[[graph/backend/src/backend/scheduling/assignment]]"  # 합주실(이름 + 운영 시간) 정의 — backend/src/backend/scheduling/assignment.py
   - "[[graph/backend/src/backend/db/models]]"  # Room, Period table — backend/src/backend/db/models.py
-  - "[[graph/backend/src/backend/services/validation/input]]"  # 개방 시각, 폐쇄 시각, 이름, 기간 날짜를 비롯한 모든 입력의 경계 검증 — backend/src/backend/services/validation/input.py
+  - "[[graph/backend/src/backend/services/validation/rules]]"  # 개방 시각, 폐쇄 시각, 이름, 기간 날짜를 비롯한 모든 입력의 경계 검증 — backend/src/backend/services/validation/rules.py
   - "[[graph/backend/src/backend/services/room/room_service]]"  # 합주실 조회, 생성, 수정 — backend/src/backend/services/room/room_service.py
   - "[[graph/backend/src/backend/services/period/period_crud_service]]"  # 기간 조회, 생성, 수정, 삭제 — backend/src/backend/services/period/period_crud_service.py
   - "[[graph/backend/src/backend/services/period/ensemble_service]]"  # 집중 합주기간의 전체 합주 설정, 날짜별 시각 저장 — backend/src/backend/services/period/ensemble_service.py

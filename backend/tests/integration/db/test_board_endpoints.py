@@ -818,7 +818,8 @@ def test_another_member_cannot_read_my_draft(
     _, other = account("멤버", "member@example.com")
     draft_id = api_client.post("/notices/drafts", cookies=head).json()["post"]["id"]
 
-    assert api_client.get(f"/posts/{draft_id}", cookies=other).status_code == 403
+    # 없는 글과 같은 422 입니다. 403 으로 나누면 상태 코드만으로 그 번호의 초안이 있다는 사실이 드러납니다.
+    assert api_client.get(f"/posts/{draft_id}", cookies=other).status_code == 422
     assert api_client.get(f"/posts/{draft_id}", cookies=head).status_code == 200
 
 

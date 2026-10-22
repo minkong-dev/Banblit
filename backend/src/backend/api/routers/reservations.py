@@ -94,6 +94,7 @@ def create_reservation_endpoint(
     now: datetime = Depends(current_time),
 ) -> ReservationsOut:
     # 예약자는 요청 body(본문)가 아니라 cookie(브라우저가 저장해 요청마다 함께 보내는 값)로 확인한 requester 입니다. 다른 사람 이름으로 예약할 수 없습니다.
+    # 응답은 행 1개를 담은 목록입니다. 목록 조회와 같은 형식이라 화면이 같은 변환 함수 1개를 씁니다.
     row = create_reservation(
         session,
         req.room_id,
@@ -132,8 +133,9 @@ def cancel_reservation_endpoint(
     reservation_id: int,
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
+    now: datetime = Depends(current_time),
 ) -> None:
-    cancel_reservation(session, reservation_id, requester, datetime.now())
+    cancel_reservation(session, reservation_id, requester, now)
 
 
 # 다른 멤버의 예약 취소는 이 주소로만 합니다. DELETE 는 본문을 받지 않는 클라이언트·proxy 가 있어,

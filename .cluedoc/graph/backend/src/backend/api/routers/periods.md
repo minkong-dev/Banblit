@@ -49,7 +49,9 @@ flowchart LR
 ## 함수와 호출
 
 - `_ensemble_out`: `backend.api.schemas`, `backend.services.validation.pipeline`
-- `_window_out`: `backend.api.schemas`, `backend.services.validation.pipeline`
+- `_clock_pair_out`: `backend.api.schemas`, `backend.services.validation.pipeline`
+- `_window_out`: `backend.api.schemas`
+- `_clock_pair_in`
 - `_window_in`: `backend.services.period.pipeline`
 - `_rule_in`: `backend.services.period.pipeline`
 - `_period_out`: `backend.api.schemas`, `backend.services.validation.pipeline`

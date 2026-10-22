@@ -14,7 +14,7 @@ sources:
   - "[[graph/frontend/src/routes/Profile]]"  # 프로필 화면. 내 정보, 비밀번호, 탈퇴 — frontend/src/routes/Profile.tsx
   - "[[graph/frontend/src/lib/account]]"  # 항목 22가지의 한국어 이름, 내가 가졌는지 판단, 프로필 카드의 역할 문구(permission set 이름) — frontend/src/lib/account.ts
   - "[[graph/frontend/src/lib/account.test]]"  # 역할 문구가 permission set 이름을 표시하는지의 시나리오 — frontend/src/lib/account.test.ts
-  - "[[graph/backend/src/backend/services/validation/input]]"  # 서버가 다시 검증하는 이름, 이메일, 비밀번호를 비롯한 모든 입력 규칙 — backend/src/backend/services/validation/input.py
+  - "[[graph/backend/src/backend/services/validation/rules]]"  # 서버가 다시 검증하는 이름, 이메일, 비밀번호를 비롯한 모든 입력 규칙 — backend/src/backend/services/validation/rules.py
   - "[[graph/backend/src/backend/services/auth/password_reset]]"  # 재설정 token 발급, 사용 처리와 아이디 안내 — backend/src/backend/services/auth/password_reset.py
   - "[[graph/backend/src/backend/services/auth/mailer]]"  # 메일 1통을 보내는 위치, 설정이 없을 때의 처리 — backend/src/backend/services/auth/mailer.py
   - "[[graph/backend/src/backend/api/app]]"  # 서비스 계층의 기록을 container 기록으로 내보내는 설정 — backend/src/backend/api/app.py

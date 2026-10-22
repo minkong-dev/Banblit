@@ -26,6 +26,8 @@ class _StopWhenStalled(cp_model.CpSolverSolutionCallback):
     불러도 됩니다). daemon=True 는 프로세스가 끝날 때 이 thread 가 남아 있어도 종료를 막지 않게 합니다.
     """
 
+    # CpSolverSolutionCallback 을 상속해야 solver 가 해를 찾을 때마다 on_solution_callback 을 호출합니다.
+    # super().__init__() 은 부모 class 의 초기화(C++ solver 와의 연결)라 생략하면 호출이 오지 않습니다.
     def __init__(self, solver: cp_model.CpSolver, stall_seconds: float) -> None:
         super().__init__()
         self._solver = solver
@@ -140,6 +142,7 @@ def _validate(teams: list[Team], target_sessions: int, max_absent: int) -> None:
 
     team_counts = Counter(team.id for team in teams)
     duplicated_teams = {team_id for team_id, count in team_counts.items() if count > 1}
+    # set, list 를 조건에 두면 비어 있을 때 거짓입니다.
     if duplicated_teams:
         raise ValueError(
             f"팀 번호가 겹쳐요: {', '.join(str(i) for i in sorted(duplicated_teams))}"
@@ -194,6 +197,7 @@ def assign(
     _one_room_per_team(model, chosen, teams, indices_by_interval)
     _one_place_per_member(model, chosen, absent, teams, indices_by_interval)
     if daily_max_minutes is not None:
+        # // 는 나머지를 버리는 정수 나눗셈입니다. 분 단위 상한을 session 횟수로 변환합니다.
         _limit_per_day(model, chosen, room_sessions, daily_max_minutes // session_minutes)
     if max_consecutive_minutes is not None:
         _limit_consecutive(model, chosen, room_sessions, max_consecutive_minutes // session_minutes, session_minutes)
@@ -360,7 +364,11 @@ def _limit_per_day(
     room_sessions: list[RoomInterval],
     most: int,
 ) -> None:
-    """팀마다 하루에 배정되는 session 수를 most 이하로 묶습니다. 날짜는 session 시작일입니다."""
+    """팀마다 하루에 배정되는 session 수를 most 이하로 묶습니다. 날짜는 session 시작일입니다.
+
+    합주실 종료 시간은 늦어도 다음 날 00:00(LATEST_CLOSE_NEXT_DAY)이라 자정을 넘는 session 은 00:00 에 끝나는 마지막 session 뿐이고,
+    시작한 날의 횟수로 셉니다.
+    """
     by_day: dict[tuple[int, date], list[cp_model.IntVar]] = defaultdict(list)
     for (team_id, index), var in chosen.items():
         by_day[(team_id, room_sessions[index].interval.start.date())].append(var)
@@ -438,6 +446,8 @@ def _objective(
     model 의 목적은 하나뿐이므로 maximize 는 여기서만 부릅니다. 각 가중치는 뒤 항목들이 가질 수 있는 최댓값의
     합보다 크게 잡아, 앞 항목을 1 늘리는 해가 뒤 항목과 관계없이 항상 더 좋게 합니다.
     """
+    # w_absent 는 4번째 항(이어지는 쌍 수)의 최댓값+1, w_total 은 3번째 항(불참 합)의 최댓값+1 에 w_absent 를 곱한 값,
+    # w_min 은 2번째 항(전체 횟수)의 최댓값+1 에 w_total 을 곱한 값입니다. 가중치가 뒤 항 전부의 합보다 크므로 앞 항이 우선합니다.
     team_count = len(teams)
     w_absent = len(joined) + 1
     w_total = w_absent * (max_absent * target_sessions * team_count + 1)
@@ -445,6 +455,7 @@ def _objective(
 
     fewest = model.new_int_var(0, target_sessions, "fewest")
     for team in teams:
+        # chosen 의 key 는 (팀 번호, session 번호) 입니다. 여기서는 팀 번호만 쓰므로 session 번호를 _ 로 받습니다.
         own = [var for (team_id, _), var in chosen.items() if team_id == team.id]
         model.add(fewest <= cp_model.LinearExpr.sum(own))
     total = cp_model.LinearExpr.sum(list(chosen.values()))

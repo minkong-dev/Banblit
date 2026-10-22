@@ -13,7 +13,7 @@ flowchart LR
   backend_tests_unit_test_period_input --> backend_src_backend_db_models["models.py"]
   backend_tests_unit_test_period_input --> backend_src_backend_scheduling_interval["interval.py"]
   backend_tests_unit_test_period_input --> backend_src_backend_services_period_period_input["period_input.py"]
-  backend_tests_unit_test_period_input --> backend_src_backend_services_validation_input["input.py"]
+  backend_tests_unit_test_period_input --> backend_src_backend_services_validation_rules["rules.py"]
 ```
 
 ## imports
@@ -21,7 +21,7 @@ flowchart LR
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/scheduling/interval|interval.py]]
 - [[graph/backend/src/backend/services/period/period_input|period_input.py]]
-- [[graph/backend/src/backend/services/validation/input|input.py]]
+- [[graph/backend/src/backend/services/validation/rules|rules.py]]
 
 ## imported by
 

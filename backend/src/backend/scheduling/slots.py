@@ -20,9 +20,11 @@ def generate_slots(
     시작과 끝이 그 크기의 격자 위에 있어야 합니다. 격자를 벗어나면 남은 시간을 버리지 않고
     잘못된 설정으로 거부합니다.
 
-    slot_minutes 는 60 의 약수라서 정시가 항상 격자 위에 있습니다. 그래서 분만 보면 되고
-    하루의 시작부터 세어 볼 필요가 없습니다(settings table 의 CHECK 가 이를 보장합니다).
+    slot_minutes 가 60 의 약수여야 정시가 항상 격자 위에 있어 분만 보면 됩니다. settings table 의 CHECK 도
+    같은 조건을 두지만, 이 함수는 임의의 slot_minutes 로 호출될 수 있어 여기서도 검사합니다.
     """
+    if slot_minutes <= 0 or 60 % slot_minutes != 0:
+        raise ValueError(f"시간 단위({slot_minutes}분)는 60의 약수여야 해요")
     # 60분이면 "정시"가 사람이 읽기에 자연스럽습니다. 그보다 작은 값일 때만 분을 적습니다.
     unit_text = "정시" if slot_minutes == 60 else f"{slot_minutes}분 단위"
     if not _is_on_grid(period.start, slot_minutes):

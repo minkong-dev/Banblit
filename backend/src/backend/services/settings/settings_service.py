@@ -26,22 +26,21 @@ def session_minutes(session: Session) -> int:
 
 def set_settings(
     session: Session,
-    slot: int | None = None,
-    length: int | None = None,
-) -> tuple[int, int]:
-    """칸 크기와 합주 길이를 변경하고 저장된 두 값을 반환합니다. None 인 값은 그대로 둡니다.
+    new_slot_minutes: int | None = None,
+    new_session_minutes: int | None = None,
+) -> None:
+    """칸 크기(slot_minutes)와 합주 1회 길이(session_minutes)를 변경합니다. None 인 값은 그대로 둡니다.
 
     합주 길이는 칸 크기의 배수여야 하므로 두 값을 한 번에 검증합니다. 이미 저장된 예약과 배정은 변경하지 않습니다.
     """
     row = _row(session)
-    wanted_slot = row.slot_minutes if slot is None else slot
-    wanted_length = row.session_minutes if length is None else length
+    wanted_slot = row.slot_minutes if new_slot_minutes is None else new_slot_minutes
+    wanted_length = row.session_minutes if new_session_minutes is None else new_session_minutes
     _check_fits(wanted_slot, wanted_length)
     # 두 값을 한 번에 기록합니다. 나눠 기록하면 뒤의 기록이 실패했을 때 앞의 변경만 남습니다.
     row.slot_minutes = wanted_slot
     row.session_minutes = wanted_length
     session.commit()
-    return row.slot_minutes, row.session_minutes
 
 
 def _check_fits(slot: int, length: int) -> None:

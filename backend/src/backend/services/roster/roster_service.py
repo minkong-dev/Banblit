@@ -38,6 +38,7 @@ def list_teams(session: Session) -> list[tuple[Team, int, int]]:
     ).all()
     counts = {team_id: (total, filled) for team_id, total, filled in rows}
     teams = session.scalars(select(Team).order_by(Team.id)).all()
+    # tuple 안의 * 는 unpacking 연산자입니다. (total, filled) 2개를 펼쳐 (team, total, filled) 3개짜리 tuple 을 만듭니다.
     return [(team, *counts.get(team.id, (0, 0))) for team in teams]
 
 
@@ -52,7 +53,7 @@ def list_slots(session: Session, team_id: int) -> list[tuple[TeamSlot, Member | 
         .outerjoin(Member, Member.id == TeamSlot.member_id)
         .where(TeamSlot.team_id == team_id)
         .order_by(TeamSlot.instrument, TeamSlot.ordinal)
-    ).tuples().all()
+    ).tuples().all()  # .tuples() 는 행을 Row 객체 대신 (TeamSlot, Member | None) 의 typed tuple 로 반환합니다
     return [(slot, member) for slot, member in rows]
 
 
@@ -88,7 +89,7 @@ def list_members(
     for member_id, name in session.execute(
         select(MemberPermissionSet.member_id, PermissionSet.name)
         .join(PermissionSet, PermissionSet.id == MemberPermissionSet.permission_set_id)
-        .where(MemberPermissionSet.member_id.in_(held))
+        .where(MemberPermissionSet.member_id.in_(held))  # dict 를 in_ 에 주면 key(멤버 번호)로 비교합니다
         .order_by(PermissionSet.name)
     ).all():
         held[member_id].append(name)
@@ -107,6 +108,8 @@ def search_members(session: Session, query: str, limit: int) -> list[Member]:
     trimmed = query.strip()
     rows = select(Member).order_by(Member.name, Member.id).limit(limit)
     if trimmed:
+        # ilike 는 대소문자를 구분하지 않는 LIKE 이고 % 는 임의 길이의 문자열과 일치하는 wildcard 입니다.
+        # 검색어의 % 와 _ 도 wildcard 로 해석됩니다. 이름은 한글, 영어만 받으므로(NAME_PATTERN) 결과가 넓어질 뿐 다른 영향은 없습니다.
         rows = rows.where(Member.name.ilike(f"%{trimmed}%"))
     return list(session.scalars(rows).all())
 
@@ -249,6 +252,7 @@ def replace_slots(session: Session, team_id: int, counts: dict[str, int], max_sl
     stale_ids = [row.id for row in rows if (row.instrument, row.ordinal) not in keep]
     if stale_ids:
         session.execute(delete(TeamSlot).where(TeamSlot.id.in_(stale_ids)))
+    # set 끼리의 - 는 차집합입니다. keep 에는 있고 have 에는 없는 (포지션, 번호)만 새로 만듭니다.
     session.add_all(
         TeamSlot(team_id=team_id, instrument=instrument, ordinal=ordinal)
         for instrument, ordinal in sorted(keep - have)
@@ -257,12 +261,11 @@ def replace_slots(session: Session, team_id: int, counts: dict[str, int], max_sl
 
 
 def delete_team(session: Session, team_id: int) -> None:
-    """팀을 삭제합니다. 포지션은 팀의 구성이므로 함께 삭제됩니다.
+    """팀을 삭제합니다. 포지션은 team_slots.team_id 의 ondelete=CASCADE 로 DB 가 함께 삭제합니다(db/models.py).
 
     포지션에 배정되어 있던 멤버 행은 삭제하지 않습니다.
     """
     team = get_team_or_raise(session, team_id)
-    session.execute(delete(TeamSlot).where(TeamSlot.team_id == team_id))
     session.delete(team)
     commit_translating(session, ROSTER_MESSAGES)
 

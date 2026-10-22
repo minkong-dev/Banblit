@@ -24,7 +24,7 @@ from backend.services.room.pipeline import get_room_or_raise
 from backend.services.settings.pipeline import slot_minutes
 from backend.scheduling.pipeline import day_window
 
-# 하루 범위 2개를 비교할 때 쓰는 기준 날짜입니다. 시각만 비교하므로 어느 날짜든 결과가 같습니다.
+# 하루 범위 2개를 비교할 때 쓰는 기준 날짜입니다. 시각만 비교하므로 어느 날짜든 결과가 같습니다. 2000-01-03 은 임의의 월요일입니다.
 _ANY_DAY = date(2000, 1, 3)
 
 ENSEMBLE_FIELDS = (
@@ -47,6 +47,7 @@ def _ensemble_times(
     if ensemble.start < opened.start or ensemble.end > opened.end:
         raise ValueError("전체 합주 시각은 합주실 운영 시간 안이어야 해요")
     # 점유 단위는 60 의 약수라(settings CHECK) 분만 나누어 보면 격자 위인지 알 수 있습니다.
+    # % 의 나머지가 0 이 아니면 참이므로, 둘 중 하나라도 격자 위가 아닐 때 거절합니다.
     minutes = slot_minutes(session)
     if start.minute % minutes or end.minute % minutes:
         raise ValueError(f"전체 합주 시각은 {minutes}분 단위여야 해요")
@@ -79,6 +80,7 @@ def set_ensemble(
             or_(EnsembleDay.day < starts, EnsembleDay.day > ends),
         )
     )
+    # zip 은 두 목록을 같은 자리끼리 짝짓습니다. strict=True 는 길이가 다르면 ValueError 를 발생시켜, 열 이름과 값의 개수가 어긋난 채 저장되지 않게 합니다.
     for field, value in zip(ENSEMBLE_FIELDS, (starts, ends, room_id, start, end), strict=True):
         setattr(period, field, value)
     # 전체 합주의 합주실, 시각과 겹치게 된 예약의 취소까지 commit 1회로 저장합니다.
@@ -115,6 +117,8 @@ def set_ensemble_day(
     start, end = _ensemble_times(session, get_room_or_raise(session, room_id), starts_at, ends_at)
 
     # 조회 후 INSERT 하면 같은 날짜를 동시에 저장하는 두 요청이 unique 제약에 걸리므로 한 문장으로 덮어씁니다.
+    # on_conflict_do_update 는 PostgreSQL 의 INSERT ... ON CONFLICT DO UPDATE 입니다. index_elements 의 (period_id, day) 가
+    # 이미 있으면 INSERT 대신 set_ 의 열만 갱신합니다.
     values = {"starts_at": start, "ends_at": end}
     session.execute(
         insert(EnsembleDay)

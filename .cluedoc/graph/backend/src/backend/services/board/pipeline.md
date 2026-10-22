@@ -36,3 +36,4 @@ flowchart LR
 
 - `save_attachment`: `backend.services.board.attachment_service.save_attachment`
 - `delete_post`: `backend.services.board.attachment_service`, `backend.services.board.board_service`
+- `sweep_stale_drafts`: `backend.services.board.attachment_service`, `backend.services.board.board_service`

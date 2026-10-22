@@ -24,6 +24,7 @@ def _deliver(message: EmailMessage, host: str, port: int, user: str, password: s
     """한 통의 메일을 실제로 SMTP 서버로 전송합니다. 요청 처리 스레드가 아니라 별도 스레드에서 실행됩니다."""
     try:
         with smtplib.SMTP(host, port, timeout=SMTP_TIMEOUT_SECONDS) as smtp:
+            # starttls 는 평문으로 연 SMTP 연결을 TLS 로 암호화된 연결로 전환하는 명령입니다.
             # context 를 전달하지 않으면 smtplib 이 인증서를 검증하지 않고 연결합니다. 이 연결로
             # 재설정 token 과 SMTP 계정 비밀번호가 전송되므로 ssl.create_default_context() 로 인증서를 검증합니다.
             smtp.starttls(context=ssl.create_default_context())
@@ -72,6 +73,8 @@ def send_mail(to: str, subject: str, body: str) -> None:
     # 빈 문자열은 미설정으로 처리합니다 — int("")는 예외입니다.
     port = int(os.environ.get("SMTP_PORT") or DEFAULT_SMTP_PORT)
     password = os.environ.get("SMTP_PASSWORD", "")
+    # daemon=True 인 thread 는 process 종료를 막지 않습니다. 발송이 끝나기 전에 process 가 종료되면 그 메일은 보내지지 않습니다
+    # (위 ponytail 의 손실 경우). False 면 발송이 끝날 때까지 process 가 종료되지 않습니다.
     threading.Thread(
         target=_deliver, args=(message, host, port, user, password), daemon=True
     ).start()

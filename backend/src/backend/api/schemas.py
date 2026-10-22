@@ -1,6 +1,8 @@
 from datetime import date, datetime
 from typing import Literal
 
+# pydantic 은 요청 본문을 class 선언대로 검증해 객체로 만들고, 응답 객체를 JSON 으로 변환하는 라이브러리입니다.
+# class 이름의 접미사: In 은 요청 본문, Out 은 응답 본문, Envelope 은 객체 1개를 {"post": {...}} 처럼 이름 1개로 감싼 응답입니다.
 from pydantic import BaseModel, Field, NaiveDatetime, model_validator
 
 from backend.contract import PERMISSIONS, Instrument, JobStatus, NotificationKind, Permission, SlotMinutes
@@ -21,7 +23,8 @@ class RoomSlotOut(BaseModel):
 
 
 class AssignmentOut(BaseModel):
-    slots_by_team: dict[str, list[RoomSlotOut]]
+    # 팀 이름마다 그 팀의 session(합주 1회가 이어지는 구간) 목록입니다. 항목 1개는 slot 이 아니라 session 1회입니다.
+    sessions_by_team: dict[str, list[RoomSlotOut]]
     open_slots: list[RoomSlotOut]
 
 
@@ -90,11 +93,15 @@ class PeriodAssignIn(BaseModel):
 class RecordScoreOut(BaseModel):
     """기록 하나의 점수입니다. 앞 항목이 우선하고, absences 만 적을수록 좋습니다."""
 
+    # 가장 적게 배정받은 팀의 session 수입니다.
     fewest: int
+    # 전체 팀의 session 합계입니다.
     sessions: int
+    # 불참 처리된 팀원 수의 합계입니다.
     absences: int
+    # 1회 이상 배정받은 팀 수입니다.
     joined: int
-    # 100점 만점 점수입니다(record_points).
+    # 100점 만점 점수입니다. services/period/period_service.py 의 record_points 가 계산합니다.
     points: int
 
 
@@ -147,6 +154,7 @@ class JobEnvelopeOut(BaseModel):
 class RoomOut(BaseModel):
     id: int
     name: str
+    # 시각 문자열은 "HH:MM" 형식입니다. 아래의 first_run_at, starts_at 등 시각 field 전부 같습니다.
     opens_at: str
     closes_at: str
 
@@ -231,10 +239,11 @@ class AssignRuleOut(BaseModel):
 class AssignRuleIn(BaseModel):
     """배정 규칙 전체를 한 번에 대체합니다. PATCH 에서 보내지 않으면 저장값을 그대로 둡니다(PracticeWindowIn 과 같은 방식).
 
-    max_consecutive_hours 가 daily_max_hours 이하인지는 services/period/period_crud_service.py 의 AssignRuleIn 이 판정합니다.
+    max_consecutive_hours 가 daily_max_hours 이하인지는 services/period/period_crud_service.py 의 AssignRuleInput 이 판정합니다.
     """
 
     target_hours: int | None = Field(default=None, gt=0)
+    # 32767 은 DB 열(periods.max_absent_members)의 SMALLINT 상한입니다. 화면의 MAX_ABSENT_LIMIT(frontend/src/lib/settings.ts)과 같은 값입니다.
     max_absent: int = Field(default=0, ge=0, le=32767)
     daily_max_hours: int = Field(default=DEFAULT_DAILY_MAX_HOURS, ge=1, le=MAX_DAILY_HOURS)
     max_consecutive_hours: int = Field(default=DEFAULT_MAX_CONSECUTIVE_HOURS, ge=1, le=MAX_DAILY_HOURS)
@@ -311,6 +320,7 @@ class PeriodUpdateIn(BaseModel):
     # 보내지 않으면 저장된 배정 규칙을 그대로 둡니다.
     assign_rule: AssignRuleIn | None = None
     # 보내지 않으면 저장된 마감 일시를 유지하고, null 을 보내면 삭제합니다. router 가 model_fields_set 으로 구분합니다.
+    # model_fields_set 은 요청 본문에 실제로 들어 있던 field 이름의 집합입니다. 기본값으로 채워진 field 는 들어 있지 않습니다.
     closes_at: datetime | None = None
 
 
@@ -507,7 +517,7 @@ class AccountOut(BaseModel):
     # 사진을 다시 불러옵니다 — 사진 주소는 계정 번호로 고정이라 값이 없으면 옛 사진이 남습니다.
     avatar: str | None
     # role 은 permissions 에서 계산한 값입니다. PERMISSIONS 의 항목 전부가 설정되어 있으면
-    # head_manager 입니다. 화면이 아직 이 값으로 label(화면에 표시되는 텍스트)을
+    # head_manager(헤드매니저, 권한 전부를 가진 운영진)입니다. 화면이 아직 이 값으로 label(화면에 표시되는 텍스트)을
     # 선택하고 있어 함께 제공합니다.
     role: Literal["head_manager", "member"]
     permissions: list[Permission]
@@ -577,7 +587,7 @@ class SignupIn(BaseModel):
     email: str = Field(max_length=254)
     login_id: str = Field(max_length=20)
     password: str = Field(max_length=100)
-    # 기수입니다. 1981년이 1기지만 연도로 환산하지 않고 숫자를 그대로 받습니다.
+    # 기수입니다. 동아리 창립 연도 1981년에 가입한 기수가 1기이고 매년 1씩 증가하지만, 연도로 환산하지 않고 숫자를 그대로 받습니다.
     cohort: int
     # 관리자코드입니다. 환경변수 ADMIN_SIGNUP_CODE 와 같을 경우 권한 항목을 모두 받습니다.
     # 보내지 않았거나 다를 경우 권한 0개로 가입하고, 가입을 거절하지 않습니다.
@@ -591,7 +601,7 @@ class ProfileEditIn(BaseModel):
 
 class PasswordChangeIn(BaseModel):
     current: str = Field(max_length=100)
-    next: str = Field(max_length=100)
+    new_password: str = Field(max_length=100)
 
 
 class LoginIn(BaseModel):
@@ -609,7 +619,8 @@ class UnavailableOut(BaseModel):
     # 반복할 요일의 집합입니다. 월요일 1, 화요일 2, 수요일 4 … 일요일 64 를 더한 값입니다.
     # null 이면 반복하지 않고, 127 이면 매일입니다.
     repeat_weekdays: int | None
-    # 반복 횟수입니다. 시작 회차를 포함해 셉니다. repeat_until 과 동시에 지정할 수 없습니다.
+    # 반복 횟수입니다. 선택한 요일 전부를 1세트로 하는 주 단위이고 시작 주를 포함해 셉니다(period_input._occurrences).
+    # repeat_until 과 동시에 지정할 수 없습니다.
     repeat_count: int | None
     repeat_until: date | None
     reason: str | None
@@ -645,7 +656,7 @@ class UnavailableCreateIn(BaseModel):
     ends_at: NaiveDatetime
     # 반복할 요일의 집합입니다. 월요일 1 부터 일요일 64 까지 더한 값이고 상한은 127 입니다.
     repeat_weekdays: int | None = Field(default=None, ge=0, le=127)
-    # 반복 횟수입니다. 1 이상이어야 하고 repeat_until 과 동시에 보내면 422 로 거부합니다.
+    # 반복 횟수입니다. 주 단위로 세며(위 UnavailableOut 과 같음) 1 이상이어야 하고 repeat_until 과 동시에 보내면 422 로 거부합니다.
     repeat_count: int | None = Field(default=None, ge=1)
     repeat_until: date | None = None
     # 사유는 사용자가 입력하는 한 줄 문장입니다. 입력하지 않아도 등록됩니다.
@@ -675,6 +686,8 @@ class SettingsUpdateIn(BaseModel):
     # 이 schema 는 값 1개로 판정할 수 있는 범위만 검증합니다.
     session_minutes: int | None = Field(default=None, ge=1, le=MAX_SESSION_MINUTES)
 
+    # mode="after" 는 field 검증이 전부 끝난 뒤에 실행됩니다. 반환 타입을 따옴표로 감싼 이유는 class 본문 안에서는
+    # SettingsUpdateIn 이름이 아직 정의되지 않았기 때문입니다.
     @model_validator(mode="after")
     def _at_least_one(self) -> "SettingsUpdateIn":
         # 빈 요청을 200 으로 응답하면 field 이름을 잘못 적은 요청이 error 없이 무시됩니다.

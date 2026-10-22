@@ -40,6 +40,7 @@ def avatar_path(session: Session, member_id: int) -> tuple[Path, str]:
     if not path.is_file():
         # 열은 남아 있는데 파일이 사라진 경우입니다. 화면에는 사진 없음과 같게 보입니다.
         raise LookupError("프로필 사진이 없어요")
+    # rsplit(".", 1) 은 오른쪽 끝의 "." 1개에서만 나누므로 [-1] 이 확장자입니다.
     return path, ALLOWED_IMAGE_TYPES[member.avatar.rsplit(".", 1)[-1]]
 
 

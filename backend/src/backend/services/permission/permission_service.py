@@ -55,9 +55,12 @@ def account_permission_set_names(session: Session, member_id: int) -> list[str]:
 
 
 def holds_every_permission(permissions: Collection[str]) -> bool:
+    # set 의 <= 는 부분집합 판정입니다. PERMISSIONS 전부가 permissions 에 들어 있으면 True 입니다.
     return set(PERMISSIONS) <= set(permissions)
 
 
+# Select[tuple[int]] 는 실행하면 행마다 int 1개짜리 tuple 을 반환하는 SELECT 문의 타입입니다.
+# .contains(목록) 은 PostgreSQL 배열 연산자 @> 로, permissions 배열이 목록의 값 전부를 포함하는지 검사합니다.
 def _full_set_ids() -> Select[tuple[int]]:
     """모든 항목이 활성화된 permission set 의 번호를 선택하는 질의입니다. 실행하지 않고 질의만 반환하므로
     호출자가 order_by, with_for_update, limit 을 추가합니다."""
@@ -71,11 +74,13 @@ def _require_another_full_set(session: Session, set_id: int) -> None:
 
     마지막 1개는 삭제와 항목 비활성화를 거부합니다.
 
-    모든 항목을 가진 행을 id 오름차순으로 잠급니다(with_for_update).
+    모든 항목을 가진 행을 id 오름차순으로 잠급니다(with_for_update). SELECT ... FOR UPDATE 로 그 행을 transaction 이 끝날 때까지
+    잠가, 두 요청이 동시에 서로 다른 마지막 set 을 삭제해 전체 권한자가 0명이 되는 일을 막습니다.
     """
     full_ids = session.scalars(
         _full_set_ids().order_by(PermissionSet.id).with_for_update()
     ).all()
+    # next(generator, None) 은 조건에 맞는 첫 값을, 없으면 None 을 반환합니다.
     another = next((full_id for full_id in full_ids if full_id != set_id), None)
     if another is None:
         raise ValueError("모든 권한을 가진 마지막 permission set 은 삭제하거나 항목을 끌 수 없어요")
@@ -105,6 +110,7 @@ def require_another_full_set_holder(
             remaining.append(holder)
         elif set_id is not None and held != set_id:
             remaining.append(holder)
+    # 전체 권한 set 을 가진 사람이 member_id 1명뿐인 상태에서 그 사람의 set 을 회수하거나 그 사람을 삭제하려 할 때입니다.
     if not remaining:
         raise ValueError(
             "모든 권한을 가진 permission set 의 마지막 보유자예요. "
@@ -132,7 +138,7 @@ def account_permissions(session: Session, member_id: int) -> list[str]:
 
 
 class SetMember(NamedTuple):
-    """permission set을 가진 멤버의 번호와 이름입니다."""
+    """permission set을 가진 멤버의 번호와 이름입니다. NamedTuple 은 tuple 이면서 field 이름으로 읽을 수 있고, dataclass 와 달리 변경할 수 없습니다."""
 
     id: int
     name: str
@@ -140,6 +146,7 @@ class SetMember(NamedTuple):
 
 def list_permission_sets(session: Session) -> list[tuple[PermissionSet, list[SetMember]]]:
     """permission set을 id 오름차순으로, 그 permission set을 가진 멤버와 함께 반환합니다."""
+    # defaultdict(list) 는 없는 key 를 읽으면 빈 list 를 먼저 만들어 넣는 dict 입니다. key 존재 검사 없이 append 합니다.
     holders: dict[int, list[SetMember]] = defaultdict(list)
     rows = session.execute(
         select(MemberPermissionSet.permission_set_id, Member.id, Member.name)

@@ -5,7 +5,7 @@ from datetime import date, datetime, time
 import pytest
 
 from backend.scheduling.pipeline import day_window
-from backend.services.validation.input import require_clock_range, require_within_room_window
+from backend.services.validation.rules import require_clock_range, require_within_room_window
 
 DAY = date(2026, 9, 14)
 

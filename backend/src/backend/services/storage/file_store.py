@@ -34,7 +34,9 @@ def display_name(raw: str) -> str:
 def stored_path(stored_name: str) -> Path:
     """저장된 파일명을 폴더 안의 실제 경로로 변환합니다. 폴더 밖을 가리키면 ValueError 를 발생시킵니다."""
     root = storage_root().resolve()
+    # Path 끼리의 / 는 경로 이어붙이기입니다. resolve() 는 ".." 과 symlink 를 풀어 절대 경로로 만듭니다.
     path = (root / stored_name).resolve()
+    # stored_name 에 "../" 가 들어 있으면 resolve 뒤 root 밖을 가리키므로 is_relative_to 가 False 가 되어 거절합니다.
     if not path.is_relative_to(root):
         raise ValueError("잘못된 저장 위치예요")
     return path
@@ -54,11 +56,13 @@ def write_stream(stream: BinaryIO, path: Path, limit: int, too_large: str) -> in
     written = 0
     try:
         with path.open("wb") as target:
+            # := 는 대입과 동시에 그 값을 조건으로 쓰는 연산자입니다. 읽은 조각이 빈 bytes(끝)가 되면 반복을 끝냅니다.
             while chunk := stream.read(_CHUNK_BYTES):
                 written += len(chunk)
                 if written > limit:
                     raise ValueError(too_large)
                 target.write(chunk)
+    # Exception 이 아닌 BaseException 을 잡아 KeyboardInterrupt, SystemExit 로 중단될 때도 쓰다 만 파일을 삭제합니다. 바로 raise 하므로 중단은 그대로 진행됩니다.
     except BaseException:
         path.unlink(missing_ok=True)
         raise

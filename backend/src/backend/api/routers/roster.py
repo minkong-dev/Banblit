@@ -121,7 +121,11 @@ def read_members(
     limit: int = Query(default=50, ge=1, le=200),
     session: Session = Depends(get_session),
 ) -> MemberRowsOut:
-    """모든 멤버를 멤버 번호(id) 오름차순으로 반환합니다. 화면이 아래로 스크롤하면서 after 이후를 이어서 받습니다."""
+    """모든 멤버를 멤버 번호(id) 오름차순으로 반환합니다. 화면이 아래로 스크롤하면서 after 이후를 이어서 받습니다.
+
+    keyset 방식의 페이지 나누기입니다. page 번호 대신 마지막으로 받은 id(after)를 보내고, 그보다 큰 id 를 limit 개 받습니다.
+    offset 방식과 달리 중간에 멤버가 추가, 삭제되어도 같은 행이 2번 나오거나 빠지지 않습니다.
+    """
     return MemberRowsOut(
         members=[
             MemberRowOut(**_member_out(member).model_dump(), permission_sets=sets)
@@ -156,6 +160,7 @@ def create_team(
     req: TeamCreateIn, session: Session = Depends(get_session)
 ) -> TeamEnvelopeOut:
     team = create_team_row(session, req.name, req.slots, req.color)
+    # team_slot_counts 는 (자리 수, 채워진 자리 수) tuple 이고, * 가 두 값을 slot_count, filled_count 인자로 펼칩니다.
     return TeamEnvelopeOut(team=_team_out(team, *team_slot_counts(session, team.id)))
 
 
