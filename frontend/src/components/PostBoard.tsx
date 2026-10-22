@@ -2,6 +2,7 @@
 // 작성 form 은 자기 주소를 가진 화면(routes/PostWrite)이 맡고, 첨부, 댓글, 조치 부품은 Post*.tsx 가 각각 담당합니다.
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import type { RefObject } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -18,9 +19,10 @@ import { BlindPost, EditPost, RemovePost } from "./PostActions";
 import { CommentForm, CommentRow } from "./PostComments";
 import { RichTextView } from "./RichText";
 import { boardActions } from "../lib/boards";
-import { loadPost, loadPosts } from "../lib/pipeline";
+import { loadPost } from "../lib/pipeline";
+import type { PostDetail as PostDetailBody } from "../lib/pipeline";
 import { stampLabel } from "../lib/calendar";
-import { boardListKey, postKey } from "./queries";
+import { boardListKey, postKey, usePosts } from "./queries";
 
 /** 글 목록을 렌더합니다. 비어 있거나 로딩 중이어도 컨테이너는 유지합니다.
  *  컨테이너 높이를 측정해 한 page(페이지)에 표시할 글 개수를 계산하므로,
@@ -52,6 +54,22 @@ function PostList(props: {
   );
 }
 
+/** 글 1개의 상세 조회입니다. 상세를 받은 시점에 heading 으로 초점을 옮깁니다. 제목은 상세를 받은 뒤에 그려지기 때문입니다.
+ *  다시 조회해도 isSuccess 가 그대로라 초점을 빼앗지 않습니다. */
+function usePostDetail(postId: number, heading: RefObject<HTMLHeadingElement | null>): UseQueryResult<PostDetailBody> {
+  const detail = useQuery({
+    queryKey: postKey(postId),
+    // attachment 들은 글 상세 조회 response(응답)에 포함되므로 따로 요청하지 않습니다.
+    // 서버 정의는 `backend/src/backend/api/schemas.py` 의 `PostDetailOut` 를 참조합니다.
+    queryFn: () => loadPost(postId),
+  });
+  const loaded = detail.isSuccess;
+  useEffect(() => {
+    if (loaded) heading.current?.focus();
+  }, [loaded, heading]);
+  return detail;
+}
+
 export function PostDetail(props: {
   postId: number;
   /** 현재 사용자의 id. 미인증(로그인 전)이면 null이므로 글과 댓글을 작성할 수 없습니다. */
@@ -67,17 +85,7 @@ export function PostDetail(props: {
 }) {
   const { postId, authorId, canModerate, canComment = true, listKey, heading, onBack } = props;
   const [editing, setEditing] = useState(false);
-  const detail = useQuery({
-    queryKey: postKey(postId),
-    // attachment 들은 글 상세 조회 response(응답)에 포함되므로 따로 요청하지 않습니다.
-    // 서버 정의는 `backend/src/backend/api/schemas.py` 의 `PostDetailOut` 를 참조합니다.
-    queryFn: () => loadPost(postId),
-  });
-  // 제목은 상세를 받은 뒤에 그려지므로, 받은 시점에 제목으로 초점을 옮깁니다. 다시 조회해도 isSuccess 가 그대로라 초점을 빼앗지 않습니다.
-  const loaded = detail.isSuccess;
-  useEffect(() => {
-    if (loaded) heading.current?.focus();
-  }, [loaded, heading]);
+  const detail = usePostDetail(postId, heading);
 
   // isSuccess 로 분기해야 TypeScript 가 아래에서 detail.data 를 undefined 없이 좁혀줍니다.
   // loadState(detail).kind === "ready" 는 같은 조건이지만 별개 값이라 좁히지 못합니다.
@@ -169,8 +177,8 @@ export function PostListPanel(props: {
 }) {
   const { title, hint, listPath, newPath, canWrite, emptyText, onOpen, buttonRef } = props;
   const [page, setPage] = useState(1);
-  const posts = useQuery({ queryKey: boardListKey(listPath), queryFn: async () => ({ posts: await loadPosts(listPath) }) });
-  const list = posts.data?.posts ?? [];
+  const posts = usePosts(listPath);
+  const list = posts.data ?? [];
   const state = loadState(posts);
   // 글이 삭제되어 현재 page 가 범위를 벗어날 수 있어 렌더마다 유효한 page 로 제한합니다. 한 쪽에 PER_PAGE(10)개입니다(lib/paging).
   const pages = pageCount(list.length);

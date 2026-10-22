@@ -3,7 +3,7 @@
 // 가려진 글은 목록과 상세에서 빠지므로 작성자 본인도 볼 수 없고, 이 표가 그 글을 보는 유일한 자리입니다.
 // 서버도 같은 권한으로 조회와 되돌리기를 받습니다(routers/boards.py 의 read_blinded_posts, unblind_post).
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { Button, Empty } from "../components/controls";
 import { Card, SectionHead } from "../components/Layout";
@@ -11,20 +11,17 @@ import { reason } from "../lib/api";
 import { say } from "../components/toast";
 import { loadState } from "../lib/loading";
 import type { Post } from "../lib/contract";
-import { BLINDED_KEY, BOARD_KEY } from "../components/queries";
-import { getJSON } from "../lib/api";
+import { BLINDED_KEY, BOARD_KEY, useBlindedPosts } from "../components/queries";
+import { unblindPost } from "../lib/pipeline";
 import { stampLabel } from "../lib/calendar";
 
 export function BlindedCards() {
   const client = useQueryClient();
 
-  const list = useQuery({
-    queryKey: BLINDED_KEY,
-    queryFn: () => getJSON<{ posts: Post[] }>("/blinded-posts"),
-  });
+  const list = useBlindedPosts();
 
   const lift = useMutation({
-    mutationFn: (post: Post) => getJSON(`/posts/${post.id}/blind`, { method: "DELETE" }),
+    mutationFn: (post: Post) => unblindPost(post.id),
     onSettled: () => {
       void client.invalidateQueries({ queryKey: BLINDED_KEY });
       // 해제한 글이 원래 목록에 다시 나타나야 합니다. 공지와 팀 게시판 중 어느 쪽인지 여기서
@@ -35,7 +32,7 @@ export function BlindedCards() {
     onError: (error) => say(reason(error, "블라인드를 해제하지 못했어요.")),
   });
 
-  const posts = list.data?.posts ?? [];
+  const posts = list.data ?? [];
   const state = loadState(list);
 
   return (

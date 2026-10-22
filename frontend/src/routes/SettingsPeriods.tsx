@@ -15,8 +15,8 @@ import type { ClockRange, Period, PracticeWindow, Room } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { checkPeriod, daysBetween, periodBody, removePeriod, savePeriod } from "../lib/pipeline";
-import type { PeriodBody } from "../lib/pipeline";
-import { MAX_DAILY_HOURS, periodTitle } from "../lib/settings";
+import type { PeriodDraft } from "../lib/pipeline";
+import { MAX_DAILY_HOURS, assignRuleDraft, periodTitle } from "../lib/settings";
 import type { WindowPair } from "../lib/settings";
 import { EnsembleDays, EnsembleFields, EnsembleToggle, ensembleBody, ensembleDraft } from "./SettingsEnsemble";
 import { Row, useFirstField, useForm } from "./SettingsForm";
@@ -24,7 +24,7 @@ import { assignRuleMessage as checkAssignRule, ensembleMessage as checkEnsemble,
 
 const NO_WINDOW: PracticeWindow = { weekday: null, weekend: null };
 
-const BLANK_PERIOD: PeriodBody = {
+const BLANK_PERIOD: PeriodDraft = {
   kind: "focused",
   name: "",
   starts_on: "",
@@ -33,15 +33,16 @@ const BLANK_PERIOD: PeriodBody = {
   first_run_at: "09:00",
   second_run_at: "21:00",
   practice_window: NO_WINDOW,
-  assign_rule: { target_hours: null, max_absent: 0, daily_max_hours: 2, max_consecutive_hours: 2 },
+  assign_rule: { target_hours: null, max_absent: "0", daily_max_hours: "2", max_consecutive_hours: "2" },
   closes_at: null,
 };
 
-/** 기간 form 이 수정하는 값만 추립니다. 목록에서 받은 기간에는 id, ensemble 이 함께 있어 그대로 보내면 요청 본문에 섞입니다. */
-function periodFields(period: Period): PeriodBody {
+/** 기간 form 이 수정하는 값만 추립니다. 목록에서 받은 기간에는 id, ensemble 이 함께 있어 그대로 보내면 요청 본문에 섞입니다.
+ *  배정 규칙의 숫자 칸은 입력 문자열로 변환합니다. */
+function periodFields(period: Period): PeriodDraft {
   const { kind, name, starts_on, ends_on, everyday, first_run_at, second_run_at } = period;
   return { kind, name, starts_on, ends_on, everyday, first_run_at, second_run_at,
-    practice_window: period.practice_window, assign_rule: period.assign_rule, closes_at: period.closes_at };
+    practice_window: period.practice_window, assign_rule: assignRuleDraft(period.assign_rule), closes_at: period.closes_at };
 }
 
 /** 시간대 한 쌍을 입력칸 두 개로 펼칩니다. 지정하지 않은 쌍은 빈 문자열 2개입니다. */
@@ -97,8 +98,8 @@ function PeriodLines({ period }: { period: Period }) {
  *  종류(kind) 선택 대신 공연명 입력이 있습니다(사용자 결정 2026-10-07). 새 기간은 전부 집중 합주(focused)이고,
  *  저장된 open 기간은 수정 form 에서 그 값을 유지합니다. */
 function PeriodFields(props: {
-  form: PeriodBody;
-  setForm: (next: PeriodBody) => void;
+  form: PeriodDraft;
+  setForm: (next: PeriodDraft) => void;
   at: (field: string) => string;
   bad: string;
   whyId: string;
@@ -222,7 +223,7 @@ function PeriodFields(props: {
               })}
             />
           </Cell>
-          {/* 빈칸은 NaN 으로 담아 checkAssignRule 이 거부합니다. 0 으로 바꾸면 사용자가 지운 값이 0 으로 저장됩니다. */}
+          {/* 숫자 칸 3개는 입력 문자열 그대로 보관합니다. 빈칸은 checkAssignRule 이 거부하고, 저장할 때 periodBody 가 숫자로 변환합니다. */}
           <Cell label="불참 허용 인원" htmlFor={at("absent")}>
             <input
               id={at("absent")}
@@ -230,12 +231,12 @@ function PeriodFields(props: {
               inputMode="numeric"
               min={0}
               step={1}
-              value={Number.isNaN(rule.max_absent) ? "" : rule.max_absent}
+              value={rule.max_absent}
               aria-invalid={ruleBad}
               aria-describedby={ruleBad ? whyId : undefined}
               onChange={(event) => setForm({
                 ...form,
-                assign_rule: { ...rule, max_absent: event.target.value === "" ? Number.NaN : Number(event.target.value) },
+                assign_rule: { ...rule, max_absent: event.target.value },
               })}
             />
           </Cell>
@@ -250,12 +251,12 @@ function PeriodFields(props: {
               min={1}
               max={MAX_DAILY_HOURS}
               step={1}
-              value={Number.isNaN(rule.daily_max_hours) ? "" : rule.daily_max_hours}
+              value={rule.daily_max_hours}
               aria-invalid={ruleBad}
               aria-describedby={ruleBad ? whyId : undefined}
               onChange={(event) => setForm({
                 ...form,
-                assign_rule: { ...rule, daily_max_hours: event.target.value === "" ? Number.NaN : Number(event.target.value) },
+                assign_rule: { ...rule, daily_max_hours: event.target.value },
               })}
             />
           </Cell>
@@ -267,12 +268,12 @@ function PeriodFields(props: {
               min={1}
               max={MAX_DAILY_HOURS}
               step={1}
-              value={Number.isNaN(rule.max_consecutive_hours) ? "" : rule.max_consecutive_hours}
+              value={rule.max_consecutive_hours}
               aria-invalid={ruleBad}
               aria-describedby={ruleBad ? whyId : undefined}
               onChange={(event) => setForm({
                 ...form,
-                assign_rule: { ...rule, max_consecutive_hours: event.target.value === "" ? Number.NaN : Number(event.target.value) },
+                assign_rule: { ...rule, max_consecutive_hours: event.target.value },
               })}
             />
           </Cell>
@@ -338,7 +339,6 @@ export function PeriodCard(props: {
 }) {
   const { periods, rooms, state, canEdit, canCreate, canDelete, onSaved, onDeleted } = props;
   const { openId: editing, open, close, register } = useReturnFocus();
-  const [making, setMaking] = useState(false);
   const drop = useRemoveRow(removePeriod, onDeleted);
 
   return (
@@ -384,12 +384,19 @@ export function PeriodCard(props: {
         </ul>
       )}
 
-      {!canCreate ? null : (
-        <div className="listfoot">
-          <Button kind="go" onClick={() => setMaking(true)}>+ 새 집중 합주기간</Button>
-        </div>
-      )}
+      {!canCreate ? null : <NewPeriodButton rooms={rooms} onSaved={onSaved} />}
+    </Card>
+  );
+}
 
+/** "+ 새 집중 합주기간" 버튼과 생성 modal 입니다. 저장이 끝나면 modal 을 닫고 onSaved 를 호출합니다. */
+function NewPeriodButton({ rooms, onSaved }: { rooms: Room[]; onSaved: () => void }) {
+  const [making, setMaking] = useState(false);
+  return (
+    <>
+      <div className="listfoot">
+        <Button kind="go" onClick={() => setMaking(true)}>+ 새 집중 합주기간</Button>
+      </div>
       {!making ? null : (
         <Modal title="새 집중 합주기간" hint="집중 합주기간을 설정해요"
           onClose={() => setMaking(false)}>
@@ -402,7 +409,7 @@ export function PeriodCard(props: {
           />
         </Modal>
       )}
-    </Card>
+    </>
   );
 }
 

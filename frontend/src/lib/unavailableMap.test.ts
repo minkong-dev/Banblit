@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Unavailable } from "./contract";
-import { dayHours, heatByMonth, packColumns, heatByWeek, offMembersAt, offMembersOnDay, offRuns, offRunsByDay } from "./unavailableMap";
+import { dayHours, heatByMonth, laneBars, packColumns, heatByWeek, offMembersAt, offMembersOnDay, offRuns, offRunsByDay } from "./unavailableMap";
 
 const MONDAY_BIT = 1;
 
@@ -120,5 +120,16 @@ describe("packColumns — 겹치는 막대를 옆으로 나눌 열 번호", () =
   it("앞 막대가 끝난 열은 다시 씁니다", () => {
     expect(packColumns([{ from: 0, to: 4 }, { from: 1, to: 2 }, { from: 2, to: 3 }]))
       .toEqual([{ col: 0, cols: 2 }, { col: 1, cols: 2 }, { col: 1, cols: 2 }]);
+  });
+});
+
+describe("laneBars — 하루 타임라인 lane 1개의 막대", () => {
+  it("그날에 없는 일정은 제외하고 운영 시간 밖은 자른다", () => {
+    const bars = laneBars(TIMES, "2026-10-13", 18, 20);
+    expect(bars.map((bar) => [bar.item.id, bar.from, bar.to])).toEqual([[2, 19, 20], [3, 19, 20]]);
+  });
+
+  it("운영 시간 밖에 전부 있는 일정은 제외한다", () => {
+    expect(laneBars(TIMES, "2026-10-13", 21, 23)).toEqual([]);
   });
 });

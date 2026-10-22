@@ -6,7 +6,7 @@ import { useSlotMinutes } from "../components/queries";
 import type { Period, Room } from "../lib/contract";
 import { ensembleOn } from "../lib/dayEntries";
 import type { EnsembleBody, PeriodBody } from "../lib/pipeline";
-import { datesBetween, dayLabel, focusedRanges } from "../lib/calendar";
+import { WEEKDAY_NAMES, datesBetween, dayLabel, focusedRanges } from "../lib/calendar";
 import { EnsembleDayEditor } from "../components/EnsembleDayEditor";
 
 /** 기간 form 이 보유하는 전체 합주 입력값입니다. on 이 false 면 저장할 때 전체 합주를 해제합니다. */
@@ -129,7 +129,7 @@ export function EnsembleToggle({ draft, setDraft, at }: {
 
 /** day 의 요일 1글자를 반환합니다. 날짜별 시각 행에 표시합니다. */
 function weekdayLetter(day: string): string {
-  return "일월화수목금토"[new Date(`${day}T12:00:00`).getDay()];
+  return WEEKDAY_NAMES[new Date(`${day}T12:00:00`).getDay()];
 }
 
 /** 설정 화면 기간 편집 행 아래에 붙는 날짜별 시각 구역입니다. 전체 합주 날짜 범위의 날짜를 전부 행으로 나열하고,

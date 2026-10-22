@@ -2,7 +2,7 @@
 // 값을 보유하지 않으며, 표시할 항목은 부모가 entriesOf 로 넘깁니다.
 
 import { Fragment, useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { entryClass, entryName, visible } from "../lib/dayEntries";
 import type { DayTab, Entry } from "../lib/dayEntries";
@@ -35,6 +35,73 @@ function useNow(): Date {
 }
 
 /** 달 보기입니다. 예약 탭에서는 날짜마다 남은 시간을, 다른 탭에서는 그날 항목 3개까지를 표시합니다. */
+type CellContent = { blocked: boolean; inner: ReactNode };
+
+/** 예약 탭의 날짜 칸 내용입니다. 지난 날짜는 누를 수 없고(blocked) 아무것도 표시하지 않습니다. 집중 합주기간은 자동 배정,
+ *  시간 범위를 지정했으면 그 범위의 예약 가능 여부, 그 밖에는 남은 시간과 meter 를 표시합니다. */
+function bookCell(args: {
+  key: string;
+  today: string;
+  inFocus: boolean;
+  range: { from: number; to: number } | null;
+  gridOf: (key: string, minutes?: number) => boolean[];
+  slotMinutes: number;
+}): CellContent {
+  const { key, today, inFocus, range, gridOf, slotMinutes } = args;
+  // 지난 날짜는 서버가 예약을 거절하므로 누를 수 없게 두고 남은 시간도 표시하지 않습니다.
+  // "YYYY-MM-DD" 문자열은 사전순 비교가 날짜순 비교와 같습니다.
+  if (key < today) return { blocked: true, inner: null };
+  if (inFocus) return { blocked: true, inner: <div className="avail auto"><span className="big">자동 배정</span></div> };
+  if (range !== null) {
+    const free = isRangeFree(gridOf(key), range.from, range.to, slotMinutes);
+    return {
+      blocked: !free,
+      inner: (
+        <div className="avail">
+          {free
+            ? <span className="yes">예약 가능</span>
+            : <span className="no">해당 시간 마감</span>}
+        </div>
+      ),
+    };
+  }
+  // 남은 시간과 마감 판정은 점유 단위 칸으로 계산하고, meter 막대는 1시간 칸으로 그립니다.
+  // 막대까지 점유 단위로 그리면 5분 단위에서 날짜 하나에 막대가 144개가 됩니다.
+  const left = gridOf(key).filter((taken) => !taken).length;
+  const grid = gridOf(key, MINUTES_PER_HOUR);
+  return {
+    blocked: left === 0,
+    inner: (
+      <div className={left === 0 ? "avail none" : "avail"}>
+        <span className="big">
+          {left === 0 ? "예약 마감" : <>{hoursLabel(left, slotMinutes)}<small>예약 가능</small></>}
+        </span>
+        <span className="meter" aria-hidden="true">
+          {grid.map((taken, i) => <i className={taken ? "on" : ""} key={i} />)}
+        </span>
+      </div>
+    ),
+  };
+}
+
+/** 내 일정, 전체 일정 탭의 날짜 칸 내용입니다. 항목 3개까지 표시하고 나머지는 개수로 표시합니다. 칸은 항상 누를 수 있습니다. */
+function entryCell(list: Entry[], teams: DayTeam[], label: (index: number) => string): CellContent {
+  return {
+    blocked: false,
+    inner: (
+      <>
+        {list.slice(0, 3).map((entry, i) => (
+          <span className={`ev ${entryClass(entry)}`} key={i}>
+            <span className="nm">{entryName(entry, teams)}</span>
+            <time>{label(entry.a)}</time>
+          </span>
+        ))}
+        {list.length > 3 ? <span className="plus">+{list.length - 3}</span> : null}
+      </>
+    ),
+  };
+}
+
 export function MonthView({
   year, month, range, inFocus, onOpen, tab, teams, entriesOf, openHour, slotCount, slotMinutes,
 }: ViewProps & {
@@ -71,59 +138,10 @@ export function MonthView({
           const weekday = index % 7;
           // 오늘 칸은 어느 탭에서나 테두리로 표시합니다. 날짜 문자열끼리 비교하므로 시각은 영향을 주지 않습니다.
           const marks = [weekday === 0 ? "sun" : "", key === today ? "today" : ""].filter(Boolean);
-          let blocked = false;
-          let inner = null;
-
-          if (tab === "book") {
-            // 지난 날짜는 서버가 예약을 거절하므로 누를 수 없게 두고 남은 시간도 표시하지 않습니다.
-            // "YYYY-MM-DD" 문자열은 사전순 비교가 날짜순 비교와 같습니다.
-            if (key < today) {
-              blocked = true;
-            } else if (inFocus(key)) {
-              blocked = true;
-              inner = <div className="avail auto"><span className="big">자동 배정</span></div>;
-            } else if (range !== null) {
-              const free = isRangeFree(gridOf(key), range.from, range.to, slotMinutes);
-              blocked = !free;
-              inner = (
-                <div className="avail">
-                  {free
-                    ? <span className="yes">예약 가능</span>
-                    : <span className="no">해당 시간 마감</span>}
-                </div>
-              );
-            } else {
-              // 남은 시간과 마감 판정은 점유 단위 칸으로 계산하고, meter 막대는 1시간 칸으로 그립니다.
-              // 막대까지 점유 단위로 그리면 5분 단위에서 날짜 하나에 막대가 144개가 됩니다.
-              const left = gridOf(key).filter((taken) => !taken).length;
-              const grid = gridOf(key, MINUTES_PER_HOUR);
-              blocked = left === 0;
-              inner = (
-                <div className={left === 0 ? "avail none" : "avail"}>
-                  <span className="big">
-                    {left === 0 ? "예약 마감" : <>{hoursLabel(left, slotMinutes)}<small>예약 가능</small></>}
-                  </span>
-                  <span className="meter" aria-hidden="true">
-                    {grid.map((taken, i) => <i className={taken ? "on" : ""} key={i} />)}
-                  </span>
-                </div>
-              );
-            }
-            if (!blocked) marks.push("pickable");
-          } else {
-            const list = visible(entriesOf(key), tab, teams);
-            inner = (
-              <>
-                {list.slice(0, 3).map((entry, i) => (
-                  <span className={`ev ${entryClass(entry)}`} key={i}>
-                    <span className="nm">{entryName(entry, teams)}</span>
-                    <time>{label(entry.a)}</time>
-                  </span>
-                ))}
-                {list.length > 3 ? <span className="plus">+{list.length - 3}</span> : null}
-              </>
-            );
-          }
+          const { blocked, inner } = tab === "book"
+            ? bookCell({ key, today, inFocus: inFocus(key), range, gridOf, slotMinutes })
+            : entryCell(visible(entriesOf(key), tab, teams), teams, label);
+          if (tab === "book" && !blocked) marks.push("pickable");
 
           return (
             <button

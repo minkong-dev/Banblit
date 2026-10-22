@@ -36,6 +36,7 @@ flowchart LR
   frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_pipeline
+  frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_lib_pipeline
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_lib_pipeline
@@ -76,6 +77,7 @@ flowchart LR
 - [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
+- [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]
 - [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]

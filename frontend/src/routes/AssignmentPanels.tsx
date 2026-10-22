@@ -8,8 +8,8 @@ import { Button, Empty } from "../components/controls";
 import { Panel } from "../components/Layout";
 import { recordsKey, NOTIFICATIONS_KEY, PERIODS_KEY } from "../components/queries";
 import { ReasonDialog } from "../components/RejectDialog";
-import { getJSON, reason } from "../lib/api";
-import { loadRecords, unfixPeriod } from "../lib/pipeline";
+import { reason } from "../lib/api";
+import { loadRecords, saveRunTimes, unfixPeriod } from "../lib/pipeline";
 import { periodTitle } from "../lib/settings";
 import { absentOf, hoursOf, reportLines } from "../lib/assignment";
 import { appliedLabel, checkRunTimes, scoreLabel } from "../lib/runs";
@@ -113,26 +113,56 @@ function ScheduleReportBlock({ report }: { report: ScheduleReport | null }) {
   );
 }
 
-/** 달력 아래 설명 구역입니다. 오류, 스케줄링 기록, 현재 배정안 없음, 현재 배정안 있음 4가지 중 하나를 표시합니다. */
-export function AssignmentStatus({
-  error, roundAt, roundPending, roundError, report, hasConfirmed, shown, colors,
-  canRun, canConfirm, confirmPending, onConfirm, onBack, actions,
-}: {
+/** 달력 아래 설명 구역의 스케줄링 기록 미리보기입니다. 적용 버튼(proposal_confirm 권한)과 현재 배정안으로 돌아가는 버튼이 있습니다. */
+export function RoundStatus({ roundAt, pending, error, report, shown, colors, canConfirm, confirmPending, onConfirm, onBack }: {
+  roundAt: string;
+  pending: boolean;
+  error: unknown;
+  /** 기록의 부족분과 불참자입니다. */
+  report: ScheduleReport | null;
+  shown: Session[];
+  colors: Map<string, string>;
+  canConfirm: boolean;
+  confirmPending: boolean;
+  onConfirm: () => void;
+  onBack: () => void;
+}) {
+  const hours = hoursOf(shown);
+  return (
+    <>
+      <h2>{stampLabel(roundAt)} 연산 결과예요</h2>
+      <p className="sub">
+        {pending
+          ? LOADING_TEXT
+          : error !== null
+            ? reason(error, "해당 배정안을 불러오지 못했어요")
+            : `총 ${hours.toFixed(1)}시간이에요`}
+      </p>
+      <TeamCounts shown={shown} colors={colors} />
+      <ScheduleReportBlock report={report} />
+      <div className="note">적용할 경우에만 메인 캘린더에 반영되니, 신중하게 결정해주세요.</div>
+      <div className="act">
+        {!canConfirm ? null : (
+          <Button kind="go" pending={confirmPending} pendingLabel="배정안 적용 중…" onClick={onConfirm}>
+            이 배정안 적용
+          </Button>
+        )}
+        <Button kind="ghost" onClick={onBack}>현재 배정안으로 돌아가기</Button>
+      </div>
+    </>
+  );
+}
+
+/** 달력 아래 설명 구역입니다. 오류, 현재 배정안 없음, 현재 배정안 있음 3가지 중 하나를 표시합니다. 스케줄링 기록 미리보기는 RoundStatus 입니다. */
+export function AssignmentStatus({ error, report, hasConfirmed, shown, colors, canRun, actions }: {
   /** 조회, 계산 중 첫 실패입니다. 없으면 null 입니다. */
   error: unknown;
-  roundAt: string | null;
-  roundPending: boolean;
-  roundError: unknown;
-  /** 표시 중인 시간표의 부족분과 불참자입니다. */
+  /** 현재 배정안의 부족분과 불참자입니다. */
   report: ScheduleReport | null;
   hasConfirmed: boolean;
   shown: Session[];
   colors: Map<string, string>;
   canRun: boolean;
-  canConfirm: boolean;
-  confirmPending: boolean;
-  onConfirm: () => void;
-  onBack: () => void;
   /** 스케줄링 버튼 줄입니다. 계산 권한이 없으면 null 입니다. */
   actions: ReactNode;
 }) {
@@ -146,31 +176,6 @@ export function AssignmentStatus({
         <h2>서버가 요청을 받지 못했어요</h2>
         <p className="sub">{error instanceof Error ? error.message : "알 수 없는 오류"}</p>
         {actions}
-      </>
-    );
-  }
-  if (roundAt !== null) {
-    return (
-      <>
-        <h2>{stampLabel(roundAt)} 연산 결과예요</h2>
-        <p className="sub">
-          {roundPending
-            ? LOADING_TEXT
-            : roundError !== null
-              ? reason(roundError, "해당 배정안을 불러오지 못했어요")
-              : `총 ${hours.toFixed(1)}시간이에요`}
-        </p>
-        {counts}
-        {reportBlock}
-        <div className="note">적용할 경우에만 메인 캘린더에 반영되니, 신중하게 결정해주세요.</div>
-        <div className="act">
-          {!canConfirm ? null : (
-            <Button kind="go" pending={confirmPending} pendingLabel="배정안 적용 중…" onClick={onConfirm}>
-              이 배정안 적용
-            </Button>
-          )}
-          <Button kind="ghost" onClick={onBack}>현재 배정안으로 돌아가기</Button>
-        </div>
       </>
     );
   }
@@ -280,10 +285,7 @@ export function RunTimesPanel({ period, canManage }: { period: Period | null; ca
   const save = useMutation({
     mutationFn: (body: { first_run_at: string; second_run_at: string }) => {
       if (period === null) throw new Error("선택한 집중 합주기간이 존재하지 않아요");
-      return getJSON<{ period: Period }>(`/periods/${period.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(body),
-      });
+      return saveRunTimes(period.id, body.first_run_at, body.second_run_at);
     },
     onSuccess: async () => {
       // 수정한 값을 서버에서 다시 받아 화면과 맞춥니다. 받아온 뒤에는 수정 기록을 삭제합니다.

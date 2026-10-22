@@ -4,13 +4,14 @@ import { useMemo } from "react";
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 
-import { fetchMe, loadTeamMembers, loadTeamSlots } from "../lib/pipeline";
-import type { Member, TeamSlot } from "../lib/contract";
+import { fetchMe, loadBlindedPosts, loadPosts, loadReservationRows, loadTeamMembers, loadTeamSlots } from "../lib/pipeline";
+import type { Member, Post, Reservation, TeamSlot } from "../lib/contract";
 import { loadState, stillUnresolved } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { teamColorKey } from "../lib/teamColors";
 import { DEFAULT_SETTINGS } from "../lib/contract";
 import type { Account, Period, Room, Settings, Team } from "../lib/contract";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { getJSON, reason } from "../lib/api";
 import { say } from "./toast";
 import { myTeamIds } from "../lib/roster";
@@ -42,10 +43,29 @@ export function teamSlotsQuery(teamId: number): { queryKey: readonly ["slots", n
   return { queryKey: teamSlotsKey(teamId), queryFn: () => loadTeamSlots(teamId) };
 }
 
-// routes/Assignment.tsx 는 ["schedule", activePeriodId](숫자 하나)를, routes/Scheduler.tsx 는
-// ["schedule", periodIds](배열 하나)를 queryKey 로 씁니다. invalidateQueries 는 첫 원소가 같으면
+// routes/Assignment.tsx 는 scheduleKey(activePeriodId)(숫자 하나)를, routes/Scheduler.tsx 는
+// scheduleKey(periodIds)(배열 하나)를 queryKey 로 씁니다. invalidateQueries 는 첫 원소가 같으면
 // 나머지 모양이 달라도 무효화하므로, 이 접두사 하나로 두 화면의 schedule 캐시를 함께 무효화합니다.
 export const SCHEDULE_KEY = ["schedule"] as const;
+/** 기간 1개(번호) 또는 여러 기간(번호 배열)의 시간표입니다. */
+export const scheduleKey = (periodIds: number | readonly number[] | null) => [...SCHEDULE_KEY, periodIds] as const;
+
+/** 멤버 1명의 불가능 일정입니다. memberId 가 undefined 이면 계정을 아직 받지 못한 상태입니다. */
+export const memberUnavailableKey = (memberId: number | undefined) => [...UNAVAILABLE_KEY, memberId] as const;
+/** 전체 멤버의 불가능 일정입니다. 앞부분이 UNAVAILABLE_KEY 라 반려, 삭제 뒤 달력의 불가능 일정과 함께 다시 조회합니다. */
+export const ALL_UNAVAILABLE_KEY = [...UNAVAILABLE_KEY, "all"] as const;
+
+/** 달력이 표시하는 날짜 범위(from, to)의 합주실별 예약입니다. */
+export const roomReservationsKey = (roomIds: readonly number[], from: string, to: string) =>
+  [...RESERVATIONS_KEY, roomIds, from, to] as const;
+/** 아직 끝나지 않은 내 예약 전부입니다. */
+export const MY_BOOKINGS_KEY = [...RESERVATIONS_KEY, "mine"] as const;
+/** 관리자 메뉴 예약 구역의 다가오는 예약입니다. 앞부분이 RESERVATIONS_KEY 라 달력에서 취소해도 함께 다시 조회합니다. */
+export const upcomingReservationsKey = (roomIds: readonly number[], from: string, to: string) =>
+  [...RESERVATIONS_KEY, "upcoming", roomIds, from, to] as const;
+
+/** 멤버 검색 결과입니다. 검색어가 비어 있을 때의 key 는 ["member-search", ""] 입니다. */
+export const memberSearchKey = (query: string) => ["member-search", query] as const;
 
 // backend/src/backend/db/models.py 의 ON DELETE CASCADE 기준입니다. 기간을 삭제하면 서버가
 // assignments·assignment_runs·assignment_backups 를 함께 삭제합니다. reservations 는 기간을
@@ -68,6 +88,32 @@ export function boardListKey(listPath: string): string[] {
 
 /** 글 1개의 상세(본문, 댓글, 첨부)입니다. */
 export const postKey = (postId: number) => [...BOARD_KEY, "post", postId] as const;
+
+/** 팀 게시판 글 목록의 endpoint 주소입니다. 목록 화면(routes/Board)과 작성 화면(routes/PostWrite)이 같은 값으로 boardListKey 를 만듭니다. */
+export function teamPostsPath(teamId: number | string): string {
+  return `/teams/${teamId}/posts`;
+}
+
+/** listPath 의 글 목록입니다. 공지 화면, 팀 게시판, 스케줄러 오른쪽 공지 칸이 같은 cache 를 씁니다. */
+export function usePosts(listPath: string): UseQueryResult<Post[]> {
+  return useQuery({ queryKey: boardListKey(listPath), queryFn: () => loadPosts(listPath) });
+}
+
+/** 블라인드한 글 목록입니다. 블라인드하는 화면(PostBoard)이 BLINDED_KEY 를 무효화하면 다시 조회합니다. */
+export function useBlindedPosts(): UseQueryResult<Post[]> {
+  return useQuery({ queryKey: BLINDED_KEY, queryFn: loadBlindedPosts });
+}
+
+/** roomIds 합주실의 from 부터 to 까지 예약입니다. 합주실 목록을 받기 전(enabled 가 false)에는 요청하지 않습니다. */
+export function useUpcomingReservations(
+  roomIds: readonly number[], from: string, to: string, enabled: boolean,
+): UseQueryResult<{ rows: Reservation[]; failures: string[] }> {
+  return useQuery({
+    queryKey: upcomingReservationsKey(roomIds, from, to),
+    queryFn: () => loadReservationRows([...roomIds], from, to),
+    enabled,
+  });
+}
 
 /** 팀·합주실·기간 목록입니다. 여러 화면에서 같은 조회를 다시 작성하지 않습니다. queryKey 가 같아 cache 도 하나입니다.
  *

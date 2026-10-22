@@ -7,7 +7,7 @@ import { PostDetail, PostListPanel, usePostBoard } from "../components/PostBoard
 import { can } from "../lib/account";
 import { loadState } from "../lib/loading";
 import { readableBoards } from "../lib/boards";
-import { useMe, useMyTeams, useTeams } from "../components/queries";
+import { teamPostsPath, useMe, useMyTeams, useTeams } from "../components/queries";
 
 import "../styles/board.css";
 
@@ -47,7 +47,7 @@ export function Board() {
 
 /** 팀 1개의 게시판입니다. 주소에 글 번호가 있으면 그 글의 상세를, 없으면 팀 글 목록을 표시합니다. member 가 false 이면 글과 댓글을 작성할 수 없습니다. */
 function TeamBoard({ teamId, teamName, member, meId, canModerate }: { teamId: number; teamName: string; member: boolean; meId: number | null; canModerate: boolean }) {
-  const listPath = `/teams/${teamId}/posts`;
+  const listPath = teamPostsPath(teamId);
   const { focus, listKey, backToList } = usePostBoard(`/board/${teamId}`, listPath);
   return (
     <div className="main">

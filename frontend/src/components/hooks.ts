@@ -115,6 +115,21 @@ export function usePopoverRouteClose(id: string): void {
   }
 }
 
+// 가장 이른 일정 막대 위에 남기는 여백(px)입니다.
+const FIRST_GAP = 12;
+
+/** 반환한 ref 의 스크롤 영역을 data-first 요소가 맨 위에 오도록 스크롤합니다. first 가 바뀔 때만 다시 스크롤합니다.
+ *  날짜 modal 의 타임라인(routes/DayDialogParts)과 불가능 일정 캘린더의 하루 modal(routes/UnavailableCalendar)이 같이 씁니다. */
+export function useScrollToFirst(first: number | null): RefObject<HTMLDivElement | null> {
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const target = box.current?.querySelector<HTMLElement>("[data-first]");
+    if (!box.current || !target) return;
+    box.current.scrollTop += target.getBoundingClientRect().top - box.current.getBoundingClientRect().top - FIRST_GAP;
+  }, [first]);
+  return box;
+}
+
 /** 화면별 CSS는 body[data-page="..."] 속에 격리됩니다. data-page 속성을 설정/해제하는 곳입니다.
  *  AppShell 의 data-shell 과 같은 이유로 useLayoutEffect 입니다. 자식 effect 가 크기를 잴 때 속성이 비어 있지 않게 합니다. */
 export function usePage(page: string): void {

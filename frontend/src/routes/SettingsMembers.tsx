@@ -14,7 +14,7 @@ import { Button, DeleteButton, EditButton, Empty, FormFoot, IconButton, NavButto
 import { Modal } from "../components/Modal";
 import { SeatRow } from "../components/SeatRow";
 import { PersonIcon, PlusIcon } from "../components/icons";
-import { getJSON, reason } from "../lib/api";
+import { reason } from "../lib/api";
 import { say } from "../components/toast";
 import { cohortLabel } from "../lib/roster";
 import { PERMISSION_ITEMS, can } from "../lib/account";
@@ -22,42 +22,36 @@ import { permissionSetProblem } from "../lib/validate";
 import { askDelete, askExpel } from "../lib/confirm";
 import { MEMBERS_KEY, SETS_KEY, refreshMemberArea, useMe } from "../components/queries";
 import {
-  expelMember, grantPermissionSet, loadPermissionSets, removePermissionSet, revokePermissionSet,
+  expelMember, grantPermissionSet, loadMemberPage, loadPermissionSets, removePermissionSet, revokePermissionSet, savePermissionSet,
 } from "../lib/pipeline";
 import { LOADING_TEXT } from "../lib/loading";
-import type { MemberRow, Permission, PermissionSet } from "../lib/contract";
+import type { MemberRow, Permission, PermissionSet, PermissionSetInput } from "../lib/contract";
 
 /** 한 번에 불러오는 멤버 수입니다. 아래로 스크롤하면 이 크기만큼씩 다음 페이지를 불러옵니다. */
 const PAGE = 50;
 
-type Draft = { name: string; description: string; permissions: Permission[] };
-
-const BLANK: Draft = { name: "", description: "", permissions: [] };
+const BLANK: PermissionSetInput = { name: "", description: "", permissions: [] };
 
 /** permission set 을 생성하거나 수정하는 modal 입니다. 설명은 필수입니다. 항목 목록만으로는 "이 permission set 이 필요한 이유"가 명확하지 않습니다. */
 function SetForm(props: {
-  start: Draft;
+  start: PermissionSetInput;
   taken: string[];
-  path: string;
-  method: "POST" | "PATCH";
+  /** 수정하는 권한 세트의 번호입니다. null 이면 생성입니다. */
+  setId: number | null;
   title: string;
   onClose: () => void;
   onDone: (text: string) => void;
 }) {
-  const { start, taken, path, method, title, onClose, onDone } = props;
+  const { start, taken, setId, title, onClose, onDone } = props;
   const client = useQueryClient();
   const [form, setForm] = useState(start);
   const [bad, setBad] = useState("");
 
   const send = useMutation({
-    mutationFn: () =>
-      getJSON<{ permission_set: PermissionSet }>(path, {
-        method,
-        body: JSON.stringify(form),
-      }),
+    mutationFn: () => savePermissionSet(setId, form),
     onSuccess: () => {
       refreshMemberArea(client);
-      onDone(method === "POST" ? "권한 세트를 생성했어요." : "권한 세트를 저장했어요.");
+      onDone(setId === null ? "권한 세트를 생성했어요." : "권한 세트를 저장했어요.");
     },
     onError: (error) => setBad(reason(error)),
   });
@@ -244,8 +238,7 @@ function SetModals(props: {
       <SetForm
         start={BLANK}
         taken={list.map((set) => set.name)}
-        path="/permission-sets"
-        method="POST"
+        setId={null}
         title="새 권한 세트"
         onClose={onClose}
         onDone={closeAndTell}
@@ -261,8 +254,7 @@ function SetModals(props: {
           permissions: open.set.permissions,
         }}
         taken={list.filter((one) => one.id !== open.set.id).map((one) => one.name)}
-        path={`/permission-sets/${open.set.id}`}
-        method="PATCH"
+        setId={open.set.id}
         title="권한 세트 수정"
         onClose={onClose}
         onDone={closeAndTell}
@@ -338,6 +330,21 @@ function SetRail() {
   );
 }
 
+/** 반환한 ref 의 요소가 화면에 들어오면 onMore 를 호출합니다. done 이면 감시하지 않습니다. */
+function useLoadMore(done: boolean, onMore: () => unknown): RefObject<HTMLDivElement | null> {
+  const foot = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const mark = foot.current;
+    if (mark === null || done) return;
+    const watch = new IntersectionObserver((seen) => {
+      if (seen.some((one) => one.isIntersecting)) onMore();
+    });
+    watch.observe(mark);
+    return () => watch.disconnect();
+  }, [done, onMore]);
+  return foot;
+}
+
 /** 가입한 모든 멤버입니다. 아래로 스크롤하면 다음 페이지를 불러옵니다. */
 function MemberRoster(props: {
   rows: MemberRow[];
@@ -350,18 +357,8 @@ function MemberRoster(props: {
 }) {
   const { rows, done, onMore, sets, onExpel, meId } = props;
   const [filter, setFilter] = useState("");
-  const foot = useRef<HTMLDivElement | null>(null);
-
   // 목록의 바닥이 화면에 들어오면 다음 페이지를 불러옵니다.
-  useEffect(() => {
-    const mark = foot.current;
-    if (mark === null || done) return;
-    const watch = new IntersectionObserver((seen) => {
-      if (seen.some((one) => one.isIntersecting)) onMore();
-    });
-    watch.observe(mark);
-    return () => watch.disconnect();
-  }, [done, onMore]);
+  const foot = useLoadMore(done, onMore);
 
   const shown =
     filter === "" ? rows : rows.filter((row) => row.permission_sets.includes(filter));
@@ -432,15 +429,12 @@ export function MemberCards() {
   const list = useInfiniteQuery({
     queryKey: MEMBERS_KEY,
     initialPageParam: null as number | null,
-    queryFn: ({ pageParam }) =>
-      getJSON<{ members: MemberRow[] }>(
-        `/members?limit=${PAGE}${pageParam === null ? "" : `&after=${pageParam}`}`,
-      ),
+    queryFn: ({ pageParam }) => loadMemberPage(PAGE, pageParam),
     getNextPageParam: (last) =>
-      last.members.length < PAGE ? undefined : (last.members.at(-1)?.id ?? undefined),
+      last.length < PAGE ? undefined : (last.at(-1)?.id ?? undefined),
   });
 
-  const rows = list.data?.pages.flatMap((page) => page.members) ?? [];
+  const rows = list.data?.pages.flat() ?? [];
   const sets = [...new Set(rows.flatMap((row) => row.permission_sets))].sort();
 
   const { me } = useMe();

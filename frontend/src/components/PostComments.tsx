@@ -1,6 +1,7 @@
 // 게시판 글에 달리는 댓글 부품입니다. 댓글 작성 form 과 댓글 한 줄을 담습니다. 글 상세(PostBoard)가 사용합니다.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { reason } from "../lib/api";
@@ -67,15 +68,19 @@ export function CommentForm(props: { postId: number; authorId: number | null }) 
   );
 }
 
-/** 댓글 하나를 렌더합니다. 수정 권한이 있으면 수정 버튼이, 삭제 권한이 있으면 삭제 버튼이
- *  오른쪽 끝에 표시됩니다(`lib/boards` 의 `boardActions` 참조). */
-export function CommentRow(props: {
-  comment: PostComment;
-  canEdit: boolean;
-  canDelete: boolean;
-  postId: number;
-}) {
-  const { comment, canEdit, canDelete, postId } = props;
+/** 댓글 1개의 수정 modal 상태와 수정, 삭제 요청입니다. 성공하면 글 상세(postKey)를 다시 조회합니다.
+ *  startEdit 은 저장된 본문으로 modal 을 열고, submit 은 본문을 검증한 뒤 저장합니다. */
+function useCommentEdit(comment: PostComment, postId: number): {
+  editing: boolean;
+  body: string;
+  bad: string;
+  setBody: (next: string) => void;
+  startEdit: () => void;
+  cancelEdit: () => void;
+  submit: () => void;
+  save: UseMutationResult<PostComment, Error, void>;
+  remove: UseMutationResult<void, Error, void>;
+} {
   const client = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState(comment.body);
@@ -97,6 +102,30 @@ export function CommentRow(props: {
     onError: (error) => say(reason(error)),
   });
 
+  return {
+    editing, body, bad, setBody,
+    startEdit: () => { setBody(comment.body); setBad(""); setEditing(true); },
+    cancelEdit: () => setEditing(false),
+    submit: () => {
+      const why = checkComment(body);
+      setBad(why);
+      if (why === "") save.mutate();
+    },
+    save, remove,
+  };
+}
+
+/** 댓글 하나를 렌더합니다. 수정 권한이 있으면 수정 버튼이, 삭제 권한이 있으면 삭제 버튼이
+ *  오른쪽 끝에 표시됩니다(`lib/boards` 의 `boardActions` 참조). */
+export function CommentRow(props: {
+  comment: PostComment;
+  canEdit: boolean;
+  canDelete: boolean;
+  postId: number;
+}) {
+  const { comment, canEdit, canDelete, postId } = props;
+  const { editing, body, bad, setBody, startEdit, cancelEdit, submit, save, remove } = useCommentEdit(comment, postId);
+
   return (
     <li className="comment">
       <span className="meta">{comment.author} {stampLabel(comment.created_at)}</span>
@@ -104,7 +133,7 @@ export function CommentRow(props: {
       {!canEdit && !canDelete ? null : (
         <span className="acts">
           {!canEdit ? null : (
-            <EditButton label="댓글 수정" onClick={() => { setBody(comment.body); setBad(""); setEditing(true); }} />
+            <EditButton label="댓글 수정" onClick={startEdit} />
           )}
           {!canDelete ? null : (
             <DeleteButton label="댓글 삭제" disabled={remove.isPending}
@@ -114,19 +143,8 @@ export function CommentRow(props: {
       )}
 
       {!editing ? null : (
-        <Modal title="댓글 수정" onClose={() => setEditing(false)}
-          foot={
-            <FormFoot
-              onCancel={() => setEditing(false)}
-              pending={save.isPending}
-              submitLabel="저장"
-              onSubmit={() => {
-                const why = checkComment(body);
-                setBad(why);
-                if (why === "") save.mutate();
-              }}
-            />
-          }
+        <Modal title="댓글 수정" onClose={cancelEdit}
+          foot={<FormFoot onCancel={cancelEdit} pending={save.isPending} submitLabel="저장" onSubmit={submit} />}
         >
           <div className="fields">
             <label className="wide" htmlFor="editComment">

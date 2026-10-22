@@ -8,7 +8,9 @@ import { Navigate } from "react-router-dom";
 
 import { Card, Panel, SectionHead } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
-import { PERIOD_DELETE_KEYS, ROOM_DELETE_KEYS, useMe, usePeriods, useRooms, useSettings, useSlotMinutes, useTeams } from "../components/queries";
+import {
+  PERIOD_DELETE_KEYS, PERIODS_KEY, ROOM_DELETE_KEYS, ROOMS_KEY, SETTINGS_KEY, useMe, usePeriods, useRooms, useSettings, useSlotMinutes, useTeams,
+} from "../components/queries";
 import { can } from "../lib/account";
 import { ADMIN_MENU } from "../lib/adminMenu";
 import type { AdminSection } from "../lib/adminMenu";
@@ -65,56 +67,73 @@ export function AdminArea({ section, children }: { section: AdminSection; childr
   return <>{children}</>;
 }
 
-/** 합주실, 기간 구역입니다. 두 구역만 설정값이 배정에 미치는 영향을 오른쪽 계산 패널에서 미리 봅니다. */
-function SetupArea({ tab }: { tab: "rooms" | "periods" }) {
+/** 저장이 끝난 뒤 호출할 함수를 만듭니다. keys 의 목록을 서버에서 다시 조회하고 text 를 toast 로 알립니다.
+ *  삭제는 서버가 CASCADE 로 함께 삭제한 데이터의 key(ROOM_DELETE_KEYS, PERIOD_DELETE_KEYS)까지 넘깁니다. */
+function useSaved(): (keys: readonly string[], text: string) => () => void {
   const client = useQueryClient();
+  return (keys, text) => () => {
+    for (const key of keys) void client.invalidateQueries({ queryKey: [key] });
+    say(text);
+  };
+}
+
+/** 합주실 구역입니다. 합주실 목록과 점유 단위 카드를 표시하고, 오른쪽 계산 패널에 하루 개방 시간을 미리 봅니다. */
+function RoomsArea() {
   const { me } = useMe();
   const rooms = useRooms();
   const periods = usePeriods();
   // 팀 목록은 오른쪽 계산에만 씁니다. 다른 화면과 queryKey 가 같아 이미 받은 목록이 있으면 다시 조회하지 않습니다.
   const teams = useTeams();
+  const saved = useSaved();
   const roomList = rooms.data?.rooms ?? [];
-  const periodList = periods.data?.periods ?? [];
-
-  // 저장이 끝나면 keys 의 목록을 서버에서 다시 조회합니다. 삭제는 서버가 CASCADE 로 함께 삭제한 데이터의 key 까지 넘깁니다.
-  function saved(keys: readonly string[], text: string): () => void {
-    return () => {
-      for (const key of keys) void client.invalidateQueries({ queryKey: [key] });
-      say(text);
-    };
-  }
 
   return (
     <>
       <div className="main">
-        {tab === "rooms" ? (
-          <>
-            <RoomCard
-              rooms={roomList}
-              state={loadState(rooms)}
-              canEdit={can(me, "room_edit")}
-              canCreate={can(me, "room_create")}
-              canDelete={can(me, "room_delete")}
-              onSaved={saved(["rooms"], "합주실 정보를 등록했어요.")}
-              onDeleted={saved(ROOM_DELETE_KEYS, "합주실을 삭제했어요.")}
-            />
-            <SlotUnitCard canEdit={can(me, "room_edit")} onSaved={saved(["settings"], "설정을 변경했어요.")} />
-          </>
-        ) : (
-          <PeriodCard
-            periods={periodList}
-            rooms={roomList}
-            state={loadState(periods)}
-            canEdit={can(me, "period_edit")}
-            canCreate={can(me, "period_create")}
-            canDelete={can(me, "period_delete")}
-            onSaved={saved(["periods"], "집중 합주기간을 등록했어요.")}
-            onDeleted={saved(PERIOD_DELETE_KEYS, "집중 합주기간을 삭제했어요.")}
-          />
-        )}
+        <RoomCard
+          rooms={roomList}
+          state={loadState(rooms)}
+          canEdit={can(me, "room_edit")}
+          canCreate={can(me, "room_create")}
+          canDelete={can(me, "room_delete")}
+          onSaved={saved(ROOMS_KEY, "합주실 정보를 등록했어요.")}
+          onDeleted={saved(ROOM_DELETE_KEYS, "합주실을 삭제했어요.")}
+        />
+        <SlotUnitCard canEdit={can(me, "room_edit")} onSaved={saved(SETTINGS_KEY, "설정을 변경했어요.")} />
       </div>
       <div className="rail">
-        <Readout rooms={roomList} periods={periodList} teams={teams.data?.teams ?? []} teamsState={loadState(teams)} tab={tab} />
+        <Readout rooms={roomList} periods={periods.data?.periods ?? []} teams={teams.data?.teams ?? []} teamsState={loadState(teams)} tab="rooms" />
+      </div>
+    </>
+  );
+}
+
+/** 기간 구역입니다. 기간 목록을 표시하고, 오른쪽 계산 패널에 첫 집중 합주기간의 개방 시간을 미리 봅니다. */
+function PeriodsArea() {
+  const { me } = useMe();
+  const rooms = useRooms();
+  const periods = usePeriods();
+  const teams = useTeams();
+  const saved = useSaved();
+  const roomList = rooms.data?.rooms ?? [];
+  const periodList = periods.data?.periods ?? [];
+
+  return (
+    <>
+      <div className="main">
+        <PeriodCard
+          periods={periodList}
+          rooms={roomList}
+          state={loadState(periods)}
+          canEdit={can(me, "period_edit")}
+          canCreate={can(me, "period_create")}
+          canDelete={can(me, "period_delete")}
+          onSaved={saved(PERIODS_KEY, "집중 합주기간을 등록했어요.")}
+          onDeleted={saved(PERIOD_DELETE_KEYS, "집중 합주기간을 삭제했어요.")}
+        />
+      </div>
+      <div className="rail">
+        <Readout rooms={roomList} periods={periodList} teams={teams.data?.teams ?? []} teamsState={loadState(teams)} tab="periods" />
       </div>
     </>
   );
@@ -122,8 +141,8 @@ function SetupArea({ tab }: { tab: "rooms" | "periods" }) {
 
 /** 관리자 메뉴 구역마다 그릴 화면입니다. App.tsx 가 lib/adminMenu.ts 의 주소마다 AdminArea 로 감싸 연결합니다. */
 export const ADMIN_SCREENS: Record<AdminSection, ReactElement> = {
-  rooms: <SetupArea tab="rooms" />,
-  periods: <SetupArea tab="periods" />,
+  rooms: <RoomsArea />,
+  periods: <PeriodsArea />,
   members: <div className="main"><MemberCards /></div>,
   reservations: <div className="main"><ReservationCards /></div>,
   blinded: <div className="main"><BlindedCards /></div>,

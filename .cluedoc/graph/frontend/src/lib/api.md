@@ -26,12 +26,10 @@ flowchart LR
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_api
   frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_lib_api
   frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_lib_api
-  frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_lib_api
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_api
   frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_lib_api
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_lib_api
   frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_lib_api
-  frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_lib_api
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_lib_api
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_lib_api
 ```
@@ -57,11 +55,9 @@ flowchart LR
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
 - [[graph/frontend/src/routes/Profile|Profile.tsx]]
-- [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]
 - [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]
-- [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]
