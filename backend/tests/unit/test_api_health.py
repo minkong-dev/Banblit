@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 
 from backend.api import app as app_module
 from backend.api.app import app
-from backend.db.health import DependencyStatus
+from backend.db.engine import DependencyStatus
 
 
 def test_health_reports_each_dependency_when_everything_is_up(
