@@ -12,7 +12,7 @@ import { ProfileCard } from "./ProfileCards";
 /** 프로필 카드가 소속 팀 줄에 표시하는 값입니다. teamName 은 팀 이름, text 는 그 팀에서의 기수입니다. */
 type Affiliation = { teamName: string; text: string };
 
-/** 소속 팀마다 내가 맡은 포지션을 한 줄로 반환합니다. 실패한 팀은 사유를 그 줄에 남깁니다. */
+/** 소속 팀마다 팀 이름과 그 팀 명단에서 찾은 내 기수를 반환합니다. 조회에 실패한 팀은 실패 사유를 반환합니다. */
 function useMyAffiliations(
   me: Account | null,
   teamIds: number[],
@@ -25,7 +25,7 @@ function useMyAffiliations(
     queries: teamIds.map((id) => teamMembersQuery(id)),
   });
 
-  /** 명단에서 찾은 나입니다. 기수를 표시합니다. 찾지 못했거나 기수가 없을 경우 그 사유를 표시합니다. */
+  /** mine 의 기수 문구를 반환합니다. mine 이 undefined 이면 찾지 못한 사유를 반환합니다. */
   function cohortText(mine: Member | undefined): string {
     if (mine === undefined) return "멤버 리스트에서 찾지 못했어요";
     return cohortLabel(mine.cohort);
@@ -46,7 +46,7 @@ export function Profile() {
   const { me, meState, teamIds, teams } = useMe();
   const affiliations = useMyAffiliations(me, teamIds, teams);
   // meState 로 구분하지 않으면 조회가 실패해도 "불러오는 중…" 이 그대로 남아 사용자가
-  // 기다리기만 합니다. 세 번째 인자는 stateText 의 ready 분기용이며 실제로는 도달하지 않습니다.
+  // 기다리기만 합니다.
   if (me === null) {
     return <div className="main"><Empty as="div" state={meState} text="로그인이 필요해요." /></div>;
   }

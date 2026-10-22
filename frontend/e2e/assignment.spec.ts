@@ -80,7 +80,7 @@ test.describe("배정 다시 계산", () => {
     await page
       .getByRole("option", { name: `${withoutSchedule.starts_on} – ${withoutSchedule.ends_on}` })
       .click();
-    await expect(page.getByRole("heading", { name: "현재 확정된 배정안이 없어요" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "현재 확정된 배정안이 존재하지 않아요" })).toBeVisible();
 
     // 배정 불가능 판정은 CP-SAT 이 탐색 없이 즉시 끝낼 때가 있어 "진행 중" 문구를 놓칠 수 있습니다.
     // 이 검사는 계산이 끝난 뒤의 결과만 확인합니다.

@@ -80,7 +80,7 @@ export function ReasonDialog({ title, hint, subject, action, onSubmit, onDone, o
             id={fieldId}
             value={text}
             maxLength={REJECT_REASON_MAX_LENGTH}
-            placeholder={`${action}사유를 작성해주세요.`}
+            placeholder={`${action} 사유를 작성해주세요.`}
             aria-invalid={send.isError}
             onChange={(event) => setText(event.target.value)}
           />

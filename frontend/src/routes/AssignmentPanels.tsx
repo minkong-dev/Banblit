@@ -51,7 +51,7 @@ export function AssignmentCalendar({ days, shown, colors, absences }: {
       <div className="grid">
         {days.length === 0 ? (
           <div className="day" style={{ gridColumn: "1/-1" }}>
-            <span className="free">캘린더에 표시할 일정이 없어요</span>
+            <span className="free">캘린더에 표시할 일정이 존재하지 않아요</span>
           </div>
         ) : (
           <>
@@ -118,7 +118,7 @@ export function AssignmentStatus({
   error, roundAt, roundPending, roundError, report, hasConfirmed, shown, colors,
   canRun, canConfirm, confirmPending, onConfirm, onBack, actions,
 }: {
-  /** 조회·계산 중 첫 실패입니다. 없으면 null 입니다. */
+  /** 조회, 계산 중 첫 실패입니다. 없으면 null 입니다. */
   error: unknown;
   roundAt: string | null;
   roundPending: boolean;
@@ -177,7 +177,7 @@ export function AssignmentStatus({
   if (!hasConfirmed) {
     return (
       <>
-        <h2>현재 확정된 배정안이 없어요</h2>
+        <h2>현재 확정된 배정안이 존재하지 않아요</h2>
         <p className="sub">
           현재 팀이나 멤버가 없거나, 집중 합주기간이 아니에요.
           생성된 팀과 가입한 멤버가 있는지 확인해주세요.
@@ -207,7 +207,7 @@ export function AssignmentStatus({
       {/* 결과 설명은 조회하는 시점의 불가능 일정으로 계산합니다. 적용 뒤 불가능 일정이 바뀌어 허용 인원을 넘으면 경고합니다(사용자 결정 2026-10-13). */}
       {report?.over_absent !== true ? null : (
         <div className="warn" role="alert">
-          <b>현재 적용중인 배정안이 불가능일정 변동으로 인해 최대 제외인원을 초과했어요.</b>
+          <b>현재 적용 중인 배정안이 불가능 일정 변동으로 인해 불참 허용 인원을 초과했어요.</b>
           새로 연산된 배정안으로 업데이트하는 것을 추천드려요.
         </div>
       )}
@@ -232,7 +232,7 @@ export function PastRunsPanel({ periodId, canView, roundAt, onSelect }: {
   const records = useQuery({
     queryKey: recordsKey(periodId),
     queryFn: () => {
-      if (periodId === null) throw new Error("선택할 집중 합주기간이 없어요");
+      if (periodId === null) throw new Error("선택한 집중 합주기간이 존재하지 않아요");
       return loadRecords(periodId);
     },
     enabled: periodId !== null && canView,
@@ -243,7 +243,7 @@ export function PastRunsPanel({ periodId, canView, roundAt, onSelect }: {
   if (!canView) {
     list = <Empty as="li" text="스케줄링 기록 확정 권한이 있어야 확인이 가능해요." />;
   } else if (!records.isSuccess || rounds.length === 0) {
-    list = <Empty as="li" state={loadState(records)} text="스케줄링 기록이 없어요." />;
+    list = <Empty as="li" state={loadState(records)} text="스케줄링 기록이 존재하지 않아요." />;
   } else {
     // 최근 기록이 위로 오게 정렬합니다.
     list = [...rounds]
@@ -270,7 +270,7 @@ export function PastRunsPanel({ periodId, canView, roundAt, onSelect }: {
 }
 
 /** 오른쪽 칸의 스케줄링 시간 편집입니다. 계산 시각은 기간에 속한 값이라 period_edit 권한이 필요합니다.
- *  설정 화면의 기간 form 과 같은 값을 같은 endpoint(API의 요청 주소 단위)로 수정합니다. 이 칸에서는 두 시각만 따로 수정할 수 있게 둡니다. */
+ *  설정 화면의 기간 form 과 같은 값을 같은 endpoint(API 의 요청 주소 단위)로 수정합니다. 이 칸에서는 두 시각만 따로 수정할 수 있게 둡니다. */
 export function RunTimesPanel({ period, canManage }: { period: Period | null; canManage: boolean }) {
   const queryClient = useQueryClient();
   // 수정한 값만 이 state 에 담습니다. 기간을 변경하면 담긴 id 가 맞지 않으므로 그때는
@@ -279,7 +279,7 @@ export function RunTimesPanel({ period, canManage }: { period: Period | null; ca
 
   const save = useMutation({
     mutationFn: (body: { first_run_at: string; second_run_at: string }) => {
-      if (period === null) throw new Error("선택할 집중 합주기간이 없어요");
+      if (period === null) throw new Error("선택한 집중 합주기간이 존재하지 않아요");
       return getJSON<{ period: Period }>(`/periods/${period.id}`, {
         method: "PATCH",
         body: JSON.stringify(body),
@@ -291,7 +291,7 @@ export function RunTimesPanel({ period, canManage }: { period: Period | null; ca
       setForm(null);
       say("엔진 연산 시간을 저장했어요");
     },
-    onError: (error) => say(error instanceof Error ? error.message : "엔진 연산 시간을 저장하는데 실패했어요."),
+    onError: (error) => say(error instanceof Error ? error.message : "엔진 연산 시간을 저장하지 못했어요."),
   });
 
   const shown = form !== null && period !== null && form.id === period.id
@@ -304,7 +304,7 @@ export function RunTimesPanel({ period, canManage }: { period: Period | null; ca
   return (
     <Panel title="스케줄링 시간" hint="지정한 시간에 스케줄링을 진행해요">
       <div className="times">
-        {/* 큰 시각 표시는 두지 않습니다(사용자 결정 2026-10-07). 입력칸이 저장된 값을 보여 주고, 칸 위에 1차·2차를 작게 적습니다. */}
+        {/* 큰 시각 표시는 두지 않습니다(사용자 결정 2026-10-07). 입력칸이 저장된 값을 보여 주고, 칸 위에 1차, 2차를 작게 적습니다. */}
         {period === null ? <div className="t">집중 합주기간을 생성해주세요</div> : (
           <>
             <div className="rows">
@@ -349,7 +349,7 @@ export function RunTimesPanel({ period, canManage }: { period: Period | null; ca
   );
 }
 
-/** 확정 해제 버튼과 사유 modal 입니다. 해제하면 마감 일시도 비워지고 사유가 전체 멤버에게 알림으로 갑니다(사용자 결정 2026-10-20). */
+/** 확정 해제 버튼과 사유 modal 입니다. 해제하면 마감 일시가 삭제되고 전체 멤버에게 해제 사유를 포함한 알림을 전송합니다(사용자 결정 2026-10-20). */
 export function UnfixButton({ period }: { period: Period }) {
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -368,7 +368,7 @@ export function UnfixButton({ period }: { period: Period }) {
       {!open ? null : (
         <ReasonDialog
           title="확정 해제"
-          hint="확정을 해제하면 마감 일시도 비워지고, 사유가 전체 멤버에게 알림으로 가요."
+          hint="확정을 해제하면 마감 일시가 삭제되고, 전체 멤버에게 해제 사유를 포함한 알림을 전송해요."
           subject={periodTitle(period)}
           action="해제"
           onSubmit={(text) => unfixPeriod(period.id, text)}

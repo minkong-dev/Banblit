@@ -2,7 +2,7 @@
 // 순수 계산은 lib/richText.ts 가 담당합니다.
 //
 // Tiptap 은 편집기를 확장(extension)의 묶음으로 구성합니다. node 는 문단·그림처럼 본문을 이루는
-// 요소이고, mark 는 굵게·색처럼 글자에 걸치는 서식이며, extension 은 그 둘이 아닌 동작(단축키 등)입니다.
+// 요소이고, mark 는 굵게·색처럼 글자 범위에 적용하는 서식이며, extension 은 그 둘이 아닌 동작(단축키 등)입니다.
 
 import { Extension, Node, mergeAttributes, nodeInputRule } from "@tiptap/core";
 import type { useEditor } from "@tiptap/react";
@@ -78,7 +78,7 @@ export const Weight = TextStyle.extend({
 /** 빈 제목에서 Backspace 를 누르면 보통 문단으로 되돌립니다.
  *
  * TipTap 은 "# " 같은 입력 규칙이 방금 적용된 직후 Backspace 를 누르면 그 규칙을 되돌려
- * 입력했던 "# " 를 본문에 다시 넣습니다. 제목을 만들려다 취소한 사람에게는 지운 글자가
+ * 입력했던 "# " 를 본문에 다시 넣습니다. 제목을 만들려다 취소한 사람에게는 삭제한 글자가
  * 되살아나는 것으로 보이므로, 제목만 삭제하고 글자는 되살리지 않습니다.
  *
  * priority 를 높여 입력 규칙의 되돌리기보다 먼저 실행합니다. Tiptap 확장의 기본 priority 는
@@ -117,15 +117,11 @@ export const YoutubeTyped = Youtube.extend({
     ];
   },
 });
-/** 본문에 넣을 수 있는 파일의 MIME(형식을 알리는 문자열)입니다. 나머지는 drop(파일을 끌어다 놓는 동작)해도 처리하지 않고
- *  브라우저 기본 동작(파일 열기)에 맡깁니다. 서버 쪽 허용 목록은 이보다 넓습니다 —
- *  넣지 못하는 형식도 첨부 파일로는 올라갑니다(lib/boards.ts 의 ALLOWED_EXTENSIONS).
+/** 본문에 삽입할 수 있는 파일의 MIME(형식을 알리는 문자열)입니다. 나머지는 drop(파일을 끌어다 놓는 동작)해도 처리하지 않고
+ *  브라우저 기본 동작(파일 열기)에 맡깁니다. 서버 쪽 허용 목록은 이보다 넓습니다.
+ *  삽입하지 못하는 형식도 첨부 파일로는 올라갑니다(lib/boards.ts 의 ALLOWED_EXTENSIONS).
  *
- *  이 목록은 붙여넣기·drop·본문용 파일 선택창(RichText.tsx:143·331)이 받을 파일을 거르는 입력 필터입니다.
- *  받은 파일을 본문의 image·audio·pdf 중 무엇으로 넣을지 판정하는 곳은 lib/richText.ts 의 embedKind 이고,
- *  확장자 판정은 그 IMAGE·AUDIO 집합에 작성되어 있는 내용을 기준으로 합니다. 한쪽만 수정하면 선택창에는 표시되는데 본문에 들어가지 않고
- *  첨부로만 올라가므로 두 곳을 함께 수정합니다. audio/x-wav 는 일부 브라우저가 .wav 파일을 이 MIME 으로
- *  보고하므로 넣어 둡니다. */
+ *  수정하면 lib/richText.ts 의 IMAGE, AUDIO 도 함께 수정합니다. */
 export const ACCEPTED_MIME = [
   "image/jpeg", "image/png", "image/gif", "image/webp",
   "audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp4", "audio/aac", "audio/ogg",
@@ -139,7 +135,7 @@ export async function attach(
   editor: Editor, files: File[], pos: number | null, postId: number | null, embed = true,
 ): Promise<void> {
   if (postId === null) {
-    say("글을 준비하는 중이에요. 잠시 후 다시 넣어주세요.");
+    say("글을 준비하는 중이에요. 잠시 후 다시 첨부해주세요.");
     return;
   }
   for (const file of files) {
@@ -157,7 +153,7 @@ export async function attach(
       else if (kind === "audio") at.setAudio({ src }).run();
       else if (kind === "pdf") at.setPdf({ src, title: file.name }).run();
       // file 은 본문에 넣지 않습니다. 첨부 목록에는 이미 올라가 있습니다.
-      else if (embed) say(`${file.name} 은 본문에 넣을 수 없어 첨부로만 올렸어요.`);
+      else if (embed) say(`${file.name} 은 본문에 삽입할 수 없어 첨부로만 업로드했어요.`);
       else say(`${file.name} 을 첨부했어요.`);
     } catch (error) {
       say(`${file.name} 을 올리지 못했어요 — ${reason(error)}`);

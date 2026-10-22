@@ -26,7 +26,7 @@ export function MemberSearch(props: {
   const found = useQuery({
     queryKey: ["member-search", query],
     queryFn: async () => ({ members: await searchMembers(query) }),
-    // 한 글자 넣을 때마다 조회가 새로 나갑니다. 이전 결과를 지우지 않고 두면 목록이
+    // 한 글자 입력할 때마다 조회가 새로 나갑니다. 이전 결과를 삭제하지 않고 두면 목록이
     // "불러오는 중…" 으로 사라졌다 돌아오지 않고, 다음 결과가 도착할 때 한 번에 바뀝니다.
     placeholderData: keepPreviousData,
   });

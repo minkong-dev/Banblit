@@ -1,5 +1,5 @@
-// 설정 화면의 집중 합주기간 구역입니다. 기간 목록·추가·수정·삭제와, 기간에 딸린 전체 합주 설정을 담당합니다.
-// 전체 합주 입력칸 자체는 SettingsEnsemble 이 제공합니다. 달력의 하루 dialog 도 같은 부품을 사용합니다.
+// 설정 화면의 집중 합주기간 구역입니다. 기간 목록, 추가, 수정, 삭제와, 기간에 딸린 전체 합주 설정을 담당합니다.
+// 전체 합주 입력칸은 SettingsEnsemble 이 제공합니다.
 
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
@@ -37,24 +37,24 @@ const BLANK_PERIOD: PeriodBody = {
   closes_at: null,
 };
 
-/** 기간 form 이 수정하는 값만 추립니다. 목록에서 받은 기간에는 id·ensemble 이 함께 있어 그대로 보내면 요청 본문에 섞입니다. */
+/** 기간 form 이 수정하는 값만 추립니다. 목록에서 받은 기간에는 id, ensemble 이 함께 있어 그대로 보내면 요청 본문에 섞입니다. */
 function periodFields(period: Period): PeriodBody {
   const { kind, name, starts_on, ends_on, everyday, first_run_at, second_run_at } = period;
   return { kind, name, starts_on, ends_on, everyday, first_run_at, second_run_at,
     practice_window: period.practice_window, assign_rule: period.assign_rule, closes_at: period.closes_at };
 }
 
-/** 시간대 한 쌍을 입력칸 두 개로 펼칩니다. 정하지 않은 쌍은 빈 칸 두 개입니다. */
+/** 시간대 한 쌍을 입력칸 두 개로 펼칩니다. 지정하지 않은 쌍은 빈 문자열 2개입니다. */
 function windowPair(pair: ClockRange | null): WindowPair {
   return pair ?? { starts_at: "", ends_at: "" };
 }
 
-/** 입력칸 두 개를 저장할 값으로 되돌립니다. 둘 다 비어 있으면 정하지 않은 쌍입니다. */
+/** 입력칸 두 개를 저장할 값으로 변환합니다. 둘 다 비어 있으면 지정하지 않은 쌍입니다. */
 function windowValue(pair: WindowPair): ClockRange | null {
   return pair.starts_at === "" && pair.ends_at === "" ? null : pair;
 }
 
-/** "09:00" → "오전 9시", "21:30" → "오후 9시 30분". 목록 줄의 스케줄링 시간 표기입니다. */
+/** HH:MM 을 오전, 오후와 시, 분으로 표기한 문자열을 반환합니다. 목록 줄의 스케줄링 시간에 표시합니다. */
 function clockText(hhmm: string): string {
   const [hour, minute] = hhmm.split(":").map(Number);
   const hour12 = hour % 12 === 0 ? 12 : hour % 12;
@@ -325,7 +325,7 @@ function WindowFields(props: {
   return (
     <TimeRange
       id={at(field)}
-      labels={[`${label} 시작`, `${label} 종료`]}
+      labels={[`${label} 시작 시간`, `${label} 종료 시간`]}
       value={[pair.starts_at, pair.ends_at]}
       onChange={([starts_at, ends_at]) => onChange({ starts_at, ends_at })}
     />
@@ -346,7 +346,7 @@ export function PeriodCard(props: {
       <SectionHead title="집중 합주기간" desc="자동 스케줄링을 진행할 기간을 설정해요" />
 
       {state.kind !== "ready" || periods.length === 0 ? (
-        <Empty as="div" state={state} text="아직 등록된 집중 합주기간이 없어요." />
+        <Empty as="div" state={state} text="아직 등록된 집중 합주기간이 존재하지 않아요." />
       ) : (
         <ul className="rows">
           {periods.map((period) =>
@@ -364,7 +364,7 @@ export function PeriodCard(props: {
                 />
               </li>
             ) : (
-              // onEdit이 없으면 Row가 수정 버튼을 그리지 않습니다. period_edit 권한이 없는 사람에게는
+              // onEdit 이 없으면 Row 가 수정 버튼을 그리지 않습니다. period_edit 권한이 없는 사람에게는
               // 목록만 표시됩니다.
               <Row
                 key={period.id}
@@ -407,7 +407,7 @@ export function PeriodCard(props: {
 }
 
 /** 기간 form 입니다. before 가 null 이면 새 기간을 만들고, 아니면 그 기간을 수정합니다.
- *  집중 합주기간이면 전체 합주 입력칸이 함께 표시되고, 저장은 savePeriod 가 기간·전체 합주 요청을 순서대로 보냅니다.
+ *  집중 합주기간이면 전체 합주 입력칸이 함께 표시되고, 저장은 savePeriod 가 기간, 전체 합주 요청을 순서대로 보냅니다.
  *  날짜별 전체 합주 시각은 저장된 전체 합주가 있을 때만 form 아래에 별도 form 으로 표시합니다. form 안에 두면 그 버튼이 기간 form 을 제출합니다. */
 function PeriodForm(props: {
   before: Period | null;

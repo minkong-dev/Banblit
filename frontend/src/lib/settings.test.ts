@@ -128,20 +128,20 @@ describe("openHoursMessage", () => {
   });
 
   it("비어 있으면 채워 달라고 한다", () => {
-    expect(openHoursMessage("", "23:00")).toBe("개방 시간을 입력해 주세요.");
-    expect(openHoursMessage("18:00", "")).toBe("마감 시각을 입력해 주세요.");
+    expect(openHoursMessage("", "23:00")).toBe("개방 시간을 입력해주세요.");
+    expect(openHoursMessage("18:00", "")).toBe("마감 시간을 입력해주세요.");
   });
 });
 
 describe("roomNameMessage", () => {
   it("이미 있는 이름은 받지 않는다", () => {
     expect(roomNameMessage("합주실 A", ["합주실 A", "합주실 B"]))
-      .toBe("같은 이름의 합주실이 이미 있습니다.");
+      .toBe("같은 이름의 합주실이 이미 존재해요.");
   });
 
   it("앞뒤 공백만 다른 것도 같은 이름으로 본다", () => {
     expect(roomNameMessage("  합주실 A ", ["합주실 A"]))
-      .toBe("같은 이름의 합주실이 이미 있습니다.");
+      .toBe("같은 이름의 합주실이 이미 존재해요.");
   });
 
   it("겹치지 않으면 통과한다", () => {
@@ -149,7 +149,7 @@ describe("roomNameMessage", () => {
   });
 
   it("비어 있으면 채워 달라고 한다", () => {
-    expect(roomNameMessage("   ", [])).toBe("합주실명을 입력해 주세요.");
+    expect(roomNameMessage("   ", [])).toBe("합주실명을 입력해주세요.");
   });
 });
 

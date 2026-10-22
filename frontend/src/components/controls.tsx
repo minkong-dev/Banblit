@@ -1,6 +1,6 @@
-// 화면 전체가 공유하는 입력·버튼 요소입니다. 본질이 같은 요소는 여기 1개뿐이고, 크기·색은 CSS 가 자리에 따라 정합니다.
+// 화면 전체가 공유하는 입력, 버튼 요소입니다. 본질이 같은 요소는 여기 1개뿐이고, 크기와 색은 CSS 가 자리에 따라 지정합니다.
 // 값을 보유하지 않고 서버도 호출하지 않습니다. 무엇을 할지는 호출하는 화면이 결정합니다.
-// 외형(class 이름)은 styles/controls.css 가 담당합니다.
+// 외형(class 이름)은 styles/base.css 가 담당합니다.
 
 import type { ChangeEvent, ComponentProps, ReactNode } from "react";
 import { Link } from "react-router-dom";
@@ -64,7 +64,7 @@ export function BackButton(props: IconButtonRest & { label?: string }) {
   return <IconButton {...props} label={props.label ?? "뒤로 가기"} icon={<ChevronLeftIcon />} />;
 }
 
-/** 이전·다음 이동 버튼입니다. dir 가 아이콘 방향을 정합니다. */
+/** 이전, 다음 이동 버튼입니다. dir 가 아이콘 방향을 지정합니다. */
 export function NavButton({ dir, ...props }: IconButtonRest & { dir: "prev" | "next"; label: string }) {
   return <IconButton {...props} icon={dir === "prev" ? <ChevronLeftIcon /> : <ChevronRightIcon />} />;
 }
@@ -181,7 +181,7 @@ export function SearchInput({ label, onChange, ...rest }: {
 }
 
 /** 숨긴 파일 input 입니다. 여는 버튼은 ref 의 click() 을 호출합니다. 같은 파일을 다시 선택해도
- *  변경으로 감지되도록 선택 뒤에 값을 비웁니다. */
+ *  변경으로 감지되도록 선택 뒤에 값을 초기화합니다. */
 export function FilePicker({ onFiles, ...rest }: {
   onFiles: (files: File[]) => void;
 } & Omit<ComponentProps<"input">, "type" | "onChange" | "hidden">) {
@@ -201,7 +201,7 @@ export function Why({ text, id }: { text: string; id?: string }) {
   return <p className="why" id={id} role="alert">{text}</p>;
 }
 
-/** 목록이 비었거나 불러오는 중·실패일 때 그 자리에 표시하는 문구입니다. state 가 있으면 stateText 가 문구를 정합니다. */
+/** 목록이 비었거나 불러오는 중·실패일 때 그 자리에 표시하는 문구입니다. state 가 있으면 stateText 가 문구를 결정합니다. */
 export function Empty({ state, text, as: Tag = "p" }: { state?: LoadState; text: string; as?: "p" | "li" | "div" }) {
   // 실패는 alert, 불러오는 중은 status 로 스크린 리더에 전달합니다. 비어 있음은 일반 문구입니다.
   const role = state?.kind === "failed" ? "alert" : state?.kind === "loading" ? "status" : undefined;

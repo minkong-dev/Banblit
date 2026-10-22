@@ -26,7 +26,7 @@ export function Board() {
   return (
     <>
       {state.kind !== "ready" || boards.length === 0 ? (
-        <div className="main"><Empty as="div" state={state} text="소속된 팀이 없어요" /></div>
+        <div className="main"><Empty as="div" state={state} text="소속된 팀이 존재하지 않아요" /></div>
       ) : (
         <>
           {boards.length > 1 ? (
@@ -37,7 +37,7 @@ export function Board() {
               onSelect={(key) => void navigate(`/board/${key}`)}
             />
           ) : null}
-          {/* key 는 팀을 바꿀 때 쪽 번호와 초점 상태를 새로 시작합니다. */}
+          {/* key 는 팀을 변경할 때 page 번호와 포커스 상태를 초기화합니다. */}
           <TeamBoard key={current.id} teamId={current.id} teamName={current.name} member={current.member} meId={me?.id ?? null} canModerate={can(me, "board_moderate")} />
         </>
       )}
@@ -59,7 +59,7 @@ function TeamBoard({ teamId, teamName, member, meId, canModerate }: { teamId: nu
             listPath={listPath}
             newPath={`/board/${teamId}/new`}
             canWrite={member}
-            emptyText="아직 등록된 글이 없어요"
+            emptyText="아직 등록된 글이 존재하지 않아요"
             onOpen={focus.open}
             buttonRef={focus.register}
           />

@@ -7,7 +7,6 @@ import { SESSION_REJECTED_CODE } from "./contract";
 export const REQUEST_TIMEOUT_MS = 8000;
 
 // 서버 주소 앞에 붙이는 접두사입니다. 화면 주소와 서버 주소가 같은 이름으로 겹치는 것을 막습니다.
-// 예: /teams만으로는 팀 찾기 화면인지 팀 목록 endpoint(API의 요청 주소 단위)인지 구분할 수 없습니다.
 // 접두사를 붙이는 곳과 제거하는 곳은 각각 하나입니다(개발은 vite.config.ts, 배포는 frontend/nginx.conf.template).
 const API_PREFIX = "/api";
 

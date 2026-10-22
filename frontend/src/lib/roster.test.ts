@@ -48,12 +48,12 @@ describe("seatsOf", () => {
 describe("teamNameMessage", () => {
   it("이미 있는 이름은 받지 않는다", () => {
     expect(teamNameMessage("청산", ["청산", "곰팡이"]))
-      .toBe("같은 이름의 팀이 이미 있습니다.");
+      .toBe("같은 이름의 팀이 이미 존재해요.");
   });
 
   it("앞뒤 공백만 다른 것도 같은 이름으로 본다", () => {
     expect(teamNameMessage("  청산 ", ["청산"]))
-      .toBe("같은 이름의 팀이 이미 있습니다.");
+      .toBe("같은 이름의 팀이 이미 존재해요.");
   });
 
   it("겹치지 않으면 통과한다", () => {
@@ -61,7 +61,7 @@ describe("teamNameMessage", () => {
   });
 
   it("비어 있으면 채워 달라고 한다", () => {
-    expect(teamNameMessage("   ", [])).toBe("팀 이름을 입력해 주세요.");
+    expect(teamNameMessage("   ", [])).toBe("팀 이름을 입력해주세요.");
   });
 });
 
@@ -199,7 +199,7 @@ describe("cohortLabel", () => {
 
 describe("noMembersMessage", () => {
   it("빈 검색어에는 검색 실패가 아니라 고를 사람이 없다고 알린다", () => {
-    expect(noMembersMessage("")).toBe("고를 수 있는 멤버가 없어요.");
+    expect(noMembersMessage("")).toBe("선택할 수 있는 멤버가 존재하지 않아요.");
   });
 
   it("검색어가 있으면 검색 결과가 없다고 알린다", () => {

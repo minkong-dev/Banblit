@@ -19,9 +19,9 @@ import { dayKey, dayWithWeekday } from "../lib/calendar";
 import { dayTimeRangeLabel, timeRangeLabel, upcomingBookings } from "../lib/slots";
 import type { Booking } from "../lib/slots";
 
-// ponytail: 현재 기준 지정한 일수 범위 내의 예약만 표시합니다. 예약 목록 endpoint(API의 요청 주소 단위)가 합주실·날짜 범위 조건으로만 받으므로,
+// ponytail: 현재 기준 지정한 일수 범위 내의 예약만 표시합니다. 예약 목록 endpoint(API 의 요청 주소 단위)가 합주실, 날짜 범위 조건으로만 받으므로,
 // 합주실마다 요청을 하나씩 동시에 보냅니다(loadReservationRows). 합주실 수가 증가하여 성능 저하가 발생하거나 더 먼 범위의
-// 예약을 관리해야 하면 전체 목록 조회 endpoint를 새로 만듭니다. 그때까지는 현재 방식으로 충분합니다.
+// 예약을 관리해야 하면 전체 목록 조회 endpoint 를 새로 만듭니다. 그때까지는 현재 방식으로 충분합니다.
 const WINDOW_DAYS = 90;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -46,7 +46,7 @@ export function ReservationCards() {
   const from = dayKey(new Date(openedAt));
   const to = dayKey(new Date(openedAt + WINDOW_DAYS * DAY_MS));
 
-  // queryKey 앞머리가 달력(Scheduler)과 같은 "reservations"이므로, 어느 쪽에서 취소하든 둘 다 데이터를 refetch합니다.
+  // queryKey 앞머리가 달력(Scheduler)과 같은 "reservations"이므로, 어느 쪽에서 취소하든 둘 다 데이터를 refetch 합니다.
   const list = useQuery({
     queryKey: [...RESERVATIONS_KEY, "upcoming", roomIds, from, to],
     queryFn: () => loadReservationRows(roomIds, from, to),
@@ -77,7 +77,7 @@ export function ReservationCards() {
 
   return (
     <Card>
-      <SectionHead title="예약" desc={`${WINDOW_DAYS}일 내에 발생한 모든 예약을 불러왔어요.`} />
+      <SectionHead title="예약" desc={`이후 ${WINDOW_DAYS}일간의 모든 예약 건을 불러왔어요.`} />
 
       <div className="roster">
         {rooms.isError ? <Empty text={reason(rooms.error)} /> : null}
@@ -123,7 +123,7 @@ export function ReservationCards() {
           </tbody>
         </table>
         {rooms.data !== undefined && (state.kind === "loading" || (state.kind === "ready" && bookings.length === 0)) ? (
-          <Empty state={state} text="현재 예약이 없어요" />
+          <Empty state={state} text="현재 예약이 존재하지 않아요" />
         ) : null}
       </div>
 

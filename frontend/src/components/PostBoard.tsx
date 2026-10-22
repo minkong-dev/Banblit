@@ -1,5 +1,5 @@
-// 게시판 부품입니다. 글 목록 패널과 글 상세를 공지사항(routes/Notices)과 팀 게시판(routes/Board)이 함께 씁니다. 둘 중 무엇을 그릴지는 routes 가 정합니다.
-// 작성 form 은 자기 주소를 가진 화면(routes/PostWrite)이 맡고, 첨부·댓글·조치 부품은 Post*.tsx 가 각각 담당합니다.
+// 게시판 부품입니다. 글 목록 패널과 글 상세를 공지사항(routes/Notices)과 팀 게시판(routes/Board)이 함께 씁니다. 둘 중 무엇을 표시할지는 routes 가 결정합니다.
+// 작성 form 은 자기 주소를 가진 화면(routes/PostWrite)이 맡고, 첨부, 댓글, 조치 부품은 Post*.tsx 가 각각 담당합니다.
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -137,7 +137,7 @@ export function PostDetail(props: {
 }
 
 /** 게시판 화면의 열린 글과 초점 되돌리기입니다. 열린 글은 주소의 :postId 가 정합니다(/notices/:postId, /board/:teamId/:postId).
- *  글을 열면 기록을 쌓고 닫으면 바꿔 끼웁니다(replace). 닫은 뒤 뒤로 가기가 닫은 글을 다시 열지 않습니다.
+ *  글을 열면 기록을 추가하고 닫으면 replace 로 대체합니다. 닫은 뒤 뒤로 가기가 닫은 글을 다시 열지 않습니다.
  *  backToList 는 목록을 다시 조회하고 그 글의 목록 버튼으로 초점을 되돌립니다. 댓글 수가 바뀌었을 수 있기 때문입니다. */
 export function usePostBoard(basePath: string, listPath: string) {
   const navigate = useNavigate();

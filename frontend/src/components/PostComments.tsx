@@ -29,7 +29,7 @@ export function CommentForm(props: { postId: number; authorId: number | null }) 
       setBody("");
       setTouched(false);
       void client.invalidateQueries({ queryKey: postKey(postId) });
-      say("댓글을 올렸습니다.");
+      say("댓글을 올렸어요.");
     },
   });
 
@@ -68,7 +68,7 @@ export function CommentForm(props: { postId: number; authorId: number | null }) 
 }
 
 /** 댓글 하나를 렌더합니다. 수정 권한이 있으면 수정 버튼이, 삭제 권한이 있으면 삭제 버튼이
- *  오른쪽 끝에 표시됩니다(`lib/pipeline` 의 `boardActions` 참조). */
+ *  오른쪽 끝에 표시됩니다(`lib/boards` 의 `boardActions` 참조). */
 export function CommentRow(props: {
   comment: PostComment;
   canEdit: boolean;

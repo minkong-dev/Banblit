@@ -71,7 +71,7 @@ test("본문의 PDF 뷰어는 창 크기가 달라도 A4 비율을 유지한다"
   await page.goto("/notices");
   await page.getByRole("link", { name: "글쓰기" }).click();
   // 임시 저장본이 만들어져야 파일 넣기가 활성화됩니다. 그 전에 넣으면 무시됩니다.
-  const picker = page.locator(".rttools .rtpick[aria-label='그림 넣기'] + input");
+  const picker = page.locator(".rttools .rtpick[aria-label='그림 삽입'] + input");
   await expect(picker).toBeEnabled();
   await picker.setInputFiles({
     name: "악보.pdf",
@@ -106,7 +106,7 @@ test("본문에 그림을 넣으면 미리보기로 보인다", async ({ page })
   // 도구 막대의 그림 버튼은 떨구기·붙여넣기와 같은 경로입니다(components/RichText.tsx 의 attach).
   // 곁의 클립 버튼은 본문에 넣지 않고 첨부로만 올리므로 구분해서 지정합니다.
   // 1x1 png 한 장을 올려, 본문에 <img> 가 들어가고 그 주소가 첨부 주소인지 확인합니다.
-  await page.locator(".rttools .rtpick[aria-label='그림 넣기'] + input").setInputFiles({
+  await page.locator(".rttools .rtpick[aria-label='그림 삽입'] + input").setInputFiles({
     name: "점.png",
     mimeType: "image/png",
     buffer: Buffer.from(
@@ -141,7 +141,7 @@ test("공지 상세를 닫으면 초점이 그 글의 목록 버튼으로 돌아
 
 // 파일은 글에 붙어 올라가므로 초안이 만들어지기 전에는 파일 넣기 버튼이 비활성입니다.
 // 초안 요청을 붙잡아 두고 확인한 뒤 풀어 주면, 그때 버튼이 활성화되어야 합니다. 그 사이에 쓴 본문은 남아 있어야 합니다.
-test("초안이 만들어지기 전에는 그림 넣기와 파일 첨부가 비활성이고, 그 사이에 쓴 본문은 남는다", async ({ page }) => {
+test("초안이 만들어지기 전에는 그림 삽입과 파일 첨부가 비활성이고, 그 사이에 쓴 본문은 남는다", async ({ page }) => {
   let release: () => void = () => {};
   const held = new Promise<void>((resolve) => { release = resolve; });
   await page.route("**/api/notices/drafts", async (route) => {
@@ -150,7 +150,7 @@ test("초안이 만들어지기 전에는 그림 넣기와 파일 첨부가 비�
   });
   await page.goto("/notices/new");
 
-  const media = page.getByRole("button", { name: "그림 넣기" });
+  const media = page.getByRole("button", { name: "그림 삽입" });
   const file = page.getByRole("button", { name: "파일 첨부" });
   await expect(media).toBeDisabled();
   await expect(file).toBeDisabled();

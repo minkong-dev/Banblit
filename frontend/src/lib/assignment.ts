@@ -31,7 +31,7 @@ export function sessionsOfRows(rows: readonly ScheduleRow[]): Session[] {
   );
 }
 
-/** 합주 목록이 걸친 날짜 전부입니다. 첫 합주와 마지막 합주 사이에 합주가 없는 날짜도 들어갑니다 —
+/** 첫 합주 날짜부터 마지막 합주 날짜까지의 모든 일정입니다. 그 사이에 합주가 없는 날짜도 포함합니다.
  *  달력이 그 칸도 그려야 합니다. 합주가 없을 경우 빈 목록을 반환합니다.
  *  sort 는 원본 배열을 수정하므로 map 으로 만든 사본을 정렬합니다. */
 export function dayRangeOf(sessions: readonly Session[]): string[] {
@@ -61,7 +61,7 @@ export function hoursOf(sessions: Session[]): number {
 /** 결과 설명의 문단 1개입니다. lines 는 1줄씩, groups 는 팀 이름과 그 팀의 줄 목록, tail 은 목록 뒤 문장입니다. */
 export type ReportParagraph = { title: string; lines: string[]; groups: { team: string; lines: string[] }[]; tail: string | null };
 
-/** 1.5 → "1.5", 3 → "3". 서버의 시간 값은 소수 1자리까지입니다. */
+/** 1.5 는 "1.5", 3 은 "3" 으로 표기합니다. 서버의 시간 값은 소수 1자리까지입니다. */
 function hoursText(hours: number): string {
   return String(Math.round(hours * 10) / 10);
 }

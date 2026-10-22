@@ -25,7 +25,7 @@ describe("emailMessage", () => {
   });
 
   it("비었으면 넣어 달라고 한다", () => {
-    expect(emailMessage("")).toBe("이메일을 입력해 주세요.");
+    expect(emailMessage("")).toBe("이메일을 입력해주세요.");
   });
 
   it.each(["name", "name@", "@example.com", "name@example", "na me@example.com"])(
@@ -40,7 +40,7 @@ describe("영문·숫자·기호 밖의 글자", () => {
   it.each(["한글@example.com", "name@한글.com", "ａ@example.com"])(
     "이메일에서 거절한다 — %s",
     (bad) => {
-      expect(emailMessage(bad)).toBe("이메일은 영문, 숫자, 기호만 사용할 수 있습니다.");
+      expect(emailMessage(bad)).toBe("이메일은 영문, 숫자, 기호만 사용할 수 있어요.");
     },
   );
 
@@ -48,10 +48,10 @@ describe("영문·숫자·기호 밖의 글자", () => {
     "새 비밀번호에서 거절한다 — %s",
     (bad) => {
       expect(signupPasswordMessage(bad)).toBe(
-        "비밀번호는 영문, 숫자, 기호만 사용할 수 있습니다.",
+        "비밀번호는 영문, 숫자, 기호만 사용할 수 있어요.",
       );
       expect(strongPasswordMessage(bad)).toBe(
-        "비밀번호는 영문, 숫자, 기호만 사용할 수 있습니다.",
+        "비밀번호는 영문, 숫자, 기호만 사용할 수 있어요.",
       );
     },
   );
@@ -63,7 +63,7 @@ describe("passwordMessage", () => {
   });
 
   it("비었으면 넣어 달라고 한다", () => {
-    expect(passwordMessage("")).toBe("비밀번호를 입력해 주세요.");
+    expect(passwordMessage("")).toBe("비밀번호를 입력해주세요.");
   });
 
   it("여덟 자보다 짧으면 막는다", () => {
@@ -77,12 +77,12 @@ describe("signupPasswordMessage — 가입도 재설정과 같은 규칙을 쓴�
   });
 
   it.each([
-    ["", "비밀번호를 입력해 주세요."],
+    ["", "비밀번호를 입력해주세요."],
     ["Ab1!", "8자에서 20자 사이로 입력해주세요."],
-    ["ABCDEF1!", "소문자를 하나 이상 넣어주세요."],
-    ["abcdef1!", "대문자를 하나 이상 넣어주세요."],
-    ["Abcdefg!", "숫자를 하나 이상 넣어주세요."],
-    ["Abcdefg1", "특수기호를 하나 이상 넣어주세요."],
+    ["ABCDEF1!", "소문자를 하나 이상 포함해주세요."],
+    ["abcdef1!", "대문자를 하나 이상 포함해주세요."],
+    ["Abcdefg!", "숫자를 하나 이상 포함해주세요."],
+    ["Abcdefg1", "특수기호를 하나 이상 포함해주세요."],
   ])("%s 는 막는다", (given, expected) => {
     expect(signupPasswordMessage(given)).toBe(expected);
   });
@@ -97,10 +97,10 @@ describe("strongPasswordMessage — 재설정", () => {
     ["", "새 비밀번호를 입력해주세요."],
     ["Ab1!", "8자에서 20자 사이로 입력해주세요."],
     ["Abcdefghij1!Abcdefghij", "8자에서 20자 사이로 입력해주세요."],
-    ["ABCDEF1!", "소문자를 하나 이상 넣어주세요."],
-    ["abcdef1!", "대문자를 하나 이상 넣어주세요."],
-    ["Abcdefg!", "숫자를 하나 이상 넣어주세요."],
-    ["Abcdefg1", "특수기호를 하나 이상 넣어주세요."],
+    ["ABCDEF1!", "소문자를 하나 이상 포함해주세요."],
+    ["abcdef1!", "대문자를 하나 이상 포함해주세요."],
+    ["Abcdefg!", "숫자를 하나 이상 포함해주세요."],
+    ["Abcdefg1", "특수기호를 하나 이상 포함해주세요."],
   ])("%s 는 막는다", (given, expected) => {
     expect(strongPasswordMessage(given)).toBe(expected);
   });
@@ -116,7 +116,7 @@ describe("loginIdMessage", () => {
   });
 
   it("비었으면 넣어 달라고 한다", () => {
-    expect(loginIdMessage("  ")).toBe("아이디를 입력해 주세요.");
+    expect(loginIdMessage("  ")).toBe("아이디를 입력해주세요.");
   });
 
   it.each(["seoyeon!", "seoyeon 1", "seo_yeon"])("글자 종류가 틀리면 막는다 — %s", (bad) => {
@@ -134,7 +134,7 @@ describe("studentNoMessage", () => {
   });
 
   it("비었으면 넣어 달라고 한다", () => {
-    expect(studentNoMessage("  ")).toBe("학번을 입력해 주세요.");
+    expect(studentNoMessage("  ")).toBe("학번을 입력해주세요.");
   });
 
   it.each(["2026001", "202600011", "2026000a", "2026-0001"])(
@@ -201,7 +201,7 @@ describe("departmentMessage", () => {
   });
 
   it("비었으면 넣어 달라고 한다", () => {
-    expect(departmentMessage("  ")).toBe("학과를 입력해 주세요.");
+    expect(departmentMessage("  ")).toBe("학과를 입력해주세요.");
   });
 });
 
@@ -215,7 +215,7 @@ describe("personNameMessage", () => {
   });
 });
 
-describe("permissionSetProblem — 권한 집합을 저장할 수 없는 사유", () => {
+describe("permissionSetProblem — 권한 세트을 저장할 수 없는 사유", () => {
   const taken = ["운영자", "예약 담당"];
 
   it("이름과 설명이 모두 있고 겹치지 않으면 빈 문자열을 반환한다", () => {
@@ -225,7 +225,7 @@ describe("permissionSetProblem — 권한 집합을 저장할 수 없는 사유"
   it("이름이 비었으면 이름 사유를 먼저 반환한다", () => {
     // 설명도 비어 있지만 이름 사유가 먼저 나옵니다. 입력 순서와 같아야 사용자가 위에서부터 채웁니다.
     expect(permissionSetProblem({ name: "  ", description: "" }, taken))
-      .toBe("권한 이름을 입력해 주세요.");
+      .toBe("권한 세트 이름을 입력해주세요.");
   });
 
   it("이미 있는 이름이면 중복 사유를 반환한다", () => {

@@ -136,13 +136,9 @@ export function daysBetween(from: string, to: string): number {
   return datesBetween(from, to).length;
 }
 
-// 스케줄러 화면이 사용하는 계산입니다. 합주실과 기간 사이에 순서 의존이 없어 그대로 export 합니다.
-// roomBounds()는 달력의 여닫는 시각을, focusedRanges()는 자동 배정 띠의 날짜 범위 전부를 반환합니다.
 
 type PostForm = { title: string; body: string };
 
-// 팀별 합주 시간대 검증입니다. 순서 의존이 없어 그대로 export 합니다.
-// 배정 규칙(팀당 목표 시간, 불참 허용 인원) 검증입니다. 순서 의존이 없어 그대로 export 합니다.
 
 export function checkPost(form: PostForm): string {
   // 제목을 먼저 검증합니다. 오류 메시지를 한 번에 하나만 표시하므로 먼저 수정할 것을 앞에 둡니다.
@@ -164,9 +160,7 @@ export function checkAttachments(files: { name: string; size: number }[]): strin
   return "";
 }
 
-// 팀·포지션에 대해 화면이 하는 계산입니다. 순서 의존이 없어 그대로 export 합니다.
 
-// 게시판·공지 화면이 사용하는 계산입니다. fileSizeLabel 은 순서 의존이 없어 그대로 export 합니다.
 
 
 /** 기간 하나의 확정 시간표입니다. 달력 화면(routes/Scheduler)과 배정 결과 화면(routes/Assignment)이 같은
@@ -217,7 +211,6 @@ export async function loadAllUnavailable(): Promise<MemberUnavailable[]> {
   return body.times;
 }
 
-/** 반복 주기입니다. "none"이면 해당 날 한 번뿐입니다. */
 /** 불가능 일정의 반복 설정입니다. weekdays 가 0 이면 반복하지 않고, 127 이면 매일입니다.
  *  끝나는 조건은 count(횟수)나 until(종료일) 중 하나이고, 둘 다 값을 주면 서버가 422 로 거절합니다. */
 export type Repeat = { weekdays: number; count: number | null; until: string | null };
@@ -314,13 +307,13 @@ type ReservationForm = {
   ends_at: string;
 };
 
-/** 예약 한 건을 취소합니다. 서버가 구간 한 행으로 들고 있어 요청도 한 번입니다. */
-/** 내가 잡은 예약 중 아직 끝나지 않은 것 전부입니다. 모든 합주실에 걸칩니다. */
+/** 만료되지 않은 나의 모든 예약을 표시합니다. 모든 합주실의 예약을 포함합니다. */
 export async function loadMyBookings(): Promise<Reservation[]> {
   const body = await getJSON<{ reservations: Reservation[] }>("/reservations/mine");
   return body.reservations;
 }
 
+/** 예약 한 건을 취소합니다. 서버가 구간 한 행으로 들고 있어 요청도 한 번입니다. */
 export async function cancelBooking(reservationId: number): Promise<void> {
   await getJSON(`/reservations/${reservationId}`, { method: "DELETE" });
 }
@@ -395,7 +388,7 @@ type SignUpForm = {
   cohort: number;
   /** 관리자코드입니다. 환경변수의 코드와 같으면 권한 항목을 모두 받습니다.
    *  입력하지 않았거나 다르면 권한 0개로 가입하고 이미 권한을 가진 사람에게서 부여받습니다.
-   *  서버 쪽은 backend/src/backend/services/auth_service.py 의 ADMIN_CODE_VARIABLE 에 작성되어 있는 내용을 기준으로 합니다. */
+   *  서버 쪽은 backend/src/backend/services/auth/auth_service.py 의 ADMIN_CODE_VARIABLE 에 작성되어 있는 내용을 기준으로 합니다. */
   admin_code?: string;
 };
 
@@ -453,7 +446,6 @@ export async function fetchMe(): Promise<Me> {
   return getJSON<Me>("/me");
 }
 
-// isSignedIn 은 api.ts 에 있습니다. 401 처리가 같은 cookie 를 읽기 때문입니다. 화면은 이 파일에서 가져갑니다.
 
 export async function logOut(): Promise<void> {
   // 서버가 session 을 무효로 설정하고 cookie 2개를 삭제합니다.
@@ -479,7 +471,6 @@ export async function markNotificationsRead(): Promise<void> {
   await getJSON("/notifications/read", { method: "POST" });
 }
 
-// 알림 문구 생성과 읽지 않은 개수 계산 사이에 순서 의존이 없어 그대로 export 합니다.
 
 // ===== 게시판 =====
 
@@ -583,7 +574,7 @@ export async function publishWithAttachments(
 export function repeatConflict(value: Repeat): string {
   if (value.weekdays === 0) return "";
   if (value.count !== null && value.until !== null) {
-    return "반복 횟수와 반복 종료일은 동시에 설정할 수 없어요. 하나를 비워주세요.";
+    return "반복 횟수와 반복 종료일은 동시에 설정할 수 없어요. 둘 중 하나만 입력해주세요.";
   }
   return "";
 }

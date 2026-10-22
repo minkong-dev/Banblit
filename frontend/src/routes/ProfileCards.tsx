@@ -1,10 +1,9 @@
 // 프로필 화면(/profile)의 카드입니다. 로그인한 모든 사람이 자기 계정을 여기에서 수정합니다.
 //
-// 평소에는 값만 표시합니다. 오른쪽 위 편집을 누르면 입력칸이 열리고, 저장 한 번으로 이름·기수·비밀번호를
+// 평소에는 값만 표시합니다. 오른쪽 위 편집을 누르면 입력칸이 열리고, 저장 한 번으로 이름, 기수, 비밀번호를
 // 전부 기록합니다(사용자 결정 2026-09-28). 프로필 사진은 편집 상태와 관계없이 바로 변경합니다.
 //
-// 이메일·학과는 표시만 합니다. 이메일은 새 주소가 본인의 주소인지 검증하는 절차가 미구현이고,
-// 학과는 가입자를 구분하는 값(이름·학과·학번·기수)이라 서버에 수정 기능이 없습니다.
+// 이메일, 학과는 표시만 합니다.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -55,7 +54,7 @@ function useAvatarChange(): { upload: (file: File) => void; reset: () => void; b
   return { upload: upload.mutate, reset: reset.mutate, busy: upload.isPending || reset.isPending };
 }
 
-/** 큰 원형 사진과 그 위의 "프로필 사진 변경" 버튼입니다. 버튼을 누르면 말풍선 메뉴 2개를 표시합니다.
+/** 큰 원형 사진과 그 위의 "프로필 사진 변경" 버튼입니다. 버튼을 누르면 popover 메뉴 2개를 표시합니다.
  *  업로드는 숨긴 파일 입력칸을 대신 누르고, 기본 이미지 적용은 올린 사진을 삭제해 이름 앞 두 글자로 되돌립니다. */
 function PhotoEdit({ me }: { me: Account }) {
   const pick = useRef<HTMLInputElement>(null);
@@ -75,8 +74,8 @@ function PhotoEdit({ me }: { me: Account }) {
         className="change"
         aria-controls={PHOTO_MENU_ID}
         aria-expanded={open}
-        // 요청 중에는 disabled 가 아니라 aria-disabled 로 막습니다. 메뉴를 닫으면 초점이 이 버튼으로 돌아오는데,
-        // 초점을 가진 버튼이 disabled 가 되면 WebKit(Safari)은 초점을 body 로 옮깁니다.
+        // 요청 중에는 disabled 가 아니라 aria-disabled 로 막습니다. 메뉴를 닫으면 포커스가 이 버튼으로 돌아오는데,
+        // 포커스를 가진 버튼이 disabled 가 되면 WebKit(Safari)은 포커스를 body 로 이동합니다.
         // preventDefault 가 popoverTarget 의 기본 동작(메뉴 열기)을 막습니다.
         aria-disabled={busy}
         onClick={(event) => { if (busy) event.preventDefault(); }}
@@ -91,11 +90,8 @@ function PhotoEdit({ me }: { me: Account }) {
         className="pop"
         onOpenChange={(next) => {
           setOpen(next);
-          // 팝업이 닫히면 초점을 여는 버튼으로 되돌립니다. popover 는 이 동작을 대신해주지 않습니다.
-          // 되돌리지 않으면 초점이 사라진 메뉴와 함께 문서 맨 앞으로 갑니다.
-          // 메뉴 안의 버튼을 눌러 닫을 때는 그 버튼이 이미 초점을 갖고 있어, 브라우저가 popover 를
-          // 숨기며 처리하는 초점 정리가 이 함수보다 나중에 실행되면 여기서 옮긴 초점을 덮어씁니다.
-          // requestAnimationFrame 으로 한 프레임 미뤄 브라우저의 정리가 끝난 뒤에 옮깁니다.
+          // popover 가 닫히면 다음 frame 에 포커스를 trigger 버튼으로 이동합니다.
+          // 브라우저가 popover 를 숨기며 실행하는 포커스 정리보다 나중에 실행해야 이동한 포커스가 덮어쓰이지 않습니다.
           if (!next) requestAnimationFrame(() => trigger.current?.focus());
         }}
       >

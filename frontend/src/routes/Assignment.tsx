@@ -20,10 +20,10 @@ import type { AssignOut, ScheduleRow } from "../lib/contract";
 const NO_ROWS: ScheduleRow[] = [];
 
 /** 선택된 집중 합주기간의 번호입니다. 없을 경우 error 를 발생시킵니다.
- *  조회·재계산·확정·되돌리기·스케줄링 기록 조회가 모두 기간 번호를 요구하고, enabled 조건으로 막아도
- *  queryFn·mutationFn 의 타입에서는 null 이 남습니다. 문구를 한 곳에 두어 다섯 곳이 같게 합니다. */
+ *  조회, 재계산, 확정, 되돌리기, 스케줄링 기록 조회가 모두 기간 번호를 요구하고, enabled 조건으로 막아도
+ *  queryFn, mutationFn 의 타입에서는 null 이 남습니다. 문구를 한 곳에 두어 다섯 곳이 같게 합니다. */
 function requirePeriod(periodId: number | null): number {
-  if (periodId === null) throw new Error("선택할 집중 합주기간이 없어요");
+  if (periodId === null) throw new Error("선택한 집중 합주기간이 존재하지 않아요");
   return periodId;
 }
 
@@ -41,7 +41,7 @@ function useShownSchedule(activePeriodId: number | null, roundAt: string | null)
   const round = useQuery({
     queryKey: recordRoundKey(activePeriodId, roundAt),
     queryFn: () => {
-      if (activePeriodId === null || roundAt === null) throw new Error("선택할 스케줄링 기록이 없어요");
+      if (activePeriodId === null || roundAt === null) throw new Error("선택한 스케줄링 기록이 존재하지 않아요");
       return loadRecordRound(activePeriodId, roundAt);
     },
     enabled: activePeriodId !== null && roundAt !== null,
@@ -60,8 +60,6 @@ function useShownSchedule(activePeriodId: number | null, roundAt: string | null)
  *  연산하면 기록이 추가되고, 적용하면 현재 배정안이 바뀌기 때문입니다. */
 function useRunAndApply(activePeriodId: number | null, roundAt: string | null, canConfirm: boolean, setView: (next: View) => void) {
   const queryClient = useQueryClient();
-  // 현재 배정안과 스케줄링 기록 목록을 다시 받아 화면과 서버를 맞춥니다. 연산하면 기록이 추가되고,
-  // 적용하면 현재 배정안이 바뀌므로 둘 다 다시 받습니다.
   // SCHEDULE_KEY 로 무효화해야 캘린더 화면(routes/Scheduler.tsx)의
   // [...SCHEDULE_KEY, periodIds] 캐시도 함께 무효화됩니다. activePeriodId 로만 무효화하면
   // key 모양이 달라 캘린더 화면에 이전 배정이 그대로 남습니다.
@@ -73,7 +71,7 @@ function useRunAndApply(activePeriodId: number | null, roundAt: string | null, c
   };
 
   const recompute = useMutation({
-    // 서버는 접수만 하고 곧바로 답합니다. 끝날 때까지 polling(주기적으로 같은 요청을 다시 보내 변경을 확인하는 방식)하는 것은 runAssignment입니다.
+    // 서버는 접수만 하고 곧바로 답합니다. 끝날 때까지 polling(주기적으로 같은 요청을 다시 보내 변경을 확인하는 방식)하는 것은 runAssignment 입니다.
     mutationFn: (body: AssignBody) => runAssignment<AssignOut>(requirePeriod(activePeriodId), body),
     onSuccess: async (result) => {
       await refreshSchedule();
@@ -89,7 +87,7 @@ function useRunAndApply(activePeriodId: number | null, roundAt: string | null, c
   // 표시 중인 스케줄링 기록을 현재 배정안으로 적용합니다. 기록은 목록에 남습니다.
   const confirm = useMutation({
     mutationFn: () => {
-      if (roundAt === null) throw new Error("선택할 스케줄링 기록이 없어요");
+      if (roundAt === null) throw new Error("선택한 스케줄링 기록이 존재하지 않아요");
       return applyRecord(requirePeriod(activePeriodId), roundAt);
     },
     onSuccess: async () => {
@@ -97,8 +95,8 @@ function useRunAndApply(activePeriodId: number | null, roundAt: string | null, c
       setView(NOW);
       say("선택한 배정안을 적용했어요");
     },
-    // 서버가 거절한 사유를 그대로 표시합니다. 다른 기간과 합주실·시각이 겹쳐 적용할 수 없는 경우가 있습니다.
-    onError: (error) => say(reason(error, "해당 배정안을 적용하는데 실패했어요")),
+    // 서버가 거절한 사유를 그대로 표시합니다. 다른 기간과 합주실, 시각이 겹쳐 적용할 수 없는 경우가 있습니다.
+    onError: (error) => say(reason(error, "해당 배정안을 적용하지 못했어요")),
   });
   return { recompute, confirm };
 }

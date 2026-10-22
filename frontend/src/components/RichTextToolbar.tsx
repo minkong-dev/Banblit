@@ -80,7 +80,7 @@ export function RichTextToolbar({ editor, used, disabled, postId, onLink }: {
   // 파일은 글(postId)에 붙어 올라갑니다. 임시 저장본이 만들어지기 전에는 파일 넣기 버튼 2개를 비활성화합니다.
   const noPost = disabled || postId === null;
   // 비활성 사유는 마우스를 올리면 표시합니다. 편집기 전체가 비활성이면 사유를 붙이지 않습니다.
-  const noPostWhy = !disabled && postId === null ? "글을 준비하는 중이에요. 잠시 후 파일을 넣을 수 있어요." : undefined;
+  const noPostWhy = !disabled && postId === null ? "글을 준비하는 중이에요. 잠시 후 파일을 첨부할 수 있어요." : undefined;
   return (
     <div className="rttools">
       <Tool editor={editor} label="실행취소" on={() => editor.chain().focus().undo().run()}><UndoIcon /></Tool>
@@ -171,7 +171,7 @@ export function RichTextToolbar({ editor, used, disabled, postId, onLink }: {
       <Tool editor={editor} label="번호 매기기" active={editor.isActive("orderedList")}
         on={() => editor.chain().focus().toggleOrderedList().run()}><NumberListIcon /></Tool>
       {/* 3행 3열로 넣고 첫 줄을 제목 행으로 둡니다. 행·열 추가는 표 안에서 마우스로 합니다. */}
-      <Tool editor={editor} label="표 넣기"
+      <Tool editor={editor} label="표 삽입"
         on={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
         <TableIcon />
       </Tool>
@@ -181,7 +181,7 @@ export function RichTextToolbar({ editor, used, disabled, postId, onLink }: {
         <LinkIcon />
       </Tool>
       {/* 그림·소리·PDF 는 본문에 들어갑니다. drop 하거나 붙여넣어도 같습니다. */}
-      <IconButton label="그림 넣기" className="rtpick" icon={<ImageIcon />} disabled={noPost} title={noPostWhy}
+      <IconButton label="그림 삽입" className="rtpick" icon={<ImageIcon />} disabled={noPost} title={noPostWhy}
         onClick={() => mediaPick.current?.click()} />
       <FilePicker ref={mediaPick} multiple accept={ACCEPTED_MIME.join(",")} disabled={noPost}
         onFiles={(picked) => void attach(editor, picked, null, postId)} />
@@ -250,7 +250,7 @@ export function LinkDialog({ nowText, nowUrl, onClose, onSave }: {
   return (
     <Modal
       title="링크"
-      hint="주소를 입력하지 않고 저장하면 링크를 해제합니다."
+      hint="주소를 입력하지 않고 저장하면 링크를 해제해요."
       onClose={onClose}
       foot={(
         <FormFoot

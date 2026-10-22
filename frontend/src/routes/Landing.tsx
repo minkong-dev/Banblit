@@ -12,7 +12,7 @@ const BOXES = [
   {
     rail: "Scheduler Engine",
     title: ["모두가 가능한 시간을", "찾아 헤매지 않도록"],
-    body: "집중 합주기간에는 팀마다 합주량이 고르게 돌아가도록 자리를 직접 배정해요. 모두가 가능한 시간부터, 합주실이 비어 있는 시간, 여러 팀에 소속된 한명이 끼치는 영향까지 한 번에 계산해요.",
+    body: "집중 합주기간에는 팀마다 합주량이 고르게 돌아가도록 자리를 직접 배정해요. 모두가 가능한 시간부터, 합주실이 비어 있는 시간, 여러 팀에 소속된 한 명이 끼치는 영향까지 한 번에 계산해요.",
     num: "0.6초",
     unit: "확정된 일정을 불러오는 시간",
   },
@@ -36,7 +36,7 @@ const STEPS = [
   {
     k: "STEP 1",
     title: "불가능한 시간을 추가해주세요",
-    body: "캘린더에서 날짜를 선택해 등록해주세요. 눈치보면서 말하는건 부담스러우니까요.",
+    body: "캘린더에서 날짜를 선택해 등록해주세요. 눈치 보면서 말하는 건 부담스러우니까요.",
   },
   {
     k: "STEP 2",
@@ -46,7 +46,7 @@ const STEPS = [
   {
     k: "STEP 3",
     title: "메인 캘린더를 확인해요",
-    body: "메인 캘린더에서 내 일정을 확인해주세요. 우리 팀 합주시간을 한 눈에 보고, 지각하지 말자구요.",
+    body: "메인 캘린더에서 내 일정을 확인해주세요. 우리 팀 합주시간을 한눈에 보고, 지각하지 말자구요.",
   },
 ];
 
@@ -75,7 +75,7 @@ function useRiseOnScroll(scope: RefObject<HTMLDivElement | null>): void {
   }, [scope]);
 }
 
-// 메뉴를 여는 버튼과 메뉴가 서로를 popoverTarget으로 가리킵니다. 이름을 표시하는 자리는 하나입니다.
+// 메뉴를 여는 버튼과 메뉴가 서로를 popoverTarget 으로 가리킵니다. 이름을 표시하는 자리는 하나입니다.
 const MENU_ID = "landingMenu";
 
 export function Landing() {
@@ -94,8 +94,8 @@ export function Landing() {
         <Link className="login" to="/login">LOGIN</Link>
       </header>
 
-      {/* popover는 여닫기·Escape·맨 앞에 띄우기를 브라우저가 맡습니다.
-          링크는 popoverTarget을 걸 수 없어서(버튼만 가능) 눌리면 여기서 닫습니다. */}
+      {/* popover 의 열기, 닫기, Escape 처리는 브라우저가 실행합니다.
+          a 요소에는 popoverTarget 을 지정할 수 없어 nav 의 onClick 에서 hidePopover 를 호출합니다. */}
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- 링크를 눌렀을 때 popover 를 닫습니다. 키보드는 Enter 가 click 이벤트로 변환되고 Escape 를 브라우저가 처리하므로 막히는 경로가 없습니다. */}
       <nav
         id={MENU_ID}
@@ -125,15 +125,14 @@ export function Landing() {
 
       <section className="sec" id="how">
         <div className="wrap stack">
-          {/* 세로 한 장에 정사각형 한 장을 걸쳐 둡니다. 배경으로만 넣은 장식이라 읽을
-              텍스트가 없습니다 — 화면을 읽어 주는 도구(스크린 리더)는 그냥 지나갑니다. */}
+          {/* 장식용 배경 요소입니다. 텍스트가 없어 스크린 리더가 읽지 않습니다. */}
           <div className="shots rise">
             <div className="shot back" />
             <div className="shot front" />
           </div>
           <div className="copy rise">
-            <p className="lead">불가능한 시간대만 입력하면,<br />알아서 업데이트 해주니까.</p>
-            <p className="lead">서로 눈치 볼 필요없이,<br />모든 일정을 하나로</p>
+            <p className="lead">불가능한 시간대만 입력하면,<br />알아서 업데이트해 주니까.</p>
+            <p className="lead">서로 눈치 볼 필요 없이,<br />모든 일정을 하나로</p>
           </div>
         </div>
       </section>

@@ -34,11 +34,7 @@ export const MAX_SESSION_MINUTES = 240;
 /** 합주 길이로 흔히 쓰는 값(분)입니다. 이 중 칸의 배수만 선택지가 됩니다. */
 const COMMON_SESSION_MINUTES = [30, 45, 60, 90, 120, 150, 180, 240];
 
-/** 합주 1회 길이로 고를 수 있는 값(분)을 오름차순으로 반환합니다.
- *
- *  칸의 배수만 남깁니다. 배수가 아니면 합주가 칸 중간에서 끝나 남은 반 칸을 아무도 쓸 수 없습니다.
- *  배수를 전부 나열하지 않는 이유는 5분 칸에서 48개가 되어 고르기 어려워지기 때문입니다.
- *  칸과 같은 길이는 언제나 포함합니다 — 30분만 연습하는 팀이 그 값을 씁니다. */
+/** 합주 1회 길이로 선택할 수 있는 값(분)을 오름차순으로 반환합니다. 칸의 배수만 남기고, 칸과 같은 길이는 언제나 포함합니다. */
 export function sessionMinuteChoices(slotMinutes: number): number[] {
   const fits = (minutes: number) =>
     minutes >= slotMinutes && minutes <= MAX_SESSION_MINUTES && minutes % slotMinutes === 0;
@@ -80,8 +76,8 @@ export function openHoursMessage(
   opens: string, closes: string, slotMinutes: number = DEFAULT_SLOT_MINUTES,
 ): string {
   // opens·closes를 받아, 격자에 맞지 않거나 순서가 뒤집혔으면 그 메시지를 반환합니다.
-  if (!opens) return "개방 시간을 입력해 주세요.";
-  if (!closes) return "마감 시각을 입력해 주세요.";
+  if (!opens) return "개방 시간을 입력해주세요.";
+  if (!closes) return "마감 시간을 입력해주세요.";
   return gridMessage(minutesOf(opens), minutesOf(closes), slotMinutes);
 }
 
@@ -100,7 +96,7 @@ function gridMessage(from: number | null, to: number | null, slotMinutes: number
 export type WindowPair = { starts_at: string; ends_at: string };
 
 /** 평일·주말 시간대를 검증합니다. 서버 쪽은 periods 의 CHECK(periods_practice_window_pairs·
- *  periods_practice_window_order)와 services/period_crud_service.py 에 작성되어 있는 내용을 기준으로 합니다.
+ *  periods_practice_window_order)와 services/period/period_crud_service.py 에 작성되어 있는 내용을 기준으로 합니다.
  *
  *  격자를 함께 보는 이유는, 시간대가 격자에서 벗어나면 배정 구간도 벗어나 서버가 칸을 만들지
  *  못하기 때문입니다. 저장은 되고 배정만 실패하면 원인을 찾기 어렵습니다. */
@@ -132,7 +128,7 @@ function windowPairMessage(pair: WindowPair, label: string, slotMinutes: number)
 const MAX_ABSENT_LIMIT = 32767;
 
 /** 배정 규칙을 검증합니다. 서버 쪽은 backend/src/backend/api/schemas.py 의 AssignRuleIn 에 작성되어 있는 내용을 기준으로 합니다.
- *  입력칸을 비우면 그 값이 NaN 입니다. */
+ *  입력칸이 비어 있으면 그 값이 NaN 입니다. */
 export function assignRuleMessage(rule: AssignRule): string {
   const { target_hours, max_absent, daily_max_hours, max_consecutive_hours } = rule;
   if (target_hours !== null && (!Number.isInteger(target_hours) || target_hours < 1)) {
@@ -164,7 +160,7 @@ export function dateRangeMessage(from: string, to: string): string {
 
 type Hours = { opens_at: string; closes_at: string };
 
-/** 전체 합주 설정을 검증합니다. 서버 쪽은 backend/src/backend/services/ensemble_service.py 에 작성되어 있는 내용을 기준으로 합니다.
+/** 전체 합주 설정을 검증합니다. 서버 쪽은 backend/src/backend/services/period/ensemble_service.py 에 작성되어 있는 내용을 기준으로 합니다.
  *  periods 의 CHECK(날짜 범위가 기간 안인지)입니다. "매일" 기간은 종료일이 없어 시작일만 비교합니다. */
 export function ensembleMessage(
   form: { starts_on: string; ends_on: string; starts_at: string; ends_at: string },
