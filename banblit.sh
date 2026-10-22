@@ -8,8 +8,8 @@
 # 실행 방식은 2가지입니다.
 #
 #   dev     — 개발용. docker-compose.override.yml 이 적용되어 Vite 개발 서버와 api 가 실행됩니다.
-#             reverse proxy(caddy)·백업 service 는 실행되지 않고, 로그인 cookie 의 Secure 가 꺼집니다.
-#   deploy  — 배포용. docker-compose.yml 1개만 씁니다. nginx·caddy·정기 백업이 함께 실행되고 https 로 받습니다.
+#             reverse proxy(caddy), 백업 service 는 실행되지 않고, 로그인 cookie 의 Secure 가 꺼집니다.
+#   deploy  — 배포용. docker-compose.yml 1개만 씁니다. nginx, caddy, 정기 백업이 함께 실행되고 https 로 받습니다.
 #
 # 어느 방식인지는 실행 중인 OS 로 결정합니다 — 윈도우는 dev, 그 밖은 deploy.
 # --dev / --deploy 로 직접 지정할 수 있고, 어느 방식을 선택했는지 매번 화면에 출력합니다.
@@ -31,7 +31,7 @@ SAMPLE_PASSWORD='banblit-dev-password'
 DEV_WEB_URL='http://localhost:5173/'
 DEV_API_HEALTH_URL='http://localhost:8000/health'
 
-# 첫 기동은 container 안에서 npm install 이 실행되어 몇 분 걸립니다.
+# 첫 기동은 container 안에서 npm install 이 실행됩니다.
 DEV_WEB_TIMEOUT=420
 DEV_API_TIMEOUT=120
 DEPLOY_TIMEOUT=180
@@ -76,7 +76,7 @@ COMMAND="${COMMAND:-up}"
 if [ "$MODE" = 'deploy' ]; then
   # 배포는 docker-compose.yml 1개만 씁니다. -f 를 지정하면 docker compose 가 override 파일을 자동으로 적용하지 않습니다.
   COMPOSE=(docker compose -f docker-compose.yml)
-  # 배포에서 alembic 은 api service 의 Docker image 안에서 실행합니다. --no-deps 로 web·caddy 는 재실행하지 않습니다.
+  # 배포에서 alembic 은 api service 의 Docker image 안에서 실행합니다. --no-deps 로 web, caddy 는 재실행하지 않습니다.
   ALEMBIC=(run --rm --no-deps api alembic)
 else
   COMPOSE=(docker compose)
@@ -101,7 +101,7 @@ web_port() {
 health_url() {
   if [ "$MODE" = 'deploy' ]; then
     # 배포에서 api 는 host 에 포트를 열지 않습니다. nginx 를 거쳐 확인합니다 —
-    # web·api·db 가 연결되어 동작하는지까지 요청 1번으로 확인합니다.
+    # web, api, db 가 연결되어 동작하는지까지 요청 1번으로 확인합니다.
     printf 'http://127.0.0.1:%s/api/health' "$(web_port)"
   else
     printf '%s' "$DEV_API_HEALTH_URL"
@@ -124,7 +124,7 @@ start_docker_desktop() {
   return 1
 }
 
-# Docker·curl 이 있는지, 엔진이 응답하는지, .env 가 있는지 확인합니다. 모든 명령이 실행 전에 거칩니다.
+# Docker, curl 이 있는지, 엔진이 응답하는지, .env 가 있는지 확인합니다. 모든 명령이 실행 전에 거칩니다.
 assert_ready() {
   command -v docker >/dev/null 2>&1 || {
     fail "Docker를 찾지 못했습니다."
@@ -261,9 +261,7 @@ wait_url() {
   return 1
 }
 
-# 가입된 사용자가 없을 경우, 첫 사용자는 최고 권한을 부여받습니다.
-# (backend/src/backend/services/auth_service.py 의 _is_first_account).
-# members 컬럼에는 등록되어 있으나, 가입하지 않은 테스트 데이터도 존재하므로 password_hash를 통해 구분합니다.
+# 가입한 사용자 수를 출력합니다. members table 에는 가입하지 않은 사용자 행도 있으므로 password_hash 로 구분합니다.
 show_account_hint() {
   local user database count
   user="$(env_value POSTGRES_USER)"
@@ -290,10 +288,10 @@ register_hooks() {
 
 # 리눅스는 현재 디렉토리를 PATH에 포함하지 않습니다.
 # 따라서 clone 직후에는 지정자인 ./ 를 부여해 실행하고,
-# 이후 alias를 등록합니다.
+# 이후 function 을 등록합니다.
 #
 # ~/.bashrc 에 function 을 추가합니다.
-# 재실행시 누적 적용되지는 않으나, 경로 이동시 새 PATH로 등록될 수 있습니다.
+# 재실행시 누적 적용되지는 않으나, 경로 이동시 새 경로로 다시 등록됩니다.
 BASHRC_BEGIN='# >>> banblit >>>'
 BASHRC_END='# <<< banblit <<<'
 
@@ -316,8 +314,8 @@ register_command() {
   } >> "$rc"
 
   [ "$had" -eq 0 ] || return 0
-  note "banblit alias를 ~/.bashrc 에 추가하는 데 성공하였습니다."
-  note "alias를 제거하려면 ~/.bashrc 를 열고,"
+  note "banblit function 을 ~/.bashrc 에 추가하는 데 성공하였습니다."
+  note "function 을 제거하려면 ~/.bashrc 를 열고,"
   note ">>> banblit >>> 행 부터 <<< banblit <<< 행 까지 삭제하여 주십시오."
 }
 
@@ -332,7 +330,7 @@ open_browser() {
 
 # dependency 를 추가하고 Docker image 다시 빌드하지 않을 경우,
 # uvicorn 이 import 단계에서 종료됩니다.
-# uv.lock 파일과 Docker image의 Dockerfile 내 의존성을 비교하여 판단합니다.
+# pyproject.toml, uv.lock, Dockerfile 이 Docker image 보다 나중에 수정되었으면 0(참)을 반환합니다.
 image_stale() {
   local created built_at file_at
   created="$(docker image inspect "$DEV_IMAGE" --format '{{.Created}}' 2>/dev/null || true)"
@@ -488,7 +486,7 @@ cmd_migrate() {
   "${COMPOSE[@]}" "${ALEMBIC[@]}" current
 }
 
-# pytest를 실행하여 테스트 결과를 반환받습니다.
+# 인자로 받은 테스트 도구를 실행하고 전체 출력을 log_path 에 저장합니다.
 check_step() {
   local label="$1" log_path="$2" pattern="$3"; shift 3
   step "$label"
@@ -535,7 +533,7 @@ COMMAND
 
 SERVICE
 
-  api  web  db  auto-assign  caddy        [DEBUG] logs·restart 옵션 실행시 대상으로 부여
+  api  web  db  auto-assign  caddy        [DEBUG] logs, restart 옵션 실행시 대상으로 부여
 
 OPTIONS
 

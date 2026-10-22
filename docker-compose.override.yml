@@ -50,6 +50,9 @@ services:
     command: sh -c "npm install && npm run dev"
     ports: !override
       - "5173:5173"
+    # 개발은 nginx 가 아니라 Vite 라 배포용 healthcheck(/api/health)를 끕니다. banblit up 이 5173 응답으로 준비를 판단합니다.
+    healthcheck:
+      disable: true
     volumes:
       - ./frontend:/app
       - banblit-web-modules:/app/node_modules

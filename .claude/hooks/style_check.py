@@ -1,16 +1,18 @@
 """파일을 쓰거나 수정한 직후, writing-style 의 금지 표현이 있으면 경고를 출력합니다. 차단하지 않습니다(항상 종료 코드 0).
 입력은 표준입력의 JSON 1개이고, tool_input.file_path 에 수정한 파일 경로가 있습니다.
-검사 대상 확장자는 md, py, ts, tsx, sh, ps1, yml, yaml, conf, template, Dockerfile 입니다."""
+검사 대상 확장자는 md, py, ts, tsx, js, sh, ps1, yml, yaml, toml, html, ini, conf, template 이고,
+파일 이름 Dockerfile, Caddyfile, .gitignore, .dockerignore, .env.example 도 검사합니다."""
 
 import json
 import re
 import sys
 from pathlib import Path
 
-EXTS = (".md", ".py", ".ts", ".tsx", ".sh", ".ps1", ".yml", ".yaml", ".conf", ".template")
+EXTS = (".md", ".py", ".ts", ".tsx", ".js", ".sh", ".ps1", ".yml", ".yaml", ".toml", ".html", ".ini", ".conf", ".template")
+NAMES = {"Dockerfile", "Caddyfile", ".gitignore", ".dockerignore", ".env.example"}
 SKIP_PARTS = {"trash", "node_modules", "dev_history", "graph"}
 
-# writing-style search 패턴과 writing-style-local 의 "쓰지 않는 이름" 입니다. 바꾸면 두 스킬도 같이 바꿉니다.
+# writing-style search 패턴과 writing-style-local 의 "쓰지 않는 이름" 입니다. 변경하면 두 스킬도 함께 변경합니다.
 PATTERNS = [re.compile(p) for p in (
     r"(한다|했다|이다|된다|있다)\.?$",
     r"붙박이|걸치기|나눠쓰기|낭독기|되묻기|말풍선|통로|뒷단|처리기|그림작가|메뉴판|정본|바탕|물려받|굽는|굽지|꾸러미|잠금 파일|이름 풀이|떨어뜨리|찔러|뜰 때|채워진다",
@@ -32,7 +34,7 @@ def main() -> int:
     path = Path(raw)
     if not raw or not path.exists() or SKIP_PARTS & set(path.parts):
         return 0
-    if not (raw.endswith(EXTS) or "Dockerfile" in path.name):
+    if not (raw.endswith(EXTS) or path.name in NAMES or path.name.endswith(".Dockerfile")):
         return 0
     hits = []
     for no, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):

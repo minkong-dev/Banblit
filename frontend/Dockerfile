@@ -1,4 +1,5 @@
 # 배포용 화면 Docker image 입니다. build stage 가 Vite build 를 실행하고, prod stage 는 nginx 가 결과를 제공합니다.
+# docker-compose.yml 의 web service 가 build 합니다.
 
 FROM node:24-alpine AS build
 WORKDIR /app

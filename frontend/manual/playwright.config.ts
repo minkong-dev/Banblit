@@ -1,12 +1,10 @@
-// 매뉴얼 그림을 캡쳐할 때의 설정입니다. E2E 설정(frontend/playwright.config.ts)과 별개입니다 —
-// 검사는 동작을 판정하고, 이 설정은 그림을 생성합니다. 같은 설정에 두면 E2E 를 실행할 때마다
-// 그림이 다시 생성됩니다.
+// 매뉴얼 그림을 캡처할 때의 설정입니다. E2E 설정(frontend/playwright.config.ts)과 별개입니다.
 import { defineConfig, devices } from "@playwright/test";
 
 import { SCALE, STATE_PATH, VIEWPORT } from "./config";
 
 const baseURL = "http://localhost:5173";
-// container 안에서 npm install 뒤에 뜨므로 첫 응답까지 오래 걸릴 수 있습니다.
+// container 안에서 npm install 뒤에 시작하므로 첫 응답까지 오래 걸릴 수 있습니다.
 const DEV_SERVER_WAIT_MS = 120_000;
 // 그림 1장마다 화면을 옮기고 기다리므로 검사 1개의 상한을 길게 둡니다.
 const CAPTURE_TIMEOUT_MS = 900_000;
