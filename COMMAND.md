@@ -10,20 +10,20 @@
 
 ## 1. container — 개발용
 
-### 1-1. 개발용 image 생성하기
+### 1-1. 개발용 Docker image 생성하기
 
 ```
 docker compose build dev
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 개발용 container(Docker 가 격리해 실행하는 환경) image(container 를 생성하는 원본 파일)인 `banblit-backend:dev` 를 생성합니다. 파이썬 3.14, OR-Tools, pytest 가 설치된 환경이 이 image 에 포함됩니다.
+- **용도**: 개발용 container(Docker 가 격리해 실행하는 환경) Docker image(container 를 생성하는 원본 파일)인 `banblit-backend:dev` 를 생성합니다. 파이썬 3.14, OR-Tools, pytest 가 설치된 환경이 이 Docker image 에 포함됩니다.
 - **옵션**
-  - `build` — `docker-compose.yml`에 적힌 설정대로 image 를 생성합니다. 생성만 하고 실행하지 않습니다.
-  - `dev` — 생성 대상 서비스 이름입니다. `docker-compose.yml`의 `services.dev`를 가리킵니다. 생략하면 정의된 모든 서비스의 image 를 생성합니다.
+  - `build` — `docker-compose.yml`에 적힌 설정대로 Docker image 를 생성합니다. 생성만 하고 실행하지 않습니다.
+  - `dev` — 생성 대상 서비스 이름입니다. `docker-compose.override.yml`의 `services.dev`를 가리킵니다. 생략하면 정의된 모든 서비스의 Docker image 를 생성합니다.
 - **주의점**
-  - 처음 실행하면 파이썬 기반 image 와 OR-Tools 를 인터넷에서 내려받으므로 몇 분 걸립니다. 두 번째 실행부터는 캐시가 있어 몇 초로 끝납니다.
-  - `backend/pyproject.toml` 또는 `backend/uv.lock`이 변경되면 다시 실행해야 합니다. 소스 코드만 수정한 경우에는 image 를 다시 생성할 필요가 없습니다.
+  - 처음 실행하면 파이썬 기반 Docker image 와 OR-Tools 를 인터넷에서 내려받습니다. 두 번째 실행부터는 캐시를 사용합니다.
+  - `backend/pyproject.toml` 또는 `backend/uv.lock`이 변경되면 다시 실행해야 합니다. 소스 코드만 수정한 경우에는 Docker image 를 다시 생성할 필요가 없습니다.
 
 ### 1-1-1. 의존성을 추가한 뒤 uv.lock 갱신하기
 
@@ -32,12 +32,12 @@ docker compose run --rm --no-deps dev uv lock
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: `backend/pyproject.toml`에 패키지를 추가, 삭제한 뒤, 실제로 설치할 버전을 확정해 `backend/uv.lock`에 적습니다. image 는 `uv sync --locked`로 `uv.lock` 에 적힌 버전 그대로만 설치하므로, 이 단계를 건너뛰면 `1-1` 의 빌드가 "`uv.lock` 이 `pyproject.toml` 과 맞지 않는다" 는 오류로 실패합니다.
+- **용도**: `backend/pyproject.toml`에 패키지를 추가, 삭제한 뒤, 실제로 설치할 버전을 확정해 `backend/uv.lock`에 적습니다. Docker image 는 `uv sync --locked`로 `uv.lock` 에 적힌 버전 그대로만 설치하므로, 이 단계를 건너뛰면 `1-1` 의 빌드가 "`uv.lock` 이 `pyproject.toml` 과 맞지 않는다" 는 오류로 실패합니다.
 - **옵션**
   - `--no-deps` — `uv.lock` 생성에는 PostgreSQL 이 필요 없으므로 `db` 서비스를 실행하지 않습니다.
   - `uv lock` — container 안에서 실행할 명령입니다. 호스트에는 파이썬 환경이 없어 `uv`를 사용할 수 없습니다. container 의 `/app`이 호스트 PC의 `backend/` 폴더와 연결돼 있어, 갱신된 `uv.lock` 이 그대로 호스트 PC에 남습니다.
 - **주의점**
-  - 이 명령 뒤에는 반드시 `1-1`(`docker compose build dev`)을 실행해야 새 패키지가 image 에 설치됩니다.
+  - 이 명령 뒤에는 반드시 `1-1`(`docker compose build dev`)을 실행해야 새 패키지가 Docker image 에 설치됩니다.
 
 ### 1-2. container 안에서 테스트 실행하기
 
@@ -51,13 +51,13 @@ docker compose run --rm dev pytest -q
   - `run` — 서비스를 일회성으로 실행해 명령을 실행합니다. 명령이 끝나면 container 도 정지합니다.
   - `--rm` — 정지한 container 를 자동으로 삭제합니다. 생략하면 실행할 때마다 정지한 container 가 누적됩니다.
   - `dev` — 실행할 서비스 이름입니다.
-  - `pytest` — container 안에서 실행할 명령입니다. image 의 기본 실행 명령도 `pytest` 라 생략할 수 있지만, 뒤에 옵션을 지정하려면 `pytest` 를 명시해야 합니다.
+  - `pytest` — container 안에서 실행할 명령입니다. Docker image 의 기본 실행 명령도 `pytest` 라 생략할 수 있지만, 뒤에 옵션을 지정하려면 `pytest` 를 명시해야 합니다.
   - `-q` — 결과를 짧게 출력합니다(통과한 테스트를 점 1개로 표시). 생략하면 기본값인 보통 길이로 출력합니다.
 - **자주 쓰는 변형**
-  - `docker compose run --rm dev pytest -v` — 테스트 이름을 1개씩 모두 출력합니다. 어떤 시나리오를 검사하는지 확인할 때 사용합니다.
-  - `docker compose run --rm dev pytest tests/unit/test_resolution.py` — 지정한 파일만 실행합니다.
+  - `docker compose run --rm dev pytest -v` — 테스트 이름을 1개씩 모두 출력합니다. 어떤 시나리오를 테스트하는지 확인할 때 사용합니다.
+  - `docker compose run --rm dev pytest tests/unit/test_assignment.py` — 지정한 파일만 실행합니다.
 - **주의점**
-  - 호스트 PC의 `backend/` 폴더가 container 안에 연결돼 있어, 코드를 수정하면 image 를 다시 생성하지 않아도 바로 반영됩니다.
+  - 호스트 PC의 `backend/` 폴더가 container 안에 연결돼 있어, 코드를 수정하면 Docker image 를 다시 생성하지 않아도 바로 반영됩니다.
 
 ### 1-2-0. 테스트를 2개 이상 동시에 실행할 때 테스트 DB를 분리하기
 
@@ -66,12 +66,12 @@ docker compose run --rm -e TEST_DB_NAME=banblit_test_a dev pytest -q tests/integ
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 서로 다른 파일을 동시에 검사할 때 사용합니다. 검사는 시작할 때 table(데이터베이스의 행·열 구조)을 전부 삭제하고 마이그레이션을 다시 적용하므로, 2개의 실행이 같은 DB를 사용하면 서로의 table 을 삭제합니다.
+- **용도**: 서로 다른 파일을 동시에 테스트할 때 사용합니다. 테스트는 시작할 때 table(데이터베이스의 행, 열 구조)을 전부 삭제하고 마이그레이션을 다시 적용하므로, 2개의 실행이 같은 DB를 사용하면 서로의 table 을 삭제합니다.
 - **옵션**
-  - `-e TEST_DB_NAME=banblit_test_a` — `docker compose run` 이 container 에 전달하는 환경변수입니다. `backend/tests/conftest.py` 가 이 값으로 검사 전용 DB 이름을 정합니다. **생략하면 `banblit_test`** 를 사용합니다. 이름은 제한이 없으며, 같은 이름의 DB 가 없으면 첫 실행에서 생성합니다.
+  - `-e TEST_DB_NAME=banblit_test_a` — `docker compose run` 이 container 에 전달하는 환경변수입니다. `backend/tests/conftest.py` 가 이 값으로 테스트 전용 DB 이름을 지정합니다. **생략하면 `banblit_test`** 를 사용합니다. 이름은 제한이 없으며, 같은 이름의 DB 가 없으면 첫 실행에서 생성합니다.
 - **주의점**
   - 테스트를 1개만 실행할 때는 지정하지 않습니다. DB 이름이 늘어날수록 `docker compose exec db psql` 로 확인할 때 어느 DB 가 어느 실행의 DB 인지 구분하기 어렵습니다.
-  - 생성된 검사용 DB는 자동으로 삭제되지 않습니다. `1-4`의 `docker compose down -v` 로 데이터 volume(container 가 삭제돼도 유지되는 저장 공간)을 통째로 삭제할 때 함께 삭제됩니다.
+  - 생성된 테스트용 DB는 자동으로 삭제되지 않습니다. `docker compose down -v` 로 데이터 volume(container 가 삭제돼도 유지되는 저장 공간)을 통째로 삭제할 때 함께 삭제됩니다.
 
 ### 1-2-1. 다른 서비스를 실행하지 않고 순수 계산 테스트만 실행하기
 
@@ -80,14 +80,14 @@ docker compose run --rm --no-deps dev pytest -q tests/unit
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 외부와 통신하지 않는 검사만 실행합니다. 실패 원인이 코드인지 환경인지 구분할 때 이 명령을 먼저 실행합니다.
+- **용도**: 외부와 통신하지 않는 테스트만 실행합니다. 실패 원인이 코드인지 환경인지 구분할 때 이 명령을 먼저 실행합니다.
 - **옵션**
-  - `--no-deps` — `docker-compose.yml`에서 `dev`가 의존하는 `db` 서비스를 실행하지 않습니다. 생략하면 PostgreSQL 이 먼저 실행되어, 외부 의존 없이 실행되는지를 확인하는 의미가 없어집니다.
-  - `tests/unit` — 실행할 폴더를 지정합니다. 생략하면 `tests/` 전체가 실행되어 통합 검사까지 포함됩니다.
+  - `--no-deps` — `docker-compose.override.yml`에서 `dev`가 의존하는 `db` 서비스를 실행하지 않습니다. 생략하면 PostgreSQL 이 먼저 실행되어, 외부 의존 없이 실행되는지를 확인하는 의미가 없어집니다.
+  - `tests/unit` — 실행할 폴더를 지정합니다. 생략하면 `tests/` 전체가 실행되어 통합 테스트까지 포함됩니다.
 - **주의점**
-  - 외부와 실제로 통신하는 검사는 `tests/integration/<의존 대상>/` 아래에 둡니다. 지금은 `tests/integration/db/` 1개뿐입니다.
+  - 외부와 실제로 통신하는 테스트는 `tests/integration/<의존 대상>/` 아래에 둡니다. 지금은 `tests/integration/db/` 1개뿐입니다.
   - 폴더 이름이 곧 marker(pytest 가 테스트를 분류하는 표시) 이름입니다. `backend/tests/conftest.py`의 `pytest_collection_modifyitems`가 폴더를 보고 자동으로 부여합니다. marker 이름 자체는 `backend/pyproject.toml`의 `[tool.pytest.ini_options]`에 등록돼 있습니다.
-  - `tests/unit` 의 검사가 실제 DB fixture(`test_engine`·`db_session`·`api_client`)를 사용하면 수집 단계에서 중단됩니다. DB 가 실행 중인 동안 오류 메시지 없이 통과하는 경우를 막기 위해서입니다.
+  - `tests/unit` 의 테스트가 실제 DB fixture(`test_engine`, `db_session`, `api_client`)를 사용하면 수집 단계에서 중단됩니다. DB 가 실행 중인 동안 오류 메시지 없이 통과하는 경우를 막기 위해서입니다.
 
 ### 1-2-2. DB 가 필요한 테스트만 실행하기
 
@@ -96,7 +96,7 @@ docker compose run --rm dev pytest -q tests/integration/db
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 실제 PostgreSQL 에 접속해야 실행되는 검사만 실행합니다.
+- **용도**: 실제 PostgreSQL 에 접속해야 실행되는 테스트만 실행합니다.
 - **주의점**
   - `--no-deps` 를 지정하면 안 됩니다. `db` 서비스가 실행 중이어야 합니다.
   - marker 로 선택하는 `-m db` 도 같은 결과를 출력합니다. 폴더 지정이 더 명확해 폴더 지정을 기준으로 사용합니다.
@@ -108,7 +108,7 @@ docker compose run --rm --no-deps dev mypy
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 표기한 타입과 실제로 전달되는 값이 일치하는지 검사합니다. `CLAUDE.md`가 모든 함수에 타입 표기를 요구하는데, 이 검사가 없으면 표기가 맞는지 확인하는 수단이 없습니다.
+- **용도**: 표기한 타입과 실제로 전달되는 값이 일치하는지 검사합니다. `CLAUDE.md`가 모든 함수에 타입 표기를 요구하는데, mypy 가 없으면 표기가 맞는지 확인하는 수단이 없습니다.
 - **옵션**
   - `--no-deps` — 타입 검사는 코드를 읽기만 하므로 PostgreSQL 이 필요 없습니다.
   - `mypy` — 검사할 대상을 뒤에 적지 않습니다. `backend/pyproject.toml`의 `[tool.mypy]`에 `files = ["src", "tests"]`로 적혀 있어 `src` 와 `tests` 2개를 검사합니다.
@@ -144,21 +144,21 @@ docker compose run --rm dev bash
 
 ## 2. container — 배포용
 
-### 2-1. 배포용 image 생성하기
+### 2-1. 배포용 Docker image 생성하기
 
 ```
 docker build --target prod -t banblit-backend:prod backend/
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 실행에 필요한 패키지만 포함된 배포용 image 를 생성합니다. 테스트 도구는 포함되지 않습니다.
+- **용도**: 실행에 필요한 패키지만 포함된 배포용 Docker image 를 생성합니다. 테스트 도구는 포함되지 않습니다.
 - **옵션**
   - `--target prod` — `Dockerfile`의 단계 중 `prod` 단계까지만 생성합니다. 생략하면 파일에 적힌 마지막 단계까지 생성합니다.
-  - `-t banblit-backend:prod` — 생성한 image 에 지정할 이름과 tag(image 의 버전 표시)입니다. 생략하면 이름 없는 image 가 되어 나중에 찾기 어렵습니다.
-  - `backend/` — `Dockerfile`과 복사 대상 파일들이 있는 폴더입니다. 이 폴더가 기준이 되므로 `backend/` 바깥 파일은 image 에 포함할 수 없습니다.
-- **주의점**: 배포용 단계는 소스를 image 안에 복사합니다. 코드를 수정했으면 반드시 image 를 다시 생성해야 반영됩니다.
+  - `-t banblit-backend:prod` — 생성한 Docker image 에 지정할 이름과 tag(Docker image 의 버전 표시)입니다. 생략하면 이름 없는 Docker image 가 되어 나중에 찾기 어렵습니다.
+  - `backend/` — `Dockerfile`과 복사 대상 파일들이 있는 폴더입니다. 이 폴더가 기준이 되므로 `backend/` 바깥 파일은 Docker image 에 포함할 수 없습니다.
+- **주의점**: 배포용 단계는 소스를 Docker image 안에 복사합니다. 코드를 수정했으면 반드시 Docker image 를 다시 생성해야 반영됩니다.
 
-### 2-2. 배포용 image 동작 확인
+### 2-2. 배포용 Docker image 동작 확인
 
 ```
 docker run --rm -d -p 8001:8000 --name banblit-prod-check banblit-backend:prod
@@ -167,14 +167,14 @@ docker stop banblit-prod-check
 ```
 
 - **실행 경로**: 어디서든 무관 (단, 8001 포트가 사용 중이지 않아야 합니다)
-- **용도**: 배포용 image 가 실제로 서버로 기동해 요청에 응답하는지 확인합니다. 서버는 종료되지 않고 계속 실행되므로 포트를 열어 응답을 확인해야 합니다.
+- **용도**: 배포용 Docker image 가 실제로 서버로 기동해 요청에 응답하는지 확인합니다. 서버는 종료되지 않고 계속 실행되므로 포트를 열어 응답을 확인해야 합니다.
 - **옵션**
-  - `docker run` — image 로 container 를 새로 생성해 실행합니다.
+  - `docker run` — Docker image 로 container 를 새로 생성해 실행합니다.
   - `--rm` — container 가 정지하면 자동으로 삭제합니다.
   - `-d` — 백그라운드로 실행합니다. 생략하면 서버가 터미널을 점유해 다음 명령을 입력할 수 없습니다.
   - `-p 8001:8000` — 호스트 PC의 8001번 포트를 container 안의 8000번 포트에 연결합니다. 개발용 `api` 서비스(`3-1`)가 8000번을 사용하므로, 충돌하지 않게 8001번을 사용했습니다.
   - `--name banblit-prod-check` — container 에 이름을 지정합니다. 3행의 `docker stop`으로 정지시킬 때 이 이름으로 찾습니다. 생략하면 임의의 이름이 부여되어 찾기 번거롭습니다.
-  - `curl -s http://localhost:8001/health` — 서버가 응답하는지 확인합니다. `-s`는 진행 표시를 숨깁니다. `{"status":"ok"}`가 출력되면 정상입니다.
+  - `curl -s http://localhost:8001/health` — 서버가 응답하는지 확인합니다. `-s`는 진행 표시를 숨깁니다. `"status":"ok"` 가 포함되면 정상입니다. `checks` 에 의존 대상별 결과가 있습니다.
   - `docker stop banblit-prod-check` — 이름으로 container 를 정지시킵니다. `--rm`이 지정돼 있으므로 정지 즉시 container 도 삭제됩니다.
 - **주의점**: `-d` 없이 실행하면 터미널이 서버 로그로 점유되어 다음 명령을 입력할 수 없습니다. 확인이 끝나면 반드시 `docker stop`으로 정지해야 container 가 계속 실행 중인 채로 남지 않습니다.
 
@@ -185,10 +185,10 @@ docker run --rm banblit-backend:prod python -c "import pytest"
 ```
 
 - **실행 경로**: 어디서든 무관
-- **용도**: 배포용 image 에 개발용 도구가 포함되지 않았는지 검사합니다.
+- **용도**: 배포용 Docker image 에 개발용 도구가 포함되지 않았는지 확인합니다.
 - **옵션**
   - `python -c "..."` — container 안에서 따옴표 안의 파이썬 코드를 실행합니다.
-- **주의점**: **이 명령은 실패해야 정상입니다.** `ModuleNotFoundError: No module named 'pytest'`가 출력되면 단계 분리가 정상입니다. 성공하면 배포용 image 에 테스트 도구가 포함된 상태이므로 `Dockerfile`을 점검해야 합니다.
+- **주의점**: **이 명령은 실패해야 정상입니다.** `ModuleNotFoundError: No module named 'pytest'`가 출력되면 단계 분리가 정상입니다. 성공하면 배포용 Docker image 에 테스트 도구가 포함된 상태이므로 `Dockerfile`을 점검해야 합니다.
 
 ---
 
@@ -201,22 +201,14 @@ docker compose up -d api
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: `docker-compose.yml`의 `api` 서비스를 백그라운드로 실행해, `http://localhost:8000`에서 스케줄링 API(`GET /health`, `POST /assign`)를 호출할 수 있게 합니다. `api` 서비스는 개발용(`dev`) image 를 사용하고 `backend/` 폴더를 container 에 연결해, `--reload` 옵션으로 코드를 수정하면 서버가 자동으로 재시작합니다.
+- **용도**: `docker-compose.yml`의 `api` 서비스를 백그라운드로 실행해, `http://localhost:8000`에서 스케줄링 API(`GET /health`, `POST /periods/{id}/assign`)를 호출할 수 있게 합니다. `api` 서비스는 개발용(`dev`) Docker image 를 사용하고 `backend/` 폴더를 container 에 연결해, `--reload` 옵션으로 코드를 수정하면 서버가 자동으로 재시작합니다.
 - **옵션**
-  - `up` — 정의된 서비스를 생성하고(필요하면 image 를 빌드) 실행합니다.
+  - `up` — 정의된 서비스를 생성하고(필요하면 Docker image 를 빌드) 실행합니다.
   - `-d` — 백그라운드로 실행합니다. 생략하면 터미널이 서버 로그로 점유되어 다음 명령을 입력할 수 없습니다.
   - `api` — 실행할 대상 서비스 이름입니다. `docker-compose.yml`의 `services.api`를 가리킵니다. 생략하면 `docker-compose.yml`에 정의된 서비스가 모두 실행됩니다(`dev`는 기본 명령이 `pytest`라 곧바로 종료됩니다).
 - **주의점**
-  - 8000번 포트를 이미 다른 프로그램(다른 프로젝트의 container 등)이 사용하고 있으면 `port is already allocated` 오류로 실패합니다. 이 저장소와 무관한 container 가 8000번 포트를 사용하고 있다면, 임의로 정지하지 말고 `CLAUDE.md` 4-1에 따라 먼저 사용자에게 확인받습니다.
-  - `backend/pyproject.toml` 또는 `backend/uv.lock`이 변경된 뒤라면 `docker compose build dev`로 image 를 먼저 다시 생성해야 새 패키지가 반영됩니다(`api` 서비스는 `dev` image 를 그대로 사용합니다).
-
-### 3-1-1. 실행한 서버 정지하기
-
-```
-docker compose stop api
-```
-
-- `banblit down`(`14-5`), `banblit restart`(`14-6`)이 정지와 재실행을 대신합니다.
+  - 8000번 포트를 이미 다른 프로그램(다른 프로젝트의 container 등)이 사용하고 있으면 `port is already allocated` 오류로 실패합니다. 이 저장소와 무관한 container 가 8000번 포트를 사용하고 있다면, 임의로 정지하지 말고 `CLAUDE.md` 6장에 따라 먼저 사용자에게 확인받습니다.
+  - `backend/pyproject.toml` 또는 `backend/uv.lock`이 변경된 뒤라면 `docker compose build dev`로 Docker image 를 먼저 다시 생성해야 새 패키지가 반영됩니다(`api` 서비스는 `dev` Docker image 를 그대로 사용합니다).
 
 ### 3-1-2. 서버 로그 보기
 
@@ -236,7 +228,7 @@ docker compose logs api --since 48h | grep "메일"
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 비밀번호 재설정·아이디 안내 메일을 보냈는지, 보내지 않았다면 사유가 무엇인지 확인합니다.
+- **용도**: 비밀번호 재설정, 아이디 안내 메일을 보냈는지, 보내지 않았다면 사유가 무엇인지 확인합니다.
   "메일을 못 받았다"는 문의가 들어왔을 때 서버가 보내지 않은 것인지 수신 측 문제인지 구분하는 근거입니다.
 - **출력되는 문구 4가지**
   - `비밀번호 재설정 메일을 발송했습니다 — 계정 12` — 발송까지 정상입니다. 못 받았다면 스팸함을 확인합니다.
@@ -257,10 +249,10 @@ curl -s http://localhost:8000/health
 ```
 
 - **실행 경로**: 어디서든 무관 (단, `3-1`로 `api` 서비스가 실행 중이어야 합니다)
-- **용도**: 서버가 정상적으로 응답하는지 확인합니다. `{"status":"ok"}`가 출력되면 정상입니다.
+- **용도**: 서버가 정상적으로 응답하는지 확인합니다. `"status":"ok"` 가 포함되면 정상입니다. `checks` 에 의존 대상별 결과가 있습니다.
 - **옵션**
   - `-s` — 진행률 표시줄을 숨기고 응답 본문만 출력합니다.
-- **주의점**: Git Bash에서 한글이 포함된 JSON 본문을 작은따옴표로 감싼 인라인 인자(`-d '...'`)로 `POST /assign`에 전달하면 인코딩이 깨져 `"There was an error parsing the body"`가 반환됩니다. 한글이 포함된 요청은 UTF-8로 저장한 파일을 `--data-binary @파일명`으로 전달해야 합니다.
+- **주의점**: Git Bash에서 한글이 포함된 JSON 본문을 작은따옴표로 감싼 인라인 인자(`-d '...'`)로 `POST /periods/{id}/assign`에 전달하면 인코딩이 깨져 `"There was an error parsing the body"`가 반환됩니다. 한글이 포함된 요청은 UTF-8로 저장한 파일을 `--data-binary @파일명`으로 전달해야 합니다.
 
 ### 3-3. 서버 정지하고 삭제하기
 
@@ -269,11 +261,11 @@ docker compose down
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: `docker compose up`으로 실행한 서비스(container·네트워크)를 정지하고 삭제합니다.
+- **용도**: `docker compose up`으로 실행한 서비스(container, 네트워크)를 정지하고 삭제합니다.
 - **옵션**: 옵션 없이 사용합니다. `docker-compose.yml`에 정의된 모든 서비스를 대상으로 정지하고 삭제합니다.
 - **주의점**: 이 저장소가 실행한 서비스만 정지합니다. 다른 프로젝트의 container 에는 영향을 주지 않습니다.
 
-### 3-4. 로그인·인증 흐름 확인 (cookie)
+### 3-4. 로그인, 인증 흐름 확인 (cookie)
 
 ```
 curl -s -i -X POST http://localhost:8000/signup -H "Content-Type: application/json" --data-binary @signup.json -c cookies.txt
@@ -284,10 +276,10 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/me -b cookies.txt
 
 - **실행 경로**: 저장소 루트 (`Banblit/`, `3-1`로 `api` 서비스가 실행 중이어야 합니다)
 - **용도**: 로그인 session(서버가 로그인 상태를 기억하는 단위)이 **cookie(브라우저가 저장하고 요청마다 함께 보내는 값)**로 전달되는지를 4행으로 확인합니다. 가입해서 cookie 를 파일에 저장하고(1행), 저장한 cookie 만으로 `/me` 를 요청해 `200`을 받고(2행), 로그아웃한 뒤(3행) 같은 cookie 로 다시 요청해 `401`이 반환되는지 확인합니다(4행). 4행이 `200`이면 로그아웃이 session 을 취소하지 못한 상태입니다.
-- **본문 파일**: 1행의 `signup.json`은 직접 생성합니다. 이름·이메일·비밀번호·포지션 4개 값이 필요하고, 포지션은 마이그레이션이 추가한 목록(보컬·기타·베이스·드럼·키보드)에서 선택합니다.
+- **본문 파일**: 1행의 `signup.json`은 직접 생성합니다. 이름(`name`), 학과(`department`), 학번(`student_no`), 이메일(`email`), 아이디(`login_id`), 비밀번호(`password`), 기수(`cohort`) 7개 값이 필요합니다. 관리자코드(`admin_code`)는 선택 값이고, `.env` 의 `ADMIN_SIGNUP_CODE` 와 같을 경우에만 권한 항목을 전부 받습니다(`backend/src/backend/api/schemas.py` 의 `SignupIn`).
 
   ```json
-  {"name": "홍길동", "email": "test@example.com", "password": "banblit-test-1", "positions": ["드럼"]}
+  {"name": "홍길동", "department": "컴퓨터공학과", "student_no": "20260001", "email": "test@example.com", "login_id": "hong", "password": "banblit-test-1", "cohort": 46}
   ```
 
 - **옵션**
@@ -303,7 +295,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8000/me -b cookies.txt
   - **`4-2`의 마이그레이션이 먼저 적용돼 있어야 합니다.** session 을 저장하는 `sessions` table 이 없으면 가입 자체가 실패합니다.
   - 한글 본문은 `--data-binary @파일` 로 전달합니다(`3-2` 주의점).
   - **cookie 파일은 로그인한 상태 그 자체입니다.** 확인이 끝나면 삭제하고, 저장소에 커밋하지 않습니다.
-  - 같은 이메일로 1행을 2번 실행하면 `422`("이미 가입된 이메일입니다")가 반환됩니다. 다시 확인할 때는 이메일을 변경합니다.
+  - 같은 이메일로 1행을 2번 실행하면 `422`("이미 가입된 이메일이에요")가 반환됩니다. 다시 확인할 때는 이메일을 변경합니다.
   - 개발 구성은 `docker-compose.override.yml`이 `COOKIE_SECURE=false`로 덮어쓰므로 `http`로도 cookie 가 저장됩니다. 배포 구성(`11-1`)은 `docker-compose.yml`의 `COOKIE_SECURE=true`가 유지되어, `https`가 아니면 브라우저가 session cookie 를 저장하지 않습니다.
   - session 은 cookie 로만 전달됩니다.
 
@@ -320,13 +312,13 @@ docker compose exec api ls -l /var/lib/banblit/attachments
 - **실행 경로**: 저장소 루트 (`Banblit/`, `3-1`로 `api` 서비스가 실행 중이고 `3-4`로 저장한 `cookies.txt` 가 있어야 합니다)
 - **용도**: 파일이 실제로 서버 디스크에 저장되고 그대로 다시 내려받아지는지 확인합니다. 1행이 게시글 31번에 파일을 첨부하고(201), 2행이 첨부한 파일을 내려받고, 3행이 보낸 파일과 받은 파일이 1바이트도 다르지 않은지 비교합니다(다르면 메시지를 출력하고, 같으면 아무것도 출력하지 않습니다). 4행은 container 안의 저장 폴더를 열어, 서버가 부여한 이름으로 파일 1개가 저장됐는지 확인합니다.
 - **옵션**
-  - `-F "file=@<파일>"` — `multipart/form-data` 로 파일을 전송합니다. 항목 이름 `file` 은 서버가 정한 이름이라 변경하면 422 를 반환합니다. `;type=` 을 생략하면 curl 이 확장자를 보고 종류를 정합니다. `;filename=` 을 추가하면 전송할 이름을 따로 지정할 수 있습니다.
+  - `-F "file=@<파일>"` — `multipart/form-data` 로 파일을 전송합니다. 항목 이름 `file` 은 서버가 지정한 이름이라 변경하면 422 를 반환합니다. `;type=` 을 생략하면 curl 이 확장자를 보고 종류를 지정합니다. `;filename=` 을 추가하면 전송할 이름을 따로 지정할 수 있습니다.
   - `-D <파일>` — 응답 header 를 지정한 파일에 저장합니다. `content-disposition: attachment` 와 `x-content-type-options: nosniff` 가 포함됐는지 확인하는 데 사용합니다. 생략하면 header 를 확인할 수 없습니다.
   - `-o <파일>` — 내려받은 내용을 지정한 파일에 저장합니다. 생략하면 이진 파일이 터미널에 그대로 출력됩니다.
 - **주의점**
   - **작성자 본인만 첨부하고 삭제할 수 있습니다.** 다른 계정의 cookie 로 1행을 전송하면 403 을 반환합니다. 팀 게시판 게시글이면 내려받기도 그 팀 소속 멤버만 할 수 있습니다.
-  - **허용 목록에 없는 확장자는 422 로 거절됩니다.** 목록은 `backend/src/backend/services/attachment_service.py` 의 `ALLOWED_EXTENSIONS` 1곳에만 있습니다.
-  - **Git Bash 에서 `;filename=` 에 한글을 적으면 이름이 깨져 저장됩니다.** 터미널이 UTF-8 로 전송하지 않기 때문입니다. 서버 문제가 아닙니다. 브라우저와 검사(`tests/integration/db/test_attachment_endpoints.py`)에서는 한글 이름이 그대로 저장됩니다.
+  - **허용 목록에 없는 확장자는 422 로 거절됩니다.** 목록은 `backend/src/backend/services/board/pipeline.py` 의 `ALLOWED_EXTENSIONS` 1곳에만 있습니다.
+  - **Git Bash 에서 `;filename=` 에 한글을 적으면 이름이 깨져 저장됩니다.** 터미널이 UTF-8 로 전송하지 않기 때문입니다. 서버 문제가 아닙니다. 브라우저와 테스트(`tests/integration/db/test_attachment_endpoints.py`)에서는 한글 이름이 그대로 저장됩니다.
   - **개발 구성에는 reverse proxy(nginx)가 없습니다.** 크기 상한(`client_max_body_size 300m`)은 배포 구성에서만 적용되므로, 개발에서 300MB 를 초과해 전송하면 그대로 통과합니다. 배포 구성으로 확인하려면 `11-1` 로 실행한 서버에서 확인합니다.
   - 저장 폴더는 `banblit-attachments` volume 입니다. `docker compose down` 으로 정지해도 유지되고, `down -v` 로만 삭제됩니다.
 
@@ -341,9 +333,9 @@ docker compose up -d db
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: `docker-compose.yml`의 `db` 서비스(PostgreSQL 17)만 백그라운드로 실행합니다. `dev`·`api` 서비스는 `depends_on: db (service_healthy)`로 `db` 서비스를 자동으로 함께 실행하므로, DB 내용을 직접 확인할 때(예: `4-4`의 `psql` 접속)만 이 명령을 따로 사용합니다.
+- **용도**: `docker-compose.yml`의 `db` 서비스(PostgreSQL 17)만 백그라운드로 실행합니다. `dev`, `api` 서비스는 `depends_on: db (service_healthy)`로 `db` 서비스를 자동으로 함께 실행하므로, DB 내용을 직접 확인할 때(예: `4-4`의 `psql` 접속)만 이 명령을 따로 사용합니다.
 - **옵션**
-  - `up` — 정의된 서비스를 생성하고(필요하면 image 를 내려받고) 실행합니다.
+  - `up` — 정의된 서비스를 생성하고(필요하면 Docker image 를 내려받고) 실행합니다.
   - `-d` — 백그라운드로 실행합니다. 생략하면 터미널이 로그로 점유됩니다.
   - `db` — 실행할 대상 서비스 이름입니다. 생략하면 `docker-compose.yml`에 정의된 서비스가 모두 실행됩니다.
 - **주의점**
@@ -380,7 +372,6 @@ docker compose run --rm dev alembic downgrade -1
   - `-1` — 되돌릴 단계 수입니다. 숫자 대신 `alembic downgrade <revision>`처럼 되돌아갈 목적지 번호를 직접 적어도 됩니다. 생략하면 오류입니다. 어디까지 되돌릴지 반드시 적어야 합니다.
 - **주의점**
   - **열을 삭제하는 `downgrade()`는 그 열의 값을 함께 삭제합니다.** 되돌린 뒤 다시 `upgrade`해도 삭제된 값은 복구되지 않습니다. 새 마이그레이션을 검증할 때만 사용하고, 값이 저장된 DB에서는 먼저 백업합니다.
-  - permission set(권한 집합) 마이그레이션(`b7f1a92c4d31`)의 되돌리기는 `members.role`을 다시 생성하고, 항목이 전부 활성화된 permission set 을 가진 멤버를 `head_manager`로 되돌린 뒤 2개 table 을 삭제합니다. 이 왕복은 `backend/tests/integration/db/test_permission_migration.py`가 전용 DB에서 자동으로 확인합니다.
 
 ### 4-3. 모델 변경 후 마이그레이션 새로 만들기
 
@@ -415,7 +406,7 @@ docker compose exec -T db sh -c 'pg_dump --schema-only --no-owner --no-privilege
   - `pg_dump --schema-only` — 데이터를 빼고 구조만 출력합니다. 생략하면 행 내용까지 나와 비교할 수 없습니다.
   - `--no-owner --no-privileges` — 소유자와 권한 부여 구문을 빼고 출력합니다. 이 둘은 DB 를 만든 계정에 따라 달라져, 빼지 않으면 구조가 같아도 차이로 표시됩니다.
 - **주의점**
-  - **비교 전에 `\restrict`·`\unrestrict` 로 시작하는 줄을 제외해야 합니다.** pg_dump 가 실행할 때마다 무작위 토큰을 넣는 줄이라 항상 다르게 나옵니다.
+  - **비교 전에 `\restrict`, `\unrestrict` 로 시작하는 줄을 제외해야 합니다.** pg_dump 가 실행할 때마다 무작위 토큰을 넣는 줄이라 항상 다르게 나옵니다.
   - **열 정의 순서와 배열 원소 순서는 달라도 됩니다.** 합치기 전에는 `ALTER TABLE ADD COLUMN` 으로 열이 하나씩 붙어 순서가 생겼고, 합친 뒤에는 한 번에 만들어져 순서가 다릅니다. 동작에는 영향이 없습니다. 순서까지 무시하고 비교하려면 두 파일을 `sort` 한 뒤 `diff` 합니다.
   - **autogenerate 는 초기 데이터를 생성하지 않습니다.** `settings` 1행과 permission set 1행은 구조 비교로 확인되지 않으므로 행 수도 함께 확인합니다.
   - 확인이 끝나면 `DROP DATABASE squash_check` 로 정리합니다. 남겨 두면 다음 확인에서 이미 있다는 오류가 납니다.
@@ -431,7 +422,7 @@ docker compose exec db psql -U banblit -d banblit
 - **옵션**
   - `exec` — 이미 실행 중인 container 안에서 명령을 실행합니다. (`run`과 달리 새 container 를 생성하지 않습니다.)
   - `db` — 접속할 대상 서비스 이름입니다.
-  - `psql -U banblit -d banblit` — `banblit` 사용자로 `banblit` 데이터베이스에 접속합니다. 사용자·DB 이름은 `.env`(`.env.example` 견본)의 `POSTGRES_USER`·`POSTGRES_DB` 값과 같아야 합니다.
+  - `psql -U banblit -d banblit` — `banblit` 사용자로 `banblit` 데이터베이스에 접속합니다. 사용자, DB 이름은 `.env`(`.env.example` 견본)의 `POSTGRES_USER`, `POSTGRES_DB` 값과 같아야 합니다.
 - **주의점**
   - **호스트 포트를 열지 않았으므로, 이 방법 외에는 호스트 PC의 DB 도구로 직접 접속할 수 없습니다.** `db` 서비스가 `docker compose up -d db`나 `docker compose run --rm dev alembic ...` 등으로 이미 기동돼 있어야 하며, 실행 중이 아니면 `service "db" is not running` 오류가 발생합니다.
   - 종료할 때는 `\q`를 입력합니다.
@@ -457,9 +448,9 @@ docker compose exec -T db psql -U banblit -d banblit -c "select member_id, left(
 
 ---
 
-## 5. image 주고받기
+## 5. Docker image 주고받기
 
-### 5-1. image 를 파일 1개로 내보내기
+### 5-1. Docker image 를 파일 1개로 내보내기
 
 ```
 docker save banblit-backend:dev -o banblit-backend-dev.tar
@@ -471,34 +462,22 @@ docker save banblit-backend:dev -o banblit-backend-dev.tar
   - `-o <파일이름>` — 내보낼 파일 이름입니다. 생략하면 터미널에 출력되므로 반드시 지정합니다.
 - **주의점**: 파일 크기가 800MB를 넘습니다. 저장소에 커밋하지 않습니다.
 
-### 5-2. 받은 파일을 image 로 복원하기
+### 5-2. 받은 파일을 Docker image 로 복원하기
 
 ```
 docker load -i banblit-backend-dev.tar
 ```
 
 - **실행 경로**: 받은 파일이 있는 폴더
-- **용도**: 내보낸 파일을 image 로 복원합니다. 복원한 뒤에는 `1-2`의 테스트 실행 명령을 그대로 사용할 수 있습니다.
+- **용도**: 내보낸 파일을 Docker image 로 복원합니다. 복원한 뒤에는 `1-2`의 테스트 실행 명령을 그대로 사용할 수 있습니다.
 - **옵션**
   - `-i <파일이름>` — 읽어들일 파일 이름입니다.
 
 ---
 
-## 6. (삭제 — 호스트에 파이썬 환경을 두지 않습니다. 1-2 를 씁니다)
+## 7. 커밋 메시지 형식 검사 훅
 
----
-
-## 7. 커밋 메시지 검사 훅
-
-### 7-1. 훅 켜기
-
-```
-git config core.hooksPath .githooks
-```
-
-- `banblit up` 이 `git config core.hooksPath .githooks` 를 매번 확인해 활성화합니다(`14-2` 의 7번 단계). 직접 실행할 일은 없습니다.
-
-### 7-2. 훅이 잘못된 메시지를 거부하는지 검사
+### 7-2. 훅이 잘못된 메시지를 거부하는지 테스트
 
 ```
 bash .githooks/test-commit-msg.sh
@@ -510,16 +489,8 @@ bash .githooks/test-commit-msg.sh
 
 ### 7-3. 통과하는 커밋 메시지 형식
 
-```
-<scope>: <요약>
-
-<본문은 빈 줄 하나를 띄우고 쓴다>
-```
-
-- **허용 scope**: `scheduling` `docs` `infra` `backend` `frontend` `test` `chore`
 - **거부되는 경우**: scope가 없거나 목록에 없을 때, 콜론 뒤에 공백이 없을 때, 요약이 비었을 때, 본문 앞에 빈 줄이 없을 때
-- **그대로 통과하는 경우**: `Merge`·`Revert`로 시작하는 커밋(git이 자동 생성하는 형식이라 검사하지 않습니다)
-- **주의점**: scope를 추가하려면 `.githooks/commit-msg`의 `SCOPES` 목록과 `CLAUDE.md` 7장을 함께 수정합니다.
+- **그대로 통과하는 경우**: `Merge`, `Revert`로 시작하는 커밋(git이 자동 생성하는 형식이라 검사하지 않습니다)
 
 ---
 
@@ -544,14 +515,14 @@ git push origin develop
 
 ## 9. 삭제 금지 훅
 
-### 9-1. 훅이 삭제 명령을 거부하는지 검사
+### 9-1. 훅이 삭제 명령을 거부하는지 테스트
 
 ```bash
 rm trash/없는파일.txt
 ```
 
 - **실행 경로**: 저장소 루트
-- **용도**: `.claude/hooks/move-to-trash.ps1`이 삭제 명령을 실제로 거부하는지 확인합니다. **이 명령은 거부되어야 정상입니다.** "파일을 지우지 않습니다. 저장소 루트의 trash/ 로 옮기십시오."가 출력되면 훅이 동작하는 상태입니다.
+- **용도**: `.claude/hooks/move_to_trash.py`가 삭제 명령을 실제로 거부하는지 확인합니다. **이 명령은 거부되어야 정상입니다.** "파일을 삭제하지 않습니다. 저장소 루트의 trash/ 로 이동하십시오."가 출력되면 훅이 동작하는 상태입니다.
 - **옵션별 의미**: 옵션이 없습니다. 삭제 대상 경로 1개만 지정합니다. 실제로 없는 파일을 지정해, 훅이 거부하지 못했을 때도 아무 파일도 삭제되지 않게 합니다.
 - **주의점**:
   - 거부 대상은 `rm` `del` `erase` `rmdir` `unlink` `Remove-Item` `ri` `rd` 8가지입니다. 명령 첫머리이거나 `;` `&` `|` 뒤에 올 때만 거부합니다. 파일 이름에 우연히 `rm`이 포함된 경우는 거부하지 않습니다.
@@ -579,15 +550,14 @@ start http://localhost:5173/
 - **주의점**
   - node_modules 는 volume 에 있습니다(10-5-1).
   - **`docker compose logs web` 은 이전 기동의 로그까지 함께 출력합니다.** container 를 삭제하지 않고 `stop`/`start` 만 하면 로그가 누적된 채로 남습니다. `--since` 없이 확인하면 지난번 `ready` 를 이번 기동의 `ready` 로 잘못 읽습니다. 이번 기동 이후만 확인하려면 `--since 1m` 또는 `docker inspect banblit-web-1 --format '{{.State.StartedAt}}'` 로 얻은 시각을 `--since` 에 지정합니다.
-  - **화면은 5173, API 는 8000 에서 실행됩니다.** 브라우저는 화면을 받아온 origin(주소·포트 조합)과 다른 origin 으로의 요청을 차단하므로, 개발 서버가 정해진 경로만 API 로 대신 전달합니다. 전달하는 경로 목록은 `frontend/vite.config.ts` 의 `API_PATHS` 에 있습니다. API endpoint(API의 요청 주소 단위)를 추가하면 이 목록에도 함께 추가해야 합니다.
-  - 달력에 데이터가 표시되려면 `4-2` 마이그레이션이 적용되어 있고 팀·기간·배정이 실제로 등록돼 있어야 합니다. 등록된 배정이 없으면 화면은 정상적으로 표시되고 "저장된 배정이 없습니다" 를 표시합니다.
+  - **화면은 5173, API 는 8000 에서 실행됩니다.** 브라우저는 화면을 받아온 origin(주소, 포트 조합)과 다른 origin 으로의 요청을 차단하므로, 개발 서버가 `/api` 접두사가 붙은 요청만 API 로 대신 전달합니다. 접두사는 `frontend/vite.config.ts` 의 `API_PREFIX` 에 있습니다. 화면은 모든 API endpoint(API의 요청 주소 단위)를 이 접두사로 호출합니다.
+  - 달력에 데이터가 표시되려면 `4-2` 마이그레이션이 적용되어 있고 팀, 기간, 배정이 실제로 등록돼 있어야 합니다. 등록된 배정이 없으면 화면은 정상적으로 표시되고 "저장된 배정이 없습니다" 를 표시합니다.
   - 5173 번 포트를 다른 프로그램이 사용하고 있으면 실패합니다. 이 저장소와 무관한 container 가 5173 번 포트를 사용하고 있다면 임의로 정지하지 않습니다.
 
 ### 10-1-1. 화면이 실제로 응답하는지 확인하기
 
 ```
-curl -s -o /dev/null -w "%{http_code}
-" http://localhost:5173/scheduler
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:5173/scheduler
 curl -s http://localhost:5173/periods/1/schedule
 ```
 
@@ -606,15 +576,15 @@ docker compose run --rm --no-deps web npm test
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 화면 쪽 검사를 실행합니다. 지금 검사하는 범위는 순수 계산과 입력 검증 5가지입니다. 서버 호출 wrapper(호출을 감싸 공통 처리를 추가하는 함수), 달력 칸 계산, slot(1시간 단위 시간 칸) 조각을 합주로 연결하는 계산, 계정 서식 입력 검사, 삭제 확인 문구의 조사 결정입니다. 통과하면 `Tests 229 passed` 가 출력됩니다. 화면을 실제로 렌더링하는 검사는 아직 없습니다.
+- **용도**: 화면 쪽 검사를 실행합니다. 지금 검사하는 범위는 순수 계산과 입력 검증 5가지입니다. 서버 호출 wrapper(호출을 감싸 공통 처리를 추가하는 함수), 달력 칸 계산, slot(1시간 단위 시간 칸) 조각을 합주로 연결하는 계산, 계정 서식 입력 검사, 삭제 확인 문구의 조사 결정입니다. 화면을 실제로 렌더링하는 검사는 아직 없습니다.
 - **옵션**
   - `run` — 일회용 container 를 생성해 명령 1개만 실행하고 종료합니다. 개발 서버를 실행한 채로도 따로 실행할 수 있습니다.
   - `--rm` — 종료되면 해당 container 를 삭제합니다. 생략하면 실행할 때마다 정지한 container 가 누적됩니다.
-  - `--no-deps` — `depends_on` 에 지정된 `api`(그리고 `db`)를 함께 실행하지 않습니다. 화면 검사는 서버가 필요 없습니다. 생략하면 DB 까지 실행되어 느려집니다.
+  - `--no-deps` — `depends_on` 에 지정된 `api`(그리고 `db`)를 함께 실행하지 않습니다. 화면 테스트는 서버가 필요 없습니다. 생략하면 DB 까지 실행되어 느려집니다.
   - `npm test` — `frontend/package.json` 의 `test` 를 실행합니다. 내용은 `vitest run` 입니다. `run` 이 지정돼 있어 1번 실행하고 종료하며, 파일 변경을 감시하는 상태로 유지되지 않습니다.
 - **주의점**
   - 패키지는 `10-1` 이 설치한 `banblit-web-modules` volume 을 그대로 사용합니다. 그래서 이 명령은 설치 없이 곧바로 실행됩니다.
-  - 검사 파일은 `frontend/src/**/*.test.ts` 만 수집합니다. 범위는 `frontend/vite.config.ts` 의 `test.include` 가 정합니다.
+  - 테스트 파일은 `frontend/src/**/*.test.ts` 와 `frontend/src/**/*.test.tsx` 만 수집합니다. 범위는 `frontend/vite.config.ts` 의 `test.include` 가 지정합니다.
 
 ### 10-2-1. 화면 테스트 파일 1개만 실행하기
 
@@ -623,12 +593,12 @@ docker compose run --rm --no-deps web npx vitest run src/lib/validate.test.ts sr
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 지금 수정하는 파일의 검사만 선택해 실행합니다. 실패하는 검사를 먼저 작성하고 실패를 확인할 때, 전체를 실행하지 않아도 됩니다.
+- **용도**: 지금 수정하는 파일의 테스트만 선택해 실행합니다. 실패하는 테스트를 먼저 작성하고 실패를 확인할 때, 전체를 실행하지 않아도 됩니다.
 - **옵션**
   - `run --rm --no-deps web` — `10-2` 와 같습니다.
   - `npx vitest run <파일...>` — `npm test` 대신 vitest 를 직접 실행합니다. `run` 은 1번 실행하고 종료하는 옵션이고, 뒤에 적은 경로는 `frontend/` 기준입니다. 경로 2개 이상을 띄어 적으면 적은 파일만 실행합니다. 경로는 부분 일치라 `validate` 만 적어도 `validate.test.ts` 가 수집됩니다.
 - **주의점**
-  - 수정한 코드가 다른 파일의 검사를 실패시킬 수 있으니, 구현이 끝나면 `10-2` 로 전체를 1번 실행합니다.
+  - 수정한 코드가 다른 파일의 테스트를 실패시킬 수 있으니, 구현이 끝나면 `10-2` 로 전체를 1번 실행합니다.
 
 ### 10-3. 화면 타입 검사 실행하기
 
@@ -642,7 +612,7 @@ docker compose run --rm --no-deps web npm run typecheck
   - `npm run typecheck` — `frontend/package.json` 의 `typecheck` 를 실행합니다. 내용은 `tsc -b --noEmit` 입니다. `-b` 는 `frontend/tsconfig.json` 이 가리키는 설정들을 순서대로 검사하고, `--noEmit` 은 결과 파일을 생성하지 않습니다.
   - `--rm --no-deps` — `10-2` 와 같은 이유입니다.
 - **주의점**
-  - `-b` 는 지난 검사 결과를 `frontend/tsconfig.tsbuildinfo` 에 저장해 두 번째 실행부터 빨라집니다. 이 파일은 저장소에 커밋되어 있습니다.
+  - `-b` 는 지난 타입 검사 결과를 `frontend/tsconfig.tsbuildinfo` 에 저장해 두 번째 실행부터 빨라집니다. 이 파일은 `.gitignore` 에 있어 커밋되지 않습니다.
 
 ### 10-4. 화면 빌드하기
 
@@ -656,10 +626,10 @@ docker compose run --rm --no-deps web npm run build
   - `npm run build` — `frontend/package.json` 의 `build` 를 실행합니다. 내용은 `tsc -b && vite build` 입니다. 타입 검사를 먼저 통과해야 bundle 생성으로 진행합니다.
   - `--rm --no-deps` — `10-2` 와 같은 이유입니다.
 - **주의점**
-  - **`frontend/dist/` 는 저장소가 추적하지 않습니다**(`.gitignore` 24행). 이 명령을 실행해도 `git status` 에는 아무것도 뜨지 않습니다. 배포에 나가는 bundle 은 `10-4-1` 의 image 를 만들 때 그 안에서 다시 생성하므로, 여기서 만든 `frontend/dist/` 는 로컬 확인용입니다.
+  - **`frontend/dist/` 는 저장소가 추적하지 않습니다**(`.gitignore`). 이 명령을 실행해도 `git status` 에는 아무것도 뜨지 않습니다. 배포에 나가는 bundle 은 `10-4-1` 의 Docker image 를 만들 때 그 안에서 다시 생성하므로, 여기서 만든 `frontend/dist/` 는 로컬 확인용입니다.
   - 배포에서 이 bundle 을 제공하는 것은 nginx 입니다(`frontend/Dockerfile` 의 `prod` 단계가 `dist` 를 `/usr/share/nginx/html` 로 복사합니다). 요청 경로는 Caddy, nginx, api 순서이고, `/api` 만 서버로 전달하는 규칙이 `frontend/nginx.conf.template` 에 있습니다. 개발 서버(Vite)는 배포에 포함되지 않습니다.
 
-### 10-4-1. 배포용 화면 image 를 만들고 링크 미리보기 주소를 확인하기
+### 10-4-1. 배포용 화면 Docker image 를 만들고 링크 미리보기 주소를 확인하기
 
 ```
 docker compose -f docker-compose.yml build web
@@ -667,14 +637,14 @@ docker run --rm --entrypoint sh banblit-frontend:prod -c "grep -o 'property=\"og
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 배포용 화면 image(`banblit-frontend:prod`)를 만들고, 그 안의 `index.html` 에 링크 미리보기 태그(`og:*`)가 실제 주소로 채워졌는지 확인합니다. 주소는 build 시점에 치환되므로, image 를 만든 뒤가 아니면 확인할 수 없습니다.
+- **용도**: 배포용 화면 Docker image(`banblit-frontend:prod`)를 만들고, 그 안의 `index.html` 에 링크 미리보기 태그(`og:*`)가 실제 주소로 채워졌는지 확인합니다. 주소는 build 시점에 치환되므로, Docker image 를 만든 뒤가 아니면 확인할 수 없습니다.
 - **옵션**
   - `-f docker-compose.yml` — 배포용 설정만 사용합니다. 이 옵션이 없으면 `docker-compose.override.yml` 이 `web` 의 `build` 를 삭제해 `No services to build` 만 출력하고 끝납니다.
-  - `--entrypoint sh` — nginx 를 실행하지 않고 셸로 들어갑니다. 이 image 의 기본 실행 명령이 nginx 라 붙이지 않으면 nginx 가 실행됩니다.
+  - `--entrypoint sh` — nginx 를 실행하지 않고 셸로 들어갑니다. 이 Docker image 의 기본 실행 명령이 nginx 라 붙이지 않으면 nginx 가 실행됩니다.
   - `grep -o` — 맞은 부분만 출력합니다. `index.html` 은 한 줄이 길어 줄 단위로 출력하면 읽기 어렵습니다.
 - **주의점**
-  - 출력의 주소가 `http://localhost:8080` 이면 `.env` 의 `APP_ORIGIN` 이 비어 있는 것입니다. 배포 서버에서는 반드시 채웁니다. 비워 두면 카카오톡·페이스북 미리보기 이미지가 보이지 않습니다.
-  - 출력에 `%VITE_APP_ORIGIN%` 글자가 그대로 남아 있으면 `frontend/Dockerfile` 의 `ARG`·`ENV` 가 `npm run build` 뒤로 밀린 것입니다.
+  - 출력의 주소가 `http://localhost:8080` 이면 `.env` 의 `APP_ORIGIN` 이 비어 있는 것입니다. 배포 서버에서는 반드시 입력합니다. 빈 값이면 카카오톡, 페이스북 미리보기 이미지가 보이지 않습니다.
+  - 출력에 `%VITE_APP_ORIGIN%` 글자가 그대로 남아 있으면 `frontend/Dockerfile` 의 `ARG`, `ENV` 가 `npm run build` 뒤로 밀린 것입니다.
 
 ### 10-5. 화면 패키지 추가하기
 
@@ -683,14 +653,14 @@ docker compose run --rm --no-deps web npm install @radix-ui/colors
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 화면 코드가 쓸 npm 패키지를 추가합니다. `frontend/package.json` 의 `dependencies` 와 `frontend/package-lock.json` 이 함께 바뀌고, 패키지 파일은 `banblit-web-modules` volume 에 설치됩니다.
+- **용도**: 화면 코드가 쓸 npm 패키지를 추가합니다. `frontend/package.json` 의 `dependencies` 와 `frontend/package-lock.json` 이 함께 변경되고, 패키지 파일은 `banblit-web-modules` volume 에 설치됩니다.
 - **옵션**
   - `run --rm` — 일회용 container 를 실행하고 끝나면 삭제합니다.
-  - `--no-deps` — `api`·`db` 를 함께 실행하지 않습니다. 설치에는 서버가 필요 없습니다.
+  - `--no-deps` — `api`, `db` 를 함께 실행하지 않습니다. 설치에는 서버가 필요 없습니다.
   - `web` — `docker-compose.override.yml` 의 `web` 서비스(`node:24-alpine`)입니다. 호스트에 Node 가 없어도 실행됩니다.
-  - `npm install <패키지>` — 패키지를 설치하고 `package.json` 의 `dependencies` 에 추가합니다. 버전을 적지 않으면 최신 버전을 `^` 범위로 기록합니다. 테스트·빌드에만 쓰는 패키지면 `-D` 를 붙여 `devDependencies` 에 넣습니다.
+  - `npm install <패키지>` — 패키지를 설치하고 `package.json` 의 `dependencies` 에 추가합니다. 버전을 적지 않으면 최신 버전을 `^` 범위로 기록합니다. 테스트, 빌드에만 쓰는 패키지면 `-D` 를 붙여 `devDependencies` 에 넣습니다.
 - **주의점**
-  - **새 의존성은 사용자 승인을 받은 뒤에만 추가합니다.** `CLAUDE.md` 의 파일 생성 방식(모드 1 의 5단계)이 정한 규칙입니다.
+  - **새 의존성은 사용자 승인을 받은 뒤에만 추가합니다.** `CLAUDE.md` 의 파일 생성 방식(모드 1 의 5단계)이 지정한 규칙입니다.
   - 출력에 `npm warn install-scripts ... esbuild@... (postinstall: node install.js)` 가 나올 수 있습니다. 설치 스크립트 승인 경고이며, 이 경고가 나와도 패키지 설치와 `package.json` 기록은 끝난 상태입니다.
 
 ### 10-5-1. 패키지 목록이 바뀐 뒤 dev 의 설치본을 맞추기
@@ -706,9 +676,9 @@ docker compose run --rm --no-deps web npm ci
   - `npm ci` — `package-lock.json` 에 적힌 버전을 그대로 설치합니다. `npm install` 과 달리
     lockfile 을 변경하지 않고, `node_modules` 를 삭제한 뒤 처음부터 설치합니다.
 - **주의점**
-  - **dev 는 패키지를 image 가 아니라 `banblit-web-modules` volume 에 보관합니다.** volume 은
-    container 를 다시 만들어도 남으므로, `package.json` 이 바뀌어도 이 명령을 실행하기 전까지
-    설치본이 갱신되지 않습니다. 배포는 `frontend/Dockerfile` 이 image 를 만들 때마다 `npm ci` 를
+  - **dev 는 패키지를 Docker image 가 아니라 `banblit-web-modules` volume 에 보관합니다.** volume 은
+    container 를 다시 만들어도 남으므로, `package.json` 이 변경되어도 이 명령을 실행하기 전까지
+    설치본이 갱신되지 않습니다. 배포는 `frontend/Dockerfile` 이 Docker image 를 만들 때마다 `npm ci` 를
     실행하므로 이 문제가 없습니다.
   - lint, 타입 검사에서 다수의 오류가 나오면 이 명령을 먼저 실행합니다.
 
@@ -719,8 +689,6 @@ docker compose run --rm --no-deps web npm ci
 `docker-compose.yml` 이 **배포용 기준 파일**입니다. 개발에서는 `docker-compose.override.yml` 이
 자동으로 적용되어 `docker-compose.yml` 의 설정을 덮어씁니다. 그래서 배포에서는 `-f docker-compose.yml` 로 override 를
 제외하고 실행하고, 개발에서는 아무 옵션도 지정하지 않습니다.
-
-배포는 `-f docker-compose.yml` 로 base 만 씁니다. 모드별 실행 service 는 14장 표에 있습니다.
 
 ### 11-1. 서버에 처음 배포하기
 
@@ -742,17 +710,17 @@ nano .env
     것이 좋습니다. 같은 디스크에 두면 그 디스크가 고장날 때 백업도 함께 손실됩니다.
   - `SMTP_*` — 비어 있으면 비밀번호 재설정 메일이 발송되지 않습니다. 비밀번호를 잊은 사용자가
     스스로 재설정할 방법이 없어집니다.
-  - `APP_ORIGIN` — 메일에 포함할 링크의 접두사입니다. 비어 있으면 `http://localhost:5173` 이 포함되어
-    받는 사람이 열 수 없는 링크가 됩니다.
+  - `APP_ORIGIN` — 메일에 포함할 링크의 접두사입니다. 비어 있으면 비밀번호 재설정 메일을 발송하지 않고
+    오류 로그만 남깁니다(`services/auth/password_reset.py`).
 - **순서**: `14-2` 와 같습니다.
 - **주의점**
-  - **80·443 이 열려 있어야 합니다.** Oracle Cloud 는 기본으로 차단되어 있어 보안 목록(Security
-    List)과 인스턴스 안 방화벽(`iptables`) 양쪽을 모두 열어야 합니다.
+  - **80, 443 이 열려 있어야 합니다.** 서버 방화벽에서 80, 443 을 열어야 합니다. 클라우드 쪽 방화벽이
+    따로 있으면 양쪽을 모두 엽니다.
   - **Cloudflare 를 사용한다면** `BANBLIT_DOMAIN` 의 레코드만 프록시를 비활성화하거나(DNS only), 프록시를 유지할 것이면 SSL 모드를
     Full (strict) 로 설정합니다. Flexible 로 설정하면 Cloudflare 가 서버에 http 로 접속해, 서버는
     http 로 서비스 중이라고 판단하고 로그인 cookie 를 설정하지 않습니다.
-  - **첫 계정이 권한을 전부 받습니다**(`auth_service.py` 의 `_is_first_account`). 실행한
-    직후에 관리자가 먼저 가입하십시오. 주소 공지는 관리자 가입 다음입니다.
+  - **`.env` 의 `ADMIN_SIGNUP_CODE` 와 같은 관리자코드를 보낸 가입자만 권한 항목을 전부 받습니다.** 실행한
+    직후에 관리자가 관리자코드로 먼저 가입하십시오. 주소 공지는 관리자 가입 다음입니다.
 
 ### 11-2. 배포한 서버를 새 버전으로 갱신하기
 
@@ -762,7 +730,7 @@ nano .env
 
 - **실행 경로**: 서버의 저장소 루트
 - **용도**: 코드를 가져오고 서비스를 새 버전으로 교체합니다. `git pull` 을 실행한 뒤
-  `up` 과 같은 순서로 진행합니다 — `.env` 필수값 확인, image 생성, `db` 기동,
+  `up` 과 같은 순서로 진행합니다 — `.env` 필수값 확인, Docker image 생성, `db` 기동,
   **마이그레이션 직전 백업**, `alembic upgrade head`, 나머지 서비스 기동, 응답 대기.
 - **주의점**
   - **마이그레이션이 서비스 교체보다 먼저입니다.** 새 코드가 먼저 실행되면 존재하지 않는 열을 읽어
@@ -825,7 +793,7 @@ docker run --rm -v banblit_banblit-attachments:/dst -v /srv/banblit/backups:/src
   - **덮어씁니다.** 백업 파일이 `--clean --if-exists` 로 생성되어 있어 현재 table 을
     삭제하고 다시 생성합니다. 복원하기 전에 현재 상태를 백업해 두십시오.
   - 복원하는 동안 `api` 를 정지해 두는 편이 안전합니다. table 이 삭제됐다 생성되는 사이에 들어온
-    요청이 어떤 값을 읽을지 정해져 있지 않습니다.
+    요청이 어떤 값을 읽을지 결정되어 있지 않습니다.
   - 첨부파일 복원은 volume 에 직접 압축을 풉니다. 현재 저장된 같은 이름 파일을 덮어씁니다.
   - **volume 이름 앞에는 프로젝트 이름이 붙습니다.** compose 파일에 `banblit-attachments` 로
     적혀 있어도 실제 이름은 `banblit_banblit-attachments` 입니다. `docker run -v` 에 짧은 이름을
@@ -858,7 +826,7 @@ ls backend/migrations/versions
   cat accounts.sql | docker compose -f docker-compose.yml exec -T db psql -U banblit -d banblit -v ON_ERROR_STOP=1
   ```
 
-  **뽑아낸 권한 집합에는 그 시점의 항목만 들어 있습니다.** 그 뒤에 추가된 항목을 더하지 않으면
+  **뽑아낸 권한 세트에는 그 시점의 항목만 들어 있습니다.** 그 뒤에 추가된 항목을 더하지 않으면
   "모든 항목을 가진 permission set" 판정에서 빠져, 헤드매니저가 권한을 부여하지 못합니다. 개수를
   확인하고 모자란 항목을 더합니다.
 
@@ -894,11 +862,11 @@ docker compose --profile e2e run --rm e2e
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: `frontend/e2e/` 의 Playwright 검사를 전부 실행합니다(86개 — chromium 과 webkit 합계). 로그인·가입, 배정 다시
-  계산과 연산 결과 표시, 팀 게시판 권한·첨부, 공지 글·댓글, 달력·알림, 합주실 수정, 전체 합주 지정, 팀 명단을 브라우저로
-  재현해 화면·서버·DB 가 연결되어 동작하는지 확인합니다. dev DB 는 건드리지 않습니다.
+- **용도**: `frontend/e2e/` 의 Playwright 테스트를 전부 실행합니다(chromium 은 전부, webkit 은 `popovers`, `profile-card` 2개 spec 만. `frontend/playwright.config.ts` 의 `projects`). 로그인, 가입, 배정 다시
+  계산과 연산 결과 표시, 팀 게시판 권한, 첨부, 공지 글, 댓글, 달력, 알림, 합주실 수정, 전체 합주 지정, 팀 명단을 브라우저로
+  재현해 화면, 서버, DB 가 연결되어 동작하는지 확인합니다. dev DB 는 건드리지 않습니다.
 - **옵션**
-  - `--profile e2e` — `docker-compose.override.yml` 에서 `profiles: ["e2e"]` 가 붙은 `e2e-api`·`e2e`
+  - `--profile e2e` — `docker-compose.override.yml` 에서 `profiles: ["e2e"]` 가 붙은 `e2e-api`, `e2e`
     서비스를 켭니다. 생략하면 두 서비스를 찾지 못합니다. 그래서 `docker compose up` 에는 포함되지 않습니다.
   - 첫 줄 `up -d --force-recreate --wait e2e-api`
     - `up -d` — 서비스를 백그라운드로 실행합니다.
@@ -907,38 +875,37 @@ docker compose --profile e2e run --rm e2e
       적용하므로 이 옵션이 곧 DB 초기화입니다. 생략하면 실행 중인 container 를 그대로 두어 이전 실행의 데이터가 남습니다.
     - `--wait` — healthcheck(`/health` 가 200)가 통과할 때까지 기다린 뒤 끝납니다. 생략하면 서버가 시작되기 전에 둘째 줄이 시작될 수 있습니다.
   - 둘째 줄 `run --rm e2e` — 일회성 container 로 `npm install && npx playwright test` 를 실행하고
-    끝나면 삭제합니다. 공식 image `mcr.microsoft.com/playwright:v1.62.1-noble` 를 사용해 브라우저를
+    끝나면 삭제합니다. 공식 Docker image `mcr.microsoft.com/playwright:v1.62.1-noble` 를 사용해 브라우저를
     따로 내려받지 않습니다. `depends_on` 이 `e2e-api` 의 healthy 를 기다립니다.
 - **동작 순서**
-  1. `e2e-api`(dev image)가 `banblit_e2e` DB 를 초기화하고 migration 을 적용한 뒤 서버를 시작합니다.
+  1. `e2e-api`(dev Docker image)가 `banblit_e2e` DB 를 초기화하고 migration 을 적용한 뒤 서버를 시작합니다.
      DB 이름이 `_e2e` 로 끝나지 않으면 초기화하지 않고 중단합니다.
   2. `e2e` 안에서 Playwright 가 Vite 개발 서버(`npm run dev`)를 시작합니다(`frontend/playwright.config.ts`
      의 `webServer`). `/api` 요청은 `API_ORIGIN=http://e2e-api:8000` 으로 전달됩니다. `web` 서비스는 쓰지 않습니다.
-  3. `frontend/e2e/global-setup.ts` 가 계정 2개·합주실·팀 2개·집중 합주기간 2개(오늘은 연산 후 그 결과를 적용,
-     내일은 부족분이 있는 연산 결과가 나오도록 불가능 일정 등록)를 만들고, 첫 가입자라 전체 권한을 받은 E2E 계정의
-     로그인 cookie 를 `frontend/playwright/.auth/e2e-account.json` 에 저장합니다. 모든 검사가 이 로그인 상태로 시작합니다.
+  3. `frontend/e2e/global-setup.ts` 가 계정 2개, 합주실, 팀 2개, 집중 합주기간 2개(오늘은 연산 후 그 결과를 적용,
+     내일은 부족분이 있는 연산 결과가 나오도록 불가능 일정 등록)를 만들고, 관리자코드(`global-setup.ts` 의 `admin_code`)로 가입해 전체 권한을 받은 E2E 계정의
+     로그인 cookie 를 `frontend/playwright/.auth/e2e-account.json` 에 저장합니다. 모든 테스트가 이 로그인 상태로 시작합니다.
 - **주의점**
   - **실행할 때마다 첫 줄부터 실행합니다.** 둘째 줄만 다시 실행하면 global-setup 이
-    `POST /api/signup 가 422 로 실패했습니다: {"detail":"이미 가입된 이메일입니다"}` 로 중단됩니다.
-    전체 권한은 첫 가입자만 받으므로 DB 가 비어 있어야 합니다.
+    `POST /api/signup 가 422 로 실패했습니다: {"detail":"이미 가입된 이메일이에요"}` 로 중단됩니다.
+    같은 이메일로 다시 가입할 수 없으므로 DB 가 비어 있어야 합니다.
   - 가입 rate limit 이 발신 IP 마다 1시간에 5번입니다. 한 번 실행에 global-setup 이 2번, `account.spec.ts`
     가 2번 씁니다. 서버 메모리에서 세므로 첫 줄로 `e2e-api` 를 다시 만들면 초기화됩니다.
-  - **image 가 큽니다(브라우저 3종 포함, 처음 내려받으면 1GB 가 넘습니다).** 처음 1번만
-    느리고, 두 번째부터는 로컬 image 캐시를 그대로 사용합니다.
-  - **`@playwright/test` 버전과 image tag 버전이 다르면 안 됩니다.** image 안의
+  - **Docker image 가 큽니다(브라우저 3종 포함, 처음 내려받으면 1GB 가 넘습니다).** 처음 1번만
+    느리고, 두 번째부터는 로컬 Docker image 캐시를 그대로 사용합니다.
+  - **`@playwright/test` 버전과 Docker image tag 버전이 다르면 안 됩니다.** Docker image 안의
     브라우저가 tag 버전에 맞춰 미리 설치되어 있기 때문입니다. `frontend/package.json` 의
     devDependency 버전을 올릴 때는 `docker-compose.override.yml` 의 `e2e.image` tag 도
     같은 숫자로 함께 수정합니다.
   - 패키지는 `web` 과 따로 `banblit-e2e-modules` 라는 이름 있는 volume 에 저장합니다.
-    image 의 기반 OS(Ubuntu)가 `web`(Alpine)과 달라, 네이티브 바이너리가 섞이는 문제를
+    Docker image 의 기반 OS(Ubuntu)가 `web`(Alpine)과 달라, 네이티브 바이너리가 섞이는 문제를
     막으려고 분리했습니다.
-  - 계산 시간이 필요한 검사(`frontend/e2e/assignment.spec.ts`)는 배정 다시 계산이
+  - 계산 시간이 필요한 테스트(`frontend/e2e/assignment.spec.ts`)는 배정 다시 계산이
     끝날 때까지 기다립니다. 대기 상한은 20초이고, container 부하가 크면 계산 시간이 늘어날 수 있습니다.
-    container 부하가 크면 늘어날 수 있습니다.
-  - 검사가 올린 첨부파일은 `e2e-api` container 안 `/tmp/banblit-e2e-attachments` 에 저장되어
+  - 테스트가 올린 첨부파일은 `e2e-api` container 안 `/tmp/banblit-e2e-attachments` 에 저장되어
     container 를 다시 만들면 사라집니다.
 
-**검사 파일 1개만 실행하기**
+### 12-2. E2E 테스트 파일 1개만 실행하기
 
 ```
 docker compose --profile e2e run --rm e2e sh -c "npx playwright test profile-card"
@@ -957,31 +924,31 @@ docker compose --profile e2e run --rm e2e npx playwright test e2e/assignment.spe
     `No tests found` 입니다. `--project` 를 생략하면 chromium 과 webkit 을 둘 다 실행합니다.
   - `--project=chromium` — Chromium 으로만 실행합니다. webkit 대상 2개 파일을 함께 실행하지 않아, 화면 파일 1개를
     수정한 직후 확인에 사용합니다.
-  - `-g <문구>` — 검사 이름에 그 문구가 포함된 것만 실행합니다(grep 의 약자). 공백이 있으면 작은따옴표로 묶습니다(`-g '계정 정보를'`).
-    일치하는 검사가 없으면 `No tests found` 이고, 생략하면 그 파일의 검사를 전부 실행합니다.
+  - `-g <문구>` — 테스트 이름에 그 문구가 포함된 것만 실행합니다(grep 의 약자). 공백이 있으면 작은따옴표로 묶습니다(`-g '계정 정보를'`).
+    일치하는 테스트가 없으면 `No tests found` 이고, 생략하면 그 파일의 테스트를 전부 실행합니다.
 - **주의**
   - 12-1 의 첫 줄(`up -d --force-recreate --wait e2e-api`)을 먼저 실행해야 합니다. e2e 는 빈 DB 를 전제로
-    가입부터 진행하므로, 이전 실행이 남긴 계정이 있으면 `이미 가입된 이메일입니다` 로 중단됩니다.
+    가입부터 진행하므로, 이전 실행이 남긴 계정이 있으면 `이미 가입된 이메일이에요` 로 중단됩니다.
 
-### 12-3. 화면 쪽에서 E2E 테스트만 따로 린트·타입 검사하기
+### 12-3. 화면 쪽에서 E2E 테스트만 따로 린트, 타입 검사하기
 
 ```
 docker compose run --rm --no-deps web npm run lint:e2e
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: `frontend/e2e/` 만 타입 인식 린트로 검사합니다.
+- **용도**: `frontend/e2e/` 만 타입 인식 lint 로 테스트합니다.
 - **주의점**
   - `e2e/` 전용 설정은 `frontend/e2e/lint.config.js` 입니다. 호스트에서 `--ignore-pattern` 값은 겹따옴표로 적습니다.
   - `npm run typecheck`(`tsc -b --noEmit`)은 `frontend/tsconfig.json` 의 `include`
-    에 `e2e` 가 이미 추가되어 있어 따로 명령을 생성하지 않아도 `e2e/` 까지 함께 검사합니다.
+    에 `e2e` 가 이미 추가되어 있어 따로 명령을 생성하지 않아도 `e2e/` 까지 함께 테스트합니다.
 
 ---
 
 ## 13. 자동 배정 서비스
 
-기간에 저장된 연산 시각(`periods.first_run_at`·`second_run_at`)이 지나면 사람이 버튼을
-누르지 않아도 배정을 실행하는 서비스입니다. `api` 와 같은 image 를 사용하되 HTTP endpoint 를 거치지
+기간에 저장된 연산 시각(`periods.first_run_at`, `second_run_at`)이 지나면 사람이 버튼을
+누르지 않아도 배정을 실행하는 서비스입니다. `api` 와 같은 Docker image 를 사용하되 HTTP endpoint 를 거치지
 않고 `backend/src/backend/jobs/auto_assign.py` 의 `assign_period` 를 직접 호출합니다.
 
 ### 13-1. 자동 배정 서비스 실행하기
@@ -995,6 +962,7 @@ banblit up -Auto
 - **주의점**
   - `AUTO_ASSIGN_INTERVAL_SECONDS` — 확인 간격(초)입니다. 배포 기본값 60, 개발 기본값 10 입니다. 숫자가 아니거나 0 이하면 60 을 사용합니다.
   - 자동 실행은 등록된 팀 전부와 합주실 전부를 대상으로 실행됩니다. 오늘이 기간 안에 포함되는 집중 합주기간이 2개 이상이면 같은 합주실, 같은 시각을 배정하려다 1개는 실패로 기록됩니다.
+  - **마감 일시(`periods.closes_at`)가 지난 집중 합주기간은 확인 간격마다 1회 계산해 관리자 확인 없이 현재 배정안으로 적용하고, `periods.fixed_at` 에 확정 시각을 기록한 뒤 전체 멤버에게 알림(`assignment_fixed`)을 보냅니다.** 확정된 기간은 연산 시각이 지나도 다시 계산하지 않습니다. 확정 해제(`POST /periods/{id}/unfix`)는 배정 화면의 "확정 해제" 버튼이 사유와 함께 호출하고, 마감 일시와 확정 시각을 삭제한 뒤 전체 멤버에게 알림(`assignment_unfixed`)을 보냅니다.
 
 ### 13-2. 자동 배정 로그 보기
 
@@ -1052,13 +1020,13 @@ docker compose rm -sf auto-assign
 그대로 입력하기 위한 wrapper 스크립트(다른 스크립트를 호출만 하는 스크립트)이고, Git Bash 로 `banblit.sh` 를 호출하기만 합니다. PowerShell 식
 switch(`-Auto` 등)는 wrapper 스크립트가 `--auto` 로 변환해 전달하므로 기존 방식대로 입력하면 됩니다.
 
-실행 모드가 2가지입니다. 어느 모드인지는 실행 중인 OS 로 정하고, `--dev`·`--deploy` 로
+실행 모드가 2가지입니다. 어느 모드인지는 실행 중인 OS 로 정하고, `--dev`, `--deploy` 로
 직접 선택할 수 있습니다. 선택한 모드를 매번 출력 첫 줄에 표시합니다.
 
 | 모드 | 언제 | 무엇이 실행되는가 |
 |---|---|---|
-| `dev` | 윈도우(기본) | 개발용 override 가 적용되어 Vite 개발 서버와 api 가 실행됩니다. reverse proxy·백업은 실행되지 않습니다 |
-| `deploy` | 윈도우 이외의 OS(기본) | base 1개만 적용됩니다. nginx·reverse proxy(caddy)·정기 백업이 함께 실행되고 https 로 요청을 받습니다 |
+| `dev` | 윈도우(기본) | 개발용 override 가 적용되어 Vite 개발 서버와 api 가 실행됩니다. reverse proxy, 백업은 실행되지 않습니다 |
+| `deploy` | 윈도우 이외의 OS(기본) | base 1개만 적용됩니다. nginx, reverse proxy(caddy), 정기 백업이 함께 실행되고 https 로 요청을 받습니다 |
 
 ### 14-1. 명령을 어느 경로에서나 사용하도록 등록하기
 
@@ -1089,27 +1057,27 @@ banblit up
   0. Docker 와 curl 이 있는지, Docker 엔진이 응답하는지 확인합니다. 윈도우에서 엔진이 응답하지 않으면
      Docker Desktop 을 실행하고 120초까지 기다립니다. `.env` 가 없으면 `.env.example` 을 복사해 생성합니다.
      모든 명령(`down`, `logs` 포함)이 이 단계를 먼저 거칩니다.
-  1. `banblit-backend:dev` image 가 `backend/pyproject.toml`·`uv.lock`·`Dockerfile` 보다
+  1. `banblit-backend:dev` Docker image 가 `backend/pyproject.toml`, `uv.lock`, `Dockerfile` 보다
      오래되었으면 `1-1`(`docker compose build dev`)을 먼저 실행합니다.
   2. `4-2`(`alembic upgrade head`)로 마이그레이션을 맞춥니다.
-  3. `3-1`·`10-1`로 `api` 와 `web` 을 실행합니다.
+  3. `3-1`, `10-1`로 `api` 와 `web` 을 실행합니다.
   4. `/health` 와 5173 에 실제로 요청해 응답할 때까지 기다립니다.
   5. 가입된 계정 수를 세어 출력합니다.
   6. 브라우저로 화면을 엽니다.
-  7. `git config core.hooksPath .githooks` 로 커밋 메시지 검사 훅을 활성화합니다. 이미 같은 값이면 변경하지 않습니다.
+  7. `git config core.hooksPath .githooks` 로 커밋 메시지 형식 검사 훅을 활성화합니다. 이미 같은 값이면 변경하지 않습니다.
 - **옵션**
   - `-Auto` — `13-1`의 자동 배정 서비스까지 함께 실행합니다. 생략하면 실행하지 않습니다.
     개발용 override 가 기본값을 `false` 로 두기 때문에 이 switch 로만 활성화됩니다.
-  - `-Build` — image 의 생성 시각과 무관하게 무조건 다시 생성합니다. 생략하면 생성 시각을 비교해 판단합니다.
+  - `-Build` — Docker image 의 생성 시각과 무관하게 무조건 다시 생성합니다. 생략하면 생성 시각을 비교해 판단합니다.
   - `-NoBrowser` — 브라우저를 열지 않습니다. 생략하면 엽니다.
 - **주의점**
   - container 가 `Up` 이어도 uvicorn 이 import 단계에서 종료되어 있을 수 있으므로, `docker compose ps`
     가 아니라 실제 응답으로 확인합니다. API 는 120초, 화면은 420초까지 기다립니다.
-  - 화면은 처음 실행할 때 container 안에서 `npm install` 이 실행되어 몇 분 걸립니다.
-  - 의존성을 추가하고 image 를 다시 생성하지 않으면 API 가 import 단계에서 종료됩니다.
+  - 화면은 처음 실행할 때 container 안에서 `npm install` 이 실행됩니다.
+  - 의존성을 추가하고 Docker image 를 다시 생성하지 않으면 API 가 import 단계에서 종료됩니다.
     1번 단계가 이 문제를 막습니다.
 
-### 14-3. 검사 실행하기
+### 14-3. 테스트 실행하기
 
 ```
 banblit check
@@ -1117,11 +1085,11 @@ banblit check
 
 - **실행 경로**: 어디서나
 - **용도**: `1-2`(`pytest -q`)와 `1-2-3`(`mypy`)을 차례로 실행합니다. 터미널에는 통과 여부와
-  실패한 항목만 출력하고, **전체 출력은 `.logs/pytest-<시각>.log`·`.logs/mypy-<시각>.log` 에 저장합니다.**
+  실패한 항목만 출력하고, **전체 출력은 `.logs/pytest-<시각>.log`, `.logs/mypy-<시각>.log` 에 저장합니다.**
 - **옵션**: 없습니다.
 - **주의점**
   - 터미널 출력을 줄이는 것이 목적입니다. 전체 출력이 필요하면 `.logs/` 의 파일을 확인하거나
-    `1-2`·`1-2-3`을 직접 실행합니다.
+    `1-2`, `1-2-3`을 직접 실행합니다.
   - `.logs/` 는 `.gitignore` 에 있습니다. 커밋되지 않습니다.
   - 1개라도 실패하면 종료 코드 1 로 종료합니다.
 
@@ -1146,7 +1114,7 @@ banblit down
 - **실행 경로**: 어디서나
 - **용도**: `3-3`으로 서비스를 정지합니다. 데이터는 volume 에 유지됩니다.
 - **옵션**
-  - `-Volumes` — volume 까지 삭제합니다. DB·첨부파일·테스트용 DB 가 전부 삭제됩니다.
+  - `-Volumes` — volume 까지 삭제합니다. DB, 첨부파일, 테스트용 DB 가 전부 삭제됩니다.
     `yes` 를 직접 입력해야 실행됩니다. 생략하면 volume 을 유지합니다.
 
 ### 14-6. 그 밖의 명령
@@ -1160,13 +1128,13 @@ banblit help
 
 - **실행 경로**: 어디서나
 - **용도**
-  - `logs` — `3-1-2` 와 같습니다. 최근 1분 로그를 출력합니다. 대상을 적지 않으면 전체 서비스의 로그를 출력합니다.
+  - `logs` — 최근 1분 로그를 출력합니다. 대상을 적지 않으면 전체 서비스의 로그를 출력합니다.
   - `restart` — 다시 실행합니다. 대상을 적지 않으면 `api` 와 `web` 을 다시 실행합니다.
-  - `migrate` — `4-2`·`4-2-1` 과 같습니다. 마이그레이션만 적용하고 현재 revision 을 출력합니다.
-  - `help` — 명령·service·switch 목록을 출력합니다.
+  - `migrate` — `4-2`, `4-2-1` 과 같습니다. 마이그레이션만 적용하고 현재 revision 을 출력합니다.
+  - `help` — 명령, service, switch 목록을 출력합니다.
 - **옵션**
   - 첫 번째 위치 인자가 명령, 두 번째가 대상 service 입니다. service 는
-    `api` `web` `db` `auto-assign` 4개 중 1개이고, `logs` 와 `restart` 에서만 사용합니다.
+    `api`, `web`, `db`, `auto-assign`, `caddy` 5개 중 1개이고, `logs` 와 `restart` 에서만 사용합니다.
   - `-Follow` — `logs` 를 실시간으로 계속 출력합니다. 생략하면 1번 출력하고 종료합니다.
 - **주의점**
   - 명령을 적지 않으면 `up` 이 기본값입니다.
@@ -1186,31 +1154,31 @@ docker compose --profile manual run --rm manual
   이어져 있어 둘째 줄 하나로 전부 실행됩니다.
 - **옵션**
   - `--profile manual` — `docker-compose.override.yml` 에서 `profiles` 에 `manual` 이 있는
-    `manual`·`e2e-api` 2개를 활성화합니다. 생략하면 두 서비스를 찾지 못합니다.
+    `manual`, `e2e-api` 2개를 활성화합니다. 생략하면 두 서비스를 찾지 못합니다.
   - 첫 줄 `up -d --force-recreate --wait e2e-api`
     - `-d` — 배경에서 실행합니다.
     - `--force-recreate` — 실행 중이어도 container 를 새로 생성합니다. `e2e-api` 는 시작할 때마다 `banblit_e2e` DB 를
       초기화하고 migration 을 적용하므로, 이 옵션이 곧 매뉴얼 데이터를 처음부터 다시 만드는 수단입니다.
-      생략하면 이미 만들어 둔 데이터를 그대로 사용합니다(원고만 고칠 때는 생략하는 편이 빠릅니다).
+      생략하면 이미 만들어 둔 데이터를 그대로 사용합니다(원고만 수정할 때는 생략하는 편이 빠릅니다).
     - `--wait e2e-api` — healthcheck 가 통과할 때까지 기다립니다. DB 를 초기화하고 migration 을
       적용하는 데 시간이 걸려, 기다리지 않으면 다음 줄이 연결에 실패합니다.
   - 둘째 줄 `run --rm manual` — 일회성 container 로 캡처와 PDF 출력을 실행하고 끝나면 삭제합니다.
 - **무엇이 도는가**
-  1. `frontend/manual/seed.ts` 가 계정 10개·합주실 1개·팀 5개·집중 합주기간 2개·예약 2건·
-     불가능 일정 6건(본인 4건·다른 멤버 2건)·공지 3건·팀 글 3건·블라인드 1건을 만들고,
+  1. `frontend/manual/seed.ts` 가 계정 10개, 합주실 1개, 팀 5개, 집중 합주기간 2개, 예약 2건, 
+     불가능 일정 6건(본인 4건, 다른 멤버 2건), 공지 3건, 팀 글 3건, 블라인드 1건을 만들고,
      전체 권한 계정의 로그인 cookie 를
      `frontend/manual/.auth/` 에 저장합니다.
   2. `frontend/manual/capture.spec.ts` 가 `docs/manual/shots.json` 을 읽어 그림을 1장씩 캡처합니다.
-     강조 표시(사각형·확대·번호·spotlight)는 캡처 직전에 화면 위에 그립니다.
+     강조 표시(사각형, 확대, 번호, spotlight)는 캡처 직전에 화면 위에 그립니다.
   3. `frontend/manual/pdf.spec.ts` 가 `manual.html` 을 브라우저 인쇄 기능으로 PDF 로 출력합니다.
 - **주의점**
-  - **dev DB 는 변경되지 않습니다.** 이 명령이 쓰는 DB 는 `banblit_e2e` 1개이고, E2E 검사와 같은
-    DB 입니다. 매뉴얼을 만든 뒤 E2E 를 실행하면 12-1 의 첫 줄이 DB 를 다시 비웁니다.
-  - image 는 `deploy/manual.Dockerfile` 로 만듭니다. 공식 Playwright image 에 한글 글꼴
+  - **dev DB 는 변경되지 않습니다.** 이 명령이 쓰는 DB 는 `banblit_e2e` 1개이고, E2E 테스트와 같은
+    DB 입니다. 매뉴얼을 만든 뒤 E2E 를 실행하면 12-1 의 첫 줄이 DB 를 다시 초기화합니다.
+  - Docker image 는 `deploy/manual.Dockerfile` 로 만듭니다. 공식 Playwright Docker image 에 한글 글꼴
     (`fonts-noto-cjk`)을 추가한 것이고, 태그는 `e2e` 서비스와 같은 값이어야 합니다.
-  - 그림이 1장도 바뀌지 않았으면 15-2 로 PDF 만 다시 출력하는 편이 빠릅니다.
+  - 그림이 1장도 변경되지 않았으면 15-2 로 PDF 만 다시 출력하는 편이 빠릅니다.
 
-### 15-2. 원고만 고쳐 PDF 다시 출력하기
+### 15-2. 원고만 수정해 PDF 다시 출력하기
 
 ```
 docker compose --profile manual run --rm manual npx playwright test --config manual/pdf.config.ts
@@ -1222,5 +1190,5 @@ docker compose --profile manual run --rm manual npx playwright test --config man
   - `--config manual/pdf.config.ts` — PDF 출력만 담는 설정입니다. 이 설정에는 화면 개발 서버와
     데이터 생성이 없어 `e2e-api` 가 실행 중이 아니어도 실행됩니다.
 - **주의점**
-  - `manual.html` 은 브라우저로 열어 그대로 확인할 수 있습니다. 글만 고칠 때는 브라우저에서
+  - `manual.html` 은 브라우저로 열어 그대로 확인할 수 있습니다. 글만 수정할 때는 브라우저에서
     새로고침해 확인한 뒤 이 명령을 1번 실행하면 됩니다.

@@ -1,14 +1,14 @@
 ---
 title: 배포
 sources:
-  - "[[graph/docker-compose.yml]]"  # 배포용 기준 파일. reverse proxy·백업 service 까지 포함한 정의 파일 1개 — docker-compose.yml
-  - "[[graph/docker-compose.override.yml]]"  # 개발에서 reverse proxy·백업을 비활성화하는 위치 — docker-compose.override.yml
+  - "[[graph/docker-compose.yml]]"  # 배포용 기준 파일. reverse proxy, 백업 service 까지 포함한 정의 파일 1개 — docker-compose.yml
+  - "[[graph/docker-compose.override.yml]]"  # 개발에서 reverse proxy, 백업을 비활성화하는 위치 — docker-compose.override.yml
   - "[[graph/deploy/Caddyfile]]"  # reverse proxy 가 인증서를 받고 요청을 전달하는 규칙 — deploy/Caddyfile
   - "[[graph/deploy/backup.sh]]"  # 정기 백업과 migration 직전 1회 백업(once)을 진행하는 script — deploy/backup.sh
   - "[[graph/.env.example]]"  # 배포에서 채워야 하는 값의 목록과 뜻 — .env.example
   - "[[graph/backend/src/backend/api/rate_limit]]"  # 값을 추측하는 요청을 제한하는 rate limit — backend/src/backend/api/rate_limit.py
   - "[[graph/backend/src/backend/api/routers/auth]]"  # 그 rate limit이 적용된 5개 endpoint — backend/src/backend/api/routers/auth.py
-  - "[[graph/backend/tests/unit/test_rate_limit]]"  # 상한·창·격리의 시나리오 — backend/tests/unit/test_rate_limit.py
+  - "[[graph/backend/tests/unit/test_rate_limit]]"  # 상한, 창, 격리의 시나리오 — backend/tests/unit/test_rate_limit.py
   - "[[graph/frontend/nginx.conf.template]]"  # 화면을 제공하고 /api 만 서버로 전달하는 규칙 — frontend/nginx.conf.template
   - "[[graph/frontend/Dockerfile]]"  # 화면을 묶을 때 접속 주소를 박아 넣는 위치 — frontend/Dockerfile
   - "[[graph/frontend/index.html]]"  # 크롤러가 읽는 링크 미리보기 태그 — frontend/index.html
@@ -43,7 +43,7 @@ flowchart LR
 
 - [[Banblit|Banblit 개요]] — 전체 기능 지도
 - [[dev-environment/dev-environment|개발 환경 실행]] — 같은 구성을 개발에서 시작하는 절차
-- [[accounts-and-roles/accounts-and-roles|계정과 역할]] — rate limit이 적용되는 로그인·가입·재설정의 규칙
+- [[accounts-and-roles/accounts-and-roles|계정과 역할]] — rate limit이 적용되는 로그인, 가입, 재설정의 규칙
 - [[database-layer/database-layer|데이터 저장소]] — 백업 대상 table과 그 제약
 - [[scheduling-api/scheduling-api|스케줄링 API]] — reverse proxy 뒤에서 실제로 응답하는 서버
 - [[screens/screens|화면]] — reverse proxy 가 제공하는 앱
@@ -58,7 +58,7 @@ flowchart LR
      쿠키에 Secure 붙임     ──▶  비활성화 (개발은 암호화 없이 실행)
      자동 배정 켜짐         ──▶  비활성화 (테스트는 임의의 값으로 변경)
      메일 본문 안 남김      ──▶  저장 (재설정 링크를 클릭해 검증)
-     역할 계층·백업 있음    ──▶  실행하지 않도록 표시
+     역할 계층, 백업 있음    ──▶  실행하지 않도록 표시
 ```
 
 개발에서 reverse proxy 와 백업을 **삭제하지 않고 비활성화합니다.** 삭제하면 배포용 정의에서도 삭제되기 때문입니다. 비활성화 표시만 덮어쓰면 정의는 1곳에 그대로 남습니다.
@@ -67,7 +67,7 @@ flowchart LR
 
 reverse proxy 만 외부에 열려 있고, 화면 서버와 API 서버는 container(Docker가 실행하는 격리된 프로세스 단위) 내부 네트워크에서만 통신합니다. 화면 서버에 남겨 둔 포트는 container 내부에만 열려 있어, API 서버에 직접 접근해야 하는 경우에만 사용합니다.
 
-reverse proxy 는 인증서를 자동으로 받고 갱신합니다. 인증서를 받으려면 **도메인이 이미 이 서버를 가리키고 있어야** 합니다. 인증서 발급 기관이 도메인 소유권을 확인하기 위해 그 주소로 요청을 보내기 때문입니다. 그래서 순서가 정해져 있습니다. 도메인을 먼저 지정하고, DNS 전파를 확인한 뒤에 reverse proxy 를 실행합니다. 인증서 발급에 반복 실패하면 발급 기관이 일시적으로 요청을 거절하므로, 원인을 수정한 뒤 다시 시도합니다.
+reverse proxy 는 인증서를 자동으로 받고 갱신합니다. 인증서를 받으려면 **도메인이 이미 이 서버를 가리키고 있어야** 합니다. 인증서 발급 기관이 도메인 소유권을 확인하기 위해 그 주소로 요청을 보내기 때문입니다. 그래서 순서가 결정되어 있습니다. 도메인을 먼저 지정하고, DNS 전파를 확인한 뒤에 reverse proxy 를 실행합니다. 인증서 발급에 반복 실패하면 발급 기관이 일시적으로 요청을 거절하므로, 원인을 수정한 뒤 다시 시도합니다.
 
 받은 인증서는 volume(container 밖에 남는 저장 공간)에 별도로 보관합니다. container를 다시 생성할 때마다 새로 받으면 같은 이유로 거절됩니다.
 
@@ -122,7 +122,7 @@ reverse proxy 는 인증서를 자동으로 받고 갱신합니다. 인증서를
 | --- | --- | --- |
 | 로그인 | 사용자가 오타를 낼 여유는 있지만 체계적 추측은 막는 수준 | 인증 시도를 제한합니다 |
 | 가입 | 대량 계정 생성을 방지 | IP 주소 1개로 계정을 2개 이상 만드는 요청을 제한합니다 |
-| 아이디 찾기·비밀번호 재설정 요청 | 더 낮은 수준. **메일이 발송되므로** | 무고한 사용자의 주소로 메일을 대량 발송하는 요청을 방지합니다 |
+| 아이디 찾기, 비밀번호 재설정 요청 | 더 낮은 수준. **메일이 발송되므로** | 무고한 사용자의 주소로 메일을 대량 발송하는 요청을 방지합니다 |
 | 비밀번호 재설정 확인 | token(1회용 인증 문자열) 추측을 방지 | 메일로 받은 token의 정확성을 확인합니다 |
 
 허용 횟수는 아래와 같습니다. 값은 api 앱이 시작할 때 1번 읽는 표 1개에 모여 있습니다.
@@ -140,23 +140,23 @@ reverse proxy 는 인증서를 자동으로 받고 갱신합니다. 인증서를
 
 요청 출처는 **맨 앞의 reverse proxy 가 관찰한 IP 주소**로 식별합니다. 요청을 보낸 쪽이 제출한 값은 신뢰하지 않습니다. 신뢰할 경우 요청자가 IP를 변경하며 시도하여 임계값을 무한히 회피할 수 있습니다.
 
-reverse proxy 는 각자 관찰한 주소를 `X-Forwarded-For` 헤더(요청이 거쳐 온 주소를 쉼표로 나열한 HTTP 헤더)의 맨 뒤에 추가합니다. 배포 경로는 Caddy → nginx → api 로 reverse proxy 가 2개이므로, 맨 뒤 값은 Caddy 컨테이너의 주소이고 **뒤에서 2번째 값**이 실제 요청자입니다. reverse proxy 의 개수는 환경변수 `TRUSTED_PROXY_COUNT` 로 지정합니다.
+reverse proxy 는 각자 관찰한 주소를 `X-Forwarded-For` 헤더(요청이 거쳐 온 주소를 쉼표로 나열한 HTTP 헤더)의 맨 뒤에 추가합니다. 배포 경로는 Caddy, nginx, api 순서로 reverse proxy 가 2개이므로, 맨 뒤 값은 Caddy 컨테이너의 주소이고 **뒤에서 2번째 값**이 실제 요청자입니다. reverse proxy 의 개수는 환경변수 `TRUSTED_PROXY_COUNT` 로 지정합니다.
 
 | 환경 | 값 | 지정 위치 |
 |---|---|---|
-| 배포 (Caddy → nginx → api) | 2 | `docker-compose.yml` 의 `api.environment` |
-| 개발 (nginx 또는 Vite → api) | 1 | `docker-compose.override.yml` 의 `api.environment` |
-| 지정하지 않음·숫자가 아님·0 이하 | 1 | `rate_limit.py` 의 `DEFAULT_TRUSTED_PROXY_COUNT` |
+| 배포 (Caddy, nginx, api 순서) | 2 | `docker-compose.yml` 의 `api.environment` |
+| 개발 (nginx 또는 Vite, api 순서) | 1 | `docker-compose.override.yml` 의 `api.environment` |
+| 지정하지 않음, 숫자가 아님, 0 이하 | 1 | `rate_limit.py` 의 `DEFAULT_TRUSTED_PROXY_COUNT` |
 
 헤더의 값 개수가 `TRUSTED_PROXY_COUNT` 보다 적으면 reverse proxy 를 거치지 않은 요청이므로 헤더를 사용하지 않고 접속한 상대의 주소를 사용합니다. 값을 실제 reverse proxy 개수보다 작게 지정하면 모든 사용자가 reverse proxy 컨테이너 주소 1개로 합산되어 서비스 전체가 상한 1개를 공유합니다. Caddy 앞에 CDN 같은 reverse proxy 를 추가하면 이 값과 Caddy 의 `trusted_proxies` 설정을 함께 변경해야 합니다.
 
-카운터는 **서버 메모리에 저장**됩니다. 서버를 2대 이상으로 확장하면 각 서버가 독립적으로 카운트하므로 실제 임계값이 서버 수만큼 배가 됩니다. 현재는 단일 서버이므로 그대로 두고, 확장할 때 카운터를 공유 저장소로 옮깁니다. 메모리 누적을 방지하기 위해 저장할 IP 주소 개수에도 상한을 두었습니다. IP를 바꾸며 요청하는 것 자체가 공격이기 때문입니다.
+카운터는 **서버 메모리에 저장**됩니다. 서버를 2대 이상으로 확장하면 각 서버가 독립적으로 카운트하므로 실제 임계값이 서버 수만큼 배가 됩니다. 현재는 단일 서버이므로 그대로 두고, 확장할 때 카운터를 공유 저장소로 옮깁니다. 메모리 누적을 방지하기 위해 저장할 IP 주소 개수에도 상한을 두었습니다. IP를 변경하며 요청하는 것 자체가 공격이기 때문입니다.
 
 ### 링크 미리보기 주소는 묶을 때 박습니다
 
-카카오톡·페이스북에 주소를 붙여넣으면 그 크롤러(crawler, 링크의 내용을 대신 읽어 오는 프로그램)가
+카카오톡, 페이스북에 주소를 붙여넣으면 그 크롤러(crawler, 링크의 내용을 대신 읽어 오는 프로그램)가
 `index.html` 을 받아 갑니다. 크롤러는 JavaScript 를 실행하지 않으므로 화면 코드가 만드는 것은
-아무것도 보지 못합니다. 제목·설명·이미지는 `index.html` 의 `og:*` 태그에 직접 적혀 있어야 합니다.
+아무것도 보지 못합니다. 제목, 설명, 이미지는 `index.html` 의 `og:*` 태그에 직접 적혀 있어야 합니다.
 
 ```
 .env 의 APP_ORIGIN ─▶ docker-compose.yml 의 build arg ─▶ Dockerfile 의 ENV ─▶ index.html 의 og:image
@@ -171,10 +171,10 @@ reverse proxy 는 각자 관찰한 주소를 `X-Forwarded-For` 헤더(요청이 
 **배포 `.env` 에 `APP_ORIGIN` 이 반드시 있어야 합니다.** api 쪽에는 기본값이 없습니다. 비어 있으면 api 는 비밀번호 재설정 메일을 발송하지 않고 오류 로그를 남깁니다. 화면 build 의 미리보기 주소는 기본값이 `http://localhost:8080` 이라
 서버가 뜨고 화면도 정상이지만, 크롤러만 실패합니다. 묶은 뒤 확인하는 명령은 `COMMAND.md` 의 10-4-1 입니다.
 
-### 구조를 바꿀 때는 순서가 있습니다
+### 구조를 변경할 때는 순서가 있습니다
 
 ```
-   git pull  ─▶  이미지 빌드  ─▶  마이그레이션 실행  ─▶  서비스 재시작
+   git pull  ─▶  Docker image build  ─▶  마이그레이션 실행  ─▶  서비스 재시작
                                          ↑
                    순서를 뒤집으면 새 코드가
                    아직 없는 테이블 열을 읽어 500 error 발생

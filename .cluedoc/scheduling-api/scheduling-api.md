@@ -2,17 +2,17 @@
 title: 스케줄링 API
 sources:
   - "[[graph/backend/src/backend/api/app]]"  # FastAPI 앱을 생성하고 라우터를 등록하는 파일, 오류를 응답으로 변환하는 전역 처리 — backend/src/backend/api/app.py
-  - "[[graph/backend/src/backend/api/routers/schedule]]"  # 현재 배정안·배정·스케줄링 기록 조회와 적용 endpoint — backend/src/backend/api/routers/schedule.py
+  - "[[graph/backend/src/backend/api/routers/schedule]]"  # 현재 배정안, 배정, 스케줄링 기록 조회와 적용 endpoint — backend/src/backend/api/routers/schedule.py
   - "[[graph/backend/src/backend/services/validation/input]]"  # 모든 endpoint 가 함께 쓰는 입력 경계 검증 — backend/src/backend/services/validation/input.py
   - "[[graph/backend/src/backend/db/commit]]"  # 저장 중 데이터베이스 제약에 위반되었을 때 사용자가 읽을 사유로 변환하는 파일 — backend/src/backend/db/commit.py
-  - "[[graph/backend/src/backend/api/routers/routers]]"  # 합주실·기간·팀·예약·게시판·계정·권한·알림 endpoint — backend/src/backend/api/routers/
-  - "[[graph/backend/src/backend/api/schemas]]"  # 요청·응답의 형태 — backend/src/backend/api/schemas.py
+  - "[[graph/backend/src/backend/api/routers/routers]]"  # 합주실, 기간, 팀, 예약, 게시판, 계정, 권한, 알림 endpoint — backend/src/backend/api/routers/
+  - "[[graph/backend/src/backend/api/schemas]]"  # 요청, 응답의 형태 — backend/src/backend/api/schemas.py
   - "[[graph/backend/src/backend/api/auth_dependency]]"  # 요청한 사용자와 권한 항목 보유 여부를 확인하는 파일 — backend/src/backend/api/auth_dependency.py
   - "[[graph/backend/src/backend/services/notification/notification_service]]"  # 시간표를 변경한 endpoint가 알림을 생성하는 파일 — backend/src/backend/services/notification/notification_service.py
   - "[[graph/backend/src/backend/db/health]]"  # 상태 확인 endpoint가 조회하는 대상 — backend/src/backend/db/health.py
 ---
 
-> 문서 버전: 2.2.0 draft
+> 문서 버전: 2.2.1 draft
 
 ```mermaid
 flowchart TD
@@ -24,14 +24,14 @@ flowchart TD
     S -->|아니오| R1["422<br/>detail: 문장 1개"]
     S -->|예| E[서비스 함수 호출]
     E -->|규칙 위반| R1
-    E -->|성공| R2[200 · 결과]
+    E -->|성공| R2[200, 결과]
 ```
 
 ## Abstract
 
 서버가 화면에 제공하는 endpoint(API의 요청 주소 단위) 전체가 따르는 **공통 규칙** 3가지를 다룹니다. 호출 권한 검증, 잘못된 요청에 대한 응답 형식, 서버 상태 확인 endpoint입니다. 개별 endpoint가 무엇을 하는지는 각 기능 문서가 담당하고, 배정을 계산해 스케줄링 기록으로 쌓고 적용하는 endpoint는 [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]]이 담당합니다.
 
-처음에는 팀·합주실을 **이름으로 직접 보내면 저장하지 않고 계산만 하는** `POST /assign`이 이 문서의 주제였습니다. 저장소가 생기고 화면이 기간 번호 1개로 호출하는 endpoint만 쓰게 되면서, `POST /assign`과 이름↔번호 변환 계층은 2026-09-08에 제거했습니다(사용자 결정). 로그인만 하면 어떤 이름으로든 22초가 걸리는 계산을 실행할 수 있던 endpoint도 함께 제거했습니다.
+처음에는 팀, 합주실을 **이름으로 직접 보내면 저장하지 않고 계산만 하는** `POST /assign`이 이 문서의 주제였습니다. 저장소가 생기고 화면이 기간 번호 1개로 호출하는 endpoint만 쓰게 되면서, `POST /assign`과 이름↔번호 변환 계층은 2026-09-08에 제거했습니다(사용자 결정). 로그인만 하면 어떤 이름으로든 22초가 걸리는 계산을 실행할 수 있던 endpoint도 함께 제거했습니다.
 
 ## Introduction
 
@@ -51,17 +51,17 @@ endpoint는 10개 이상이고 각각 하는 일이 다르지만, 3가지는 모
 
 ### 호출 권한은 1곳에서 검증합니다
 
-endpoint마다 요구 조건만 선언합니다. "로그인한 사용자" 또는 "이 권한 항목이 켜진 사용자"입니다. 실제로 cookie를 읽어 사용자를 찾고 그 사용자의 permission set(권한 집합)을 합쳐 판정하는 코드는 `auth_dependency.py` 1곳뿐이고, 모든 endpoint가 그 1곳을 거칩니다.
+endpoint마다 요구 조건만 선언합니다. "로그인한 사용자" 또는 "이 권한 항목이 켜진 사용자"입니다. 실제로 cookie를 읽어 사용자를 찾고 그 사용자의 permission set(권한 세트)을 합쳐 판정하는 코드는 `auth_dependency.py` 1곳뿐이고, 모든 endpoint가 그 1곳을 거칩니다.
 
 | 요청 | 응답 |
 | --- | --- |
-| cookie가 없거나 session이 만료됨 | 401 · 로그인이 필요합니다 |
-| 로그인했지만 그 endpoint가 요구하는 권한 항목이 꺼져 있음 | 403 · 권한이 없습니다 |
+| cookie가 없거나 session이 만료됨 | 401, 로그인이 필요합니다 |
+| 로그인했지만 그 endpoint가 요구하는 권한 항목이 꺼져 있음 | 403, 권한이 없습니다 |
 | 통과 | endpoint 본문 |
 
 401과 403을 구분하는 이유는 화면의 동작이 다르기 때문입니다. 401이면 로그인 화면으로 이동하고, 403이면 현재 화면에 머문 채 안내만 표시합니다. 2개를 합치면 권한이 없는 사용자를 로그인 화면으로 보내, 다시 로그인하면 되는 것으로 오인하게 합니다.
 
-session 이 없거나 만료되어 거절한 401 에는 문구와 함께 고정된 구분 값(세션 거절 code)을 붙입니다. 화면은 문구가 아니라 이 값을 보고 로그인 화면으로 이동합니다. 로그인 화면에서 비밀번호가 틀린 경우도 401 이지만 구분 값이 없어 이동하지 않습니다. 문구를 고쳐도 이동 판정은 바뀌지 않습니다.
+session 이 없거나 만료되어 거절한 401 에는 문구와 함께 고정된 구분 값(세션 거절 code)을 붙입니다. 화면은 문구가 아니라 이 값을 보고 로그인 화면으로 이동합니다. 로그인 화면에서 비밀번호가 틀린 경우도 401 이지만 구분 값이 없어 이동하지 않습니다. 문구를 수정해도 이동 판정은 변경되지 않습니다.
 
 상태 확인(`/health`)만 이 검증을 거치지 않습니다. 서버가 실행 중인지 묻는 호출자는 사용자가 아닙니다.
 
@@ -114,7 +114,7 @@ session 이 없거나 만료되어 거절한 401 에는 문구와 함께 고정�
 | `backend/tests/integration/db/test_*_endpoints.py` | endpoint마다 로그인하지 않은 요청은 401로, 권한 항목이 없는 사용자는 403으로 구분하는지 |
 | `backend/tests/integration/db/test_period_endpoints.py` | 스케줄링 기록 목록, 기록 1개, 이 배정안 적용이 "스케줄링 기록 확정" 항목을 요구하는지, 삭제된 되돌리기 endpoint 와 조율안 확정 endpoint 가 존재하지 않는지, 다른 기간과 겹치는 기록의 적용이 500 이 아니라 422 문장 1개로 응답하는지 |
 
-옛 `POST /assign` 을 확인하던 테스트 16개는 endpoint와 함께 `trash/2026-09-08-refactor/` 로 옮겼습니다. 남은 서버 테스트는 485개입니다.
+옛 `POST /assign` 을 확인하던 테스트 16개는 endpoint와 함께 `trash/2026-09-08-refactor/` 로 옮겼습니다.
 
 ### 트러블슈팅
 
@@ -134,7 +134,7 @@ session 이 없거나 만료되어 거절한 401 에는 문구와 함께 고정�
 - **무엇이 벌어졌나**: 이 서버가 사용하려는 포트를 그 다른 프로젝트의 컨테이너가 먼저 차지하고 있어, 포트를 여는 시도가 "이미 사용하고 있다"는 오류로 실패했습니다
 - **왜 바로 중지하지 않았나**: 이 저장소의 규칙상, 이 작업과 무관하게 이미 동작 중인 프로그램을 중지하는 것처럼 되돌리기 어려운 작업을 하기 전에는 반드시 먼저 사용자에게 이유를 설명하고 승인을 받아야 합니다. 그 다른 프로젝트가 중지되었을 때 어떤 영향이 있을지 이 작업만으로는 알 수 없었기 때문에 임의로 중지하지 않고 먼저 상황을 보고했습니다
 - **어떻게 해결했나**: 사용자에게 상황을 설명하고 승인을 받은 뒤 그 다른 프로젝트의 서비스 묶음을 중지하여 포트를 비웠고, 이후 이 저장소의 서버가 그 포트를 정상적으로 사용할 수 있었습니다
-- **남는 영향**: 이 문제는 이 저장소 코드의 결함이 아니라 개발 환경에서 포트가 겹칠 때 발생하는 상황입니다. 같은 포트를 사용하는 다른 프로그램이 실행 중이면 다시 발생할 수 있고, 그때도 같은 절차(원인 확인 → 사용자 승인 → 정리)를 따릅니다
+- **남는 영향**: 이 문제는 이 저장소 코드의 결함이 아니라 개발 환경에서 포트가 겹칠 때 발생하는 상황입니다. 같은 포트를 사용하는 다른 프로그램이 실행 중이면 다시 발생할 수 있고, 그때도 같은 절차(원인 확인, 사용자 승인, 정리 순서)를 따릅니다
 
 ## Conclusion
 

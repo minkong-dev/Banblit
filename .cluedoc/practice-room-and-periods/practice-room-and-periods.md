@@ -2,39 +2,38 @@
 title: 합주실과 기간
 sources:
   - "[[graph/backend/src/backend/scheduling/slots]]"  # 운영 시간을 slot으로 분할합니다 — backend/src/backend/scheduling/slots.py
-  - "[[graph/backend/src/backend/contract]]"  # slot 길이·합주 1회 길이의 기본값과 선택 가능한 값 — backend/src/backend/contract.py
+  - "[[graph/backend/src/backend/contract]]"  # slot 길이, 합주 1회 길이의 기본값과 선택 가능한 값 — backend/src/backend/contract.py
   - "[[graph/backend/src/backend/scheduling/assignment]]"  # 합주실(이름 + 운영 시간) 정의 — backend/src/backend/scheduling/assignment.py
-  - "[[graph/backend/src/backend/db/models]]"  # Room·Period table — backend/src/backend/db/models.py
-  - "[[graph/backend/src/backend/services/validation/input]]"  # 개방 시각·폐쇄 시각·이름·기간 날짜를 비롯한 모든 입력의 경계 검증 — backend/src/backend/services/validation/input.py
-  - "[[graph/backend/src/backend/services/room/room_service]]"  # 합주실 조회·생성·수정 — backend/src/backend/services/room/room_service.py
-  - "[[graph/backend/src/backend/services/period/period_crud_service]]"  # 기간 조회·생성·수정·삭제 — backend/src/backend/services/period/period_crud_service.py
-  - "[[graph/backend/src/backend/services/period/ensemble_service]]"  # 집중 합주기간의 전체 합주 설정·날짜별 시각 저장 — backend/src/backend/services/period/ensemble_service.py
-  - backend/migrations/versions/d9a4c6e1f207_period_ensemble.py # 전체 합주 열·CHECK 제약·ensemble_days table
-  - "[[graph/backend/tests/integration/db/test_period_ensemble_endpoints]]"  # 전체 합주 설정 저장·거절 시나리오 — backend/tests/integration/db/test_period_ensemble_endpoints.py
+  - "[[graph/backend/src/backend/db/models]]"  # Room, Period table — backend/src/backend/db/models.py
+  - "[[graph/backend/src/backend/services/validation/input]]"  # 개방 시각, 폐쇄 시각, 이름, 기간 날짜를 비롯한 모든 입력의 경계 검증 — backend/src/backend/services/validation/input.py
+  - "[[graph/backend/src/backend/services/room/room_service]]"  # 합주실 조회, 생성, 수정 — backend/src/backend/services/room/room_service.py
+  - "[[graph/backend/src/backend/services/period/period_crud_service]]"  # 기간 조회, 생성, 수정, 삭제 — backend/src/backend/services/period/period_crud_service.py
+  - "[[graph/backend/src/backend/services/period/ensemble_service]]"  # 집중 합주기간의 전체 합주 설정, 날짜별 시각 저장 — backend/src/backend/services/period/ensemble_service.py
+  - "[[graph/backend/migrations/versions/080a74e46f56_initial_schema]]"  # 전체 합주 열과 ensemble_days table, 1시간 slot 을 포함한 통합 초기 schema — backend/migrations/versions/080a74e46f56_initial_schema.py
+  - "[[graph/backend/tests/integration/db/test_period_ensemble_endpoints]]"  # 전체 합주 설정 저장, 거절 시나리오 — backend/tests/integration/db/test_period_ensemble_endpoints.py
   - "[[graph/backend/src/backend/api/routers/rooms]]"  # 합주실 endpoint마다 권한을 확인하는 파일 — backend/src/backend/api/routers/rooms.py
   - "[[graph/backend/src/backend/api/routers/periods]]"  # 기간 endpoint마다 권한을 확인하는 파일 — backend/src/backend/api/routers/periods.py
-  - "[[graph/backend/src/backend/services/reservation/reservation_service]]"  # 예약 생성·취소 권한 확인 — backend/src/backend/services/reservation/reservation_service.py
+  - "[[graph/backend/src/backend/services/reservation/reservation_service]]"  # 예약 생성, 취소 권한 확인 — backend/src/backend/services/reservation/reservation_service.py
   - "[[graph/backend/src/backend/api/routers/reservations]]"  # 예약 endpoint마다 요청한 사용자를 확인하는 파일 — backend/src/backend/api/routers/reservations.py
-  - "[[graph/backend/src/backend/services/unavailable/unavailable_service]]"  # 불가능 일정을 본인만 조회·추가·삭제하게 하는 확인 — backend/src/backend/services/unavailable/unavailable_service.py
+  - "[[graph/backend/src/backend/services/unavailable/unavailable_service]]"  # 불가능 일정을 본인만 조회, 추가, 삭제하게 하는 확인 — backend/src/backend/services/unavailable/unavailable_service.py
   - "[[graph/backend/src/backend/api/routers/unavailable]]"  # 불가능 일정 endpoint의 본인 확인 — backend/src/backend/api/routers/unavailable.py
   - "[[graph/backend/src/backend/api/auth_dependency]]"  # 요청을 보낸 사용자를 확인하는 파일 — backend/src/backend/api/auth_dependency.py
-  - "[[graph/backend/tests/integration/db/db]]"  # 합주실·기간·예약·불가능 일정 endpoint의 권한 분기를 확인하는 테스트 — backend/tests/integration/db/
+  - "[[graph/backend/tests/integration/db/db]]"  # 합주실, 기간, 예약, 불가능 일정 endpoint의 권한 분기를 확인하는 테스트 — backend/tests/integration/db/
   - "[[graph/frontend/src/routes/SettingsRooms]]"  # 합주실 권한 항목을 가진 사용자가 합주실 값을 입력하는 화면 — frontend/src/routes/SettingsRooms.tsx
   - "[[graph/frontend/src/routes/SettingsPeriods]]"  # 기간 권한 항목을 가진 사용자가 기간 값을 입력하는 화면. 매일 기간은 종료일 입력을 숨깁니다 — frontend/src/routes/SettingsPeriods.tsx
   - "[[graph/frontend/src/lib/pipeline]]"  # 매일 기간을 저장할 때 ends_on 에 starts_on 을 넣어 보내는 periodBody — frontend/src/lib/pipeline.ts
   - "[[graph/frontend/src/lib/pipeline.test]]"  # periodBody 시나리오 — frontend/src/lib/pipeline.test.ts
   - "[[graph/backend/src/backend/services/period/period_service]]"  # 매일 기간은 계산을 실행한 날 하루만 배정하고 전체 합주 날짜를 제외하는 period_days — backend/src/backend/services/period/period_service.py
   - "[[graph/backend/src/backend/services/reservation/reservation_service]]"  # 집중 합주기간 예약 거절, 전체 합주 날짜는 전체 합주 시간만 거절 — backend/src/backend/services/reservation/reservation_service.py
-  - "[[graph/backend/tests/integration/db/test_reservation_endpoints]]"  # 매일 기간의 종료일 뒤 예약 거절, 전체 합주 날짜의 예약 허용·거절 시나리오 — backend/tests/integration/db/test_reservation_endpoints.py
-  - backend/migrations/versions/d4a71c96e2b8_hourly_slots.py # slot을 30분에서 1시간으로 변경한 마이그레이션
+  - "[[graph/backend/tests/integration/db/test_reservation_endpoints]]"  # 매일 기간의 종료일 뒤 예약 거절, 전체 합주 날짜의 예약 허용, 거절 시나리오 — backend/tests/integration/db/test_reservation_endpoints.py
   - "[[graph/frontend/src/lib/settings]]"  # 같은 규칙을 화면에서 먼저 검증하는 코드. 전체 합주 검증(ensembleMessage), 배정 규칙 검증(assignRuleMessage) 포함 — frontend/src/lib/settings.ts
   - "[[graph/frontend/src/lib/settings.test]]"  # 배정 규칙 2개 입력값 시나리오 — frontend/src/lib/settings.test.ts
   - "[[graph/backend/migrations/versions/c7d2e5a18f40_assign_rule_and_record_kind]]"  # 기간에 팀당 목표 시간, 불참 허용 인원 열을 추가 — backend/migrations/versions/c7d2e5a18f40_assign_rule_and_record_kind.py
   - "[[graph/frontend/src/routes/SettingsEnsemble]]"  # 기간 form 의 전체 합주 입력칸과 날짜별 시각 편집기 — frontend/src/routes/SettingsEnsemble.tsx
-  - "[[graph/frontend/e2e/settings.spec]]"  # 전체 합주 지정·날짜별 시각 저장을 브라우저로 확인하는 검사 — frontend/e2e/settings.spec.ts
+  - "[[graph/frontend/e2e/settings.spec]]"  # 전체 합주 지정, 날짜별 시각 저장을 브라우저로 확인하는 검사 — frontend/e2e/settings.spec.ts
 ---
 
-> 문서 버전: 3.7.0 draft
+> 문서 버전: 3.8.0 draft
 
 ```
 합주실마다 운영 시간을 따로 지정 ─ slot 단위는 1시간 고정
@@ -43,7 +42,7 @@ sources:
 │      └ "매일" 옵션을 켜면 종료일 없이, 계산 시각마다 그날 하루를 배정
 │
 └── 그 밖의 모든 날 ───────────▶ 선착순 예약
-       └ 따로 등록할 것이 없다 — 집중기간이 아니면 예약제다
+       └ 따로 등록할 것이 없습니다. 집중 합주기간이 아니면 예약제입니다
 ```
 
 ## Abstract
@@ -61,8 +60,8 @@ sources:
 - [[scheduler/scheduler|스케줄러]] — 예약과 일정을 보여주는 화면
 - [[accounts-and-roles/accounts-and-roles|계정과 역할]] — 요청한 사용자를 확인하는 로그인 session과 항목별 권한
 - [[teams/teams|팀과 포지션]] — 팀 이름으로 예약할 수 있는지를 결정하는 기준
-- [[database-layer/database-layer|데이터 저장소]] — 합주실 정시 격자·기간 종류가 실제로 저장되는 방식
-- [[screens/screens|화면]] — 합주실·기간 권한 항목을 가진 사용자가 합주실·기간 값을 입력하고 수정하는 화면
+- [[database-layer/database-layer|데이터 저장소]] — 합주실 정시 격자, 기간 종류가 실제로 저장되는 방식
+- [[screens/screens|화면]] — 합주실, 기간 권한 항목을 가진 사용자가 합주실, 기간 값을 입력하고 수정하는 화면
 
 ## Description
 
@@ -78,13 +77,13 @@ slot은 **정각에만** 시작합니다. 개방 시간도 정각이어야 하�
 
 **30분 단위에서 1시간 단위로 변경했습니다(사용자 결정).** 30분 단위 합주는 실제로 일어나지 않았으므로, 세분화했어도 항상 2개 slot이 함께 배정되었습니다. slot 크기를 절반으로 줄이면 배정 계산이 검토해야 하는 경우의 수도 함께 증가합니다.
 
-slot 길이는 설정의 점유 단위(`settings.slot_minutes`, 5·10·12·15·20·30·60분 중 하나)입니다. 설정값을 넘기지 않은 호출의 기본값은 `backend/contract.py` 의 `DEFAULT_SLOT_MINUTES`(60분) 상수 1개로 정의합니다. 개방/폐쇄 시간 검증 규칙도 점유 단위에서 도출됩니다.
+slot 길이는 설정의 점유 단위(`settings.slot_minutes`, 5, 10, 12, 15, 20, 30, 60분 중 하나)입니다. 설정값을 넘기지 않은 호출의 기본값은 `backend/src/backend/contract.py` 의 `DEFAULT_SLOT_MINUTES`(60분) 상수 1개로 정의합니다. 개방/폐쇄 시간 검증 규칙도 점유 단위에서 도출됩니다.
 
 합주실마다 개방 시간이 달라도 slot의 경계는 모든 합주실이 공유합니다. 1번 합주실의 19시 slot과 2번 합주실의 19시 slot은 같은 시간 구간이므로, 1명이 같은 시간에 2개 합주실에 배정되지 않도록 검증할 수 있습니다.
 
 ### 합주를 시작하는 간격과 합주가 이어지는 길이는 다른 값입니다 (2026-09-20)
 
-`settings.slot_minutes` 하나가 두 가지를 겸하고 있었습니다 — 합주를 **시작할 수 있는 간격**과 합주가 **이어지는 길이**입니다. 그래서 30분 칸이면 합주도 30분이었고, 배정은 흩어진 30분 칸을 따로따로 골랐습니다. 한 팀이 18:00·20:30·22:00 처럼 떨어진 칸을 받는 것이 정상 동작이었습니다.
+`settings.slot_minutes` 하나가 두 가지를 겸하고 있었습니다 — 합주를 **시작할 수 있는 간격**과 합주가 **이어지는 길이**입니다. 그래서 30분 칸이면 합주도 30분이었고, 배정은 흩어진 30분 칸을 따로따로 골랐습니다. 한 팀이 18:00, 20:30, 22:00 처럼 떨어진 칸을 받는 것이 정상 동작이었습니다.
 
 실제 합주는 **한 번 시작하면 1시간 이어집니다.** 시작 시간은 18:00일 수도 18:30일 수도 있지만, 시작한 뒤에는 그 길이만큼 끊기지 않습니다. 두 값을 나눕니다.
 
@@ -93,19 +92,19 @@ slot 길이는 설정의 점유 단위(`settings.slot_minutes`, 5·10·12·15·2
 | 점유 단위 | 합주를 **시작할 수 있는** 간격. 격자입니다 | `settings.slot_minutes` |
 | 합주 1회 | 한 번 시작하면 **이어지는** 길이 | `settings.session_minutes` |
 
-30분 격자에 60분 합주면 18:00·18:30·19:00 어디서든 시작해 1시간 뒤에 끝납니다.
+30분 격자에 60분 합주면 18:00, 18:30, 19:00 어디서든 시작해 1시간 뒤에 끝납니다.
 
 **합주 길이는 칸의 배수여야 합니다.** 배수가 아니면 합주가 칸 중간에서 끝나, 남은 반 칸을 아무도 쓸 수 없습니다. 상한은 240분입니다 — 상한이 없으면 하루 운영 시간보다 긴 값이 저장되어 배정할 자리가 하나도 없는 설정이 조용히 만들어집니다.
 
 자동 배정은 2026-09-20 부터 이 길이를 단위로 자리를 배치합니다. 팀 하나가 받는 1회는 이 길이만큼 끊기지 않는 구간 1개이고, 충돌 판정은 그 구간이 차지하는 칸으로 합니다 — [[auto-assignment/auto-assignment|자동 배정]]에 있습니다. 선착순 예약은 이 길이와 무관하게 칸 단위 그대로입니다.
 
-두 조건은 열 두 개를 함께 보므로 DB 의 table 단위 CHECK(`settings_session_minutes_fits_slots`)가 지킵니다. 한쪽만 바꿔 조건이 깨지는 UPDATE 도 이 제약이 거절합니다. 그래서 **칸을 키울 때 저장된 합주 길이가 배수가 아니게 되면 두 값을 한 요청에 담아야 합니다** — 나눠 보내면 어느 쪽을 먼저 보내도 중간 상태가 거절됩니다. 설정 화면은 칸을 바꿀 때 맞지 않는 합주 길이를 새 칸 크기로 함께 내려 보냅니다.
+두 조건은 열 두 개를 함께 보므로 DB 의 table 단위 CHECK(`settings_session_minutes_fits_slots`)가 지킵니다. 한쪽만 변경해 조건이 깨지는 UPDATE 도 이 제약이 거절합니다. 그래서 **칸을 키울 때 저장된 합주 길이가 배수가 아니게 되면 두 값을 한 요청에 담아야 합니다** — 나눠 보내면 어느 쪽을 먼저 보내도 중간 상태가 거절됩니다. 설정 화면은 칸을 변경할 때 맞지 않는 합주 길이를 새 칸 크기로 함께 내려 보냅니다.
 
 ### 팀별 합주 시간대는 합주실 개방시각과 별개입니다 (2026-09-20)
 
 자동 배정은 합주실 개방시각 전체를 배정 대상으로 삼았습니다. 그런데 합주실이 09시에 열어도 **팀별 합주는 17시부터만** 하는 것이 보통이고, 낮 시간은 선착순 예약으로 씁니다. 집중 합주기간이 합주실 개방시각과 같아야 할 이유가 없습니다.
 
-기간마다 **평일(월~금)·주말(토·일) 두 벌**을 둡니다. 주말은 낮에도 합주하기 때문입니다. 두 쌍은 서로 독립이라 평일만 좁히고 주말은 열어 둘 수 있습니다.
+기간마다 **평일(월~금), 주말(토, 일) 두 벌**을 둡니다. 주말은 낮에도 합주하기 때문입니다. 두 쌍은 서로 독립이라 평일만 좁히고 주말은 열어 둘 수 있습니다.
 
 ```
 합주실 개방       09 ─────────────────────────── 23
@@ -115,11 +114,11 @@ slot 길이는 설정의 점유 단위(`settings.slot_minutes`, 5·10·12·15·2
 낮 시간          09 ───────────── 17              ← 선착순 예약
 ```
 
-**실제 배정 구간은 시간대와 합주실 개방시각의 교집합입니다.** 17~23시로 정해도 합주실이 22시에 닫으면 22시까지입니다. 겹치는 시간이 없는 날은 배정 대상에서 빠집니다 — 길이가 0 이거나 음수인 구간을 엔진에 넘기면 칸을 만들지 못하거나 운영 시간이 잘못되었다고 거부합니다.
+**실제 배정 구간은 시간대와 합주실 개방시각의 교집합입니다.** 17~23시로 지정해도 합주실이 22시에 닫으면 22시까지입니다. 겹치는 시간이 없는 날은 배정 대상에서 빠집니다 — 길이가 0 이거나 음수인 구간을 엔진에 넘기면 칸을 만들지 못하거나 운영 시간이 잘못되었다고 거부합니다.
 
 **시간대 밖의 시간도 예약은 열려 있습니다.** 자동 배정만 하지 않을 뿐입니다. 남는 칸을 계산하는 곳(`open_slots_in_period`)은 시간대를 넘기지 않고 개방시각 전체를 씁니다.
 
-정하지 않은 쌍은 두 열 모두 null 이고, 그날은 지금처럼 개방시각 전체를 씁니다. 한쪽만 채우면 종료 시간 없는 시간대가 되어 배정 구간을 정할 수 없으므로 DB CHECK(`periods_practice_window_pairs`)가 거절합니다. 시각이 점유 단위 격자 위인지는 화면(`lib/settings.ts` 의 `practiceWindowMessage`)이 먼저 봅니다 — 격자를 벗어나면 저장은 되고 배정만 실패해 원인을 찾기 어렵습니다.
+지정하지 않은 쌍은 두 열 모두 null 이고, 그날은 지금처럼 개방시각 전체를 씁니다. 한쪽만 입력하면 종료 시간 없는 시간대가 되어 배정 구간을 지정할 수 없으므로 DB CHECK(`periods_practice_window_pairs`)가 거절합니다. 시각이 점유 단위 격자 위인지는 화면(`lib/settings.ts` 의 `practiceWindowMessage`)이 먼저 봅니다 — 격자를 벗어나면 저장은 되고 배정만 실패해 원인을 찾기 어렵습니다.
 
 ### 기간은 2종류입니다
 
@@ -134,12 +133,15 @@ slot 길이는 설정의 점유 단위(`settings.slot_minutes`, 5·10·12·15·2
 
 **기간마다 배정 규칙 2개를 둡니다(사용자 결정 2026-10-12).** 설정 화면의 기간 form 에서 입력하고, 기간 table 의 열 2개에 저장합니다(migration `c7d2e5a18f40`).
 
-| 규칙 | 뜻 | 비워 두면 | 허용 값 |
+| 규칙 | 뜻 | 빈 값이면 | 허용 값 |
 | --- | --- | --- | --- |
 | 팀당 목표 시간 | 팀마다 받을 합주 시간의 목표 | 전체 시간 ÷ 팀 수로 자동 계산. 입력칸 placeholder 가 "자동 N시간" 으로 그 값을 보여 줍니다 | 1 이상의 정수(시간). 0 은 거절합니다 |
 | 불참 허용 인원 | session 1회에서 불가능 일정 때문에 빠져도 되는 팀원 수의 상한 | 빈칸은 거절합니다. 새 기간의 기본값은 0 | 0 이상의 정수 |
+| 하루 최대 시간 | 팀 1개가 하루에 받는 합주 시간의 상한(`daily_max_hours`, migration `7d3c9a1e5b24`) | 빈칸은 거절합니다 | 1 이상 12 이하의 정수 |
+| 최대 연속 시간 | 팀 1개가 같은 합주실에서 이어 쓰는 합주 시간의 상한(`max_consecutive_hours`) | 빈칸은 거절합니다 | 1 이상, 하루 최대 시간 이하의 정수 |
+| 마감 일시 | 이 일시가 지나면 auto-assign service 가 1회 계산해 적용하고 배정을 확정합니다(`closes_at`, migration `b6f3d8a2c915`, 사용자 결정 2026-10-20) | 마감 없이 연산 시각마다 계속 계산합니다 | 시간대 없는 일시. 확정된 기간은 변경할 수 없습니다 |
 
-불참 허용 인원이 0 이면 팀 전원이 가능한 시간만 씁니다. 1 이상이면 그 인원까지 빠지는 시간도 배정에 쓰고, 빠지는 사람은 결과 보고의 불참자로 표시됩니다. 두 값을 계산 엔진이 어떻게 쓰는지는 [[auto-assignment/auto-assignment|자동 배정]]에, 목표 시간을 session 횟수로 바꾸는 규칙은 [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]]에 있습니다. 화면 검증(빈칸, 0, 소수, 음수 거절)은 `frontend/src/lib/settings.test.ts` 가, 서버 기본값 저장과 0 거절은 `backend/tests/integration/db/test_period_crud_endpoints.py` 가 확인합니다.
+하루 최대 시간과 최대 연속 시간은 이전의 설정값(`settings.daily_max_hours`)을 대체하는 기간별 값입니다(2026-10-20). 마감 일시가 지나 확정된 기간은 목록 줄에 "배정 확정" 이 표시되고, 확정 해제는 배정 화면에서 합니다([[scheduling-api/period-assignment/period-assignment|기간 자동 배정]]). 불참 허용 인원이 0 이면 팀 전원이 가능한 시간만 씁니다. 1 이상이면 그 인원까지 빠지는 시간도 배정에 쓰고, 빠지는 사람은 결과 보고의 불참자로 표시됩니다. 두 값을 계산 엔진이 어떻게 쓰는지는 [[auto-assignment/auto-assignment|자동 배정]]에, 목표 시간을 session 횟수로 변경하는 규칙은 [[scheduling-api/period-assignment/period-assignment|기간 자동 배정]]에 있습니다. 화면 검증(빈칸, 0, 소수, 음수 거절)은 `frontend/src/lib/settings.test.ts` 가, 서버 기본값 저장과 0 거절은 `backend/tests/integration/db/test_period_crud_endpoints.py` 가 확인합니다.
 
 **"매일" 옵션은 종료일이 없는 집중 합주기간입니다(사용자 결정 2026-09-11).** 항상 자동 배정을 원하는 조직이 집중 합주기간에 활성화합니다. 이 옵션이 활성화된 기간은 시작일 이후의 모든 날에 다음과 같이 동작합니다.
 
@@ -148,7 +150,7 @@ slot 길이는 설정의 점유 단위(`settings.slot_minutes`, 5·10·12·15·2
 | 자동 배정이 실행되는 날 | 시작일부터 종료일까지 | 시작일부터 종료일 없이 매일 |
 | 1회 계산이 배정하는 날짜 | 시작일부터 종료일까지 전부 | 계산을 실행한 그날 하루 |
 | 예약 | 시작일부터 종료일까지 거절합니다 | 시작일 이후의 모든 날을 거절합니다. 저장된 종료일 뒤의 날짜도 거절합니다 |
-| 화면의 기간 양식 | 시작일과 종료일을 입력합니다 | 종료일 입력을 숨깁니다. 저장할 때 종료일에 시작일과 같은 값을 보냅니다(종료일 열은 비워 둘 수 없습니다) |
+| 화면의 기간 양식 | 시작일과 종료일을 입력합니다 | 종료일 입력을 숨깁니다. 저장할 때 종료일에 시작일과 같은 값을 보냅니다(종료일 열은 null 로 둘 수 없습니다) |
 | 화면의 기간 목록 | "<시작일> 부터 <종료일> 까지" | "<시작일> 부터 매일" |
 
 이전 규칙은 매일 옵션이 켜진 기간이 예약을 차단하지 않는 것이었습니다. 지금은 매일 옵션이 켜진 기간도 예약을 거절합니다.
@@ -177,7 +179,7 @@ slot 길이는 설정의 점유 단위(`settings.slot_minutes`, 5·10·12·15·2
 
 ### 같은 규칙을 3곳에서 검증합니다
 
-합주실·기간 권한 항목을 가진 사용자가 설정 화면에서 값을 입력하면, 화면·서버·데이터베이스가 같은 규칙을 3번 검증합니다.
+합주실, 기간 권한 항목을 가진 사용자가 설정 화면에서 값을 입력하면, 화면, 서버, 데이터베이스가 같은 규칙을 3번 검증합니다.
 
 ```
 사용자 입력  ──▶  화면이 먼저 검증      : 오류 위치를 즉시 알려주기 위해
@@ -195,43 +197,43 @@ slot 길이는 설정의 점유 단위(`settings.slot_minutes`, 5·10·12·15·2
 
 합주실의 개방 시간과 폐쇄 시간을 수정할 수 있고, 2026-09-19 부터 삭제할 수도 있습니다. 삭제에는 권한 항목 `room_delete` 가 필요합니다.
 
-**삭제하면 그 합주실의 예약과 배정 결과, 스케줄링 기록이 함께 삭제됩니다**(외래 키 ON DELETE CASCADE). 지울 대상을 남겨 두면 없는 합주실을 참조하는 행이 남기 때문입니다. 되돌릴 수 없으므로 화면은 삭제 버튼을 누를 때 확인 dialog 를 1번 표시하고, 그 문구에 함께 삭제되는 것을 적습니다(`frontend/src/lib/confirm.ts` 의 `askDeleteRoom`).
+**삭제하면 그 합주실의 예약과 배정 결과, 스케줄링 기록이 함께 삭제됩니다**(외래 키 ON DELETE CASCADE). 삭제할 대상을 남겨 두면 없는 합주실을 참조하는 행이 남기 때문입니다. 되돌릴 수 없으므로 화면은 삭제 버튼을 누를 때 확인 dialog 를 1번 표시하고, 그 문구에 함께 삭제되는 것을 적습니다(`frontend/src/lib/confirm.ts` 의 `askDeleteRoom`).
 
 **전체 합주 합주실로 지정된 합주실은 삭제되지 않습니다.** `settings.ensemble_room_id` 만 CASCADE 가 아니라서 DB 가 거절하고, 요청은 409 로 반환됩니다. 먼저 전체 합주 지정을 해제해야 합니다.
 
-기간은 삭제할 수 있습니다(patch_note 13번). 기간을 삭제하면 그 기간의 배정 결과(`assignments`)·계산 기록(`assignment_runs`)·스케줄링 기록(`assignment_backups`)이 외래 키 `ondelete=CASCADE` 로 함께 삭제됩니다. 예약은 기간과 연결되어 있지 않아 남습니다. 되돌릴 수 없는 삭제라 수정과 다른 권한 항목("집중 합주기간 삭제")으로 두었고, 설정 화면은 삭제 전에 "그 기간과 그 배정 결과를 삭제할까요?" 로 한 번 묻습니다. 삭제 204·없는 번호 422·로그인 없음 401·항목 없음 403 은 `backend/tests/integration/db/test_period_crud_endpoints.py` 가 확인합니다.
+기간은 삭제할 수 있습니다(patch_note 13번). 기간을 삭제하면 그 기간의 배정 결과(`assignments`), 계산 기록(`assignment_runs`), 스케줄링 기록(`assignment_backups`)이 외래 키 `ondelete=CASCADE` 로 함께 삭제됩니다. 예약은 기간과 연결되어 있지 않아 남습니다. 되돌릴 수 없는 삭제라 수정과 다른 권한 항목("집중 합주기간 삭제")으로 두었고, 설정 화면은 삭제 전에 "그 기간과 그 배정 결과를 삭제할까요?" 로 한 번 묻습니다. 삭제 204, 없는 번호 422, 로그인 없음 401, 항목 없음 403 은 `backend/tests/integration/db/test_period_crud_endpoints.py` 가 확인합니다.
 
-**집중 합주기간끼리는 날짜가 하루라도 겹치면 등록·수정을 거절합니다(patch_note 8번).** 전체 합주 옵션이 날짜마다 어느 기간에 속하는지 정해야 하므로 한 날짜는 집중 합주기간 하나에만 속합니다. DB 제약 `periods_focused_no_overlap`(migration `b5e1d9a37c42`)이 양 끝 날짜를 포함한 범위로 검사하고, "매일" 기간은 종료일이 없는 것으로 봅니다. 서버는 이 위반을 422 "다른 집중 합주기간과 날짜가 겹칩니다" 로 응답합니다. 상시 개방 기간은 검사하지 않습니다. 이미 겹치는 집중 합주기간이 저장된 DB 에서는 migration 이 실패하며, 어느 기간을 남길지는 사람이 정해야 해서 자동으로 삭제하지 않습니다. 생성 겹침·"매일" 기간의 무기한 겹침·수정 겹침 422 와 상시 개방 기간 허용 201 은 같은 테스트 파일이 확인합니다.
+**집중 합주기간끼리는 날짜가 하루라도 겹치면 등록, 수정을 거절합니다(patch_note 8번).** 전체 합주 옵션이 날짜마다 어느 기간에 속하는지 지정해야 하므로 한 날짜는 집중 합주기간 하나에만 속합니다. DB 제약 `periods_focused_no_overlap`(migration `b5e1d9a37c42`)이 양 끝 날짜를 포함한 범위로 검사하고, "매일" 기간은 종료일이 없는 것으로 봅니다. 서버는 이 위반을 422 "다른 집중 합주기간과 날짜가 겹칩니다" 로 응답합니다. 상시 개방 기간은 검사하지 않습니다. 이미 겹치는 집중 합주기간이 저장된 DB 에서는 migration 이 실패하며, 어느 기간을 남길지는 사람이 지정해야 해서 자동으로 삭제하지 않습니다. 생성 겹침, "매일" 기간의 무기한 겹침, 수정 겹침 422 와 상시 개방 기간 허용 201 은 같은 테스트 파일이 확인합니다.
 
-**집중 합주기간에 전체 합주를 지정할 수 있습니다(patch_note 8번 B단계).** 기간 하나에 날짜 범위 하나·합주실 하나·기본 시작/종료 시간을 저장하고(`periods.ensemble_*` 다섯 열, 함께 채우거나 함께 비움), 날짜마다 시각을 다르게 지정하면 `ensemble_days` 에 그 날짜 한 행을 둡니다.
+**집중 합주기간에 전체 합주를 지정할 수 있습니다(patch_note 8번 B단계).** 기간 하나에 날짜 범위 하나, 합주실 하나, 기본 시작/종료 시간을 저장하고(`periods.ensemble_*` 다섯 열, 함께 채우거나 함께 비움), 날짜마다 시각을 다르게 지정하면 `ensemble_days` 에 그 날짜 한 행을 둡니다.
 
 | 요청 | 동작 |
 | --- | --- |
-| `PUT /periods/{id}/ensemble` | 지정·변경. 새 날짜 범위 밖이 된 날짜별 시각은 삭제합니다 |
+| `PUT /periods/{id}/ensemble` | 지정, 변경. 새 날짜 범위 밖이 된 날짜별 시각은 삭제합니다 |
 | `DELETE /periods/{id}/ensemble` | 해제. 날짜별 시각도 삭제합니다 |
 | `PUT /periods/{id}/ensemble/days/{YYYY-MM-DD}` | 날짜 하나의 시각 지정. 이미 있으면 덮어씁니다 |
 | `DELETE /periods/{id}/ensemble/days/{YYYY-MM-DD}` | 날짜 하나를 기본 시각으로 되돌립니다 |
 
-날짜 범위는 기간 안이어야 하고, "매일" 기간은 범위 시작일만 기간 시작일 이후면 됩니다. 이 조건과 "집중 합주기간만" 조건은 DB CHECK(`periods_ensemble_within_period`·`periods_ensemble_focused_only`)가 검사합니다. 기간 수정(PATCH)으로 날짜를 줄여도 같은 제약이 422 로 거절하게 하려고 서비스가 아니라 DB 에 두었습니다. 시각이 합주실 운영 시간 안인지와 점유 단위 격자 위인지는 `ensemble_service.py` 가 검사합니다.
+날짜 범위는 기간 안이어야 하고, "매일" 기간은 범위 시작일만 기간 시작일 이후면 됩니다. 이 조건과 "집중 합주기간만" 조건은 DB CHECK(`periods_ensemble_within_period`, `periods_ensemble_focused_only`)가 검사합니다. 기간 수정(PATCH)으로 날짜를 줄여도 같은 제약이 422 로 거절하게 하려고 서비스가 아니라 DB 에 두었습니다. 시각이 합주실 운영 시간 안인지와 점유 단위 격자 위인지는 `ensemble_service.py` 가 검사합니다.
 
-**전체 합주 날짜는 팀별 배정에서 제외하고, 예약은 전체 합주 시간만 거절합니다(patch_note 8번 C단계).** 한 날짜는 팀별·전체 중 한쪽에만 속합니다.
+**전체 합주 날짜는 팀별 배정에서 제외하고, 예약은 전체 합주 시간만 거절합니다(patch_note 8번 C단계).** 한 날짜는 팀별, 전체 중 한쪽에만 속합니다.
 
 | 대상 | 전체 합주 날짜의 동작 | 코드 |
 | --- | --- | --- |
-| 배정 계산 | 계산할 날짜에서 제외합니다. 남는 날짜가 없으면 계산 job 이 "팀별로 배정할 날짜가 없습니다" 로 실패합니다 | `period_service.py` 의 `period_days`·`assign_period` |
+| 배정 계산 | 계산할 날짜에서 제외합니다. 남는 날짜가 없으면 계산 job 이 "팀별로 배정할 날짜가 없습니다" 로 실패합니다 | `period_service.py` 의 `period_days`, `assign_period` |
 | 자동 배정 | "매일" 기간은 오늘 하루만 계산하므로, 오늘이 전체 합주 날짜면 실행하지 않고 실행 기록도 남기지 않습니다 | `jobs/auto_assign.py` 의 `run_due_assignments` |
-| 예약 생성·이동 | 선착순으로 받습니다. 전체 합주에 지정한 합주실에서 그날의 전체 합주 시각(날짜별 지정이 있으면 그 시각, 없으면 기본 시각)과 겹치는 구간만 422 "전체 합주 시간이라 예약할 수 없습니다" 로 거절합니다 | `reservation_service.py` 의 `_require_not_in_focused_period` |
+| 예약 생성, 이동 | 선착순으로 받습니다. 전체 합주에 지정한 합주실에서 그날의 전체 합주 시각(날짜별 지정이 있으면 그 시각, 없으면 기본 시각)과 겹치는 구간만 422 "전체 합주 시간이라 예약할 수 없습니다" 로 거절합니다 | `reservation_service.py` 의 `_require_not_in_focused_period` |
 
-집중 합주기간의 나머지 날짜는 이전과 같이 예약을 거절합니다. 전체 합주를 지정하기 전에 이미 있던 예약은 다시 검사하지 않습니다. 시나리오는 `test_period_service.py`(전체 합주 날짜 제외)·`test_auto_assign.py`(매일 기간 미실행)·`test_reservation_endpoints.py`(다른 합주실·다른 시각 허용, 날짜별 시각 우선, 이동 거절)가 확인합니다.
+집중 합주기간의 나머지 날짜는 이전과 같이 예약을 거절합니다. 전체 합주를 지정하기 전에 이미 있던 예약은 다시 검사하지 않습니다. 시나리오는 `test_period_service.py`(전체 합주 날짜 제외), `test_auto_assign.py`(매일 기간 미실행), `test_reservation_endpoints.py`(다른 합주실, 다른 시각 허용, 날짜별 시각 우선, 이동 거절)가 확인합니다.
 
-**설정 화면의 기간 form 에서 전체 합주를 지정합니다(patch_note 8번 D단계).** 집중 합주기간이면 "전체 합주기간 지정" 체크박스가 표시되고, 체크하면 전체 합주 시작일·종료일·합주실·시작/종료 시간을 받습니다. 팀별 합주 날짜는 입력받지 않고 "기간 − 전체 합주 범위" 계산 결과를 한 줄로 표시합니다(사용자 결정 2026-09-15). "매일" 기간은 팀별 날짜가 끝없이 이어져 이 줄을 표시하지 않습니다. 목록 줄에는 "전체 합주 <시작일>–<종료일>" 이 붙고, 편집 행 아래에 날짜를 선택해 그 날짜의 시각을 저장하거나 기본 시각으로 되돌리는 구역이 있습니다.
+**설정 화면의 기간 form 에서 전체 합주를 지정합니다(patch_note 8번 D단계).** 집중 합주기간이면 "전체 합주기간 지정" 체크박스가 표시되고, 체크하면 전체 합주 시작일, 종료일, 합주실, 시작/종료 시간을 받습니다. 팀별 합주 날짜는 입력받지 않고 "기간 − 전체 합주 범위" 계산 결과를 한 줄로 표시합니다(사용자 결정 2026-09-15). "매일" 기간은 팀별 날짜가 끝없이 이어져 이 줄을 표시하지 않습니다. 목록 줄에는 "전체 합주 <시작일>–<종료일>" 이 붙고, 편집 행 아래에 날짜를 선택해 그 날짜의 시각을 저장하거나 기본 시각으로 되돌리는 구역이 있습니다.
 
 | 누가 | 무엇을 | 코드 |
 | --- | --- | --- |
-| 화면 검증 | 날짜 범위가 기간 안인지("매일" 기간은 시작일만), 합주실 선택, 점유 단위 격자, 시각 순서, 합주실 운영 시간 | `lib/settings.ts` 의 `ensembleMessage`·`ensembleTimeMessage` |
-| 저장 순서 | 새 기간은 기간 → 전체 합주. 해제는 전체 합주 해제 → 기간 수정. 새 전체 합주가 저장된 기간 안이면 전체 합주 → 기간, 밖이면 기간 → 전체 합주 | `lib/pipeline.ts` 의 `ensembleSaveOrder`·`savePeriod` |
+| 화면 검증 | 날짜 범위가 기간 안인지("매일" 기간은 시작일만), 합주실 선택, 점유 단위 격자, 시각 순서, 합주실 운영 시간 | `lib/settings.ts` 의 `ensembleMessage`, `ensembleTimeMessage` |
+| 저장 순서 | 새 기간은 기간, 전체 합주 순서. 해제는 전체 합주 해제, 기간 수정 순서. 새 전체 합주가 저장된 기간 안이면 전체 합주, 기간 순서이고, 밖이면 기간, 전체 합주 순서입니다 | `lib/pipeline.ts` 의 `ensembleSaveOrder`, `savePeriod` |
 
-요청 순서를 정하는 이유는 서버가 요청마다 "전체 합주 날짜 범위가 기간 안" CHECK 를 검사하기 때문입니다. 순서가 틀리면 기간을 줄이는 PATCH 가 옛 전체 합주 때문에 422 로 거절됩니다. 새 전체 합주가 저장된 기간 밖이고 옛 전체 합주도 새 기간 밖인 경우는 어느 순서든 첫 요청이 거절되어 서버 사유를 표시합니다. 두 요청은 한 transaction 이 아니라 둘째 요청이 실패하면 첫 요청은 저장된 채로 남습니다. 순서 규칙은 `pipeline.test.ts`, 검증 문구는 `settings.test.ts`, 생성·날짜별 시각 저장·삭제의 브라우저 흐름은 `e2e/settings.spec.ts` 가 확인합니다(`COMMAND.md` 12-1).
+요청 순서를 지정하는 이유는 서버가 요청마다 "전체 합주 날짜 범위가 기간 안" CHECK 를 검사하기 때문입니다. 순서가 틀리면 기간을 줄이는 PATCH 가 옛 전체 합주 때문에 422 로 거절됩니다. 새 전체 합주가 저장된 기간 밖이고 옛 전체 합주도 새 기간 밖인 경우는 어느 순서든 첫 요청이 거절되어 서버 사유를 표시합니다. 두 요청은 한 transaction 이 아니라 둘째 요청이 실패하면 첫 요청은 저장된 채로 남습니다. 순서 규칙은 `pipeline.test.ts`, 검증 문구는 `settings.test.ts`, 생성, 날짜별 시각 저장, 삭제의 브라우저 흐름은 `e2e/settings.spec.ts` 가 확인합니다(`COMMAND.md` 12-1).
 
 ### 권한을 가진 사용자만 입력한다는 규칙을 서버가 검증합니다
 
@@ -243,31 +245,31 @@ slot 길이는 설정의 점유 단위(`settings.slot_minutes`, 5·10·12·15·2
 | 합주실 수정(이름, 개방 시각, 폐쇄 시각) | "합주실 정보 수정"을 가진 사용자만 |
 | 기간 생성 | "집중 합주기간 추가"를 가진 사용자만 |
 | 기간 수정(종류, 날짜, 배정 계산 시각, 배정 규칙 2개) | "스케줄링 시간 설정"을 가진 사용자만 |
-| 전체 합주 지정·해제·날짜별 시각 지정 | "스케줄링 시간 설정"을 가진 사용자만 |
-| 기간 삭제(그 기간의 배정 결과·계산 기록·스케줄링 기록 포함) | "집중 합주기간 삭제"를 가진 사용자만 |
-| 합주실 목록·기간 목록 조회 | 로그인한 사용자 전체 |
+| 전체 합주 지정, 해제, 날짜별 시각 지정 | "스케줄링 시간 설정"을 가진 사용자만 |
+| 기간 삭제(그 기간의 배정 결과, 계산 기록, 스케줄링 기록 포함) | "집중 합주기간 삭제"를 가진 사용자만 |
+| 합주실 목록, 기간 목록 조회 | 로그인한 사용자 전체 |
 | 합주실의 예약 현황 조회 | 로그인한 사용자 전체 |
 | slot 예약 | 로그인한 사용자 전체. 예약자는 언제나 본인입니다 |
-| 예약 수정·취소 | 그 slot을 예약한 본인, 그리고 "타 멤버 예약 수정 및 취소"를 가진 사용자 |
-| 불가능 일정 조회·추가·삭제 | 본인만. 권한 항목을 전부 가진 사용자도 다른 사용자의 불가능 일정은 조회할 수 없습니다 |
+| 예약 수정, 취소 | 그 slot을 예약한 본인, 그리고 "타 멤버 예약 수정 및 취소"를 가진 사용자 |
+| 불가능 일정 조회, 추가, 삭제 | 본인만. 권한 항목을 전부 가진 사용자도 다른 사용자의 불가능 일정은 조회할 수 없습니다 |
 
 예약 소유자는 요청 매개변수의 사용자 이름이 아니라 인증 cookie의 소유자입니다. 이전에는 누구 이름으로 예약할지를 요청에 담아 보냈고 서버가 검증 없이 사용했으나, 현재는 예약자를 선택하는 매개변수 자체가 없습니다.
 
-취소와 이동은 행을 삭제하지 않습니다. 취소는 `reservations.cancelled_at` 에 취소 시각만 기록하고, 이동은 옛 행을 취소 표시로 두고 같은 합주실·팀·예약자·처음 잡은 시각(`created_at`)을 가진 새 행을 만듭니다(Cal.com 의 Booking 방식, 사용자 결정 2026-09-15). 두 행은 한 transaction 이라 옮길 자리가 이미 차 있으면 옛 행의 취소 표시까지 되돌아갑니다. 취소된 행은 조회·이동·취소 대상에서 빠지고 겹침 금지 제약(`reservations_no_overlap`, `WHERE cancelled_at IS NULL`)도 보지 않으므로 그 시간은 다시 예약할 수 있습니다. 취소된 행을 보여주는 화면은 미구현이며 DB 에만 남습니다.
+취소와 이동은 행을 삭제하지 않습니다. 취소는 `reservations.cancelled_at` 에 취소 시각만 기록하고, 이동은 옛 행을 취소 표시로 두고 같은 합주실, 팀, 예약자, 처음 잡은 시각(`created_at`)을 가진 새 행을 만듭니다(Cal.com 의 Booking 방식, 사용자 결정 2026-09-15). 두 행은 한 transaction 이라 옮길 자리가 이미 차 있으면 옛 행의 취소 표시까지 되돌아갑니다. 취소된 행은 조회, 이동, 취소 대상에서 빠지고 겹침 금지 제약(`reservations_no_overlap`, `WHERE cancelled_at IS NULL`)도 보지 않으므로 그 시간은 다시 예약할 수 있습니다. 취소된 행을 보여주는 화면은 미구현이며 DB 에만 남습니다.
 
-**집중 합주기간을 생성·확장하거나 전체 합주를 지정·해제·날짜별로 수정하면, 그 변경으로 "지금 새로 예약하면 거절되는" 예약을 취소하고 예약자에게 알림(`reservation_cancelled`)을 1개씩 만듭니다(사용자 결정 2026-09-28).** 이미 시작한 예약은 취소하지 않습니다. 기간 변경과 취소·알림은 transaction 1개(commit 1회)로 저장합니다(2026-09-30). 전에는 기간을 먼저 commit 하고 취소를 두 번째 commit 으로 저장해, 두 번째 commit 이 실패할 경우 기간만 바뀌고 취소·알림은 저장되지 않았습니다. 검증은 `backend/tests/integration/db/test_focus_cancels_reservations.py` 이고, 두 번째 commit 을 실패하게 둔 검사가 commit 이 1회임을 확인합니다.
+**집중 합주기간을 생성, 확장하거나 전체 합주를 지정, 해제, 날짜별로 수정하면, 그 변경으로 "지금 새로 예약하면 거절되는" 예약을 취소하고 예약자에게 알림(`reservation_cancelled`)을 1개씩 만듭니다(사용자 결정 2026-09-28).** 이미 시작한 예약은 취소하지 않습니다. 기간 변경과 취소, 알림은 transaction 1개(commit 1회)로 저장합니다(2026-09-30). 전에는 기간을 먼저 commit 하고 취소를 두 번째 commit 으로 저장해, 두 번째 commit 이 실패할 경우 기간만 변경되고 취소, 알림은 저장되지 않았습니다. 검증은 `backend/tests/integration/db/test_focus_cancels_reservations.py` 이고, 두 번째 commit 을 실패하게 둔 검사가 commit 이 1회임을 확인합니다.
 
 팀을 지정하는 예약은 해당 팀의 소속 여부를 검증합니다. 이전에는 "그런 팀이 있는가"만 확인했으므로, 소속이 아닌 사용자가 다른 팀 이름으로 slot을 예약할 수 있었습니다. 그 slot이 전체 일정에 해당 팀이 사용한 slot으로 기록되어 일정 정보 자체가 잘못되었습니다. slot 1개가 잘못 예약되는 것을 넘어 전체 일정 정보가 잘못되므로, 이제는 소속이 아니면 거절합니다.
 
-불가능 일정은 권한 항목을 모두 가진 사용자도 다른 사용자의 불가능 일정을 조회할 수 없습니다. 기획 문서에서 일반 멤버의 역할은 "자신의 불가능 일정 관리"로만 정의되며, 배정 계산은 서버가 데이터베이스를 직접 읽으므로 endpoint로 다른 사용자의 불가능 일정을 조회할 필요가 없습니다. endpoint를 개방하지 않으면 다른 사용자의 불가능 일정이 노출될 경로가 없으므로, 조회가 필요한 경우가 생기면 그때 용도와 접근 규칙을 먼저 정합니다.
+불가능 일정은 권한 항목을 모두 가진 사용자도 다른 사용자의 불가능 일정을 조회할 수 없습니다. 기획 문서에서 일반 멤버의 역할은 "자신의 불가능 일정 관리"로만 정의되며, 배정 계산은 서버가 데이터베이스를 직접 읽으므로 endpoint로 다른 사용자의 불가능 일정을 조회할 필요가 없습니다. endpoint를 개방하지 않으면 다른 사용자의 불가능 일정이 노출될 경로가 없으므로, 조회가 필요한 경우가 생기면 그때 용도와 접근 규칙을 먼저 지정합니다.
 
-검증은 서버 테스트 504개 전부와 화면 테스트 237개, 타입 검사 모두가 통과하는 것으로 확인했습니다. 위 표의 권한 분기는 합주실·기간·예약·불가능 일정마다 별도의 테스트 파일이 담당하며, 로그인하지 않은 요청은 401, 로그인했지만 권한이 없는 요청은 403으로 서로 다른 응답을 받는지까지 함께 검증합니다. 매일 옵션이 켜진 기간이 저장된 종료일 뒤의 날짜에도 예약을 거절하는지는 `backend/tests/integration/db/test_reservation_endpoints.py` 가, 화면이 종료일에 시작일을 넣어 보내는지는 `frontend/src/lib/pipeline.test.ts` 가 확인합니다.
+위 표의 권한 분기는 합주실, 기간, 예약, 불가능 일정마다 별도의 테스트 파일이 담당하며, 로그인하지 않은 요청은 401, 로그인했지만 권한이 없는 요청은 403으로 서로 다른 응답을 받는지까지 함께 검증합니다. 매일 옵션이 켜진 기간이 저장된 종료일 뒤의 날짜에도 예약을 거절하는지는 `backend/tests/integration/db/test_reservation_endpoints.py` 가, 화면이 종료일에 시작일을 넣어 보내는지는 `frontend/src/lib/pipeline.test.ts` 가 확인합니다.
 
 ### 조회 헬퍼와 남는 칸 계산의 날짜 (2026-09-30)
 
 `open_slots_in_period(session, period, on)` 은 날짜 `on` 을 매개변수로 받습니다. 매일 기간은 계산을 실행한 날 하루만 배정하므로(`period_days`), `on` 이 그 대상 날짜입니다.
 
-합주실 조회 `get_room_or_raise`(`services/room/room_service.py`)와 기간 조회 `get_period_or_raise`(`services/period/period_crud_service.py`)는 없는 대상에 ValueError 를 발생시키는 공개 함수입니다. 팀 쪽 `get_team_or_raise`·`require_team_member`(`services/roster/roster_service.py`)는 팀과 포지션 문서에 있습니다. 예약·기간 서비스는 각 모듈의 `pipeline.py` 를 통해 호출합니다.
+합주실 조회 `get_room_or_raise`(`services/room/room_service.py`)와 기간 조회 `get_period_or_raise`(`services/period/period_crud_service.py`)는 없는 대상에 ValueError 를 발생시키는 공개 함수입니다. 팀 쪽 `get_team_or_raise`, `require_team_member`(`services/roster/roster_service.py`)는 팀과 포지션 문서에 있습니다. 예약, 기간 서비스는 각 모듈의 `pipeline.py` 를 통해 호출합니다.
 
 ## Conclusion
 

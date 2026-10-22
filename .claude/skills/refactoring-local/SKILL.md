@@ -30,10 +30,14 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 
 - **message broker 는 적용하지 않습니다.** 서버 1개 process 의 FastAPI 입니다. 모듈 간 통신은 api(gateway) 의 router 가 services 의 `pipeline.py` 를 호출하는 직접 호출입니다.
 - services 끼리의 직접 호출은 2절 예외입니다. 상대 모듈의 `pipeline.py` 만 import 하고 기능 파일은 import 하지 않습니다. audit 때 숫자를 다시 셉니다.
-  - 2026-10-15 기준 26곳입니다. 대부분 공용 조회와 검증입니다(validation 9, permission 6, settings 4, roster 2, room 2, storage 2).
-  - 알림 2곳: reservation, unavailable 이 notification 의 `pipeline.py` 를 호출합니다. 예약 취소, 반려를 알리는 판단이 저장과 같은 자리에 있어야 합니다. 배정 변경 알림은 router(`api/routers/schedule.py`)가 호출합니다.
+  - 2026-10-21 기준 34곳(import 문 기준)입니다. 대부분 공용 조회와 검증입니다(validation 11, permission 6, settings 5, notification 4, roster 2, room 2, storage 2, reservation 1, period 1).
+  - 알림 4곳: reservation, unavailable, period(`close_service.py`, `period/pipeline.py`)가 notification 의 `pipeline.py` 를 호출합니다. 예약 취소, 반려, 확정, 확정 해제를 알리는 판단이 저장과 같은 자리에 있어야 합니다. 배정 변경 알림은 router(`api/routers/schedule.py`)가 호출합니다.
   - period 가 reservation 의 `cancel_reservations_in_focus` 를 호출합니다. 집중 합주기간을 저장하는 transaction 안에서 겹치는 예약을 취소합니다.
-- services 가 `db/models.py` 의 ORM class 를 직접 import 하는 것은 예외입니다(사용자 결정 2026-10-12). ORM class 는 db 모듈의 규격 선언입니다.
+  - unavailable 이 period 의 `require_unavailable_open` 을 호출합니다. 마감된 집중 합주기간의 날짜에 걸리는 불가능 일정의 추가, 수정, 삭제를 저장 전에 거절합니다.
+  - services 가 db, scheduling 의 `pipeline.py` 를 import 하는 것은 2절 예외입니다.
+- services, api, jobs 가 `db/models.py` 의 ORM class 를 직접 import 하는 것은 예외입니다(사용자 결정 2026-10-12). ORM class 는 db 모듈의 규격 선언입니다.
+- `db/models.py` 가 `contract.py` 의 목록에서 CHECK 제약 문자열을 생성하는 함수(`_in_sql` 등)는 선언으로 봅니다.
+- `mailer.py` 와 `storage/file_store.py` 는 외부 연결 정보 환경변수를 직접 읽습니다.
 - 외부와 직접 통신하는 자리(timeout 필수)
 
 | 호출하는 쪽 | 대상 | timeout 위치 |
@@ -44,6 +48,7 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 | `frontend/nginx.conf.template` | api(배포) | `proxy_read_timeout 30s`. 배정 계산은 job 으로 접수하므로 요청 1개 기준 |
 
 - 규격 1세트: 서버는 `contract.py`, 화면은 field 타입이 `lib/contract.ts`, 조회 hook 과 queryKey 가 `components/queries.ts` 입니다. 같은 field 를 다른 곳에 다시 선언하지 않습니다.
+- 조합이 없는 GET 1건은 `components/queries.ts` 가 `lib/api.ts` 의 `getJSON` 을 직접 호출합니다.
 
 ## 테스트 위치 (3절)
 
@@ -59,7 +64,11 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 ## health check (5절)
 
 - 서버: `api/app.py` 의 `/health`. `db/health.py` 가 DB 연결을 실제로 확인하고, 실패한 의존 대상을 응답에 포함합니다.
-- compose: `db` 는 `pg_isready`, `e2e-api` 는 `/health` 를 healthcheck 로 씁니다. `banblit up` 은 container 상태가 아니라 `/health` 와 5173 응답으로 준비를 판단합니다.
+- compose healthcheck 는 6개 service 에 있습니다. `api` 와 `e2e-api` 는 `/health` 응답, `auto-assign` 은 heartbeat 파일(`/tmp/auto-assign-heartbeat`)의 수정 시각이 확인 간격의 3배 이내인지, `backup` 은 `/tmp/backup-ok` 의 수정 시각이 백업 간격의 2배 이내인지, `db` 는 `pg_isready`, `web` 은 nginx 를 거친 `/api/health` 응답입니다. `banblit up` 은 container 상태가 아니라 `/health` 와 5173 응답으로 준비를 판단합니다.
+
+## 장애 격리 (4절)
+
+- `jobs/auto_assign.py` 의 주기 반복은 다음 주기의 확인이 retry 를 겸하고, 반복 전체의 실패는 heartbeat healthcheck 가 표시합니다.
 
 ## 실행환경 분기 (6절)
 
@@ -71,6 +80,15 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 
 - 어투("~합니다")와 용어는 `writing-style-local` 에 있습니다. 사용자 결정은 "(사용자 결정 YYYY-MM-DD)" 로 표시합니다.
 - 시퀀스 파일 호출부 WHY 의 예: `services/period/pipeline.py` 에서 검증을 배정 계산보다 앞에 두는 이유를 호출 줄에 적습니다.
+- `components/` 와 `lib/` 는 브라우저와 라이브러리 동작 때문에 정한 설정의 WHY 를 그 자리에 적습니다. 변경 이력과 대안 비교는 적지 않습니다.
+
+## 1절 가변 state, 상수로 세지 않는 것
+
+- `components/toast.ts` 의 useSyncExternalStore 저장소는 모듈 레벨 state 예외입니다.
+- 기능 파일의 불변 상수(DB 제약 이름 사전, 보안 규칙, 언어 상수)는 1절 위반으로 세지 않습니다. 조절 값만 `pipeline.py` 에 둡니다.
+- 기능 파일의 `logging.getLogger(__name__)` 와 그 logger 의 `setLevel` 은 1절 가변 state 로 세지 않습니다.
+- Dropdown value 의 "me" 같은 선택지 sentinel 은 사용하는 자리 1곳에서 바로 분리하면 올리지 않습니다.
+- filter predicate 1개의 OR 조건, class 이름 배열의 `filter(Boolean)` 은 올리지 않습니다.
 
 ## 함수 크기 판정 예시 (8절)
 
@@ -80,6 +98,9 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 | `routes/SettingsMembers.tsx SetForm` | 100 | 1 — 저장 mutation | 통과 |
 | `routes/SettingsMembers.tsx SetRail`(2026-10-08) | 101 | 4 — 조회, 삭제 mutation, modal state 3개, 가로 스크롤 제어 | 위반 |
 | `routes/SettingsMembers.tsx SetRail`(2026-10-15) | 48 | 가로 스크롤은 `useRailScroll`, 서버 호출은 `lib/pipeline` | 통과 — 50줄 미만 |
+| `components/RichTextToolbar.tsx RichTextToolbar` | 126 | 0 — 업로드는 attach, file input 은 ref click | 통과 |
+
+화면에서 분리한 form hook 이 state 묶음 1개와 그 state 를 저장하는 요청 1개만 담당하면 60줄까지 통과입니다.
 
 ## 문서 (9절)
 
@@ -92,16 +113,13 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 - `docker-compose.override.yml` 의 `dev` service 는 유지합니다. 테스트, migration 전용이고 api 의 환경변수를 테스트에 섞지 않기 위해서입니다.
 - `.claude/skills/security-scan` 은 유지합니다. `.claude/` 설정 검사용이고 security-review(코드)와 대상이 다릅니다.
 - `services/auth/mailer.py` 는 유지합니다. notification 등 다른 service 가 쓸 예정입니다.
-
-## 다음 audit 에 올릴 항목 (사용자 결정 2026-10-08)
-
 - `services/*/pipeline.py` 12개 중 5개(auth, board, period, roster, validation)에 순서 함수와 조절 값을 모았습니다(2026-10-14). 나머지 7개(notification, permission, reservation, room, settings, storage, unavailable)는 모을 순서나 조절 값이 없어 재export 만 합니다(사용자 결정 2026-10-12). 다시 올리지 않습니다.
 
 ## audit 기본 범위
 
 - 경로: `backend/src/` 와 `frontend/src/`. 인자로 경로를 받으면 그 범위.
 - 검수 항목 6개(전역 audit)의 이 저장소 대상 — 1 문체: 주석, `.cluedoc/`, `COMMAND.md`, 자동화 파일. 2 병합: `services/*` 의 기능 파일, `.claude/skills/` 중복, 자동화 스크립트. 4 압축: `CLAUDE.md`(공통 규칙 `~/.claude/CLAUDE.md` 와 겹치는 줄). 5 압축: `COMMAND.md`(삭제된 옵션, service 의 절, `banblit.sh` 가 대체한 개별 명령). 6 정리: `trash/` 이동 대상, `.logs/`, 참조 0건 파일.
-- 출력: 저장소 루트 `AUDIT.md`. 끝나면 `trash/<날짜>-refactor-audit/` 로 이동.
+- 출력: 저장소 루트 `AUDIT.html`, `AUDIT.result.json`. 끝나면 `trash/<날짜>-refactor-audit/` 로 이동.
 - 리뷰어는 "통신(2절)" 의 "적용하지 않음" 을 반영합니다. broker 미적용을 위반으로 올리지 않습니다.
 
 ## 목적 (저장소 루트의 refactoring.md 에서 2026-10-08 이동. 개발자님이 쓴 원문입니다)
