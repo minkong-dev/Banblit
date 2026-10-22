@@ -1,5 +1,5 @@
-// 설정 화면의 합주실 구역입니다. 합주실 목록·추가·수정·삭제를 담당합니다.
-// 합주실은 하나만 사용하므로 이미 하나 있으면 추가 버튼이 표시되지 않습니다. 자세한 이유는 RoomCard 안의 주석에 있습니다.
+// 설정 화면의 합주실 구역입니다. 합주실 목록, 추가, 수정, 삭제를 담당합니다.
+// 합주실은 하나만 사용하므로 이미 하나 있으면 추가 버튼이 표시되지 않습니다.
 
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
@@ -33,14 +33,14 @@ function RoomFields(props: {
   const { form, setForm, at, bad, whyId, first } = props;
   return (
     <>
-      <Cell label="이름" wide htmlFor={at("name")}>
+      <Cell label="합주실명" wide htmlFor={at("name")}>
         <input
           ref={first}
           value={form.name}
           id={at("name")}
           aria-invalid={bad !== ""}
           aria-describedby={bad === "" ? undefined : whyId}
-          placeholder="합주실"
+          placeholder="합주실명을 입력해주세요."
           onChange={(event) => setForm({ ...form, name: event.target.value })}
         />
       </Cell>
@@ -68,10 +68,10 @@ export function RoomCard(props: {
 
   return (
     <Card>
-      <SectionHead title="합주실" desc="개방 및 마감시간은 정각으로만 설정이 가능해요" />
+      <SectionHead title="합주실" desc="개방 시간과 마감 시간은 정각으로만 설정이 가능해요" />
 
       {state.kind !== "ready" || rooms.length === 0 ? (
-        <Empty as="div" state={state} text="아직 등록된 합주실이 없어요" />
+        <Empty as="div" state={state} text="아직 등록된 합주실이 존재하지 않아요" />
       ) : (
         <ul className="rows">
           {rooms.map((room) =>
@@ -92,7 +92,7 @@ export function RoomCard(props: {
                 />
               </li>
             ) : (
-              // onEdit이 없으면 Row가 수정 버튼을 그리지 않습니다. room_edit 권한이 없는 사람에게는
+              // onEdit 이 없으면 Row 가 수정 버튼을 그리지 않습니다. room_edit 권한이 없는 사람에게는
               // 목록만 표시됩니다.
               <Row
                 key={room.id}
@@ -112,9 +112,7 @@ export function RoomCard(props: {
         </ul>
       )}
 
-      {/* 합주실은 하나만 사용합니다. 이미 하나 있으면 추가 form 을 표시하지 않습니다.
-          저장소와 배정 계산은 합주실 2개 이상을 다룰 수 있게 그대로 두고, 추가 경로만 차단했습니다.
-          여러 합주실을 다시 쓸 일이 생기면 이 조건 하나를 제거하면 됩니다. */}
+      {/* 합주실이 1개 이상이면 추가 버튼을 표시하지 않습니다. */}
       {!canCreate || rooms.length > 0 ? null : (
         <div className="listfoot">
           <Button kind="go" onClick={() => setMaking(true)}>+ 새 합주실</Button>
@@ -122,7 +120,7 @@ export function RoomCard(props: {
       )}
 
       {!making ? null : (
-        <Modal title="새 합주실" hint="합주실명과 개방 및 마감시간을 지정해주세요"
+        <Modal title="새 합주실" hint="합주실명과 개방 시간, 마감 시간을 지정해주세요"
           onClose={() => setMaking(false)}>
           <RoomForm
             start={BLANK_ROOM}

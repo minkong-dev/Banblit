@@ -1,8 +1,7 @@
 // 글·댓글 본문의 서식 있는 HTML 을 다루는 규칙입니다. 편집기 자체는 components/RichText.tsx 입니다.
 //
-// Tiptap 으로 변경하면서 본문이 평문에서 HTML 이 되었습니다. 저장된 HTML 을 그대로 화면에 넣으면
-// 남이 작성한 글의 script 가 읽는 사람의 브라우저에서 실행됩니다. 그래서 화면에 넣기 직전에
-// 허용한 태그와 속성만 남기고 전부 제거합니다.
+// 저장된 본문 HTML 을 화면에 표시하기 직전에 허용한 태그와 속성만 남기고 전부 제거합니다.
+// 남이 작성한 글의 script 가 읽는 사람의 브라우저에서 실행되지 않게 합니다.
 
 import DOMPurify from "dompurify";
 
@@ -97,7 +96,7 @@ const TONES: [number, number][] = [
 ];
 
 /** HSL 값을 "#rrggbb" 로 변환합니다. 팔레트 64칸을 손으로 적지 않고 계산해 만듭니다.
- *  CSS Color 4 의 HSL → RGB 변환 공식입니다. at 은 색 성분 하나를 두 자리 16진수로 반환합니다. */
+ *  CSS Color 4 의 HSL 을 RGB 로 변환하는 공식입니다. at 은 색 성분 하나를 두 자리 16진수로 반환합니다. */
 export function hslHex(hue: number, light: number, saturation: number): string {
   const l = light / 100;
   const a = (saturation / 100) * Math.min(l, 1 - l);
@@ -131,7 +130,7 @@ export function usedColors(html: string): string[] {
 const CONTENT_TAGS = /<(img|audio|video|iframe|table|hr)\b/i;
 
 /** 본문에 사람이 읽을 내용이 있는지 판단합니다.
- *  편집기는 비어 있어도 "<p></p>" 를 내놓으므로 trim 만으로는 빈 글을 걸러내지 못합니다.
+ *  편집기는 비어 있어도 "<p></p>" 를 내놓으므로 trim 만으로는 빈 글을 판정하지 못합니다.
  *  태그를 걷어낸 글자가 있거나 위 요소가 하나라도 있으면 내용이 있는 것으로 봅니다. */
 export function hasContent(html: string): boolean {
   return CONTENT_TAGS.test(html) || textOf(html).trim() !== "";
@@ -158,7 +157,7 @@ export function textOf(html: string): string {
 type EmbedKind = "image" | "audio" | "pdf" | "file";
 
 // 브라우저가 태그 하나로 여는 형식만 담습니다. heic 는 Safari 만, flac 은 Safari 가 열지 못하고,
-// avi·mkv 는 어느 브라우저도 재생하지 않아 넣지 않습니다 — 깨진 그림이 뜨는 것보다 이름 줄이 낫습니다.
+// avi, mkv 는 브라우저가 재생하지 않으므로 목록에서 제외합니다.
 const IMAGE = new Set(["jpg", "jpeg", "png", "gif", "webp"]);
 const AUDIO = new Set(["mp3", "wav", "m4a", "aac", "ogg"]);
 

@@ -10,7 +10,7 @@ import { notificationText, unreadCount } from "../lib/notifications";
 import { stampLabel } from "../lib/calendar";
 import { NOTIFICATIONS_KEY } from "./queries";
 
-// 알림 popover 의 id 입니다. 알림 버튼이 popoverTarget 으로 이 판을 엽니다.
+// 알림 popover 의 id 입니다. 알림 버튼이 popoverTarget 으로 이 popover 를 엽니다.
 const NOTES_POP_ID = "notesPop";
 
 /** 상단바의 알림 아이콘과 그 아래 popover(HTML popover 속성, 바깥 클릭·Escape 로 자동으로 닫히는

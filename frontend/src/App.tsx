@@ -27,13 +27,13 @@ import { isSignedIn } from "./lib/api";
  *  렌더링하지 않고 로그인으로 이동합니다. 서버도 session(서버가 보관하는 로그인 상태) 없는 요청은 401 로 거절하므로,
  *  frontend 에서 먼저 필터링해 빈 화면이 잠깐 표시된 후 이동하는 것을 방지합니다.
  *  ponytail: 표시용 cookie 는 서버가 session 을 취소해도 즉시 삭제되지 않습니다(다른
- *  기기에서 로그아웃한 경우 등). 이 경우 RequireAuth를 통과하지만 이후 요청이
- *  401로 거절됩니다. */
+ *  기기에서 로그아웃한 경우 등). 이 경우 RequireAuth 를 통과하지만 이후 요청이
+ *  401 로 거절됩니다. */
 function RequireAuth(props: { children: ReactElement }): ReactElement {
   return isSignedIn() ? props.children : <Navigate to="/login" replace />;
 }
 
-/** RequireAuth 의 반대입니다. 로그인 표시 cookie 가 있으면 랜딩·로그인 화면 대신 대시보드로 보냅니다.
+/** RequireAuth 의 반대입니다. 로그인 표시 cookie 가 있으면 랜딩, 로그인 화면 대신 대시보드로 보냅니다.
  *  이 이동이 없으면 로그인 상태 유지로 cookie 가 살아 있어도 다시 들어왔을 때 로그인 화면이 보입니다.
  *  ponytail: cookie 는 남았는데 서버 session 이 취소된 경우(다른 기기에서 비밀번호 변경 등) 로그인 화면으로
  *  갈 수 없고 대시보드의 요청이 401 로 거절됩니다. 프로필 카드의 로그아웃이 cookie 를 삭제하므로 빠져나올 수 있습니다.
@@ -55,20 +55,20 @@ export function App() {
         <Route path="/find-password" element={<FindPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
-      {/* 상단바·사이드바를 layout route 로 둡니다. 화면을 이동해도 AppShell 은 유지되고 Outlet 안의 화면만 교체됩니다. */}
+      {/* 상단바, 사이드바를 layout route 로 둡니다. 화면을 이동해도 AppShell 은 유지되고 Outlet 안의 화면만 교체됩니다. */}
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route path="/scheduler" element={<Scheduler />} />
         <Route path="/admin" element={<Assignment />} />
         {/* 관리자 메뉴 6개입니다. 주소와 필요 권한은 lib/adminMenu.ts, 구역별 화면은 routes/Settings.tsx 의 ADMIN_SCREENS 입니다.
-            권한이 없는 사람이 주소로 바로 들어오면 AdminArea 가 /settings 로 돌려보냅니다. */}
+            권한이 없는 사람이 주소로 바로 들어오면 AdminArea 가 /settings 로 이동시킵니다. */}
         {ADMIN_MENU.map((item) => (
           // key 는 구역을 옮길 때 화면을 새로 마운트합니다. 합주실과 기간이 같은 SetupArea 라 key 가 없으면
-          // React 가 이전 구역의 state 를 그대로 넘깁니다.
+          // React 가 이전 구역의 state 를 유지합니다.
           <Route key={item.key} path={item.to} element={<AdminArea key={item.key} section={item.key}>{ADMIN_SCREENS[item.key]}</AdminArea>} />
         ))}
         {/* 관리자 메뉴를 구역별 주소로 분리하기 전의 주소입니다. 저장해 둔 링크가 끊기지 않게 둡니다. */}
         <Route path="/settings" element={<SettingsIndex />} />
-        {/* 글·팀 상세는 주소로 엽니다. :postId?·:teamId? 의 ? 는 그 자리가 없어도 같은 화면이라는 뜻이고,
+        {/* 글, 팀 상세는 주소로 엽니다. :postId?, :teamId? 의 ? 는 그 자리가 없어도 같은 화면이라는 뜻이고,
             정적인 /new 가 :postId 보다 먼저 맞습니다(React Router 의 순위). */}
         <Route path="/notices/:postId?" element={<Notices />} />
         <Route path="/notices/new" element={<NoticeWrite />} />

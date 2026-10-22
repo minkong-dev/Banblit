@@ -1,4 +1,4 @@
-// RichText 도구 줄의 색 선택 부분입니다. 글자색과 배경색을 popover 하나에서 고릅니다.
+// RichText 도구 줄의 색 선택 부분입니다. 글자색과 배경색을 popover 하나에서 선택합니다.
 // 팔레트 값과 최근 사용한 색 계산은 lib/richText.ts 가 담당합니다.
 
 import { useId, useRef, useState } from "react";
@@ -69,7 +69,7 @@ function ColorColumn({ title, reset, resetLabel, value, used, onPick }: {
   );
 }
 
-/** 글자색과 배경색을 popover(버튼에 붙어 열리는 작은 창) 하나에서 고릅니다. 팔레트·초기화·스펙트럼·최근 사용한 색이 모두 들어 있습니다. */
+/** 글자색과 배경색을 popover(버튼에 붙어 열리는 작은 창) 하나에서 선택합니다. 팔레트, 초기화, 스펙트럼, 최근 사용한 색을 포함합니다. */
 export function ColorPanel({ editor, used, disabled }: {
   editor: Editor;
   used: string[];

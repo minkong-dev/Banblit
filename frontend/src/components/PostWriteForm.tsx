@@ -72,7 +72,7 @@ function usePublish(args: {
       markPublished();
     },
     onSuccess: () => {
-      say(files.length === 0 ? "글을 업로드 했어요." : "글과 첨부파일을 업로드 했어요.");
+      say(files.length === 0 ? "글을 업로드했어요." : "글과 첨부파일을 업로드했어요.");
       onDone();
     },
     onSettled: () => {
@@ -83,9 +83,7 @@ function usePublish(args: {
   return { send, stage };
 }
 
-/** 글 하나를 쓰는 form 입니다. 목록 화면이 아니라 작성 페이지(routes/PostWrite)가 사용합니다.
- *  목록 아래에 이어붙이지 않습니다 — 목록과 작성은 하는 일이 다르고, 붙이면 작성 화면을 주소로
- *  가리킬 수 없습니다. */
+/** 글 하나를 쓰는 form 입니다. 작성 페이지(routes/PostWrite)가 사용합니다. */
 export function WriteForm(props: {
   /** 초안을 만드는 주소입니다. 이 화면이 열릴 때 한 번 호출해 글 번호를 받습니다. */
   draftPath: string;

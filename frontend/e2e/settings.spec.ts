@@ -235,7 +235,7 @@ test("다른 멤버의 불가능 일정을 반려하면 표에서 사라지고 �
 
     const dialog = page.getByRole("dialog", { name: "불가능 일정 반려" });
     await expect(dialog).toContainText(`${E2E_MEMBER.name}님의 불가능 일정을 반려할게요.`);
-    await expect(dialog.getByPlaceholder("반려사유를 작성해주세요.")).toBeVisible();
+    await expect(dialog.getByPlaceholder("반려 사유를 작성해주세요.")).toBeVisible();
     await dialog.getByLabel("반려 사유").fill(reason);
     await dialog.getByRole("button", { name: "반려하기" }).click();
 

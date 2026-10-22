@@ -1,6 +1,6 @@
 // 삭제, 취소, 확정 전에 브라우저의 confirm 으로 한 번 묻는 함수를 모은 파일입니다. 함수마다 확인을 누르면 true 를 반환합니다.
 
-/** 이름 끝소리에 받침이 있으면 "을", 없으면 "를"입니다. 한글이 아니면 "를"을 설정합니다. */
+/** 이름 끝소리에 받침이 있으면 "을", 없으면 "를"을 반환합니다. 한글이 아니면 "를"을 반환합니다. */
 export function objectParticle(word: string): string {
   const last = word.trim().slice(-1);
   const code = last.charCodeAt(0);
@@ -28,7 +28,7 @@ export function askCancel(name: string): boolean {
  *  ON DELETE CASCADE 로 함께 삭제되므로, 합주실명이 아니라 함께 사라지는 것을 문장에 적습니다. */
 export function askDeleteRoom(): boolean {
   return window.confirm(
-    "기록이 있을경우 예약과 배정안, 스케줄링 기록이 모두 삭제돼요. 정말 삭제할까요?",
+    "기록이 있을 경우 예약과 배정안, 스케줄링 기록이 모두 삭제돼요. 정말 삭제할까요?",
   );
 }
 

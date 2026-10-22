@@ -28,7 +28,7 @@ export type Entry = {
   bookingId?: number;
   /** 항목의 날짜("2026-09-14")입니다. 여러 날짜의 항목을 한 목록에 나열하는 allOffEntries 만 값을 넣습니다. */
   day?: string;
-  /** 목록 한 줄에 덧붙일 반복 표기입니다. "매일" 이나 "매주 월·수·금" 이고, 반복이 아니면 없습니다. */
+  /** 목록 한 줄에 덧붙일 반복 표기입니다. "매일" 이나 "매주 월 수 금" 이고, 반복이 아니면 없습니다. */
   repeat?: string;
   /** 반복 요일 집합·횟수·종료일입니다. 수정 화면이 폼을 되살릴 때 사용합니다. */
   repeatWeekdays?: number | null;
@@ -51,10 +51,10 @@ export function entryClass(entry: Entry): string {
   return entry.team ?? "off";
 }
 
-/** 날짜별 항목 여러 벌을 한 벌로 합치고, 각 날짜의 목록을 시작 slot 번호(a) 순서로 정렬합니다.
- *  달력은 배정·전체 합주·불가능 일정·예약 네 가지를 한 칸에 함께 표시하고 칸마다 목록을 다시
+/** 날짜별 항목 묶음 여러 개를 하나로 합치고, 각 날짜의 목록을 시작 slot 번호(a) 순서로 정렬합니다.
+ *  달력은 배정, 전체 합주, 불가능 일정, 예약 네 가지를 한 칸에 함께 표시하고 칸마다 목록을 다시
  *  꺼내므로, 정렬을 한 번만 해 둡니다.
- *  넘긴 객체와 그 안의 배열은 수정하지 않습니다 — 각 벌은 useMemo 가 보유한 값이고, 그것을
+ *  전달한 객체와 그 안의 배열은 수정하지 않습니다. 각 묶음은 useMemo 가 보유한 값이고, 그 값을
  *  수정하면 다음 렌더에서 항목이 중복됩니다. */
 export function mergeByDay(...sources: readonly DayEntries[]): DayEntries {
   const merged: DayEntries = {};
@@ -164,7 +164,7 @@ export function assignedByDay(rows: ScheduleRow[], teams: DayTeam[], openHour: n
 export function offByDay(times: Unavailable[], openHour: number, days: string[]): DayEntries {
   const byDay: DayEntries = {};
   for (const item of times) {
-    // 반복은 서버가 배정을 계산할 때 전개하지만(services/period_input.py expand_unavailable),
+    // 반복은 서버가 배정을 계산할 때 전개하지만(services/period/period_input.py expand_unavailable),
     // 달력은 저장된 행 하나만 받습니다. 표시 중인 날짜 위에 같은 규칙으로 다시 전개합니다.
     // 전개하지 않으면 매주 반복으로 등록한 일정이 첫날에만 표시되어 등록되지 않은 것처럼 보입니다.
     for (const day of repeatDays(item, days)) {
@@ -205,7 +205,7 @@ export function allOffEntries(times: Unavailable[], openHour: number): Entry[] {
     }));
 }
 
-/** allOffEntries 의 항목 1줄에 적는 날짜입니다. "9월 14일 월요일" 이고, 반복 일정이면 " · 매주" 를 덧붙입니다.
+/** allOffEntries 의 항목 1줄에 적는 날짜입니다. "9월 14일 월요일" 이고, 반복 일정이면 공백 뒤에 반복 표기("매주 월 수 금")를 덧붙입니다.
  *  day 가 없는 항목(그날의 항목만 나열하는 목록)은 날짜를 적지 않으므로 빈 문자열입니다. */
 export function offWhenLabel(entry: Entry): string {
   if (entry.day === undefined) return "";
@@ -220,7 +220,7 @@ export function repeatDays(item: Unavailable, days: string[]): string[] {
   if (chosen === 0) return [first];
 
   const last = item.repeat_until;
-  // 횟수는 고른 요일 전부를 한 세트로 세는 주 단위입니다(services/period_input 과 같은 규칙).
+  // 횟수는 선택한 요일 전부를 한 세트로 세는 주 단위입니다(services/period/period_input.py 와 같은 규칙).
   // 주의 경계는 월요일이므로, 시작일이 속한 주의 월요일부터 weeks 주 뒤까지가 범위입니다.
   const weeks = item.repeat_count;
   const firstMonday = shiftDay(first, -weekdayIndex(first));

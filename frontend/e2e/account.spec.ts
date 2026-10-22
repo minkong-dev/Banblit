@@ -88,7 +88,7 @@ test("등록되지 않은 주소는 없는 주소 화면을 표시한다", async
   await page.goto("/이런주소는없습니다");
 
   await expect(page.getByRole("heading", { name: "Oops!" })).toBeVisible();
-  await expect(page.getByText("존재하지 않는 페이지에요")).toBeVisible();
+  await expect(page.getByText("존재하지 않는 페이지예요")).toBeVisible();
 
   await page.getByRole("link", { name: "로그인으로 돌아가기" }).click();
   await expect(page).toHaveURL(/\/login$/);

@@ -1,4 +1,4 @@
-// 여러 화면이 같은 아이콘을 사용합니다. 화면마다 SVG를 다시 작성하면 한쪽만 수정되어 불일치가 발생합니다.
+// 여러 화면이 같은 아이콘을 사용합니다.
 // 크기는 CSS 가 결정하므로 이 파일에서는 모양만 정의합니다.
 
 type IconProps = { className?: string };
@@ -125,8 +125,7 @@ export function CheckIcon(props: IconProps) {
   return <Stroke width={2.6} {...props}><path d="M4.5 12.5l5 5 10-11" /></Stroke>;
 }
 
-/** 충족하지 못한 항목의 표시입니다. 닫기 버튼의 CloseIcon 과 모양은 비슷하지만 다른 컴포넌트입니다 —
- *  닫기 아이콘을 바꾸면 규칙 목록의 표시까지 같이 바뀝니다. 굵기는 짝이 되는 CheckIcon 과 맞춥니다. */
+/** 충족하지 못한 항목의 표시입니다. CloseIcon 과 별개 컴포넌트이고, 굵기는 CheckIcon 과 같습니다. */
 export function CrossIcon(props: IconProps) {
   return <Stroke width={2.6} {...props}><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" /></Stroke>;
 }

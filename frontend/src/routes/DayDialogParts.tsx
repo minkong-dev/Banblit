@@ -41,14 +41,14 @@ export function useScrollToFirst(first: number | null): RefObject<HTMLDivElement
   return box;
 }
 
-/** 찬 칸이 걸치지 않는 구간만 pick 에 넘깁니다. 걸치면 아무것도 하지 않아 직전 구간이 남습니다. */
+/** 이미 예약된 slot 과 겹치지 않는 구간만 pick.onChange 에 전달합니다. 겹치면 호출하지 않아 직전 구간이 유지됩니다. */
 function apply(pick: DragPick, next: SlotRange): void {
   if (acceptsDrag(pick.grid, next, pick.slotMinutes)) pick.onChange(next);
 }
 
-/** 드래그로 구간을 선택하게 할 때 넘기는 값입니다. 없으면 타임라인은 보기 전용입니다. range 가 null 이면 아직 선택하지 않은 상태입니다.
- *  grid 는 이미 찬 칸(slotMinutes 길이)입니다. 넘기면 찬 칸이 걸치는 구간을 반영하지 않아 드래그가 그 앞에서 멈춥니다.
- *  불가능 일정은 겹쳐도 되므로 넘기지 않습니다. */
+/** 드래그로 구간을 선택하게 할 때 전달하는 값입니다. 없으면 타임라인은 보기 전용입니다. range 가 null 이면 아직 선택하지 않은 상태입니다.
+ *  grid 는 이미 예약된 slot(slotMinutes 길이)입니다. 전달하면 예약된 slot 과 겹치는 구간을 반영하지 않아 드래그가 그 앞에서 멈춥니다.
+ *  불가능 일정은 겹쳐도 되므로 전달하지 않습니다. */
 export type DragPick = {
   range: SlotRange | null;
   slotMinutes: number;
@@ -57,7 +57,7 @@ export type DragPick = {
 };
 
 /** 하루를 세로 띠로 표시합니다. 시각은 왼쪽에 시간 단위로만 적습니다.
- *  pick 이 있으면 누른 자리부터 끄는 자리까지를 slotMinutes 간격으로 선택해 onChange 에 넘기고, 선택한 구간을 점선 막대로 표시합니다. */
+ *  pick 이 있으면 pointer 를 누른 위치부터 드래그한 위치까지를 slotMinutes 간격으로 선택해 onChange 에 전달하고, 선택한 구간을 점선 막대로 표시합니다. */
 export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount }: HoursProps & {
   list: Entry[];
   teams: DayTeam[];
@@ -76,9 +76,9 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
     return ((event.clientY - rect.top) / rect.height) * slotCount;
   };
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    // button 0 이 왼쪽 버튼입니다. 오른쪽·가운데 버튼으로는 드래그를 시작하지 않습니다.
+    // button 0 이 왼쪽 버튼입니다. 오른쪽, 가운데 버튼으로는 드래그를 시작하지 않습니다.
     if (pick === undefined || event.button !== 0) return;
-    // 포인터가 띠 밖으로 나가도 move·up 이 이 요소로 계속 옵니다.
+    // 포인터가 띠 밖으로 나가도 move, up 이 이 요소로 계속 옵니다.
     // 이 줄이 없으면 띠 밖에서 버튼을 뗄 때 pointerup 을 받지 못해 드래그 상태가 남습니다.
     event.currentTarget.setPointerCapture(event.pointerId);
     pressed.current = slotAt(event);
@@ -132,7 +132,7 @@ export function SlotPicker({ prefix, range, onChange, grid, slotMinutes, openHou
   prefix: string;
   range: SlotRange;
   onChange: (next: SlotRange) => void;
-  /** 이미 찬 칸(slotMinutes 길이)입니다. 예약 창만 넘깁니다. 불가능 일정은 찬 칸과 겹쳐도 등록할 수 있습니다. */
+  /** 이미 예약된 slot(slotMinutes 길이)입니다. 예약 modal 만 전달합니다. 불가능 일정은 예약된 slot 과 겹쳐도 등록할 수 있습니다. */
   grid?: boolean[];
   slotMinutes: number;
 }) {
@@ -141,21 +141,21 @@ export function SlotPicker({ prefix, range, onChange, grid, slotMinutes, openHou
   return (
     <div className="pick">
       <div className="fld">
-        <label htmlFor={`${prefix}-from`}>시작</label>
+        <label htmlFor={`${prefix}-from`}>시작 시간</label>
         <Dropdown
           id={`${prefix}-from`}
           value={range.a}
           choices={steps.slice(0, -1).map((slot) => ({
             value: slot,
             // slot 은 한 시간 단위 위치이고 grid 는 slotMinutes 간격이라, cellAt 으로 grid 의 index 로 변환합니다.
-            label: `${label(slot)}${grid?.[cellAt(slot, slotMinutes)] ? " (찼어요)" : ""}`,
+            label: `${label(slot)}${grid?.[cellAt(slot, slotMinutes)] ? " (예약 마감)" : ""}`,
             disabled: grid?.[cellAt(slot, slotMinutes)] ?? false,
           }))}
           onChange={(next) => onChange({ ...range, a: next })}
         />
       </div>
       <div className="fld">
-        <label htmlFor={`${prefix}-to`}>종료</label>
+        <label htmlFor={`${prefix}-to`}>종료 시간</label>
         <Dropdown
           id={`${prefix}-to`}
           value={range.b}
@@ -168,8 +168,7 @@ export function SlotPicker({ prefix, range, onChange, grid, slotMinutes, openHou
 }
 
 /** 로그인한 사용자가 등록한 항목의 목록입니다. 줄마다 삭제 버튼이 있습니다. 불가능 일정은 전부를 나열하므로
- *  줄마다 날짜를 함께 적고(offWhenLabel), 예약은 이날의 항목만 나열하므로 시각만 적습니다.
- *  막대 안에 삭제 버튼을 넣지 않는 이유는 1시간 slot 막대가 14px 이라 클릭 영역이 없기 때문입니다. */
+ *  줄마다 날짜를 함께 적고(offWhenLabel), 예약은 이날의 항목만 나열하므로 시각만 적습니다. */
 export function MyEntriesList({ title, empty, entries, teams, onRemove, onEdit, openHour, closeHour, slotCount }: HoursProps & {
   title: string;
   /** 항목이 없을 때 표시하는 한 줄입니다. */
@@ -177,7 +176,7 @@ export function MyEntriesList({ title, empty, entries, teams, onRemove, onEdit, 
   entries: Entry[];
   teams: DayTeam[];
   onRemove: (entry: Entry) => void;
-  /** 불가능 일정 줄의 수정 버튼입니다. 넘기지 않으면 그 버튼을 표시하지 않습니다(예약 목록). */
+  /** 불가능 일정 줄의 수정 버튼입니다. 전달하지 않으면 그 버튼을 표시하지 않습니다(예약 목록). */
   onEdit?: (entry: Entry) => void;
 }) {
   const { label, endLabel } = slotLabels(openHour, closeHour, slotCount);
@@ -245,10 +244,10 @@ export function DayPeople({ people, error }: {
 }
 
 /** 불가능 일정의 반복 설정입니다. 체크를 켜면 요일 버튼과 끝나는 조건이 나타납니다.
- *  요일을 일곱 개 전부 선택하면 매일과 같습니다. 끝나는 조건은 종료일과 횟수 중 하나만 채웁니다 —
- *  둘 다 채우면 아래에 사유를 표시하고 저장을 막습니다(서버도 422 로 거절합니다). */
+ *  요일을 일곱 개 전부 선택하면 매일과 같습니다. 끝나는 조건은 종료일과 횟수 중 1개만 입력합니다.
+ *  둘 다 입력하면 아래에 사유를 표시하고 저장을 막습니다(서버도 422 로 거절합니다). */
 export function RepeatFields({ dayKey, value, onChange }: {
-  /** 지금 보고 있는 날짜입니다. 반복을 처음 켤 때 이 날의 요일을 기본으로 고릅니다. */
+  /** 지금 보고 있는 날짜입니다. 반복을 처음 켤 때 이 날의 요일을 기본값으로 선택합니다. */
   dayKey: string;
   value: Repeat;
   onChange: (next: Repeat) => void;
@@ -311,7 +310,7 @@ export function RepeatFields({ dayKey, value, onChange }: {
               })}
             />
           </label>
-          <p className="sub">고른 요일 전부가 한 세트입니다. 4 를 넣으면 그 요일들이 4주 동안 반복합니다.</p>
+          <p className="sub">선택한 요일 전부가 1주 단위예요. 4 를 입력하면 선택한 요일이 4주 동안 반복돼요.</p>
           <Why text={conflict} />
         </div>
       )}

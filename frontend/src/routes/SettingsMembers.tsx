@@ -1,6 +1,6 @@
 // 설정 화면의 멤버 구역입니다. 카드 두 장이 수직으로 배치됩니다.
 //
-// 위쪽은 permission set(권한 집합)입니다. 정사각형 카드가 수평으로 배치되며, 한 화면에 모두 보이지 않으면 < > 버튼으로 넘깁니다.
+// 위쪽은 권한 세트(permission set)입니다. 정사각형 카드가 수평으로 배치되며, 한 화면에 모두 보이지 않으면 < > 버튼으로 스크롤합니다.
 // 아래쪽은 가입한 모든 멤버입니다. 아래로 스크롤하면 다음 page 를 불러옵니다.
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -57,7 +57,7 @@ function SetForm(props: {
       }),
     onSuccess: () => {
       refreshMemberArea(client);
-      onDone(method === "POST" ? "권한을 생성했어요." : "권한을 저장했어요.");
+      onDone(method === "POST" ? "권한 세트를 생성했어요." : "권한 세트를 저장했어요.");
     },
     onError: (error) => setBad(reason(error)),
   });
@@ -87,13 +87,13 @@ function SetForm(props: {
     >
       <div className="fields">
         <label className="wide" htmlFor="setName">
-          권한 이름
+          권한 세트 이름
           <input
             id="setName"
-            // eslint-disable-next-line jsx-a11y/no-autofocus -- 권한 편집 모달이 열릴 때 이름 입력칸으로 초점을 이동합니다. WAI-ARIA dialog 패턴이 규정하는 동작입니다.
+            // eslint-disable-next-line jsx-a11y/no-autofocus -- 권한 편집 모달이 열릴 때 이름 입력칸으로 포커스를 이동합니다. WAI-ARIA dialog 패턴이 규정하는 동작입니다.
             autoFocus
             value={form.name}
-            placeholder="권한 이름"
+            placeholder="권한 세트 이름을 입력해주세요."
             onChange={(event) => setForm({ ...form, name: event.target.value })}
           />
         </label>
@@ -102,7 +102,7 @@ function SetForm(props: {
           <input
             id="setNote"
             value={form.description}
-            placeholder="권한 설명"
+            placeholder="권한 세트 설명을 입력해주세요."
             onChange={(event) => setForm({ ...form, description: event.target.value })}
           />
         </label>
@@ -129,7 +129,7 @@ function SetForm(props: {
   );
 }
 
-/** 멤버 검색 창에서 고른 멤버에게 permission set 을 부여합니다. */
+/** 멤버 검색 modal 에서 선택한 멤버에게 권한 세트를 부여합니다. */
 function GrantAdd(props: {
   set: PermissionSet;
   onClose: () => void;
@@ -174,7 +174,7 @@ function GrantHolders(props: {
     <Modal title={set.name} hint="해당 권한을 가진 멤버" onClose={onClose}>
       <ul className="lineup">
         {set.members.length === 0 ? (
-          <Empty as="li" text="아직 해당 권한을 가진 멤버가 없어요" />
+          <Empty as="li" text="아직 해당 권한 세트를 가진 멤버가 존재하지 않아요" />
         ) : (
           set.members.map((person) => (
             <SeatRow
@@ -221,14 +221,14 @@ function SetTile(props: {
   );
 }
 
-/** 권한 카드가 여는 창입니다. 동시에 하나만 열립니다. */
+/** 권한 세트 카드가 여는 modal 입니다. 동시에 하나만 열립니다. */
 type SetModal =
   | { kind: "new" }
   | { kind: "edit"; set: PermissionSet }
   | { kind: "holders"; set: PermissionSet }
   | { kind: "add"; set: PermissionSet };
 
-/** 권한 카드가 여는 창 네 종류를 open.kind 로 구분해 렌더합니다. */
+/** 권한 세트 카드가 여는 modal 네 종류를 open.kind 로 구분해 렌더합니다. */
 function SetModals(props: {
   open: SetModal;
   list: PermissionSet[];
@@ -236,7 +236,7 @@ function SetModals(props: {
   onDone: (text: string) => void;
 }) {
   const { open, list, onClose, onDone } = props;
-  // 생성·수정 창은 저장이 끝나면 닫습니다. 부여·회수 창은 여러 멤버를 연달아 처리하므로 닫지 않습니다.
+  // 생성, 수정 modal 은 저장이 끝나면 닫습니다. 부여, 회수 modal 은 여러 멤버를 연달아 처리하므로 닫지 않습니다.
   const closeAndTell = (text: string): void => { onClose(); onDone(text); };
 
   if (open.kind === "new") {
@@ -246,7 +246,7 @@ function SetModals(props: {
         taken={list.map((set) => set.name)}
         path="/permission-sets"
         method="POST"
-        title="새 권한"
+        title="새 권한 세트"
         onClose={onClose}
         onDone={closeAndTell}
       />
@@ -263,13 +263,13 @@ function SetModals(props: {
         taken={list.filter((one) => one.id !== open.set.id).map((one) => one.name)}
         path={`/permission-sets/${open.set.id}`}
         method="PATCH"
-        title="권한 수정"
+        title="권한 세트 수정"
         onClose={onClose}
         onDone={closeAndTell}
       />
     );
   }
-  // 창을 열어 둔 동안 권한을 부여·회수하면 목록을 다시 조회합니다. open 이 보유한 값은 창을 열 때의
+  // modal 을 열어 둔 동안 권한을 부여, 회수하면 목록을 다시 조회합니다. open 이 보유한 값은 modal 을 열 때의
   // 값이므로, 같은 id 의 최신 값을 목록에서 찾아 넘깁니다.
   const set = list.find((one) => one.id === open.set.id) ?? open.set;
   if (open.kind === "add") return <GrantAdd set={set} onClose={onClose} onDone={onDone} />;
@@ -288,7 +288,7 @@ function useRailScroll(): { track: RefObject<HTMLUListElement | null>; slide: (w
   return { track, slide };
 }
 
-/** permission set 카드 행입니다. 카드가 수평으로 배치되며, 한 화면에 모두 보이지 않으면 < > 버튼으로 넘깁니다. */
+/** 권한 세트 카드 행입니다. 카드가 수평으로 배치되며, 한 화면에 모두 보이지 않으면 < > 버튼으로 스크롤합니다. */
 function SetRail() {
   const client = useQueryClient();
   const { track, slide } = useRailScroll();
@@ -308,7 +308,7 @@ function SetRail() {
 
   return (
     <Card>
-      <SectionHead title="권한" desc="부여할 권한을 설정해 커스텀 권한을 만들 수 있어요">
+      <SectionHead title="권한 세트" desc="부여할 권한을 설정해 커스텀 권한을 만들 수 있어요">
         <span className="railnav">
           <NavButton dir="prev" label="이전 권한" onClick={() => slide(-1)} />
           <NavButton dir="next" label="다음 권한" onClick={() => slide(1)} />
@@ -327,7 +327,7 @@ function SetRail() {
           />
         ))}
         <li className="tile add">
-          <Button kind="ghost" onClick={() => setOpen({ kind: "new" })}>+ 새 권한</Button>
+          <Button kind="ghost" onClick={() => setOpen({ kind: "new" })}>+ 새 권한 세트</Button>
         </li>
       </ul>
 
@@ -352,7 +352,7 @@ function MemberRoster(props: {
   const [filter, setFilter] = useState("");
   const foot = useRef<HTMLDivElement | null>(null);
 
-  // 목록의 바닥이 화면에 들어오면 다음 페이지를 불러옵니다. 스크롤 위치를 직접 계산하지 않는 이유는, 행 높이나 카드 높이가 변해도 이 방식은 계속 작동하기 때문입니다.
+  // 목록의 바닥이 화면에 들어오면 다음 페이지를 불러옵니다.
   useEffect(() => {
     const mark = foot.current;
     if (mark === null || done) return;
@@ -378,8 +378,8 @@ function MemberRoster(props: {
         />
       </SectionHead>
 
-      {/* 휴대폰에서는 CSS 가 행을 묶음 배치(grid)로 바꿉니다. 그때 일부 브라우저(Safari 등)가 표 구조를 버리므로
-          역할(role)을 명시해 화면 읽기가 제목 칸과 값을 계속 연결하게 합니다. */}
+      {/* 휴대폰 폭에서는 CSS 가 행을 grid 로 변경합니다. Safari 는 이때 table 역할을 삭제하므로
+          role 을 명시해 스크린 리더가 열 제목과 값을 연결하게 합니다. */}
       <div className="roster members">
         <table role="table">
           <thead>
@@ -395,7 +395,7 @@ function MemberRoster(props: {
             </tr>
           </thead>
           {/* eslint-disable jsx-a11y/no-interactive-element-to-noninteractive-role -- td 는 상호작용 요소가 아닙니다. 이 규칙이
-              td 를 잘못 분류합니다. 묶음 배치에서 표 구조를 유지하려고 cell 역할을 명시합니다. */}
+              td 를 잘못 분류합니다. grid 배치에서 표 구조를 유지하려고 cell 역할을 명시합니다. */}
           <tbody>
             {shown.map((row) => (
               <tr role="row" key={row.id}>
@@ -418,7 +418,7 @@ function MemberRoster(props: {
           </tbody>
           {/* eslint-enable jsx-a11y/no-interactive-element-to-noninteractive-role */}
         </table>
-        {shown.length === 0 ? <Empty text="표시할 멤버가 없어요" /> : null}
+        {shown.length === 0 ? <Empty text="표시할 멤버가 존재하지 않아요" /> : null}
         {/* 이 요소가 화면에 들어오면 다음 페이지를 불러옵니다. */}
         <div ref={foot} className="rosterfoot">{done ? "" : LOADING_TEXT}</div>
       </div>

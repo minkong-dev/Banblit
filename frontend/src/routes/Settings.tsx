@@ -50,7 +50,7 @@ export function SettingsIndex() {
   return (
     <div className="main">
       <Card>
-        <Empty as="div" text="설정할 수 있는 항목이 없어요. 내 계정은 프로필 화면에서 수정해요." />
+        <Empty as="div" text="설정할 수 있는 항목이 존재하지 않아요. 내 계정은 프로필 화면에서 수정해요." />
       </Card>
     </div>
   );
@@ -206,7 +206,7 @@ function Readout(props: {
   periods: Period[];
   teams: Team[];
   teamsState: LoadState;
-  /** 합주실·기간 중 어느 구역에서 열렸는지입니다. 계산에 쓰는 값이 구역마다 다릅니다. */
+  /** 합주실, 기간 중 어느 구역에서 열렸는지입니다. 계산에 쓰는 값이 구역마다 다릅니다. */
   tab: "rooms" | "periods";
 }) {
   const { rooms, periods, teams, teamsState, tab } = props;
@@ -217,7 +217,7 @@ function Readout(props: {
   const focused = periods.filter((period) => period.kind === "focused");
   const period = tab === "periods" ? focused[0] : undefined;
   const days = period ? daysBetween(period.starts_on, period.ends_on) : 1;
-  // 팀 수는 팀 목록 endpoint(API의 요청 주소 단위)가 제공합니다. 아직 조회하지 못했으면 0 이며,
+  // 팀 수는 팀 목록 endpoint(API 의 요청 주소 단위)가 제공합니다. 아직 조회하지 못했으면 0 이며,
   // 이 경우 팀당 배정을 계산하지 않습니다.
   const count = teams.length;
   const sum = openingHours({ rooms, days, teams: count, slotMinutes });
@@ -230,7 +230,7 @@ function Readout(props: {
           <small>
             {period
               ? `${period.starts_on} – ${period.ends_on} 동안 개방을 진행해요.`
-              : `합주실 ${rooms.length} 전체 총 개방 시간`}
+              : `합주실 ${rooms.length}개 전체 개방 시간`}
           </small>
         </div>
 
@@ -252,7 +252,7 @@ function Readout(props: {
         <p className="note">
           {count > 0
             ? "집중 합주기간에는 모든 팀이 같은 합주 횟수를 갖도록 스케줄링을 진행해요."
-            : "현재 생성된 팀이 없어요."}
+            : "현재 생성된 팀이 존재하지 않아요."}
         </p>
       </div>
     </Panel>

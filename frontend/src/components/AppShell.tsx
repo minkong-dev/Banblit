@@ -37,7 +37,7 @@ const MANAGER_NAV = [
 // satisfies 는 리터럴 타입을 유지한 채, 구조가 오른쪽에 적은 타입에 맞는지만 검사합니다.
 ] as const satisfies readonly { key: string; label: string; to: string; needs: readonly Permission[] }[];
 
-// 주소의 첫 구간 → 화면 CSS 가 격리되는 이름(body[data-page])입니다. 공지사항과 팀 게시판은 board.css 를 함께 씁니다.
+// 주소의 첫 구간별로 화면 CSS 가 격리되는 이름(body[data-page])입니다. 공지사항과 팀 게시판은 board.css 를 함께 씁니다.
 // 관리자 메뉴의 구역은 주소가 각각 다르지만 전부 settings.css 를 씁니다. 목록은 lib/adminMenu.ts 에서 가져와,
 // 구역을 추가할 때 이 표를 빠뜨리지 않게 합니다.
 const PAGE_BY_PATH: Record<string, string> = {
@@ -53,13 +53,13 @@ const PAGE_BY_PATH: Record<string, string> = {
 
 type NavItem = { key: string; label: string; to: string };
 
-// 휴대폰 메뉴 판의 id 입니다. 상단바의 햄버거 버튼이 popoverTarget 으로 이 판을 엽니다.
+// 휴대폰 메뉴 drawer 의 id 입니다. 상단바의 햄버거 버튼이 popoverTarget 으로 이 drawer 를 엽니다.
 const MENU_ID = "shellmenu";
 
 // 본문 상자의 id 입니다. 계정 조회 실패 안내가 사라진 뒤 초점을 이 상자로 옮깁니다.
 const PAGE_ID = "shellpage";
 
-// 프로필 popover 의 id 입니다. 프로필 버튼이 popoverTarget 으로 이 판을 엽니다.
+// 프로필 popover 의 id 입니다. 프로필 버튼이 popoverTarget 으로 이 popover 를 엽니다.
 const PROFILE_POP_ID = "profileMenuPop";
 
 // NavLink 는 주소가 to 와 같거나 그 아래(/notices/new 등)이면 aria-current="page" 를 붙입니다.
@@ -72,7 +72,7 @@ function NavList({ items }: { items: readonly NavItem[] }) {
   );
 }
 
-/** 사이드바와 휴대폰 메뉴 판이 함께 쓰는 메뉴 목록입니다. 관리자 메뉴는 권한이 있을 때만 붙습니다. */
+/** 사이드바와 휴대폰 메뉴 drawer 가 함께 쓰는 메뉴 목록입니다. 관리자 메뉴는 권한이 있을 때만 붙습니다. */
 function MenuItems({ nav, managerNav }: { nav: readonly NavItem[]; managerNav: readonly NavItem[] }) {
   return (
     <>
@@ -102,21 +102,19 @@ function useShellBodyMark(): void {
 /** 계정 조회 실패 안내 줄의 사유(meWhy)와 다시 불러오기(retryMe)입니다. retrying 은 사용자가 누른 재조회가 진행 중인지입니다. */
 function useMeRetry(meState: LoadState): { meWhy: string; retrying: boolean; retryMe: () => Promise<void> } {
   const client = useQueryClient();
-  // 사용자가 누른 재조회가 진행 중인지입니다. 20초 간격 폴링(main.tsx)의 재조회와 구분합니다 — 폴링까지
+  // 사용자가 누른 재조회가 진행 중인지입니다. 20초 간격 polling(main.tsx)의 재조회와 구분합니다 — polling까지
   // 표시하면 안내 문구가 20초마다 바뀌고 role="alert" 이 그때마다 다시 읽힙니다.
   const [retrying, setRetrying] = useState(false);
 
   // 마지막으로 받은 실패 사유를 보관합니다. 받아 둔 값이 없는 조회를 다시 조회하면 TanStack Query 가
   // error 를 null 로 되돌리므로(query-core 의 fetchState), meState 를 그대로 표시하면 20초 간격
-  // 폴링(main.tsx)마다 사유가 사라졌다 다시 나타나고 role="alert" 이 그때마다 다시 읽힙니다.
+  // polling(main.tsx)마다 사유가 사라졌다 다시 나타나고 role="alert" 이 그때마다 다시 읽힙니다.
   // 렌더 중에 state 를 변경하는 것은 값이 바뀐 즉시 같은 렌더에 반영하는 React 의 방식입니다.
   const failedWhy = meState.kind === "failed" ? meState.why : "";
   const [meWhy, setMeWhy] = useState("");
   if (failedWhy !== "" && failedWhy !== meWhy) setMeWhy(failedWhy);
 
-  /** 계정과 팀 목록을 함께 다시 조회합니다. 계정 조회가 성공하고 팀 목록만 실패한 상태는 안내가 뜨지 않아
-   *  이 버튼에 닿지 않지만, 계정 조회와 함께 실패했을 때 두 번 누르지 않게 같이 무효화합니다.
-   *  refetch 대신 invalidateQueries 를 쓰는 이유는 이 자리에 두 조회의 query 객체가 없기 때문입니다. */
+  /** 계정과 팀 목록을 함께 다시 조회합니다. 두 조회를 invalidateQueries 로 함께 무효화합니다. */
   async function retryMe(): Promise<void> {
     if (retrying) return;
     setRetrying(true);
@@ -174,7 +172,7 @@ export function AppShell() {
         <div className="mecut" role="alert" aria-label="계정 조회 실패">
           <p>
             <b>계정 정보를 불러오지 못했어요</b>{" "}
-            권한이 필요한 메뉴는 표시되지 않습니다.{meWhy === "" ? "" : ` 사유: ${meWhy}`}
+            권한이 필요한 메뉴는 표시되지 않아요.{meWhy === "" ? "" : ` 사유: ${meWhy}`}
           </p>
           {/* disabled 가 아니라 aria-disabled 입니다. 초점을 가진 버튼이 disabled 가 되면 브라우저가 초점을
               body 로 옮겨, 재조회가 다시 실패했을 때 키보드 사용자가 버튼으로 되돌아올 수 없습니다. */}
@@ -193,9 +191,9 @@ export function AppShell() {
         <div className="page" id={PAGE_ID} tabIndex={-1}><Outlet /></div>
       </div>
 
-      {/* 휴대폰 메뉴 판입니다(Material Design 모달 드로어). .drawer 가 화면 전체를 덮으므로 판(.sheet) 바깥을 누른 click 은
-          .drawer 가 받아 판을 닫고, 판 아래 버튼에는 전달되지 않습니다. 링크를 누를 때도 닫습니다. Esc 는 브라우저가 닫습니다. */}
-      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- 링크와 판 바깥을 눌렀을 때 판을 닫습니다. Escape 는 popover="auto" 가 처리합니다. */}
+      {/* 휴대폰 메뉴 drawer 입니다(Material Design modal drawer). .drawer 가 화면 전체를 덮으므로 .sheet 바깥을 누른 click 은
+          .drawer 가 받아 drawer 를 닫고, drawer 아래 버튼에는 전달되지 않습니다. 링크를 누를 때도 닫습니다. Esc 는 브라우저가 닫습니다. */}
+      {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- 링크와 drawer 바깥을 눌렀을 때 drawer 를 닫습니다. Escape 는 popover="auto" 가 처리합니다. */}
       <div
         id={MENU_ID}
         popover="auto"

@@ -348,7 +348,7 @@ export function weekdayIndex(day: string): number {
 }
 
 /** 목록 한 줄에 적는 반복 표기입니다. 반복하지 않으면 빈 문자열, 일곱 요일 전부면 "매일",
- *  그 밖에는 "매주 월·수·금" 입니다. */
+ *  그 밖에는 "매주 월 수 금" 입니다. */
 export function repeatLabel(mask: number): string {
   if (mask === 0) return "";
   if (mask === ALL_WEEKDAYS) return "매일";

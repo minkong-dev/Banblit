@@ -23,7 +23,7 @@ test("긴 글쓰기 화면은 페이지 전체가 스크롤하고 상단바·사
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/notices/new");
   // 임시 저장본이 만들어져야 파일 넣기가 활성화됩니다. 그 전에 넣으면 무시됩니다.
-  const picker = page.locator(".rttools .rtpick[aria-label='그림 넣기'] + input");
+  const picker = page.locator(".rttools .rtpick[aria-label='그림 삽입'] + input");
   await expect(picker).toBeEnabled();
   await picker.setInputFiles({
     name: "긴 악보.pdf",
@@ -357,7 +357,7 @@ test("카드가 세로로 쌓이는 폭에서는 하루 dialog 에 타임라인�
     expect(hint, `${width}px`).toBe(shown ? "타임라인을 드래그하거나 시간을 선택해주세요." : "시간을 선택해주세요.");
     await openDay("예약");
     const bookHint = await page.locator("dialog[open] .col .sub").first().innerText();
-    expect(bookHint, `${width}px 예약`).toBe(shown ? "타임라인을 드래그하거나 시각을 선택해요." : "시각을 선택해요.");
+    expect(bookHint, `${width}px 예약`).toBe(shown ? "타임라인을 드래그하거나 시간을 선택해주세요." : "시간을 선택해주세요.");
   }
 });
 

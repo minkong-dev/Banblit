@@ -1,5 +1,5 @@
 // 글·댓글 본문을 서식과 함께 작성하는 편집기입니다. 본문을 HTML 문자열로 주고받습니다.
-// 저장된 HTML 을 화면에 넣기 전의 sanitize(허용 목록에 없는 태그와 속성을 제거하는 처리)와
+// 저장된 HTML 을 화면에 표시하기 전의 sanitize(허용 목록에 없는 태그와 속성을 제거하는 처리)와
 // 빈 값 판정은 lib/richText.ts 가 담당합니다.
 
 import { EditorContent, useEditor } from "@tiptap/react";
@@ -49,7 +49,7 @@ function useBodyEditor({ id, label, postId, value, onChange, disabled = false, i
       // 링크는 새 창으로 열되, 연 쪽 창을 조작하지 못하게 rel 을 붙입니다.
       StarterKit.configure({
         // dropcursor 는 파일을 끌어 오는 동안 삽입 위치에 가로 막대를 그립니다. 아래 덧댄 안내(.rtdrop)가
-        // 편집기를 전부 가려 그 위치가 보이지 않으므로, 막대만 안내 위에 떠서 정체를 알 수 없는 선이 됩니다.
+        // 편집기를 전부 가려 그 위치가 보이지 않으므로, 막대만 안내 위에 표시되어 의미를 알 수 없는 선이 됩니다.
         dropcursor: false,
         // trailingNode 는 마지막 블록이 문단이 아니면 빈 문단을 덧붙입니다. 제목을 만들면 그 뒤에
         // 빈 줄이 하나 생겨, "# " 를 입력했을 때 커서가 다음 줄로 내려간 것처럼 보입니다.

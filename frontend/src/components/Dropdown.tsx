@@ -8,14 +8,14 @@ import { useDismissible } from "./hooks";
 import { edgeChoice, moveChoice, openAt } from "../lib/dropdown";
 import type { Choice } from "../lib/dropdown";
 
-/** 선택한 값과 선택지를 받아 목록을 그립니다. id 는 label 의 htmlFor 가 가리키는 버튼의 id 입니다.
- *  곁에 label 이 없는 자리에서는 id 대신 ariaLabel 로 이름을 답니다. 둘 중 하나는 있어야 합니다.
- *  value 가 선택지에 없으면 버튼에 placeholder 를 표시합니다. */
 /** 선택지 하나의 id 입니다. aria-activedescendant 가 이 값으로 커서 위치를 가리킵니다. */
 function optionId(id: string | undefined, index: number): string {
   return `${id ?? "dd"}-opt-${index}`;
 }
 
+/** 선택한 값과 선택지를 받아 목록을 그립니다. id 는 label 의 htmlFor 가 가리키는 버튼의 id 입니다.
+ *  곁에 label 이 없는 자리에서는 id 대신 ariaLabel 로 이름을 답니다. 둘 중 하나는 있어야 합니다.
+ *  value 가 선택지에 없으면 버튼에 placeholder 를 표시합니다. */
 export function Dropdown<T extends string | number>({
   id, ariaLabel, value, choices, onChange, disabled = false, placeholder = "선택해주세요",
   invalid = false, describedBy, buttonRef, className,

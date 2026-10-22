@@ -248,7 +248,7 @@ function DayModal({ day, lanes, open, close, onClose }: {
 
   return (
     <Modal title={dayWithWeekday(day)} onClose={onClose}>
-      {shown.length === 0 ? <Empty text="이날은 불가능 일정이 없어요." /> : (
+      {shown.length === 0 ? <Empty text="이날은 불가능 일정이 존재하지 않아요." /> : (
         <div className="offtl" ref={box} style={{ "--lanes": shown.length, "--rows": rows.length } as CSSProperties}>
           <div className="hrs" aria-hidden="true">
             {rows.map((hour, i) => <span key={hour} style={{ "--i": i } as CSSProperties}>{hourLabel(hour)}</span>)}

@@ -53,7 +53,7 @@ function labelled(slots: TeamSlot[]): { slot: TeamSlot; label: string }[] {
   }));
 }
 
-/** 팀 목록의 한 행입니다. 행을 클릭하면 포지션 구성이 열리며, 오른쪽 끝의 연필·삭제 버튼은
+/** 팀 목록의 한 행입니다. 행을 클릭하면 포지션 구성이 열리며, 오른쪽 끝의 수정, 삭제 버튼은
  *  팀을 수정할 권한이 있는 사람에게만 표시됩니다. */
 function TeamRow(props: {
   team: Team;
@@ -116,7 +116,7 @@ function ColorPick(props: { value: string | null; taken: string[]; onChange: (ne
   );
 }
 
-/** 포지션 구성 창의 자리 조회와 멤버 지정, 해제입니다. 성공하면 팀, 자리, 명단, 내 계정을 다시 조회합니다.
+/** 포지션 구성 modal 의 자리 조회와 멤버 지정, 해제입니다. 성공하면 팀, 자리, 명단, 내 계정을 다시 조회합니다.
  *  현재 사용자가 지정되거나 해제되면 "내 팀"(프로필, 달력의 내 일정)도 바뀌기 때문입니다. */
 function useLineup(teamId: number, onSat: () => void) {
   const client = useQueryClient();
@@ -146,7 +146,7 @@ function Lineup(props: {
   canRemove: boolean;
 }) {
   const { teamId, canAdd, canRemove } = props;
-  // 멤버를 찾는 중인 자리의 번호입니다. null 이면 검색 창을 닫은 상태입니다.
+  // 멤버를 찾는 중인 자리의 번호입니다. null 이면 검색 modal 을 닫은 상태입니다.
   const [seeking, setSeeking] = useState<number | null>(null);
   const { slots, sit, clear } = useLineup(teamId, () => setSeeking(null));
 
@@ -166,7 +166,7 @@ function Lineup(props: {
                 <IconButton label={`${label} 지정할 멤버 찾기`} icon={<SearchIcon />} onClick={() => setSeeking(slot.id)} />
               )}
               {slot.member_id === null || !canRemove ? null : (
-                <Button kind="ghost" disabled={clear.isPending} onClick={() => clear.mutate(slot.id)}>삭제</Button>
+                <Button kind="ghost" disabled={clear.isPending} onClick={() => clear.mutate(slot.id)}>해제</Button>
               )}
             </>
           )}
@@ -185,7 +185,7 @@ function Lineup(props: {
   );
 }
 
-/** 팀 창에 처음 입력할 값입니다. 새 팀은 BLANK_TEAM, 수정은 서버에서 받은 팀과 자리(startOf)입니다. */
+/** 팀 modal 에 처음 입력할 값입니다. 새 팀은 BLANK_TEAM, 수정은 서버에서 받은 팀과 자리(startOf)입니다. */
 type TeamStart = { name: string; color: string | null; counts: Counts; members: ReadonlyMap<string, Member> };
 
 const BLANK_TEAM: TeamStart = { name: "", color: null, counts: NO_SLOTS, members: new Map() };
@@ -201,7 +201,7 @@ function startOf(team: Team, slots: TeamSlot[]): TeamStart {
   return { name: team.name, color: team.color, counts: countsOf(slots), members };
 }
 
-/** 팀 창의 이름·색·포지션 인원 입력입니다. */
+/** 팀 modal 의 이름, 색, 포지션 인원 입력입니다. */
 function TeamFields(props: {
   name: string;
   color: string | null;
@@ -218,7 +218,7 @@ function TeamFields(props: {
       <div className="fields">
         <label className="wide">
           팀 이름
-          {/* eslint-disable-next-line jsx-a11y/no-autofocus -- 팀 편집 form 이 열릴 때 이름 입력칸으로 초점을 이동합니다. */}
+          {/* eslint-disable-next-line jsx-a11y/no-autofocus -- 팀 편집 form 이 열릴 때 이름 입력칸으로 포커스를 이동합니다. */}
           <input autoFocus value={name} placeholder="곡 이름" onChange={(event) => onName(event.target.value)} />
         </label>
       </div>
@@ -239,7 +239,7 @@ function TeamFields(props: {
   );
 }
 
-/** 팀 창의 자리 목록과 멤버 검색 창입니다. 멤버 지정·삭제는 화면 값만 변경하고, 서버에는 저장 버튼을 누를 때 전송합니다. */
+/** 팀 modal 의 자리 목록과 멤버 검색 modal 입니다. 멤버 지정, 삭제는 화면 값만 변경하고, 서버에는 저장 버튼을 누를 때 전송합니다. */
 function SeatRows(props: {
   seats: Seat[];
   canAdd: boolean;
@@ -264,7 +264,7 @@ function SeatRows(props: {
                   <IconButton label={`${seat.label} 지정할 멤버 찾기`} icon={<SearchIcon />} onClick={() => setSeeking(seat)} />
                 )}
                 {seat.member === null || !canRemove ? null : (
-                  <Button kind="ghost" onClick={() => onRemove(seat)}>삭제</Button>
+                  <Button kind="ghost" onClick={() => onRemove(seat)}>해제</Button>
                 )}
               </>
             )}
@@ -300,8 +300,8 @@ type TeamFormProps = {
   onClose: () => void;
 };
 
-/** 팀 이름·색·포지션 인원·멤버를 한 창에서 설정합니다. 새 팀과 팀 수정이 같은 창을 사용합니다.
- *  저장 버튼을 누르면 팀을 저장한 뒤 서버의 자리 목록을 조회하고, 포지션·번호로 대응시켜 멤버를 지정합니다. */
+/** 팀 이름, 색, 포지션 인원, 멤버를 modal 1개에서 설정합니다. 새 팀과 팀 수정이 같은 modal 을 사용합니다.
+ *  저장 버튼을 누르면 팀을 저장한 뒤 서버의 자리 목록을 조회하고, 포지션, 번호로 대응시켜 멤버를 지정합니다. */
 function TeamForm(props: TeamFormProps) {
   const { team, start, taken, takenColors, canAdd, canRemove, onDelete, onDone, onClose } = props;
   const client = useQueryClient();
@@ -310,7 +310,7 @@ function TeamForm(props: TeamFormProps) {
   const [counts, setCounts] = useState(start.counts);
   const [members, setMembers] = useState(start.members);
   // 새 팀 저장 후 멤버 지정이 실패했을 때 생성된 팀입니다. 재시도하면 POST 대신 이 팀에 수정 요청을 전송해 팀이 중복 생성되지 않습니다.
-  // 목록을 다시 조회하면 taken 에 이 팀의 이름·색이 포함되므로 검증과 색 선택에서 제외합니다.
+  // 목록을 다시 조회하면 taken 에 이 팀의 이름, 색이 포함되므로 검증과 색 선택에서 제외합니다.
   const [created, setCreated] = useState<Team | null>(null);
   const [bad, setBad] = useState("");
 
@@ -322,7 +322,7 @@ function TeamForm(props: TeamFormProps) {
     mutationFn: async () => {
       const saved = await saveTeam(team ?? created, name.trim(), color, counts);
       if (isNew) setCreated(saved);
-      // 멤버 지정·삭제 권한이 둘 다 없으면 seats 가 서버 값과 같으므로 자리 목록을 조회하지 않습니다.
+      // 멤버 지정, 삭제 권한이 둘 다 없으면 seats 가 서버 값과 같으므로 자리 목록을 조회하지 않습니다.
       if (canAdd || canRemove) await saveSeats(saved.id, seats);
     },
     onSuccess: () => onDone(isNew ? `${name.trim()} 팀 생성을 완료했어요.` : `${name.trim()} 수정을 완료했어요.`),
@@ -367,7 +367,7 @@ function TeamForm(props: TeamFormProps) {
   );
 }
 
-/** 팀 수정 창입니다. 서버의 자리 목록을 조회한 뒤에 TeamForm 을 엽니다. 조회 전에 열면 빈 포지션으로 시작해 저장 시 자리가 삭제됩니다. */
+/** 팀 수정 modal 입니다. 서버의 자리 목록을 조회한 뒤에 TeamForm 을 엽니다. 조회 전에 열면 빈 포지션으로 시작해 저장 시 자리가 삭제됩니다. */
 function EditTeam(props: Omit<TeamFormProps, "team" | "start"> & { team: Team }) {
   const { team, onClose } = props;
   const slots = useQuery(teamSlotsQuery(team.id));
@@ -389,7 +389,7 @@ export function Teams() {
   const navigate = useNavigate();
   const { teamId } = useParams();
   const openId = idParam(teamId);
-  // 열 때는 기록을 쌓고 닫을 때는 바꿔 끼웁니다(replace). 닫은 뒤 뒤로 가기가 닫은 팀을 다시 열지 않게 합니다.
+  // 열 때는 기록을 추가하고 닫을 때는 기록을 교체합니다(replace). 닫은 뒤 뒤로 가기가 닫은 팀을 다시 열지 않게 합니다.
   const setOpenId = (id: number | null): void => {
     void (id === null ? navigate("/teams", { replace: true }) : navigate(`/teams/${id}`));
   };
@@ -401,7 +401,7 @@ export function Teams() {
   const drop = useMutation({
     mutationFn: (team: Team) => removeTeam(team.id),
     onSuccess: (_body, team) => {
-      // 삭제된 팀의 포지션 구성이나 수정 창이 열려 있으면 함께 닫습니다.
+      // 삭제된 팀의 포지션 구성이나 수정 modal 이 열려 있으면 함께 닫습니다.
       if (openId === team.id) setOpenId(null);
       setRenaming((now) => (now?.id === team.id ? null : now));
       void client.invalidateQueries({ queryKey: TEAMS_KEY });
@@ -413,7 +413,7 @@ export function Teams() {
   const teams = useTeams();
   const allTeams = teams.data?.teams ?? [];
   const manages = canManageTeams(me);
-  // 팀 관리 권한이 없으면 메뉴 이름이 "내 팀"이므로 소속 팀만 표시합니다. 이름·색 중복 검증은 전체 팀(allTeams)으로 합니다.
+  // 팀 관리 권한이 없으면 메뉴 이름이 "내 팀"이므로 소속 팀만 표시합니다. 이름, 색 중복 검증은 전체 팀(allTeams)으로 합니다.
   const list = teamsShown(allTeams, teamIds, manages);
   const canCreate = can(me, "team_create");
   const canRename = can(me, "team_edit");
@@ -423,7 +423,7 @@ export function Teams() {
   // 목록을 렌더링할 수 없는 경우입니다. 아직 데이터를 받지 못했거나, 오류가 발생했거나, 데이터가 비어 있을 때입니다.
   const noList = state.kind !== "ready" || list.length === 0;
 
-  // 한 쪽에 PER_PAGE(10)개씩 보여 줍니다(lib/paging). 쪽 넘김 줄은 목록 바로 아래에 옵니다.
+  // page 1개에 PER_PAGE(10)개씩 표시합니다(lib/paging). Pager 는 목록 바로 아래에 표시합니다.
   const pages = pageCount(list.length);
   const shownPage = clampPage(page, pages);
   const opened = list.find((team) => team.id === openId) ?? null;
@@ -435,11 +435,10 @@ export function Teams() {
         <Card>
           <SectionHead title={teamNavLabel(me)} desc="팀을 눌러 포지션을 확인해주세요" />
 
-          {/* 데이터가 비어 있거나 로딩 중이어도 컨테이너는 그대로 유지합니다. 컨테이너 높이를 측정하여 한 페이지의 행 수를 결정하므로,
-              컨테이너가 사라지면 측정할 대상이 없어집니다. */}
+          {/* 목록이 비어 있거나 조회 중이면 ul 안에 Empty 를 표시합니다. */}
           <ul className="rows">
             {noList ? (
-              <Empty as="li" state={state} text={manages ? "아직 생성된 팀이 없어요." : "소속된 팀이 없어요."} />
+              <Empty as="li" state={state} text={manages ? "아직 생성된 팀이 존재하지 않아요." : "소속된 팀이 존재하지 않아요."} />
             ) : (
               pageSlice(list, shownPage).map((team) => (
                 <li key={team.id}>

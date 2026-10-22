@@ -32,7 +32,7 @@ const render = (ui: ReactElement): string =>
 describe("하루 창 — 탭마다 다른 화면", () => {
   it("전체 일정 창은 등록 버튼 없이 그날 예약이 없다고 표시한다", () => {
     const html = render(<DayView {...day} />);
-    expect(html).toContain("현재 예약이 없어요");
+    expect(html).toContain("현재 예약이 존재하지 않아요");
     expect(html).not.toContain("예약하기");
     expect(html).not.toContain("등록하기");
   });
@@ -40,7 +40,7 @@ describe("하루 창 — 탭마다 다른 화면", () => {
   it("내 일정 창은 불가능 일정 등록 form 을 그린다", () => {
     const html = render(<OffDialog {...day} myOff={[]} onSaved={() => {}} />);
     expect(html).toContain("등록하기");
-    expect(html).toContain("등록한 불가능 일정이 없어요.");
+    expect(html).toContain("등록한 불가능 일정이 존재하지 않아요.");
   });
 
   it("예약 창은 위쪽 시간 선택으로 열면 그 시간으로 예약한다고 표시한다", () => {

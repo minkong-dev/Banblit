@@ -33,7 +33,7 @@ const SCALES: Record<TeamColor, [Scale, Scale]> = {
 const TINT_STEP = 4;
 const INK_STEP = 11;
 
-/** 팀 색 이름을 CSS key 로 변경합니다. "jade" → "team-jade". 이 key 가 class 이름이자 CSS 변수 이름입니다. */
+/** 팀 색 이름을 CSS key 로 변경합니다. "jade" 는 "team-jade" 가 됩니다. 이 key 가 class 이름이자 CSS 변수 이름입니다. */
 export function teamColorKey(color: string): string {
   return `team-${color}`;
 }

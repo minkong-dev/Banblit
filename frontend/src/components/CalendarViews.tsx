@@ -40,7 +40,7 @@ export function MonthView({
 }: ViewProps & {
   year: number;
   month: number;
-  /** 위쪽 시간 선택에서 시작·끝을 둘 다 지정했으면 그 범위입니다. */
+  /** 위쪽 시간 선택에서 시작 시간과 종료 시간을 둘 다 지정했으면 그 범위입니다. */
   range: { from: number; to: number } | null;
   inFocus: (key: string) => boolean;
   onOpen: (key: string) => void;
@@ -89,7 +89,7 @@ export function MonthView({
                 <div className="avail">
                   {free
                     ? <span className="yes">예약 가능</span>
-                    : <span className="no">해당시간 마감</span>}
+                    : <span className="no">해당 시간 마감</span>}
                 </div>
               );
             } else {
@@ -131,7 +131,7 @@ export function MonthView({
               className={["cell", ...marks].join(" ")}
               disabled={blocked}
               // 지난 날짜는 누를 수 없는 이유를 스크린 리더에 알립니다. 화면에는 표시하지 않습니다.
-              aria-label={tab === "book" && key < today ? `${dayWithWeekday(key)}, 지난 날짜라 예약할 수 없습니다` : dayWithWeekday(key)}
+              aria-label={tab === "book" && key < today ? `${dayWithWeekday(key)}, 지난 날짜라 예약할 수 없어요` : dayWithWeekday(key)}
               onClick={() => onOpen(key)}
             >
               <span className="n">{day}</span>

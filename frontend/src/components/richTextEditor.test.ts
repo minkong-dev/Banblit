@@ -39,7 +39,7 @@ describe("attach — 파일을 올리고 본문에 넣기", () => {
     await attach(editor, [pdf], null, null);
     expect(upload).not.toHaveBeenCalled();
     expect(calls).toEqual([]);
-    expect(toast).toHaveBeenCalledWith("글을 준비하는 중이에요. 잠시 후 다시 넣어주세요.");
+    expect(toast).toHaveBeenCalledWith("글을 준비하는 중이에요. 잠시 후 다시 첨부해주세요.");
   });
 
   it("PDF 를 올리면 받은 주소로 PDF 노드를 넣는다", async () => {

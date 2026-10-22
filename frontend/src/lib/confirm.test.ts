@@ -78,7 +78,7 @@ describe("askDeleteRoom — 합주실 삭제는 함께 사라지는 것을 적�
 
     expect(askDeleteRoom()).toBe(true);
     expect(asked[0]).toBe(
-      "기록이 있을경우 예약과 배정안, 스케줄링 기록이 모두 삭제돼요. 정말 삭제할까요?",
+      "기록이 있을 경우 예약과 배정안, 스케줄링 기록이 모두 삭제돼요. 정말 삭제할까요?",
     );
   });
 

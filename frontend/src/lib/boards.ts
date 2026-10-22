@@ -20,7 +20,7 @@ export function titleMessage(title: string): string {
   return title.length > TITLE_MAX ? `제목은 ${TITLE_MAX}자 이내로 작성해주세요.` : "";
 }
 
-// 본문은 편집기가 만든 HTML 입니다. 비어 있어도 "<p></p>" 가 들어오므로 trim 으로는 걸러지지 않고,
+// 본문은 편집기가 만든 HTML 입니다. 비어 있어도 "<p></p>" 가 들어오므로 trim 으로는 빈 본문을 판정할 수 없고,
 // 글자 수도 태그를 걷어낸 뒤에 세야 굵게 표시한 글이 먼저 상한에 걸리지 않습니다.
 export function bodyMessage(body: string): string {
   if (!hasContent(body)) return "내용을 입력해주세요.";
@@ -80,7 +80,7 @@ export function attachmentMessage(name: string, size: number): string {
     return `지원하지 않는 파일 형식이에요. 파일명을 확인해주세요.`;
   }
   if (size > MAX_ATTACHMENT_BYTES) {
-    return `파일 당 업로드 가능한 크기는 ${fileSizeLabel(MAX_ATTACHMENT_BYTES)} 이하만 가능해요.`
+    return `파일당 업로드 가능한 크기는 ${fileSizeLabel(MAX_ATTACHMENT_BYTES)} 이하만 가능해요.`
       + ` 해당 파일은 ${fileSizeLabel(size)} 에요.`;
   }
   return "";

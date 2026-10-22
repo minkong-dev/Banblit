@@ -1,7 +1,7 @@
-// 설정 화면의 블라인드 구역입니다. 가려 둔 글을 한 표에서 보고 되돌립니다.
+// 설정 화면의 블라인드 구역입니다. 블라인드한 글을 표 1개로 표시하고 블라인드를 해제합니다.
 // "타 멤버 글 삭제 및 블라인드"(board_moderate) 권한자에게만 이 탭이 표시됩니다.
 // 가려진 글은 목록과 상세에서 빠지므로 작성자 본인도 볼 수 없고, 이 표가 그 글을 보는 유일한 자리입니다.
-// 서버도 같은 권한으로 조회와 되돌리기를 받습니다(routers/boards.py 의 read_blinded_posts·unblind_post).
+// 서버도 같은 권한으로 조회와 되돌리기를 받습니다(routers/boards.py 의 read_blinded_posts, unblind_post).
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -40,7 +40,7 @@ export function BlindedCards() {
 
   return (
     <Card>
-      <SectionHead title="블라인드" desc="가려 둔 글이에요. 해제하면 원래 게시판으로 돌아가요." />
+      <SectionHead title="블라인드" desc="블라인드한 글이에요. 해제하면 원래 게시판에 다시 표시돼요." />
 
       <div className="roster">
         {state.kind === "failed" ? <Empty text={state.why} /> : null}
@@ -49,8 +49,8 @@ export function BlindedCards() {
             <tr>
               <th>글</th>
               <th>작성자</th>
-              <th>올린 날</th>
-              <th>가린 사람</th>
+              <th>작성일</th>
+              <th>블라인드한 멤버</th>
               <th className="fill" aria-hidden="true" />
               <th aria-hidden="true" />
             </tr>
@@ -61,7 +61,7 @@ export function BlindedCards() {
                 <td>{post.title}</td>
                 <td>{post.author}</td>
                 <td>{stampLabel(post.created_at)}</td>
-                {/* 가린 사람의 계정이 삭제되면 이름이 비므로, 그때는 줄표를 표시합니다. */}
+                {/* 블라인드한 멤버의 계정이 삭제되면 이름이 비므로, 그때는 줄표를 표시합니다. */}
                 <td>{post.blinded_by ?? "—"}</td>
                 <td className="fill" />
                 <td>
@@ -80,7 +80,7 @@ export function BlindedCards() {
           </tbody>
         </table>
         {state.kind !== "failed" && posts.length === 0 ? (
-          <Empty state={state} text="가려 둔 글이 없어요" />
+          <Empty state={state} text="블라인드한 글이 존재하지 않아요" />
         ) : null}
       </div>
     </Card>

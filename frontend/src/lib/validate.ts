@@ -2,7 +2,7 @@
 // 오류 메시지가 화면에 표시되는 빨간 텍스트입니다.
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-// 한글을 비롯한 ASCII 밖의 글자를 거르는 규칙입니다. 서버(input.py 의 isascii 검사)와 같습니다.
+// 한글을 비롯한 ASCII 밖의 글자를 판정하는 규칙입니다. 서버(input.py 의 isascii 검사)와 같습니다.
 // 이메일은 SMTPUTF8 을 지원하지 않는 메일 서버를 거치면 발송이 실패하고, 비밀번호는 자판이
 // 다른 기기에서 본인도 다시 입력하지 못합니다.
 const ASCII_ONLY = /^[\x20-\x7E]*$/;
@@ -30,16 +30,16 @@ const STRONG_MAX = 20;
 
 export function emailMessage(value: string): string {
   // @ 기호 앞뒤에 공백이 없고 마지막 점 뒤가 두 글자 이상이어야 합니다.
-  if (!value) return "이메일을 입력해 주세요.";
-  if (!ASCII_ONLY.test(value)) return "이메일은 영문, 숫자, 기호만 사용할 수 있습니다.";
+  if (!value) return "이메일을 입력해주세요.";
+  if (!ASCII_ONLY.test(value)) return "이메일은 영문, 숫자, 기호만 사용할 수 있어요.";
   return EMAIL.test(value) ? "" : "이메일 형식이 맞는지 확인해주세요.";
 }
 
-/** 로그인 아이디입니다. 앞뒤 공백을 지우고 소문자로 바꾼 값으로 검사합니다 — 서버도 같은 방식으로
+/** 로그인 아이디입니다. 앞뒤 공백을 삭제하고 소문자로 변환한 값으로 검사합니다 — 서버도 같은 방식으로
  *  정규화한 뒤 저장·비교합니다. 서버의 같은 규칙은 input.py 의 require_login_id() 입니다. */
 export function loginIdMessage(value: string): string {
   const normalized = value.trim().toLowerCase();
-  if (!normalized) return "아이디를 입력해 주세요.";
+  if (!normalized) return "아이디를 입력해주세요.";
   if (!LOGIN_ID.test(normalized)) return "아이디는 영어 소문자와 숫자만 사용 가능해요.";
   if (normalized.length < LOGIN_ID_MIN || normalized.length > LOGIN_ID_MAX) {
     return `아이디는 ${LOGIN_ID_MIN}자 이상 ${LOGIN_ID_MAX}자 이하로 입력해주세요.`;
@@ -47,39 +47,39 @@ export function loginIdMessage(value: string): string {
   return "";
 }
 
-/** 사람 이름입니다. 앞뒤 공백을 지운 값으로 검사합니다. 서버의 같은 규칙은 input.py 의 require_person_name() 입니다. */
+/** 사람 이름입니다. 앞뒤 공백을 삭제한 값으로 검사합니다. 서버의 같은 규칙은 input.py 의 require_person_name() 입니다. */
 export function personNameMessage(value: string): string {
   const trimmed = value.trim();
-  if (!trimmed) return "이름을 입력해 주세요.";
+  if (!trimmed) return "이름을 입력해주세요.";
   return NAME_LETTERS.test(trimmed) ? "" : "이름은 한글과 영어만 사용 가능해요.";
 }
 
-/** 학과입니다. 앞뒤 공백을 지운 값으로 검사합니다. 서버의 같은 규칙은 input.py 의 require_department() 입니다. */
+/** 학과입니다. 앞뒤 공백을 삭제한 값으로 검사합니다. 서버의 같은 규칙은 input.py 의 require_department() 입니다. */
 export function departmentMessage(value: string): string {
   const trimmed = value.trim();
-  if (!trimmed) return "학과를 입력해 주세요.";
+  if (!trimmed) return "학과를 입력해주세요.";
   return NAME_LETTERS.test(trimmed) ? "" : "학과는 한글과 영어만 사용 가능해요.";
 }
 
 /** 로그인 입력 필드입니다. 강화된 규칙을 적용하지 않습니다. 이 함수에서 규칙을 강화하면 규칙 변경 전에 생성한 계정이 로그인할 수 없게 됩니다. 유효성은 서버가 판단합니다. */
 export function passwordMessage(value: string): string {
-  if (!value) return "비밀번호를 입력해 주세요.";
+  if (!value) return "비밀번호를 입력해주세요.";
   return value.length < PASSWORD_MIN ? "비밀번호는 8자 이상으로 작성해주세요." : "";
 }
 
 /** 새로 설정하는 비밀번호가 충족해야 할 규칙입니다. 가입과 재설정이 이 함수를 공유합니다. 화면마다 따로 정의하면 규칙이 어긋납니다. 서버의 같은 규칙은 input.py 의 require_password() 입니다. 빈 값은 호출자가 먼저 검증합니다. 화면마다 표시하는 문구가 다르기 때문입니다. */
 function passwordRuleMessage(value: string): string {
-  if (!ASCII_ONLY.test(value)) return "비밀번호는 영문, 숫자, 기호만 사용할 수 있습니다.";
+  if (!ASCII_ONLY.test(value)) return "비밀번호는 영문, 숫자, 기호만 사용할 수 있어요.";
   if (!ONLY_ALLOWED.test(value)) {
     return `특수문자는 ${PASSWORD_SYMBOLS.split("").join(" ")} 만 사용 가능해요.`;
   }
   if (value.length < STRONG_MIN || value.length > STRONG_MAX) {
     return "8자에서 20자 사이로 입력해주세요.";
   }
-  if (!/[a-z]/.test(value)) return "소문자를 하나 이상 넣어주세요.";
-  if (!/[A-Z]/.test(value)) return "대문자를 하나 이상 넣어주세요.";
-  if (!/[0-9]/.test(value)) return "숫자를 하나 이상 넣어주세요.";
-  if (!HAS_SYMBOL.test(value)) return "특수기호를 하나 이상 넣어주세요.";
+  if (!/[a-z]/.test(value)) return "소문자를 하나 이상 포함해주세요.";
+  if (!/[A-Z]/.test(value)) return "대문자를 하나 이상 포함해주세요.";
+  if (!/[0-9]/.test(value)) return "숫자를 하나 이상 포함해주세요.";
+  if (!HAS_SYMBOL.test(value)) return "특수기호를 하나 이상 포함해주세요.";
   return "";
 }
 
@@ -99,7 +99,7 @@ export function passwordChecks(value: string): { text: string; ok: boolean }[] {
 
 /** 가입에서 처음 설정하는 비밀번호입니다. */
 export function signupPasswordMessage(value: string): string {
-  if (!value) return "비밀번호를 입력해 주세요.";
+  if (!value) return "비밀번호를 입력해주세요.";
   return passwordRuleMessage(value);
 }
 
@@ -112,7 +112,7 @@ export function strongPasswordMessage(value: string): string {
 /** 기수입니다. 1981년이 1기이고 매년 하나씩 증가하지만, 연도로 변환하지 않고 숫자만 수신합니다. 명단에 기재된 기수를 그대로 입력받기 위함입니다. 서버도 같은 범위를 검증합니다. */
 export function cohortMessage(value: string): string {
   const trimmed = value.trim();
-  if (!trimmed) return "기수를 입력해 주세요.";
+  if (!trimmed) return "기수를 입력해주세요.";
   const cohort = Number(trimmed);
   if (!Number.isInteger(cohort) || cohort < 1 || cohort > 100) {
     return "기수는 1에서 100 사이의 숫자여야 해요.";
@@ -123,21 +123,21 @@ export function cohortMessage(value: string): string {
 /** name을 taken 목록과 비교해, 비었거나 겹치면 그 사유를 반환합니다. what은 "합주실"·"팀"처럼 오류 문장에 들어갈 제품 용어이고, label 은 빈 이름 문구의 주어("합주실명")입니다. 앞뒤 공백을 제거한 후 비교하므로 공백만 다른 이름도 중복으로 판정합니다. */
 export function uniqueNameMessage(name: string, taken: string[], what: string, label = `${what} 이름`): string {
   const trimmed = name.trim();
-  if (!trimmed) return `${label}을 입력해 주세요.`;
+  if (!trimmed) return `${label}을 입력해주세요.`;
   const clash = taken.some((other) => other.trim() === trimmed);
-  return clash ? `같은 이름의 ${what}이 이미 있습니다.` : "";
+  return clash ? `같은 이름의 ${what}이 이미 존재해요.` : "";
 }
 
-/** 권한 집합을 저장할 수 없는 사유입니다. 저장할 수 있을 경우 빈 문자열을 반환합니다.
- *  이름 없음 → 이름 중복 → 설명 없음 순서로 검사합니다. 입력칸의 위아래 순서와 같아야
- *  사용자가 위에서부터 채울 수 있습니다.
+/** 권한 세트을 저장할 수 없는 사유입니다. 저장할 수 있을 경우 빈 문자열을 반환합니다.
+ *  이름 없음, 이름 중복, 설명 없음 순서로 검사합니다. 입력칸의 위아래 순서와 같아야
+ *  사용자가 위에서부터 입력할 수 있습니다.
  *  중복은 앞뒤 공백을 제거한 뒤 비교하므로 공백만 다른 이름도 같은 이름으로 판정합니다.
- *  taken 은 이미 쓰인 권한 집합 이름이고, 수정 중인 집합의 이름은 호출부가 제외해 넘깁니다. */
+ *  taken 은 이미 쓰인 권한 세트 이름이고, 수정 중인 집합의 이름은 호출부가 제외해 넘깁니다. */
 export function permissionSetProblem(
   draft: { name: string; description: string }, taken: readonly string[],
 ): string {
   const name = draft.name.trim();
-  if (name === "") return "권한 이름을 입력해 주세요.";
+  if (name === "") return "권한 세트 이름을 입력해주세요.";
   if (taken.some((other) => other.trim() === name)) return "이미 같은 이름을 가진 권한이 있어요.";
   return draft.description.trim() === "" ? "이 권한에 대한 설명을 작성해주세요." : "";
 }
@@ -145,11 +145,11 @@ export function permissionSetProblem(
 /** 학번입니다. 숫자 8자리만 수신합니다. 서버의 같은 규칙은 input.py의 require_student_no()입니다. */
 export function studentNoMessage(value: string): string {
   const trimmed = value.trim();
-  if (!trimmed) return "학번을 입력해 주세요.";
+  if (!trimmed) return "학번을 입력해주세요.";
   return /^\d{8}$/.test(trimmed) ? "" : "학번은 숫자 8자리여야 해요.";
 }
 
-/** 비워 둘 수 있는 기수 입력칸입니다. 비어 있으면 빈 문자열, 값이 있으면 cohortMessage 와 같은 규칙으로 봅니다. */
+/** 입력하지 않아도 되는 기수 입력칸입니다. 비어 있으면 빈 문자열, 값이 있으면 cohortMessage 와 같은 규칙으로 봅니다. */
 export function optionalCohortMessage(value: string): string {
   return value.trim() === "" ? "" : cohortMessage(value);
 }

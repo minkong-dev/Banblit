@@ -123,9 +123,9 @@ export function SignIn() {
   return (
     <form aria-label="로그인" noValidate onSubmit={onSubmit}>
       <Field name="loginId" label="아이디" type="text"
-        autoComplete="username" placeholder="아이디를 입력해주세요" error={errors.loginId} />
+        autoComplete="username" placeholder="아이디를 입력해주세요." error={errors.loginId} />
       <Field name="pw" label="비밀번호" type="password"
-        autoComplete="current-password" placeholder="비밀번호를 입력해주세요" error={errors.pw} />
+        autoComplete="current-password" placeholder="비밀번호를 입력해주세요." error={errors.pw} />
       <div className="row">
         {/* eslint-disable-next-line jsx-a11y/label-has-associated-control -- Toggle 컴포넌트 안에 input 이 있습니다. eslint 는 컴포넌트 내부를 확인하지 못합니다. */}
         <label className="keep"><Toggle kind="check" name="keep" /> 로그인 상태 유지</label>
@@ -138,7 +138,7 @@ export function SignIn() {
 
       <div className="or">또는</div>
       <div className="social">
-        {/* 구글·카카오 로그인은 외부 서비스 등록과 API 키가 있어야 합니다. 아직 없어 클릭할 수
+        {/* 구글, 카카오 로그인은 외부 서비스 등록과 API 키가 있어야 합니다. 아직 없어 클릭할 수
             없는 상태로 둡니다. AccountLayout 아래쪽의 "서비스 이용약관"과 같은 방식입니다. */}
         <button type="button" className="google" disabled>
           <GoogleIcon />구글로 계속하기
@@ -154,7 +154,7 @@ export function SignIn() {
 }
 
 
-/** 비밀번호 규칙 한 줄입니다. 충족하면 초록색 체크, 충족하기 전에는 포인트 색 X 입니다. */
+/** 비밀번호 규칙 1줄입니다. ok 가 true 이면 met class 를 붙입니다. */
 function Rule({ ok, text }: { ok: boolean; text: string }) {
   return (
     <li className={ok ? "met" : ""}>
@@ -166,8 +166,8 @@ function Rule({ ok, text }: { ok: boolean; text: string }) {
 
 export function SignUp() {
   const navigate = useNavigate();
-  // 비밀번호 칸은 값이 바뀔 때마다 체크리스트를 다시 그려야 해서 값을 화면이 들고 있습니다.
-  // 다른 칸은 브라우저가 들고 있습니다(제출할 때 form 에서 한 번에 읽습니다).
+  // 비밀번호 입력값은 변경될 때마다 체크리스트를 다시 렌더링해야 하므로 state 로 관리합니다.
+  // 다른 입력값은 제출할 때 FormData 로 읽습니다.
   const [password, setPassword] = useState("");
   const [again, setAgain] = useState("");
   // 칸을 한 번이라도 누르면 체크리스트를 표시하고, 그 뒤로는 닫지 않습니다. 확인 칸으로 옮겨도
@@ -199,10 +199,10 @@ export function SignUp() {
           email: fieldText(data, "mail2").trim(),
           password: fieldText(data, "pw2"),
           cohort: Number(fieldText(data, "cohort")),
-          // 입력하지 않으면 보내지 않습니다. 빈 문자열을 보내면 서버가 틀린 코드로 보고 가입을 거절합니다.
+          // 입력하지 않으면 보내지 않습니다. 빈 문자열을 보내면 서버가 잘못된 코드로 판정하고 가입을 거절합니다.
           ...(adminCode === "" ? {} : { admin_code: adminCode }),
         });
-        say(`${account.name}님, 가입이 완료되었습니다`);
+        say(`${account.name}님, 가입이 완료되었어요`);
         void navigate("/scheduler");
       } catch (error) {
         say(reason(error));
@@ -217,11 +217,11 @@ export function SignUp() {
       <Field name="nm" label="이름" type="text"
         autoComplete="name" placeholder="이름을 입력해주세요." error={errors.nm} />
       <Field name="dept" label="학과" type="text"
-        autoComplete="organization" placeholder="학과를 입력해주세요" error={errors.dept} />
+        autoComplete="organization" placeholder="학과를 입력해주세요." error={errors.dept} />
       <Field name="sno" label="학번" type="text" inputMode="numeric"
-        autoComplete="off" placeholder="학번을 입력해주세요" error={errors.sno} />
+        autoComplete="off" placeholder="학번을 입력해주세요." error={errors.sno} />
       <Field name="mail2" label="이메일" type="email" inputMode="email"
-        autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.mail2} />
+        autoComplete="email" placeholder="이메일을 입력해주세요." error={errors.mail2} />
       <Field name="pw2" label="비밀번호" type="password" autoComplete="new-password"
         placeholder="비밀번호를 입력해주세요." error={errors.pw2}
         value={password} onChange={setPassword} onFocus={() => setRulesShown(true)}>
@@ -253,7 +253,7 @@ export function SignUp() {
       {/* 관리자코드는 운영을 맡은 사람만 받습니다. 넣으면 모든 권한을 가진 계정이 되고,
           입력하지 않으면 권한 없이 가입해 나중에 부여받습니다. */}
       <Field name="admincode" label="관리자코드(선택)" type="password"
-        autoComplete="off" placeholder="관리자 코드를 보유하신 경우 입력해주세요" error="" />
+        autoComplete="off" placeholder="관리자 코드를 보유하신 경우 입력해주세요." error="" />
 
       <Button kind="go" type="submit" style={{ marginTop: 22 }} pending={isPending} pendingLabel="가입 중…">가입하기</Button>
       <p className="foot">이미 계정이 있으신가요? <Link to="/login">로그인</Link></p>
@@ -286,7 +286,7 @@ export function FindId() {
       <Field name="fidName" label="이름" type="text"
         autoComplete="name" placeholder="이름을 입력해주세요." error={errors.fidName} />
       <Field name="fidMail" label="이메일" type="email" inputMode="email"
-        autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.fidMail} />
+        autoComplete="email" placeholder="이메일을 입력해주세요." error={errors.fidMail} />
       <Button kind="go" type="submit" style={{ marginTop: 22 }} pending={isPending} pendingLabel="찾는 중…">아이디 찾기</Button>
       <p className="foot">
         <Link to="/find-password">비밀번호 찾기</Link> <Link to="/login">로그인</Link>
@@ -315,7 +315,7 @@ export function FindPassword() {
   return (
     <form aria-label="비밀번호 찾기" noValidate onSubmit={onSubmit}>
       <Field name="fpwMail" label="이메일" type="email" inputMode="email"
-        autoComplete="email" placeholder="이메일을 입력해주세요" error={errors.fpwMail} />
+        autoComplete="email" placeholder="이메일을 입력해주세요." error={errors.fpwMail} />
       <Button kind="go" type="submit" style={{ marginTop: 22 }} pending={isPending} pendingLabel="보내는 중…">재설정 메일 받기</Button>
       <p className="foot">
         <Link to="/find-id">아이디 찾기</Link> <Link to="/login">로그인</Link>

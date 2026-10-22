@@ -20,7 +20,7 @@ export function Notices() {
             listPath="/notices"
             newPath="/notices/new"
             canWrite={can(me, "notice_write")}
-            emptyText="아직 등록된 공지가 없어요."
+            emptyText="아직 등록된 공지가 존재하지 않아요."
             onOpen={focus.open}
             buttonRef={focus.register}
           />

@@ -1,10 +1,5 @@
-// 관리자 메뉴의 불가능 일정 구역입니다. 전체 멤버가 등록한 불가능 일정을 표 또는 캘린더(routes/UnavailableCalendar)로 봅니다.
-// "타 멤버 불가능 일정 조회"(unavailable_read) 권한자에게만 이 항목이 표시되고, 서버도 같은 권한으로
-// 거절합니다(backend/src/backend/services/unavailable/unavailable_service.py 의 _require_read).
-//
-// "타 멤버 불가능 일정 반려"(unavailable_manage) 권한이 있으면 다른 멤버의 일정을 반려 사유를 적어 삭제합니다.
-// 사유는 그 멤버에게 알림으로 갑니다. 본인 일정은 바로 삭제합니다. 다른 멤버의 일정을 대신 등록하거나
-// 수정할 수는 없습니다 — 다른 사람이 대신 등록한 불가능 일정은 본인이 모르는 채로 배정에 반영됩니다.
+// 관리자 메뉴의 불가능 일정 구역입니다(unavailable_read). 전체 멤버가 등록한 불가능 일정을 표 또는 캘린더(routes/UnavailableCalendar)로 표시합니다.
+// unavailable_manage 권한자는 사유를 입력해 다른 멤버의 일정을 반려합니다. 사유는 그 멤버에게 알림으로 전송됩니다. 본인 일정은 바로 삭제합니다.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -26,11 +21,11 @@ import { UnavailableCalendar } from "./UnavailableCalendar";
 import { dayWithWeekday } from "../lib/calendar";
 import { dayTimeRangeLabel, timeRangeLabel } from "../lib/slots";
 
-// 전체 목록의 queryKey 입니다. 앞머리가 달력의 불가능 일정 조회와 같은 "unavailable" 이라, 반려·삭제 뒤 둘 다 다시 조회합니다.
+// 전체 목록의 queryKey 입니다. 앞머리가 달력의 불가능 일정 조회와 같은 "unavailable" 이라, 반려, 삭제 뒤 둘 다 다시 조회합니다.
 const LIST_KEY = [...UNAVAILABLE_KEY, "all"] as const;
 
 /** 반복 일정이 끝나는 시점입니다. 종료일과 횟수는 동시에 값을 가질 수 없고, 둘 다 없으면 빈 문자열입니다.
- *  횟수는 고른 요일 전부를 한 세트로 세는 주 단위입니다(lib/dayEntries 의 repeatDays 와 같은 규칙). */
+ *  횟수는 선택한 요일 전부를 한 세트로 세는 주 단위입니다(lib/dayEntries 의 repeatDays 와 같은 규칙). */
 function repeatEndLabel(row: MemberUnavailable): string {
   if (row.repeat_until !== null) return `${row.repeat_until} 까지`;
   if (row.repeat_count !== null) return `${row.repeat_count}주`;
@@ -72,7 +67,7 @@ export function UnavailableCards() {
         <div className="unavbar">
           <div className="pickfield">
             <SearchIcon aria-hidden="true" />
-            <SearchInput label="멤버 이름" value={keyword} placeholder="멤버 이름으로 찾기" onChange={setKeyword} />
+            <SearchInput label="멤버 이름" value={keyword} placeholder="멤버 이름을 입력해주세요." onChange={setKeyword} />
           </div>
         </div>
 
@@ -84,9 +79,9 @@ export function UnavailableCards() {
           onReject={setRejecting}
         />
         {list.isPending ? <Empty text="불가능 일정을 불러오고 있어요." /> : null}
-        {list.isSuccess && rows.length === 0 ? <Empty text="등록된 불가능 일정이 없어요" /> : null}
+        {list.isSuccess && rows.length === 0 ? <Empty text="등록된 불가능 일정이 존재하지 않아요" /> : null}
         {list.isSuccess && rows.length > 0 && shown.length === 0 ? (
-          <Empty text={`${needle} 님이 등록한 불가능 일정이 없어요`} />
+          <Empty text={`${needle} 님이 등록한 불가능 일정이 존재하지 않아요`} />
         ) : null}
       </div>
       )}

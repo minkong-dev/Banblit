@@ -19,7 +19,7 @@ export type EnsembleDraft = {
   ends_at: string;
 };
 
-/** 저장된 전체 합주가 있으면 그 값, 없으면 첫 합주실과 그 운영 시간으로 채운 꺼진 입력값입니다. */
+/** 저장된 전체 합주가 있으면 그 값, 없으면 첫 합주실과 그 운영 시간을 기본값으로 둔, on 이 false 인 입력값입니다. */
 export function ensembleDraft(period: Period | null, rooms: Room[]): EnsembleDraft {
   const saved = period?.ensemble ?? null;
   if (saved !== null) {
@@ -47,13 +47,13 @@ export function ensembleBody(draft: EnsembleDraft): EnsembleBody {
 function teamDaysText(period: PeriodBody, draft: EnsembleDraft): string {
   if (draft.starts_on === "" || draft.ends_on === "" || draft.ends_on < draft.starts_on) return "";
   const ranges = focusedRanges([{ ...period, ensemble: draft }]);
-  if (ranges.length === 0) return "팀별 합주 날짜가 없어요. 모든 날짜가 전체 합주예요.";
+  if (ranges.length === 0) return "팀별 합주 날짜가 존재하지 않아요. 모든 날짜가 전체 합주예요.";
   const parts = ranges.map((range) =>
     range.from === range.to ? dayLabel(range.from) : `${dayLabel(range.from)}–${dayLabel(range.to ?? "")}`);
   return `팀별 합주 날짜: ${parts.join(", ")}`;
 }
 
-/** 기간 form 안의 전체 합주 입력칸입니다. 체크했을 때만 날짜 범위·합주실·기본 시각을 받습니다.
+/** 기간 form 안의 전체 합주 입력칸입니다. 체크했을 때만 날짜 범위, 합주실, 기본 시각을 받습니다.
  *  "매일" 기간은 팀별 합주 날짜가 끝없이 이어지므로 계산 결과 줄을 표시하지 않습니다. */
 export function EnsembleFields(props: {
   draft: EnsembleDraft;
@@ -113,7 +113,7 @@ export function EnsembleFields(props: {
   );
 }
 
-/** 전체 합주를 지정할지 정하는 체크박스입니다. 기간 form 의 날짜 줄(시작일·종료일 옆)에 놓입니다(사용자 결정 2026-10-07).
+/** 전체 합주 지정 여부를 선택하는 체크박스입니다. 기간 form 의 날짜 줄(시작일, 종료일 옆)에 놓입니다(사용자 결정 2026-10-07).
  *  체크하면 form 아래 "전체 합주" 묶음(EnsembleFields)이 열립니다. */
 export function EnsembleToggle({ draft, setDraft, at }: {
   draft: EnsembleDraft;
@@ -127,7 +127,7 @@ export function EnsembleToggle({ draft, setDraft, at }: {
   );
 }
 
-/** "2026-10-11" → "일". 날짜별 시각 행에서 날짜 옆에 붙는 요일 한 글자입니다. */
+/** day 의 요일 1글자를 반환합니다. 날짜별 시각 행에 표시합니다. */
 function weekdayLetter(day: string): string {
   return "일월화수목금토"[new Date(`${day}T12:00:00`).getDay()];
 }
