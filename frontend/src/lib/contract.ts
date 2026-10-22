@@ -197,6 +197,9 @@ export type PermissionSet = {
   members: { id: number; name: string }[];
 };
 
+/** 권한 세트를 생성, 수정할 때 보내는 값입니다. */
+export type PermissionSetInput = Pick<PermissionSet, "name" | "description" | "permissions">;
+
 /** 멤버 목록의 한 줄입니다. 사람을 구분하는 4개 값과 가진 permission set 이름이 함께 옵니다.
  *  서버 쪽은 backend/src/backend/api/schemas.py 의 MemberRowOut 에 작성되어 있는 내용을 기준으로 합니다 */
 export type MemberRow = {

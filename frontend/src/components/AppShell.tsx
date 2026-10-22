@@ -235,17 +235,16 @@ function ThemeButton() {
 
 /** 상단 오른쪽 프로필 버튼 + 프로필 카드입니다. 여러 화면에서 함께 씁니다.
  *  "프로필 설정"은 이 프로필 카드에서 `/profile`로 들어가는 유일한 입구입니다. */
-function ProfileMenu() {
-  const [open, setOpen] = useState(false);
+/** 프로필 popover 를 닫고 이동하는 함수 2개입니다. closeAnd(path) 는 popover 를 닫고 path 로 이동합니다.
+ *  logOutAndLeave 는 로그아웃 요청 뒤 로그인 화면으로 이동합니다. 서버 호출이 실패해도 이동합니다. 표시용 cookie(브라우저가 저장해
+ *  요청마다 함께 보내는 값)가 남아 있어도 다음 요청은 401 로 거절되므로 현재 화면을 유지할 이유가 없습니다. */
+function useLogOut(): { closeAnd: (path: string) => void; logOutAndLeave: () => Promise<void> } {
   const navigate = useNavigate();
-  const { me } = useMe();
-  const teams = useMyTeamCohorts();
-  const name = me?.name ?? "";
-  const sub = roleLabel(me);
-
-  // 서버 호출이 실패해도 로그인 화면으로 이동합니다. 표시용 cookie(브라우저가 저장해 요청마다 함께 보내는 값)가 남아 있어도
-  // 다음 요청은 401 로 거절되므로 현재 화면을 유지할 이유가 없습니다.
-  async function handleLogOut(): Promise<void> {
+  const closeAnd = (path: string): void => {
+    document.getElementById(PROFILE_POP_ID)?.hidePopover();
+    void navigate(path);
+  };
+  const logOutAndLeave = async (): Promise<void> => {
     document.getElementById(PROFILE_POP_ID)?.hidePopover();
     try {
       await logOut();
@@ -253,7 +252,17 @@ function ProfileMenu() {
       // 오류를 무시합니다. 아래에서 로그인 화면으로 이동합니다.
     }
     void navigate("/login");
-  }
+  };
+  return { closeAnd, logOutAndLeave };
+}
+
+function ProfileMenu() {
+  const [open, setOpen] = useState(false);
+  const { closeAnd, logOutAndLeave } = useLogOut();
+  const { me } = useMe();
+  const teams = useMyTeamCohorts();
+  const name = me?.name ?? "";
+  const sub = roleLabel(me);
 
   return (
     // display:contents 이므로 자리를 차지하지 않습니다. 상단바의 배치는 그대로 둡니다.
@@ -278,10 +287,10 @@ function ProfileMenu() {
           </div>
         ))}
         <hr />
-        <MenuItem onClick={() => { document.getElementById(PROFILE_POP_ID)?.hidePopover(); void navigate("/profile"); }}>
+        <MenuItem onClick={() => closeAnd("/profile")}>
           프로필 설정<span>›</span>
         </MenuItem>
-        <MenuItem className="quit" onClick={() => void handleLogOut()}>로그아웃</MenuItem>
+        <MenuItem className="quit" onClick={() => void logOutAndLeave()}>로그아웃</MenuItem>
       </Popover>
     </div>
   );

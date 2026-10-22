@@ -9,12 +9,11 @@ import { Card, SectionHead } from "../components/Layout";
 import { useReturnFocus } from "../components/hooks";
 import { Modal } from "../components/Modal";
 import { useRemoveRow, useSlotMinutes } from "../components/queries";
-import { getJSON } from "../lib/api";
 import { askDeleteRoom } from "../lib/confirm";
 import type { Room, RoomInput } from "../lib/contract";
 import { formError } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
-import { checkRoom, openingHours, removeRoom } from "../lib/pipeline";
+import { checkRoom, openingHours, removeRoom, saveRoom } from "../lib/pipeline";
 import { Button, Cell, Empty, FormFoot, TimeRange } from "../components/controls";
 import { Row, useFirstField, useForm } from "./SettingsForm";
 import { clockEndLabel } from "../lib/calendar";
@@ -63,7 +62,6 @@ export function RoomCard(props: {
   const { rooms, state, canEdit, canCreate, canDelete, onSaved, onDeleted } = props;
   const slotMinutes = useSlotMinutes();
   const { openId: editing, open, close, register } = useReturnFocus();
-  const [making, setMaking] = useState(false);
   const drop = useRemoveRow(removeRoom, onDeleted);
 
   return (
@@ -81,8 +79,7 @@ export function RoomCard(props: {
                   start={room}
                   // 자신의 이름은 중복 검사 대상에서 제외합니다.
                   taken={rooms.filter((other) => other.id !== room.id).map((other) => other.name)}
-                  path={`/rooms/${room.id}`}
-                  method="PATCH"
+                  roomId={room.id}
                   submit="저장"
                   onCancel={close}
                   onDone={() => {
@@ -113,52 +110,54 @@ export function RoomCard(props: {
       )}
 
       {/* 합주실이 1개 이상이면 추가 버튼을 표시하지 않습니다. */}
-      {!canCreate || rooms.length > 0 ? null : (
-        <div className="listfoot">
-          <Button kind="go" onClick={() => setMaking(true)}>+ 새 합주실</Button>
-        </div>
-      )}
+      {!canCreate || rooms.length > 0 ? null : <NewRoomButton rooms={rooms} onSaved={onSaved} />}
+    </Card>
+  );
+}
 
+/** "+ 새 합주실" 버튼과 생성 modal 입니다. 저장이 끝나면 modal 을 닫고 onSaved 를 호출합니다. */
+function NewRoomButton({ rooms, onSaved }: { rooms: Room[]; onSaved: () => void }) {
+  const [making, setMaking] = useState(false);
+  return (
+    <>
+      <div className="listfoot">
+        <Button kind="go" onClick={() => setMaking(true)}>+ 새 합주실</Button>
+      </div>
       {!making ? null : (
         <Modal title="새 합주실" hint="합주실명과 개방 시간, 마감 시간을 지정해주세요"
           onClose={() => setMaking(false)}>
           <RoomForm
             start={BLANK_ROOM}
             taken={rooms.map((room) => room.name)}
-            path="/rooms"
-            method="POST"
+            roomId={null}
             submit="합주실 추가"
             onCancel={() => setMaking(false)}
             onDone={() => { setMaking(false); onSaved(); }}
           />
         </Modal>
       )}
-    </Card>
+    </>
   );
 }
 
 function RoomForm(props: {
   start: RoomInput;
   taken: string[];
-  path: string;
-  method: "POST" | "PATCH";
+  /** 수정하는 합주실의 번호입니다. null 이면 생성입니다. */
+  roomId: number | null;
   submit: string;
   onCancel?: () => void;
   onDone: () => void;
 }) {
-  const { start, taken, path, method, submit, onCancel, onDone } = props;
+  const { start, taken, roomId, submit, onCancel, onDone } = props;
   const [form, setForm, touched, reset] = useForm(start);
   const first = useFirstField<HTMLInputElement>(onCancel !== undefined);
 
   const send = useMutation({
-    mutationFn: () =>
-      getJSON<{ room: Room }>(path, {
-        method,
-        body: JSON.stringify(form),
-      }),
+    mutationFn: () => saveRoom(roomId, form),
     onSuccess: () => {
       // 새로 생성한 뒤에는 다음 항목을 입력하도록 form 을 초기화합니다. 수정 중이면 그대로 둡니다.
-      if (method === "POST") reset();
+      if (roomId === null) reset();
       onDone();
     },
   });
@@ -168,7 +167,7 @@ function RoomForm(props: {
 
   // 같은 화면에 추가 form 과 수정 행이 함께 표시될 수 있습니다. label 이 어느 입력칸을 가리키는지
   // 모호해지지 않도록, 화면 내 식별자를 form 마다 다르게 짓습니다.
-  const at = (field: string): string => `${path}-${field}`;
+  const at = (field: string): string => `${roomId === null ? "/rooms" : `/rooms/${roomId}`}-${field}`;
   const whyId = at("why");
   const bad = formError(touched, why, send.error);
 

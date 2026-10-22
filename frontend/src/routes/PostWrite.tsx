@@ -8,7 +8,7 @@ import { Empty } from "../components/controls";
 import { SectionHead } from "../components/Layout";
 import { WriteForm } from "../components/PostWriteForm";
 import { can } from "../lib/account";
-import { boardListKey, useMe, useMyTeams } from "../components/queries";
+import { boardListKey, teamPostsPath, useMe, useMyTeams } from "../components/queries";
 import { stateText } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import type { Account } from "../lib/contract";
@@ -43,7 +43,7 @@ export function BoardWrite() {
       hint="해당 팀에 소속된 멤버만 볼 수 있어요"
       draftPath={`/teams/${teamId ?? ""}/posts/drafts`}
       listPath="/board"
-      listKey={`/teams/${teamId ?? ""}/posts`}
+      listKey={teamPostsPath(teamId ?? "")}
       allowed={team !== undefined}
       denied="이 팀에 소속된 멤버만 쓸 수 있어요."
     />

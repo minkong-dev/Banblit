@@ -97,6 +97,20 @@ export function dayHours(item: Unavailable, day: string): { from: number; to: nu
   return null;
 }
 
+/** lane 1개의 막대입니다. day 에 없는 일정은 제외하고, 운영 시간(open 부터 close) 밖은 자릅니다. 전부 밖이면 제외합니다. */
+export function laneBars<T extends Unavailable>(items: T[], day: string, open: number, close: number): { item: T; from: number; to: number }[] {
+  const bars: { item: T; from: number; to: number }[] = [];
+  for (const item of items) {
+    const at = dayHours(item, day);
+    if (at === null) continue;
+    const from = Math.max(at.from, open);
+    const to = Math.min(at.to, close);
+    if (to <= from) continue;
+    bars.push({ item, from, to });
+  }
+  return bars;
+}
+
 /** 겹치는 막대를 옆으로 나눌 열 번호(col)와, 그 막대가 속한 겹침 묶음의 열 수(cols)입니다. 결과는 입력 순서입니다.
  *  끝난 열은 다시 씁니다. 겹치지 않는 막대는 { col: 0, cols: 1 } 입니다. */
 export function packColumns(bars: { from: number; to: number }[]): { col: number; cols: number }[] {

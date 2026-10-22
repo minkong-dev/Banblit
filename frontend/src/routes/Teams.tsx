@@ -17,6 +17,7 @@ import { say } from "../components/toast";
 import { askDelete } from "../lib/confirm";
 import { reason } from "../lib/api";
 import { loadState } from "../lib/loading";
+import type { LoadState } from "../lib/loading";
 import { can, canManageTeams, teamNavLabel } from "../lib/account";
 import { INSTRUMENTS } from "../lib/contract";
 import { TEAM_COLORS, teamColorKey } from "../lib/teamColors";
@@ -383,6 +384,78 @@ function EditTeam(props: Omit<TeamFormProps, "team" | "start"> & { team: Team })
 }
 
 /** 팀 목록입니다. 열린 팀(포지션 구성 modal)은 주소의 :teamId 가 정합니다(/teams/:teamId). */
+/** 팀 삭제 요청입니다. 반환한 함수는 askDelete 확인을 받은 뒤 삭제하고, 성공하면 onDropped 를 호출한 뒤 팀 목록을 다시 조회합니다. */
+function useTeamDrop(onDropped: (team: Team) => void): (team: Team) => void {
+  const client = useQueryClient();
+  const drop = useMutation({
+    mutationFn: (team: Team) => removeTeam(team.id),
+    onSuccess: (_body, team) => {
+      onDropped(team);
+      void client.invalidateQueries({ queryKey: TEAMS_KEY });
+      say(`${team.name} 팀을 삭제했어요.`);
+    },
+    onError: (error) => say(reason(error)),
+  });
+  return (team) => { if (askDelete(team.name)) drop.mutate(team); };
+}
+
+/** 팀 목록 카드입니다. page 1개에 PER_PAGE(10)개씩 표시합니다(lib/paging). Pager 는 목록 바로 아래에 표시합니다.
+ *  onRename, onDrop, onMake 가 없으면 그 버튼을 그리지 않습니다. */
+function TeamList(props: {
+  title: string;
+  list: Team[];
+  state: LoadState;
+  emptyText: string;
+  openId: number | null;
+  teamIds: number[];
+  onOpen: (id: number) => void;
+  onRename: ((team: Team) => void) | undefined;
+  onDrop: ((team: Team) => void) | undefined;
+  onMake: (() => void) | undefined;
+}) {
+  const { title, list, state, emptyText, openId, teamIds, onOpen, onRename, onDrop, onMake } = props;
+  const [page, setPage] = useState(1);
+  // 목록을 렌더링할 수 없는 경우입니다. 아직 데이터를 받지 못했거나, 오류가 발생했거나, 데이터가 비어 있을 때입니다.
+  const noList = state.kind !== "ready" || list.length === 0;
+  const pages = pageCount(list.length);
+  const shownPage = clampPage(page, pages);
+
+  return (
+    <Card>
+      <SectionHead title={title} desc="팀을 눌러 포지션을 확인해주세요" />
+
+      {/* 목록이 비어 있거나 조회 중이면 ul 안에 Empty 를 표시합니다. */}
+      <ul className="rows">
+        {noList ? (
+          <Empty as="li" state={state} text={emptyText} />
+        ) : (
+          pageSlice(list, shownPage).map((team) => (
+            <li key={team.id}>
+              <TeamRow
+                team={team}
+                selected={team.id === openId}
+                mine={teamIds.includes(team.id)}
+                onOpen={() => onOpen(team.id)}
+                onRename={onRename === undefined ? undefined : () => onRename(team)}
+                onDelete={onDrop === undefined ? undefined : () => onDrop(team)}
+              />
+            </li>
+          ))
+        )}
+      </ul>
+
+      <div className="listfoot">
+        {noList ? null : (
+          <Pager page={shownPage} pages={pages} onPage={setPage} />
+        )}
+        {onMake === undefined ? null : (
+          <Button kind="go" onClick={onMake}>+ 새 팀</Button>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 export function Teams() {
   const { me, teamIds } = useMe();
   const navigate = useNavigate();
@@ -394,19 +467,10 @@ export function Teams() {
   };
   const [making, setMaking] = useState(false);
   const [renaming, setRenaming] = useState<Team | null>(null);
-  const [page, setPage] = useState(1);
-  const client = useQueryClient();
-
-  const drop = useMutation({
-    mutationFn: (team: Team) => removeTeam(team.id),
-    onSuccess: (_body, team) => {
-      // 삭제된 팀의 포지션 구성이나 수정 modal 이 열려 있으면 함께 닫습니다.
-      if (openId === team.id) setOpenId(null);
-      setRenaming((now) => (now?.id === team.id ? null : now));
-      void client.invalidateQueries({ queryKey: TEAMS_KEY });
-      say(`${team.name} 팀을 삭제했어요.`);
-    },
-    onError: (error) => say(reason(error)),
+  // 삭제된 팀의 포지션 구성이나 수정 modal 이 열려 있으면 함께 닫습니다.
+  const askDrop = useTeamDrop((team) => {
+    if (openId === team.id) setOpenId(null);
+    setRenaming((now) => (now?.id === team.id ? null : now));
   });
 
   const teams = useTeams();
@@ -417,52 +481,24 @@ export function Teams() {
   const canCreate = can(me, "team_create");
   const canRename = can(me, "team_edit");
   const canDrop = can(me, "team_delete");
-  const askDrop = (team: Team): void => { if (askDelete(team.name)) drop.mutate(team); };
-  const state = loadState(teams);
-  // 목록을 렌더링할 수 없는 경우입니다. 아직 데이터를 받지 못했거나, 오류가 발생했거나, 데이터가 비어 있을 때입니다.
-  const noList = state.kind !== "ready" || list.length === 0;
-
-  // page 1개에 PER_PAGE(10)개씩 표시합니다(lib/paging). Pager 는 목록 바로 아래에 표시합니다.
-  const pages = pageCount(list.length);
-  const shownPage = clampPage(page, pages);
   const opened = list.find((team) => team.id === openId) ?? null;
   const others = (team: Team | null): Team[] => allTeams.filter((one) => one.id !== team?.id);
 
   return (
     <>
       <div className="main">
-        <Card>
-          <SectionHead title={teamNavLabel(me)} desc="팀을 눌러 포지션을 확인해주세요" />
-
-          {/* 목록이 비어 있거나 조회 중이면 ul 안에 Empty 를 표시합니다. */}
-          <ul className="rows">
-            {noList ? (
-              <Empty as="li" state={state} text={manages ? "아직 생성된 팀이 존재하지 않아요." : "소속된 팀이 존재하지 않아요."} />
-            ) : (
-              pageSlice(list, shownPage).map((team) => (
-                <li key={team.id}>
-                  <TeamRow
-                    team={team}
-                    selected={team.id === openId}
-                    mine={teamIds.includes(team.id)}
-                    onOpen={() => setOpenId(team.id)}
-                    onRename={canRename ? () => setRenaming(team) : undefined}
-                    onDelete={canDrop ? () => askDrop(team) : undefined}
-                  />
-                </li>
-              ))
-            )}
-          </ul>
-
-          <div className="listfoot">
-            {noList ? null : (
-              <Pager page={shownPage} pages={pages} onPage={setPage} />
-            )}
-            {!canCreate ? null : (
-              <Button kind="go" onClick={() => setMaking(true)}>+ 새 팀</Button>
-            )}
-          </div>
-        </Card>
+        <TeamList
+          title={teamNavLabel(me)}
+          list={list}
+          state={loadState(teams)}
+          emptyText={manages ? "아직 생성된 팀이 존재하지 않아요." : "소속된 팀이 존재하지 않아요."}
+          openId={openId}
+          teamIds={teamIds}
+          onOpen={setOpenId}
+          onRename={canRename ? setRenaming : undefined}
+          onDrop={canDrop ? askDrop : undefined}
+          onMake={canCreate ? () => setMaking(true) : undefined}
+        />
       </div>
 
       {/* 새 팀은 팀 생성 권한만으로 멤버까지 지정합니다(권한 설명 "새 팀을 추가하고 인원을 배정할 수 있어요"). */}

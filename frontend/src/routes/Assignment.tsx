@@ -9,13 +9,13 @@ import { say } from "../components/toast";
 import { askApplyRecord } from "../lib/confirm";
 import { applyRecord, loadRecordRound, loadScheduleOut, runAssignment } from "../lib/pipeline";
 import type { AssignBody } from "../lib/pipeline";
-import { recordRoundKey, recordRoundsKey, recordsKey, SCHEDULE_KEY, useMe, usePeriods, useRooms, useTeams } from "../components/queries";
+import { recordRoundKey, recordRoundsKey, recordsKey, SCHEDULE_KEY, scheduleKey, useMe, usePeriods, useRooms, useTeams } from "../components/queries";
 import { can } from "../lib/account";
 import { NOW, colorsOf, dayRangeOf, sessionsOfRows, tabKey, tabsOf, viewOf } from "../lib/assignment";
 import type { View } from "../lib/assignment";
-import { AssignmentCalendar, AssignmentStatus, PastRunsPanel, RunTimesPanel, UnfixButton } from "./AssignmentPanels";
+import { AssignmentCalendar, AssignmentStatus, PastRunsPanel, RoundStatus, RunTimesPanel, UnfixButton } from "./AssignmentPanels";
 import "../styles/assignment.css";
-import type { AssignOut, ScheduleRow } from "../lib/contract";
+import type { AssignOut, Period, ScheduleRow } from "../lib/contract";
 // 조회 결과가 아직 없을 때 사용하는 빈 목록입니다. 같은 배열을 계속 사용해야 useMemo 의 의존성이 변하지 않습니다.
 const NO_ROWS: ScheduleRow[] = [];
 
@@ -31,7 +31,7 @@ function requirePeriod(periodId: number | null): number {
  *  report 는 shown 의 결과 설명입니다. */
 function useShownSchedule(activePeriodId: number | null, roundAt: string | null) {
   const schedule = useQuery({
-    queryKey: [...SCHEDULE_KEY, activePeriodId],
+    queryKey: scheduleKey(activePeriodId),
     queryFn: () => loadScheduleOut(requirePeriod(activePeriodId)),
     enabled: activePeriodId !== null,
   });
@@ -61,7 +61,7 @@ function useShownSchedule(activePeriodId: number | null, roundAt: string | null)
 function useRunAndApply(activePeriodId: number | null, roundAt: string | null, canConfirm: boolean, setView: (next: View) => void) {
   const queryClient = useQueryClient();
   // SCHEDULE_KEY 로 무효화해야 캘린더 화면(routes/Scheduler.tsx)의
-  // [...SCHEDULE_KEY, periodIds] 캐시도 함께 무효화됩니다. activePeriodId 로만 무효화하면
+  // scheduleKey(periodIds) 캐시도 함께 무효화됩니다. activePeriodId 로만 무효화하면
   // key 모양이 달라 캘린더 화면에 이전 배정이 그대로 남습니다.
   const refreshSchedule = async () => {
     await queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY });
@@ -101,33 +101,50 @@ function useRunAndApply(activePeriodId: number | null, roundAt: string | null, c
   return { recompute, confirm };
 }
 
+/** 선택한 집중 합주기간입니다. 이 화면은 집중 합주기간만 다룹니다. 상시 기간은 자동 배정 대상이 아닙니다.
+ *  사용자가 아직 선택하지 않았으면 목록의 첫 기간입니다. useEffect 로 동기화하지 않고 렌더할 때마다 계산합니다. */
+function useActivePeriod(): {
+  periods: ReturnType<typeof usePeriods>;
+  focusedPeriods: Period[];
+  activePeriodId: number | null;
+  activePeriod: Period | null;
+  select: (id: number) => void;
+} {
+  const [periodId, setPeriodId] = useState<number | null>(null);
+  const periods = usePeriods();
+  const focusedPeriods = (periods.data?.periods ?? []).filter((period) => period.kind === "focused");
+  const activePeriodId = periodId ?? focusedPeriods[0]?.id ?? null;
+  const activePeriod = focusedPeriods.find((period) => period.id === activePeriodId) ?? null;
+  return { periods, focusedPeriods, activePeriodId, activePeriod, select: setPeriodId };
+}
+
+/** 계산에 넣을 팀과 합주실입니다. 자동 배정(jobs/auto_assign.py)과 같이 멤버가 있는 전체 팀과 전체 합주실입니다. 확정된 배정안에
+ *  나온 팀만 넣으면 그 뒤에 만든 팀과 합주실은 다시 계산해도 배정받지 못합니다. 멤버가 없는 팀이 들어가면 서버가 계산 전체를 거절합니다. */
+function useAssignTargets(): {
+  rooms: ReturnType<typeof useRooms>;
+  teams: ReturnType<typeof useTeams>;
+  teamIds: number[];
+  roomIds: number[];
+} {
+  const rooms = useRooms();
+  const teams = useTeams();
+  const teamIds = (teams.data?.teams ?? []).filter((team) => team.filled_count > 0).map((team) => team.id);
+  const roomIds = (rooms.data?.rooms ?? []).map((room) => room.id);
+  return { rooms, teams, teamIds, roomIds };
+}
+
 export function Assignment() {
   const { me } = useMe();
   // 계산은 assign_run, 스케줄링 기록 조회와 적용은 proposal_confirm 권한입니다.
   const canRun = can(me, "assign_run");
   const canConfirm = can(me, "proposal_confirm");
-  const [periodId, setPeriodId] = useState<number | null>(null);
   const [view, setView] = useState<View>(NOW);
-
-  const periods = usePeriods();
-  // 이 화면은 집중 합주기간만 다룹니다. 상시 기간은 자동 배정 대상이 아닙니다.
-  const focusedPeriods = (periods.data?.periods ?? []).filter((period) => period.kind === "focused");
-  // 사용자가 아직 선택하지 않았으면 목록의 첫 기간을 사용합니다. useEffect 로 동기화하지 않고
-  // 렌더할 때마다 이렇게 계산합니다.
-  const activePeriodId = periodId ?? focusedPeriods[0]?.id ?? null;
-  const activePeriod = focusedPeriods.find((period) => period.id === activePeriodId) ?? null;
-
-  const rooms = useRooms();
-  const teams = useTeams();
+  const { periods, focusedPeriods, activePeriodId, activePeriod, select } = useActivePeriod();
+  const { rooms, teams, teamIds, roomIds } = useAssignTargets();
 
   // 선택한 스케줄링 기록입니다. view 값 하나를 사용하므로 달력, 아래 설명, 탭이 값 하나로 결정됩니다.
   const roundAt = view.kind === "round" ? view.at : null;
   const { schedule, round, confirmed, shown, report } = useShownSchedule(activePeriodId, roundAt);
-
-  // 자동 배정(jobs/auto_assign.py)과 같이 멤버가 있는 전체 팀과 전체 합주실을 계산에 넣습니다. 확정된 배정안에
-  // 나온 팀만 넣으면 그 뒤에 만든 팀과 합주실은 다시 계산해도 배정받지 못합니다. 멤버가 없는 팀이 들어가면 서버가 계산 전체를 거절합니다.
-  const teamIds = (teams.data?.teams ?? []).filter((team) => team.filled_count > 0).map((team) => team.id);
-  const roomIds = (rooms.data?.rooms ?? []).map((room) => room.id);
 
   const { recompute, confirm } = useRunAndApply(activePeriodId, roundAt, canConfirm, setView);
 
@@ -170,7 +187,7 @@ export function Assignment() {
                   value: period.id,
                   label: `${period.starts_on} – ${period.ends_on}`,
                 }))}
-                onChange={(next) => { setPeriodId(next); setView(NOW); }}
+                onChange={(next) => { select(next); setView(NOW); }}
               />
             </span>
             {activePeriod === null || activePeriod.fixed_at === null || !canConfirm ? null : <UnfixButton period={activePeriod} />}
@@ -183,22 +200,31 @@ export function Assignment() {
           </div>
 
           <div className="under">
-            <AssignmentStatus
-              error={firstError}
-              roundAt={roundAt}
-              roundPending={round.isPending}
-              roundError={round.error}
-              report={report}
-              hasConfirmed={confirmed.length > 0}
-              shown={shown}
-              colors={colors}
-              canRun={canRun}
-              canConfirm={canConfirm}
-              confirmPending={confirm.isPending}
-              onConfirm={() => { if (askApplyRecord()) confirm.mutate(); }}
-              onBack={() => setView(NOW)}
-              actions={actions}
-            />
+            {/* 조회 오류가 없고 스케줄링 기록을 선택했으면 그 기록의 미리보기(RoundStatus)입니다. */}
+            {firstError === null && roundAt !== null ? (
+              <RoundStatus
+                roundAt={roundAt}
+                pending={round.isPending}
+                error={round.error}
+                report={report}
+                shown={shown}
+                colors={colors}
+                canConfirm={canConfirm}
+                confirmPending={confirm.isPending}
+                onConfirm={() => { if (askApplyRecord()) confirm.mutate(); }}
+                onBack={() => setView(NOW)}
+              />
+            ) : (
+              <AssignmentStatus
+                error={firstError}
+                report={report}
+                hasConfirmed={confirmed.length > 0}
+                shown={shown}
+                colors={colors}
+                canRun={canRun}
+                actions={actions}
+              />
+            )}
           </div>
         </Card>
       </div>

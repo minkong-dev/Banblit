@@ -83,6 +83,45 @@ function usePublish(args: {
   return { send, stage };
 }
 
+/** 첨부 선택 구역입니다. 브라우저가 그리는 파일 입력칸은 모양을 정할 수 없어 감추고(tabIndex -1), 같은 동작의 버튼이 click() 으로 엽니다.
+ *  label 로 감싸지 않습니다. 감싸면 안내 문구를 눌러도 파일 선택 대화상자가 열립니다. 이름은 aria-labelledby 로 연결해 화면 읽기에는 그대로 전달합니다. */
+function AttachmentPicker({ count, disabled, bad, onFiles }: {
+  /** 선택한 파일 수입니다. */
+  count: number;
+  disabled: boolean;
+  /** form 하단 오류 문구입니다. 비어 있지 않으면 입력칸을 오류로 표시합니다. */
+  bad: string;
+  onFiles: (picked: File[]) => void;
+}) {
+  // 선택한 파일은 브라우저가 관리하므로 코드에서 값을 설정할 수 없습니다. 파일 선택 버튼이 이 입력칸을 click() 으로 엽니다.
+  const picker = useRef<HTMLInputElement>(null);
+  return (
+    <div className="wide">
+      <span id="postFilesLabel">첨부파일</span> <span className="meta">{ATTACHMENT_HINT}</span>
+      <div className="filepick">
+        <Button kind="ghost" disabled={disabled} onClick={() => picker.current?.click()}>
+          파일 선택
+        </Button>
+        <span className="meta">
+          {count === 0 ? "선택한 파일 없음" : `${count}개 선택함`}
+        </span>
+      </div>
+      <FilePicker
+        id="postFiles"
+        aria-labelledby="postFilesLabel"
+        multiple
+        tabIndex={-1}
+        accept={ATTACHMENT_ACCEPT}
+        ref={picker}
+        disabled={disabled}
+        aria-invalid={bad !== ""}
+        aria-describedby={bad === "" ? undefined : "postWhy"}
+        onFiles={onFiles}
+      />
+    </div>
+  );
+}
+
 /** 글 하나를 쓰는 form 입니다. 작성 페이지(routes/PostWrite)가 사용합니다. */
 export function WriteForm(props: {
   /** 초안을 만드는 주소입니다. 이 화면이 열릴 때 한 번 호출해 글 번호를 받습니다. */
@@ -100,8 +139,6 @@ export function WriteForm(props: {
   const [body, setBody] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [touched, setTouched] = useState(false);
-  // 선택한 파일은 브라우저가 관리하므로 코드에서 값을 설정할 수 없습니다. 파일 선택 버튼이 이 입력칸을 click() 으로 엽니다.
-  const picker = useRef<HTMLInputElement>(null);
   const { draftId, markPublished } = useDraft(draftPath);
   const { send, stage } = usePublish({ draftId, markPublished, title, body, files, setFiles, queryKey, onDone });
 
@@ -145,33 +182,8 @@ export function WriteForm(props: {
             onChange={(next) => { setTouched(true); setBody(next); }}
           />
         </label>
-        {/* label 로 감싸지 않습니다. 감싸면 안내 문구를 눌러도 파일 선택 대화상자가 열립니다 —
-            여는 곳은 아래 버튼 하나뿐이어야 합니다.
-            브라우저가 그리는 파일 입력칸은 모양을 정할 수 없어 감추고, 같은 동작의 버튼을 둡니다.
-            이름은 aria-labelledby 로 연결해 화면 읽기에는 그대로 전달합니다. */}
-        <div className="wide">
-          <span id="postFilesLabel">첨부파일</span> <span className="meta">{ATTACHMENT_HINT}</span>
-          <div className="filepick">
-            <Button kind="ghost" disabled={send.isPending} onClick={() => picker.current?.click()}>
-              파일 선택
-            </Button>
-            <span className="meta">
-              {files.length === 0 ? "선택한 파일 없음" : `${files.length}개 선택함`}
-            </span>
-          </div>
-          <FilePicker
-            id="postFiles"
-            aria-labelledby="postFilesLabel"
-            multiple
-            tabIndex={-1}
-            accept={ATTACHMENT_ACCEPT}
-            ref={picker}
-            disabled={send.isPending}
-            aria-invalid={bad !== ""}
-            aria-describedby={bad === "" ? undefined : "postWhy"}
-            onFiles={(picked) => { setTouched(true); setFiles(picked); }}
-          />
-        </div>
+        <AttachmentPicker count={files.length} disabled={send.isPending} bad={bad}
+          onFiles={(picked) => { setTouched(true); setFiles(picked); }} />
       </div>
       {files.length === 0 ? null : (
         <div className="comments">

@@ -35,6 +35,7 @@ flowchart LR
   frontend_src_lib_roster["roster.ts"] --> frontend_src_lib_contract
   frontend_src_lib_runs["runs.ts"] --> frontend_src_lib_contract
   frontend_src_lib_settings["settings.ts"] --> frontend_src_lib_contract
+  frontend_src_lib_slots["slots.ts"] --> frontend_src_lib_contract
   frontend_src_lib_unavailableMap_test["unavailableMap.test.ts"] --> frontend_src_lib_contract
   frontend_src_lib_unavailableMap["unavailableMap.ts"] --> frontend_src_lib_contract
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_contract
@@ -43,13 +44,13 @@ flowchart LR
   frontend_src_routes_DayDialogParts["DayDialogParts.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_PostWrite["PostWrite.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_lib_contract
-  frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Settings_test["Settings.test.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_SettingsEnsemble["SettingsEnsemble.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_lib_contract
+  frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_lib_contract
@@ -87,6 +88,7 @@ flowchart LR
 - [[graph/frontend/src/lib/roster|roster.ts]]
 - [[graph/frontend/src/lib/runs|runs.ts]]
 - [[graph/frontend/src/lib/settings|settings.ts]]
+- [[graph/frontend/src/lib/slots|slots.ts]]
 - [[graph/frontend/src/lib/unavailableMap.test|unavailableMap.test.ts]]
 - [[graph/frontend/src/lib/unavailableMap|unavailableMap.ts]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
@@ -95,13 +97,13 @@ flowchart LR
 - [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]
 - [[graph/frontend/src/routes/PostWrite|PostWrite.tsx]]
 - [[graph/frontend/src/routes/Profile|Profile.tsx]]
-- [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
 - [[graph/frontend/src/routes/Settings.test|Settings.test.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]
 - [[graph/frontend/src/routes/SettingsEnsemble|SettingsEnsemble.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]
+- [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]

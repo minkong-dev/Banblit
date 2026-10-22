@@ -6,8 +6,8 @@ import { Card, Panel, Tabs } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
 import { Button } from "../components/controls";
 import { CalendarBar, useCalendarCursor } from "../components/CalendarBar";
+import type { CalendarCursor } from "../components/CalendarBar";
 import { ClockIcon } from "../components/icons";
-import { getJSON } from "../lib/api";
 import { firstWhy } from "../lib/loading";
 import { monthRange, slotLabels, slotSteps } from "../lib/calendar";
 import { loadMyBookings, loadReservationRows, loadScheduleRows, loadUnavailable } from "../lib/pipeline";
@@ -20,9 +20,11 @@ import {
 import { can } from "../lib/account";
 import type { DayTab, Entry } from "../lib/dayEntries";
 import { teamsOf } from "../lib/roster";
-import { boardListKey, ME_KEY, PERIODS_KEY, RESERVATIONS_KEY, ROOMS_KEY, SCHEDULE_KEY, UNAVAILABLE_KEY, useMe, useMyTeams, usePeriods, useRooms, useSlotMinutes } from "../components/queries";
+import {
+  ME_KEY, MY_BOOKINGS_KEY, PERIODS_KEY, RESERVATIONS_KEY, ROOMS_KEY, SCHEDULE_KEY, UNAVAILABLE_KEY,
+  memberUnavailableKey, roomReservationsKey, scheduleKey, useMe, useMyTeams, usePeriods, usePosts, useRooms, useSlotMinutes,
+} from "../components/queries";
 import "../styles/scheduler.css";
-import type { Post } from "../lib/contract";
 import { focusedRanges, inRanges, roomBounds, slotCountOf, stampLabel } from "../lib/calendar";
 // 오른쪽 공지 칸에 표시할 최대 줄 수입니다. 전체 목록은 공지 화면(routes/Notices)이 표시합니다.
 const RECENT_NOTICES = 3;
@@ -33,16 +35,11 @@ const TABS: readonly { key: DayTab; text: string }[] = [
   { key: "all", text: "전체 일정" },
 ];
 
-export function Scheduler() {
+/** 달력이 쓰는 서버 조회 6개와 날짜별 집계입니다. 조회 결과가 오기 전에는 빈 배열을 useMemo 로 고정해 집계가 렌더마다 다시 실행되지 않게 합니다. */
+function useSchedulerData(cursor: CalendarCursor) {
   const { me, meState, teamIds, teams: allTeams } = useMe();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const [tab, setTab] = useState<DayTab>("me");
-  const cursor = useCalendarCursor();
   const { week, weekDayKeys } = cursor;
-  const [from, setFrom] = useState<number | null>(null);
-  const [to, setTo] = useState<number | null>(null);
-  const [openDay, setOpenDay] = useState<string | null>(null);
 
   // 합주실, 기간 목록은 배정 여부와 상관없이 달력의 시간, 날짜 범위를 결정합니다.
   const rooms = useRooms();
@@ -58,36 +55,25 @@ export function Scheduler() {
 
   // 기간 목록이 오기 전에는 어느 기간의 시간표를 받을지 알 수 없어 query 를 비활성화합니다.
   const query = useQuery({
-    queryKey: [...SCHEDULE_KEY, periodIds],
+    queryKey: scheduleKey(periodIds),
     queryFn: () => loadScheduleRows(periodIds),
     enabled: periods.data !== undefined,
   });
   // 로그인한 사용자 id 가 와야 그 사용자의 불가능 일정을 조회할 수 있습니다.
   const unavailableQuery = useQuery({
-    queryKey: [...UNAVAILABLE_KEY, me?.id],
+    queryKey: memberUnavailableKey(me?.id),
     queryFn: () => loadUnavailable(me?.id ?? 0),
     enabled: me !== null,
   });
   // 합주실 목록이 와야 어느 합주실의 예약을 조회할지 알 수 있습니다.
   const reservationQuery = useQuery({
-    queryKey: [...RESERVATIONS_KEY, roomIds, rangeFrom, rangeTo],
+    queryKey: roomReservationsKey(roomIds, rangeFrom, rangeTo),
     queryFn: () => loadReservationRows(roomIds, rangeFrom, rangeTo),
     enabled: rooms.data !== undefined,
   });
   // 예약 모달 오른쪽 "내 예약" 목록입니다. 달력 범위와 관계없이 아직 끝나지 않은 내 예약 전부입니다.
   // queryKey 가 "reservations" 로 시작해서, 예약, 취소 후 RESERVATIONS_KEY 를 무효로 할 때 함께 다시 받습니다.
-  const myBookingsQuery = useQuery({ queryKey: [...RESERVATIONS_KEY, "mine"], queryFn: loadMyBookings });
-  // 공지 화면(routes/Notices 의 PostBoard)이 사용하는 queryKey 와 endpoint(API 의 요청 주소 단위)를 그대로 사용합니다. 두 화면이
-  // 같은 목록을 공유하므로, 공지를 작성하고 돌아오면 이 화면도 함께 갱신됩니다.
-  const notices = useQuery({
-    queryKey: boardListKey("/notices"),
-    queryFn: () => getJSON<{ posts: Post[] }>("/notices"),
-  });
-  const recentNotices = notices.data?.posts.slice(0, RECENT_NOTICES) ?? [];
-  const noticeState = listNote(
-    notices.isPending, notices.error, recentNotices.length,
-    "아직 등록된 공지가 존재하지 않아요", "공지를 불러오지 못했어요",
-  );
+  const myBookingsQuery = useQuery({ queryKey: MY_BOOKINGS_KEY, queryFn: loadMyBookings });
 
   // 조회 결과가 오기 전에는 ?? 가 매번 새 빈 배열을 만듭니다. 아래 집계의 useMemo 가 그 배열을 의존성으로
   // 받으므로, 배열을 여기서 고정하지 않으면 집계가 렌더마다 다시 실행됩니다.
@@ -116,6 +102,13 @@ export function Scheduler() {
     for (const queryKey of [ME_KEY, ROOMS_KEY, PERIODS_KEY, SCHEDULE_KEY, UNAVAILABLE_KEY, RESERVATIONS_KEY]) {
       void queryClient.invalidateQueries({ queryKey });
     }
+  };
+  const refreshSchedule = (): void => { void queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY }); };
+  // POST 가 끝난 뒤 화면이 새 값을 표시하게 합니다. 클라이언트 쪽에 따로 상태를 두지 않고
+  // 서버가 가진 값을 다시 조회해 저장이 실제로 되었는지까지 함께 확인합니다.
+  const onSaved = (): void => {
+    void queryClient.invalidateQueries({ queryKey: UNAVAILABLE_KEY });
+    void queryClient.invalidateQueries({ queryKey: RESERVATIONS_KEY });
   };
 
   const teams = useMemo(() => teamsOf(rows, teamIds, allTeams), [rows, teamIds, allTeams]);
@@ -146,15 +139,121 @@ export function Scheduler() {
     () => mergeByDay(assigned, ensembleEntries, offEntries, bookEntries),
     [assigned, ensembleEntries, offEntries, bookEntries],
   );
-
   const entriesOf = (key: string): Entry[] => entriesByDay[key] ?? [];
 
-  // POST 가 끝난 뒤 화면이 새 값을 표시하게 합니다. 클라이언트 쪽에 따로 상태를 두지 않고
-  // 서버가 가진 값을 다시 조회해 저장이 실제로 되었는지까지 함께 확인합니다.
-  const onSaved = () => {
-    void queryClient.invalidateQueries({ queryKey: UNAVAILABLE_KEY });
-    void queryClient.invalidateQueries({ queryKey: RESERVATIONS_KEY });
+  return {
+    me, meState, teams, roomList, periodList, open, close, focus, slotCount, slotMinutes, steps,
+    loadWhy, failures, refreshAll, refreshSchedule, onSaved, entriesOf,
+    myOff: unavailableQuery.data ?? [],
+    myBookings: myBookingsQuery.data ?? [],
   };
+}
+
+/** 예약 탭 달 보기의 시작 시간, 종료 시간 선택 줄입니다. 둘 다 지정하면 range 가 되고, 달력은 그 시간에 예약할 수 있는 날짜만 누를 수 있게 표시합니다. */
+function TimeBar({ steps, label, endLabel, from, to, range, onFrom, onTo }: {
+  steps: number[];
+  label: (slot: number) => string;
+  endLabel: (slot: number) => string;
+  from: number | null;
+  to: number | null;
+  range: { from: number; to: number } | null;
+  onFrom: (next: number | null) => void;
+  onTo: (next: number | null) => void;
+}) {
+  return (
+    <div className="timebar">
+      <div className="fld">
+        <label htmlFor="tFrom">시작 시간</label>
+        <Dropdown
+          id="tFrom"
+          value={from ?? ""}
+          choices={[
+            { value: "" as const, label: "선택 안 함" },
+            ...steps.slice(0, -1).map((slot) => ({ value: slot, label: label(slot) })),
+          ]}
+          onChange={(next) => onFrom(next === "" ? null : next)}
+        />
+      </div>
+      <div className="fld">
+        <label htmlFor="tTo">종료 시간</label>
+        <Dropdown
+          id="tTo"
+          value={to ?? ""}
+          choices={[
+            { value: "" as const, label: "선택 안 함" },
+            ...steps.slice(1).map((slot) => ({ value: slot, label: endLabel(slot) })),
+          ]}
+          onChange={(next) => onTo(next === "" ? null : next)}
+        />
+      </div>
+      <button className="clear" onClick={() => { onFrom(null); onTo(null); }}>시간 선택 취소</button>
+      <span className="state">
+        {range === null
+          ? "지정한 시간에 예약이 가능한 날짜만 표시해요"
+          : `${label(range.from)}–${endLabel(range.to)} 해당 시간으로 예약할 날짜를 눌러주세요`}
+      </span>
+    </div>
+  );
+}
+
+/** 달력 오른쪽 칸(rail)입니다. 최근 공지 RECENT_NOTICES 개와 소속 팀 전부를 표시합니다. */
+function SchedulerRail() {
+  const navigate = useNavigate();
+  const { teams: allTeams } = useMe();
+  // 공지 화면(routes/Notices 의 PostBoard)과 같은 조회(usePosts)라 공지를 작성하고 돌아오면 이 칸도 함께 갱신됩니다.
+  const notices = usePosts("/notices");
+  const recentNotices = notices.data?.slice(0, RECENT_NOTICES) ?? [];
+  const noticeState = listNote(
+    notices.isPending, notices.error, recentNotices.length,
+    "아직 등록된 공지가 존재하지 않아요", "공지를 불러오지 못했어요",
+  );
+  // 소속된 팀 전부입니다. 달력의 teams 는 배정 일정에 나온 팀만 담고 있어, 아직 일정이 없는 팀이 빠집니다.
+  const myTeams = useMyTeams();
+
+  return (
+    <div className="rail">
+      <Panel title="공지사항" hint="전체보기 ›" onOpen={() => void navigate("/notices")}>
+        {/* 이 칸에서는 제목만 표시하고, 클릭하면 글 본문을 볼 수 있는 공지 화면으로 이동합니다. */}
+        <ul>
+          {noticeState !== "" ? (
+            <li><button type="button" disabled><b>{noticeState}</b></button></li>
+          ) : recentNotices.map((post) => (
+            <li key={post.id}>
+              <button type="button" onClick={() => void navigate(`/notices/${post.id}`)}>
+                <b>{post.title}</b>
+                <small>{stampLabel(post.created_at)} {post.author}</small>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+      <Panel title="내 팀" hint="전체보기 ›" onOpen={() => void navigate("/teams")}>
+        <ul>
+          {myTeams.map((team) => (
+            <li key={team.id}>
+              <button className="teamrow" onClick={() => void navigate(`/board/${team.id}`)}>
+                <i style={{ background: `var(--${team.colorKey})` }} />
+                <b>{team.name}</b>
+                <small>{memberCountLabel(allTeams, team.id)}</small>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+    </div>
+  );
+}
+
+export function Scheduler() {
+  const [tab, setTab] = useState<DayTab>("me");
+  const cursor = useCalendarCursor();
+  const { week, weekDayKeys } = cursor;
+  // 예약 탭의 시작 시간, 종료 시간입니다. 탭을 옮겨도 유지됩니다.
+  const [from, setFrom] = useState<number | null>(null);
+  const [to, setTo] = useState<number | null>(null);
+  const [openDay, setOpenDay] = useState<string | null>(null);
+  const data = useSchedulerData(cursor);
+  const { me, teams, roomList, periodList, open, close, focus, slotCount, slotMinutes, entriesOf } = data;
 
   const inFocus = (key: string) => inRanges(focus, key);
   // 날짜 modal 3개(DayView, OffDialog, BookDialog)가 함께 받는 값입니다.
@@ -168,14 +267,11 @@ export function Scheduler() {
     inFocus: inFocus(day),
     ensemble: ensembleOn(periodList, day),
     canEditEnsemble: can(me, "period_edit"),
-    rooms: rooms.data?.rooms ?? [],
+    rooms: roomList,
     onClose: () => setOpenDay(null),
   });
   const { label, endLabel } = slotLabels(open, close, slotCount);
   const range = from !== null && to !== null ? { from, to } : null;
-
-  // 오른쪽 "내 팀" 은 소속된 팀 전부입니다. teams 는 배정 일정에 나온 팀만 담고 있어, 아직 일정이 없는 팀이 빠집니다.
-  const myTeams = useMyTeams();
 
   const viewProps = { tab, teams, entriesOf, openHour: open, slotCount, slotMinutes };
 
@@ -185,19 +281,19 @@ export function Scheduler() {
 
       {/* 조회 일곱 개 중 하나라도 실패하면 성공한 것만 표시하고 첫 실패 사유를
           알립니다. 다시 불러오기는 일곱을 한 번에 다시 조회합니다. */}
-      {loadWhy === "" ? null : (
+      {data.loadWhy === "" ? null : (
         <div className="cut">
-          <p><b>스케줄을 불러오지 못했어요</b>{loadWhy}</p>
-          <Button kind="danger" onClick={refreshAll}>다시 불러오기</Button>
+          <p><b>스케줄을 불러오지 못했어요</b>{data.loadWhy}</p>
+          <Button kind="danger" onClick={data.refreshAll}>다시 불러오기</Button>
         </div>
       )}
 
       {/* loadScheduleRows 는 기간 하나의 조회가 실패해도 나머지 기간의 시간표를 반환합니다. 그 기간만
           달력에서 빠지므로 빠진 사실을 따로 알립니다. 위 안내는 조회 자체가 실패한 경우입니다. */}
-      {failures.length === 0 ? null : (
+      {data.failures.length === 0 ? null : (
         <div className="cut">
-          <p><b>일부 기간의 배정을 불러오지 못했어요</b> {failures.join(", ")}</p>
-          <Button kind="danger" onClick={() => { void queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY }); }}>
+          <p><b>일부 기간의 배정을 불러오지 못했어요</b> {data.failures.join(", ")}</p>
+          <Button kind="danger" onClick={data.refreshSchedule}>
             다시 불러오기
           </Button>
         </div>
@@ -207,38 +303,7 @@ export function Scheduler() {
         <CalendarBar cursor={cursor} />
 
         {tab === "book" && !week ? (
-          <div className="timebar">
-            <div className="fld">
-              <label htmlFor="tFrom">시작 시간</label>
-              <Dropdown
-                id="tFrom"
-                value={from ?? ""}
-                choices={[
-                  { value: "" as const, label: "선택 안 함" },
-                  ...steps.slice(0, -1).map((slot) => ({ value: slot, label: label(slot) })),
-                ]}
-                onChange={(next) => setFrom(next === "" ? null : next)}
-              />
-            </div>
-            <div className="fld">
-              <label htmlFor="tTo">종료 시간</label>
-              <Dropdown
-                id="tTo"
-                value={to ?? ""}
-                choices={[
-                  { value: "" as const, label: "선택 안 함" },
-                  ...steps.slice(1).map((slot) => ({ value: slot, label: endLabel(slot) })),
-                ]}
-                onChange={(next) => setTo(next === "" ? null : next)}
-              />
-            </div>
-            <button className="clear" onClick={() => { setFrom(null); setTo(null); }}>시간 선택 취소</button>
-            <span className="state">
-              {range === null
-                ? "지정한 시간에 예약이 가능한 날짜만 표시해요"
-                : `${label(range.from)}–${endLabel(range.to)} 해당 시간으로 예약할 날짜를 눌러주세요`}
-            </span>
-          </div>
+          <TimeBar steps={data.steps} label={label} endLabel={endLabel} from={from} to={to} range={range} onFrom={setFrom} onTo={setTo} />
         ) : null}
 
         <div id="body">
@@ -265,49 +330,19 @@ export function Scheduler() {
         </div>
       </Card>
 
-      {/* 달력 오른쪽 칸(rail)입니다. */}
-      <div className="rail">
-        <Panel title="공지사항" hint="전체보기 ›" onOpen={() => void navigate("/notices")}>
-          {/* 이 칸에서는 제목만 표시하고, 클릭하면 글 본문을 볼 수 있는 공지 화면으로 이동합니다. */}
-          <ul>
-            {noticeState !== "" ? (
-              <li><button type="button" disabled><b>{noticeState}</b></button></li>
-            ) : recentNotices.map((post) => (
-              <li key={post.id}>
-                <button type="button" onClick={() => void navigate(`/notices/${post.id}`)}>
-                  <b>{post.title}</b>
-                  <small>{stampLabel(post.created_at)} {post.author}</small>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-        <Panel title="내 팀" hint="전체보기 ›" onOpen={() => void navigate("/teams")}>
-          <ul>
-            {myTeams.map((team) => (
-              <li key={team.id}>
-                <button className="teamrow" onClick={() => void navigate(`/board/${team.id}`)}>
-                  <i style={{ background: `var(--${team.colorKey})` }} />
-                  <b>{team.name}</b>
-                  <small>{memberCountLabel(allTeams, team.id)}</small>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      </div>
+      <SchedulerRail />
 
       {openDay === null ? null : tab === "all" ? (
         <DayView {...dayProps(openDay)} />
       ) : tab === "me" ? (
-        <OffDialog {...dayProps(openDay)} myOff={allOffEntries(unavailableQuery.data ?? [], open)} onSaved={onSaved} />
+        <OffDialog {...dayProps(openDay)} myOff={allOffEntries(data.myOff, open)} onSaved={data.onSaved} />
       ) : (
         <BookDialog
           {...dayProps(openDay)}
-          myBookings={allBookedEntries(myBookingsQuery.data ?? [], teams, open)}
+          myBookings={allBookedEntries(data.myBookings, teams, open)}
           fixed={range}
           myName={me?.name ?? ""}
-          onSaved={onSaved}
+          onSaved={data.onSaved}
         />
       )}
     </>

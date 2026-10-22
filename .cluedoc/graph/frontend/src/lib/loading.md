@@ -38,6 +38,7 @@ flowchart LR
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_lib_loading
   frontend_src_routes_SettingsReservations["SettingsReservations.tsx"] --> frontend_src_lib_loading
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_lib_loading
+  frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_lib_loading
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_lib_loading
   frontend_src_routes_UnavailableCalendar["UnavailableCalendar.tsx"] --> frontend_src_lib_loading
 ```
@@ -75,5 +76,6 @@ flowchart LR
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]
 - [[graph/frontend/src/routes/SettingsReservations|SettingsReservations.tsx]]
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
+- [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]
 - [[graph/frontend/src/routes/UnavailableCalendar|UnavailableCalendar.tsx]]

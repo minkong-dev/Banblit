@@ -13,30 +13,23 @@ function optionId(id: string | undefined, index: number): string {
   return `${id ?? "dd"}-opt-${index}`;
 }
 
-/** 선택한 값과 선택지를 받아 목록을 그립니다. id 는 label 의 htmlFor 가 가리키는 버튼의 id 입니다.
- *  곁에 label 이 없는 자리에서는 id 대신 ariaLabel 로 이름을 답니다. 둘 중 하나는 있어야 합니다.
- *  value 가 선택지에 없으면 버튼에 placeholder 를 표시합니다. */
-export function Dropdown<T extends string | number>({
-  id, ariaLabel, value, choices, onChange, disabled = false, placeholder = "선택해주세요",
-  invalid = false, describedBy, buttonRef, className,
-}: {
-  id?: string;
-  ariaLabel?: string;
-  className?: string;
-  value: T;
-  choices: Choice<T>[];
-  onChange: (next: T) => void;
-  disabled?: boolean;
-  placeholder?: string;
-  invalid?: boolean;
-  describedBy?: string;
-  buttonRef?: RefObject<HTMLButtonElement | null>;
-}) {
+/** 목록의 열림, 키보드 커서(at), 선택을 담당합니다. 커서는 선택한 값과 다를 수 있어 따로 둡니다. Enter 를 눌러야 선택한 값이 됩니다.
+ *  box 는 버튼과 목록을 감싼 요소에, list 는 목록(ul)에 연결합니다. */
+function useDropdownCursor<T extends string | number>(
+  choices: Choice<T>[], value: T, onChange: (next: T) => void, disabled: boolean,
+): {
+  open: boolean;
+  at: number;
+  setAt: (index: number) => void;
+  box: RefObject<HTMLDivElement | null>;
+  list: RefObject<HTMLUListElement | null>;
+  toggle: () => void;
+  pick: (choice: Choice<T>) => void;
+  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
+} {
   const { open, setOpen, box } = useDismissible();
-  // 키보드 커서입니다. 선택한 값과 다를 수 있어 따로 둡니다. Enter 를 눌러야 선택한 값이 됩니다.
   const [at, setAt] = useState(-1);
   const list = useRef<HTMLUListElement>(null);
-  const picked = choices.find((choice) => choice.value === value);
 
   /** 목록을 엽니다. 여는 순간의 커서는 지금 선택한 값의 자리입니다. */
   function show(): void {
@@ -88,6 +81,31 @@ export function Dropdown<T extends string | number>({
     }
   }
 
+  return { open, at, setAt, box, list, toggle: () => { if (open) setOpen(false); else show(); }, pick, onKeyDown };
+}
+
+/** 선택한 값과 선택지를 받아 목록을 그립니다. id 는 label 의 htmlFor 가 가리키는 버튼의 id 입니다.
+ *  곁에 label 이 없는 자리에서는 id 대신 ariaLabel 로 이름을 답니다. 둘 중 하나는 있어야 합니다.
+ *  value 가 선택지에 없으면 버튼에 placeholder 를 표시합니다. */
+export function Dropdown<T extends string | number>({
+  id, ariaLabel, value, choices, onChange, disabled = false, placeholder = "선택해주세요",
+  invalid = false, describedBy, buttonRef, className,
+}: {
+  id?: string;
+  ariaLabel?: string;
+  className?: string;
+  value: T;
+  choices: Choice<T>[];
+  onChange: (next: T) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  invalid?: boolean;
+  describedBy?: string;
+  buttonRef?: RefObject<HTMLButtonElement | null>;
+}) {
+  const { open, at, setAt, box, list, toggle, pick, onKeyDown } = useDropdownCursor(choices, value, onChange, disabled);
+  const picked = choices.find((choice) => choice.value === value);
+
   return (
     <div className="dd" ref={box}>
       <button
@@ -103,7 +121,7 @@ export function Dropdown<T extends string | number>({
         // 목록의 커서를 버튼에 붙여 알립니다. 초점은 버튼에 그대로 있고 커서만 목록 안에서 움직입니다.
         aria-activedescendant={open && at >= 0 ? optionId(id, at) : undefined}
         onKeyDown={onKeyDown}
-        onClick={() => { if (open) setOpen(false); else show(); }}
+        onClick={toggle}
       >
         <span className={picked === undefined ? "ddempty" : undefined}>
           {picked?.label ?? placeholder}

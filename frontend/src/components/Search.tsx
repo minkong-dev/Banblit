@@ -14,7 +14,7 @@ import { searchMembers } from "../lib/pipeline";
 import { matchingTeams, memberLabel, noMembersMessage } from "../lib/roster";
 import { Empty, SearchInput } from "./controls";
 import { Modal } from "./Modal";
-import { useTeams } from "./queries";
+import { memberSearchKey, useTeams } from "./queries";
 
 function SearchList(props: {
   text: string;
@@ -62,7 +62,7 @@ export function MemberSearch(props: {
   const query = text.trim();
 
   const found = useQuery({
-    queryKey: ["member-search", query],
+    queryKey: memberSearchKey(query),
     queryFn: async () => ({ members: await searchMembers(query) }),
     // 한 글자 입력할 때마다 조회가 새로 나갑니다. 이전 결과를 삭제하지 않고 두면 목록이
     // "불러오는 중…" 으로 사라졌다 돌아오지 않고, 다음 결과가 도착할 때 한 번에 바뀝니다.

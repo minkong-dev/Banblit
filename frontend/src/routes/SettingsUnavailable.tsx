@@ -9,20 +9,19 @@ import { BulletListIcon, CalendarIcon, SearchIcon } from "../components/icons";
 import "../styles/unavailable.css";
 import { Card, SectionHead } from "../components/Layout";
 import { RejectDialog } from "../components/RejectDialog";
-import { UNAVAILABLE_KEY, useMe } from "../components/queries";
+import { ALL_UNAVAILABLE_KEY, UNAVAILABLE_KEY, useMe } from "../components/queries";
 import { can } from "../lib/account";
 import { reason } from "../lib/api";
 import { repeatLabel } from "../lib/calendar";
 import { askDelete } from "../lib/confirm";
 import { loadAllUnavailable, rejectUnavailable, removeUnavailable } from "../lib/pipeline";
 import type { MemberUnavailable } from "../lib/contract";
+import { loadState } from "../lib/loading";
+import type { LoadState } from "../lib/loading";
 import { say } from "../components/toast";
 import { UnavailableCalendar } from "./UnavailableCalendar";
 import { dayWithWeekday } from "../lib/calendar";
 import { dayTimeRangeLabel, timeRangeLabel } from "../lib/slots";
-
-// 전체 목록의 queryKey 입니다. 앞머리가 달력의 불가능 일정 조회와 같은 "unavailable" 이라, 반려, 삭제 뒤 둘 다 다시 조회합니다.
-const LIST_KEY = [...UNAVAILABLE_KEY, "all"] as const;
 
 /** 반복 일정이 끝나는 시점입니다. 종료일과 횟수는 동시에 값을 가질 수 없고, 둘 다 없으면 빈 문자열입니다.
  *  횟수는 선택한 요일 전부를 한 세트로 세는 주 단위입니다(lib/dayEntries 의 repeatDays 와 같은 규칙). */
@@ -40,17 +39,12 @@ function whenLabel(row: MemberUnavailable): string {
 export function UnavailableCards() {
   const client = useQueryClient();
   const { me } = useMe();
-  // 검색어입니다. 멤버가 늘면 표가 길어지므로 이름으로 좁힙니다.
-  const [keyword, setKeyword] = useState("");
   // 반려 사유 modal 을 연 일정입니다. null 이면 modal 이 닫혀 있습니다.
   const [rejecting, setRejecting] = useState<MemberUnavailable | null>(null);
   const [calendar, setCalendar] = useState(false);
 
-  const list = useQuery({ queryKey: LIST_KEY, queryFn: loadAllUnavailable });
-
+  const list = useQuery({ queryKey: ALL_UNAVAILABLE_KEY, queryFn: loadAllUnavailable });
   const rows = list.data ?? [];
-  const needle = keyword.trim();
-  const shown = needle === "" ? rows : rows.filter((row) => row.member.includes(needle));
 
   return (
     <Card>
@@ -62,28 +56,13 @@ export function UnavailableCards() {
       </SectionHead>
 
       {calendar ? <UnavailableCalendar times={rows} /> : (
-      <div className="roster unavail">
-        {/* 캘린더 보기의 대상 선택 줄(.unavbar)과 같은 높이, 같은 자리에 둡니다. */}
-        <div className="unavbar">
-          <div className="pickfield">
-            <SearchIcon aria-hidden="true" />
-            <SearchInput label="멤버 이름" value={keyword} placeholder="멤버 이름을 입력해주세요." onChange={setKeyword} />
-          </div>
-        </div>
-
-        {list.isError ? <Empty text={reason(list.error)} /> : null}
-        <UnavailableTable
-          rows={shown}
+        <UnavailableList
+          rows={rows}
+          state={loadState(list)}
           meId={me?.id ?? null}
           canReject={can(me, "unavailable_manage")}
           onReject={setRejecting}
         />
-        {list.isPending ? <Empty text="불가능 일정을 불러오고 있어요." /> : null}
-        {list.isSuccess && rows.length === 0 ? <Empty text="등록된 불가능 일정이 존재하지 않아요" /> : null}
-        {list.isSuccess && rows.length > 0 && shown.length === 0 ? (
-          <Empty text={`${needle} 님이 등록한 불가능 일정이 존재하지 않아요`} />
-        ) : null}
-      </div>
       )}
 
       {rejecting === null ? null : (
@@ -101,6 +80,39 @@ export function UnavailableCards() {
         />
       )}
     </Card>
+  );
+}
+
+/** 표 보기입니다. 검색어로 멤버 이름을 좁힙니다. 멤버가 늘면 표가 길어지기 때문입니다. */
+function UnavailableList({ rows, state, meId, canReject, onReject }: {
+  rows: MemberUnavailable[];
+  state: LoadState;
+  meId: number | null;
+  canReject: boolean;
+  onReject: (row: MemberUnavailable) => void;
+}) {
+  const [keyword, setKeyword] = useState("");
+  const needle = keyword.trim();
+  const shown = needle === "" ? rows : rows.filter((row) => row.member.includes(needle));
+
+  return (
+    <div className="roster unavail">
+      {/* 캘린더 보기의 대상 선택 줄(.unavbar)과 같은 높이, 같은 자리에 둡니다. */}
+      <div className="unavbar">
+        <div className="pickfield">
+          <SearchIcon aria-hidden="true" />
+          <SearchInput label="멤버 이름" value={keyword} placeholder="멤버 이름을 입력해주세요." onChange={setKeyword} />
+        </div>
+      </div>
+
+      {state.kind === "failed" ? <Empty text={state.why} /> : null}
+      <UnavailableTable rows={shown} meId={meId} canReject={canReject} onReject={onReject} />
+      {state.kind === "loading" ? <Empty text="불가능 일정을 불러오고 있어요." /> : null}
+      {state.kind === "ready" && rows.length === 0 ? <Empty text="등록된 불가능 일정이 존재하지 않아요" /> : null}
+      {state.kind === "ready" && rows.length > 0 && shown.length === 0 ? (
+        <Empty text={`${needle} 님이 등록한 불가능 일정이 존재하지 않아요`} />
+      ) : null}
+    </div>
   );
 }
 

@@ -11,6 +11,7 @@ kind: file
 flowchart LR
   frontend_src_lib_slots["slots.ts"]
   frontend_src_lib_slots --> frontend_src_lib_calendar["calendar.ts"]
+  frontend_src_lib_slots --> frontend_src_lib_contract["contract.ts"]
   frontend_src_lib_assignment["assignment.ts"] --> frontend_src_lib_slots
   frontend_src_lib_dayEntries["dayEntries.ts"] --> frontend_src_lib_slots
   frontend_src_lib_notifications["notifications.ts"] --> frontend_src_lib_slots
@@ -24,6 +25,7 @@ flowchart LR
 ## imports
 
 - [[graph/frontend/src/lib/calendar|calendar.ts]]
+- [[graph/frontend/src/lib/contract|contract.ts]]
 
 ## imported by
 

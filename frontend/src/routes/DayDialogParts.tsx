@@ -1,9 +1,10 @@
 // 하루 dialog(routes/DayDialog)의 부품입니다. 서버를 호출하지 않습니다. 보유하는 값은 드래그 중 누른 위치 하나뿐입니다.
 
-import { useEffect, useRef } from "react";
-import type { CSSProperties, PointerEvent, RefObject } from "react";
+import { useRef } from "react";
+import type { CSSProperties, PointerEvent } from "react";
 
 import { Dropdown } from "../components/Dropdown";
+import { useScrollToFirst } from "../components/hooks";
 import { DeleteButton, EditButton, Toggle, Why } from "../components/controls";
 import {
   acceptsDrag, cellAt, dragRange, hasWeekday, REPEAT_WEEKDAY_NAMES, repeatLabel, slotLabels, slotSteps,
@@ -27,20 +28,6 @@ function kindLabel(entry: Entry): string {
 
 type HoursProps = { openHour: number; closeHour: number; slotCount: number };
 
-// 가장 이른 일정 막대 위에 남기는 여백(px)입니다.
-const FIRST_GAP = 12;
-
-/** 반환한 ref 의 스크롤 영역을 data-first 요소가 맨 위에 오도록 스크롤합니다. first 가 바뀔 때만 다시 스크롤합니다. */
-export function useScrollToFirst(first: number | null): RefObject<HTMLDivElement | null> {
-  const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const target = box.current?.querySelector<HTMLElement>("[data-first]");
-    if (!box.current || !target) return;
-    box.current.scrollTop += target.getBoundingClientRect().top - box.current.getBoundingClientRect().top - FIRST_GAP;
-  }, [first]);
-  return box;
-}
-
 /** 이미 예약된 slot 과 겹치지 않는 구간만 pick.onChange 에 전달합니다. 겹치면 호출하지 않아 직전 구간이 유지됩니다. */
 function apply(pick: DragPick, next: SlotRange): void {
   if (acceptsDrag(pick.grid, next, pick.slotMinutes)) pick.onChange(next);
@@ -56,19 +43,17 @@ export type DragPick = {
   grid?: boolean[];
 };
 
-/** 하루를 세로 띠로 표시합니다. 시각은 왼쪽에 시간 단위로만 적습니다.
- *  pick 이 있으면 pointer 를 누른 위치부터 드래그한 위치까지를 slotMinutes 간격으로 선택해 onChange 에 전달하고, 선택한 구간을 점선 막대로 표시합니다. */
-export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount }: HoursProps & {
-  list: Entry[];
-  teams: DayTeam[];
-  pick?: DragPick;
-}) {
-  const { label, endLabel } = slotLabels(openHour, closeHour, slotCount);
-  // 누른 위치(소수 칸 번호)입니다. null 이면 드래그 중이 아닙니다.
+type PointerHandlers = {
+  onPointerDown: (event: PointerEvent<HTMLDivElement>) => void;
+  onPointerMove: (event: PointerEvent<HTMLDivElement>) => void;
+  onPointerUp: () => void;
+  onPointerCancel: () => void;
+};
+
+/** 드래그로 구간을 선택하는 pointer handler 4개입니다. pick 이 없으면 handler 는 아무 일도 하지 않습니다.
+ *  보유하는 값은 누른 위치(소수 칸 번호) 1개이고, null 이면 드래그 중이 아닙니다. */
+function useDragPick(pick: DragPick | undefined, slotCount: number): PointerHandlers {
   const pressed = useRef<number | null>(null);
-  const first = list.length === 0 ? null : Math.min(...list.map((entry) => entry.a));
-  const firstIndex = list.findIndex((entry) => entry.a === first);
-  const box = useScrollToFirst(first);
 
   /** 포인터의 세로 위치를 소수 칸 번호로 변경합니다. 띠 높이가 slotCount 칸이므로 비율에 칸 수를 곱합니다. */
   const slotAt = (event: PointerEvent<HTMLDivElement>) => {
@@ -89,14 +74,26 @@ export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount 
     apply(pick, dragRange(pressed.current, slotAt(event), pick.slotMinutes, slotCount));
   };
   const onPointerEnd = () => { pressed.current = null; };
+  return { onPointerDown, onPointerMove, onPointerUp: onPointerEnd, onPointerCancel: onPointerEnd };
+}
+
+/** 하루를 세로 띠로 표시합니다. 시각은 왼쪽에 시간 단위로만 적습니다.
+ *  pick 이 있으면 pointer 를 누른 위치부터 드래그한 위치까지를 slotMinutes 간격으로 선택해 onChange 에 전달하고, 선택한 구간을 점선 막대로 표시합니다. */
+export function DayTimeline({ list, teams, pick, openHour, closeHour, slotCount }: HoursProps & {
+  list: Entry[];
+  teams: DayTeam[];
+  pick?: DragPick;
+}) {
+  const { label, endLabel } = slotLabels(openHour, closeHour, slotCount);
+  const first = list.length === 0 ? null : Math.min(...list.map((entry) => entry.a));
+  const firstIndex = list.findIndex((entry) => entry.a === first);
+  const box = useScrollToFirst(first);
+  const drag = useDragPick(pick, slotCount);
 
   return (
     <div className="tlscroll" ref={box}><div
       className={`tl${pick === undefined ? "" : " pickable"}`}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerEnd}
-      onPointerCancel={onPointerEnd}
+      {...drag}
     >
       {Array.from({ length: closeHour - openHour }, (_, i) => openHour + i).map((hour) => (
         <div className="hr" data-h={`${hour}:00`} key={hour} />

@@ -31,13 +31,13 @@ const ALLOWED_ATTR = [
  *  다른 주소를 iframe 으로 열면 남이 만든 화면이 이 화면 안에서 실행됩니다. */
 const ALLOWED_FRAME = /^(?:\/|https:\/\/(?:www\.)?youtube(?:-nocookie)?\.com\/embed\/)/i;
 
-/** 저장된 본문을 sanitize(허용 목록에 없는 태그와 속성을 제거하는 처리)해서 화면에 넣을 수 있는
- *  HTML 로 반환합니다. script·iframe 과 on... 속성, javascript: 주소가 제거됩니다.
- *  ponytail: sanitize 는 화면에 넣기 직전에만 수행합니다. 서버는 받은 HTML 을 그대로 저장하므로,
- *  화면 말고 다른 곳(메일 발송 등)에서 본문을 내보내게 되면 그쪽에서도 sanitize 해야 합니다. */
-export function sanitizeBody(html: string): string {
+/** 이 파일 전용 DOMPurify instance 를 만들고 hook 2개를 1번만 등록합니다. 전역 instance 의 hook 과 섞이지 않습니다.
+ *  DOM 이 없는 환경(vitest 의 Node)에서는 isSupported 가 false 라 hook 을 등록할 수 없고, sanitize 는 입력을 그대로 반환합니다. */
+function makePurifier(): ReturnType<typeof DOMPurify> {
+  const instance = DOMPurify();
+  if (!instance.isSupported) return instance;
   // iframe 은 태그만 허용하면 어떤 주소든 열립니다. 주소를 직접 확인해 목록 밖이면 태그를 삭제합니다.
-  DOMPurify.addHook("uponSanitizeElement", (node, data) => {
+  instance.addHook("uponSanitizeElement", (node, data) => {
     if (data.tagName !== "iframe") return;
     const src = (node as Element).getAttribute?.("src") ?? "";
     if (!ALLOWED_FRAME.test(src)) (node as Element).remove?.();
@@ -48,16 +48,21 @@ export function sanitizeBody(html: string): string {
   // 편집기에서 넣을 때도 같은 값을 붙이지만(components/RichText.tsx), 그 전에 저장된 글에는
   // 없으므로 화면에 넣는 이 자리에서 붙입니다.
   // 속성을 붙이는 자리가 위 hook 이 아닌 이유: 위는 속성 검사 전이라 붙여도 그 검사에서 지워집니다.
-  DOMPurify.addHook("afterSanitizeAttributes", (node) => {
+  instance.addHook("afterSanitizeAttributes", (node) => {
     if (node.nodeName !== "IFRAME") return;
     node.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
   });
-  try {
-    return purify(html);
-  } finally {
-    // hook 은 전역에 쌓입니다. 삭제하지 않으면 호출할 때마다 같은 hook 이 하나씩 늘어납니다.
-    DOMPurify.removeAllHooks();
-  }
+  return instance;
+}
+
+const purifier = makePurifier();
+
+/** 저장된 본문을 sanitize(허용 목록에 없는 태그와 속성을 제거하는 처리)해서 화면에 넣을 수 있는
+ *  HTML 로 반환합니다. script·iframe 과 on... 속성, javascript: 주소가 제거됩니다.
+ *  ponytail: sanitize 는 화면에 넣기 직전에만 수행합니다. 서버는 받은 HTML 을 그대로 저장하므로,
+ *  화면 말고 다른 곳(메일 발송 등)에서 본문을 내보내게 되면 그쪽에서도 sanitize 해야 합니다. */
+export function sanitizeBody(html: string): string {
+  return purify(html);
 }
 
 /** href·src 에 쓸 수 있는 주소입니다. javascript:·data:·blob: 같은 주소를 막습니다.
@@ -67,7 +72,7 @@ export function sanitizeBody(html: string): string {
 const ALLOWED_URI = /^(?:https?:|mailto:|\/)/i;
 
 function purify(html: string): string {
-  return DOMPurify.sanitize(html, {
+  return purifier.sanitize(html, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
     ALLOWED_URI_REGEXP: ALLOWED_URI,

@@ -128,7 +128,7 @@ describe("isoAt — slotIndex 의 반대 방향", () => {
 
 describe("upcomingBookings — 설정의 예약 탭이 보는 목록", () => {
   const booking = (id: number, room: string, start: string, end: string) => ({
-    id, room, teamId: null, team: null, memberId: 7, member: "고윤서", name: null, start, end,
+    id, room_id: 1, room, team_id: null, team: null, member_id: 7, member: "고윤서", name: null, start, end,
   });
 
   it("합주실과 무관하게 시작 시간 순으로 세운다", () => {

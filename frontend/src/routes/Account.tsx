@@ -164,16 +164,45 @@ function Rule({ ok, text }: { ok: boolean; text: string }) {
   );
 }
 
-export function SignUp() {
-  const navigate = useNavigate();
-  // 비밀번호 입력값은 변경될 때마다 체크리스트를 다시 렌더링해야 하므로 state 로 관리합니다.
-  // 다른 입력값은 제출할 때 FormData 로 읽습니다.
+/** 비밀번호와 비밀번호 확인 입력칸입니다. 입력값은 변경될 때마다 체크리스트를 다시 렌더링해야 하므로 state 로 관리합니다.
+ *  다른 입력값은 제출할 때 FormData 로 읽습니다. 칸을 한 번이라도 누르면 체크리스트를 표시하고, 그 뒤로는 닫지 않습니다.
+ *  확인 칸으로 옮겨도 앞 규칙을 계속 볼 수 있어야 합니다. */
+function PasswordFields({ errors }: { errors: Errors }) {
   const [password, setPassword] = useState("");
   const [again, setAgain] = useState("");
-  // 칸을 한 번이라도 누르면 체크리스트를 표시하고, 그 뒤로는 닫지 않습니다. 확인 칸으로 옮겨도
-  // 앞 규칙을 계속 볼 수 있어야 합니다.
   const [rulesShown, setRulesShown] = useState(false);
   const [matchShown, setMatchShown] = useState(false);
+  return (
+    <>
+      <Field name="pw2" label="비밀번호" type="password" autoComplete="new-password"
+        placeholder="비밀번호를 입력해주세요." error={errors.pw2}
+        value={password} onChange={setPassword} onFocus={() => setRulesShown(true)}>
+        {!rulesShown ? null : (
+          <ul className="rules">
+            {passwordChecks(password).map((rule) => (
+              <Rule key={rule.text} ok={rule.ok} text={rule.text} />
+            ))}
+            {!matchShown ? null : (
+              <Rule
+                ok={passwordsMatch(password, again)}
+                text={passwordsMatch(password, again)
+                  ? "비밀번호가 일치해요"
+                  : "비밀번호가 일치하지 않아요"}
+              />
+            )}
+          </ul>
+        )}
+      </Field>
+      <Field name="pw3" label="비밀번호 확인" type="password" autoComplete="new-password"
+        placeholder="비밀번호를 한 번 더 입력해주세요." error={errors.pw3}
+        value={again} onChange={setAgain}
+        onFocus={() => { setRulesShown(true); setMatchShown(true); }} />
+    </>
+  );
+}
+
+export function SignUp() {
+  const navigate = useNavigate();
   const { errors, onSubmit, isPending } = useFormAction(
     (data) => {
       const password = fieldText(data, "pw2");
@@ -222,29 +251,7 @@ export function SignUp() {
         autoComplete="off" placeholder="학번을 입력해주세요." error={errors.sno} />
       <Field name="mail2" label="이메일" type="email" inputMode="email"
         autoComplete="email" placeholder="이메일을 입력해주세요." error={errors.mail2} />
-      <Field name="pw2" label="비밀번호" type="password" autoComplete="new-password"
-        placeholder="비밀번호를 입력해주세요." error={errors.pw2}
-        value={password} onChange={setPassword} onFocus={() => setRulesShown(true)}>
-        {!rulesShown ? null : (
-          <ul className="rules">
-            {passwordChecks(password).map((rule) => (
-              <Rule key={rule.text} ok={rule.ok} text={rule.text} />
-            ))}
-            {!matchShown ? null : (
-              <Rule
-                ok={passwordsMatch(password, again)}
-                text={passwordsMatch(password, again)
-                  ? "비밀번호가 일치해요"
-                  : "비밀번호가 일치하지 않아요"}
-              />
-            )}
-          </ul>
-        )}
-      </Field>
-      <Field name="pw3" label="비밀번호 확인" type="password" autoComplete="new-password"
-        placeholder="비밀번호를 한 번 더 입력해주세요." error={errors.pw3}
-        value={again} onChange={setAgain}
-        onFocus={() => { setRulesShown(true); setMatchShown(true); }} />
+      <PasswordFields errors={errors} />
 
       <Field name="cohort" label="기수" type="number" inputMode="numeric"
         min={1} max={100} step={1}

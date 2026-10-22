@@ -127,20 +127,56 @@ function windowPairMessage(pair: WindowPair, label: string, slotMinutes: number)
 // 서버 periods.max_absent_members 의 SMALLINT 상한입니다.
 const MAX_ABSENT_LIMIT = 32767;
 
+/** 기간 form 이 보관하는 배정 규칙입니다. 숫자 칸 3개는 입력 문자열 그대로 두고, 빈칸은 빈 문자열입니다.
+ *  서버 규격(AssignRule)으로는 assignRuleOf 가 변환합니다. */
+export type AssignRuleDraft = Omit<AssignRule, "max_absent" | "daily_max_hours" | "max_consecutive_hours"> & {
+  max_absent: string;
+  daily_max_hours: string;
+  max_consecutive_hours: string;
+};
+
+/** 저장된 배정 규칙을 form 입력값으로 변환합니다. */
+export function assignRuleDraft(rule: AssignRule): AssignRuleDraft {
+  return {
+    ...rule,
+    max_absent: String(rule.max_absent),
+    daily_max_hours: String(rule.daily_max_hours),
+    max_consecutive_hours: String(rule.max_consecutive_hours),
+  };
+}
+
+/** form 입력값을 서버 규격으로 변환합니다. assignRuleMessage 가 빈 문자열을 반환한 값만 넘깁니다. */
+export function assignRuleOf(draft: AssignRuleDraft): AssignRule {
+  return {
+    ...draft,
+    max_absent: Number(draft.max_absent),
+    daily_max_hours: Number(draft.daily_max_hours),
+    max_consecutive_hours: Number(draft.max_consecutive_hours),
+  };
+}
+
+/** 입력 문자열이 정수이면 그 값을, 아니면 null 을 반환합니다. 빈 문자열과 "1.5" 는 null 입니다. */
+function integerOf(text: string): number | null {
+  return /^-?\d+$/.test(text.trim()) ? Number(text) : null;
+}
+
 /** 배정 규칙을 검증합니다. 서버 쪽은 backend/src/backend/api/schemas.py 의 AssignRuleIn 에 작성되어 있는 내용을 기준으로 합니다.
- *  입력칸이 비어 있으면 그 값이 NaN 입니다. */
-export function assignRuleMessage(rule: AssignRule): string {
-  const { target_hours, max_absent, daily_max_hours, max_consecutive_hours } = rule;
+ *  숫자 칸 3개는 입력 문자열이라 정수가 아닌 값(빈칸 포함)을 거부합니다. */
+export function assignRuleMessage(rule: AssignRuleDraft): string {
+  const { target_hours } = rule;
+  const maxAbsent = integerOf(rule.max_absent);
+  const dailyMax = integerOf(rule.daily_max_hours);
+  const maxConsecutive = integerOf(rule.max_consecutive_hours);
   if (target_hours !== null && (!Number.isInteger(target_hours) || target_hours < 1)) {
     return "팀당 목표 시간은 1 이상의 숫자만 입력해주세요.";
   }
-  if (!Number.isInteger(max_absent) || max_absent < 0 || max_absent > MAX_ABSENT_LIMIT) {
+  if (maxAbsent === null || maxAbsent < 0 || maxAbsent > MAX_ABSENT_LIMIT) {
     return "불참 허용 인원은 0 이상의 숫자만 입력해주세요.";
   }
-  if (!Number.isInteger(daily_max_hours) || daily_max_hours < 1 || daily_max_hours > MAX_DAILY_HOURS) {
+  if (dailyMax === null || dailyMax < 1 || dailyMax > MAX_DAILY_HOURS) {
     return `팀당 하루 최대 배정시간은 1~${MAX_DAILY_HOURS} 사이의 숫자만 입력해주세요.`;
   }
-  if (!Number.isInteger(max_consecutive_hours) || max_consecutive_hours < 1 || max_consecutive_hours > daily_max_hours) {
+  if (maxConsecutive === null || maxConsecutive < 1 || maxConsecutive > dailyMax) {
     return "연속 배정시간은 1 이상, 팀당 하루 최대 배정시간 사이의 숫자만 입력해주세요.";
   }
   return "";

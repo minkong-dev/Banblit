@@ -3,8 +3,8 @@
 
 import { apiUrl, getJSON, reason, sendFile } from "./api";
 import type {
-  Account, Attachment, RecordRound, ScheduleRecord, Ensemble, Me, Member, MemberUnavailable, Notification, Period, PermissionSet, Post, PostComment, Reservation,
-  RoomInput, ScheduleOut, ScheduleRow, Settings, Team, TeamSlot, Unavailable,
+  Account, Attachment, RecordRound, ScheduleRecord, Ensemble, Me, Member, MemberRow, MemberUnavailable, Notification, Period, PermissionSet, PermissionSetInput, Post, PostComment, Reservation,
+  Room, RoomInput, ScheduleOut, ScheduleRow, Settings, Team, TeamSlot, Unavailable,
 } from "./contract";
 import { seatAssignments } from "./roster";
 import type { Seat } from "./roster";
@@ -13,11 +13,13 @@ import {
   hoursLabel,
 } from "./calendar";
 import {
+  assignRuleOf,
   capacity,
   dateRangeMessage,
   openHoursMessage,
   roomNameMessage,
 } from "./settings";
+import type { AssignRuleDraft } from "./settings";
 import {
   attachmentMessage,
   bodyMessage,
@@ -37,13 +39,18 @@ export function checkRoom(form: RoomInput, taken: string[], slotMinutes: number)
   return openHoursMessage(form.opens_at, form.closes_at, slotMinutes);
 }
 
-/** 서버에 보낼 기간 값입니다. 매일이 켜진 집중 합주기간은 종료일이 없으므로
+export type PeriodBody = Omit<Period, "id" | "ensemble" | "fixed_at">;
+/** 기간 form 이 보관하는 값입니다. 배정 규칙의 숫자 칸 3개는 입력 문자열입니다(lib/settings 의 AssignRuleDraft). */
+export type PeriodDraft = Omit<PeriodBody, "assign_rule"> & { assign_rule: AssignRuleDraft };
+
+/** 서버에 보낼 기간 값입니다. 배정 규칙의 입력 문자열을 숫자로 변환합니다. 매일이 켜진 집중 합주기간은 종료일이 없으므로
  *  화면이 감춘 종료일 대신 시작일을 종료일로 보냅니다. 서버는 ends_on 을 필수로 받고 everyday 면 무시합니다. */
-export function periodBody<T extends PeriodForm & { kind?: string; everyday?: boolean }>(form: T): T {
-  if (form.kind === "focused" && form.everyday) {
-    return { ...form, ends_on: form.starts_on };
+export function periodBody(draft: PeriodDraft): PeriodBody {
+  const body: PeriodBody = { ...draft, assign_rule: assignRuleOf(draft.assign_rule) };
+  if (body.kind === "focused" && body.everyday) {
+    return { ...body, ends_on: body.starts_on };
   }
-  return form;
+  return body;
 }
 
 export type SaveStep = "period" | "ensemble" | "clearEnsemble";
@@ -64,13 +71,12 @@ export function ensembleSaveOrder(
   return inside ? ["ensemble", "period"] : ["period", "ensemble"];
 }
 
-export type PeriodBody = Omit<Period, "id" | "ensemble" | "fixed_at">;
 export type EnsembleBody = Omit<Ensemble, "days">;
 
 /** 기간과 전체 합주를 ensembleSaveOrder 순서로 저장합니다. 요청 사이에 실패하면 앞 요청은 저장된 채로 남고,
  *  서버 사유를 담은 오류를 그대로 던집니다. */
 export async function savePeriod(
-  before: Period | null, period: PeriodBody, ensemble: EnsembleBody | null,
+  before: Period | null, period: PeriodDraft, ensemble: EnsembleBody | null,
 ): Promise<void> {
   let id = before?.id;
   for (const step of ensembleSaveOrder(before, ensemble)) {
@@ -88,6 +94,23 @@ export async function savePeriod(
   }
 }
 
+/** 집중 합주기간의 1차, 2차 스케줄링 시간을 저장합니다. 기간 form 과 같은 endpoint(PATCH /periods/{id})로 두 값만 보냅니다. */
+export async function saveRunTimes(periodId: number, firstRunAt: string, secondRunAt: string): Promise<void> {
+  await getJSON<{ period: Period }>(`/periods/${periodId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ first_run_at: firstRunAt, second_run_at: secondRunAt }),
+  });
+}
+
+/** 합주실을 생성(roomId 가 null, POST /rooms)하거나 수정(PATCH /rooms/{id})하고 저장된 합주실을 반환합니다. */
+export async function saveRoom(roomId: number | null, form: RoomInput): Promise<Room> {
+  const saved = await getJSON<{ room: Room }>(roomId === null ? "/rooms" : `/rooms/${roomId}`, {
+    method: roomId === null ? "POST" : "PATCH",
+    body: JSON.stringify(form),
+  });
+  return saved.room;
+}
+
 /** 전체 합주 날짜 하나의 시각을 지정합니다. 이미 지정한 날짜면 서버가 덮어씁니다. */
 export async function saveEnsembleDay(
   periodId: number, day: string, startsAt: string, endsAt: string,
@@ -103,7 +126,7 @@ export async function clearEnsembleDay(periodId: number, day: string): Promise<v
   await getJSON(`/periods/${periodId}/ensemble/days/${day}`, { method: "DELETE" });
 }
 
-export function checkPeriod(form: PeriodForm): string {
+export function checkPeriod(form: PeriodDraft): string {
   // 기간은 시작일과 종료일 2개를 검증합니다. 종류와 계산 시각은 선택 옵션이라 검증할 항목이 없습니다.
   const body = periodBody(form);
   return dateRangeMessage(body.starts_on, body.ends_on);
@@ -417,6 +440,21 @@ export async function saveSettings(next: {
 }
 
 /** 멤버를 추방합니다. 서버는 계정을 삭제하므로 그 멤버의 글·댓글·예약도 함께 삭제됩니다. member_expel 권한이 필요합니다. */
+/** 권한 세트를 생성(setId 가 null, POST /permission-sets)하거나 수정(PATCH /permission-sets/{id})하고 저장된 권한 세트를 반환합니다. */
+export async function savePermissionSet(setId: number | null, draft: PermissionSetInput): Promise<PermissionSet> {
+  const saved = await getJSON<{ permission_set: PermissionSet }>(setId === null ? "/permission-sets" : `/permission-sets/${setId}`, {
+    method: setId === null ? "POST" : "PATCH",
+    body: JSON.stringify(draft),
+  });
+  return saved.permission_set;
+}
+
+/** 멤버 목록 1 page 입니다. after 의 다음 번호부터 limit 명을 반환합니다. after 가 null 이면 첫 page 입니다. */
+export async function loadMemberPage(limit: number, after: number | null): Promise<MemberRow[]> {
+  const body = await getJSON<{ members: MemberRow[] }>(`/members?limit=${limit}${after === null ? "" : `&after=${after}`}`);
+  return body.members;
+}
+
 export async function expelMember(memberId: number): Promise<void> {
   await getJSON(`/members/${memberId}`, { method: "DELETE" });
 }
@@ -555,6 +593,17 @@ export async function deletePost(postId: number): Promise<void> {
 
 export async function blindPost(postId: number): Promise<void> {
   await getJSON(`/posts/${postId}/blind`, { method: "PUT" });
+}
+
+/** 블라인드한 글 목록입니다. board_moderate 권한자만 조회합니다. */
+export async function loadBlindedPosts(): Promise<Post[]> {
+  const body = await getJSON<{ posts: Post[] }>("/blinded-posts");
+  return body.posts;
+}
+
+/** 블라인드를 해제합니다. 글은 원래 게시판 목록에 다시 표시됩니다. */
+export async function unblindPost(postId: number): Promise<void> {
+  await getJSON(`/posts/${postId}/blind`, { method: "DELETE" });
 }
 
 export async function addComment(postId: number, body: string): Promise<PostComment> {

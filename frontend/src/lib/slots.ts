@@ -2,6 +2,7 @@
 // 화면이나 서버와 상호작용하지 않습니다.
 
 import { clockEndLabel, dayWithWeekday, shiftDay, slotLabel } from "./calendar";
+import type { Reservation } from "./contract";
 
 export type Session = {
   team: string;
@@ -29,24 +30,6 @@ export function mergeSessions(items: Session[]): Session[] {
   }
   return merged;
 }
-
-/** 예약 한 건입니다. 서버가 구간 한 행으로 주므로 화면에서 잇는 계산이 없습니다.
- *  서버 응답(lib/contract의 Reservation)에서 화면이 쓰는 값만 추린 형태입니다. */
-export type Booking = {
-  /** 취소와 이동은 이 번호 하나로 합니다. */
-  id: number;
-  room: string;
-  /** 예약한 팀의 번호입니다. 없으면 멤버가 개인으로 예약한 것입니다. 팀 이름은 DB 에서 중복될 수 없지만(teams.name UNIQUE)
-   *  변경될 수는 있으므로, 서버에 보내는 값은 이름이 아니라 번호입니다. */
-  teamId: number | null;
-  team: string | null;
-  memberId: number;
-  member: string;
-  /** 예약자가 붙인 이름입니다. 비어 있으면 화면이 팀 이름이나 예약자 이름을 대신 씁니다. */
-  name: string | null;
-  start: string;
-  end: string;
-};
 
 export function dayOf(iso: string): string {
   // "2026-09-14T18:30:00"에서 "2026-09-14"를 잘라 반환합니다.
@@ -83,7 +66,7 @@ export function isoAt(dayKey: string, index: number, openHour: number): string {
 
 /** 설정의 예약 탭이 표시하는 목록입니다. 합주실과 무관하게 시작 시간 순으로 세웁니다.
  *  사용자가 보려는 것이 "다음 예약이 무엇인지"라서 합주실보다 시각이 먼저입니다. */
-export function upcomingBookings(rows: readonly Booking[]): Booking[] {
+export function upcomingBookings(rows: readonly Reservation[]): Reservation[] {
   return [...rows].sort((a, b) => a.start.localeCompare(b.start));
 }
 

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { addUnavailable, cancelBooking, checkAttachments, checkPeriod, ensembleSaveOrder, expelMember, findId, loadReservationRows, NO_REPEAT, logOut, openingHours, periodBody, rejectBooking, rejectUnavailable, removeUnavailable, unfixPeriod, requestPasswordReset, saveSettings, resetPassword } from "./pipeline";
 import { isSignedIn } from "./api";
 import { JOB_DEADLINE_MS, awaitJob } from "./pipeline";
-import type { Job } from "./pipeline";
+import type { Job, PeriodDraft } from "./pipeline";
 import { AttachmentFailed, loadScheduleRows, publishWithAttachments, repeatConflict, saveSeats, saveTeam } from "./pipeline";
 import { weekKeys } from "./calendar";
 
@@ -328,15 +328,24 @@ describe("removeUnavailable", () => {
 });
 
 describe("periodBody", () => {
+  const draft: PeriodDraft = {
+    kind: "focused", name: "", starts_on: "2026-09-20", ends_on: "", everyday: true,
+    first_run_at: "09:00", second_run_at: "21:00", practice_window: { weekday: null, weekend: null },
+    assign_rule: { target_hours: null, max_absent: "0", daily_max_hours: "2", max_consecutive_hours: "2" },
+    closes_at: null,
+  };
+
   it("매일이 켜진 집중 합주기간은 종료일 대신 시작일을 보내고, 종료일 검증도 통과한다", () => {
-    const form = { kind: "focused", everyday: true, starts_on: "2026-09-20", ends_on: "" };
-    expect(periodBody(form).ends_on).toBe("2026-09-20");
-    expect(checkPeriod(form)).toBe("");
+    expect(periodBody(draft).ends_on).toBe("2026-09-20");
+    expect(checkPeriod(draft)).toBe("");
   });
 
   it("매일이 꺼져 있으면 입력한 종료일을 그대로 보낸다", () => {
-    const form = { kind: "focused", everyday: false, starts_on: "2026-09-20", ends_on: "2026-09-27" };
-    expect(periodBody(form)).toEqual(form);
+    expect(periodBody({ ...draft, everyday: false, ends_on: "2026-09-27" }).ends_on).toBe("2026-09-27");
+  });
+
+  it("배정 규칙의 입력 문자열을 숫자로 변환한다", () => {
+    expect(periodBody(draft).assign_rule).toEqual({ target_hours: null, max_absent: 0, daily_max_hours: 2, max_consecutive_hours: 2 });
   });
 });
 

@@ -13,15 +13,15 @@ import { Empty, Segmented } from "../components/controls";
 import { SearchIcon } from "../components/icons";
 import { MemberSearch, TeamSearch } from "../components/Search";
 import { Modal } from "../components/Modal";
+import { useScrollToFirst } from "../components/hooks";
 import { teamMembersQuery, useRooms } from "../components/queries";
 import { offByDay, visibleDays } from "../lib/dayEntries";
 import type { Member, MemberUnavailable, Team } from "../lib/contract";
 import { loadState } from "../lib/loading";
-import { dayHours, heatByMonth, offMembersOnDay, offRunsByDay, packColumns } from "../lib/unavailableMap";
+import { heatByMonth, laneBars, offMembersOnDay, offRunsByDay, packColumns } from "../lib/unavailableMap";
 import "../styles/unavailable.css";
 import { MINUTES_PER_HOUR, WEEKDAY_NAMES, clockEndLabel, dayKey, dayWithWeekday, hourLabel, monthCells, roomBounds } from "../lib/calendar";
 import { memberLabel } from "../lib/roster";
-import { useScrollToFirst } from "./DayDialogParts";
 
 type Target = "member" | "team";
 const TARGETS = [{ key: "member", text: "멤버" }, { key: "team", text: "팀" }] as const satisfies readonly { key: Target; text: string }[];
@@ -223,17 +223,7 @@ function DayModal({ day, lanes, open, close, onClose }: {
 }) {
   const rows = Array.from({ length: close - open }, (_, i) => open + i);
   const shown = lanes
-    .map((lane) => ({
-      label: lane.label,
-      bars: lane.items.flatMap((item) => {
-        const at = dayHours(item, day);
-        if (at === null) return [];
-        // 운영 시간 밖은 자릅니다. 전부 밖이면 그리지 않습니다.
-        const from = Math.max(at.from, open);
-        const to = Math.min(at.to, close);
-        return to <= from ? [] : [{ item, from, to }];
-      }),
-    }))
+    .map((lane) => ({ label: lane.label, bars: laneBars(lane.items, day, open, close) }))
     // 같은 팀원의 일정끼리 겹치면 열을 나눠 옆에 놓습니다.
     .map((lane) => {
       const cols = packColumns(lane.bars);
