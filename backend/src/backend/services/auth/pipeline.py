@@ -7,8 +7,9 @@ from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
 
+from backend.contract import SOCIAL_PROVIDERS, SocialProvider
 from backend.db.models import Member
-from backend.services.auth import auth_session, password_reset
+from backend.services.auth import auth_session, password_reset, social_login
 from backend.services.auth.auth_service import (
     change_password,
     delete_account,
@@ -19,6 +20,7 @@ from backend.services.auth.auth_service import (
 )
 from backend.services.auth.auth_session import resolve_session, revoke_session
 from backend.services.auth.password_reset import reset_password, send_id_reminder
+from backend.services.auth.social_login import ProviderConfig, SocialError, linked_providers, unlink_social
 
 # 로그인 상태 유지를 끈 사람의 session(로그인 상태를 담는 서버 쪽 기록) 유효 기간입니다.
 # 브라우저를 닫으면 cookie 가 삭제되므로 브라우저를 계속 켜 둔 사람에게만 적용됩니다.
@@ -34,6 +36,11 @@ RESET_TTL = timedelta(minutes=30)
 # 같은 계정으로 이 시간 안에 다시 요청하면 token 을 만들지 않고 메일도 보내지 않습니다. 인증 없이 열린 endpoint 라
 # 제한하지 않으면 다른 사람의 메일함에 재설정 메일을 계속 보낼 수 있습니다.
 RESEND_INTERVAL = timedelta(minutes=1)
+# 소셜 로그인 제공자(Google, 카카오)에 token 교환과 사용자 조회를 요청할 때의 timeout(초)입니다.
+SOCIAL_HTTP_TIMEOUT = 10.0
+# 소셜 로그인 시작부터 callback 까지 state cookie 가 유효한 시간입니다. 제공자 화면에서 로그인을 마치는 시간입니다.
+SOCIAL_STATE_TTL = timedelta(minutes=10)
+SOCIAL_STATE_COOKIE = "banblit_social_state"
 
 
 def create_session(session: Session, member_id: int, now: datetime, keep: bool = False) -> str:
@@ -83,6 +90,48 @@ def request_password_reset(session: Session, email: str, now: datetime) -> None:
     )
 
 
+def social_provider(name: SocialProvider) -> ProviderConfig | None:
+    """name 제공자의 설정을 반환합니다. 환경변수 <NAME>_CLIENT_ID, <NAME>_CLIENT_SECRET 과 APP_ORIGIN 중 하나라도 비어 있으면
+    None 입니다. None 이면 화면이 그 제공자의 버튼을 표시하지 않고, endpoint 는 404 로 응답합니다."""
+    if os.environ.get("APP_ORIGIN", "") == "":
+        return None
+    prefix = name.upper()
+    return social_login.provider_config(
+        name, os.environ.get(f"{prefix}_CLIENT_ID", ""), os.environ.get(f"{prefix}_CLIENT_SECRET", "")
+    )
+
+
+def enabled_social_providers() -> list[SocialProvider]:
+    return [name for name in SOCIAL_PROVIDERS if social_provider(name) is not None]
+
+
+def social_redirect_uri(name: SocialProvider) -> str:
+    """제공자에 등록한 callback 주소입니다. 화면 주소 뒤에 /api 를 붙입니다(nginx, vite 가 /api 를 삭제해 api 로 전달합니다)."""
+    return f"{os.environ.get('APP_ORIGIN', '').rstrip('/')}/api/social/{name}/callback"
+
+
+def social_authorize_url(config: ProviderConfig, state: str) -> str:
+    return social_login.authorize_url(config, social_redirect_uri(config.name), state)
+
+
+def social_user_id(config: ProviderConfig, code: str) -> str:
+    """callback 의 code 를 제공자의 사용자 번호로 바꿉니다. 제공자가 응답하지 않거나 거절하면 SocialError(provider) 입니다."""
+    return social_login.fetch_provider_user_id(config, code, social_redirect_uri(config.name), SOCIAL_HTTP_TIMEOUT)
+
+
+def link_social(session: Session, member_id: int, provider: SocialProvider, provider_user_id: str, now: datetime) -> None:
+    social_login.link(session, member_id, provider, provider_user_id, now)
+
+
+def sign_in_social(session: Session, provider: SocialProvider, provider_user_id: str, now: datetime) -> tuple[Member, str]:
+    """provider_user_id 에 연결된 멤버로 로그인하고 session token 을 함께 반환합니다. 연결이 없으면 SocialError(unlinked) 입니다."""
+    member = social_login.find_member(session, provider, provider_user_id)
+    if member is None:
+        raise SocialError("unlinked", "연결된 계정이 존재하지 않아요. 가입 후 프로필에서 연결해주세요.")
+    # 소셜 로그인은 "로그인 상태 유지" 를 선택할 자리가 없어 유지하지 않는 쪽(SESSION_TTL)으로 둡니다.
+    return member, create_session(session, member.id, now)
+
+
 __all__ = [
     "change_password",
     "create_session",
@@ -99,10 +148,22 @@ __all__ = [
     "sign_up",
     "signup",
     "update_profile",
+    "enabled_social_providers",
+    "link_social",
+    "linked_providers",
+    "sign_in_social",
+    "SocialError",
+    "social_authorize_url",
+    "social_provider",
+    "social_user_id",
+    "unlink_social",
     "KEEP_TTL",
     "RESEND_INTERVAL",
     "RESET_TTL",
     "SESSION_COOKIE",
     "SESSION_TTL",
     "SIGNED_IN_COOKIE",
+    "SOCIAL_HTTP_TIMEOUT",
+    "SOCIAL_STATE_COOKIE",
+    "SOCIAL_STATE_TTL",
 ]

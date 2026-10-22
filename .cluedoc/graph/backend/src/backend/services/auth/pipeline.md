@@ -10,10 +10,12 @@ kind: file
 ```mermaid
 flowchart LR
   backend_src_backend_services_auth_pipeline["pipeline.py"]
+  backend_src_backend_services_auth_pipeline --> backend_src_backend_contract["contract.py"]
   backend_src_backend_services_auth_pipeline --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_auth_pipeline --> backend_src_backend_services_auth_auth_service["auth_service.py"]
   backend_src_backend_services_auth_pipeline --> backend_src_backend_services_auth_auth_session["auth_session.py"]
   backend_src_backend_services_auth_pipeline --> backend_src_backend_services_auth_password_reset["password_reset.py"]
+  backend_src_backend_services_auth_pipeline --> backend_src_backend_services_auth_social_login["social_login.py"]
   backend_src_backend_api_auth_dependency["auth_dependency.py"] --> backend_src_backend_services_auth_pipeline
   backend_src_backend_api_routers_auth["auth.py"] --> backend_src_backend_services_auth_pipeline
   backend_tests_integration_db_test_auth_service_password_rehash["test_auth_service_password_rehash.py"] --> backend_src_backend_services_auth_pipeline
@@ -22,10 +24,12 @@ flowchart LR
 
 ## imports
 
+- [[graph/backend/src/backend/contract|contract.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/services/auth/auth_service|auth_service.py]]
 - [[graph/backend/src/backend/services/auth/auth_session|auth_session.py]]
 - [[graph/backend/src/backend/services/auth/password_reset|password_reset.py]]
+- [[graph/backend/src/backend/services/auth/social_login|social_login.py]]
 
 ## imported by
 
@@ -41,3 +45,10 @@ flowchart LR
 - `sign_in`: `backend.services.auth.auth_service`
 - `issue_reset_token`: `backend.services.auth.password_reset.issue_reset_token`
 - `request_password_reset`: `backend.services.auth.password_reset.request_password_reset`
+- `social_provider`: `backend.services.auth.social_login.provider_config`
+- `enabled_social_providers`
+- `social_redirect_uri`
+- `social_authorize_url`: `backend.services.auth.social_login.authorize_url`
+- `social_user_id`: `backend.services.auth.social_login.fetch_provider_user_id`
+- `link_social`: `backend.services.auth.social_login.link`
+- `sign_in_social`: `backend.services.auth.social_login`, `backend.services.auth.social_login.find_member`

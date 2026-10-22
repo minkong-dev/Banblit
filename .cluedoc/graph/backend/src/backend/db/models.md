@@ -28,6 +28,7 @@ flowchart LR
   backend_src_backend_services_auth_auth_session["auth_session.py"] --> backend_src_backend_db_models
   backend_src_backend_services_auth_password_reset["password_reset.py"] --> backend_src_backend_db_models
   backend_src_backend_services_auth_pipeline["pipeline.py"] --> backend_src_backend_db_models
+  backend_src_backend_services_auth_social_login["social_login.py"] --> backend_src_backend_db_models
   backend_src_backend_services_board_attachment_service["attachment_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_board_board_service["board_service.py"] --> backend_src_backend_db_models
   backend_src_backend_services_board_pipeline["pipeline.py"] --> backend_src_backend_db_models
@@ -74,6 +75,7 @@ flowchart LR
   backend_tests_integration_db_test_roster_endpoints["test_roster_endpoints.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_schedule_store["test_schedule_store.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_settings_endpoints["test_settings_endpoints.py"] --> backend_src_backend_db_models
+  backend_tests_integration_db_test_social_endpoints["test_social_endpoints.py"] --> backend_src_backend_db_models
   backend_tests_integration_db_test_unavailable_endpoints["test_unavailable_endpoints.py"] --> backend_src_backend_db_models
   backend_tests_unit_test_auth_dependency["test_auth_dependency.py"] --> backend_src_backend_db_models
   backend_tests_unit_test_auto_assign_rules["test_auto_assign_rules.py"] --> backend_src_backend_db_models
@@ -103,6 +105,7 @@ flowchart LR
 - [[graph/backend/src/backend/services/auth/auth_session|auth_session.py]]
 - [[graph/backend/src/backend/services/auth/password_reset|password_reset.py]]
 - [[graph/backend/src/backend/services/auth/pipeline|pipeline.py]]
+- [[graph/backend/src/backend/services/auth/social_login|social_login.py]]
 - [[graph/backend/src/backend/services/board/attachment_service|attachment_service.py]]
 - [[graph/backend/src/backend/services/board/board_service|board_service.py]]
 - [[graph/backend/src/backend/services/board/pipeline|pipeline.py]]
@@ -149,6 +152,7 @@ flowchart LR
 - [[graph/backend/tests/integration/db/test_roster_endpoints|test_roster_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_schedule_store|test_schedule_store.py]]
 - [[graph/backend/tests/integration/db/test_settings_endpoints|test_settings_endpoints.py]]
+- [[graph/backend/tests/integration/db/test_social_endpoints|test_social_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_unavailable_endpoints|test_unavailable_endpoints.py]]
 - [[graph/backend/tests/unit/test_auth_dependency|test_auth_dependency.py]]
 - [[graph/backend/tests/unit/test_auto_assign_rules|test_auto_assign_rules.py]]

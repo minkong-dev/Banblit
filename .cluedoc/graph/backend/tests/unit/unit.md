@@ -35,4 +35,5 @@ kind: directory
 - [[graph/backend/tests/unit/test_schemas|test_schemas.py]]
 - [[graph/backend/tests/unit/test_settings_rules|test_settings_rules.py]]
 - [[graph/backend/tests/unit/test_slots|test_slots.py]]
+- [[graph/backend/tests/unit/test_social_login|test_social_login.py]]
 - [[graph/backend/tests/unit/test_validation|test_validation.py]]

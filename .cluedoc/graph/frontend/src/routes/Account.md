@@ -15,8 +15,11 @@ flowchart LR
   frontend_src_routes_Account --> frontend_src_components_controls["controls.tsx"]
   frontend_src_routes_Account --> frontend_src_components_hooks["hooks.ts"]
   frontend_src_routes_Account --> frontend_src_components_icons["icons.tsx"]
+  frontend_src_routes_Account --> frontend_src_components_queries["queries.ts"]
   frontend_src_routes_Account --> frontend_src_components_toast["toast.ts"]
+  frontend_src_routes_Account --> frontend_src_lib_account["account.ts"]
   frontend_src_routes_Account --> frontend_src_lib_api["api.ts"]
+  frontend_src_routes_Account --> frontend_src_lib_contract["contract.ts"]
   frontend_src_routes_Account --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_routes_Account --> frontend_src_lib_validate["validate.ts"]
   frontend_src_App["App.tsx"] --> frontend_src_routes_Account
@@ -29,8 +32,11 @@ flowchart LR
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/hooks|hooks.ts]]
 - [[graph/frontend/src/components/icons|icons.tsx]]
+- [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/components/toast|toast.ts]]
+- [[graph/frontend/src/lib/account|account.ts]]
 - [[graph/frontend/src/lib/api|api.ts]]
+- [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/validate|validate.ts]]
 

@@ -15,6 +15,7 @@ kind: directory
 - [[graph/backend/migrations/versions/a3f1c8d2b905_backup_applied_at|a3f1c8d2b905_backup_applied_at.py]]
 - [[graph/backend/migrations/versions/a4e7c2d91b58_rejected_notification|a4e7c2d91b58_rejected_notification.py]]
 - [[graph/backend/migrations/versions/a5e2c19f74b8_session_minutes_setting|a5e2c19f74b8_session_minutes_setting.py]]
+- [[graph/backend/migrations/versions/a7c2e9d4b531_social_accounts|a7c2e9d4b531_social_accounts.py]]
 - [[graph/backend/migrations/versions/b3f6a9c2d471_period_name|b3f6a9c2d471_period_name.py]]
 - [[graph/backend/migrations/versions/b5d2e9f17a03_clock_ranges_past_midnight|b5d2e9f17a03_clock_ranges_past_midnight.py]]
 - [[graph/backend/migrations/versions/b6f3d24a89e1_practice_window|b6f3d24a89e1_practice_window.py]]

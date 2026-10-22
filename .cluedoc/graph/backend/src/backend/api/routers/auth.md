@@ -13,12 +13,15 @@ flowchart LR
   backend_src_backend_api_routers_auth --> backend_src_backend_api_auth_dependency["auth_dependency.py"]
   backend_src_backend_api_routers_auth --> backend_src_backend_api_rate_limit["rate_limit.py"]
   backend_src_backend_api_routers_auth --> backend_src_backend_api_schemas["schemas.py"]
+  backend_src_backend_api_routers_auth --> backend_src_backend_contract["contract.py"]
   backend_src_backend_api_routers_auth --> backend_src_backend_db_models["models.py"]
   backend_src_backend_api_routers_auth --> backend_src_backend_db_pipeline["pipeline.py"]
   backend_src_backend_api_routers_auth --> backend_src_backend_services_auth_pipeline["pipeline.py"]
+  backend_src_backend_api_routers_auth --> backend_src_backend_services_auth_social_login["social_login.py"]
   backend_src_backend_api_routers_auth --> backend_src_backend_services_permission_pipeline["pipeline.py"]
   backend_src_backend_api_routers_auth --> backend_src_backend_services_roster_pipeline["pipeline.py"]
   backend_src_backend_api_app["app.py"] --> backend_src_backend_api_routers_auth
+  backend_tests_integration_db_test_social_endpoints["test_social_endpoints.py"] --> backend_src_backend_api_routers_auth
 ```
 
 ## imports
@@ -26,15 +29,18 @@ flowchart LR
 - [[graph/backend/src/backend/api/auth_dependency|auth_dependency.py]]
 - [[graph/backend/src/backend/api/rate_limit|rate_limit.py]]
 - [[graph/backend/src/backend/api/schemas|schemas.py]]
+- [[graph/backend/src/backend/contract|contract.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/db/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/auth/pipeline|pipeline.py]]
+- [[graph/backend/src/backend/services/auth/social_login|social_login.py]]
 - [[graph/backend/src/backend/services/permission/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/roster/pipeline|pipeline.py]]
 
 ## imported by
 
 - [[graph/backend/src/backend/api/app|app.py]]
+- [[graph/backend/tests/integration/db/test_social_endpoints|test_social_endpoints.py]]
 
 ## endpoint
 
@@ -53,6 +59,10 @@ flowchart LR
 | POST | `/password-reset` | `start_password_reset` |
 | POST | `/password-reset/confirm` | `confirm_password_reset` |
 | GET | `/me` | `read_me` |
+| GET | `/social` | `list_social_providers` |
+| GET | `/social/{provider}/start` | `start_social` |
+| GET | `/social/{provider}/callback` | `finish_social` |
+| DELETE | `/me/social/{provider}` | `unlink_my_social` |
 
 ## 함수와 호출
 
@@ -72,4 +82,12 @@ flowchart LR
 - `find_id`: `backend.api.schemas`, `backend.services.auth.pipeline`
 - `start_password_reset`: `backend.api.schemas`, `backend.services.auth.pipeline`
 - `confirm_password_reset`: `backend.api.schemas`, `backend.services.auth.pipeline`
-- `read_me`: `backend.api.schemas`, `backend.services.roster.pipeline`
+- `read_me`: `backend.api.schemas`, `backend.services.auth.pipeline`, `backend.services.roster.pipeline`
+- `_provider_or_404`: `backend.services.auth.pipeline`
+- `_set_state_cookie`: `backend.services.auth.pipeline.total_seconds`
+- `_signed_in_member`: `backend.services.auth.pipeline`
+- `list_social_providers`: `backend.api.schemas`, `backend.services.auth.pipeline`
+- `start_social`: `backend.services.auth.pipeline`
+- `finish_social`: `backend.services.auth.pipeline`
+- `_social_result`
+- `unlink_my_social`: `backend.services.auth.pipeline`

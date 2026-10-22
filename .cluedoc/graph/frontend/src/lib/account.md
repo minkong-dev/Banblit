@@ -12,7 +12,9 @@ flowchart LR
   frontend_src_lib_account["account.ts"]
   frontend_src_lib_account --> frontend_src_lib_contract["contract.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_account
+  frontend_src_components_hooks["hooks.ts"] --> frontend_src_lib_account
   frontend_src_lib_account_test["account.test.ts"] --> frontend_src_lib_account
+  frontend_src_routes_Account["Account.tsx"] --> frontend_src_lib_account
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_account
   frontend_src_routes_Board["Board.tsx"] --> frontend_src_lib_account
   frontend_src_routes_PostWrite["PostWrite.tsx"] --> frontend_src_lib_account
@@ -31,7 +33,9 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
+- [[graph/frontend/src/components/hooks|hooks.ts]]
 - [[graph/frontend/src/lib/account.test|account.test.ts]]
+- [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/Board|Board.tsx]]
 - [[graph/frontend/src/routes/PostWrite|PostWrite.tsx]]

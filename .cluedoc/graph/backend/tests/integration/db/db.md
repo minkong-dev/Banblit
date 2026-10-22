@@ -34,4 +34,5 @@ kind: directory
 - [[graph/backend/tests/integration/db/test_roster_endpoints|test_roster_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_schedule_store|test_schedule_store.py]]
 - [[graph/backend/tests/integration/db/test_settings_endpoints|test_settings_endpoints.py]]
+- [[graph/backend/tests/integration/db/test_social_endpoints|test_social_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_unavailable_endpoints|test_unavailable_endpoints.py]]

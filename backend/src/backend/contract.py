@@ -120,6 +120,11 @@ JobStatus = Literal["queued", "running", "done", "failed"]
 RunSlot = Literal["first", "second"]
 RUN_SLOTS: tuple[RunSlot, ...] = get_args(RunSlot)
 
+# 소셜 로그인 제공자입니다. 연결 table 의 CHECK 제약(db/models.py), 연결 endpoint 의 경로 변수(api/routers/auth.py),
+# 화면의 버튼(frontend/src/lib/contract.ts 의 SocialProvider)이 같은 값을 씁니다.
+SocialProvider = Literal["google", "kakao"]
+SOCIAL_PROVIDERS: tuple[SocialProvider, ...] = get_args(SocialProvider)
+
 # 로그인 session 이 없거나 만료되어 401 로 거절할 때 응답 본문의 code 입니다. 화면(frontend/src/lib/contract.ts 의
 # SESSION_REJECTED_CODE)은 문구가 아니라 이 값으로 로그인 화면 이동을 판정하므로, 문구를 수정해도 판정이 바뀌지 않습니다.
 SESSION_REJECTED_CODE = "session_rejected"

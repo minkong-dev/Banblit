@@ -13,10 +13,13 @@ flowchart LR
   backend_src_backend_api_app["app.py"] --> backend_src_backend_contract
   backend_src_backend_api_auth_dependency["auth_dependency.py"] --> backend_src_backend_contract
   backend_src_backend_api_job_runner["job_runner.py"] --> backend_src_backend_contract
+  backend_src_backend_api_routers_auth["auth.py"] --> backend_src_backend_contract
   backend_src_backend_api_schemas["schemas.py"] --> backend_src_backend_contract
   backend_src_backend_db_models["models.py"] --> backend_src_backend_contract
   backend_src_backend_jobs_auto_assign["auto_assign.py"] --> backend_src_backend_contract
   backend_src_backend_scheduling_slots["slots.py"] --> backend_src_backend_contract
+  backend_src_backend_services_auth_pipeline["pipeline.py"] --> backend_src_backend_contract
+  backend_src_backend_services_auth_social_login["social_login.py"] --> backend_src_backend_contract
   backend_src_backend_services_notification_notification_service["notification_service.py"] --> backend_src_backend_contract
   backend_src_backend_services_period_period_crud_service["period_crud_service.py"] --> backend_src_backend_contract
   backend_src_backend_services_period_period_service["period_service.py"] --> backend_src_backend_contract
@@ -44,10 +47,13 @@ flowchart LR
 - [[graph/backend/src/backend/api/app|app.py]]
 - [[graph/backend/src/backend/api/auth_dependency|auth_dependency.py]]
 - [[graph/backend/src/backend/api/job_runner|job_runner.py]]
+- [[graph/backend/src/backend/api/routers/auth|auth.py]]
 - [[graph/backend/src/backend/api/schemas|schemas.py]]
 - [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/jobs/auto_assign|auto_assign.py]]
 - [[graph/backend/src/backend/scheduling/slots|slots.py]]
+- [[graph/backend/src/backend/services/auth/pipeline|pipeline.py]]
+- [[graph/backend/src/backend/services/auth/social_login|social_login.py]]
 - [[graph/backend/src/backend/services/notification/notification_service|notification_service.py]]
 - [[graph/backend/src/backend/services/period/period_crud_service|period_crud_service.py]]
 - [[graph/backend/src/backend/services/period/period_service|period_service.py]]
