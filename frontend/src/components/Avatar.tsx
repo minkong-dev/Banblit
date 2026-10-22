@@ -18,6 +18,7 @@ export function Avatar({ id, name, className = "face", photo }: {
   // "없음" 판정은 판정 당시의 계정 번호·파일명(src)에만 적용합니다. 사진이 바뀌어 src 가 달라지면
   // 판정이 자동으로 취소되어 다시 불러옵니다. effect 로 상태를 초기화하지 않습니다(react-hooks/set-state-in-effect).
   // 사진을 올렸다가 삭제해 src 가 판정 당시의 값으로 돌아오면 다시 "없음"으로 표시합니다. 그 src 는 실제로 404 였으므로 의도한 동작입니다.
+  // ?v= 는 서버가 읽지 않는 query 입니다. 파일명이 바뀌면 주소가 달라져 브라우저 cache 의 옛 사진 대신 새로 요청합니다.
   const src = id === null ? null : apiUrl(`/members/${id}/avatar`) + (photo ? `?v=${photo}` : "");
   const [missingSrc, setMissingSrc] = useState<string | null>(null);
 

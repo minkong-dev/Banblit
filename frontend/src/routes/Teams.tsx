@@ -21,6 +21,7 @@ import type { LoadState } from "../lib/loading";
 import { can, canManageTeams, teamNavLabel } from "../lib/account";
 import { INSTRUMENTS } from "../lib/contract";
 import { TEAM_COLORS, teamColorKey } from "../lib/teamColors";
+// MAX_SLOTS_PER_TEAM 은 lib/roster 에 있고 서버의 services/roster/pipeline.py 와 같은 값입니다. 서버가 다시 검증합니다.
 import { MAX_SLOTS_PER_TEAM, seatKey, seatsOf, teamsShown } from "../lib/roster";
 import { removeTeam, saveSeats, saveTeam, seatMember, unseatMember } from "../lib/pipeline";
 import type { Seat } from "../lib/roster";
@@ -218,6 +219,7 @@ function TeamFields(props: {
       <div className="fields">
         <label className="wide">
           팀 이름
+          {/* 이 동아리는 곡 1개마다 팀 1개를 꾸리므로 팀 이름이 곧 곡 이름입니다(사용자 결정). */}
           {/* eslint-disable-next-line jsx-a11y/no-autofocus -- 팀 편집 form 이 열릴 때 이름 입력칸으로 포커스를 이동합니다. */}
           <input autoFocus value={name} placeholder="곡 이름" onChange={(event) => onName(event.target.value)} />
         </label>
@@ -327,6 +329,7 @@ function TeamForm(props: TeamFormProps) {
     },
     onSuccess: () => onDone(isNew ? `${name.trim()} 팀 생성을 완료했어요.` : `${name.trim()} 수정을 완료했어요.`),
     onError: (error) => setBad(reason(error)),
+    // 실패해도 다시 조회합니다. 팀은 저장되고 멤버 지정만 실패할 수 있어, 실패 뒤에도 목록이 서버 값과 달라져 있습니다.
     onSettled: () => {
       for (const queryKey of [TEAMS_KEY, SLOTS_KEY, TEAM_MEMBERS_KEY, ME_KEY]) void client.invalidateQueries({ queryKey });
     },
@@ -520,6 +523,8 @@ export function Teams() {
           team={renaming}
           taken={others(renaming).map((team) => team.name)}
           takenColors={others(renaming).map((team) => team.color)}
+          // 새 팀도 같은 TeamForm 을 쓰고 같은 canAdd 를 받습니다. 서버의 PUT /teams/{id}/slot-members 가 member_add 를 요구하므로
+          // team_create 만 있는 사람은 새 팀에도 멤버를 지정하지 못합니다.
           canAdd={can(me, "member_add")}
           canRemove={can(me, "member_remove")}
           onDelete={canDrop ? () => askDrop(renaming) : undefined}

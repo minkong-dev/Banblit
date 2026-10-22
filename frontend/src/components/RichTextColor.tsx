@@ -50,7 +50,8 @@ function ColorColumn({ title, reset, resetLabel, value, used, onPick }: {
         value={value}
         onChange={(event) => onPick(event.target.value)}
       />
-      {/* 최근 사용한 색입니다. 본문에 이미 쓴 색을 다시 고를 때 팔레트를 뒤지지 않아도 됩니다. */}
+      {/* 최근 사용한 색입니다. 본문에 이미 쓴 색을 다시 선택할 때 팔레트를 뒤지지 않아도 됩니다.
+          8개는 팔레트 한 줄의 칸 수(lib/richText.ts 의 GREYS, HUES 각 8개)와 같아 줄 너비가 맞습니다. */}
       <p className="cap2">최근 사용한 색</p>
       <div className="rtgrid recent" role="group" aria-label={`${title} 최근 사용한 색`}>
         {Array.from({ length: 8 }, (_, index) => used[index] ?? null).map((color, index) => (
@@ -77,6 +78,8 @@ export function ColorPanel({ editor, used, disabled }: {
 }) {
   const [open, setOpen] = useState(false);
   const popId = useId();
+  // 색을 지정하지 않은 글자에 색 선택기가 표시할 기본값입니다. #191f28 은 base.css 의 본문 글자색(--ink)과 같은 값이고,
+  // #ffffff 는 배경 없음입니다. <input type="color"> 는 #rrggbb 형식의 값만 받습니다.
   const color = String(editor.getAttributes("textStyle").color ?? "#191f28");
   const background = String(editor.getAttributes("textStyle").backgroundColor ?? "#ffffff");
   return (

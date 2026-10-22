@@ -11,7 +11,7 @@ import type { Room } from "../lib/contract";
 import type { EnsembleOn } from "../lib/dayEntries";
 import { formError } from "../lib/loading";
 import { clearEnsembleDay, saveEnsembleDay } from "../lib/pipeline";
-import { ensembleTimeMessage as checkEnsembleTime } from "../lib/settings";
+import { ensembleTimeMessage } from "../lib/settings";
 import { dayLabel } from "../lib/calendar";
 
 /** 전체 합주 날짜 하나의 시각을 저장하거나 기본 시각으로 되돌립니다. 저장하면 기간 목록을 다시 조회해
@@ -26,6 +26,7 @@ export function EnsembleDayEditor({ day, on, room, picker }: {
   const slotMinutes = useSlotMinutes();
   const [times, setTimes] = useState({ starts: on.startsAt, ends: on.endsAt });
 
+  // done(text) 는 onSuccess 에 넣을 함수를 반환합니다. 저장과 되돌리기가 문구만 다른 같은 뒷처리를 쓰므로 문구를 먼저 받아 둡니다.
   const done = (text: string) => () => {
     void client.invalidateQueries({ queryKey: PERIODS_KEY });
     say(text);
@@ -41,7 +42,7 @@ export function EnsembleDayEditor({ day, on, room, picker }: {
 
   const why = room === undefined
     ? "전체 합주에 지정한 합주실을 찾을 수 없어요."
-    : checkEnsembleTime(times.starts, times.ends, room, slotMinutes);
+    : ensembleTimeMessage(times.starts, times.ends, room, slotMinutes);
   const touched = times.starts !== on.startsAt || times.ends !== on.endsAt;
   const bad = formError(touched, why, save.error ?? reset.error);
   const pending = save.isPending || reset.isPending;
@@ -61,7 +62,7 @@ export function EnsembleDayEditor({ day, on, room, picker }: {
         id={`ensday-${on.periodId}-${day}`}
         labels={["시작 시간", "종료 시간"]}
         value={[times.starts, times.ends]}
-        step={slotMinutes * 60}
+        step={slotMinutes * 60} // <input type="time"> 의 step 은 초 단위라 분에 60 을 곱합니다
         invalid={invalid}
         onChange={([starts, ends]) => setTimes({ starts, ends })}
       />

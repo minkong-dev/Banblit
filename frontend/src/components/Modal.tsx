@@ -6,6 +6,7 @@
 // 요소 상태) 관리, Esc 닫기는 모두 브라우저가 자동으로 처리하므로 따로 구현하지 않습니다.
 
 import { useEffect, useId, useLayoutEffect, useRef } from "react";
+import type { ReactNode } from "react";
 import { CloseButton } from "./controls";
 
 export function Modal({ title, hint, foot, panes, children, onClose }: {
@@ -13,11 +14,11 @@ export function Modal({ title, hint, foot, panes, children, onClose }: {
   /** 제목 아래 설명 한 줄입니다. 없으면 렌더하지 않습니다. */
   hint?: string;
   /** 아래 버튼 줄. 없으면 줄 전체를 렌더하지 않습니다(읽기 전용 modal 이 그렇습니다). */
-  foot?: React.ReactNode;
+  foot?: ReactNode;
   /** true 면 dialog 는 투명한 grid 틀만 되고 제목 줄·본문·버튼 줄을 렌더하지 않습니다. children 이 카드(.pane)마다
    *  제목과 버튼을 직접 배치합니다(하루 dialog 의 3단). 배치는 shell.css 의 dialog.panes 가 결정합니다. */
   panes?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
   onClose: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);

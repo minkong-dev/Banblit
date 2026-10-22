@@ -24,6 +24,7 @@ export type CalendarCursor = {
 export function useCalendarCursor(): CalendarCursor {
   const [week, setWeek] = useState(false);
   const [cursor, setCursor] = useState(currentMonth);
+  // useState 에 함수를 전달하면 첫 렌더링에서만 호출해 초기값을 만듭니다. 값을 전달하면 렌더링마다 weekShiftFor 를 다시 계산합니다.
   const [weekShift, setWeekShift] = useState(() => weekShiftFor(cursor.year, cursor.month, dayKey(new Date())));
   const shift = (step: number) => {
     if (week) {

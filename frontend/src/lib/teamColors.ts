@@ -14,6 +14,7 @@ export const TEAM_COLORS = [
   "teal", "jade", "green", "mint", "lime", "yellow", "amber", "orange", "gold", "brown",
 ] as const;
 
+// (typeof TEAM_COLORS)[number] 는 위 readonly 배열의 요소 타입, 즉 "tomato" | "red" | … 20개 글자값의 union 입니다.
 export type TeamColor = (typeof TEAM_COLORS)[number];
 
 type Scale = Record<string, string>;
@@ -45,6 +46,8 @@ export function teamColorCss(): string {
   return TEAM_COLORS.map((name) => {
     const [light, dark] = SCALES[name];
     const key = teamColorKey(name);
+    // CSS 의 light-dark(a, b) 는 밝은 테마에서 a, 어두운 테마에서 b 를 쓰는 값입니다. 안쪽 template 문자열 `${name}${step}` 은
+    // Radix 색표의 key("tomato4")를 만들어 바깥 문자열에 그 색 값을 넣습니다.
     const pair = (step: number): string => `light-dark(${light[`${name}${step}`]}, ${dark[`${name}${step}`]})`;
     return [
       `:root { --${key}: ${pair(INK_STEP)}; --${key}-tint: ${pair(TINT_STEP)}; }`,

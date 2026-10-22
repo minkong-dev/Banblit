@@ -9,6 +9,7 @@ import { usePage } from "../components/hooks";
 import "../styles/landing.css";
 
 const BOXES = [
+  // num, unit 은 측정값이 아니라 소개 문구입니다(사용자 결정). 기능이 바뀌면 문구도 같이 수정합니다.
   {
     rail: "Scheduler Engine",
     title: ["모두가 가능한 시간을", "찾아 헤매지 않도록"],
@@ -105,6 +106,7 @@ export function Landing() {
         onClick={(event) => event.currentTarget.hidePopover()}
       >
         <CloseButton className="x" label="메뉴 닫기" popoverTarget={MENU_ID} popoverTargetAction="hide" />
+        {/* 메뉴 이름은 구역의 역할입니다. #how 는 서비스 소개, #auto 는 기능 3개(BOXES) 설명입니다. */}
         <a href="#how">BANBLIT</a>
         <a href="#auto">HOW IT WORKS</a>
         <a href="#admin">FOR MANAGERS</a>
@@ -180,7 +182,7 @@ export function Landing() {
       <section className="sec admin" id="admin">
         <div className="wrap row">
           <p className="quote rise">
-            합주실이 늘어도,<br></br> 열고 닫는 시간이 변해도 괜찮아요.<br></br><b>설정 페이지만 조금 변경해주세요.</b>
+            합주실이 늘어도,<br /> 열고 닫는 시간이 변해도 괜찮아요.<br /><b>설정 페이지만 조금 변경해주세요.</b>
           </p>
           <ul className="rise">
             <li><b>합주실</b><span>합주실마다 운영시간을 설정하고, 합주실 수가 늘어나도 괜찮아요.</span></li>

@@ -6,7 +6,7 @@ import { useSlotMinutes } from "../components/queries";
 import type { Period, Room } from "../lib/contract";
 import { ensembleOn } from "../lib/dayEntries";
 import type { EnsembleBody, PeriodBody } from "../lib/pipeline";
-import { WEEKDAY_NAMES, datesBetween, dayLabel, focusedRanges } from "../lib/calendar";
+import { datesBetween, dayLabel, focusedRanges, weekdayName } from "../lib/calendar";
 import { EnsembleDayEditor } from "../components/EnsembleDayEditor";
 
 /** 기간 form 이 보유하는 전체 합주 입력값입니다. on 이 false 면 저장할 때 전체 합주를 해제합니다. */
@@ -120,16 +120,12 @@ export function EnsembleToggle({ draft, setDraft, at }: {
   setDraft: (next: EnsembleDraft) => void;
   at: (field: string) => string;
 }) {
+  // "전체 합주기간" 은 전체 합주를 진행하는 날짜 범위(ensemble.starts_on~ends_on)입니다. 켜면 아래에 날짜와 시각 입력칸이 열립니다.
   return (
     <Cell label="전체 합주기간 지정" htmlFor={at("ensemble")}>
       <Toggle kind="check" id={at("ensemble")} checked={draft.on} onChange={(on) => setDraft({ ...draft, on })} />
     </Cell>
   );
-}
-
-/** day 의 요일 1글자를 반환합니다. 날짜별 시각 행에 표시합니다. */
-function weekdayLetter(day: string): string {
-  return WEEKDAY_NAMES[new Date(`${day}T12:00:00`).getDay()];
 }
 
 /** 설정 화면 기간 편집 행 아래에 붙는 날짜별 시각 구역입니다. 전체 합주 날짜 범위의 날짜를 전부 행으로 나열하고,
@@ -153,7 +149,7 @@ export function EnsembleDays({ period, room }: { period: Period; room: Room | un
             picker={
               <div className="ensdate">
                 <b className="d">{dayLabel(day)}</b>
-                <span className="w">{weekdayLetter(day)}</span>
+                <span className="w">{weekdayName(day)}</span>
                 {on.custom ? <span className="enstag">지정</span> : null}
               </div>
             }

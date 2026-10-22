@@ -116,7 +116,7 @@ function useCommentEdit(comment: PostComment, postId: number): {
 }
 
 /** 댓글 하나를 렌더합니다. 수정 권한이 있으면 수정 버튼이, 삭제 권한이 있으면 삭제 버튼이
- *  오른쪽 끝에 표시됩니다(`lib/boards` 의 `boardActions` 참조). */
+ *  오른쪽 끝에 표시됩니다. canEdit, canDelete 는 PostBoard 가 lib/boards.ts 의 boardActions 로 계산해 전달합니다. */
 export function CommentRow(props: {
   comment: PostComment;
   canEdit: boolean;
@@ -149,7 +149,7 @@ export function CommentRow(props: {
           <div className="fields">
             <label className="wide" htmlFor="editComment">
               댓글
-              <RichText id="editComment" label="댓글" postId={comment.post_id ?? null} value={body} onChange={setBody} />
+              <RichText id="editComment" label="댓글" postId={postId} value={body} onChange={setBody} />
             </label>
           </div>
           <Why text={bad} />

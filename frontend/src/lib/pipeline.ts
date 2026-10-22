@@ -40,7 +40,8 @@ export function checkRoom(form: RoomInput, taken: string[], slotMinutes: number)
 }
 
 export type PeriodBody = Omit<Period, "id" | "ensemble" | "fixed_at">;
-/** 기간 form 이 보관하는 값입니다. 배정 규칙의 숫자 칸 3개는 입력 문자열입니다(lib/settings 의 AssignRuleDraft). */
+/** 기간 form 이 보관하는 값입니다. 배정 규칙의 숫자 칸 3개는 입력 문자열입니다(lib/settings 의 AssignRuleDraft).
+ *  Omit<PeriodBody, "assign_rule"> 은 PeriodBody 에서 assign_rule 만 뺀 타입이고, & 로 문자열 버전의 assign_rule 을 다시 더합니다. */
 export type PeriodDraft = Omit<PeriodBody, "assign_rule"> & { assign_rule: AssignRuleDraft };
 
 /** 서버에 보낼 기간 값입니다. 배정 규칙의 입력 문자열을 숫자로 변환합니다. 매일이 켜진 집중 합주기간은 종료일이 없으므로
@@ -195,7 +196,8 @@ export function loadScheduleOut(periodId: number): Promise<ScheduleOut> {
   return getJSON<ScheduleOut>(`/periods/${periodId}/schedule`);
 }
 
-/** 스케줄링 기록 1개를 확정 시간표로 만듭니다. 교체되는 현행은 서버가 이전 확정본으로 보관합니다. */
+/** 스케줄링 기록 1개를 확정 시간표로 만듭니다. 교체되는 현행은 따로 보관하지 않습니다. 현행은 언제나 기록 1개를 적용한 것이라
+ *  같은 시간표가 기록 목록에 남아 있습니다(backend/db/schedule_store.py 의 save_schedule). */
 export function applyRecord(periodId: number, savedAt: string): Promise<{ applied: boolean }> {
   return getJSON<{ applied: boolean }>(
     `/periods/${periodId}/records/${encodeURIComponent(savedAt)}/apply`, { method: "POST" },
@@ -218,8 +220,8 @@ export type Job<T> = {
 /** 다시 조회하는 간격(밀리초)입니다. */
 export const JOB_POLL_MS = 700;
 
-/** 서버가 배정 작업 1개에 쓰는 최대 시간(초)입니다. solver 계산 1회 60초(scheduling/pipeline.py 의
- *  SOLVER_TIME_LIMIT_SECONDS)입니다. 서버 값을 변경하면 이 값도 함께 변경합니다. */
+/** 서버가 배정 작업 1개에 쓰는 최대 시간(초)입니다. 서버 쪽은 backend/src/backend/scheduling/pipeline.py 의
+ *  SOLVER_TIME_LIMIT_SECONDS 에 작성되어 있는 내용을 기준으로 합니다. 서버 값을 변경하면 이 값도 함께 변경합니다. */
 const SERVER_JOB_LIMIT_SECONDS = 60;
 
 /** 서버 상한에 더하는 여유(초)입니다. 결과 저장과 마지막 조회 간격만큼입니다. */
@@ -227,7 +229,7 @@ const DEADLINE_MARGIN_SECONDS = 30;
 
 /** 이 시간까지 끝나지 않으면 대기를 중단합니다(밀리초). 서버 상한보다 먼저 중단하면 화면은 실패를
  *  표시하고 서버는 계산을 계속해 저장하므로, 실패한 배정이 나중에 반영됩니다.
- *  ponytail: queue 대기 시간은 포함하지 않습니다. 동시 작업 수(ASSIGN_MAX_CONCURRENT_JOBS)를 넘겨 접수된
+ *  ponytail: queue 대기 시간은 포함하지 않습니다. 동시 작업 수(backend/src/backend/api/job_runner.py 의 MAX_CONCURRENT_JOBS)를 넘겨 접수된
  *  작업은 이 시간을 넘길 수 있습니다. 그 경우가 실제로 발생하면 queued 상태에서는 시간을 세지 않게 변경합니다. */
 export const JOB_DEADLINE_MS = (SERVER_JOB_LIMIT_SECONDS + DEADLINE_MARGIN_SECONDS) * 1000;
 
@@ -240,6 +242,7 @@ export async function awaitJob<T>(
   // jobId를 read에 넣어 상태를 받고, done이면 결과를, failed이면 사유를 발생시킵니다.
   // 그 외에는 wait만큼 기다린 후 다시 조회합니다. now가 지정한 시각을 넘기면 중단합니다.
   const until = now() + JOB_DEADLINE_MS;
+  // for (;;) 는 조건 없는 무한 반복입니다. 아래 return(done) 또는 throw(failed, 시간 초과)로만 끝납니다.
   for (;;) {
     const { job } = await read(jobId);
     if (job.status === "done") {
@@ -269,6 +272,7 @@ export async function runAssignment<T>(periodId: number, body: AssignBody): Prom
   return awaitJob<T>(
     accepted.job.id,
     (id) => getJSON<{ job: Job<T> }>(`/jobs/${id}`),
+    // ms 뒤에 resolve 되는 Promise 입니다. await 하면 그 시간만큼 기다린 뒤 다음 조회로 넘어갑니다.
     (ms) => new Promise((done) => setTimeout(done, ms)),
     () => Date.now(),
   );
@@ -357,6 +361,8 @@ export async function editUnavailable(
 export async function loadReservationRows(
   roomIds: number[], from: string, to: string,
 ): Promise<{ rows: Reservation[]; failures: string[] }> {
+  // Promise.allSettled 는 하나가 실패해도 나머지를 기다려 결과 전부를 돌려줍니다. Promise.all 은 첫 실패에서 바로 reject 됩니다.
+  // from, to 는 monthRange 가 만든 "YYYY-MM-DD" 라 URL 에 인코딩할 글자가 없습니다.
   const settled = await Promise.allSettled(
     roomIds.map((roomId) =>
       getJSON<{ reservations: Reservation[] }>(`/rooms/${roomId}/reservations?from=${from}&to=${to}`),
@@ -439,7 +445,6 @@ export async function saveSettings(next: {
   return { slotMinutes: body.slot_minutes, sessionMinutes: body.session_minutes };
 }
 
-/** 멤버를 추방합니다. 서버는 계정을 삭제하므로 그 멤버의 글·댓글·예약도 함께 삭제됩니다. member_expel 권한이 필요합니다. */
 /** 권한 세트를 생성(setId 가 null, POST /permission-sets)하거나 수정(PATCH /permission-sets/{id})하고 저장된 권한 세트를 반환합니다. */
 export async function savePermissionSet(setId: number | null, draft: PermissionSetInput): Promise<PermissionSet> {
   const saved = await getJSON<{ permission_set: PermissionSet }>(setId === null ? "/permission-sets" : `/permission-sets/${setId}`, {
@@ -455,6 +460,7 @@ export async function loadMemberPage(limit: number, after: number | null): Promi
   return body.members;
 }
 
+/** 멤버를 추방합니다. 서버는 계정을 삭제하므로 그 멤버의 글, 댓글, 예약도 함께 삭제됩니다. member_expel 권한이 필요합니다. */
 export async function expelMember(memberId: number): Promise<void> {
   await getJSON(`/members/${memberId}`, { method: "DELETE" });
 }
@@ -551,7 +557,8 @@ export async function loadTeamMembers(teamId: number): Promise<Member[]> {
 // 알림입니다. 목록을 조회한 후에야 읽지 않은 개수를 계산할 수 있고, 읽음 표시는 목록을 다시 조회해야
 // 화면에 반영됩니다. 호출 순서가 중요하므로 이 파일에 모읍니다.
 export async function loadNotifications(): Promise<Notification[]> {
-  // ponytail: 오래된 알림을 삭제하거나 일부만 조회하는 기능은 구현하지 않았습니다. 사용자당 하루에 최대 알림 2개가 누적됩니다. 목록 크기가 커지면 이 함수에 개수 제한을 추가하고 서버도 함께 적용합니다.
+  // ponytail: 오래된 알림을 삭제하거나 일부만 조회하는 기능은 구현하지 않았습니다. 자동 배정이 하루 2회(contract.py 의 RUN_SLOTS)라
+  // 배정 알림은 사용자당 하루 최대 2개 누적됩니다. 목록 크기가 커지면 이 함수에 개수 제한을 추가하고 서버도 함께 적용합니다.
   const body = await getJSON<{ notifications: Notification[] }>("/notifications");
   return body.notifications;
 }
@@ -646,6 +653,7 @@ export async function searchMembers(query: string): Promise<Member[]> {
 
 /** files 의 index 번째 첨부를 올리지 못했습니다. 그 앞의 첨부는 이미 초안에 붙어 있습니다. */
 export class AttachmentFailed extends Error {
+  // 매개변수 앞의 readonly 는 같은 이름의 읽기 전용 속성을 선언하고 값을 대입하는 TypeScript 축약입니다. this.index = index 와 같습니다.
   constructor(readonly index: number, fileName: string, why: string) {
     super(`"${fileName}" 을 업로드하지 못해 글을 발행하지 않았어요 — ${why}`);
   }
@@ -660,6 +668,7 @@ export async function publishWithAttachments(
 ): Promise<void> {
   // 첨부를 먼저 올립니다. 발행을 먼저 하면 첨부가 실패했을 때 첨부 없는 글이 공개됩니다.
   // 하나씩 올려야 파일마다 진행률을 표시할 수 있습니다.
+  // files.entries() 는 [index, 요소] 쌍을 차례로 내놓는 iterator 입니다. 진행률 표시에 index 가 필요해 for...of 로 둘 다 받습니다.
   for (const [index, file] of files.entries()) {
     try {
       await uploadAttachment(draftId, file, (percent) => onProgress(index, percent));
@@ -682,15 +691,17 @@ export function repeatConflict(value: Repeat): string {
 
 /** 여러 기간의 시간표를 받습니다. 실패한 기간은 "기간 {번호}: {사유}" 로 failures 에 모으고 나머지 기간의 행은 rows 에 담습니다. */
 export async function loadScheduleRows(periodIds: number[]): Promise<{ rows: ScheduleRow[]; failures: string[] }> {
+  // loadReservationRows 와 같이 동시에 요청합니다. 차례로 기다리면 기간 수만큼 왕복시간이 누적됩니다.
+  const settled = await Promise.allSettled(periodIds.map((id) => loadSchedule(id)));
   const rows: ScheduleRow[] = [];
   const failures: string[] = [];
-  for (const id of periodIds) {
-    try {
-      rows.push(...(await loadSchedule(id)));
-    } catch (error) {
-      failures.push(`기간 ${id}: ${reason(error)}`);
+  settled.forEach((result, index) => {
+    if (result.status === "fulfilled") {
+      rows.push(...result.value);
+      return;
     }
-  }
+    failures.push(`기간 ${periodIds[index]}: ${reason(result.reason)}`);
+  });
   return { rows, failures };
 }
 

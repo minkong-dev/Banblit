@@ -99,6 +99,7 @@ function RoomsArea() {
           onSaved={saved(ROOMS_KEY, "합주실 정보를 등록했어요.")}
           onDeleted={saved(ROOM_DELETE_KEYS, "합주실을 삭제했어요.")}
         />
+        {/* 설정 전용 권한은 없습니다. 칸 크기는 합주실 운영 시간의 격자이므로 합주실 정보 수정 권한(room_edit)으로 수정합니다(사용자 결정). */}
         <SlotUnitCard canEdit={can(me, "room_edit")} onSaved={saved(SETTINGS_KEY, "설정을 변경했어요.")} />
       </div>
       <div className="rail">
@@ -165,8 +166,8 @@ function SlotUnitCard({ canEdit, onSaved }: { canEdit: boolean; onSaved: () => v
     onError: (error: unknown) => setWhy(reason(error)),
   });
 
-  // 칸을 바꿀 때 저장된 합주 길이가 그 배수가 아니면, 새 칸에서 고를 수 있는 가장 가까운
-  // 길이로 함께 내립니다. 사용자가 두 값의 관계를 외우지 않아도 됩니다.
+  // 칸을 바꿀 때 저장된 합주 길이가 그 배수가 아니면, 합주 길이를 새 칸 길이와 같게 함께 보냅니다.
+  // 사용자가 두 값의 관계를 외우지 않아도 됩니다.
   const changeSlot = (next: number) => {
     const fits = sessionMinutes >= next && sessionMinutes % next === 0;
     save.mutate(fits ? { slotMinutes: next } : { slotMinutes: next, sessionMinutes: next });
@@ -235,6 +236,7 @@ function Readout(props: {
   // 혼동하지 않습니다. 여러 개를 비교하는 기능은 선택지를 만든 뒤에 추가합니다.
   const focused = periods.filter((period) => period.kind === "focused");
   const period = tab === "periods" ? focused[0] : undefined;
+  // 집중 합주기간이 없으면 하루 기준으로 계산합니다. 아래 hint 가 "하루 기준" 으로 표시합니다.
   const days = period ? daysBetween(period.starts_on, period.ends_on) : 1;
   // 팀 수는 팀 목록 endpoint(API 의 요청 주소 단위)가 제공합니다. 아직 조회하지 못했으면 0 이며,
   // 이 경우 팀당 배정을 계산하지 않습니다.

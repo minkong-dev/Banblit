@@ -30,6 +30,7 @@ const BLANK_PERIOD: PeriodDraft = {
   starts_on: "",
   ends_on: "",
   everyday: false,
+  // 스케줄링 시간 09:00, 21:00 과 하루 2시간, 연속 2시간은 동아리 운영 관행으로 정한 초기값입니다(사용자 결정). 서버 기본값과 무관합니다.
   first_run_at: "09:00",
   second_run_at: "21:00",
   practice_window: NO_WINDOW,
@@ -86,6 +87,7 @@ function PeriodLines({ period }: { period: Period }) {
       )}
       {period.closes_at === null ? null : (
         <div>
+          {/* closes_at 은 서버가 "YYYY-MM-DDTHH:MM:SS" 로 고정해 보내는 값(schemas.py 의 PeriodOut)이라 자리로 잘라 날짜와 시각을 표시합니다. */}
           마감 일시 <b>{period.closes_at.slice(0, 10)} {period.closes_at.slice(11, 16)}</b>
           {period.fixed_at === null ? null : ", 배정 확정"}
         </div>
@@ -343,6 +345,7 @@ export function PeriodCard(props: {
 
   return (
     <Card>
+      {/* 목록에 kind 가 open 인 기간이 남아 있을 수 있지만 새로 만들 수 없는 옛 값이라(lib/settings 의 KIND_TEXT) 제목은 집중 합주기간입니다. */}
       <SectionHead title="집중 합주기간" desc="자동 스케줄링을 진행할 기간을 설정해요" />
 
       {state.kind !== "ready" || periods.length === 0 ? (

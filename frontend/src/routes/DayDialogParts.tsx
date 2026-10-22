@@ -14,6 +14,7 @@ import { NO_REPEAT, repeatConflict } from "../lib/pipeline";
 import type { Repeat } from "../lib/pipeline";
 import { entryClass, entryName, offWhenLabel } from "../lib/dayEntries";
 import type { Entry } from "../lib/dayEntries";
+import { reason } from "../lib/api";
 import { cohortLabel } from "../lib/roster";
 import type { DayTeam } from "../lib/roster";
 import type { Member } from "../lib/contract";
@@ -224,6 +225,7 @@ export function DayPeople({ people, error }: {
                 className="pic"
                 style={{ background: `var(--${team.key}-tint)`, color: `var(--${team.key})` }}
               >
+                {/* 사진 대신 쓰는 머리글자입니다. components/Avatar 와 같은 규칙으로 이름 앞 두 글자를 씁니다. */}
                 {member.name.slice(0, 2)}
               </span>
               <span className="nm">{member.name} <i>{team.name}</i></span>
@@ -233,7 +235,7 @@ export function DayPeople({ people, error }: {
         </div>
       ) : (
         <p className="msg">
-          {error instanceof Error ? error.message : "멤버 리스트를 불러오지 못했어요."}
+          {reason(error, "멤버 리스트를 불러오지 못했어요.")}
         </p>
       )}
     </div>
@@ -297,6 +299,7 @@ export function RepeatFields({ dayKey, value, onChange }: {
               id="offRepeatCount"
               type="number"
               min={1}
+              // 서버의 상한(backend/src/backend/services/validation/pipeline.py 의 MAX_REPEAT_COUNT = 365 * 5)과 같습니다.
               max={1825}
               step={1}
               placeholder="예: 4"

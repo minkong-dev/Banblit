@@ -9,7 +9,8 @@ import { MoonIcon, SunIcon, WideMenuIcon } from "./icons";
 import { usePage } from "./hooks";
 import { Popover } from "./Popover";
 import { ME_KEY, TEAMS_KEY, useMe, useMyTeamCohorts } from "./queries";
-import { useToast } from "./toast";
+import { say, useToast } from "./toast";
+import { reason } from "../lib/api";
 import { LOADING_TEXT } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { Avatar } from "./Avatar";
@@ -163,8 +164,8 @@ export function AppShell() {
         </div>
       </header>
 
-      {/* /me 조회가 실패하고 받아 둔 값도 없으면 me 가 null 이 되어 권한 판정 9곳이 전부 "권한 없음" 과 같아집니다.
-          사유를 이 한 곳에서 알립니다 — AppShell 은 로그인 후 7개 화면을 모두 감싸므로 호출부마다 안내를 넣지
+      {/* /me 조회가 실패하고 받아 둔 값도 없으면 me 가 null 이 되어 can(me, ...) 판정이 전부 "권한 없음" 과 같아집니다.
+          사유를 이 한 곳에서 알립니다. AppShell 은 로그인 뒤 화면 전부를 감싸므로(App.tsx 의 layout route) 호출부마다 안내를 넣지
           않아도 됩니다. 판정이 meState 가 아닌 이유는 lib/loading 의 stillUnresolved 에 있습니다.
           영향을 사유보다 앞에 두는 이유는, 서버가 detail 을 주지 않으면 사유가 "500 Internal Server Error"
           처럼 마침표 없이 끝나(lib/api.ts 의 기본 문구) 뒤 문장과 한 문장으로 붙기 때문입니다. */}
@@ -193,6 +194,7 @@ export function AppShell() {
 
       {/* 휴대폰 메뉴 drawer 입니다(Material Design modal drawer). .drawer 가 화면 전체를 덮으므로 .sheet 바깥을 누른 click 은
           .drawer 가 받아 drawer 를 닫고, drawer 아래 버튼에는 전달되지 않습니다. 링크를 누를 때도 닫습니다. Esc 는 브라우저가 닫습니다. */}
+      {/* popover="auto" 는 브라우저가 최상위 layer 에 띄우고, 바깥 클릭과 Escape 로 닫으며, 다른 auto popover 가 열리면 이 popover 를 닫습니다. */}
       {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- 링크와 drawer 바깥을 눌렀을 때 drawer 를 닫습니다. Escape 는 popover="auto" 가 처리합니다. */}
       <div
         id={MENU_ID}
@@ -201,7 +203,9 @@ export function AppShell() {
         role="dialog"
         aria-label="메뉴"
         onClick={(event) => {
-          if (event.target === event.currentTarget || (event.target as HTMLElement).closest("a")) event.currentTarget.hidePopover();
+          // instanceof 로 좁힙니다. as HTMLElement 로 단정하면 Text node 가 target 일 때 closest 가 없어 예외가 납니다.
+          const onLink = event.target instanceof Element && event.target.closest("a") !== null;
+          if (event.target === event.currentTarget || onLink) event.currentTarget.hidePopover();
         }}
       >
         <div className="sheet">
@@ -248,8 +252,9 @@ function useLogOut(): { closeAnd: (path: string) => void; logOutAndLeave: () => 
     document.getElementById(PROFILE_POP_ID)?.hidePopover();
     try {
       await logOut();
-    } catch {
-      // 오류를 무시합니다. 아래에서 로그인 화면으로 이동합니다.
+    } catch (error) {
+      // 사유를 toast 로 알린 뒤에도 로그인 화면으로 이동합니다. 서버 session 이 남았을 수 있다는 사실을 사용자가 알아야 다른 기기에서 정리합니다.
+      say(`로그아웃 요청이 실패했어요. ${reason(error)}`);
     }
     void navigate("/login");
   };

@@ -27,6 +27,7 @@ export function NotificationMenu() {
     queryFn: loadNotifications,
   });
   const rows = notifications.data ?? [];
+  // unreadCount 는 rows.length 입니다(lib/notifications.ts). 읽음 처리가 행을 삭제하므로 남은 행이 곧 읽지 않은 개수입니다.
   const unread = unreadCount(rows);
 
   async function readAll(): Promise<void> {

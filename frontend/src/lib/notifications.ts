@@ -27,6 +27,8 @@ function rejectedText(target: RejectTarget, startsAt: string, reason: string): s
 }
 
 export function notificationText(item: Notification): string {
+  // 서버는 rejected 와 assignment_unfixed 알림에 reason 을 항상 넣습니다(notification_service 의 reason: str). null 검사는
+  // 타입이 nullable 이라 두는 것이고, null 이면 아래 TEXT 표에 없는 kind 라 "새 알림이 있어요." 로 표시됩니다.
   if (item.kind === "rejected" && item.target !== null && item.target_starts_at !== null && item.reason !== null) {
     return rejectedText(item.target, item.target_starts_at, item.reason);
   }

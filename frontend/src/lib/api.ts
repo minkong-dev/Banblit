@@ -18,6 +18,7 @@ export function apiUrl(path: string): string {
   return API_PREFIX + path;
 }
 
+// <T> 는 호출부가 지정하는 응답 본문의 타입(generic)입니다. getJSON<{ room: Room }>(...) 처럼 쓰면 반환 Promise 가 그 타입으로 resolve 됩니다.
 export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
   // path를 fetch에 넣어 본문을 반환합니다. 서버가 거절하면 그 사유를 예외로 발생시킵니다.
   // 로그인 session 은 서버가 httpOnly cookie(banblit_session)로 관리합니다. 같은 출처로
@@ -27,6 +28,8 @@ export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
     // AbortSignal.timeout은 지정된 밀리초가 지나면 요청을 끊고
     // TimeoutError라는 이름의 예외를 발생시킵니다. fetch 자체에는 시간 제한이 없습니다.
     res = await fetch(API_PREFIX + path, {
+      // ...init 은 호출부가 준 옵션(method, body 등)을 전부 복사해 넣는 spread 입니다. 아래 headers, signal 이 같은 이름을 덮어씁니다.
+      // init?.headers 의 ?. 은 init 이 undefined 면 평가를 멈추고 undefined 를 반환하는 optional chaining 입니다.
       ...init,
       // 본문이 있으면 Content-Type 을 application/json 으로 지정합니다. 지정하지 않으면 브라우저가 text/plain 으로
       // 보내고 서버는 본문을 읽지 못해 422 로 거절합니다. 호출 지점마다 지정하면
@@ -46,13 +49,16 @@ export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
     );
   }
 
-  // 본문이 없는 응답도 있습니다.
+  // 본문이 없거나 JSON 이 아닌 응답은 body 를 null 로 둡니다. 성공과 실패는 본문이 아니라 res.ok(상태 코드 200~299)로 판정합니다.
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) {
     const detail = detailOf(body);
     if (res.status === 401 && codeOf(body) === SESSION_REJECTED_CODE) leaveExpiredSession();
+    // ?? 는 왼쪽이 null 또는 undefined 일 때만 오른쪽을 씁니다. || 와 달리 빈 문자열 "" 은 왼쪽을 그대로 씁니다.
     throw new Error(detail ?? `${res.status} ${res.statusText}`);
   }
+  // ponytail: 응답 본문의 모양을 실행 시점에 검증하지 않고 호출부가 지정한 T 로 단정합니다. 모양은 서버의 response_model
+  // (backend/src/backend/api/schemas.py)이 보장합니다. 검증이 필요해지면 이 자리에 zod 같은 schema 검사를 둡니다.
   return body as T;
 }
 
@@ -60,7 +66,8 @@ export async function getJSON<T>(path: string, init?: RequestInit): Promise<T> {
 // 실제 session cookie(banblit_session)는 httpOnly 라 화면에서 읽을 수 없습니다.
 const SIGNED_IN_COOKIE = "banblit_signed_in";
 
-/** 로그인 표시 cookie 가 있는지 확인합니다. */
+/** 로그인 표시 cookie 가 있는지 확인합니다. document.cookie 는 "a=1; b=2" 형식의 문자열이라 "; " 로 나눠 비교합니다.
+ *  header 에는 넣지 않습니다. 인증은 브라우저가 자동으로 보내는 httpOnly session cookie 로 서버가 판정합니다. */
 export function isSignedIn(): boolean {
   return document.cookie.split("; ").includes(`${SIGNED_IN_COOKIE}=1`);
 }
@@ -78,6 +85,7 @@ function leaveExpiredSession(): void {
 
 /** 서버가 판정용으로 보내는 code 필드입니다. 없으면 null 입니다. 같은 401 이라도 틀린 비밀번호에는 code 가 없습니다. */
 function codeOf(body: unknown): string | null {
+  // "code" in body 는 객체에 code 속성이 있는지 검사합니다. 통과하면 TypeScript 가 body.code 를 읽을 수 있게 타입을 좁힙니다.
   if (typeof body !== "object" || body === null || !("code" in body)) return null;
   return typeof body.code === "string" ? body.code : null;
 }

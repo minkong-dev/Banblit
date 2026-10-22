@@ -1,5 +1,5 @@
 // 설정 화면의 합주실 구역입니다. 합주실 목록, 추가, 수정, 삭제를 담당합니다.
-// 합주실은 하나만 사용하므로 이미 하나 있으면 추가 버튼이 표시되지 않습니다.
+// 이 동아리는 합주실을 1개만 쓰므로 이미 하나 있으면 추가 버튼이 표시되지 않습니다(사용자 결정). 서버는 개수를 제한하지 않습니다.
 
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
@@ -18,6 +18,7 @@ import { Button, Cell, Empty, FormFoot, TimeRange } from "../components/controls
 import { Row, useFirstField, useForm } from "./SettingsForm";
 import { clockEndLabel } from "../lib/calendar";
 
+// 새 합주실 form 의 초기값입니다. 18:00~23:00 은 동아리 합주실의 실제 운영 시간입니다(사용자 결정).
 const BLANK_ROOM: RoomInput = { name: "", opens_at: "18:00", closes_at: "23:00" };
 
 /** 합주실 form 의 입력칸입니다. */
@@ -47,6 +48,7 @@ function RoomFields(props: {
         id={at("hours")}
         labels={["개방 시간", "마감 시간"]}
         value={[form.opens_at, form.closes_at]}
+        // 운영 시간은 칸 크기와 무관하게 정시만 받습니다(서버 rooms 의 CHECK). step 은 초 단위라 3600 이 1시간입니다.
         step={3600}
         invalid={{ "aria-invalid": bad !== "", "aria-describedby": bad === "" ? undefined : whyId }}
         onChange={([opens_at, closes_at]) => setForm({ ...form, opens_at, closes_at })}

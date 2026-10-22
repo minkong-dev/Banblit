@@ -182,6 +182,7 @@ export function Assignment() {
                   id 가 아니라 날짜 범위로 표시합니다. 화면에서 기간을 번호로 표시하지 않습니다. */}
               <Dropdown
                 ariaLabel="기간 선택"
+                // 기간이 없으면 0 을 넘깁니다. 선택지의 id 는 1 이상이라 어느 항목과도 일치하지 않아 Dropdown 이 선택 없음으로 표시합니다.
                 value={activePeriodId ?? 0}
                 choices={focusedPeriods.map((period) => ({
                   value: period.id,

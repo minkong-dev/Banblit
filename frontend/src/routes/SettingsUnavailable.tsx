@@ -93,6 +93,7 @@ function UnavailableList({ rows, state, meId, canReject, onReject }: {
 }) {
   const [keyword, setKeyword] = useState("");
   const needle = keyword.trim();
+  // ponytail: 이름 포함 여부로만 거릅니다. 동명이인은 둘 다 남고 표의 기수 열로 구분합니다. 멤버 번호로 거르려면 MemberPicker 로 바꿉니다.
   const shown = needle === "" ? rows : rows.filter((row) => row.member.includes(needle));
 
   return (

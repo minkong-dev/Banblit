@@ -9,7 +9,8 @@ import type { Absence, ScheduleReport, ScheduleRow, SessionAbsence } from "./con
 
 const MINUTES_PER_HOUR = 60;
 
-/** 달력에 표시하는 대상입니다. 현재 확정된 시간표, 스케줄링 기록 하나 중 하나입니다. */
+/** 달력에 표시하는 대상입니다. 현재 확정된 시간표, 스케줄링 기록 하나 중 하나입니다.
+ *  kind 값으로 구분하는 union 타입입니다. view.kind === "round" 를 검사하면 TypeScript 가 그 분기 안에서 at 을 읽게 해 줍니다. */
 export type View = { kind: "now" } | { kind: "round"; at: string };
 export const NOW: View = { kind: "now" };
 
@@ -58,7 +59,8 @@ export function hoursOf(sessions: Session[]): number {
   return sessions.reduce((sum, session) => sum + minutesOf(session), 0) / MINUTES_PER_HOUR;
 }
 
-/** 결과 설명의 문단 1개입니다. lines 는 1줄씩, groups 는 팀 이름과 그 팀의 줄 목록, tail 은 목록 뒤 문장입니다. */
+/** 결과 설명의 문단 1개입니다. lines 는 1줄씩, groups 는 팀 이름과 그 팀의 줄 목록, tail 은 목록 마지막 줄 바로 뒤에
+ *  이어 붙는 문장입니다. tail 은 "를 제외해야…" 처럼 조사로 시작합니다. 화면이 마지막 이름 뒤에 그대로 붙입니다. */
 export type ReportParagraph = { title: string; lines: string[]; groups: { team: string; lines: string[] }[]; tail: string | null };
 
 /** 1.5 는 "1.5", 3 은 "3" 으로 표기합니다. 서버의 시간 값은 소수 1자리까지입니다. */
@@ -90,6 +92,7 @@ export function reportLines(report: ScheduleReport): ReportParagraph[] {
 
 /** 불참자를 서버가 준 순서대로 팀마다 묶습니다. 줄은 "포지션 이름 (기수)" 입니다. */
 function byTeam(absences: Absence[]): { team: string; lines: string[] }[] {
+  // new Set 이 중복을 제거하고 [...] 가 다시 배열로 펼칩니다. Set 은 넣은 순서를 유지하므로 서버가 준 팀 순서가 남습니다.
   const ids = [...new Set(absences.map((item) => item.team_id))];
   return ids.map((id) => {
     const own = absences.filter((item) => item.team_id === id);
@@ -99,6 +102,7 @@ function byTeam(absences: Absence[]): { team: string; lines: string[] }[] {
 
 /** session 블록 시각 안에서 같은 팀의 불참자를 "이름 (기수)" 로 1번씩 쉼표로 이어 반환합니다. 없으면 빈 문자열입니다. */
 export function absentOf(session: Session, absences: SessionAbsence[]): string {
+  // "2026-09-14T18:00:00" 형식은 자릿수가 고정이라 문자열 크기 비교가 시각 순서와 같습니다. Date 로 변환하지 않습니다.
   const inside = absences.filter(
     (item) => item.team === session.team && item.start >= session.start && item.start < session.end,
   );

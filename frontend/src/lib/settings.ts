@@ -27,7 +27,7 @@ export function slotMinutesLabel(minutes: number): string {
   return minutes === MINUTES_PER_HOUR ? "1시간" : `${minutes}분`;
 }
 
-/** 합주 1회 길이의 상한(분)입니다. 서버 쪽은 backend/src/backend/scheduling/slots.py 의
+/** 합주 1회 길이의 상한(분)입니다. 서버 쪽은 backend/src/backend/contract.py 의
  *  MAX_SESSION_MINUTES 에 작성되어 있는 내용을 기준으로 합니다. */
 export const MAX_SESSION_MINUTES = 240;
 
@@ -67,7 +67,8 @@ function onGrid(minutes: number, slotMinutes: number): boolean {
   return minutes % slotMinutes === 0;
 }
 
-/** 격자에 맞지 않을 때 보여줄 단위 이름입니다. 한 시간이면 "정각"이 자연스럽습니다. */
+/** 격자에 맞지 않을 때 보여줄 단위 이름입니다. 한 시간이면 "정각"이 자연스럽습니다.
+ *  서버 주석의 "정시" 와 같은 뜻(분이 00 인 시각)이고, 화면 문구는 "정각" 으로 통일합니다. */
 function unitText(slotMinutes: number): string {
   return slotMinutes === MINUTES_PER_HOUR ? "정각" : `${slotMinutes}분`;
 }
@@ -163,6 +164,7 @@ function integerOf(text: string): number | null {
 /** 배정 규칙을 검증합니다. 서버 쪽은 backend/src/backend/api/schemas.py 의 AssignRuleIn 에 작성되어 있는 내용을 기준으로 합니다.
  *  숫자 칸 3개는 입력 문자열이라 정수가 아닌 값(빈칸 포함)을 거부합니다. */
 export function assignRuleMessage(rule: AssignRuleDraft): string {
+  // 객체 구조 분해입니다. rule.target_hours 를 같은 이름의 변수로 꺼냅니다. 나머지 3개는 문자열이라 integerOf 를 거쳐 꺼냅니다.
   const { target_hours } = rule;
   const maxAbsent = integerOf(rule.max_absent);
   const dailyMax = integerOf(rule.daily_max_hours);
@@ -273,7 +275,8 @@ export function capacity(input: {
   return { perDay, total, perTeam, leftover: total - perTeam * teams };
 }
 
-/** 기간 종류의 화면 이름입니다. open 은 서버가 아무 동작도 하지 않는 옛 값이라 새로 만들 수 없고, 저장된 기간의 제목에만 쓰입니다. */
+/** 기간 종류의 화면 이름입니다. open 은 서버가 아무 동작도 하지 않는 옛 값이라 새로 만들 수 없고, periods.kind 열에 open 으로
+ *  저장된 기간을 조회할 때만 들어옵니다. 저장된 기간의 제목에만 쓰입니다. */
 export const KIND_TEXT = { open: "상시 개방", focused: "집중 합주" } as const;
 
 /** 기간 목록의 제목입니다. 공연명(name)이 있으면 공연명, 비어 있으면 종류 이름이고 매일 기간은 " 매일" 이 붙습니다(사용자 결정 2026-10-07). */

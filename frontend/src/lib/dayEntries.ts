@@ -1,6 +1,6 @@
 // 달력 하루에 표시할 항목(Entry)을 서버 자료에서 만드는 계산입니다. 화면이나 서버와 상호작용하지 않습니다.
 
-import { dayWithWeekday, hasWeekday, repeatLabel, shiftDay, weekdayIndex } from "./calendar";
+import { dayKey, dayWithWeekday, hasWeekday, repeatLabel, shiftDay, weekdayIndex } from "./calendar";
 import { dayOf, mergeSessions, slotEndIndex, slotIndex } from "./slots";
 import { LOADING_TEXT } from "./loading";
 import type { Session } from "./slots";
@@ -18,6 +18,7 @@ export type Entry = {
   who?: string;
   /** 불가능 일정에 적은 사유입니다. 이름(who)과 따로 표시합니다. */
   note?: string;
+  /** a 는 시작, b 는 종료 위치입니다. 합주실 여는 시각을 0 으로 두고 1시간을 1 로 세는 index 이고, 분은 소수입니다(lib/slots 의 slotIndex). */
   a: number;
   b: number;
   /** 로그인한 사용자가 삭제할 수 있는 불가능 일정이면, 삭제할 때 서버에 넘길 id 입니다.
@@ -56,6 +57,7 @@ export function entryClass(entry: Entry): string {
  *  꺼내므로, 정렬을 한 번만 해 둡니다.
  *  전달한 객체와 그 안의 배열은 수정하지 않습니다. 각 묶음은 useMemo 가 보유한 값이고, 그 값을
  *  수정하면 다음 렌더에서 항목이 중복됩니다. */
+// ...sources 는 rest 매개변수입니다. 인자를 몇 개 전달하든 배열 1개로 받습니다. mergeByDay(a, b, c) 면 sources 는 [a, b, c] 입니다.
 export function mergeByDay(...sources: readonly DayEntries[]): DayEntries {
   const merged: DayEntries = {};
   for (const source of sources) {
@@ -105,6 +107,7 @@ export type EnsembleOn = {
 export function ensembleOn(periods: Period[], day: string): EnsembleOn | null {
   const period = periods.find((item) =>
     item.ensemble !== null && day >= item.ensemble.starts_on && day <= item.ensemble.ends_on);
+  // == null 은 null 과 undefined 를 한 번에 검사합니다. period 가 없으면 ?. 이 undefined 를, 전체 합주가 없으면 null 을 반환합니다.
   if (period?.ensemble == null) return null;
   const { ensemble } = period;
   const own = ensemble.days.find((item) => item.day === day);
@@ -138,8 +141,8 @@ export function ensembleByDay(
 }
 
 /** 확정된 시간표를 합주 한 번씩으로 합친 뒤 날짜별로 담습니다.
- *  서버는 이어진 칸을 구간 한 행으로 저장하지만(backend/db/schedule_store.py 의 merge_runs),
- *  그 변경 전에 저장된 백업 배정기록은 칸마다 한 행으로 남아 있어 여기서 한 번 더 연결합니다.
+ *  서버는 이어진 칸을 구간 한 행으로 저장하지만(backend/db/schedule_store.py 의 merge_runs), 새 행은 생기지 않아도
+ *  merge_runs 도입 전에 저장된 스케줄링 기록(assignment_backups)은 칸마다 한 행으로 남아 있어 여기서 한 번 더 연결합니다.
  *  이미 합쳐진 행을 다시 연결해도 결과는 같습니다. */
 export function assignedByDay(rows: ScheduleRow[], teams: DayTeam[], openHour: number): DayEntries {
   const sessions: Session[] = rows.map((row) => ({
@@ -148,6 +151,7 @@ export function assignedByDay(rows: ScheduleRow[], teams: DayTeam[], openHour: n
   const byDay: DayEntries = {};
   for (const session of mergeSessions(sessions)) {
     const team = teams.find((item) => item.name === session.team);
+    // x ??= [] 는 x 가 null 또는 undefined 일 때만 [] 를 대입하고, 식 전체는 대입 뒤의 값입니다. 날짜의 첫 항목에서 배열을 만듭니다.
     (byDay[dayOf(session.start)] ??= []).push({
       kind: "assign",
       team: team?.key ?? null,
@@ -238,10 +242,9 @@ export function visibleDays(year: number, month: number): string[] {
   const first = new Date(year, month, 1 - DAYS_PER_WEEK);
   const last = new Date(year, month + 1, DAYS_PER_WEEK);
   const days: string[] = [];
+  // const 는 변수 at 이 다른 객체를 가리키지 못하게 할 뿐, 같은 Date 객체의 날짜를 setDate 로 변경하는 것은 허용합니다.
   for (const at = first; at <= last; at.setDate(at.getDate() + 1)) {
-    days.push(
-      `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`,
-    );
+    days.push(dayKey(at));
   }
   return days;
 }

@@ -46,6 +46,7 @@ export function AssignmentCalendar({ days, shown, colors, absences }: {
 }) {
   return (
     <>
+      {/* 머리글은 일요일부터입니다(WEEKDAY_NAMES). 월요일 기준인 weekdayIndex 는 반복 요일 비트 계산에만 쓰고 달력 격자에는 쓰지 않습니다. */}
       <div className="dow">{WEEKDAY_NAMES.map((name) => <span key={name}>{name}</span>)}</div>
 
       <div className="grid">
@@ -57,6 +58,7 @@ export function AssignmentCalendar({ days, shown, colors, absences }: {
           <>
             {/* 요일 머리글이 일요일부터라 첫 주의 앞쪽을 빈 칸으로 채웁니다.
                 getDay()는 일요일을 0으로 세므로 그 값이 곧 빈 칸 수입니다. */}
+            {/* T12:00:00 을 붙여 정오로 만듭니다. 날짜만 주면 UTC 자정으로 해석되어 한국 시간대에서는 전날 요일이 나옵니다. */}
             {Array.from(
               { length: new Date(`${days[0]}T12:00:00`).getDay() },
               (_, i) => <div className="day" aria-hidden="true" key={`pad-${i}`} />,
@@ -173,8 +175,8 @@ export function AssignmentStatus({ error, report, hasConfirmed, shown, colors, c
   if (error !== null) {
     return (
       <>
-        <h2>서버가 요청을 받지 못했어요</h2>
-        <p className="sub">{error instanceof Error ? error.message : "알 수 없는 오류"}</p>
+        <h2>배정안을 불러오지 못했어요</h2>
+        <p className="sub">{reason(error)}</p>
         {actions}
       </>
     );
@@ -293,7 +295,7 @@ export function RunTimesPanel({ period, canManage }: { period: Period | null; ca
       setForm(null);
       say("엔진 연산 시간을 저장했어요");
     },
-    onError: (error) => say(error instanceof Error ? error.message : "엔진 연산 시간을 저장하지 못했어요."),
+    onError: (error) => say(reason(error, "엔진 연산 시간을 저장하지 못했어요.")),
   });
 
   const shown = form !== null && period !== null && form.id === period.id
