@@ -11,14 +11,14 @@ kind: file
 flowchart LR
   frontend_src_components_ErrorBoundary["ErrorBoundary.tsx"]
   frontend_src_components_ErrorBoundary --> frontend_src_components_controls["controls.tsx"]
-  frontend_src_components_ErrorBoundary --> frontend_src_lib_fallback["fallback.ts"]
+  frontend_src_components_ErrorBoundary --> frontend_src_lib_loading["loading.ts"]
   frontend_src_main["main.tsx"] --> frontend_src_components_ErrorBoundary
 ```
 
 ## imports
 
 - [[graph/frontend/src/components/controls|controls.tsx]]
-- [[graph/frontend/src/lib/fallback|fallback.ts]]
+- [[graph/frontend/src/lib/loading|loading.ts]]
 
 ## imported by
 

@@ -10,16 +10,14 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_components_MemberPicker_test["MemberPicker.test.tsx"]
-  frontend_src_components_MemberPicker_test --> frontend_src_components_MemberPicker["MemberPicker.tsx"]
-  frontend_src_components_MemberPicker_test --> frontend_src_components_MemberSearch["MemberSearch.tsx"]
   frontend_src_components_MemberPicker_test --> frontend_src_components_Modal["Modal.tsx"]
+  frontend_src_components_MemberPicker_test --> frontend_src_components_Search["Search.tsx"]
 ```
 
 ## imports
 
-- [[graph/frontend/src/components/MemberPicker|MemberPicker.tsx]]
-- [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
 - [[graph/frontend/src/components/Modal|Modal.tsx]]
+- [[graph/frontend/src/components/Search|Search.tsx]]
 
 ## imported by
 

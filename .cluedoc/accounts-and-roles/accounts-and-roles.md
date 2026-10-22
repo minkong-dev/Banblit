@@ -11,7 +11,7 @@ sources:
   - "[[graph/backend/tests/integration/db/test_auth_endpoints]]"  # 관리자코드로 전체 권한을 받는지, 코드가 없거나 틀리면 0개로 가입하는지의 시나리오 — backend/tests/integration/db/test_auth_endpoints.py
   - "[[graph/backend/tests/integration/db/test_member_expel_endpoints]]"  # 추방 권한 검증, 계정 삭제, 마지막 full set 보유자 보호 시나리오 — backend/tests/integration/db/test_member_expel_endpoints.py
   - "[[graph/frontend/src/routes/SettingsMembers]]"  # 설정 화면의 멤버 탭. permission set 목록과 멤버 명단 — frontend/src/routes/SettingsMembers.tsx
-  - "[[graph/frontend/src/routes/ProfileCards]]"  # 프로필 화면의 카드. 내 정보, 비밀번호, 탈퇴 — frontend/src/routes/ProfileCards.tsx
+  - "[[graph/frontend/src/routes/Profile]]"  # 프로필 화면. 내 정보, 비밀번호, 탈퇴 — frontend/src/routes/Profile.tsx
   - "[[graph/frontend/src/lib/account]]"  # 항목 22가지의 한국어 이름, 내가 가졌는지 판단, 프로필 카드의 역할 문구(permission set 이름) — frontend/src/lib/account.ts
   - "[[graph/frontend/src/lib/account.test]]"  # 역할 문구가 permission set 이름을 표시하는지의 시나리오 — frontend/src/lib/account.test.ts
   - "[[graph/backend/src/backend/services/validation/input]]"  # 서버가 다시 검증하는 이름, 이메일, 비밀번호를 비롯한 모든 입력 규칙 — backend/src/backend/services/validation/input.py

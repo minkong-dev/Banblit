@@ -11,7 +11,6 @@ kind: file
 flowchart LR
   frontend_src_components_PostBoard["PostBoard.tsx"]
   frontend_src_components_PostBoard --> frontend_src_components_Layout["Layout.tsx"]
-  frontend_src_components_PostBoard --> frontend_src_components_Pager["Pager.tsx"]
   frontend_src_components_PostBoard --> frontend_src_components_PostActions["PostActions.tsx"]
   frontend_src_components_PostBoard --> frontend_src_components_PostAttachments["PostAttachments.tsx"]
   frontend_src_components_PostBoard --> frontend_src_components_PostComments["PostComments.tsx"]
@@ -26,13 +25,11 @@ flowchart LR
   frontend_src_components_PostBoard --> frontend_src_lib_paging["paging.ts"]
   frontend_src_components_PostBoard --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_routes_Board["Board.tsx"] --> frontend_src_components_PostBoard
-  frontend_src_routes_Notices["Notices.tsx"] --> frontend_src_components_PostBoard
 ```
 
 ## imports
 
 - [[graph/frontend/src/components/Layout|Layout.tsx]]
-- [[graph/frontend/src/components/Pager|Pager.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
 - [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
@@ -50,4 +47,3 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/routes/Board|Board.tsx]]
-- [[graph/frontend/src/routes/Notices|Notices.tsx]]

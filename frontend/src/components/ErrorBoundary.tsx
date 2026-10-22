@@ -11,7 +11,7 @@
 import { Component } from "react";
 import type { ErrorInfo, ReactNode } from "react";
 
-import { crashDetail } from "../lib/fallback";
+import { crashDetail } from "../lib/loading";
 import { Button } from "./controls";
 import "../styles/fallback.css";
 

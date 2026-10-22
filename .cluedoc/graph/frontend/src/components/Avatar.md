@@ -13,7 +13,7 @@ flowchart LR
   frontend_src_components_Avatar --> frontend_src_lib_api["api.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_components_Avatar
   frontend_src_components_Avatar_test["Avatar.test.tsx"] --> frontend_src_components_Avatar
-  frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_components_Avatar
+  frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_components_Avatar
 ```
 
 ## imports
@@ -24,4 +24,4 @@ flowchart LR
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
 - [[graph/frontend/src/components/Avatar.test|Avatar.test.tsx]]
-- [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
+- [[graph/frontend/src/routes/Profile|Profile.tsx]]

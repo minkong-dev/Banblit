@@ -4,9 +4,8 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ReactElement } from "react";
 
-import { MemberPicker } from "./MemberPicker";
 import { Modal } from "./Modal";
-import { MemberSearch } from "./MemberSearch";
+import { MemberPicker, MemberSearch } from "./Search";
 
 type ModalEl = ReactElement<{ title: string; hint: string; onClose: () => void; children: ReactElement }>;
 type SearchEl = ReactElement<{ exclude?: number[]; onPick: (member: { id: number }) => void }>;

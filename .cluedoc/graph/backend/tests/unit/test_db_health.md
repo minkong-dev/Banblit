@@ -10,12 +10,12 @@ kind: file
 ```mermaid
 flowchart LR
   backend_tests_unit_test_db_health["test_db_health.py"]
-  backend_tests_unit_test_db_health --> backend_src_backend_db_health["health.py"]
+  backend_tests_unit_test_db_health --> backend_src_backend_db_engine["engine.py"]
 ```
 
 ## imports
 
-- [[graph/backend/src/backend/db/health|health.py]]
+- [[graph/backend/src/backend/db/engine|engine.py]]
 
 ## imported by
 
@@ -23,4 +23,4 @@ flowchart LR
 
 ## 함수와 호출
 
-- `test_connection_failure_does_not_leak_the_driver_message`: `backend.db.health.check_database`
+- `test_connection_failure_does_not_leak_the_driver_message`: `backend.db.engine.check_database`

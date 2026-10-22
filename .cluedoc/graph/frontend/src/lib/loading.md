@@ -13,8 +13,8 @@ flowchart LR
   frontend_src_lib_loading --> frontend_src_lib_api["api.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_loading
   frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_lib_loading
+  frontend_src_components_ErrorBoundary["ErrorBoundary.tsx"] --> frontend_src_lib_loading
   frontend_src_components_MemberSearch_test["MemberSearch.test.tsx"] --> frontend_src_lib_loading
-  frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_lib_loading
   frontend_src_components_NotificationMenu["NotificationMenu.tsx"] --> frontend_src_lib_loading
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_lib_loading
   frontend_src_components_PostAttachments["PostAttachments.tsx"] --> frontend_src_lib_loading
@@ -22,7 +22,7 @@ flowchart LR
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_lib_loading
   frontend_src_components_PostWriteForm["PostWriteForm.tsx"] --> frontend_src_lib_loading
   frontend_src_components_RejectDialog["RejectDialog.tsx"] --> frontend_src_lib_loading
-  frontend_src_components_TeamSearch["TeamSearch.tsx"] --> frontend_src_lib_loading
+  frontend_src_components_Search["Search.tsx"] --> frontend_src_lib_loading
   frontend_src_components_controls["controls.tsx"] --> frontend_src_lib_loading
   frontend_src_components_queries["queries.ts"] --> frontend_src_lib_loading
   frontend_src_lib_dayEntries["dayEntries.ts"] --> frontend_src_lib_loading
@@ -50,8 +50,8 @@ flowchart LR
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
 - [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
+- [[graph/frontend/src/components/ErrorBoundary|ErrorBoundary.tsx]]
 - [[graph/frontend/src/components/MemberSearch.test|MemberSearch.test.tsx]]
-- [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
 - [[graph/frontend/src/components/NotificationMenu|NotificationMenu.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
 - [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]
@@ -59,7 +59,7 @@ flowchart LR
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
 - [[graph/frontend/src/components/PostWriteForm|PostWriteForm.tsx]]
 - [[graph/frontend/src/components/RejectDialog|RejectDialog.tsx]]
-- [[graph/frontend/src/components/TeamSearch|TeamSearch.tsx]]
+- [[graph/frontend/src/components/Search|Search.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/lib/dayEntries|dayEntries.ts]]

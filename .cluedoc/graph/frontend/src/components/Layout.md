@@ -15,9 +15,8 @@ flowchart LR
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_components_Layout
   frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_components_Layout
   frontend_src_routes_Board["Board.tsx"] --> frontend_src_components_Layout
-  frontend_src_routes_Notices["Notices.tsx"] --> frontend_src_components_Layout
   frontend_src_routes_PostWrite["PostWrite.tsx"] --> frontend_src_components_Layout
-  frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_components_Layout
+  frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_components_Layout
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_components_Layout
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_components_Layout
   frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_components_Layout
@@ -40,9 +39,8 @@ flowchart LR
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
 - [[graph/frontend/src/routes/Board|Board.tsx]]
-- [[graph/frontend/src/routes/Notices|Notices.tsx]]
 - [[graph/frontend/src/routes/PostWrite|PostWrite.tsx]]
-- [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
+- [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]

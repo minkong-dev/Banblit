@@ -3,9 +3,8 @@ import { useId, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { Card, SectionHead } from "../components/Layout";
-import { Pager } from "../components/Pager";
-import { MemberPicker } from "../components/MemberPicker";
-import { Button, DeleteButton, EditButton, Empty, FormFoot, IconButton, Why } from "../components/controls";
+import { MemberPicker } from "../components/Search";
+import { Button, DeleteButton, EditButton, Empty, FormFoot, IconButton, Pager, Why } from "../components/controls";
 import { Modal, Stepper } from "../components/Modal";
 import { SearchIcon } from "../components/icons";
 import { SeatRow } from "../components/SeatRow";

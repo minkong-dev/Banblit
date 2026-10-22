@@ -23,7 +23,7 @@ flowchart LR
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_components_toast
   frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_components_toast
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_components_toast
-  frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_components_toast
+  frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_components_toast
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_components_toast
   frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_components_toast
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_components_toast
@@ -51,7 +51,7 @@ flowchart LR
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
-- [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
+- [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]

@@ -10,25 +10,37 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_routes_Profile["Profile.tsx"]
+  frontend_src_routes_Profile --> frontend_src_components_Avatar["Avatar.tsx"]
+  frontend_src_routes_Profile --> frontend_src_components_Layout["Layout.tsx"]
+  frontend_src_routes_Profile --> frontend_src_components_Popover["Popover.tsx"]
   frontend_src_routes_Profile --> frontend_src_components_controls["controls.tsx"]
   frontend_src_routes_Profile --> frontend_src_components_queries["queries.ts"]
+  frontend_src_routes_Profile --> frontend_src_components_toast["toast.ts"]
+  frontend_src_routes_Profile --> frontend_src_lib_account["account.ts"]
   frontend_src_routes_Profile --> frontend_src_lib_api["api.ts"]
   frontend_src_routes_Profile --> frontend_src_lib_contract["contract.ts"]
   frontend_src_routes_Profile --> frontend_src_lib_loading["loading.ts"]
+  frontend_src_routes_Profile --> frontend_src_lib_pipeline["pipeline.ts"]
   frontend_src_routes_Profile --> frontend_src_lib_roster["roster.ts"]
-  frontend_src_routes_Profile --> frontend_src_routes_ProfileCards["ProfileCards.tsx"]
+  frontend_src_routes_Profile --> frontend_src_lib_validate["validate.ts"]
   frontend_src_App["App.tsx"] --> frontend_src_routes_Profile
 ```
 
 ## imports
 
+- [[graph/frontend/src/components/Avatar|Avatar.tsx]]
+- [[graph/frontend/src/components/Layout|Layout.tsx]]
+- [[graph/frontend/src/components/Popover|Popover.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
+- [[graph/frontend/src/components/toast|toast.ts]]
+- [[graph/frontend/src/lib/account|account.ts]]
 - [[graph/frontend/src/lib/api|api.ts]]
 - [[graph/frontend/src/lib/contract|contract.ts]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
+- [[graph/frontend/src/lib/pipeline|pipeline.ts]]
 - [[graph/frontend/src/lib/roster|roster.ts]]
-- [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
+- [[graph/frontend/src/lib/validate|validate.ts]]
 
 ## imported by
 

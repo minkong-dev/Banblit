@@ -7,7 +7,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { LOADING_TEXT } from "../lib/loading";
 import type { Member } from "../lib/contract";
-import { MemberSearch } from "./MemberSearch";
+import { MemberSearch } from "./Search";
 
 function render(members: Member[] | null, exclude?: number[]): string {
   const client = new QueryClient();

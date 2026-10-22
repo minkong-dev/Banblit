@@ -11,9 +11,8 @@ kind: file
 flowchart LR
   frontend_src_routes_Teams["Teams.tsx"]
   frontend_src_routes_Teams --> frontend_src_components_Layout["Layout.tsx"]
-  frontend_src_routes_Teams --> frontend_src_components_MemberPicker["MemberPicker.tsx"]
   frontend_src_routes_Teams --> frontend_src_components_Modal["Modal.tsx"]
-  frontend_src_routes_Teams --> frontend_src_components_Pager["Pager.tsx"]
+  frontend_src_routes_Teams --> frontend_src_components_Search["Search.tsx"]
   frontend_src_routes_Teams --> frontend_src_components_SeatRow["SeatRow.tsx"]
   frontend_src_routes_Teams --> frontend_src_components_controls["controls.tsx"]
   frontend_src_routes_Teams --> frontend_src_components_hooks["hooks.ts"]
@@ -35,9 +34,8 @@ flowchart LR
 ## imports
 
 - [[graph/frontend/src/components/Layout|Layout.tsx]]
-- [[graph/frontend/src/components/MemberPicker|MemberPicker.tsx]]
 - [[graph/frontend/src/components/Modal|Modal.tsx]]
-- [[graph/frontend/src/components/Pager|Pager.tsx]]
+- [[graph/frontend/src/components/Search|Search.tsx]]
 - [[graph/frontend/src/components/SeatRow|SeatRow.tsx]]
 - [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/components/hooks|hooks.ts]]
