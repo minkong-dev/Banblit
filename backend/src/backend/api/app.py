@@ -54,6 +54,8 @@ RATE_LIMITS: dict[str, tuple[int, float]] = {
     "signup": (5, 3600),
     "mail": (5, 3600),
     "reset": (10, 3600),
+    # 소셜 로그인 callback 입니다. 비밀번호 로그인과 bucket 을 나눠 한쪽의 429 가 다른 쪽을 막지 않게 합니다.
+    "social": (20, 300),
 }
 
 

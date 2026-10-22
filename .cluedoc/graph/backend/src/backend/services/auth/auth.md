@@ -10,3 +10,4 @@ kind: directory
 - [[graph/backend/src/backend/services/auth/mailer|mailer.py]]
 - [[graph/backend/src/backend/services/auth/password_reset|password_reset.py]]
 - [[graph/backend/src/backend/services/auth/pipeline|pipeline.py]]
+- [[graph/backend/src/backend/services/auth/social_login|social_login.py]]

@@ -10,6 +10,8 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_components_hooks["hooks.ts"]
+  frontend_src_components_hooks --> frontend_src_components_toast["toast.ts"]
+  frontend_src_components_hooks --> frontend_src_lib_account["account.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_components_hooks
   frontend_src_components_Dropdown["Dropdown.tsx"] --> frontend_src_components_hooks
   frontend_src_components_Popover["Popover.tsx"] --> frontend_src_components_hooks
@@ -18,6 +20,7 @@ flowchart LR
   frontend_src_routes_Account["Account.tsx"] --> frontend_src_components_hooks
   frontend_src_routes_DayDialogParts["DayDialogParts.tsx"] --> frontend_src_components_hooks
   frontend_src_routes_Landing["Landing.tsx"] --> frontend_src_components_hooks
+  frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_components_hooks
   frontend_src_routes_SettingsPeriods["SettingsPeriods.tsx"] --> frontend_src_components_hooks
   frontend_src_routes_SettingsRooms["SettingsRooms.tsx"] --> frontend_src_components_hooks
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_components_hooks
@@ -26,7 +29,8 @@ flowchart LR
 
 ## imports
 
-- 없음
+- [[graph/frontend/src/components/toast|toast.ts]]
+- [[graph/frontend/src/lib/account|account.ts]]
 
 ## imported by
 
@@ -38,6 +42,7 @@ flowchart LR
 - [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]
 - [[graph/frontend/src/routes/Landing|Landing.tsx]]
+- [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/SettingsPeriods|SettingsPeriods.tsx]]
 - [[graph/frontend/src/routes/SettingsRooms|SettingsRooms.tsx]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]

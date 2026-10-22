@@ -38,6 +38,7 @@ flowchart LR
   frontend_src_lib_slots["slots.ts"] --> frontend_src_lib_contract
   frontend_src_lib_unavailableMap_test["unavailableMap.test.ts"] --> frontend_src_lib_contract
   frontend_src_lib_unavailableMap["unavailableMap.ts"] --> frontend_src_lib_contract
+  frontend_src_routes_Account["Account.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_contract
@@ -91,6 +92,7 @@ flowchart LR
 - [[graph/frontend/src/lib/slots|slots.ts]]
 - [[graph/frontend/src/lib/unavailableMap.test|unavailableMap.test.ts]]
 - [[graph/frontend/src/lib/unavailableMap|unavailableMap.ts]]
+- [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
 - [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]

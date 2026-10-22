@@ -5,7 +5,7 @@ from typing import Literal
 # class 이름의 접미사: In 은 요청 본문, Out 은 응답 본문, Envelope 은 객체 1개를 {"post": {...}} 처럼 이름 1개로 감싼 응답입니다.
 from pydantic import BaseModel, Field, NaiveDatetime, model_validator
 
-from backend.contract import PERMISSIONS, Instrument, JobStatus, NotificationKind, Permission, SlotMinutes
+from backend.contract import PERMISSIONS, Instrument, JobStatus, NotificationKind, Permission, SlotMinutes, SocialProvider
 from backend.contract import (
     DEFAULT_DAILY_MAX_HOURS,
     DEFAULT_MAX_CONSECUTIVE_HOURS,
@@ -578,6 +578,13 @@ class MeOut(BaseModel):
     account: AccountOut
     # 요청자가 배정된 포지션을 팀 번호 순으로 포함합니다. 화면이 "내 팀"을 구분하는 근거입니다.
     teams: list[MyTeamOut]
+    # 프로필에서 연결한 소셜 로그인 제공자입니다. 프로필 화면이 "연결됨" 과 "연결" 버튼을 구분하는 근거입니다.
+    linked_social: list[SocialProvider]
+
+
+class SocialProvidersOut(BaseModel):
+    # 환경변수가 설정되어 사용할 수 있는 소셜 로그인 제공자입니다. 로그인 화면이 이 목록의 버튼만 활성화합니다.
+    providers: list[SocialProvider]
 
 
 class SignupIn(BaseModel):

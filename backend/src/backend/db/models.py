@@ -44,6 +44,8 @@ from backend.contract import (
     REJECT_TARGETS,
     RUN_SLOTS,
     SLOT_MINUTE_CHOICES,
+    SOCIAL_PROVIDERS,
+    SocialProvider,
     TEAM_COLORS,
 )
 
@@ -145,6 +147,27 @@ class Member(Base):
 
     __table_args__ = (
         UniqueConstraint("name", "department", "student_no", "cohort"),
+    )
+
+
+class SocialAccount(Base):
+    """멤버에 연결된 소셜 계정 1개입니다. provider 는 SOCIAL_PROVIDERS 중 하나이고, provider_user_id 는
+    제공자가 발급한 사용자 번호입니다. (provider, provider_user_id) 가 unique 라 소셜 계정 1개는 멤버 1명에게만
+    연결되고, (member_id, provider) 가 unique 라 멤버 1명은 제공자마다 1개만 연결합니다. 멤버가 삭제되면 함께 삭제됩니다.
+    """
+
+    __tablename__ = "social_accounts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("members.id", ondelete="CASCADE"))
+    provider: Mapped[SocialProvider] = mapped_column(Text)
+    provider_user_id: Mapped[str] = mapped_column(Text)
+    linked_at: Mapped[datetime] = mapped_column(DateTime)
+
+    __table_args__ = (
+        UniqueConstraint("provider", "provider_user_id"),
+        UniqueConstraint("member_id", "provider"),
+        CheckConstraint(_in_sql("provider", SOCIAL_PROVIDERS)),
     )
 
 

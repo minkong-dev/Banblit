@@ -21,6 +21,7 @@ flowchart LR
   frontend_src_routes_Account["Account.tsx"] --> frontend_src_components_icons
   frontend_src_routes_Landing["Landing.tsx"] --> frontend_src_components_icons
   frontend_src_routes_NotFound["NotFound.tsx"] --> frontend_src_components_icons
+  frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_components_icons
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_components_icons
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_components_icons
   frontend_src_routes_SettingsUnavailable["SettingsUnavailable.tsx"] --> frontend_src_components_icons
@@ -45,6 +46,7 @@ flowchart LR
 - [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/Landing|Landing.tsx]]
 - [[graph/frontend/src/routes/NotFound|NotFound.tsx]]
+- [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]
 - [[graph/frontend/src/routes/SettingsUnavailable|SettingsUnavailable.tsx]]

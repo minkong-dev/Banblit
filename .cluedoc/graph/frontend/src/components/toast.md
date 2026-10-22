@@ -16,6 +16,7 @@ flowchart LR
   frontend_src_components_PostAttachments["PostAttachments.tsx"] --> frontend_src_components_toast
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_components_toast
   frontend_src_components_PostWriteForm["PostWriteForm.tsx"] --> frontend_src_components_toast
+  frontend_src_components_hooks["hooks.ts"] --> frontend_src_components_toast
   frontend_src_components_queries["queries.ts"] --> frontend_src_components_toast
   frontend_src_components_richTextEditor["richTextEditor.ts"] --> frontend_src_components_toast
   frontend_src_components_toast_test["toast.test.ts"] --> frontend_src_components_toast
@@ -44,6 +45,7 @@ flowchart LR
 - [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
 - [[graph/frontend/src/components/PostWriteForm|PostWriteForm.tsx]]
+- [[graph/frontend/src/components/hooks|hooks.ts]]
 - [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/components/richTextEditor|richTextEditor.ts]]
 - [[graph/frontend/src/components/toast.test|toast.test.ts]]

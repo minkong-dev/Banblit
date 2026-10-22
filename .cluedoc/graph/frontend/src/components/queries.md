@@ -26,6 +26,7 @@ flowchart LR
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_components_queries
   frontend_src_components_Search["Search.tsx"] --> frontend_src_components_queries
   frontend_src_components_queries_test["queries.test.ts"] --> frontend_src_components_queries
+  frontend_src_routes_Account["Account.tsx"] --> frontend_src_components_queries
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_components_queries
   frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_components_queries
   frontend_src_routes_Board["Board.tsx"] --> frontend_src_components_queries
@@ -67,6 +68,7 @@ flowchart LR
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
 - [[graph/frontend/src/components/Search|Search.tsx]]
 - [[graph/frontend/src/components/queries.test|queries.test.ts]]
+- [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
 - [[graph/frontend/src/routes/Board|Board.tsx]]
