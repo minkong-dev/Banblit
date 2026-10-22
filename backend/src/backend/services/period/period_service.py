@@ -14,8 +14,10 @@ from backend.services.period.period_input import (
     expand_unavailable,
     target_sessions,
 )
+from backend.contract import RunSlot
 from backend.db.models import (
     Assignment,
+    AssignmentRun,
     Member,
     TeamSlot,
     Period,
@@ -105,16 +107,12 @@ class RecordScore:
     points: int
 
 
-# session 1회에서 불참 1명당 감점입니다(사용자 결정 2026-10-16).
-ABSENCE_PENALTY = 1
-
-
-def record_points(team_sessions: list[int], target_sessions: int, absences: int) -> int:
-    """100 × (팀마다 목표까지만 센 session 수의 합 / 목표 session 합) − 불참 1명당 ABSENCE_PENALTY 점입니다. 0 미만은 0 입니다."""
+def record_points(team_sessions: list[int], target_sessions: int, absences: int, absence_penalty: int) -> int:
+    """100 × (팀마다 목표까지만 센 session 수의 합 / 목표 session 합) − 불참 1명당 absence_penalty 점입니다. 0 미만은 0 입니다."""
     target_total = target_sessions * len(team_sessions)
     got = sum(min(count, target_sessions) for count in team_sessions)
     share = 100 if target_total == 0 else round(100 * got / target_total)
-    return max(0, share - absences * ABSENCE_PENALTY)
+    return max(0, share - absences * absence_penalty)
 
 
 @dataclass(frozen=True)
@@ -215,6 +213,7 @@ def schedule_report(
     room_ids: list[int],
     rows: list[AssignmentRow],
     on: date,
+    absence_penalty: int,
 ) -> ScheduleReport:
     """rows(현행 시간표 또는 스케줄링 기록 1개)의 부족분과 불참자를 지금의 불가능 일정으로 계산합니다.
 
@@ -263,14 +262,14 @@ def schedule_report(
             absences=sum(missed.values()),
             joined=sum(1 for end in ends if end in starts),
             points=record_points(
-                [counts[team_id] for team_id in team_ids], inputs.target_sessions, sum(missed.values())
+                [counts[team_id] for team_id in team_ids], inputs.target_sessions, sum(missed.values()), absence_penalty
             ),
         ),
     )
 
 
 def stored_report(
-    session: Session, period: Period, rows: list[ScheduleRow], on: date
+    session: Session, period: Period, rows: list[ScheduleRow], on: date, absence_penalty: int
 ) -> ScheduleReport | None:
     """저장된 시간표(현행 또는 스케줄링 기록 1개)의 보고입니다. 집중 합주기간이 아니거나, 행이 없거나, 멤버가 있는 팀이 없으면 None 입니다.
 
@@ -289,7 +288,7 @@ def stored_report(
         AssignmentRow(team_id=team_id, room_id=room_id, starts_at=start, ends_at=end)
         for team_id, _, room_id, _, start, end in rows
     ]
-    return schedule_report(session, period.id, team_ids, room_ids, stored_rows, on)
+    return schedule_report(session, period.id, team_ids, room_ids, stored_rows, on, absence_penalty)
 
 
 def _absence(inputs: _Inputs, team_id: int, member_id: int, count: int) -> Absence:
@@ -385,6 +384,55 @@ def practice_window(period: Period) -> PracticeWindow:
         weekday=pair(period.practice_weekday_starts_at, period.practice_weekday_ends_at),
         weekend=pair(period.practice_weekend_starts_at, period.practice_weekend_ends_at),
     )
+
+
+def due_slots(
+    period: Period, now: datetime, already_ran: set[str]
+) -> tuple[RunSlot, ...]:
+    # period 의 두 계산 시각 중 now 까지 지났고 아직 실행하지 않은 시각을 반환합니다.
+    # 어제 놓친 시각은 검사하지 않습니다. 배정은 기간 전체를 다시 계산하는 작업이므로 어제 시각을
+    # 지금 실행하는 것과 오늘 시각을 지금 실행하는 것은 결과가 같습니다.
+    today = now.date()
+    schedule: list[tuple[RunSlot, time]] = [
+        ("first", period.first_run_at),
+        ("second", period.second_run_at),
+    ]
+    due: list[RunSlot] = []
+    for slot, run_at in schedule:
+        if slot in already_ran:
+            continue
+        if datetime.combine(today, run_at) <= now:
+            due.append(slot)
+    return tuple(due)
+
+
+def ran_slots_today(
+    session: Session, period_ids: list[int], today: date
+) -> dict[int, set[str]]:
+    # 오늘 이미 실행한 (기간, 계산 시각)을 기간별 집합으로 수집합니다.
+    rows = session.execute(
+        select(AssignmentRun.period_id, AssignmentRun.slot)
+        .where(AssignmentRun.period_id.in_(period_ids))
+        .where(AssignmentRun.run_on == today)
+    ).all()
+    ran: dict[int, set[str]] = defaultdict(set)
+    for period_id, slot in rows:
+        ran[period_id].add(slot)
+    return ran
+
+
+def mark_ran(
+    session: Session, period_id: int, now: datetime, slots: tuple[RunSlot, ...]
+) -> None:
+    # (기간, 날짜, 계산 시각)을 assignment_runs 에 기록합니다. 세 열에 unique 제약이
+    # 있어 같은 시각이 중복으로 기록되지 않습니다.
+    for slot in slots:
+        session.add(
+            AssignmentRun(
+                period_id=period_id, run_on=now.date(), slot=slot, ran_at=now
+            )
+        )
+    session.commit()
 
 
 def period_days(period: Period, on: date) -> list[date]:

@@ -31,7 +31,7 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 - **message broker 는 적용하지 않습니다.** 서버 1개 process 의 FastAPI 입니다. 모듈 간 통신은 api(gateway) 의 router 가 services 의 `pipeline.py` 를 호출하는 직접 호출입니다.
 - services 끼리의 직접 호출은 2절 예외입니다. 상대 모듈의 `pipeline.py` 만 import 하고 기능 파일은 import 하지 않습니다. audit 때 숫자를 다시 셉니다.
   - 2026-10-21 기준 34곳(import 문 기준)입니다. 대부분 공용 조회와 검증입니다(validation 11, permission 6, settings 5, notification 4, roster 2, room 2, storage 2, reservation 1, period 1).
-  - 알림 4곳: reservation, unavailable, period(`close_service.py`, `period/pipeline.py`)가 notification 의 `pipeline.py` 를 호출합니다. 예약 취소, 반려, 확정, 확정 해제를 알리는 판단이 저장과 같은 자리에 있어야 합니다. 배정 변경 알림은 router(`api/routers/schedule.py`)가 호출합니다.
+  - 알림 4곳: reservation, unavailable, period(`close_service.py`, `period/pipeline.py`)가 notification 의 `pipeline.py` 를 호출합니다. 예약 취소, 반려, 확정, 확정 해제, 배정 변경(`apply_saved_record`)을 알리는 판단이 저장과 같은 자리에 있어야 합니다.
   - period 가 reservation 의 `cancel_reservations_in_focus` 를 호출합니다. 집중 합주기간을 저장하는 transaction 안에서 겹치는 예약을 취소합니다.
   - unavailable 이 period 의 `require_unavailable_open` 을 호출합니다. 마감된 집중 합주기간의 날짜에 걸리는 불가능 일정의 추가, 수정, 삭제를 저장 전에 거절합니다.
   - services 가 db, scheduling 의 `pipeline.py` 를 import 하는 것은 2절 예외입니다.

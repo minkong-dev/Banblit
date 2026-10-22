@@ -11,7 +11,6 @@ kind: file
 flowchart LR
   backend_src_backend_services_validation_input["input.py"]
   backend_src_backend_services_validation_input --> backend_src_backend_contract["contract.py"]
-  backend_src_backend_services_validation_input --> backend_src_backend_db_models["models.py"]
   backend_src_backend_services_validation_input --> backend_src_backend_scheduling_pipeline["pipeline.py"]
   backend_src_backend_services_validation_pipeline["pipeline.py"] --> backend_src_backend_services_validation_input
   backend_tests_unit_test_clock_range["test_clock_range.py"] --> backend_src_backend_services_validation_input
@@ -22,7 +21,6 @@ flowchart LR
 ## imports
 
 - [[graph/backend/src/backend/contract|contract.py]]
-- [[graph/backend/src/backend/db/models|models.py]]
 - [[graph/backend/src/backend/scheduling/pipeline|pipeline.py]]
 
 ## imported by

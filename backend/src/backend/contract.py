@@ -82,6 +82,20 @@ PERMISSIONS: tuple[Permission, ...] = get_args(Permission)
 Instrument = Literal["보컬", "일렉", "통기타", "베이스", "신디", "드럼"]
 INSTRUMENTS: tuple[Instrument, ...] = get_args(Instrument)
 
+# 팀 색입니다. @radix-ui/colors 의 이름 25개 중 바로 옆 색과 거의 같은 5개(ruby, violet, bronze, cyan, grass)를
+# 뺀 20개입니다. 순서가 곧 자동 배정 순서입니다. DB CHECK 제약(db/models.py), 팀 생성(services/roster/roster_service.py),
+# 화면(frontend/src/lib/teamColors.ts)이 같은 값을 씁니다.
+TeamColor = Literal[
+    "tomato", "red", "crimson", "pink", "plum", "purple", "iris", "indigo", "blue", "sky",
+    "teal", "jade", "green", "mint", "lime", "yellow", "amber", "orange", "gold", "brown",
+]
+TEAM_COLORS: tuple[TeamColor, ...] = get_args(TeamColor)
+
+# 기간의 종류입니다. 집중 합주기간(focused)만 자동 배정이 실행됩니다. DB CHECK 제약(db/models.py)과
+# 입력 검증(services/validation/input.py)이 같은 값을 씁니다.
+PeriodKind = Literal["open", "focused"]
+PERIOD_KINDS: tuple[PeriodKind, ...] = get_args(PeriodKind)
+
 # 알림의 종류입니다. 문구는 이 코드에 두지 않습니다. table 에는 종류만 저장하고 사람이 읽을
 # 문장은 화면이 만듭니다. 그래서 문구를 수정하면 이미 저장된 알림에도 적용되고, table 을
 # 수정할 필요가 없습니다.
@@ -89,7 +103,7 @@ INSTRUMENTS: tuple[Instrument, ...] = get_args(Instrument)
 # rejected: 관리 권한자가 예약이나 불가능 일정을 사유와 함께 반려했습니다(services/notification/notification_service.py).
 # assignment_fixed: 마감 일시가 지나 배정이 확정되었습니다(jobs/auto_assign.py). 전체 멤버에게 갑니다.
 # assignment_unfixed: 스케줄링 기록 확정 권한자가 사유와 함께 확정을 해제했습니다(services/period/close_service.py). 전체 멤버에게 갑니다.
-# assignment_updated: 스케줄링 기록이 현재 배정안으로 적용되었습니다(api/routers/schedule.py).
+# assignment_updated: 스케줄링 기록이 현재 배정안으로 적용되었습니다(services/period/pipeline.py 의 apply_saved_record).
 NotificationKind = Literal["assignment_updated", "reservation_cancelled", "rejected", "assignment_fixed", "assignment_unfixed"]
 NOTIFICATION_KINDS: tuple[NotificationKind, ...] = get_args(NotificationKind)
 

@@ -8,7 +8,7 @@ sources:
   - "[[graph/backend/src/backend/scheduling/pipeline]]"  # 모듈 진입점. solver 시간 상수 3개를 정의해 기능 파일에 전달 — backend/src/backend/scheduling/pipeline.py
   - "[[graph/backend/src/backend/contract]]"  # 칸 크기, 합주 1회 길이. 모듈 2개 이상이 참조하는 값 — backend/src/backend/contract.py
   - "[[graph/backend/src/backend/api/auth_dependency]]"  # 계산 실행, 결과 조회, 스케줄링 기록 적용 endpoint의 권한 항목 확인 — backend/src/backend/api/auth_dependency.py
-  - "[[graph/backend/src/backend/api/routers/schedule]]"  # endpoint마다 어떤 항목을 요구하는지 선언한 위치, 기록을 적용했을 때 알림을 저장하는 위치 — backend/src/backend/api/routers/schedule.py
+  - "[[graph/backend/src/backend/api/routers/schedule]]"  # endpoint마다 어떤 항목을 요구하는지 선언한 위치 — backend/src/backend/api/routers/schedule.py
   - "[[graph/backend/src/backend/jobs/auto_assign]]"  # 지정된 시각이 지나면 자동으로 실행되는 별도 서비스 — backend/src/backend/jobs/auto_assign.py
   - "[[graph/backend/src/backend/services/notification/notification_service]]"  # 시간표가 저장된 뒤 누구에게 알림을 저장하는지 — backend/src/backend/services/notification/notification_service.py
   - "[[graph/backend/src/backend/db/models]]"  # 자동 실행 기록 table(assignment_runs)과 알림 table(notifications) — backend/src/backend/db/models.py

@@ -12,7 +12,6 @@ flowchart LR
   backend_src_backend_services_notification_pipeline["pipeline.py"]
   backend_src_backend_services_notification_pipeline --> backend_src_backend_services_notification_notification_service["notification_service.py"]
   backend_src_backend_api_routers_notifications["notifications.py"] --> backend_src_backend_services_notification_pipeline
-  backend_src_backend_api_routers_schedule["schedule.py"] --> backend_src_backend_services_notification_pipeline
   backend_src_backend_services_period_close_service["close_service.py"] --> backend_src_backend_services_notification_pipeline
   backend_src_backend_services_period_pipeline["pipeline.py"] --> backend_src_backend_services_notification_pipeline
   backend_src_backend_services_reservation_reservation_service["reservation_service.py"] --> backend_src_backend_services_notification_pipeline
@@ -26,7 +25,6 @@ flowchart LR
 ## imported by
 
 - [[graph/backend/src/backend/api/routers/notifications|notifications.py]]
-- [[graph/backend/src/backend/api/routers/schedule|schedule.py]]
 - [[graph/backend/src/backend/services/period/close_service|close_service.py]]
 - [[graph/backend/src/backend/services/period/pipeline|pipeline.py]]
 - [[graph/backend/src/backend/services/reservation/reservation_service|reservation_service.py]]

@@ -23,6 +23,8 @@ flowchart LR
   backend_src_backend_services_unavailable_unavailable_service["unavailable_service.py"] --> backend_src_backend_services_period_pipeline
   backend_tests_integration_db_test_focus_cancels_reservations["test_focus_cancels_reservations.py"] --> backend_src_backend_services_period_pipeline
   backend_tests_integration_db_test_period_service["test_period_service.py"] --> backend_src_backend_services_period_pipeline
+  backend_tests_unit_test_auto_assign_rules["test_auto_assign_rules.py"] --> backend_src_backend_services_period_pipeline
+  backend_tests_unit_test_record_points["test_record_points.py"] --> backend_src_backend_services_period_pipeline
 ```
 
 ## imports
@@ -43,8 +45,13 @@ flowchart LR
 - [[graph/backend/src/backend/services/unavailable/unavailable_service|unavailable_service.py]]
 - [[graph/backend/tests/integration/db/test_focus_cancels_reservations|test_focus_cancels_reservations.py]]
 - [[graph/backend/tests/integration/db/test_period_service|test_period_service.py]]
+- [[graph/backend/tests/unit/test_auto_assign_rules|test_auto_assign_rules.py]]
+- [[graph/backend/tests/unit/test_record_points|test_record_points.py]]
 
 ## 함수와 호출
 
+- `schedule_report`: `backend.services.period.period_service`
+- `stored_report`: `backend.services.period.period_service`
 - `run_period_assignment`: `backend.db.pipeline`, `backend.services.period.period_service`
 - `fix_closed_period`: `backend.db.pipeline`, `backend.services.notification.pipeline`, `backend.services.period.period_service`
+- `apply_saved_record`: `backend.db.pipeline`, `backend.services.notification.pipeline`, `backend.services.period.close_service`

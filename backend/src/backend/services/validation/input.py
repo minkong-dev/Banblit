@@ -7,8 +7,7 @@ table(데이터베이스의 행과 열로 이루어진 데이터 구조)마다 �
 import re
 from datetime import date, datetime, time, timedelta
 
-from backend.contract import LATEST_CLOSE_NEXT_DAY, REJECT_REASON_MAX_LENGTH
-from backend.db.models import PERIOD_KINDS
+from backend.contract import LATEST_CLOSE_NEXT_DAY, PERIOD_KINDS, REJECT_REASON_MAX_LENGTH
 from backend.scheduling.pipeline import TimeInterval, day_window, generate_slots
 
 CLOCK_FORMAT = "%H:%M"

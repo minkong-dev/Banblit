@@ -19,6 +19,7 @@ flowchart LR
   backend_src_backend_scheduling_slots["slots.py"] --> backend_src_backend_contract
   backend_src_backend_services_notification_notification_service["notification_service.py"] --> backend_src_backend_contract
   backend_src_backend_services_period_period_crud_service["period_crud_service.py"] --> backend_src_backend_contract
+  backend_src_backend_services_period_period_service["period_service.py"] --> backend_src_backend_contract
   backend_src_backend_services_permission_permission_service["permission_service.py"] --> backend_src_backend_contract
   backend_src_backend_services_roster_roster_service["roster_service.py"] --> backend_src_backend_contract
   backend_src_backend_services_settings_settings_service["settings_service.py"] --> backend_src_backend_contract
@@ -49,6 +50,7 @@ flowchart LR
 - [[graph/backend/src/backend/scheduling/slots|slots.py]]
 - [[graph/backend/src/backend/services/notification/notification_service|notification_service.py]]
 - [[graph/backend/src/backend/services/period/period_crud_service|period_crud_service.py]]
+- [[graph/backend/src/backend/services/period/period_service|period_service.py]]
 - [[graph/backend/src/backend/services/permission/permission_service|permission_service.py]]
 - [[graph/backend/src/backend/services/roster/roster_service|roster_service.py]]
 - [[graph/backend/src/backend/services/settings/settings_service|settings_service.py]]

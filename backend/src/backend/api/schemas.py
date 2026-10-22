@@ -317,7 +317,7 @@ class PeriodUpdateIn(BaseModel):
 class TeamOut(BaseModel):
     id: int
     name: str
-    # 팀 색 이름입니다(backend/db/models.py 의 TEAM_COLORS 중 하나). 화면이 달력·목록의 색으로 씁니다.
+    # 팀 색 이름입니다(backend/contract.py 의 TEAM_COLORS 중 하나). 화면이 달력·목록의 색으로 씁니다.
     color: str
     # 포지션 전체 수와 그중 멤버가 배정된 수입니다. 둘을 함께 반환해야 화면이 비어 있는 포지션 수를 계산할 수 있습니다.
     slot_count: int

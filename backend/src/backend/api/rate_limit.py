@@ -13,9 +13,9 @@ from collections.abc import Callable
 from fastapi import HTTPException, Request
 
 # api 앞에 있는 reverse proxy 개수를 담은 환경변수의 이름입니다. 배포는 Caddy, nginx, api 순서라 2(docker-compose.yml),
-# 개발은 nginx 또는 Vite 1개라 1(docker-compose.override.yml)입니다.
+# 개발은 nginx 또는 Vite 1개라 1(docker-compose.override.yml)입니다. 환경변수가 없으면 배포 값입니다.
 _PROXY_COUNT_VARIABLE = "TRUSTED_PROXY_COUNT"
-DEFAULT_TRUSTED_PROXY_COUNT = 1
+DEFAULT_TRUSTED_PROXY_COUNT = 2
 
 # IP 주소를 변경해 가며 요청하면 _seen 의 항목이 무한히 쌓입니다. 메모리를 고갈시키는 공격이 되므로 상한을 둡니다.
 DEFAULT_MAX_CALLERS = 10_000

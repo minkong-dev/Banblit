@@ -3,9 +3,8 @@ from sqlalchemy.orm import Session
 
 from backend.services.validation.pipeline import require_non_empty
 from backend.services.permission.pipeline import require_another_full_set_holder
-from backend.contract import INSTRUMENTS, Instrument
+from backend.contract import INSTRUMENTS, TEAM_COLORS, Instrument
 from backend.db.models import (
-    TEAM_COLORS,
     Member,
     MemberPermissionSet,
     PermissionSet,

@@ -26,6 +26,8 @@ SESSION_TTL = timedelta(days=7)
 # 로그인 상태 유지를 켠 사람의 session 유효 기간입니다. cookie 에도 같은 값을 씁니다. 한쪽만 길면 짧은 쪽이 먼저 만료됩니다.
 KEEP_TTL = timedelta(days=90)
 SESSION_COOKIE = "banblit_session"
+# 관리자코드를 담은 환경변수의 이름입니다. 값은 개발자가 결정하고 .env 에 둡니다(저장소에 넣지 않습니다).
+ADMIN_CODE_VARIABLE = "ADMIN_SIGNUP_CODE"
 SIGNED_IN_COOKIE = "banblit_signed_in"
 # 재설정 token 은 그것만으로 계정을 탈취할 수 있어 SESSION_TTL 보다 짧게 둡니다. 메일을 열어 새 비밀번호를 설정하는 시간입니다.
 RESET_TTL = timedelta(minutes=30)
@@ -52,8 +54,10 @@ def sign_up(
     now: datetime,
 ) -> tuple[Member, str]:
     """계정을 만들고 바로 로그인한 session token 을 함께 반환합니다."""
+    # 관리자코드는 배포마다 다른 값이라 환경변수로 받습니다. 비어 있으면 signup 이 어떤 코드도 통과시키지 않습니다.
+    expected_code = os.environ.get(ADMIN_CODE_VARIABLE, "")
     # 계정 생성이 commit 된 뒤에 session 을 만듭니다. session 행이 member 번호를 외래 키로 참조합니다.
-    member = signup(session, name, department, student_no, email, login_id, password, cohort, admin_code)
+    member = signup(session, name, department, student_no, email, login_id, password, cohort, admin_code, expected_code)
     return member, create_session(session, member.id, now)
 
 

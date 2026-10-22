@@ -311,12 +311,15 @@ def _one_place_per_member(
         if len(team_ids) < 2:
             continue
         for indices in indices_by_interval.values():
-            present = [
-                chosen[(team_id, index)]
-                for team_id in team_ids
-                for index in indices
-                if (team_id, index) in chosen and member_id not in absent[(team_id, index)]
-            ]
+            # 이 멤버가 참석하는 (팀, session) 변수만 모읍니다. 불참하는 session 은 같은 시각에 있어도 겹치지 않습니다.
+            present = []
+            for team_id in team_ids:
+                for index in indices:
+                    if (team_id, index) not in chosen:
+                        continue
+                    if member_id in absent[(team_id, index)]:
+                        continue
+                    present.append(chosen[(team_id, index)])
             _at_most_one(model, present)
 
 
