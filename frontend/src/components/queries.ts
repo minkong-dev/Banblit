@@ -4,8 +4,8 @@ import { useMemo } from "react";
 import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import type { QueryClient } from "@tanstack/react-query";
 
-import { fetchMe, loadBlindedPosts, loadPosts, loadReservationRows, loadTeamMembers, loadTeamSlots } from "../lib/pipeline";
-import type { Member, Post, Reservation, TeamSlot } from "../lib/contract";
+import { fetchMe, loadBlindedPosts, loadPosts, loadReservationRows, loadSocialProviders, loadTeamMembers, loadTeamSlots } from "../lib/pipeline";
+import type { Member, Post, Reservation, SocialProvider, TeamSlot } from "../lib/contract";
 import { loadState, stillUnresolved } from "../lib/loading";
 import type { LoadState } from "../lib/loading";
 import { teamColorKey } from "../lib/teamColors";
@@ -24,6 +24,7 @@ export const TEAMS_KEY = ["teams"] as const;
 export const ROOMS_KEY = ["rooms"] as const;
 export const PERIODS_KEY = ["periods"] as const;
 export const SETTINGS_KEY = ["settings"] as const;
+export const SOCIAL_KEY = ["social"] as const;
 export const NOTIFICATIONS_KEY = ["notifications"] as const;
 export const UNAVAILABLE_KEY = ["unavailable"] as const;
 export const RESERVATIONS_KEY = ["reservations"] as const;
@@ -166,6 +167,8 @@ export function useMe(): {
   meUnresolved: boolean;
   teamIds: number[];
   teams: Team[];
+  /** 프로필에서 연결한 소셜 로그인 제공자입니다. 조회 전에는 빈 배열입니다. */
+  linkedSocial: SocialProvider[];
 } {
   const mine = useQuery({ queryKey: ME_KEY, queryFn: fetchMe, retry: false });
   const teamList = useTeams();
@@ -183,7 +186,14 @@ export function useMe(): {
     meUnresolved: stillUnresolved(mine),
     teamIds,
     teams,
+    linkedSocial: mine.data?.linked_social ?? [],
   };
+}
+
+/** 사용할 수 있는 소셜 로그인 제공자입니다. 로그인 전에도 조회하므로 실패해도 로그인 화면으로 보내지 않습니다(401 이 아닙니다). 실패하면 빈 배열입니다. */
+export function useSocialProviders(): SocialProvider[] {
+  const query = useQuery({ queryKey: SOCIAL_KEY, queryFn: loadSocialProviders, staleTime: Infinity });
+  return query.data ?? [];
 }
 
 /** 프로필 카드에 표시하는 소속 팀입니다. 서버가 반환하는 배정 자리(lib/contract 의 MyTeam)와 다른 자료형입니다. */

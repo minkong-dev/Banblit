@@ -1,5 +1,5 @@
 import { useActionState, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { reason } from "../lib/api";
 import {
   Link,
@@ -15,10 +15,13 @@ import type { Errors } from "../components/Field";
 import { Button, Toggle } from "../components/controls";
 import { CheckIcon, CrossIcon, GoogleIcon, KakaoIcon } from "../components/icons";
 
-import { usePage } from "../components/hooks";
+import { usePage, useSocialNotice } from "../components/hooks";
+import { useSocialProviders } from "../components/queries";
 import { say, useToast } from "../components/toast";
 import "../styles/account.css";
-import { findId, logIn, requestPasswordReset, resetPassword, signUp } from "../lib/pipeline";
+import { SOCIAL_PROVIDERS } from "../lib/account";
+import type { SocialProvider } from "../lib/contract";
+import { findId, logIn, requestPasswordReset, resetPassword, signUp, socialStartUrl } from "../lib/pipeline";
 import { cohortMessage, departmentMessage, emailMessage, loginIdMessage, passwordChecks, passwordMatchMessage, passwordMessage, passwordsMatch, personNameMessage, signupPasswordMessage, strongPasswordMessage, studentNoMessage } from "../lib/validate";
 
 
@@ -99,8 +102,16 @@ function useFormAction(
   return { errors, onSubmit, isPending };
 }
 
+/** 소셜 로그인 버튼 1개입니다. 제공자가 사용 가능하면 서버의 시작 주소로 이동하는 링크이고, 아니면 누를 수 없는 버튼입니다. */
+function SocialButton({ provider, enabled, children }: { provider: SocialProvider; enabled: boolean; children: ReactNode }) {
+  if (!enabled) return <button type="button" className={provider} disabled>{children}</button>;
+  return <a className={provider} href={socialStartUrl(provider)}>{children}</a>;
+}
+
 export function SignIn() {
   const navigate = useNavigate();
+  const enabled = useSocialProviders();
+  useSocialNotice();
   const { errors, onSubmit, isPending } = useFormAction(
     (data) => ({
       loginId: loginIdMessage(fieldText(data, "loginId").trim()),
@@ -142,14 +153,12 @@ export function SignIn() {
 
       <div className="or">또는</div>
       <div className="social">
-        {/* 구글, 카카오 로그인은 외부 서비스 등록과 API 키가 있어야 합니다. 아직 없어 클릭할 수
-            없는 상태로 둡니다. AccountLayout 아래쪽의 "서비스 이용약관"과 같은 방식입니다. */}
-        <button type="button" className="google" disabled>
-          <GoogleIcon />구글로 계속하기
-        </button>
-        <button type="button" className="kakao" disabled>
-          <KakaoIcon />카카오로 계속하기
-        </button>
+        {/* 환경변수(client id, secret)가 설정된 제공자만 서버가 /social 로 알려 줍니다. 설정되지 않은 제공자는 누를 수 없는 상태로 둡니다. */}
+        {SOCIAL_PROVIDERS.map(({ key, label }) => (
+          <SocialButton key={key} provider={key} enabled={enabled.includes(key)}>
+            {key === "google" ? <GoogleIcon /> : <KakaoIcon />}{label}로 계속하기
+          </SocialButton>
+        ))}
       </div>
 
       <p className="foot">계정이 없으신가요? <Link to="/signup">회원가입</Link></p>

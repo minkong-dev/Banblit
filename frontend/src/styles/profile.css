@@ -51,4 +51,13 @@ body[data-page="profile"] {
   .card > .fields label { gap: 7px; }
   .card > .why { margin: 0; padding: 0 0 16px; }
 
+  /* 연결된 계정 카드의 줄입니다. 왼쪽 제공자 표시, 가운데 이름, 오른쪽 연결 또는 연결 해제 버튼입니다. */
+  .linked { list-style: none; margin: 0; padding: 12px 0 6px; display: flex; flex-direction: column; gap: 10px; }
+  .linked li { display: flex; align-items: center; gap: 12px; font-size: 14.5px; }
+  .linked .name { flex: 1; font-weight: 500; }
+  .linked .mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); }
+  .linked .mark svg { width: 18px; height: 18px; }
+  .linked .mark.kakao { background: #FEE500; color: #191600; border-color: transparent; }
+  .linked .btn { min-height: 36px; padding: 6px 14px; text-decoration: none; }
+
 }

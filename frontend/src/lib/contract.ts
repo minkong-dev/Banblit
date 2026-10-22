@@ -139,7 +139,11 @@ export type MyTeam = {
 };
 
 /** /me 응답 전체입니다. 현재 로그인한 계정과 그 계정이 배정된 자리 목록입니다. */
-export type Me = { account: Account; teams: MyTeam[] };
+/** 소셜 로그인 제공자입니다. 서버 쪽은 backend/src/backend/contract.py 의 SocialProvider 에 작성되어 있는 내용을 기준으로 합니다. */
+export type SocialProvider = "google" | "kakao";
+
+/** linked_social 은 프로필에서 연결한 소셜 로그인 제공자입니다. */
+export type Me = { account: Account; teams: MyTeam[]; linked_social: SocialProvider[] };
 
 /** 할 수 있는 일 23가지입니다. 서버 쪽은 backend/src/backend/contract.py 의 Permission 에 작성되어 있는 내용을 기준으로 합니다 */
 export type Permission =
