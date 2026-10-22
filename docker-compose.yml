@@ -90,6 +90,13 @@ services:
     # 127.0.0.1 에만 bind 합니다. 외부 요청은 caddy 가 받고, 서버 안에서 curl 로 확인합니다.
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:80"
+    # nginx 를 거쳐 api 의 /health 가 응답하는지 확인합니다. nginx 설정 오류와 api 연결 실패를 함께 잡습니다.
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       api:
         condition: service_healthy
@@ -113,7 +120,8 @@ services:
       - banblit-caddy-config:/config
       - banblit-caddy-logs:/var/log/caddy
     depends_on:
-      - web
+      web:
+        condition: service_healthy
     restart: unless-stopped
 
   # 정기 백업입니다. 데이터베이스와 첨부파일을 host 폴더에 백업합니다. banblit.sh 가 migration 직전 백업에도 이 service 를 씁니다.

@@ -1,5 +1,6 @@
 # 배포용 nginx 설정입니다. 화면 경로를 직접 요청해도 index.html 을 반환하고, /api 요청만 api 로 전달합니다.
 # ${API_ORIGIN} 은 container 시작 시 nginx 공식 Docker image 의 envsubst 가 치환합니다. templates/ 폴더의 파일만 치환 대상입니다.
+# frontend/Dockerfile 이 복사하고, web service 의 nginx 가 읽습니다.
 
 server {
   listen 80;

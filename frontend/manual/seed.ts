@@ -1,7 +1,7 @@
-// 매뉴얼 그림에 담길 데이터를 만듭니다. 캡쳐를 시작하기 전에 1번 실행됩니다.
+// 매뉴얼 그림에 담길 데이터를 만듭니다. 캡처를 시작하기 전에 1번 실행됩니다.
 //
-// e2e-api 가 뜰 때 banblit_e2e DB 를 비우므로(backend/scripts/reset_e2e_db.py) 여기가 저장소의
-// 첫 가입입니다. 첫 계정은 관리자코드를 넣어 권한 20개를 전부 받습니다. 그 계정으로 캡쳐하는
+// e2e-api 가 시작할 때 banblit_e2e DB 를 초기화하므로(backend/scripts/reset_e2e_db.py) 여기가 저장소의
+// 첫 가입입니다. 첫 계정은 관리자코드를 넣어 권한 20개를 전부 받습니다. 그 계정으로 캡처하는
 // 이유는 관리자 화면(배정 결과 확인·설정의 멤버·예약·블라인드 탭)이 권한 없이는 렌더링되지 않기 때문입니다.
 //
 // 만드는 데이터는 아래 상수에 전부 있습니다. 그림에 나오는 이름·팀·날짜를 변경하려면
@@ -22,7 +22,7 @@ const RUN_TIMES = { first_run_at: "09:00", second_run_at: "21:00" };
 const JOB_POLL_MS = 500;
 const JOB_WAIT_MS = 60_000;
 
-/** 캡쳐에 사용하는 계정입니다. 관리자코드로 가입하므로 권한 항목을 전부 받습니다. */
+/** 캡처에 사용하는 계정입니다. 관리자코드로 가입하므로 권한 항목을 전부 받습니다. */
 const ADMIN = {
   name: "김반블",
   department: "실용음악과",
@@ -120,7 +120,7 @@ function weekdayBit(dayKey: string): number {
   return 1 << ((new Date(`${dayKey}T12:00:00`).getDay() + 6) % 7);
 }
 
-/** 요청이 실패하면 응답 본문을 담아 멈춥니다. 데이터가 절반만 들어간 상태로 캡쳐하지 않습니다. */
+/** 요청이 실패하면 응답 본문을 담아 멈춥니다. 데이터가 절반만 들어간 상태로 캡처하지 않습니다. */
 async function call<T>(
   context: APIRequestContext, method: Method, url: string, data?: unknown,
 ): Promise<T> {
@@ -143,12 +143,12 @@ async function waitForJob(context: APIRequestContext, jobId: string): Promise<Jo
   throw new Error(`배정 계산 ${jobId} 가 ${JOB_WAIT_MS}ms 안에 끝나지 않았습니다`);
 }
 
-/** 가입 응답의 cookie 가 캡쳐 계정의 로그인을 덮어쓰지 않도록 context 를 따로 만들어 가입시킵니다.
+/** 가입 응답의 cookie 가 캡처 계정의 로그인을 덮어쓰지 않도록 context 를 따로 만들어 가입시킵니다.
  *
  *  요청마다 X-Forwarded-For 를 다른 값으로 보냅니다. 가입 endpoint 의 rate limit 이 1시간에 5회이고
  *  (backend/api/routers/auth.py 의 `_signup_guard`) 매뉴얼은 계정 10개가 필요한데, 서버는 reverse proxy
  *  뒤에 있을 때 이 header 의 값을 요청자로 셉니다(backend/api/rate_limit.py 의 `caller_of`).
- *  대상은 캡쳐 전용 DB(banblit_e2e)이고 매 실행마다 비워집니다. */
+ *  대상은 캡처 전용 DB(banblit_e2e)이고 매 실행마다 비워집니다. */
 async function signUp(baseURL: string | undefined, callerIp: string, body: unknown): Promise<{ id: number }> {
   const separate = await request.newContext({
     baseURL, extraHTTPHeaders: { "x-forwarded-for": callerIp },
@@ -185,7 +185,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   const context = await request.newContext({ baseURL });
   try {
     // 가입이 거절되면 이 DB 에 이미 매뉴얼 데이터가 있는 것입니다. 로그인만 하고 생성을 건너뜁니다 —
-    // 원고나 강조 표시만 고쳐 다시 캡쳐할 때 데이터를 매번 다시 만들지 않기 위해서입니다.
+    // 원고나 강조 표시만 고쳐 다시 캡처할 때 데이터를 매번 다시 만들지 않기 위해서입니다.
     // 데이터를 처음부터 다시 만들려면 COMMAND.md 15-1 의 첫 줄로 e2e-api 를 다시 만듭니다.
     const signedUp = await call<{ account: { id: number } }>(
       context, "POST", "/api/signup", { ...ADMIN, admin_code: ADMIN_CODE },
@@ -216,7 +216,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
       rooms.push(created);
     }
 
-    // 캡쳐 계정이 1번째 팀의 보컬 자리에 들어갑니다. 그 팀이 "내 팀"·팀 게시판의 대상입니다.
+    // 캡처 계정이 1번째 팀의 보컬 자리에 들어갑니다. 그 팀이 "내 팀"·팀 게시판의 대상입니다.
     const everyone = [admin.id, ...members.map((member) => member.id)];
     const teams: { id: number; name: string }[] = [];
     for (const [index, team] of TEAMS.entries()) {
@@ -271,7 +271,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     );
     await waitForJob(context, tightJob.id);
 
-    // 캡쳐 계정의 불가능 일정입니다. 반복 1건을 포함합니다.
+    // 캡처 계정의 불가능 일정입니다. 반복 1건을 포함합니다.
     await call(context, "POST", `/api/members/${admin.id}/unavailable`, {
       starts_at: `${day(1)}T13:00:00`, ends_at: `${day(1)}T17:00:00`,
       name: "아르바이트", reason: "평일 오후 고정",
@@ -282,7 +282,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     });
 
     // 다른 멤버의 불가능 일정입니다. 관리자 메뉴의 불가능 일정 화면이 "전체 멤버" 를 표시하므로,
-    // 캡쳐 계정 1명의 일정만 있으면 그 화면이 무엇을 보여주는지 그림에서 드러나지 않습니다.
+    // 캡처 계정 1명의 일정만 있으면 그 화면이 무엇을 보여주는지 그림에서 드러나지 않습니다.
     // 등록은 본인만 할 수 있어 그 멤버로 로그인한 context 를 따로 만듭니다.
     for (const [index, person] of MEMBERS.slice(0, 2).entries()) {
       const asMember = await request.newContext({ baseURL });

@@ -71,7 +71,7 @@ $markEnd
     Write-Host ""
     Write-Host "등록했습니다 — $profilePath" -ForegroundColor Green
     Write-Host ""
-    Write-Host "  banblit up          실행합니다. 첫 기동은 Docker image 생성과 npm install 로 몇 분 걸립니다"
+    Write-Host "  banblit up          실행합니다. 첫 기동은 Docker image 생성과 npm install 을 실행합니다"
     Write-Host "  banblit help        나머지 명령"
     Write-Host ""
     Write-Host "   이 창에서 바로 쓸 수 있습니다. 새 창은 profile 을 읽어 자동으로 등록됩니다." -ForegroundColor DarkGray

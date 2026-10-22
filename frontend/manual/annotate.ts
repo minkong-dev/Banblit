@@ -1,4 +1,4 @@
-// 캡쳐한 화면에 강조 표시를 그립니다. 그림 편집기를 쓰지 않고 캡쳐 직전에 화면 위에
+// 캡처한 화면에 강조 표시를 그립니다. 그림 편집기를 쓰지 않고 캡처 직전에 화면 위에
 // 요소를 추가하는 방식입니다. 그래야 화면이 변경될 때 표시 위치가 함께 따라갑니다.
 //
 // 표시 4가지
@@ -31,7 +31,7 @@ type Drawn = Annotation & { rect: Rect };
 const OVERLAY_ID = "banblit-manual-overlay";
 const DEFAULT_PAD = 6;
 
-/** 그림마다 같은 모습이 나오도록 애니메이션과 입력 커서를 멈춥니다. 캡쳐 1장마다 1번 호출합니다. */
+/** 그림마다 같은 모습이 나오도록 애니메이션과 입력 커서를 멈춥니다. 캡처 1장마다 1번 호출합니다. */
 export async function freeze(page: Page): Promise<void> {
   await page.addStyleTag({
     content: `*, *::before, *::after {
@@ -42,7 +42,7 @@ export async function freeze(page: Page): Promise<void> {
       caret-color: transparent !important;
     }
     /* 비어 있는 toast(로그인 뒤 화면은 .toast, 계정 화면은 .ok)는 화면 아래 밖에 숨어 있다가,
-       fullPage 캡쳐가 창을 늘리면 검은 알약으로 찍힙니다. */
+       fullPage 캡처가 창을 늘리면 검은 알약으로 찍힙니다. */
     .toast:not(.on), body[data-page="account"] .ok:not(.on) { display: none !important; }`,
   });
 }
@@ -150,7 +150,7 @@ export async function annotate(page: Page, items: Annotation[]): Promise<void> {
   );
 }
 
-/** 그린 강조 표시를 모두 삭제합니다. 같은 화면에서 다른 그림을 이어서 캡쳐할 때 호출합니다. */
+/** 그린 강조 표시를 모두 삭제합니다. 같은 화면에서 다른 그림을 이어서 캡처할 때 호출합니다. */
 export async function clearAnnotations(page: Page): Promise<void> {
   await page.evaluate((overlayId) => {
     document.getElementById(overlayId)?.remove();

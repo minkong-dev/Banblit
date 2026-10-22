@@ -25,7 +25,7 @@ test("원고를 PDF 로 출력합니다", async ({ page }) => {
   await page.pdf({
     path: OUTPUT_PDF,
     format: "A4",
-    // 가로형입니다. 화면 캡쳐가 가로로 긴 그림이라, 세로 쪽에서는 그림 1장이 쪽 폭을 다 쓰고
+    // 가로형입니다. 화면 캡처가 가로로 긴 그림이라, 세로 쪽에서는 그림 1장이 쪽 폭을 다 쓰고
     // 설명이 그림 아래로 밀립니다. 가로 쪽에서는 그림과 설명을 좌우로 나란히 배치합니다.
     landscape: true,
     printBackground: true,

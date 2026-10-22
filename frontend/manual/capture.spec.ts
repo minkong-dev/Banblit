@@ -1,4 +1,4 @@
-// 매뉴얼 그림을 캡쳐합니다. 무엇을 캡쳐할지는 이 파일이 아니라 docs/manual/shots.json 이 정합니다 —
+// 매뉴얼 그림을 캡처합니다. 무엇을 캡처할지는 이 파일이 아니라 docs/manual/shots.json 이 정합니다 —
 // 그림을 추가·삭제하거나 강조 표시를 옮길 때 코드를 수정하지 않게 하기 위한 분리입니다.
 import { test } from "@playwright/test";
 import type { Browser, Page } from "@playwright/test";
@@ -8,7 +8,7 @@ import { annotate, clearAnnotations, freeze } from "./annotate";
 import type { Annotation } from "./annotate";
 import { SHOTS_DIR, SHOTS_PATH, VIEWPORT } from "./config";
 
-/** 캡쳐 전에 화면에서 수행하는 동작 1개입니다. */
+/** 캡처 전에 화면에서 수행하는 동작 1개입니다. */
 type Step = {
   /** 이동할 주소입니다. */
   goto?: string;
@@ -40,16 +40,16 @@ type Step = {
 type Shot = {
   /** 파일 이름입니다. `shots/<이름>.png` 로 저장되고 원고가 같은 경로로 참조합니다. */
   name: string;
-  /** 로그인하지 않은 화면을 캡쳐할 때 "none" 을 적습니다. 생략하면 전체 권한 계정입니다. */
+  /** 로그인하지 않은 화면을 캡처할 때 "none" 을 적습니다. 생략하면 전체 권한 계정입니다. */
   auth?: "none";
-  /** true 면 앞 그림의 화면 상태를 그대로 이어 씁니다. 모달을 단계별로 캡쳐할 때 사용합니다. */
+  /** true 면 앞 그림의 화면 상태를 그대로 이어 씁니다. 모달을 단계별로 캡처할 때 사용합니다. */
   continue?: boolean;
   steps?: Step[];
   /** 잘라낼 범위입니다. 적으면 그 요소만 확대한 그림이 됩니다.
    *  `to` 를 적으면 target 의 왼쪽 위부터 to 의 오른쪽 아래까지를 범위로 합니다 —
    *  내용보다 높이가 큰 요소에서 아래쪽 빈 자리를 잘라낼 때 사용합니다. */
   clip?: { target: string; to?: string; pad?: number; nth?: number };
-  /** true 면 창 높이가 아니라 내용 전체 높이로 캡쳐합니다. 회원가입처럼 창보다 긴 화면에 사용합니다. */
+  /** true 면 창 높이가 아니라 내용 전체 높이로 캡처합니다. 회원가입처럼 창보다 긴 화면에 사용합니다. */
   fullPage?: boolean;
   annotate?: Annotation[];
 };
@@ -123,7 +123,7 @@ async function signedOutPage(browser: Browser): Promise<Page> {
   return context.newPage();
 }
 
-test("매뉴얼 그림을 캡쳐합니다", async ({ page, browser }) => {
+test("매뉴얼 그림을 캡처합니다", async ({ page, browser }) => {
   mkdirSync(SHOTS_DIR, { recursive: true });
   const { shots } = JSON.parse(readFileSync(SHOTS_PATH, "utf8")) as ShotFile;
   let guest: Page | null = null;
@@ -140,7 +140,7 @@ test("매뉴얼 그림을 캡쳐합니다", async ({ page, browser }) => {
       if (shot.continue === true) target = previous;
       previous = target;
 
-      // 동작 1개가 실패해도 남은 그림을 계속 캡쳐합니다. 선택자 1개 때문에 전체 실행이
+      // 동작 1개가 실패해도 남은 그림을 계속 캡처합니다. 선택자 1개 때문에 전체 실행이
       // 중단되면 어느 그림이 더 잘못되었는지 한 번에 확인할 수 없습니다.
       for (const step of shot.steps ?? []) {
         await runStep(target, step).catch((error: unknown) => {
