@@ -15,8 +15,7 @@ flowchart LR
   frontend_src_lib_roster --> frontend_src_lib_validate["validate.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_roster
   frontend_src_components_CalendarViews["CalendarViews.tsx"] --> frontend_src_lib_roster
-  frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_lib_roster
-  frontend_src_components_TeamSearch["TeamSearch.tsx"] --> frontend_src_lib_roster
+  frontend_src_components_Search["Search.tsx"] --> frontend_src_lib_roster
   frontend_src_components_queries["queries.ts"] --> frontend_src_lib_roster
   frontend_src_lib_assignment["assignment.ts"] --> frontend_src_lib_roster
   frontend_src_lib_dayEntries_test["dayEntries.test.ts"] --> frontend_src_lib_roster
@@ -42,8 +41,7 @@ flowchart LR
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
 - [[graph/frontend/src/components/CalendarViews|CalendarViews.tsx]]
-- [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
-- [[graph/frontend/src/components/TeamSearch|TeamSearch.tsx]]
+- [[graph/frontend/src/components/Search|Search.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/lib/assignment|assignment.ts]]
 - [[graph/frontend/src/lib/dayEntries.test|dayEntries.test.ts]]

@@ -12,14 +12,13 @@ flowchart LR
   frontend_src_components_controls["controls.tsx"]
   frontend_src_components_controls --> frontend_src_components_icons["icons.tsx"]
   frontend_src_components_controls --> frontend_src_lib_loading["loading.ts"]
+  frontend_src_components_controls --> frontend_src_lib_paging["paging.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_components_controls
   frontend_src_components_CalendarBar["CalendarBar.tsx"] --> frontend_src_components_controls
   frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_components_controls
   frontend_src_components_ErrorBoundary["ErrorBoundary.tsx"] --> frontend_src_components_controls
-  frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_components_controls
   frontend_src_components_Modal["Modal.tsx"] --> frontend_src_components_controls
   frontend_src_components_NotificationMenu["NotificationMenu.tsx"] --> frontend_src_components_controls
-  frontend_src_components_Pager["Pager.tsx"] --> frontend_src_components_controls
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_components_controls
   frontend_src_components_PostAttachments["PostAttachments.tsx"] --> frontend_src_components_controls
   frontend_src_components_PostBoard["PostBoard.tsx"] --> frontend_src_components_controls
@@ -27,8 +26,7 @@ flowchart LR
   frontend_src_components_PostWriteForm["PostWriteForm.tsx"] --> frontend_src_components_controls
   frontend_src_components_RejectDialog["RejectDialog.tsx"] --> frontend_src_components_controls
   frontend_src_components_RichTextToolbar["RichTextToolbar.tsx"] --> frontend_src_components_controls
-  frontend_src_components_SearchList["SearchList.tsx"] --> frontend_src_components_controls
-  frontend_src_components_TeamSearch["TeamSearch.tsx"] --> frontend_src_components_controls
+  frontend_src_components_Search["Search.tsx"] --> frontend_src_components_controls
   frontend_src_components_controls_test["controls.test.tsx"] --> frontend_src_components_controls
   frontend_src_routes_Account["Account.tsx"] --> frontend_src_components_controls
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_components_controls
@@ -40,7 +38,6 @@ flowchart LR
   frontend_src_routes_NotFound["NotFound.tsx"] --> frontend_src_components_controls
   frontend_src_routes_PostWrite["PostWrite.tsx"] --> frontend_src_components_controls
   frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_components_controls
-  frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_components_controls
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_components_controls
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_components_controls
   frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_components_controls
@@ -59,6 +56,7 @@ flowchart LR
 
 - [[graph/frontend/src/components/icons|icons.tsx]]
 - [[graph/frontend/src/lib/loading|loading.ts]]
+- [[graph/frontend/src/lib/paging|paging.ts]]
 
 ## imported by
 
@@ -66,10 +64,8 @@ flowchart LR
 - [[graph/frontend/src/components/CalendarBar|CalendarBar.tsx]]
 - [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
 - [[graph/frontend/src/components/ErrorBoundary|ErrorBoundary.tsx]]
-- [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
 - [[graph/frontend/src/components/Modal|Modal.tsx]]
 - [[graph/frontend/src/components/NotificationMenu|NotificationMenu.tsx]]
-- [[graph/frontend/src/components/Pager|Pager.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
 - [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]
 - [[graph/frontend/src/components/PostBoard|PostBoard.tsx]]
@@ -77,8 +73,7 @@ flowchart LR
 - [[graph/frontend/src/components/PostWriteForm|PostWriteForm.tsx]]
 - [[graph/frontend/src/components/RejectDialog|RejectDialog.tsx]]
 - [[graph/frontend/src/components/RichTextToolbar|RichTextToolbar.tsx]]
-- [[graph/frontend/src/components/SearchList|SearchList.tsx]]
-- [[graph/frontend/src/components/TeamSearch|TeamSearch.tsx]]
+- [[graph/frontend/src/components/Search|Search.tsx]]
 - [[graph/frontend/src/components/controls.test|controls.test.tsx]]
 - [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
@@ -90,7 +85,6 @@ flowchart LR
 - [[graph/frontend/src/routes/NotFound|NotFound.tsx]]
 - [[graph/frontend/src/routes/PostWrite|PostWrite.tsx]]
 - [[graph/frontend/src/routes/Profile|Profile.tsx]]
-- [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]

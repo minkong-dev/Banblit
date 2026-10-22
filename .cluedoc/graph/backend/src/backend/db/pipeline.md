@@ -12,7 +12,6 @@ flowchart LR
   backend_src_backend_db_pipeline["pipeline.py"]
   backend_src_backend_db_pipeline --> backend_src_backend_db_commit["commit.py"]
   backend_src_backend_db_pipeline --> backend_src_backend_db_engine["engine.py"]
-  backend_src_backend_db_pipeline --> backend_src_backend_db_health["health.py"]
   backend_src_backend_db_pipeline --> backend_src_backend_db_schedule_store["schedule_store.py"]
   backend_src_backend_api_app["app.py"] --> backend_src_backend_db_pipeline
   backend_src_backend_api_auth_dependency["auth_dependency.py"] --> backend_src_backend_db_pipeline
@@ -49,7 +48,6 @@ flowchart LR
 
 - [[graph/backend/src/backend/db/commit|commit.py]]
 - [[graph/backend/src/backend/db/engine|engine.py]]
-- [[graph/backend/src/backend/db/health|health.py]]
 - [[graph/backend/src/backend/db/schedule_store|schedule_store.py]]
 
 ## imported by
@@ -90,4 +88,4 @@ flowchart LR
 - `get_engine`
 - `get_session`
 - `get_session_factory`
-- `check_database`: `backend.db.health`
+- `check_database`: `backend.db.engine`

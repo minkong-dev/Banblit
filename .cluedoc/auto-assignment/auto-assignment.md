@@ -176,9 +176,9 @@ session 후보     ├───────────────┤          
 |---|---|---|
 | 계산 1회(solver 1번)의 상한 | 60초 | `scheduling/pipeline.py` 의 `SOLVER_TIME_LIMIT_SECONDS` |
 | 더 나은 배정안이 나오지 않을 때 기다리는 시간 | 5초 | `scheduling/pipeline.py` 의 `STALL_SECONDS` |
-| 화면이 결과를 기다리는 상한 | 90초 | `frontend/src/lib/jobs.ts` 의 `JOB_DEADLINE_MS` |
+| 화면이 결과를 기다리는 상한 | 90초 | `frontend/src/lib/pipeline.ts` 의 `JOB_DEADLINE_MS` |
 
-화면의 상한은 서버가 작업 1개에 쓰는 최대 시간(60초)에 여유 30초를 더한 값입니다. 화면이 서버보다 먼저 대기를 중단하면 화면은 실패를 표시하고 서버는 계산을 계속해 기록을 쌓습니다. 서버의 값을 변경하면 `jobs.ts` 의 `SERVER_JOB_LIMIT_SECONDS` 도 함께 변경합니다.
+화면의 상한은 서버가 작업 1개에 쓰는 최대 시간(60초)에 여유 30초를 더한 값입니다. 화면이 서버보다 먼저 대기를 중단하면 화면은 실패를 표시하고 서버는 계산을 계속해 기록을 쌓습니다. 서버의 값을 변경하면 `pipeline.ts` 의 `SERVER_JOB_LIMIT_SECONDS` 도 함께 변경합니다.
 
 자동 실행이 상한을 넘기면 그 기간만 실패로 기록하고 다음 기간으로 넘어갑니다. 실행 기록을 남기지 않으므로 그 계산 시각은 다음 확인에서 다시 실행됩니다.
 

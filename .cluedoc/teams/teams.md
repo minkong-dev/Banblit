@@ -11,7 +11,7 @@ sources:
   - "[[graph/backend/tests/integration/db/test_member_expel_endpoints]]"  # 추방으로 계정이 삭제되면 포지션이 해제되는지의 시나리오 — backend/tests/integration/db/test_member_expel_endpoints.py
   - "[[graph/frontend/src/routes/Teams]]"  # 팀 목록, 포지션 구성, 명단 화면. 팀 생성, 수정 창의 팀 색 선택 — frontend/src/routes/Teams.tsx
   - "[[graph/frontend/src/lib/teamColors]]"  # 팀 색 20가지와 @radix-ui/colors 값으로 만든 CSS 변수 — frontend/src/lib/teamColors.ts
-  - "[[graph/frontend/src/components/MemberSearch]]"  # 포지션에 추가할 사람을 검색하는 입력칸 — frontend/src/components/MemberSearch.tsx
+  - "[[graph/frontend/src/components/Search]]"  # 포지션에 추가할 사람을 검색하는 입력칸 — frontend/src/components/Search.tsx
   - "[[graph/frontend/src/routes/Profile]]"  # 내가 맡은 포지션을 표시하는 화면 — frontend/src/routes/Profile.tsx
 ---
 

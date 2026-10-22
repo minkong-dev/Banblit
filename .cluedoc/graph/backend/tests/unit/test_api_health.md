@@ -11,13 +11,13 @@ kind: file
 flowchart LR
   backend_tests_unit_test_api_health["test_api_health.py"]
   backend_tests_unit_test_api_health --> backend_src_backend_api_app["app.py"]
-  backend_tests_unit_test_api_health --> backend_src_backend_db_health["health.py"]
+  backend_tests_unit_test_api_health --> backend_src_backend_db_engine["engine.py"]
 ```
 
 ## imports
 
 - [[graph/backend/src/backend/api/app|app.py]]
-- [[graph/backend/src/backend/db/health|health.py]]
+- [[graph/backend/src/backend/db/engine|engine.py]]
 
 ## imported by
 
@@ -25,5 +25,5 @@ flowchart LR
 
 ## 함수와 호출
 
-- `test_health_reports_each_dependency_when_everything_is_up`: `backend.db.health`
-- `test_health_reports_which_dependency_failed`: `backend.db.health`
+- `test_health_reports_each_dependency_when_everything_is_up`: `backend.db.engine`
+- `test_health_reports_which_dependency_failed`: `backend.db.engine`

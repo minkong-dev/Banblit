@@ -9,7 +9,7 @@ import type { RefObject } from "react";
 
 import { Card, SectionHead } from "../components/Layout";
 import { Dropdown } from "../components/Dropdown";
-import { MemberPicker } from "../components/MemberPicker";
+import { MemberPicker } from "../components/Search";
 import { Button, DeleteButton, EditButton, Empty, FormFoot, IconButton, NavButton, Toggle, Why } from "../components/controls";
 import { Modal } from "../components/Modal";
 import { SeatRow } from "../components/SeatRow";

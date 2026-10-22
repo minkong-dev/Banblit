@@ -10,8 +10,8 @@ kind: file
 ```mermaid
 flowchart LR
   frontend_src_lib_paging["paging.ts"]
-  frontend_src_components_Pager["Pager.tsx"] --> frontend_src_lib_paging
   frontend_src_components_PostBoard["PostBoard.tsx"] --> frontend_src_lib_paging
+  frontend_src_components_controls["controls.tsx"] --> frontend_src_lib_paging
   frontend_src_lib_paging_test["paging.test.ts"] --> frontend_src_lib_paging
   frontend_src_routes_Teams["Teams.tsx"] --> frontend_src_lib_paging
 ```
@@ -22,7 +22,7 @@ flowchart LR
 
 ## imported by
 
-- [[graph/frontend/src/components/Pager|Pager.tsx]]
 - [[graph/frontend/src/components/PostBoard|PostBoard.tsx]]
+- [[graph/frontend/src/components/controls|controls.tsx]]
 - [[graph/frontend/src/lib/paging.test|paging.test.ts]]
 - [[graph/frontend/src/routes/Teams|Teams.tsx]]

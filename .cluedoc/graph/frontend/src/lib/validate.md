@@ -14,7 +14,7 @@ flowchart LR
   frontend_src_lib_settings["settings.ts"] --> frontend_src_lib_validate
   frontend_src_lib_validate_test["validate.test.ts"] --> frontend_src_lib_validate
   frontend_src_routes_Account["Account.tsx"] --> frontend_src_lib_validate
-  frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_lib_validate
+  frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_lib_validate
   frontend_src_routes_SettingsMembers["SettingsMembers.tsx"] --> frontend_src_lib_validate
 ```
 
@@ -28,5 +28,5 @@ flowchart LR
 - [[graph/frontend/src/lib/settings|settings.ts]]
 - [[graph/frontend/src/lib/validate.test|validate.test.ts]]
 - [[graph/frontend/src/routes/Account|Account.tsx]]
-- [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
+- [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/SettingsMembers|SettingsMembers.tsx]]

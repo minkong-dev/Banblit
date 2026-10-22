@@ -12,15 +12,13 @@ flowchart LR
   frontend_src_lib_contract["contract.ts"]
   frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_contract
   frontend_src_components_EnsembleDayEditor["EnsembleDayEditor.tsx"] --> frontend_src_lib_contract
-  frontend_src_components_MemberPicker["MemberPicker.tsx"] --> frontend_src_lib_contract
   frontend_src_components_MemberSearch_test["MemberSearch.test.tsx"] --> frontend_src_lib_contract
-  frontend_src_components_MemberSearch["MemberSearch.tsx"] --> frontend_src_lib_contract
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_lib_contract
   frontend_src_components_PostAttachments["PostAttachments.tsx"] --> frontend_src_lib_contract
   frontend_src_components_PostBoard["PostBoard.tsx"] --> frontend_src_lib_contract
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_lib_contract
   frontend_src_components_RejectDialog["RejectDialog.tsx"] --> frontend_src_lib_contract
-  frontend_src_components_TeamSearch["TeamSearch.tsx"] --> frontend_src_lib_contract
+  frontend_src_components_Search["Search.tsx"] --> frontend_src_lib_contract
   frontend_src_components_queries["queries.ts"] --> frontend_src_lib_contract
   frontend_src_lib_account_test["account.test.ts"] --> frontend_src_lib_contract
   frontend_src_lib_account["account.ts"] --> frontend_src_lib_contract
@@ -45,7 +43,6 @@ flowchart LR
   frontend_src_routes_DayDialogParts["DayDialogParts.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_PostWrite["PostWrite.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_lib_contract
-  frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Scheduler["Scheduler.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Settings_test["Settings.test.tsx"] --> frontend_src_lib_contract
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_contract
@@ -67,15 +64,13 @@ flowchart LR
 
 - [[graph/frontend/src/components/AppShell|AppShell.tsx]]
 - [[graph/frontend/src/components/EnsembleDayEditor|EnsembleDayEditor.tsx]]
-- [[graph/frontend/src/components/MemberPicker|MemberPicker.tsx]]
 - [[graph/frontend/src/components/MemberSearch.test|MemberSearch.test.tsx]]
-- [[graph/frontend/src/components/MemberSearch|MemberSearch.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
 - [[graph/frontend/src/components/PostAttachments|PostAttachments.tsx]]
 - [[graph/frontend/src/components/PostBoard|PostBoard.tsx]]
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
 - [[graph/frontend/src/components/RejectDialog|RejectDialog.tsx]]
-- [[graph/frontend/src/components/TeamSearch|TeamSearch.tsx]]
+- [[graph/frontend/src/components/Search|Search.tsx]]
 - [[graph/frontend/src/components/queries|queries.ts]]
 - [[graph/frontend/src/lib/account.test|account.test.ts]]
 - [[graph/frontend/src/lib/account|account.ts]]
@@ -100,7 +95,6 @@ flowchart LR
 - [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]
 - [[graph/frontend/src/routes/PostWrite|PostWrite.tsx]]
 - [[graph/frontend/src/routes/Profile|Profile.tsx]]
-- [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
 - [[graph/frontend/src/routes/Scheduler|Scheduler.tsx]]
 - [[graph/frontend/src/routes/Settings.test|Settings.test.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]

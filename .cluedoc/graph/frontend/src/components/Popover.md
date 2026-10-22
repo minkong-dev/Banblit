@@ -15,7 +15,7 @@ flowchart LR
   frontend_src_components_NotificationMenu["NotificationMenu.tsx"] --> frontend_src_components_Popover
   frontend_src_components_Popover_test["Popover.test.tsx"] --> frontend_src_components_Popover
   frontend_src_components_RichTextColor["RichTextColor.tsx"] --> frontend_src_components_Popover
-  frontend_src_routes_ProfileCards["ProfileCards.tsx"] --> frontend_src_components_Popover
+  frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_components_Popover
 ```
 
 ## imports
@@ -28,4 +28,4 @@ flowchart LR
 - [[graph/frontend/src/components/NotificationMenu|NotificationMenu.tsx]]
 - [[graph/frontend/src/components/Popover.test|Popover.test.tsx]]
 - [[graph/frontend/src/components/RichTextColor|RichTextColor.tsx]]
-- [[graph/frontend/src/routes/ProfileCards|ProfileCards.tsx]]
+- [[graph/frontend/src/routes/Profile|Profile.tsx]]

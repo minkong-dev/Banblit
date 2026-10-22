@@ -5,14 +5,14 @@ sources:
   - "[[graph/frontend/src/main]]"  # 앱을 시작하고, polling 상한과 20초 polling 간격을 지정하는 파일 — frontend/src/main.tsx
   - "[[graph/frontend/src/routes/routes]]"  # 랜딩, 계정 화면 5개, 스케줄러, 배정, 관리 구역, 공지, 게시판, 팀, 프로필 — frontend/src/routes/
   - "[[graph/frontend/src/routes/SettingsMembers]]"  # 멤버 구역 — permission set 목록과 멤버 명단 — frontend/src/routes/SettingsMembers.tsx
-  - "[[graph/frontend/src/routes/ProfileCards]]"  # 프로필 화면의 카드 — 사진, 내 정보, 비밀번호, 테마, 탈퇴 — frontend/src/routes/ProfileCards.tsx
+  - "[[graph/frontend/src/routes/Profile]]"  # 프로필 화면 — 사진, 내 정보, 비밀번호, 테마, 탈퇴 — frontend/src/routes/Profile.tsx
   - "[[graph/frontend/src/components/Avatar]]"  # 사람 한 명을 나타내는 동그라미 — 사진이 없으면 이름 앞 두 글자 — frontend/src/components/Avatar.tsx
   - "[[graph/frontend/src/routes/SettingsReservations]]"  # 예약 구역 — 모든 멤버의 예약과 취소 — frontend/src/routes/SettingsReservations.tsx
   - "[[graph/frontend/src/routes/SettingsBlinded]]"  # 블라인드 구역 — 가려 둔 글과 되돌리기 — frontend/src/routes/SettingsBlinded.tsx
   - "[[graph/frontend/src/components/Modal]]"  # 모든 화면이 함께 쓰는 Modal 컴포넌트 — frontend/src/components/Modal.tsx
   - "[[graph/frontend/src/components/controls]]"  # 버튼, 체크, 시작/종료 쌍, 검색, 파일 선택, 문구 등 본질이 같은 요소 1개 — frontend/src/components/controls.tsx
   - "[[graph/frontend/src/components/Popover]]"  # popover="auto" 팝업 1개와 경로 변경 시 닫기 — frontend/src/components/Popover.tsx
-  - "[[graph/frontend/src/components/MemberSearch]]"  # 창 위에 겹쳐 뜨는 멤버 검색 창의 입력칸과 목록 — frontend/src/components/MemberSearch.tsx
+  - "[[graph/frontend/src/components/Search]]"  # modal 안의 멤버 검색, 팀 검색의 입력칸과 목록 — frontend/src/components/Search.tsx
   - "[[graph/frontend/src/styles/base.css]]"  # 색, 본문 최대 폭 같은 모든 화면 공통 값 — frontend/src/styles/base.css
   - "[[graph/frontend/src/styles/shell.css]]"  # 상단바, 사이드바, 카드, 입력칸 등 모든 화면이 함께 쓰는 스타일 — frontend/src/styles/shell.css
   - "[[graph/frontend/src/lib/loading]]"  # 목록이 불러오는 중인지, 실패했는지, 정상인지를 값 1개로 표현하는 타입 — frontend/src/lib/loading.ts
@@ -41,7 +41,6 @@ sources:
   - "[[graph/frontend/src/components/Layout]]"  # 모든 화면이 함께 쓰는 Card, SectionHead, Tabs, Panel — frontend/src/components/Layout.tsx
   - "[[graph/frontend/src/components/richTextEditor]]"  # 글쓰기 editor 의 확장과 본문에 넣을 수 있는 파일 형식 — frontend/src/components/richTextEditor.ts
   - "[[graph/frontend/src/lib/pipeline]]"  # lib 모듈의 호출 순서를 지정하는 파일 — frontend/src/lib/pipeline.ts
-  - "[[graph/frontend/src/lib/jobs]]"  # 접수한 계산이 끝날 때까지 polling 하는 함수 — frontend/src/lib/jobs.ts
   - "[[graph/frontend/src/lib/notifications]]"  # 알림 종류를 문장으로 변환하는 함수 — frontend/src/lib/notifications.ts
   - "[[graph/frontend/src/lib/boards]]"  # 첨부의 크기, 확장자를 화면에서 먼저 검증하는 함수 — frontend/src/lib/boards.ts
   - "[[graph/frontend/src/components/PostBoard]]"  # 글 목록과 상세를 전환하는 게시판 컴포넌트 — frontend/src/components/PostBoard.tsx

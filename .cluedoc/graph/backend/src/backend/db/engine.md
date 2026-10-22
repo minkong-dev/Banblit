@@ -11,7 +11,9 @@ kind: file
 flowchart LR
   backend_src_backend_db_engine["engine.py"]
   backend_src_backend_db_pipeline["pipeline.py"] --> backend_src_backend_db_engine
+  backend_tests_unit_test_api_health["test_api_health.py"] --> backend_src_backend_db_engine
   backend_tests_unit_test_db_engine["test_db_engine.py"] --> backend_src_backend_db_engine
+  backend_tests_unit_test_db_health["test_db_health.py"] --> backend_src_backend_db_engine
 ```
 
 ## imports
@@ -21,8 +23,11 @@ flowchart LR
 ## imported by
 
 - [[graph/backend/src/backend/db/pipeline|pipeline.py]]
+- [[graph/backend/tests/unit/test_api_health|test_api_health.py]]
 - [[graph/backend/tests/unit/test_db_engine|test_db_engine.py]]
+- [[graph/backend/tests/unit/test_db_health|test_db_health.py]]
 
 ## 함수와 호출
 
 - `create_db_engine`
+- `check_database`

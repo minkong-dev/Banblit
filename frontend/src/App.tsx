@@ -10,10 +10,9 @@ import {
   SignUp,
 } from "./routes/Account";
 import { Assignment } from "./routes/Assignment";
-import { Board } from "./routes/Board";
+import { Board, Notices } from "./routes/Board";
 import { Landing } from "./routes/Landing";
 import { NotFound } from "./routes/NotFound";
-import { Notices } from "./routes/Notices";
 import { BoardWrite, NoticeWrite } from "./routes/PostWrite";
 import { Profile } from "./routes/Profile";
 import { Scheduler } from "./routes/Scheduler";
