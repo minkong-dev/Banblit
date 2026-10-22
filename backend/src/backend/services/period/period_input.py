@@ -8,8 +8,8 @@ from backend.scheduling.pipeline import Team as EngineTeam
 from backend.scheduling.pipeline import TimeInterval, day_window, generate_slots
 
 DAY = timedelta(days=1)
-# 반복을 전개할 때 시작일로부터 계산할 최대 기간입니다. 고른 요일이 없거나 종료일이 잘못 들어와도
-# 무한히 돌지 않게 하는 상한입니다. 5년이면 이 서비스의 어떤 조회 범위보다 넓습니다.
+# 반복을 전개할 때 시작일로부터 계산할 최대 기간입니다. 선택한 요일이 없거나 종료일이 잘못 입력되어도
+# 전개를 이 기간에서 종료합니다.
 MAX_REPEAT_SPAN = timedelta(days=365 * 5)
 
 
@@ -28,7 +28,7 @@ def expand_unavailable(
 
     매일 반복하면 1일, 매주 반복하면 7일 간격으로 되풀이하되, 반복 종료일이 있으면
     그 날짜까지만 생성합니다.
-    기간과 전혀 겹치지 않는 구간은 제외합니다 — 엔진에 넘겨도 아무 영향이 없습니다.
+    기간과 전혀 겹치지 않는 구간은 제외합니다.
     """
     expanded: list[TimeInterval] = []
     for row in rows:
@@ -52,13 +52,12 @@ def _occurrences(row: UnavailableTime, window_end: datetime) -> list[datetime]:
         # 반복 종료일은 "그 날짜까지"라는 뜻이므로 그날의 끝까지 인정합니다.
         limit = min(limit, datetime.combine(row.repeat_until + timedelta(days=1), time()))
 
-    # 횟수는 고른 요일 전부를 한 세트로 세는 주 단위입니다. 월·화·목·금에 4 면 그 네 요일이
-    # 4주 동안 반복해 16번입니다. 한 번에 하나씩 세면 4 가 월·화·목·금 한 주로 끝나 버립니다.
+    # 횟수는 선택한 요일 전부를 1세트로 세는 주 단위입니다.
     # 주의 경계는 월요일입니다(date.weekday() 가 0).
     weeks = row.repeat_count
     first_monday = (row.starts_at - timedelta(days=row.starts_at.weekday())).date()
     if weeks is not None:
-        # 마지막 주의 일요일까지가 끝입니다. 화면이 보는 범위와 무관하게 여기서 자릅니다.
+        # 마지막 주의 일요일에서 전개를 종료합니다. 화면의 조회 범위와 무관합니다.
         last_day = first_monday + timedelta(days=weeks * 7)
         limit = min(limit, datetime.combine(last_day, time()))
 
@@ -68,25 +67,25 @@ def _occurrences(row: UnavailableTime, window_end: datetime) -> list[datetime]:
         if chosen & (1 << current.weekday()):
             starts.append(current)
         current += DAY
-        # 고른 요일이 없거나 종료일이 시작일보다 앞서면 무한히 돌 수 있으므로 상한을 둡니다.
+        # 선택한 요일이 없거나 종료일이 시작일보다 앞서도 MAX_REPEAT_SPAN 에서 전개를 종료합니다.
         if current - row.starts_at > MAX_REPEAT_SPAN:
             break
     return starts
 
 
 
-# 토요일·일요일의 date.weekday() 값입니다. 월요일이 0 이고 일요일이 6 입니다.
+# 토요일의 date.weekday() 값입니다. 이 값 이상이면 주말입니다. 월요일이 0 이고 일요일이 6 입니다.
 SATURDAY = 5
 
 
 @dataclass(frozen=True)
 class PracticeWindow:
-    """팀별 합주를 배정할 수 있는 하루 중의 시간대입니다. 평일(월~금)과 주말(토·일)이 다를 수 있습니다.
+    """팀별 합주를 배정할 수 있는 하루 중의 시간대입니다. 평일(월~금)과 주말(토요일, 일요일)이 다를 수 있습니다.
 
     합주실 개방시각과는 다른 값입니다. 합주실이 09시에 열어도 팀별 합주는 17시부터만 배정할 수
     있습니다. 실제 배정 구간은 이 시간대와 합주실 개방시각의 교집합입니다.
 
-    None 인 쪽은 시간대를 정하지 않았다는 뜻이고, 그날은 합주실 개방시각 전체를 씁니다.
+    None 인 쪽은 시간대를 지정하지 않았다는 뜻이고, 그날은 합주실 개방시각 전체를 씁니다.
     """
 
     weekday: tuple[time, time] | None
@@ -99,15 +98,11 @@ class PracticeWindow:
 def build_engine_rooms(
     rooms: list[Room], days: list[date], window: PracticeWindow | None = None
 ) -> list[EngineRoom]:
-    """합주실 × 날짜를 엔진 입력 합주실 목록으로 확장합니다.
+    """합주실 × 날짜를 엔진 입력 합주실 목록으로 확장합니다. 날짜마다 합주실 1개를 전달합니다.
 
-    엔진은 한 합주실에 이어진 운영시간 하나만 받으므로 날짜마다 한 번씩 전달합니다.
-    번호는 DB의 합주실 번호를 그대로 사용합니다 — 날짜가 다르면 시간 구간이 달라
-    같은 번호가 여러 번 나와도 slot(점유 단위 길이의 시간 칸)끼리는 겹치지 않습니다.
+    번호는 DB 의 합주실 번호를 그대로 사용합니다.
 
-    window 를 넘기면 그날의 팀별 합주 시간대와 겹치는 부분만 남깁니다. 겹치는 시간이 없는
-    날은 목록에서 빠집니다 — 길이가 0 이거나 음수인 구간을 엔진에 넘기면 칸을 만들지 못하거나
-    운영 시간이 잘못되었다고 거부합니다.
+    window 를 전달하면 그날의 팀별 합주 시간대와 겹치는 부분만 남깁니다. 겹치는 시간이 없는 날은 목록에서 제외합니다.
     """
     engine_rooms: list[EngineRoom] = []
     for day in days:
@@ -139,7 +134,7 @@ def capped_sessions_per_team(
 def target_sessions(
     target_hours: int | None, auto: int, day_count: int, daily_max_minutes: int, session_minutes: int
 ) -> int:
-    """팀당 목표 session 횟수입니다. target_hours 가 None 이면 auto, 아니면 그 시간을 session 횟수로 바꾼 값을 하루 상한으로 자릅니다."""
+    """팀당 목표 session 횟수입니다. target_hours 가 None 이면 auto, 아니면 그 시간을 session 횟수로 변환한 값을 하루 상한으로 제한합니다."""
     wanted = auto if target_hours is None else target_hours * 60 // session_minutes
     return capped_sessions_per_team(wanted, day_count, daily_max_minutes, session_minutes)
 

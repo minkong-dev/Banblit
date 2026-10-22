@@ -28,7 +28,7 @@ router = APIRouter()
 
 
 def current_time() -> datetime:
-    """예약 검증에 쓰는 현재 시각입니다. 테스트가 고정된 시각으로 바꿔 넣을 수 있도록 의존성으로 둡니다."""
+    """예약 검증에 쓰는 현재 시각입니다. 테스트가 고정된 시각으로 대체할 수 있도록 dependency 로 둡니다."""
     return datetime.now()
 
 

@@ -94,7 +94,7 @@ class Base(DeclarativeBase):
 
 
 class Settings(Base):
-    """저장소 전체에 하나뿐인 설정입니다. id 가 1 로 못박혀 있어 행이 둘 이상 생기지 않습니다.
+    """서비스 전체에 1개뿐인 설정입니다. CHECK 제약(id = 1)이 있어 행이 2개 이상 생성되지 않습니다.
 
     값마다 허용 범위가 달라 키·값 table 로 두지 않고 열로 둡니다. 그래야 CHECK 로 지킬 수 있습니다.
     """
@@ -102,8 +102,7 @@ class Settings(Base):
     __tablename__ = "settings"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    # 예약과 배정이 쓰는 시간 칸의 크기입니다. 한 시간을 남김없이 나누어야 격자가 고르게
-    # 떨어지므로 60 의 약수만 받습니다.
+    # 예약과 배정이 쓰는 slot 의 크기(분)입니다. slot 경계가 정시와 맞도록 60 의 약수만 허용합니다.
     # server_default 는 DB 가 적용하는 기본값입니다. default 만 두면 이 프로그램을 거치지 않는
     # INSERT(psql, migration)에서 값이 비어 NOT NULL 에 걸립니다.
     slot_minutes: Mapped[int] = mapped_column(
@@ -133,25 +132,11 @@ class Settings(Base):
 
 
 class Member(Base):
-    """사용자를 나타냅니다. 동명이인이 있을 수 있으므로 이름에 고유 조건을 두지 않습니다.
-    ID가 식별자입니다.
+    """사용자입니다. id 가 식별자이고, 이름, 학과, 학번, 기수 조합이 unique 입니다.
 
-    login_id 는 로그인에 사용하는 아이디이고, email 은 비밀번호 재설정·아이디 찾기 메일을
-    받는 주소입니다. password_hash 와 함께 로그인 계정 정보를 이룹니다. 명단에만 등록되고
-    아직 가입하지 않은 사용자는 login_id·email·password_hash 가 모두 null 입니다. 가입해야만
-    로그인 계정이 됩니다. 수행 가능한 작업은 member_permission_sets 가 참조하는 permission
-    set(권한 집합)이 결정합니다.
-
-    cohort 는 기수(입학 연도를 구분하는 번호)입니다. 연도로 환산하지 않고
-    숫자를 그대로 저장합니다.
-
-    시스템은 사용자를 id 로 식별하지만, 사용자가 다른 사용자를 구분하는 값은
-    이름, 학과, 학번, 기수 4가지입니다. 그 조합에 unique 제약을 두어
-    같은 사용자가 중복으로 등록되지 않도록 합니다. 이름 하나만으로는
-    동명이인을 구분할 수 없습니다.
-
-    학과와 학번은 이 제약이 추가되기 전에 등록된 행에는 null 입니다. PostgreSQL 은
-    NULL 이 있는 조합을 중복으로 보지 않으므로, 기존 행들이 서로 충돌하지 않습니다.
+    login_id 는 로그인 아이디, email 은 비밀번호 재설정과 아이디 찾기 메일 주소입니다. 가입 전 사용자는
+    login_id, email, password_hash 가 null 입니다. 권한은 member_permission_sets 가 참조하는 권한 세트가 결정합니다.
+    cohort 는 기수이고 숫자 그대로 저장합니다. 학과, 학번은 null 을 허용합니다.
     """
 
     __tablename__ = "members"
@@ -173,10 +158,9 @@ class Member(Base):
 
 
 class PermissionSet(Base):
-    """permission set(권한 집합)입니다. 이름이 식별자이므로 중복될 수 없고, permissions 는 활성화된 항목 목록입니다.
+    """권한 세트(permission set)입니다. name 은 unique 이고, permissions 는 활성화된 권한 항목 목록입니다.
 
-    description 은 이 permission set 을 어떤 역할의 사람에게 부여하는지 적는 열입니다. 항목
-    목록만으로는 "왜 이 permission set 이 있는가"가 남지 않으므로, 생성할 때 반드시 입력받습니다.
+    description 은 이 권한 세트를 부여할 역할을 적는 열이고, 생성할 때 필수입니다.
     """
 
     __tablename__ = "permission_sets"
@@ -232,19 +216,10 @@ class Team(Base):
 
 
 class TeamSlot(Base):
-    """팀의 포지션 자리 하나입니다. (team_id, instrument, ordinal) 이 자리를 식별하고, member_id 가
-    그 자리에 배정된 멤버입니다.
+    """팀의 포지션 자리 1개입니다. (team_id, instrument, ordinal) 이 자리를 식별하고, member_id 가 배정된 멤버입니다.
 
-    member_id 가 null 이면 아직 멤버가 배정되지 않은 자리입니다. 팀을 생성할 때 자리부터
-    생성되고 멤버는 나중에 배정하므로, 멤버가 없는 자리가 정상 상태입니다. 그래서 이 table 은
-    "소속"이 아니라 "자리"를 저장합니다.
-
-    멤버가 삭제되면 그 자리는 member_id 가 null 이 되고 자리 자체는 삭제되지 않습니다(ON DELETE SET NULL).
-    자리는 팀의 구성이므로 멤버가 탈퇴해도 팀의 자리 수가 줄면 안 됩니다.
-
-    한 멤버가 같은 팀의 두 자리에 배정될 수 없습니다(team_id, member_id unique 제약). 배정되면 배정 계산이
-    그 멤버를 같은 시간에 2번 세기 때문입니다. 빈 자리끼리는 이 제약에 위반되지 않습니다. PostgreSQL 이
-    NULL 을 서로 다른 값으로 보기 때문입니다.
+    member_id 가 null 이면 빈 자리입니다. 멤버가 삭제되면 member_id 가 null 로 변경되고 자리는 유지됩니다(ON DELETE SET NULL).
+    (team_id, member_id) 는 unique 이고, 빈 자리끼리는 이 제약에 위반되지 않습니다.
     """
 
     __tablename__ = "team_slots"
@@ -266,7 +241,7 @@ class TeamSlot(Base):
 
 
 class UnavailableTime(Base):
-    """멤버의 불가능 일정입니다. 반복이 켜지면 고른 요일마다 반복합니다.
+    """멤버의 불가능 일정입니다. repeat_weekdays 가 있으면 선택한 요일마다 반복합니다.
 
     시각은 tzinfo(시간대 정보)가 없는 값으로 저장합니다. 엔진의 TimeInterval 과 같은 규칙입니다.
 
@@ -299,7 +274,7 @@ class UnavailableTime(Base):
 
 
 class Room(Base):
-    """합주실입니다. 이름이 식별자이므로 중복될 수 없고, 여는 시각과 닫는 시각은 정시여야 합니다."""
+    """합주실입니다. name 은 unique 이고, opens_at 과 closes_at 은 정시여야 합니다."""
 
     __tablename__ = "rooms"
 
@@ -322,23 +297,19 @@ class Room(Base):
 
 
 class Period(Base):
-    """기간입니다. kind 가 open 이면 선착순 예약 기간, focused 면 자동 배정 대상인 집중 합주기간입니다.
+    """기간입니다. kind 가 open 이면 선착순 예약 기간, focused 이면 자동 배정 대상인 집중 합주기간입니다.
 
-    everyday 는 집중 합주기간의 "매일" 옵션입니다. first_run_at 과 second_run_at 은 하루 2회 계산하는 시각입니다.
-
-    ensemble_* 다섯 열은 전체 합주 설정입니다. 날짜 범위·합주실·기본 시작/종료 시간을 함께 채우거나
-    함께 null 로 변경합니다. null 이면 전체 합주가 없는 기간입니다. 날짜마다 다른 시각은 ensemble_days 가 저장합니다.
-
-    practice_* 네 열은 팀별 합주를 배정할 수 있는 하루 중의 시간대입니다. 합주실 개방시각과는 다른
-    값입니다 — 합주실이 09시에 열어도 팀별 합주는 17시부터만 배정할 수 있습니다. 평일(월~금)과
-    주말(토·일)이 각각 한 쌍이고, null 인 쪽은 그날 합주실 개방시각 전체를 씁니다.
+    everyday 는 집중 합주기간의 "매일" 옵션이고, first_run_at, second_run_at 은 하루 2회 계산 시각입니다.
+    ensemble_* 5개 열은 전체 합주 설정이고 전부 값이 있거나 전부 null 입니다. 날짜마다 다른 시각은 ensemble_days 가 저장합니다.
+    practice_* 4개 열은 팀별 합주를 배정할 수 있는 시간대이고 평일(월~금), 주말(토, 일)이 각각 1쌍입니다.
+    null 인 쪽은 합주실 개방 시간 전체를 씁니다.
     """
 
     __tablename__ = "periods"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     kind: Mapped[str] = mapped_column(Text)
-    # 공연명입니다. 화면의 기간 목록 제목이고, 빈 문자열이면 화면이 종류 이름을 대신 표시합니다(2026-10-07).
+    # 공연명입니다. 화면의 기간 목록 제목이고, 빈 문자열이면 화면이 종류 이름을 표시합니다.
     name: Mapped[str] = mapped_column(Text, default="", server_default="")
     starts_on: Mapped[date] = mapped_column(Date)
     ends_on: Mapped[date] = mapped_column(Date)
@@ -489,7 +460,7 @@ class Assignment(Base):
 class Post(Base):
     """게시판 글입니다. team_id 가 있으면 그 팀 게시판 글, NULL 이면 공지사항입니다.
 
-    같은 table 을 두 화면이 공유하므로 화면과 endpoint(API의 요청 주소 단위)도 하나씩만 둡니다.
+    같은 table 을 공지사항과 팀 게시판이 공유합니다.
     """
 
     __tablename__ = "posts"
@@ -507,8 +478,8 @@ class Post(Base):
         ForeignKey("members.id", ondelete="CASCADE")
     )
     created_at: Mapped[datetime] = mapped_column(DateTime)
-    # 값이 있으면 그 시각에 가려진 글입니다. 가려진 글은 목록과 상세에서 빠지고 작성자 본인도 볼 수
-    # 없습니다. board_moderate 를 가진 사람이 격리 목록에서만 봅니다.
+    # 값이 있으면 그 시각에 블라인드된 글입니다. 블라인드된 글은 목록과 상세에서 제외되고 작성자 본인도 조회할 수
+    # 없습니다. board_moderate 를 가진 사람만 블라인드 목록에서 조회합니다.
     blinded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # 가린 사람입니다. 그 계정이 삭제되면 이 값만 null 로 변경합니다 — author_id 처럼 CASCADE 로 두면
     # 관리자 계정 하나를 삭제할 때 그 사람이 가린 글이 전부 삭제됩니다.
@@ -582,18 +553,10 @@ class Attachment(Base):
 
 
 class Reservation(Base):
-    """예약 한 건입니다. 사람이 선택한 구간을 쪼개지 않고 starts_at~ends_at 한 행으로 저장합니다.
+    """예약 1건입니다. 선택한 구간을 starts_at, ends_at 1행으로 저장합니다.
 
-    같은 합주실에서 시간이 겹치는 행은 DB 가 거절합니다(reservations_no_overlap). 선착순은
-    그 제약이 commit 시점에 결정합니다.
-
-    name 은 캘린더에 표시할 이름입니다. 비어 있으면 화면이 팀 이름을, 팀도 없으면 예약자
-    이름을 대신 씁니다.
-
-    team_id 가 있으면 팀 예약, 없으면 member_id 멤버의 개인 예약입니다.
-
-    cancelled_at 이 있으면 취소된 예약입니다. 취소해도 행을 삭제하지 않고, 이동하면 옛 행을 취소 표시로
-    두고 새 행을 만듭니다. 겹침 금지 제약은 취소된 행을 보지 않습니다(migration f4c2a9d17b63).
+    team_id 가 있으면 팀 예약, 없으면 member_id 멤버의 개인 예약입니다. name 이 비어 있으면 화면이 팀 이름, 팀도 없으면 예약자 이름을 표시합니다.
+    cancelled_at 이 있으면 취소된 예약입니다. 취소된 행을 제외한 행끼리의 겹침은 reservations_no_overlap 제약이 거부합니다.
     """
 
     __tablename__ = "reservations"

@@ -1,5 +1,5 @@
 # roster 모듈의 시퀀스 파일이자 공개 interface(다른 모듈에서 접근하는 진입점)입니다.
-# api와 다른 service 모듈은 이 모듈 안의 다른 파일을 직접 import 하지 않고 이 파일만 참조합니다.
+# api 와 다른 service 모듈은 이 모듈 안의 다른 파일을 직접 import 하지 않고 이 파일만 참조합니다.
 # 팀당 포지션 수, 사진 용량, 검색 결과 수처럼 운영자가 조절하는 값은 이 파일에만 둡니다.
 
 from typing import BinaryIO
@@ -52,8 +52,8 @@ def search_members(session: Session, query: str) -> list[Member]:
 def assign_slot_members(
     session: Session, team_id: int, wanted: list[tuple[int, int | None]], requester: Member
 ) -> None:
-    """자리 여러 개의 배정을 transaction 1개로 저장합니다. 앉히려면 member_add, 다른 사람을 내리려면 member_remove 가 필요합니다."""
-    # 항목마다 필요한 권한이 달라 endpoint 의 dependency 가 아니라 여기서 요청자의 권한을 조회해 넘깁니다.
+    """자리 2개 이상의 배정을 transaction 1개로 저장합니다. 자리에 배치하려면 member_add, 다른 사람의 배치를 해제하려면 member_remove 가 필요합니다."""
+    # 항목마다 필요한 권한이 달라 endpoint 의 dependency 가 아니라 이 함수에서 요청자의 권한을 조회해 전달합니다.
     held = account_permissions(session, requester.id)
     roster_service.assign_slot_members(
         session, team_id, wanted, "member_add" in held, "member_remove" in held, requester.id
@@ -62,7 +62,7 @@ def assign_slot_members(
 
 def clear_slot(session: Session, team_id: int, slot_id: int, requester: Member) -> TeamSlot:
     """포지션의 배정을 해제합니다. 자신의 자리는 권한 없이, 다른 사람의 자리는 member_remove 로 해제합니다."""
-    # 본인 자리 해제는 권한이 필요 없어 endpoint 의 dependency 로 막지 않고 여기서 권한을 조회해 넘깁니다.
+    # 본인 자리 해제는 권한이 필요 없어 endpoint 의 dependency 로 막지 않고 이 함수에서 권한을 조회해 전달합니다.
     may_unseat = "member_remove" in account_permissions(session, requester.id)
     return roster_service.clear_slot(session, team_id, slot_id, requester.id, may_unseat)
 

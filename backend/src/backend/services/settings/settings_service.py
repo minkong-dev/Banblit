@@ -7,14 +7,10 @@ from backend.contract import MAX_SESSION_MINUTES
 
 
 def _row(session: Session) -> Settings:
-    """설정 행을 가져옵니다. migration 이 넣어 두므로 없을 수 없습니다.
-
-    그래도 없으면 DB 가 migration 을 거치지 않은 상태라는 뜻이라, 기본값으로 덮지 않고
-    바로 실패시킵니다. 오류 없이 60 으로 동작하면 설정이 누락된 것을 알 수 없습니다.
-    """
+    """설정 행을 조회합니다. 행이 존재하지 않으면 RuntimeError 를 발생시킵니다."""
     row = session.get(Settings, 1)
     if row is None:
-        raise RuntimeError("설정 행이 없습니다. migration 을 적용하십시오")
+        raise RuntimeError("설정 행이 존재하지 않습니다. migration 을 적용하십시오")
     return row
 
 
@@ -49,18 +45,14 @@ def set_settings(
 
 
 def _check_fits(slot: int, length: int) -> None:
-    """DB 의 CHECK 와 같은 조건을 사유가 있는 문구로 먼저 봅니다.
-
-    CHECK 에 그대로 걸리게 두면 "제약 조건 위반"만 전달되어, 어느 값을 어떻게 고쳐야 하는지
-    사용자가 알 수 없습니다.
-    """
+    """DB 의 CHECK 와 같은 조건을 먼저 검사하고, 위반하면 사유를 담은 ValueError 를 발생시킵니다."""
     if length < slot:
         raise ValueError(
-            f"합주 길이({length}분)는 시간 칸({slot}분)보다 짧을 수 없어요. 칸을 먼저 줄여주세요"
+            f"합주 길이({length}분)는 점유 단위({slot}분)보다 짧을 수 없어요. 점유 단위를 먼저 줄여주세요"
         )
     if length % slot != 0:
         raise ValueError(
-            f"합주 길이({length}분)는 시간 칸({slot}분)의 배수여야 해요. "
+            f"합주 길이({length}분)는 점유 단위({slot}분)의 배수여야 해요. "
             f"{length - length % slot}분이나 {length - length % slot + slot}분으로 맞춰주세요"
         )
     if length > MAX_SESSION_MINUTES:

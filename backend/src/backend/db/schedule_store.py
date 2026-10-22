@@ -17,7 +17,7 @@ class AssignmentRow(TypedDict):
     두 곳에 정의하면 한쪽 이름을 변경해도 Python 이 검사하지 못합니다.
     실제 table 의 열은 backend/db/models.py 의 Assignment 가 정의합니다.
 
-    배정 계산은 칸 하나씩 넘기고, save_schedule 이 이어진 칸을 한 구간으로 합쳐 저장합니다.
+    배정 계산은 slot 단위로 전달하고, save_schedule 과 save_record 가 이어진 slot 을 구간 1개로 합쳐 저장합니다.
     """
 
     team_id: int
@@ -137,8 +137,8 @@ def list_backup_rounds(
 ) -> list[BackupRound]:
     """그 기간의 스케줄링 기록을 최신순으로 반환합니다. 사용자가 보거나 적용할 기록을 선택하는 목록입니다.
 
-    slot_minutes 는 칸 하나의 크기(분)이고 저장소 설정이 결정합니다. 구간의 길이를 그 값으로 나눠
-    칸 수를 셉니다. 저장 이후 설정이 변경되었으면 지금 설정 기준의 칸 수가 됩니다.
+    slot_minutes 는 slot 1개의 크기(분)이고 settings table 의 값입니다. 구간 길이를 slot_minutes 로 나눠
+    slot 수를 셉니다. 저장 이후 설정이 변경되었으면 현재 설정 기준의 slot 수를 반환합니다.
     """
     # extract(epoch from interval) 은 구간의 길이를 초로 반환합니다. 분으로 변경한 뒤 칸 크기로 나눕니다.
     minutes = func.sum(

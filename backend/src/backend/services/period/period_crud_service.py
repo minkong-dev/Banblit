@@ -19,8 +19,7 @@ from backend.services.reservation.pipeline import cancel_reservations_in_focus
 from backend.db.pipeline import commit_translating
 from backend.services.period.close_service import require_naive_close
 
-# 위반될 수 있는 제약과 그때 표시할 문장입니다. 제약 이름은 migration b5e1d9a37c42·d9a4c6e1f207 이 지정했습니다.
-# 전체 합주 설정(services/period/ensemble_service.py)도 이 문장을 씁니다.
+# 위반될 수 있는 제약과 그때 표시할 문장입니다. 제약 이름은 migration 080a74e46f56 이 지정했습니다.
 PERIOD_MESSAGES = {
     "periods_focused_no_overlap": (
         "다른 집중 합주기간과 날짜가 겹쳐요. \"매일\" 기간은 종료일 없이 계속되는 것으로 봐요"
@@ -31,12 +30,10 @@ PERIOD_MESSAGES = {
 
 
 def commit_with_cancellations(session: Session, period: Period, now: datetime) -> None:
-    """기간 변경과, 그 변경으로 거절 대상이 된 now 이후 예약의 취소·알림을 commit 1회로 저장합니다.
+    """기간 변경과, 그 변경으로 거절 대상이 된 now 이후 예약의 취소와 알림을 commit 1회로 저장합니다.
 
     취소(cancel_reservations_in_focus)는 시작할 때 flush 하므로 기간 제약 위반이 그 flush 에서 발생합니다.
     commit_translating 의 action 안에서 실행해, 그 위반도 rollback 되고 PERIOD_MESSAGES 의 문장으로 변환됩니다.
-    기간을 먼저 commit 하고 취소를 두 번째 commit 으로 저장하면, 두 번째 commit 이 실패했을 때 기간만 바뀌고
-    취소·알림은 저장되지 않습니다.
     """
 
     def action() -> None:
@@ -46,18 +43,14 @@ def commit_with_cancellations(session: Session, period: Period, now: datetime) -
     commit_translating(session, PERIOD_MESSAGES, action)
 
 
-# 팀별 합주 시간대 한 쌍입니다. 시각 두 개를 "HH:MM" 문자열로 받습니다. None 이면 그 쌍을 정하지
+# 팀별 합주 시간대 한 쌍입니다. 시각 두 개를 "HH:MM" 문자열로 받습니다. None 이면 그 쌍을 지정하지
 # 않았다는 뜻이고, 그날은 합주실 개방시각 전체를 씁니다.
 ClockPair = tuple[str, str] | None
 
 
 @dataclass(frozen=True)
 class WindowIn:
-    """팀별 합주를 배정할 수 있는 하루 중의 시간대입니다. 평일(월~금)과 주말(토·일)이 서로 독립입니다.
-
-    시각 네 개를 매개변수로 따로 받지 않고 값 하나로 묶습니다. 기간을 만들고 고치는 함수는 이미
-    매개변수가 일곱 개라, 네 개를 더하면 호출부에서 어느 자리가 무엇인지 읽히지 않습니다.
-    """
+    """팀별 합주를 배정할 수 있는 하루 중의 시간대입니다. 평일(월~금)과 주말(토요일, 일요일)이 서로 독립입니다."""
 
     weekday: ClockPair = None
     weekend: ClockPair = None
@@ -225,11 +218,10 @@ def update_period(
 ) -> Period:
     """period_id의 기간에서 전달된 항목만 수정하여 저장하고, 수정된 기간을 반환합니다.
 
-    closes_at 이 "keep" 이면 저장된 마감 일시를 그대로 두고, None 이면 마감 일시를 비웁니다.
+    closes_at 이 "keep" 이면 저장된 마감 일시를 그대로 두고, None 이면 마감 일시를 삭제합니다.
     확정된 기간의 마감 일시를 다른 값으로 변경하면 ValueError 입니다.
 
-    window 가 None 이면 저장된 시간대를 그대로 둡니다. 지우려면 두 쌍이 None 인 WindowIn 을
-    넘깁니다. "보내지 않음"과 "지움"을 구분해야, 다른 값만 고치는 요청이 시간대를 지우지 않습니다.
+    window 가 None 이면 저장된 시간대를 그대로 둡니다. 시간대를 삭제하려면 두 쌍이 None 인 WindowIn 을 전달합니다.
     """
     period = get_period_or_raise(session, period_id)
 
@@ -261,7 +253,7 @@ def update_period(
 def delete_period(session: Session, period_id: int) -> None:
     """period_id 의 기간을 삭제합니다. 없는 기간이면 ValueError 를 발생시킵니다.
 
-    그 기간의 배정 결과(assignments)·계산 기록(assignment_runs)·이전 배정기록(assignment_backups)은
+    그 기간의 배정 결과(assignments), 계산 기록(assignment_runs), 이전 배정기록(assignment_backups)은
     외래 키 ondelete=CASCADE 로 DB 가 함께 삭제합니다. 예약은 기간과 연결되어 있지 않아 남습니다.
     """
     period = get_period_or_raise(session, period_id)

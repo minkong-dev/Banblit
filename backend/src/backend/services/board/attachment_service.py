@@ -125,7 +125,7 @@ def attachment_for_download(
 
 # 본문에 넣은 첨부를 브라우저가 표시할 때 사용하는 content type 입니다. 확장자로만 판정합니다 —
 # 업로드할 때 받은 MIME 은 보내는 쪽이 정하는 값이라 믿지 않습니다.
-# HTML·SVG·XML 은 넣지 않습니다. 그 안의 스크립트가 이 서비스 화면의 권한으로 실행됩니다.
+# HTML, SVG, XML 은 포함하지 않습니다.
 # 이 목록은 inline endpoint 가 내보낼 수 있는 형식이고, 화면 editor 가 본문에 넣는 형식 목록과는 다릅니다.
 # flac 은 Safari 가 재생하지 못해 화면 쪽(frontend/src/lib/richText.ts 의 AUDIO)에서 의도적으로 제외합니다.
 INLINE_TYPES: dict[str, str] = {

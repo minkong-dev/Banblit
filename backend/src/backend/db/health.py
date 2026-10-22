@@ -30,5 +30,5 @@ def check_database(engine: Engine) -> DependencyStatus:
         return DependencyStatus(ok=False, detail="데이터베이스에 접속하지 못했습니다")
 
     if revision is None:
-        return DependencyStatus(ok=False, detail="마이그레이션이 적용되지 않았습니다")
+        return DependencyStatus(ok=False, detail="migration 이 적용되지 않았습니다")
     return DependencyStatus(ok=True, detail=f"revision={revision}")

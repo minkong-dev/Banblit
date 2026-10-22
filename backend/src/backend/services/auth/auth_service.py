@@ -27,11 +27,11 @@ _SCRYPT_P = 1
 _SCRYPT_DKLEN = 32
 
 # 데이터베이스 제약(constraint) 위반 시 표시할 오류 메시지입니다. 이메일은 계정 하나에 하나이며,
-# 이름·학과·학번·기수가 모두 같으면 같은 사람으로 판정합니다.
+# 이름, 학과, 학번, 기수가 모두 같으면 같은 사람으로 판정합니다.
 MEMBER_MESSAGES = {
     "members_email_key": "이미 가입된 이메일이에요",
     "members_login_id_key": "이미 사용 중인 아이디예요",
-    "members_name_department_student_no_cohort_key": "이미 가입된 사람이에요 — 이름·학과·학번·기수가 같아요",
+    "members_name_department_student_no_cohort_key": "이미 가입된 사람이에요. 이름, 학과, 학번, 기수가 같아요",
 }
 
 
@@ -39,7 +39,7 @@ def hash_password(password: str) -> str:
     """"scrypt$n$r$p$salt$derived_key" 형식의 문자열을 반환합니다. salt 는 호출마다 새로 생성합니다.
 
     맨 앞 "scrypt"는 형식 표식입니다. 나중에 다른 KDF로 변경하면 형식을 구분하는 데 사용합니다.
-    n·r·p 값을 저장된 해시에 포함하면, 나중에 강도를 올려도 기존 계정은 저장 당시의 강도로 검증됩니다.
+    n, r, p 값을 저장된 해시에 포함하면, 나중에 강도를 올려도 기존 계정은 저장 당시의 강도로 검증됩니다.
     """
     salt = secrets.token_bytes(16)
     derived = hashlib.scrypt(
@@ -49,7 +49,7 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, stored: str) -> bool:
-    """저장된 해시에서 읽은 n·r·p로 다시 계산하여 비교합니다. dklen 은 저장하지 않고 파생값의 길이로 복원합니다."""
+    """저장된 해시에서 읽은 n, r, p 로 다시 계산하여 비교합니다. dklen 은 저장하지 않고 파생값의 길이로 복원합니다."""
     _, n_text, r_text, p_text, salt_hex, derived_hex = stored.split("$")
     n, r, p = int(n_text), int(r_text), int(p_text)
     dklen = len(bytes.fromhex(derived_hex))
@@ -62,7 +62,7 @@ def verify_password(password: str, stored: str) -> bool:
 
 
 def _needs_rehash(stored: str) -> bool:
-    """저장된 해시에서 읽은 n·r·p 가 현재의 _SCRYPT_N·_SCRYPT_R·_SCRYPT_P 와 다른지 판정합니다."""
+    """저장된 해시에서 읽은 n, r, p 가 현재의 _SCRYPT_N, _SCRYPT_R, _SCRYPT_P 와 다른지 판정합니다."""
     _, n_text, r_text, p_text, _, _ = stored.split("$")
     return (int(n_text), int(r_text), int(p_text)) != (_SCRYPT_N, _SCRYPT_R, _SCRYPT_P)
 
@@ -75,12 +75,9 @@ ADMIN_CODE_VARIABLE = "ADMIN_SIGNUP_CODE"
 def _matches_admin_code(given: str) -> bool:
     """가입 요청이 보낸 코드가 환경변수의 코드와 같은지 판단합니다.
 
-    환경변수가 비어 있으면 어떤 값도 통과시키지 않습니다. 비어 있는 채로 두면 코드를 빈 문자열로
-    보낸 요청이 통과해 누구나 모든 권한을 받습니다.
+    환경변수가 비어 있으면 어떤 값도 통과시키지 않습니다.
 
-    hmac.compare_digest 는 길이가 같은 두 값을 끝까지 비교합니다. == 는 다른 글자를 만나면 즉시
-    멈춰서, 응답 시간의 차이로 앞자리를 한 글자씩 맞혀 나갈 수 있습니다. 한글이 든 코드도 받을 수
-    있게 글자가 아니라 UTF-8 바이트로 넘깁니다 — 이 함수는 ASCII 밖의 글자를 거절합니다.
+    두 값을 UTF-8 바이트로 변환해 hmac.compare_digest 로 비교합니다.
     """
     expected = os.environ.get(ADMIN_CODE_VARIABLE, "")
     if expected == "":
@@ -99,13 +96,13 @@ def signup(
     cohort: int,
     admin_code: str | None = None,
 ) -> Member:
-    """새 계정을 만듭니다. 이름 중복은 허용합니다. 이메일·아이디가 같거나 이름·학과·학번·기수가 모두 같은 계정이 있으면 거부합니다.
+    """새 계정을 생성합니다. 이름 중복은 허용합니다. 이메일이나 아이디가 같거나 이름, 학과, 학번, 기수가 모두 같은 계정이 있으면 거부합니다.
 
     cohort(기수)는 화면이 동명이인을 구분하는 값입니다.
 
     admin_code 가 환경변수의 코드와 같으면 권한 항목이 모두 활성화된 permission set 을 부여합니다.
     넣지 않았거나 다르면 권한 0개로 가입하고, 이미 권한을 가진 사람에게서 부여받습니다.
-    틀린 코드로 가입을 거절하지 않습니다.
+    코드가 일치하지 않아도 가입을 거절하지 않습니다.
     """
     clean_name = require_person_name(name)
     clean_department = require_department(department)
@@ -125,7 +122,7 @@ def signup(
         password_hash=hash_password(password),
     )
     session.add(member)
-    # 이메일·신원 제약 위반은 아래 commit 이 아니라 이 flush 에서 감지됩니다.
+    # 이메일 제약과 신원 제약 위반은 아래 commit 이 아니라 이 flush 에서 감지됩니다.
     commit_translating(session, MEMBER_MESSAGES, session.flush)
     if admin_code is not None and _matches_admin_code(admin_code):
         grant_full_permissions(session, member.id)
@@ -136,10 +133,10 @@ def signup(
 def update_profile(
     session: Session, member: Member, name: str, cohort: int | None
 ) -> Member:
-    """로그인 사용자의 이름과 기수를 수정합니다. 이메일은 이 함수에서 수정하지 않습니다. 비밀번호 재설정·아이디 찾기를 받는 주소이므로 변경하려면 새 주소의 소유권을 확인하는 별도 절차가 필요합니다."""
+    """로그인 사용자의 이름과 기수를 수정합니다. 이메일은 이 함수에서 수정하지 않습니다."""
     member.name = require_person_name(name)
     member.cohort = None if cohort is None else require_cohort(cohort)
-    # 이름·기수를 다른 사람과 같게 수정하면 가입 때와 같은 신원 제약을 위반합니다.
+    # 이름과 기수를 다른 사람과 같게 수정하면 가입 때와 같은 신원 제약을 위반합니다.
     commit_translating(session, MEMBER_MESSAGES)
     return member
 
@@ -157,13 +154,13 @@ def change_password(
 
 
 def delete_account(session: Session, member: Member) -> None:
-    """member 를 삭제하고 commit 합니다. 글, 댓글, 예약은 함께 삭제되고 포지션은 비웁니다(db/models.py 의 ondelete)."""
+    """member 를 삭제하고 commit 합니다. 글, 댓글, 예약은 함께 삭제되고 포지션 배치는 해제됩니다(db/models.py 의 ondelete)."""
     session.delete(member)
     session.commit()
 
 
 def login(session: Session, login_id: str, password: str) -> Member:
-    """아이디가 없거나 비밀번호가 틀려도 같은 오류 메시지를 반환합니다. 어느 쪽이 틀렸는지 알리면 가입된 아이디를 공개하는 보안 문제가 됩니다."""
+    """아이디가 존재하지 않거나 비밀번호가 일치하지 않아도 같은 오류 메시지를 반환합니다."""
     member = session.scalar(
         select(Member).where(Member.login_id == login_id.strip().lower())
     )

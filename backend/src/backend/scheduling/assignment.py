@@ -1,19 +1,9 @@
-"""팀마다 합주실의 빈 시간을 target_sessions 회까지 배정하는 계산입니다.
+"""팀마다 합주실의 빈 시간을 target_sessions 회까지 배정합니다. OR-Tools 의 CP-SAT(제약 조건을 전부 충족하는 값의 조합을 찾는 solver)를 사용합니다.
 
-Banblit 은 밴드 동아리의 합주 일정 관리 서비스입니다. 팀(밴드)이 합주실(연습 공간)을 나눠 쓰고, 이 파일이 그 배정을
-계산합니다. 계산은 OR-Tools 의 CP-SAT(제약 조건을 전부 충족하는 값의 조합을 찾는 해결기)로 합니다.
+model.add(식) 안의 == 와 <= 는 비교가 아니라 해가 충족해야 하는 제약입니다.
 
-CP-SAT 모델은 4가지로 이루어집니다.
-- 변수: "팀 T 가 session 후보 i 를 쓴다" 를 뜻하는 0/1 값. new_bool_var 가 만들고, 이름 문자열은 solver 로그에만 쓰입니다.
-- 제약: 변수 사이의 조건. model.add(식 == 값) 의 == 는 비교가 아니라 "이 등식이 성립해야 한다" 는 조건입니다.
-  cp_model.LinearExpr.sum 은 변수의 합을 뜻하는 식이고, 파이썬 sum 도 변수에 쓰면 같은 식이 됩니다.
-- 목적: 최대화할 식(model.maximize). 없으면 조건을 충족하는 아무 해나 반환합니다.
-- 해: solver.solve 가 찾은 변수 값의 조합. solver.value(변수) 로 읽습니다. 상태가 OPTIMAL(최적 증명) 또는
-  FEASIBLE(조건 충족, 최적 미증명)이면 해가 있고, INFEASIBLE(조건을 충족하는 조합 없음)·UNKNOWN(시간 안에 못 찾음)이면 없습니다.
-
-용어: slot 은 점유 단위(설정의 slot_minutes)만큼의 시간 칸, session 은 합주 1회(session_minutes)가 이어지는 구간,
-격자는 합주실 개방 시각부터 slot_minutes 간격으로 놓인 시각의 나열입니다. 선착순 예약은 배정과 별개로 멤버가 빈 칸을
-직접 잡는 기능이고, 배정 결과의 open_slots 가 그 대상입니다.
+용어: slot 은 slot_minutes 길이의 시간 칸, session 은 session_minutes 동안 이어지는 합주 1회, 격자는 합주실 개방 시각부터
+slot_minutes 간격으로 놓인 시각입니다. open_slots 는 어느 session 도 차지하지 않은 slot 입니다.
 """
 
 import threading
@@ -182,26 +172,14 @@ def assign(
     max_absent: int = 0,
     num_workers: int = 0,
 ) -> Assignment:
-    """각 팀에게 빈 합주실 session 을 target_sessions 회까지, 가장 적게 받은 팀부터 최대한 배정합니다.
+    """각 팀에 빈 합주실 session 을 target_sessions 회까지, 가장 적게 받은 팀부터 배정합니다.
 
-    solver_time_limit_seconds 는 계산 1회의 상한이고, stall_seconds 는 더 나은 해가 나오지 않을 때 기다리는
-    시간이며, num_workers 는 계산에 쓰는 thread 수입니다(0 이면 OR-Tools 기본값인 코어 수). 세 값 모두 pipeline.py 가 전달합니다.
+    solver_time_limit_seconds, stall_seconds, num_workers(0 이면 OR-Tools 기본값인 코어 수)는 pipeline.py 가 전달합니다.
+    max_absent 는 session 1회에서 불가능 일정으로 빠져도 되는 팀원 수의 상한입니다.
+    daily_max_minutes, max_consecutive_minutes 는 팀 1개의 하루 배정 시간 상한과 연속 배정 시간 상한이고, None 이면 상한을 두지 않습니다.
 
-    session 은 session_minutes 동안 끊기지 않고 이어지는 구간 하나입니다. slot_minutes 는 칸 하나의
-    크기(분)이고 session 이 시작할 수 있는 간격입니다. 두 값 모두 저장소 설정이 결정합니다.
-
-    max_absent 는 session 1회에서 불가능 일정 때문에 빠져도 되는 팀원 수의 상한입니다. 0 이면 팀 전원이
-    가능한 session 만 씁니다.
-
-    daily_max_minutes 는 팀 하나가 하루에 받는 시간의 상한, max_consecutive_minutes 는 끊기지 않고 이어지는
-    시간의 상한입니다. None 이면 그 상한을 두지 않습니다.
-
-    칸 하나에는 팀 하나만 배정됩니다. 팀 하나는 같은 시간에 여러 합주실을 동시에 사용할 수 없으며,
-    여러 팀에 속한 멤버도 같은 시간에 한 곳에만 있을 수 있습니다. 모든 팀에 0회를 배정하는 해가 항상
-    조건을 충족하므로 결과는 항상 나옵니다.
-
-    open_slots 는 어떤 session 도 차지하지 않은 칸입니다. session 이 아니라 칸 단위입니다 —
-    남은 시간이 session 1회보다 짧아도 선착순 예약은 그 칸을 쓸 수 있기 때문입니다.
+    slot 1개에는 팀 1개, 팀 1개는 같은 시각에 합주실 1곳, 멤버 1명은 같은 시각에 팀 1개에만 배정됩니다.
+    open_slots 는 어느 session 도 차지하지 않은 slot 입니다.
     """
     _validate(teams, target_sessions, max_absent)
     room_slots = _build_room_slots(rooms, slot_minutes)
@@ -240,9 +218,9 @@ def assign(
     return Assignment(sessions_by_team=sessions_by_team, open_slots=open_slots, absences=absences)
 
 
-# (팀 번호, session 후보 번호) → 그 팀이 그 후보를 쓰면 1, 아니면 0 인 model 변수입니다.
+# key 는 (팀 번호, session 후보 번호), value 는 그 팀이 그 후보를 쓰면 1, 아니면 0 인 model 변수입니다.
 Chosen = dict[tuple[int, int], cp_model.IntVar]
-# (팀 번호, session 후보 번호) → 그 후보 시각에 불가능 일정이 있는 팀원 번호입니다. Chosen 과 key 가 같습니다.
+# key 는 Chosen 과 같은 (팀 번호, session 후보 번호), value 는 그 후보 시각에 불가능 일정이 있는 팀원 번호 목록입니다.
 Absent = dict[tuple[int, int], list[int]]
 
 

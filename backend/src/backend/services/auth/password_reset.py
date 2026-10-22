@@ -15,13 +15,8 @@ RESET_SUBJECT = "[Banblit] 비밀번호 재설정"
 FIND_ID_SUBJECT = "[Banblit] 아이디 안내"
 BAD_TOKEN = "재설정 링크가 만료되었거나 이미 사용되었어요"
 
-# 보낸 메일과 보내지 않은 메일의 사유를 남깁니다. 못 받았다는 문의가 들어왔을 때 수신 측 문제인지
-# 서버가 조건을 이유로 보내지 않은 것인지 구분하는 근거입니다. 계정은 번호로만 남깁니다 —
-# 기록을 열람할 수 있는 사람에게 가입자의 메일 주소가 노출되지 않게 하기 위해서입니다.
-#
-# 수준을 이 모듈에서 올립니다 — 상위(backend)에서 올리면 mailer 의 INFO 까지 통과하고,
-# 그 기록에는 개발 환경용 메일 본문(재설정 token 포함)이 들어 있습니다. 출력 경로(handler)는
-# api/app.py 가 backend logger 에 부착합니다.
+# 보낸 메일과 보내지 않은 메일의 사유를 계정 번호로 남깁니다.
+# 로그 수준은 이 모듈에서 INFO 로 지정합니다. handler 는 api/app.py 가 backend logger 에 부착합니다.
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -155,9 +150,7 @@ def reset_password(session: Session, token: str, password: str, now: datetime) -
 def send_id_reminder(session: Session, name: str, email: str) -> None:
     """이름과 이메일이 모두 일치하는 계정이 있을 때만 그 이메일로 로그인 아이디를 안내합니다.
 
-    아이디는 이메일과 별도로 가입할 때 정한 login_id 입니다. 이메일은 계정을 찾는 열쇠이자
-    메일을 받을 주소일 뿐이고, 화면에는 보여주지 않습니다 — 메일함 소유자만 접근할 수 있는
-    곳으로 전송하면 정보 노출이 없습니다.
+    아이디는 가입할 때 지정한 login_id 입니다. 아이디는 화면에 표시하지 않고 메일로만 전송합니다.
 
     ponytail: 반복 호출을 제한하지 않았습니다. 이름과 이메일을 모두 맞혀야 메일이 전송되고
     그 메일은 해당 이메일로만 전송됩니다. 같은 주소로 대량 전송이 문제가 되면

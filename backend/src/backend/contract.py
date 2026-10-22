@@ -1,11 +1,6 @@
-"""모듈 2개 이상이 같은 값을 참조해야 하는 선언만 두는 파일입니다.
+"""모듈 2개 이상이 같은 값을 참조해야 하는 선언만 두는 파일입니다. 계산, 판단, 분기를 두지 않습니다.
 
-계산·판단·분기를 두지 않습니다. 함수가 생기면 그때부터 기능 코드이고, 기능 코드는 모듈 밖으로
-공유하지 않습니다. 이 파일을 참조하는 모듈은 db(CHECK 제약 문구), api(요청 검증), services(설정
-저장), scheduling(칸 분할)입니다.
-
-scheduling 의 진입점(pipeline.py)이 아니라 이 파일에 둡니다. 진입점을 참조하면 db/models.py 를
-import 하는 migration 까지 OR-Tools 를 로드하게 됩니다.
+참조하는 모듈은 db(CHECK 제약 문구), api(요청 검증), services(설정 저장), scheduling(slot 분할)입니다.
 """
 
 from typing import Literal, get_args
@@ -18,7 +13,7 @@ from typing import Literal, get_args
 SlotMinutes = Literal[5, 10, 12, 15, 20, 30, 60]
 SLOT_MINUTE_CHOICES: tuple[SlotMinutes, ...] = get_args(SlotMinutes)
 
-# settings.slot_minutes 의 기본값입니다. 칸 크기는 저장소 설정이 결정합니다.
+# settings.slot_minutes 의 기본값입니다.
 DEFAULT_SLOT_MINUTES = 60
 
 # 합주 1회가 진행되는 길이(분)입니다. 칸 하나의 크기와는 다른 값입니다 — 칸은 합주를 "시작할 수 있는
@@ -26,14 +21,13 @@ DEFAULT_SLOT_MINUTES = 60
 # 18:00·18:30·19:00 어디서든 시작해 1시간 뒤에 끝납니다.
 DEFAULT_SESSION_MINUTES = 60
 
-# 합주 1회 길이의 상한(분)입니다. 이보다 긴 합주는 한 번에 진행하지 않습니다. 상한이 없으면
-# 하루 운영 시간보다 긴 값이 저장되어, 배정할 수 있는 자리가 하나도 없는 설정이 조용히 만들어집니다.
+# 합주 1회 길이의 상한(분)입니다. 상한이 없으면 하루 운영 시간보다 긴 값이 저장되어,
+# 배정할 수 있는 session 이 0개인 설정이 error 없이 저장됩니다.
 MAX_SESSION_MINUTES = 240
 
-# 기간마다 정하는 팀 1개의 하루 배정 시간 상한(periods.daily_max_hours)과 끊기지 않고 이어지는 시간의 상한
-# (periods.max_consecutive_hours)입니다. 단위는 시간이고 1 이상 MAX_DAILY_HOURS 이하, 연속 상한은 하루 상한 이하입니다
-# (사용자 결정 2026-10-20). 상한이 없으면 배정 계산이 연속 배정을 최대화하면서 팀의 시간을 하루에 전부 몰아 7시간 연속
-# 같은 배정이 나옵니다. API(api/schemas.py), DB CHECK 제약(db/models.py), 화면(frontend/src/lib/settings.ts)이 같은 값을 씁니다.
+# 기간마다 지정하는 팀 1개의 하루 배정 시간 상한(periods.daily_max_hours)과 연속 배정 시간 상한(periods.max_consecutive_hours)입니다.
+# 단위는 시간이고 1 이상 MAX_DAILY_HOURS 이하, 연속 상한은 하루 상한 이하입니다(사용자 결정 2026-10-20).
+# API(api/schemas.py), DB CHECK 제약(db/models.py), 화면(frontend/src/lib/settings.ts)이 같은 값을 씁니다.
 MAX_DAILY_HOURS = 12
 DEFAULT_DAILY_MAX_HOURS = 2
 DEFAULT_MAX_CONSECUTIVE_HOURS = 2
@@ -52,10 +46,8 @@ REJECT_REASON_MAX_LENGTH = 300
 # 입력 검증(services/validation/input.py), 화면(frontend/src/lib/settings.ts 의 LATEST_CLOSE_NEXT_DAY)이 같은 값을 씁니다.
 LATEST_CLOSE_NEXT_DAY = "00:00"
 
-# 권한 항목입니다. 생성·수정·삭제·조회를 따로 두어, permission set(권한 집합)을 만드는 사람이
-# 필요한 항목만 선택해 묶을 수 있게 합니다. 항목이 늘면 그 항목을 처리하는 서버 코드도
-# 같이 늘어나므로 데이터가 아니라 이 코드에 고정합니다. 활성화/비활성화 여부만 permission_sets 에
-# 저장합니다.
+# 권한 항목입니다. 생성, 수정, 삭제, 조회를 따로 두어 권한 세트를 만드는 사람이 항목을 1개씩 선택하게 합니다.
+# 항목 목록은 이 코드에 고정하고, 활성화 여부만 permission_sets 에 저장합니다.
 Permission = Literal[
     "room_create",  # 합주실 생성
     "room_edit",  # 합주실 여는 시각·닫는 시각 수정
@@ -96,7 +88,8 @@ INSTRUMENTS: tuple[Instrument, ...] = get_args(Instrument)
 # reservation_cancelled: 집중 합주기간이 생기거나 넓어져 예약이 취소되었습니다(services/reservation/reservation_service.py).
 # rejected: 관리 권한자가 예약이나 불가능 일정을 사유와 함께 반려했습니다(services/notification/notification_service.py).
 # assignment_fixed: 마감 일시가 지나 배정이 확정되었습니다(jobs/auto_assign.py). 전체 멤버에게 갑니다.
-# assignment_unfixed: 스케줄링 기록 확정 권한자가 사유와 함께 확정을 해제했습니다(api/routers/schedule.py). 전체 멤버에게 갑니다.
+# assignment_unfixed: 스케줄링 기록 확정 권한자가 사유와 함께 확정을 해제했습니다(services/period/close_service.py). 전체 멤버에게 갑니다.
+# assignment_updated: 스케줄링 기록이 현재 배정안으로 적용되었습니다(api/routers/schedule.py).
 NotificationKind = Literal["assignment_updated", "reservation_cancelled", "rejected", "assignment_fixed", "assignment_unfixed"]
 NOTIFICATION_KINDS: tuple[NotificationKind, ...] = get_args(NotificationKind)
 

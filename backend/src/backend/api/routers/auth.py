@@ -53,8 +53,7 @@ _reset_guard = Depends(limit_guesses("reset"))
 
 # 로그인 상태 유지를 활성화한 사용자의 cookie(브라우저가 저장해 요청마다 함께 보내는 값) 수명입니다.
 # 비활성화한 사용자에게는 수명을 설정하지 않습니다 — 브라우저를 닫을 때 cookie가 삭제됩니다.
-# 서버 쪽 session(auth_session 모듈)과 같은 값이어야 합니다. 한쪽만 길면 짧은 쪽이 먼저 만료되어
-# 로그인이 해제됩니다.
+# 값은 services/auth/pipeline.py 의 KEEP_TTL 에서 계산합니다.
 _KEEP_MAX_AGE = int(KEEP_TTL.total_seconds())
 
 
@@ -155,8 +154,8 @@ def edit_me(
     return AuthOut(account=_account_out(session, member))
 
 
-# 프로필 사진입니다. 올리고 지우는 것은 자기 것만 가능하므로 /me 아래에 둡니다. 보는 것은
-# 계정 번호로 누구나(로그인한 사람) 할 수 있습니다 — 명단·검색 화면이 서로의 사진을 표시합니다.
+# 프로필 사진입니다. 업로드와 삭제는 본인 사진만 가능하므로 /me 아래에 둡니다.
+# 조회는 로그인한 사용자 누구나 계정 번호로 할 수 있습니다. 명단, 검색 화면이 다른 사용자의 사진을 표시합니다.
 @router.post("/me/avatar", response_model=AckOut)
 def upload_my_avatar(
     file: UploadFile = File(...),
@@ -185,8 +184,8 @@ def show_avatar(
         path, content_type = avatar_path(session, member_id)
     except LookupError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
-    # 첨부 파일을 표시하는 경로와 같은 머리말을 붙입니다. 브라우저가 내용을 보고 형식을 다시
-    # 정하지 못하게 하고, 이 응답이 다른 자원을 불러오지 못하게 합니다.
+    # 첨부 파일 inline 경로(boards.py 의 view_attachment)와 같은 header 를 추가합니다. 브라우저가 내용을 보고
+    # 형식을 재판정하지 못하게 하고, 이 응답이 다른 자원을 불러오지 못하게 합니다.
     return FileResponse(
         path,
         media_type=content_type,
@@ -194,8 +193,8 @@ def show_avatar(
             "X-Content-Type-Options": "nosniff",
             "Content-Disposition": "inline",
             "Content-Security-Policy": "default-src 'none'; img-src 'self'; frame-ancestors 'self'",
-            # 사진을 바꾸면 주소가 그대로라 브라우저가 옛 사진을 계속 표시합니다. 매번 서버에
-            # 확인하게 하되, 바뀌지 않았으면 FileResponse 가 304 로 답해 다시 내려보내지 않습니다.
+            # 사진을 변경해도 주소가 같아 브라우저가 이전 사진을 표시합니다. 매번 서버에 확인하고,
+            # 변경되지 않았으면 FileResponse 가 304 로 응답합니다.
             "Cache-Control": "no-cache",
         },
     )

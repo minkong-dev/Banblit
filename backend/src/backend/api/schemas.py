@@ -74,9 +74,8 @@ class ScheduleRowOut(BaseModel):
 
 
 class ScheduleOut(BaseModel):
-    # open_slots 는 어느 팀도 배정받지 않은 slot(점유 단위 길이의 시간 칸)입니다. 예약 대상이 아닙니다 —
-    # 이 slot 은 집중 합주기간 안에 있고, 그 기간의 예약은 services/reservation/reservation_service.py 가 전부
-    # 거절합니다. 어느 자리가 비었는지를 알리는 값이며 지금은 화면이 사용하지 않습니다.
+    # open_slots 는 어느 팀도 배정받지 않은 slot(점유 단위 길이의 시간 칸)입니다. 집중 합주기간 안의 slot 이라
+    # 예약 대상이 아니고, 화면은 사용하지 않습니다.
     rows: list[ScheduleRowOut]
     open_slots: list[RoomSlotOut]
     # 확정 시간표가 없으면 null 입니다.
@@ -207,10 +206,10 @@ class PracticeWindowOut(BaseModel):
 
 
 class PracticeWindowIn(BaseModel):
-    """시간대 전체를 한 번에 대체합니다. 두 쌍을 모두 null 로 보내면 시간대를 지웁니다.
+    """시간대 전체를 한 번에 대체합니다. 두 쌍을 모두 null 로 보내면 시간대를 삭제합니다.
 
-    PATCH 에서 이 값을 보내지 않으면 저장된 시간대를 그대로 둡니다. "보내지 않음"과 "지움"을
-    이렇게 구분해야, 다른 값만 고치는 요청이 시간대를 조용히 지우지 않습니다.
+    PATCH 에서 이 값을 보내지 않으면 저장된 시간대를 유지합니다. 다른 값만 수정하는 요청이 시간대를 삭제하지 않도록
+    보내지 않은 경우와 null 을 보낸 경우를 구분합니다.
     """
 
     weekday: ClockRangeOut | None = None
@@ -251,7 +250,7 @@ class PeriodOut(BaseModel):
     everyday: bool
     first_run_at: str
     second_run_at: str
-    # 정하지 않은 쌍은 null 입니다. 껍데기는 언제나 있습니다 — 화면이 null 검사를 두 번 하지 않습니다.
+    # 지정하지 않은 쌍은 null 입니다. practice_window 자체는 항상 객체이므로 화면은 weekday, weekend 만 null 검사합니다.
     practice_window: PracticeWindowOut
     assign_rule: AssignRuleOut
     # 전체 합주를 지정하지 않은 기간은 null 입니다.
@@ -307,11 +306,11 @@ class PeriodUpdateIn(BaseModel):
     everyday: bool | None = None
     first_run_at: str | None = None
     second_run_at: str | None = None
-    # 보내지 않으면 저장된 시간대를 그대로 둡니다. 지우려면 두 쌍이 null 인 객체를 보냅니다.
+    # 보내지 않으면 저장된 시간대를 유지합니다. 삭제하려면 두 쌍이 null 인 객체를 보냅니다.
     practice_window: PracticeWindowIn | None = None
     # 보내지 않으면 저장된 배정 규칙을 그대로 둡니다.
     assign_rule: AssignRuleIn | None = None
-    # 보내지 않으면 저장된 마감 일시를 그대로 두고, null 을 보내면 비웁니다. router 가 model_fields_set 으로 구분합니다.
+    # 보내지 않으면 저장된 마감 일시를 유지하고, null 을 보내면 삭제합니다. router 가 model_fields_set 으로 구분합니다.
     closes_at: datetime | None = None
 
 
@@ -408,7 +407,7 @@ class MemberOut(BaseModel):
 
 
 class MemberRowOut(MemberOut):
-    """멤버 화면의 한 줄입니다. 가진 permission set(권한 집합) 이름이 함께 포함됩니다."""
+    """멤버 화면의 1행입니다. 가진 권한 세트 이름이 함께 포함됩니다."""
 
     permission_sets: list[str]
 
@@ -436,7 +435,7 @@ class PostOut(BaseModel):
     author: str
     created_at: str
     comment_count: int
-    # 가린 사람의 이름입니다. 가려지지 않은 글은 언제나 None 이라, 값이 차는 곳은 격리 목록뿐입니다.
+    # 블라인드한 사람의 이름입니다. 블라인드되지 않은 글은 None 이고, 값이 있는 응답은 블라인드 목록(GET /blinded-posts)뿐입니다.
     blinded_by: str | None = None
 
 
@@ -530,9 +529,7 @@ class PermissionSetIn(BaseModel):
 
 
 class PermissionSetMemberOut(BaseModel):
-    """permission set(권한 집합)을 가진 사용자 하나입니다. ID로 사용자를 식별하고,
-    이름은 표시하기 위한 것입니다.
-    """
+    """권한 세트를 가진 사용자 1명입니다. id 로 사용자를 식별하고, name 은 화면 표시에 씁니다."""
 
     id: int
     name: str
@@ -582,8 +579,8 @@ class SignupIn(BaseModel):
     password: str = Field(max_length=100)
     # 기수입니다. 1981년이 1기지만 연도로 환산하지 않고 숫자를 그대로 받습니다.
     cohort: int
-    # 관리자코드입니다. 환경변수 ADMIN_SIGNUP_CODE 와 같으면 권한 항목을 모두 받습니다.
-    # 넣지 않았거나 다르면 권한 0개로 가입합니다. 틀렸다고 가입을 거절하지는 않습니다.
+    # 관리자코드입니다. 환경변수 ADMIN_SIGNUP_CODE 와 같을 경우 권한 항목을 모두 받습니다.
+    # 보내지 않았거나 다를 경우 권한 0개로 가입하고, 가입을 거절하지 않습니다.
     admin_code: str | None = Field(default=None, max_length=200)
 
 
@@ -674,15 +671,15 @@ class SettingsUpdateIn(BaseModel):
     # 한 시간을 남김없이 나누는 값만 받습니다. DB 의 CHECK 와 같은 조건을 경계에서도 봅니다.
     # 허용 값은 contract.py 의 SlotMinutes 에 작성되어 있는 내용을 기준으로 합니다.
     slot_minutes: SlotMinutes | None = None
-    # 칸의 배수인지는 저장된 칸 크기를 함께 봐야 알 수 있어 services/settings/settings_service.py 가 판정합니다.
-    # 여기서는 값 하나만으로 판정할 수 있는 범위만 봅니다.
+    # session_minutes 가 slot_minutes 의 배수인지는 저장된 slot_minutes 가 필요하므로 services/settings/settings_service.py 가 판정합니다.
+    # 이 schema 는 값 1개로 판정할 수 있는 범위만 검증합니다.
     session_minutes: int | None = Field(default=None, ge=1, le=MAX_SESSION_MINUTES)
 
     @model_validator(mode="after")
     def _at_least_one(self) -> "SettingsUpdateIn":
-        # 빈 요청을 200 으로 받으면 이름을 잘못 적은 요청이 조용히 무시됩니다.
+        # 빈 요청을 200 으로 응답하면 field 이름을 잘못 적은 요청이 error 없이 무시됩니다.
         if self.slot_minutes is None and self.session_minutes is None:
-            raise ValueError("바꿀 값을 하나 이상 보내주세요")
+            raise ValueError("변경할 값을 1개 이상 보내주세요")
         return self
 
 

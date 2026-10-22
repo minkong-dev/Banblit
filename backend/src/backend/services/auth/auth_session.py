@@ -14,7 +14,7 @@ def hash_token(token: str) -> str:
 
 
 def _delete_dead_sessions(session: Session, member_id: int, now: datetime) -> None:
-    """해당 계정의 만료된(expires_at < now) 행과 취소된(revoked_at이 채워진) 행을 삭제합니다.
+    """해당 계정의 만료된(expires_at < now) 행과 취소된(revoked_at 이 null 이 아닌) 행을 삭제합니다.
 
     두 경우 모두 resolve_session 에서 이미 거절되는 행이므로, 남겨 둬도 로그인에 사용되지 않습니다.
     """

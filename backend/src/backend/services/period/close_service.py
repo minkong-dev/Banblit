@@ -63,10 +63,9 @@ def require_unavailable_open(session: Session, rows: list[UnavailableTime], now:
 
 
 def unfix_period(session: Session, period: Period, reason: str, now: datetime) -> Period:
-    """확정된 period 의 확정과 마감 일시를 비우고, 전체 멤버에게 reason 을 담은 확정 해제 알림을 보냅니다.
+    """확정된 period 의 확정 일시와 마감 일시를 해제하고, 전체 멤버에게 reason 을 담은 확정 해제 알림을 보냅니다.
 
-    마감 일시도 비우는 이유는, 남겨 두면 지난 마감 일시를 보고 자동 배정 job 이 다음 확인 때 다시 확정하기 때문입니다.
-    확정되지 않은 기간이거나 사유가 비었으면 ValueError 입니다. 사유 길이 상한은 요청 본문(api/schemas.py 의 UnfixIn)이 검증합니다.
+    확정되지 않은 기간이거나 사유가 빈 문자열이면 ValueError 입니다. 사유 길이 상한은 요청 본문(api/schemas.py 의 UnfixIn)이 검증합니다.
     """
     if period.fixed_at is None:
         raise ValueError("확정되지 않은 기간이에요")

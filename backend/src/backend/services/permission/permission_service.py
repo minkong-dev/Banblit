@@ -15,10 +15,10 @@ from backend.db.models import (
 from backend.db.pipeline import commit_translating
 
 # 위반될 수 있는 제약 조건과 그때 사용자에게 표시할 문장입니다. 제약 조건 이름은 migration(DB 구조를 변경하는 단계별 기록)이 지정한 이름입니다.
-SET_MESSAGES = {"permission_sets_name_key": "이미 있는 권한 묶음 이름이에요"}
+SET_MESSAGES = {"permission_sets_name_key": "이미 있는 권한 세트 이름이에요"}
 
-# 계정이 0개인 DB 에 처음 가입한 사람이 받는 permission set 의 이름입니다. migration 이
-# 추가하는 permission set 도 같은 이름을 사용합니다(migrations/versions/b7f1a92c4d31_permission_sets.py).
+# 가입할 때 admin_code 가 환경변수의 코드와 같은 사람이 받는 permission set 의 이름입니다. migration 이
+# 추가하는 permission set 도 같은 이름을 사용합니다(migrations/versions/080a74e46f56_initial_schema.py).
 FULL_SET_NAME = "헤드매니저"
 FULL_SET_NOTE = "최고 권한 관리자"
 
@@ -27,7 +27,7 @@ def _clean_permissions(names: list[str]) -> list[str]:
     """알 수 없는 이름을 거부하고, 중복을 제거한 뒤 선언 순서로 정렬하여 반환합니다."""
     unknown = [name for name in names if name not in PERMISSIONS]
     if unknown:
-        raise ValueError("오류로 인해 해당 권한은 사용할 수 없어요.")
+        raise ValueError("존재하지 않는 권한이에요.")
     chosen = set(names)
     return [name for name in PERMISSIONS if name in chosen]
 
@@ -35,7 +35,7 @@ def _clean_permissions(names: list[str]) -> list[str]:
 def _get_set_or_raise(session: Session, set_id: int) -> PermissionSet:
     permission_set = session.get(PermissionSet, set_id)
     if permission_set is None:
-        raise ValueError("해당 권한이 존재하지 않아요.")
+        raise ValueError("존재하지 않는 권한 세트예요.")
     return permission_set
 
 
@@ -60,22 +60,18 @@ def holds_every_permission(permissions: Collection[str]) -> bool:
 
 def _full_set_ids() -> Select[tuple[int]]:
     """모든 항목이 활성화된 permission set 의 번호를 선택하는 질의입니다. 실행하지 않고 질의만 반환하므로
-    호출자가 order_by·with_for_update·limit 을 덧붙입니다. 판정 기준이 PERMISSIONS 한 곳에만 남습니다."""
+    호출자가 order_by, with_for_update, limit 을 추가합니다."""
     return select(PermissionSet.id).where(
         PermissionSet.permissions.contains(list(PERMISSIONS))
     )
 
 
 def _require_another_full_set(session: Session, set_id: int) -> None:
-    """set_id 외에 모든 항목이 활성화된 permission set 이 없으면 ValueError 를 발생시킵니다.
+    """set_id 외에 모든 항목이 활성화된 permission set 이 존재하지 않으면 ValueError 를 발생시킵니다.
 
-    기준은 개인이 아니라 permission set 입니다. 모든 항목을 가진 permission set 이
-    0개가 되면 권한을 부여할 사람이 없어지므로, 마지막 1개는 삭제와 항목 비활성화를 거부합니다.
+    마지막 1개는 삭제와 항목 비활성화를 거부합니다.
 
-    모든 항목을 가진 행을 전부 잠급니다(with_for_update). 잠그지 않으면 2개가 남은 상태에서 두 요청이
-    각각 하나씩 동시에 삭제할 때 둘 다 "다른 하나가 있다" 로 통과해 0개가 됩니다. 뒤에 온 요청은
-    앞의 요청이 commit 할 때까지 기다렸다가 다시 세므로 마지막 1개에서 거부됩니다. 검사 대상인
-    set_id 도 full set 이라 함께 잠기고, id 오름차순으로 잠가 두 요청이 서로를 기다리지 않게 합니다.
+    모든 항목을 가진 행을 id 오름차순으로 잠급니다(with_for_update).
     """
     full_ids = session.scalars(
         _full_set_ids().order_by(PermissionSet.id).with_for_update()
@@ -91,14 +87,9 @@ def require_another_full_set_holder(
     """member_id 가 모든 항목을 가진 permission set 의 유일한 보유자이면 ValueError 를 발생시킵니다.
 
     set_id 를 주면 그 permission set 하나만 잃는 경우로 셉니다(권한 회수). member_id 가 다른 full set 을
-    또 가지고 있으면 통과합니다. 주지 않으면 보유를 전부 잃는 경우로 셉니다(추방).
+    보유하면 통과합니다. 주지 않으면 보유를 전부 잃는 경우로 셉니다(추방).
 
-    _require_another_full_set 은 permission set 이 남는지만 확인합니다. 추방과 회수는 permission set 을
-    남기고 가진 사람만 0명으로 만들 수 있어 검사가 따로 필요합니다.
-
-    보유 행(member_permission_sets)을 계정 번호 오름차순으로 잠급니다. 마지막 보유자가 2명 남은 상태에서
-    두 요청이 각각 1명씩 동시에 처리하면 둘 다 "다른 1명이 있다" 로 통과해 0명이 됩니다. 잠그는 table 이
-    _require_another_full_set(permission_sets)과 달라 두 검사는 서로 경합하지 않습니다.
+    보유 행(member_permission_sets)을 계정 번호 오름차순으로 잠급니다.
     """
     rows = session.execute(
         select(MemberPermissionSet.member_id, MemberPermissionSet.permission_set_id)
@@ -190,7 +181,7 @@ def create_permission_set(
 def update_permission_set(
     session: Session, set_id: int, name: str, description: str, permissions: list[str]
 ) -> PermissionSet:
-    """set_id permission set 의 이름·설명·활성화된 항목을 통째로 교체합니다. 모든 항목을 가진 마지막 permission set 의 항목은 끌 수 없습니다."""
+    """set_id permission set 의 이름, 설명, 활성화된 항목을 전부 교체합니다. 모든 항목을 가진 마지막 permission set 의 항목은 끌 수 없습니다."""
     permission_set = _get_set_or_raise(session, set_id)
     cleaned = _clean_permissions(permissions)
     if holds_every_permission(permission_set.permissions) and not holds_every_permission(cleaned):

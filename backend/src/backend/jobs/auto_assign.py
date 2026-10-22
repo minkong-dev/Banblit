@@ -1,6 +1,6 @@
 """계산 시각이 지난 집중 합주기간의 배정을 자동으로 실행합니다.
 
-서버(api)와 같은 image 를 사용하는 별도 container 로 동작합니다. 서버를 여러 대로 확장해도
+서버(api)와 같은 Docker image 를 사용하는 별도 container 로 동작합니다. 서버를 여러 대로 확장해도
 이 서비스는 한 대로 유지하므로 같은 계산이 여러 번 실행되지 않습니다. HTTP endpoint 를 거치지 않고
 run_period_assignment 를 직접 호출하므로 서버가 실행 중이 아니어도 계산을 수행합니다.
 """
@@ -207,14 +207,13 @@ def main() -> None:
     open_session = get_session_factory()
     logger.info("자동 배정을 시작합니다 (확인 간격 %s초)", interval)
     while True:
-        # 한 스레드에서 순차적으로 실행합니다. 계산(최대 약 22초)이 확인 간격보다 길어도
-        # 이 블록이 완료된 후 다음 sleep 으로 진행하므로 겹치지 않습니다.
+        # 한 thread 에서 순차적으로 실행합니다. 계산 1회(최대 SOLVER_TIME_LIMIT_SECONDS)가 확인 간격보다 길어도
+        # 이 블록이 완료된 후 sleep 으로 진행하므로 실행이 겹치지 않습니다.
         try:
             with open_session() as session:
                 for result in run_due_assignments(session, datetime.now()):
                     logger.info("자동 배정: %s", result)
-                # 배정 확인에 얹습니다. 주기적으로 도는 것이 이 하나뿐이라 서비스를 더 만들지 않습니다.
-                # 삭제하는 대상은 쓰다 만 글입니다 — 목록에 표시되지 않아 삭제되지 않고 계속 누적됩니다.
+                # 생성 후 DRAFT_LIFETIME 이 지난 초안을 삭제합니다. 초안은 목록에 표시되지 않아 사용자가 삭제할 수 없습니다.
                 removed = sweep_stale_drafts(session, datetime.now() - DRAFT_LIFETIME)
                 if removed > 0:
                     logger.info("버려진 초안 %d개를 삭제했습니다", removed)

@@ -15,24 +15,21 @@ CLOCK_FORMAT = "%H:%M"
 DATE_FORMAT = "%Y-%m-%d"
 EMAIL_PATTERN = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$")
 # 이메일과 비밀번호가 받는 글자입니다. 눈에 보이는 ASCII 문자(공백부터 물결표까지)만 허용합니다.
-# 한글은 메일 서버가 SMTPUTF8 을 지원해야 전달되고, 제어문자는 헤더·기록에 보이지 않는 채로
+# 한글은 메일 서버가 SMTPUTF8 을 지원해야 전달되고, 제어문자는 헤더, 기록에 보이지 않는 채로
 # 남습니다. 화면(validate.ts 의 ASCII_ONLY)도 같은 범위를 참조합니다.
 PRINTABLE_ASCII = re.compile(r"^[\x20-\x7E]*$")
 # 로그인 아이디입니다. 영어 소문자와 숫자만 허용합니다. 화면(validate.ts 의 loginIdMessage)도
-# 같은 규칙을 참조합니다. 길이는 require_login_id 가 따로 검사해, 글자 종류가 틀린 것과
-# 길이가 틀린 것을 다른 문장으로 알려 줍니다.
+# 같은 규칙을 참조합니다. 길이는 require_login_id 가 따로 검사합니다.
 LOGIN_ID_PATTERN = re.compile(r"^[a-z0-9]+$")
-# 사람 이름과 학과 이름에 쓰는 글자입니다. 한글·영어 글자와 낱말 사이 공백만 받습니다.
+# 사람 이름과 학과 이름에 쓰는 글자입니다. 한글, 영어 글자와 낱말 사이 공백만 받습니다.
 # 화면(validate.ts 의 NAME_LETTERS)도 같은 규칙을 참조합니다.
 NAME_PATTERN = re.compile(r"^[가-힣a-zA-Z]+( [가-힣a-zA-Z]+)*$")
 
-# 학과 이름에 쓰는 글자입니다. 한글·영어 글자와 낱말 사이 공백만 받습니다. 숫자와 기호는
-# 학과 이름에 쓰지 않고, 들어가면 같은 학과가 다른 학과로 저장되어 동명이인 판정이 어긋납니다.
-# 화면(validate.ts 의 departmentMessage)도 같은 규칙을 참조합니다.
+# 학과 이름에 쓰는 글자입니다. NAME_PATTERN 과 같습니다. 화면(validate.ts 의 departmentMessage)도 같은 규칙을 참조합니다.
 DEPARTMENT_PATTERN = NAME_PATTERN
 
-# 비밀번호에 쓸 수 있는 특수문자입니다. 자판에서 바로 칠 수 있고, 주소·질의문·명령줄에서 따로
-# 처리해야 하는 글자(따옴표·역슬래시·역따옴표·꺾쇠·수직선·빗금·물결·공백)는 넣지 않았습니다.
+# 비밀번호에 쓸 수 있는 특수문자입니다. 주소, 질의문, 명령줄에서 따로 처리해야 하는
+# 글자(따옴표, 역슬래시, 역따옴표, 꺾쇠, 수직선, 빗금, 물결, 공백)는 포함하지 않습니다.
 # 화면(validate.ts 의 PASSWORD_SYMBOLS)도 같은 목록을 참조합니다.
 PASSWORD_SYMBOLS = "!@#$%^&*()-_=+[]{};:,.?"
 # 학번은 숫자 8자리입니다. 화면(validate.ts의 studentNoMessage)도 같은 규칙을 참조합니다.
@@ -43,7 +40,7 @@ STUDENT_NO_PATTERN = re.compile(r"^[0-9]{8}$")
 # ── 문자열 ────────────────────────────────────────────────────────────────
 
 def require_non_empty(value: str, field_label: str) -> str:
-    """빈 문자열·공백만 있는 문자열을 거부하고, 앞뒤 공백을 제거한 값을 반환합니다.
+    """빈 문자열, 공백만 있는 문자열을 거부하고, 앞뒤 공백을 제거한 값을 반환합니다.
 
     화면도 앞뒤 공백만 다른 이름을 같은 이름으로 보므로, 저장 전에 제거하여 두 쪽의
     중복 판정이 어긋나지 않게 합니다.
@@ -62,7 +59,7 @@ def require_email(value: str) -> str:
     """
     trimmed = value.strip()
     if not PRINTABLE_ASCII.match(trimmed):
-        raise ValueError("이메일은 영문·숫자·기호만 사용할 수 있어요")
+        raise ValueError("이메일은 영문, 숫자, 기호만 사용할 수 있어요")
     if not EMAIL_PATTERN.match(trimmed):
         raise ValueError("이메일 형식이 올바르지 않아요")
     return trimmed
@@ -77,9 +74,9 @@ def require_reject_reason(value: str) -> str:
 
 
 def require_login_id(value: str, min_length: int, max_length: int) -> str:
-    """로그인 아이디입니다. 앞뒤 공백을 제거하고 소문자로 바꾼 뒤 글자 종류와 길이(min_length 이상 max_length 이하)를 검증합니다.
+    """로그인 아이디입니다. 앞뒤 공백을 제거하고 소문자로 변환한 뒤 글자 종류와 길이(min_length 이상 max_length 이하)를 검증합니다.
 
-    화면도 같은 방식(strip + lowercase)으로 정규화한 값을 비교·전송하므로, 대문자를 섞어
+    화면도 같은 방식(strip + lowercase)으로 정규화한 값을 비교, 전송하므로, 대문자를 섞어
     입력해도 같은 아이디로 로그인할 수 있습니다.
     """
     normalized = value.strip().lower()
@@ -91,7 +88,7 @@ def require_login_id(value: str, min_length: int, max_length: int) -> str:
 
 
 def require_person_name(value: str) -> str:
-    """사람 이름입니다. 앞뒤 공백을 제거하고, 한글·영어 글자와 낱말 사이 공백만 허용합니다."""
+    """사람 이름입니다. 앞뒤 공백을 제거하고, 한글, 영어 글자와 낱말 사이 공백만 허용합니다."""
     trimmed = require_non_empty(value, "이름")
     if not NAME_PATTERN.match(trimmed):
         raise ValueError("이름은 한글과 영어만 사용 가능해요")
@@ -99,7 +96,7 @@ def require_person_name(value: str) -> str:
 
 
 def require_department(value: str) -> str:
-    """학과입니다. 앞뒤 공백을 제거하고, 한글·영어 글자와 낱말 사이 공백만 허용합니다."""
+    """학과입니다. 앞뒤 공백을 제거하고, 한글, 영어 글자와 낱말 사이 공백만 허용합니다."""
     trimmed = require_non_empty(value, "학과")
     if not DEPARTMENT_PATTERN.match(trimmed):
         raise ValueError("학과는 한글과 영어만 사용 가능해요")
@@ -115,7 +112,7 @@ def require_student_no(value: str) -> str:
 
 
 # 비밀번호가 충족해야 할 규칙입니다. 왼쪽이 검증 조건, 오른쪽이 위반했을 때 사용자에게 보일 메시지입니다.
-# 가입·비밀번호 재설정·비밀번호 변경이 모두 이 규칙을 사용합니다. 경로마다 따로 두면 규칙이 어긋납니다.
+# 가입, 비밀번호 재설정, 비밀번호 변경이 모두 이 규칙을 사용합니다.
 # 화면의 같은 규칙은 frontend/src/lib/validate.ts 에 있습니다.
 PASSWORD_RULES: tuple[tuple[str, str], ...] = (
     (r"[a-z]", "비밀번호에는 소문자가 하나 이상 있어야 해요"),
@@ -124,16 +121,16 @@ PASSWORD_RULES: tuple[tuple[str, str], ...] = (
     (f"[{re.escape(PASSWORD_SYMBOLS)}]", "비밀번호에는 특수기호가 하나 이상 있어야 해요"),
 )
 
-# 목록에 없는 글자를 찾아내는 규칙입니다. 영어 글자·숫자·위 특수문자 외에는 전부 거부합니다.
+# 목록에 없는 글자를 찾아내는 규칙입니다. 영어 글자, 숫자, 위 특수문자 외에는 전부 거부합니다.
 PASSWORD_ALLOWED = re.compile(f"^[A-Za-z0-9{re.escape(PASSWORD_SYMBOLS)}]*$")
 
 
 def require_password(value: str, min_length: int, max_length: int) -> None:
     """새로 설정하는 비밀번호의 글자와 길이(min_length 이상 max_length 이하)를 검증합니다. 로그인은 이 함수를 호출하지 않습니다.
     규칙을 변경하기 전에 생성된 계정이 로그인할 수 없어서는 안 되기 때문입니다."""
-    # 쓸 수 있는 글자를 목록으로 정해, 목록 밖의 글자(한글 포함)는 종류와 관계없이 거부합니다.
+    # 쓸 수 있는 글자를 목록으로 지정해, 목록 밖의 글자(한글 포함)는 종류와 관계없이 거부합니다.
     if not PRINTABLE_ASCII.match(value):
-        raise ValueError("비밀번호는 영문·숫자·기호만 사용할 수 있어요")
+        raise ValueError("비밀번호는 영문, 숫자, 기호만 사용할 수 있어요")
     if not PASSWORD_ALLOWED.match(value):
         raise ValueError(f"특수문자는 {' '.join(PASSWORD_SYMBOLS)} 만 사용 가능해요")
     if not min_length <= len(value) <= max_length:
@@ -152,10 +149,10 @@ def require_cohort(value: int, max_cohort: int) -> int:
 
 def require_valid_kind(kind: str) -> None:
     if kind not in PERIOD_KINDS:
-        raise ValueError("kind는 open 또는 focused여야 해요")
+        raise ValueError("kind 는 open 또는 focused 여야 해요")
 
 
-# ── 시각·날짜 ─────────────────────────────────────────────────────────────
+# ── 시각, 날짜 ─────────────────────────────────────────────────────────────
 
 def parse_clock(value: str, field_label: str) -> time:
     """"HH:MM" 문자열을 시각으로 변환합니다. 형식이 아닐 경우 사용자가 읽을 문장으로 거부합니다."""
@@ -210,7 +207,7 @@ def require_ends_not_before_starts(starts_on: date, ends_on: date) -> None:
 def require_valid_slot_bounds(
     starts_at: datetime, ends_at: datetime, slot_minutes: int
 ) -> None:
-    """TimeInterval·generate_slots 이 이미 수행하는 시간대·순서·격자 검증을 재사용합니다.
+    """TimeInterval, generate_slots 이 이미 수행하는 시간대, 순서, 격자 검증을 재사용합니다.
 
     slot_minutes 는 저장소 설정이 결정하는 칸 하나의 크기(분)입니다.
     """
@@ -250,7 +247,7 @@ def require_repeat_end(
     """반복이 끝나는 조건을 검증합니다. 횟수와 종료일은 동시에 지정할 수 없고, 횟수는 1 이상 max_count 이하입니다."""
     repeating = bool(repeat_weekdays)
     if not repeating and (repeat_count is not None or repeat_until is not None):
-        raise ValueError("반복이 아니면 반복 횟수와 반복 종료일을 넣을 수 없어요")
+        raise ValueError("반복이 아니면 반복 횟수와 반복 종료일을 입력할 수 없어요")
     if repeat_count is not None and repeat_until is not None:
         raise ValueError("반복 횟수와 반복 종료일은 동시에 설정할 수 없어요")
     if repeat_count is not None and (repeat_count < 1 or repeat_count > max_count):

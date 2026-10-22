@@ -121,7 +121,7 @@ def read_schedule(
 
 
 def _assignment_out(result: PeriodAssignResult) -> AssignmentOut:
-    # 엔진이 사용한 번호가 바로 DB의 번호입니다. 이름만 대응표에서 찾아 붙입니다.
+    # 엔진이 사용한 번호가 DB 의 번호입니다. 이름은 result.room_names, result.team_names 에서 조회해 추가합니다.
     def to_slot(room_interval: RoomInterval) -> RoomSlotOut:
         return RoomSlotOut(
             room_id=room_interval.room_id,
@@ -221,20 +221,20 @@ def read_period_records(
                 applied_at=round_["applied_at"],
                 score=_score_out(session, period, round_["saved_at"]),
             )
-            # 칸 수는 구간 길이를 칸 크기로 나눈 값입니다. 칸 크기는 저장소 설정이 결정합니다.
+            # slot_count 는 구간 길이를 slot_minutes 로 나눈 값입니다. slot_minutes 는 settings table 의 값입니다.
             for round_ in list_backup_rounds(session, period.id, slot_minutes(session))
         ]
     )
 
 
 def _score_out(session: Session, period: Period, saved_at: datetime) -> RecordScoreOut | None:
-    # 점수는 저장하지 않고 조회할 때마다 지금의 불가능 일정으로 매깁니다. 불가능 일정이 바뀌면 모든 기록의 점수가 함께 바뀝니다.
+    # 점수는 저장하지 않고 조회할 때마다 현재 불가능 일정으로 계산합니다. 불가능 일정이 변경되면 모든 기록의 점수가 함께 변경됩니다.
     # ponytail: 기록마다 입력을 다시 읽어 최대 RECORD_KEEP 번 계산합니다. 목록이 느려지면 _prepare 결과를 한 번만 읽도록 묶습니다.
     report = stored_report(session, period, list_backup_round(session, period.id, saved_at), date.today())
     return None if report is None else RecordScoreOut(**asdict(report.score))
 
 
-# 스케줄링 기록 하나를 선택해 그 시간표와 보고를 봅니다. 없는 기록은 list_backup_round 가 ValueError 로 거절합니다.
+# 스케줄링 기록 1개를 선택해 시간표와 보고를 조회합니다. 존재하지 않는 기록은 list_backup_round 가 ValueError 를 발생시킵니다.
 @router.get(
     "/periods/{period_id}/records/{saved_at}",
     response_model=RecordRoundOut,
@@ -252,7 +252,7 @@ def read_period_record_round(
     )
 
 
-# 스케줄링 기록 하나를 현재 배정안으로 적용합니다. 현재 배정안이 바뀌는 곳은 이 endpoint 하나라 알림도 여기서 남깁니다.
+# 스케줄링 기록 1개를 현재 배정안으로 적용합니다. 현재 배정안을 변경하는 endpoint 는 이 endpoint 1개이므로 알림도 이 endpoint 가 생성합니다.
 @router.post(
     "/periods/{period_id}/records/{saved_at}/apply",
     response_model=ApplyRecordOut,

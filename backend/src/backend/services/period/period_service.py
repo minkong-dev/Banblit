@@ -91,7 +91,7 @@ class SessionAbsence:
 class RecordScore:
     """시간표 하나의 점수입니다. 엔진 목적식(scheduling/assignment.py 의 _objective)과 같은 4항목이고 앞 항목이 우선합니다.
 
-    기록마다 붙여 권한자가 적용할 기록을 고르는 근거로 씁니다. 점수로 자동 적용하지 않습니다(사용자 결정 2026-10-15).
+    기록마다 붙여 권한자가 적용할 기록을 선택하는 근거로 씁니다. 점수로 자동 적용하지 않습니다(사용자 결정 2026-10-15).
     """
 
     # 가장 적게 받은 팀의 session 수입니다.
@@ -162,7 +162,7 @@ class _Roster:
 
 @dataclass(frozen=True)
 class _Inputs:
-    """배정 계산과 결과 보고가 함께 쓰는 입력입니다. 두 곳이 같은 함수로 읽어 같은 규칙을 2벌 두지 않습니다."""
+    """배정 계산과 결과 보고가 함께 쓰는 입력입니다."""
 
     rooms: list[Room]
     team_names: dict[int, str]
@@ -186,8 +186,8 @@ def assign_period(
 ) -> PeriodAssignResult:
     """기간 전체의 스케줄을 계산합니다. 저장은 하지 않습니다(services/period/pipeline.py 의 run_period_assignment).
 
-    없는 기간·팀·합주실, 상시 기간(kind="open")은 ValueError 로 거부합니다.
-    saved_at 은 everyday 기간의 배정 날짜입니다. 부르는 쪽이 넘겨야 같은 입력에 같은 결과가 나옵니다.
+    존재하지 않는 기간, 팀, 합주실과 상시 기간(kind="open")은 ValueError 로 거부합니다.
+    saved_at 은 everyday 기간의 배정 날짜이고 호출자가 전달합니다.
     """
     inputs = _prepare(session, period_id, team_ids, room_ids, saved_at.date())
     assignment = assign(
@@ -255,9 +255,9 @@ def schedule_report(
         session_absences=by_session,
         over_absent=over_absent,
         score=RecordScore(
-            # team_ids 에 든 팀 중 0회인 팀도 셉니다. 저장된 기록은 stored_report 가 모든 팀을 넘기므로, 일부 팀만 골라
+            # team_ids 에 든 팀 중 0회인 팀도 셉니다. stored_report 가 모든 팀을 전달하므로, 팀 목록 중 1개 이상을 제외하고
             # 연산한 기록은 fewest 가 0 이 됩니다. 결과 설명의 부족분과 같은 기준입니다.
-            # ponytail: 연산한 팀 목록을 기록에 저장하게 되면 그 목록으로 바꿉니다.
+            # ponytail: 연산한 팀 목록을 기록에 저장하게 되면 그 목록으로 변경합니다.
             fewest=min((counts[team_id] for team_id in team_ids), default=0),
             sessions=sum(counts.values()),
             absences=sum(missed.values()),
@@ -274,7 +274,7 @@ def stored_report(
 ) -> ScheduleReport | None:
     """저장된 시간표(현행 또는 스케줄링 기록 1개)의 보고입니다. 집중 합주기간이 아니거나, 행이 없거나, 멤버가 있는 팀이 없으면 None 입니다.
 
-    저장된 시간표는 계산에 넣은 팀·합주실 목록을 보관하지 않으므로, 자동 배정(jobs/auto_assign.py)과 같이 모든 팀과
+    저장된 시간표는 계산에 포함한 팀 목록과 합주실 목록을 보관하지 않으므로, 자동 배정(jobs/auto_assign.py)과 같이 모든 팀과
     모든 합주실을 기준으로 계산합니다.
     """
     # ponytail: everyday 기간은 on 하루치 목표로 보고합니다. 여러 날의 행이 쌓이면 부족분이 실제보다 적게 보입니다.
@@ -307,7 +307,7 @@ def _absence(inputs: _Inputs, team_id: int, member_id: int, count: int) -> Absen
 
 def _sessions_of(row: AssignmentRow, length: int) -> list[TimeInterval]:
     # 저장된 행은 이어진 session 을 한 구간으로 합친 것이라(merge_runs) session 길이로 다시 나눕니다.
-    # 저장 뒤 session 길이 설정이 바뀌어 나누어떨어지지 않아도 오류 없이 마지막 조각을 짧게 둡니다.
+    # 저장 뒤 session 길이 설정이 변경되어 나누어떨어지지 않아도 오류 없이 마지막 조각을 짧게 둡니다.
     pieces: list[TimeInterval] = []
     start = row["starts_at"]
     while start < row["ends_at"]:
@@ -360,21 +360,21 @@ def _prepare(
 
 
 def _check_request(session: Session, period_id: int, team_ids: list[int], room_ids: list[int]) -> Period:
-    """배정 요청을 검증하고 기간을 반환합니다. 없는 기간, 상시 기간(kind="open"), 중복된 팀·합주실 번호는 ValueError 입니다."""
+    """배정 요청을 검증하고 기간을 반환합니다. 존재하지 않는 기간, 상시 기간(kind="open"), 중복된 팀 번호와 합주실 번호는 ValueError 입니다."""
     period = get_period_or_raise(session, period_id)
     if period.kind != "focused":
         raise ValueError("집중 합주기간에서만 자동 배정을 실행할 수 있어요")
     if len(team_ids) != len(set(team_ids)):
-        raise ValueError("팀 id가 중복되었어요")
+        raise ValueError("팀 번호가 중복되었어요")
     if len(room_ids) != len(set(room_ids)):
-        raise ValueError("합주실 id가 중복되었어요")
+        raise ValueError("합주실 번호가 중복되었어요")
     return period
 
 
 def practice_window(period: Period) -> PracticeWindow:
-    """기간에 저장된 팀별 합주 시간대입니다. 정하지 않은 쌍은 None 이고, 그날은 합주실 개방시각 전체를 씁니다.
+    """기간에 저장된 팀별 합주 시간대입니다. 지정하지 않은 쌍은 None 이고, 그날은 합주실 개방시각 전체를 씁니다.
 
-    두 열은 함께 채워지거나 함께 비어 있습니다(periods_practice_window_pairs). 한쪽만 있는 경우가
+    두 열은 함께 값이 있거나 함께 null 입니다(periods_practice_window_pairs). 한쪽만 있는 경우가
     없으므로 시작 시간만 확인합니다.
     """
 
@@ -425,7 +425,7 @@ def _load_team_names(session: Session, team_ids: list[int]) -> dict[int, str]:
 
 
 def _load_roster(session: Session, team_ids: list[int]) -> _Roster:
-    # 엔진에는 번호만 전달하고, 이름·기수·포지션은 결과 보고를 만들 때만 사용합니다.
+    # 엔진에는 번호만 전달하고, 이름, 기수, 포지션은 결과 보고를 생성할 때만 사용합니다.
     # member_id 가 None 인 TeamSlot 은 명단에 포함하지 않습니다. inner join 이 그 행을 제외합니다.
     rows = session.execute(
         select(TeamSlot.team_id, Member.id, Member.name, Member.cohort, TeamSlot.instrument)
@@ -477,7 +477,7 @@ def open_slots_in_period(session: Session, period: Period, on: date) -> list[Ope
 
     days = period_days(period, on)
     open_slots: list[OpenSlot] = []
-    # 팀별 합주 시간대(practice_window)를 넘기지 않습니다. 시간대 밖의 시간은 자동 배정만 하지
+    # 팀별 합주 시간대(practice_window)를 전달하지 않습니다. 시간대 밖의 시간은 자동 배정만 하지
     # 않을 뿐 선착순 예약은 열려 있어야 하기 때문입니다. 합주실이 10시에 열고 팀별 합주가 17시부터면
     # 10~17시는 전부 예약할 수 있는 칸입니다.
     for engine_room in build_engine_rooms(list(rooms), days):

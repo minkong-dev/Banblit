@@ -4,7 +4,7 @@ from datetime import date, datetime, time, timedelta
 
 @dataclass(frozen=True)
 class TimeInterval:
-    """시작시간과 종료시간이 있는 시간 구간입니다.
+    """시작 시간과 종료 시간이 있는 시간 구간입니다.
 
     생성 시 검증하여 잘못된 구간을 만들 수 없게 방지합니다. 이 class 에서 검증하지 않으면
     엔진이 error 를 발생시키지 않고 잘못된 배정안을 출력합니다.
@@ -20,7 +20,7 @@ class TimeInterval:
                 "시간대가 붙은 시각은 아직 지원하지 않습니다. 시간대 없는 시각을 넣으십시오"
             )
         if self.end <= self.start:
-            raise ValueError("시간 구간의 끝은 시작보다 뒤여야 해요")
+            raise ValueError("종료 시간은 시작 시간보다 뒤여야 해요")
 
 
 def day_window(day: date, starts: time, ends: time) -> TimeInterval:

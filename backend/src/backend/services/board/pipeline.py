@@ -1,5 +1,5 @@
 # board 모듈의 시퀀스 파일이자 공개 interface(다른 모듈에서 접근하는 진입점)입니다.
-# api·jobs와 다른 service 모듈은 이 모듈 안의 다른 파일을 직접 import 하지 않고
+# api, jobs 와 다른 service 모듈은 이 모듈 안의 다른 파일을 직접 import 하지 않고
 # 이 파일만 참조합니다. 첨부 용량과 확장자처럼 운영자가 조절하는 값은 이 파일에만 둡니다.
 
 from datetime import datetime

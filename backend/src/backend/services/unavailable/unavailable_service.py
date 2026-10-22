@@ -20,8 +20,7 @@ def _require_self(member_id: int, requester: Member) -> None:
     """member_id 가 requester 본인의 번호인지 검증하고, 아니면 PermissionError 를 발생시킵니다.
 
     다른 사용자의 번호든 없는 번호든 같게 거부합니다. 권한을 확인하지 않습니다. 불가능 일정의
-    등록·수정·삭제는 본인만 할 수 있으며 헤드매니저도 예외가 아닙니다 — 다른 사람이 대신
-    등록한 불가능 일정은 본인이 모르는 채로 배정에 반영됩니다. 조회는 _require_read 가 따로 봅니다.
+    등록, 수정, 삭제는 본인만 할 수 있으며 헤드매니저도 예외가 아닙니다. 조회는 _require_read 가 따로 검사합니다.
     """
     if member_id != requester.id:
         raise PermissionError("본인의 불가능 일정만 관리할 수 있어요")
@@ -49,7 +48,7 @@ def list_unavailable(
 
 
 def list_all_unavailable(session: Session) -> list[tuple[UnavailableTime, str]]:
-    """등록된 불가능 일정 전부를 (행, 멤버 이름) 으로 시작시간 순으로 반환합니다.
+    """등록된 불가능 일정 전부를 (행, 멤버 이름) 으로 시작 시간 순으로 반환합니다.
 
     권한은 호출하는 endpoint 가 검증합니다.
     """
@@ -74,7 +73,7 @@ def create_unavailable(
     name: str | None,
     now: datetime,
 ) -> UnavailableTime:
-    """불가능 일정 하나를 생성합니다. 본인 여부, 시작시간과 종료시간의 순서, slot(점유 단위 길이의 시간 칸) 격자, 반복 조건,
+    """불가능 일정 하나를 생성합니다. 본인 여부, 시작 시간과 종료 시간의 순서, slot(점유 단위 길이의 시간 칸) 격자, 반복 조건,
     now 기준으로 마감된 집중 합주기간에 걸리지 않는지를 검증합니다."""
     _require_self(member_id, requester)
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
@@ -175,7 +174,7 @@ def reject_unavailable(
 def delete_unavailable(
     session: Session, member_id: int, requester: Member, time_id: int, now: datetime
 ) -> None:
-    """member_id 본인의 불가능 일정만 삭제합니다. 다른 사용자의 불가능 일정을 지정하면 없는 시간으로 처리합니다.
+    """member_id 본인의 불가능 일정만 삭제합니다. 다른 사용자의 불가능 일정을 지정하면 존재하지 않는 불가능 일정으로 처리합니다.
 
     now 기준으로 마감된 집중 합주기간에 걸리는 일정이면 ValueError 입니다.
     """

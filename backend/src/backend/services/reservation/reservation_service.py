@@ -18,7 +18,7 @@ from backend.db.pipeline import commit_translating
 from backend.scheduling.pipeline import day_window
 
 # 선착순은 겹침 금지 제약이 commit 시점에 결정합니다. 먼저 commit 한 요청이 그 구간을 가져갑니다.
-# 제약 이름은 migration 이 지정한 이름입니다(c8e4a1b60d93_reservation_as_one_row.py).
+# 제약 이름은 migration 이 지정한 이름입니다(080a74e46f56_initial_schema.py).
 RESERVATION_MESSAGES = {
     "reservations_no_overlap": "다른 멤버의 예약이 존재하여, 예약이 불가능해요",
 }
@@ -35,11 +35,9 @@ def _require_not_in_focused_period(
 
 
 def cancel_reservations_in_focus(session: Session, period: Period, now: datetime) -> int:
-    """집중 합주기간 안에 남은 앞으로의 예약을 취소하고 예약자에게 알림을 만듭니다. commit 은 부르는 쪽이 합니다.
+    """집중 합주기간 안에 남은 앞으로의 예약을 취소하고 예약자에게 알림을 생성합니다. commit 은 호출자가 합니다.
 
-    기간을 만들거나 넓힐 때 부릅니다(기간을 막지 않고 예약을 밀어냅니다). 취소 기준은
-    "지금 새로 예약하면 거절되는가"이고, 예약을 받을 때와 같은 focus_refusal 로 판정합니다. 그래서 전체 합주 날짜의
-    전체 합주 외 시간 예약은 남습니다. 이미 시작한 예약은 기록으로 남기고 취소하지 않습니다.
+    취소 기준은 예약을 받을 때와 같은 focus_refusal 입니다. 이미 시작한 예약은 취소하지 않습니다.
     """
     if period.kind != "focused":
         return 0
@@ -69,15 +67,11 @@ def focus_refusal(
 ) -> str | None:
     """이 예약을 지금 받으면 거절할 사유를 반환합니다. 받을 수 있으면 None 입니다. 집중 합주기간이 아닐 경우 예약을 허용합니다.
 
-    차단하는 기간은 집중 합주기간뿐입니다. 그 기간만 자동 배정이 모든 slot 을 팀에 나누어 배정합니다.
-    기간을 지정하지 않은 날도 예약할 수 있습니다.
+    차단하는 기간은 집중 합주기간뿐입니다.
 
-    "매일"(everyday) 이 켜진 집중 합주기간은 종료일이 없습니다. 시작일이
-    지난 모든 날에 자동 배정이 실행되므로, 저장된 종료일 뒤의 날짜도 차단합니다.
+    "매일"(everyday) 이 켜진 집중 합주기간은 저장된 종료일 뒤의 날짜도 차단합니다.
 
-    전체 합주 날짜는 팀별 배정이 없어 예약을 허용하고, 전체 합주에 지정한 합주실의 전체 합주 시각과
-    겹치는 구간만 거절합니다. 시각은 날짜별 지정(ensemble_days)이 기본 시각보다 우선합니다.
-    집중 합주기간끼리는 겹칠 수 없으므로(periods_focused_no_overlap) 그날의 기간은 하나뿐입니다.
+    전체 합주 날짜는 전체 합주에 지정한 합주실의 전체 합주 시각과 겹치는 구간만 거절합니다. 시각은 날짜별 지정(ensemble_days)이 기본 시각보다 우선합니다.
     """
     day = starts_at.date()
     # 그날의 집중 합주기간을 이미 알면(예약 일괄 취소) 다시 조회하지 않습니다. 집중 합주기간끼리는 겹칠 수 없어
@@ -109,7 +103,7 @@ def focus_refusal(
 
 
 def _require_not_started(starts_at: datetime, now: datetime) -> None:
-    """이미 시작했거나 지난 시각의 예약을 거절합니다. 지난 예약은 쓸 수 없고, 남겨 두면 지울 곳도 없습니다."""
+    """이미 시작했거나 지난 시각의 예약을 거절합니다."""
     if starts_at <= now:
         raise ValueError("과거 시간에는 예약이 불가능해요.")
 
@@ -124,11 +118,10 @@ def _planned_row(
     ends_at: datetime,
     created_at: datetime,
 ) -> tuple[Reservation, Room, Team | None]:
-    """요청한 구간을 검증하고 예약 행 하나를 만들어, 합주실·팀과 함께 반환합니다.
+    """요청한 구간을 검증하고 예약 행 하나를 생성해, 합주실, 팀과 함께 반환합니다.
 
     행은 아직 session 에 추가하지 않습니다. 추가할 시점과 commit 범위는 호출자가 결정합니다.
-    겹치는지는 여기서 보지 않습니다. 조회해서 확인하면 그 사이에 들어온 다른 요청을 놓치므로,
-    판정을 commit 시점의 겹침 금지 제약 하나에 맡깁니다.
+    겹치는지는 이 함수에서 조회하지 않습니다. 겹침은 commit 시점에 reservations_no_overlap 이 판정합니다.
     """
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
     _require_not_started(starts_at, created_at)
@@ -164,7 +157,7 @@ def create_reservation(
 ) -> ReservationRow:
     """예약 한 건을 만듭니다. 그 시간이 이미 차 있으면 commit 이 겹침 금지 제약에 걸려 거절됩니다.
 
-    검증 과정에서 이미 조회한 합주실·멤버·팀의 이름을 함께 반환하므로, 호출자가 이름을
+    검증 과정에서 이미 조회한 합주실, 멤버, 팀의 이름을 함께 반환하므로, 호출자가 이름을
     표시하려고 다시 조회할 필요가 없습니다.
     """
     row, room, team = _planned_row(
@@ -180,7 +173,7 @@ def list_reservations(
 ) -> list[ReservationRow]:
     """room_id의 [from_date, to_date] 범위 예약을 시작 시간 순으로 반환합니다.
 
-    각 행마다 합주실명·팀 이름(팀 예약이 아니면 None)·예약한 멤버 이름을 함께 포함합니다.
+    각 행마다 합주실명, 팀 이름(팀 예약이 아니면 None), 예약한 멤버 이름을 함께 포함합니다.
     """
     room = get_room_or_raise(session, room_id)
     range_start = datetime.combine(from_date, time.min)
@@ -202,7 +195,7 @@ def list_reservations(
 
 
 def list_my_reservations(session: Session, member_id: int, now: datetime) -> list[ReservationRow]:
-    """member_id 가 잡은 예약 중 아직 끝나지 않은 것을 시작 시간 순으로 반환합니다. 모든 합주실에 걸칩니다.
+    """member_id 가 잡은 예약 중 아직 끝나지 않은 것을 시작 시간 순으로 반환합니다. 모든 합주실의 예약을 포함합니다.
 
     끝난 예약은 소멸한 것으로 보고 빼며, 달력에는 기록으로 남습니다(list_reservations).
     """
@@ -227,13 +220,9 @@ def _get_own_reservation(
 ) -> Reservation:
     """reservation_id 의 예약을 찾아, 그 예약을 한 멤버가 requester 일 때만 반환합니다.
 
-    없는 예약과 취소된 예약은 ValueError, 다른 사용자의 예약은 PermissionError 로 구분하여 발생시킵니다. 호출자가
-    "잘못된 요청"(422)과 "권한 없음"(403)을 다른 HTTP 상태 코드로 반환합니다. verb 는 오류 메시지에
-    들어가는 동작 이름입니다("취소할", "옮길").
+    존재하지 않는 예약과 취소된 예약은 ValueError, 다른 사용자의 예약은 PermissionError 를 발생시킵니다. verb 는 오류 메시지에 들어가는 동작 이름입니다("취소할", "옮길").
 
-    행을 잠급니다(with_for_update). 잠그지 않으면 읽은 뒤 commit 하기 전에 reservation_manage
-    권한자가 같은 예약을 취소할 수 있고, 그때 UPDATE 는 없는 행에 적용되어 0행을 수정하고도
-    성공으로 commit 됩니다. 옮기지 못한 예약을 옮겼다고 응답하게 됩니다.
+    행을 잠급니다(with_for_update).
     """
     reservation = session.scalars(
         select(Reservation)
@@ -242,7 +231,7 @@ def _get_own_reservation(
     ).first()
     if reservation is None:
         raise ValueError("존재하지 않는 예약이에요")
-    # reservation_manage 권한을 가진 멤버는 다른 사용자의 예약도 취소·이동할 수 있습니다. 이 권한이
+    # reservation_manage 권한을 가진 멤버는 다른 사용자의 예약도 취소하고 이동할 수 있습니다. 이 권한이
     # 없으면 합주실 관리자가 다른 사용자의 예약을 취소할 방법이 없습니다.
     if reservation.member_id != requester.id and (
         "reservation_manage" not in account_permissions(session, requester.id)
@@ -257,7 +246,7 @@ def cancel_reservation(
     """본인의 예약 한 건을 취소합니다. 다른 멤버의 예약은 reservation_manage 권한이 있어도 PermissionError 이고,
     reject_reservation 으로 사유와 함께 취소합니다.
 
-    행을 삭제하지 않고 cancelled_at 만 기록합니다. 취소된 행은 조회·이동·취소 대상에서 빠지고 겹침 금지
+    행을 삭제하지 않고 cancelled_at 만 기록합니다. 취소된 행은 조회, 이동, 취소 대상에서 제외되고 겹침 금지
     제약도 보지 않으므로, 그 시간은 다시 예약할 수 있습니다.
     """
     reservation = _get_own_reservation(session, reservation_id, requester, "취소할")
@@ -295,7 +284,7 @@ def update_reservation(
     ends_at: datetime,
     moved_at: datetime,
 ) -> ReservationRow:
-    """예약 한 건을 다른 구간으로 옮깁니다. 합주실·팀·이름·처음 잡은 시각(created_at)은 그대로 둡니다.
+    """예약 한 건을 다른 구간으로 이동합니다. 합주실, 팀, 이름, 처음 잡은 시각(created_at)은 그대로 둡니다.
 
     옛 행을 취소 표시(cancelled_at=moved_at)로 두고 새 행을 만들어, 옮긴 이력이 DB 에 남습니다.
     둘은 한 transaction 입니다. 옮길 자리가 이미 차 있으면 commit 이 겹침 금지 제약에 걸리고,
