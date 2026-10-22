@@ -31,7 +31,8 @@ function heatLevel(count: number, total: number): number {
   return count === 0 || total === 0 ? 0 : Math.ceil((count / total) * 4);
 }
 
-/** "18:00–20:00" 입니다. to 가 24 이면 종료 시간을 "24:00" 으로 표시합니다(clockEndLabel). */
+/** "18:00–20:00" 입니다. to 가 24 이면 hourLabel 이 "24:00" 을 만들지 못하므로 % 24 로 "00:00" 을 만든 뒤
+ *  clockEndLabel 이 다른 화면과 같은 규칙으로 "24:00" 으로 되돌립니다. */
 function hoursRangeLabel(from: number, to: number): string {
   return `${hourLabel(from)}–${clockEndLabel(hourLabel(to % 24))}`;
 }
@@ -103,6 +104,7 @@ function MemberCalendar({ times, cursor, open, close }: ViewArgs & { times: Memb
       </div>
       {day === null ? null : (
         <DayModal day={day} open={open} close={close} onClose={() => setDay(null)}
+          // 멤버 1명의 달력이라 lane 이 1개뿐이고 이름은 구분용이 아니라 표시용입니다. 선택 목록(MemberPicker)이 기수로 동명이인을 구분합니다.
           lanes={[{ label: times[0]?.member ?? "", items: times }]} />
       )}
     </>
@@ -242,8 +244,9 @@ function DayModal({ day, lanes, open, close, onClose }: {
           <div className="hrs" aria-hidden="true">
             {rows.map((hour, i) => <span key={hour} style={{ "--i": i } as CSSProperties}>{hourLabel(hour)}</span>)}
           </div>
-          {shown.map((lane) => (
-            <div className="lane" key={lane.label}>
+          {shown.map((lane, index) => (
+            // label 은 팀 보기에서 동명이인이면 기수가 붙지만(labelOf) 같은 이름, 같은 기수는 구분하지 못하므로 index 를 key 에 더합니다.
+            <div className="lane" key={`${index}-${lane.label}`}>
               {lane.bars.map(({ item, from, to, col, cols }) => (
                 <span className="evb off" key={item.id} data-first={item.id === firstId ? "" : undefined} style={{ "--from": from - open, "--span": to - from, "--col": col, "--cols": cols } as CSSProperties}>
                   <b>{item.member}</b>

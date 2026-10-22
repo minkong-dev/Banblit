@@ -6,8 +6,7 @@ import type { Account, Permission } from "./contract";
  *  하나도 없으면 "일반멤버", 아직 계정을 받지 못했으면 빈 문자열을 반환합니다. */
 export function roleLabel(me: Account | null): string {
   if (!me) return "";
-  const names = me.permission_sets ?? [];
-  return names.length === 0 ? "일반멤버" : names.join(", ");
+  return me.permission_sets.length === 0 ? "일반멤버" : me.permission_sets.join(", ");
 }
 
 /** 권한 항목과 그 한국어 이름·설명입니다. 순서는 서버가 고정한 선언 순서 그대로입니다.
@@ -39,6 +38,8 @@ export const PERMISSION_ITEMS: readonly {
     note: "집중 합주기간을 새로 추가할 수 있어요.",
   },
   {
+    // period_edit 은 서버에서 기간 수정(PATCH /periods/{id})과 전체 합주 저장을 함께 허용합니다. 화면 이름은
+    // 사용자가 가장 자주 변경하는 1차, 2차 스케줄링 시간을 기준으로 정했습니다(사용자 결정).
     key: "period_edit",
     label: "스케줄링 시간 설정",
     note: "스케줄링 엔진이 연산을 진행하는 시간을 설정할 수 있어요.",
@@ -144,6 +145,7 @@ export function can(me: Account | null, item: Permission): boolean {
 
 /** 팀 생성·수정·삭제 권한 중 하나라도 있으면 true 를 반환합니다. 사이드바 팀 메뉴 이름과 팀 목록 범위가 이 값을 따릅니다. */
 export function canManageTeams(me: Account | null): boolean {
+  // as const 는 배열을 string[] 이 아니라 그 세 글자값만 가지는 readonly tuple 로 좁힙니다. 그래야 can 의 Permission 타입에 맞습니다.
   return (["team_create", "team_edit", "team_delete"] as const).some((item) => can(me, item));
 }
 

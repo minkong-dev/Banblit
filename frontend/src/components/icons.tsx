@@ -1,12 +1,14 @@
 // 여러 화면이 같은 아이콘을 사용합니다.
 // 크기는 CSS 가 결정하므로 이 파일에서는 모양만 정의합니다.
 
+import type { ReactNode } from "react";
+
 type IconProps = { className?: string };
 
 /** 선 아이콘의 공통 컴포넌트입니다. 선 굵기만 아이콘마다 다릅니다. */
 function Stroke({ width, children, className }: {
   width: number;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (

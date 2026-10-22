@@ -3,6 +3,7 @@
 // 그 화면에는 추가 필드와 수정 행이 함께 표시되어 같은 식별자가 두 개 생기기 때문입니다.
 
 import { useState } from "react";
+import type { ReactNode } from "react";
 
 import { EyeIcon, EyeOffIcon } from "./icons";
 
@@ -10,6 +11,7 @@ export type Errors = Record<string, string>;
 
 /** 검증 결과에서 오류 메시지가 있는 항목만 필터링합니다. 없으면 통과입니다. */
 export function failures(checked: Errors): Errors {
+  // [, message] 는 [key, value] 쌍에서 첫 자리(key)를 건너뛰고 두 번째 값만 꺼내는 구조 분해입니다.
   return Object.fromEntries(Object.entries(checked).filter(([, message]) => message !== ""));
 }
 
@@ -38,7 +40,7 @@ export function Field(props: {
   onChange?: (value: string) => void;
   onFocus?: () => void;
   /** 오류 문구 자리 바로 위에 넣을 내용입니다. 가입 화면의 비밀번호 체크리스트가 씁니다. */
-  children?: React.ReactNode;
+  children?: ReactNode;
 }) {
   const {
     name, label, type, placeholder, autoComplete, inputMode, min, max, step, error,

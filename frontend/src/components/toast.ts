@@ -35,5 +35,6 @@ export function readToast(): string {
 
 /** 현재 표시할 문구입니다. 문구가 변경되면 다시 렌더링합니다. */
 export function useToast(): string {
+  // 세 번째 인자는 서버 렌더링용 초기값 함수입니다. 이 앱은 브라우저에서만 렌더링하지만 타입이 요구해 빈 문자열을 반환합니다.
   return useSyncExternalStore(subscribe, readToast, () => "");
 }

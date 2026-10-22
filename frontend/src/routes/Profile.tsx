@@ -3,7 +3,8 @@
 // 평소에는 값만 표시합니다. 오른쪽 위 편집을 누르면 입력칸이 열리고, 저장 한 번으로 이름, 기수, 비밀번호를
 // 전부 기록합니다(사용자 결정 2026-09-28). 프로필 사진은 편집 상태와 관계없이 바로 변경합니다.
 //
-// 이메일, 학과는 표시만 합니다.
+// 이메일, 학과는 표시만 합니다. 학과는 이름, 학과, 학번, 기수로 같은 사람을 판정하는 값 중 하나라 서버 PATCH /me 가 받지 않습니다.
+// 이름과 기수는 같은 판정에 들어가지만 오타 수정이 필요해 PATCH /me 가 받습니다(사용자 결정 2026-09-28).
 
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
@@ -105,6 +106,7 @@ function PhotoEdit({ me }: { me: Account }) {
       <FilePicker
         ref={pick}
         id="myPhoto"
+        // 서버의 허용 형식(backend/src/backend/services/roster/avatar_service.py 의 ALLOWED_IMAGE_TYPES)과 같은 목록입니다. 판정은 서버가 합니다.
         accept="image/jpeg,image/png,image/gif,image/webp"
         onFiles={([file]) => upload(file)}
       />
@@ -148,6 +150,7 @@ function useSaveProfile(me: Account, onSaved: () => void) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (draft: Draft) => saveProfile(me, draft),
+    // 실패해도 다시 조회합니다. saveProfile 은 이름, 기수를 저장한 뒤 비밀번호 변경에서 실패할 수 있어, 실패 뒤에도 서버 값이 바뀌어 있습니다.
     onSettled: () => { void client.invalidateQueries({ queryKey: ME_KEY }); },
     onSuccess: () => {
       say("프로필을 수정했어요.");
@@ -294,6 +297,7 @@ export function Profile() {
   }
 
   const rows = [
+    // login_id 가 null 인 계정은 아이디 열이 생기기 전에 가입해 아직 아이디를 설정하지 않은 계정입니다.
     { label: "아이디", text: me.login_id ?? "" },
     { label: "이메일", text: me.email },
     { label: "기수", text: cohortLabel(me.cohort) },

@@ -4,6 +4,8 @@
 export function objectParticle(word: string): string {
   const last = word.trim().slice(-1);
   const code = last.charCodeAt(0);
+  // 0xac00(가)~0xd7a3(힣)이 완성형 한글입니다. 한 초성당 중성 21개 × 종성 28개 순서로 배열되어, 0xac00 부터의 거리를 28 로 나눈
+  // 나머지가 종성 번호입니다. 0 이면 받침이 없습니다.
   if (Number.isNaN(code) || code < 0xac00 || code > 0xd7a3) return "를";
   return (code - 0xac00) % 28 === 0 ? "를" : "을";
 }

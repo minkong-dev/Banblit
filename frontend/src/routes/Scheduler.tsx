@@ -323,6 +323,7 @@ export function Scheduler() {
             {tab === "me" ? <span><i style={{ background: "var(--off)" }} />나의 불가능 일정</span> : null}
           </div>
           <div id="bandSlot">
+            {/* to 가 null 인 범위는 everyday 가 켜진 기간이라 종료일이 없습니다(lib/calendar 의 focusedRanges). */}
             {focus.length === 0 ? null : (
               <span className="band"><ClockIcon />집중 합주기간 <b>{focus.map((range) => `${range.from} ~ ${range.to ?? "매일"}`).join(", ")}</b> 자동 스케줄링</span>
             )}

@@ -6,7 +6,8 @@ import type { ReactNode, RefObject } from "react";
 
 import { DeleteButton, EditButton } from "../components/controls";
 
-/** 편집 모드에 진입한 form 의 첫 입력칸으로 포커스를 이동합니다. autoFocus 속성이 이 화면에서 동작하지 않아 직접 이동합니다.
+/** 편집 모드에 진입한 form 의 첫 입력칸으로 포커스를 이동합니다. autoFocus 는 요소가 처음 mount 될 때만 동작하는데,
+ *  이 행은 보기 상태에서 편집 상태로 같은 자리의 요소가 교체되며 React 가 입력칸을 다시 mount 하지 않는 경우가 있어 직접 이동합니다.
  *  추가 form(editing 이 false 인 경우)에는 적용하지 않습니다. 화면이 열린 직후 아래쪽 form 으로 포커스가 이동하면 안 됩니다. */
 export function useFirstField<T extends HTMLElement>(editing: boolean): RefObject<T | null> {
   const first = useRef<T>(null);

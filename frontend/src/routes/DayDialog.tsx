@@ -18,6 +18,7 @@ import { entryName, myEntries, offWhenLabel } from "../lib/dayEntries";
 import type { EnsembleOn, Entry } from "../lib/dayEntries";
 import { EnsembleDayEditor } from "../components/EnsembleDayEditor";
 import type { DayTeam } from "../lib/roster";
+import { reason } from "../lib/api";
 import { say } from "../components/toast";
 import {
   DayPeople, DayTimeline, MyEntriesList, RepeatFields, SlotPicker,
@@ -99,12 +100,12 @@ function useDayForm({ dayKey, teams, entries, openHour, closeHour, slotCount, in
       return;
     }
     try {
-      // 불가능 일정은 removeIds 의 첫 id 로 삭제합니다. 반복으로 전개한 항목은 같은 행에서
-      // 나왔으므로 그 행 하나를 삭제하면 전개된 항목이 모두 사라집니다.
+      // 불가능 일정은 removeIds 의 첫 id 로 삭제합니다. offByDay, allOffEntries 가 항목마다 행 1개의 id 만 넣으므로 배열 길이는 항상 1 입니다.
+      // 반복으로 전개한 항목은 같은 행에서 나왔으므로 그 행 하나를 삭제하면 전개된 항목이 모두 사라집니다.
       if (bookingId !== undefined) await cancelBooking(bookingId);
       else if (removeIds !== undefined) await removeUnavailable(memberId, removeIds[0]);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "삭제하지 못했어요.");
+      setError(reason(error, "삭제하지 못했어요."));
       onSaved();
       return;
     }
@@ -214,7 +215,7 @@ function useOffForm(dayKey: string, openHour: number, slotCount: number, day: Da
       if (editing === null) await addUnavailable(day.memberId, from, to, repeat, offReason, offName);
       else await editUnavailable(day.memberId, editing, from, to, repeat, offReason, offName);
     } catch (error) {
-      day.setError(error instanceof Error ? error.message : "등록하지 못했어요.");
+      day.setError(reason(error, "등록하지 못했어요."));
       return;
     }
     const edited = editing !== null;
@@ -256,6 +257,7 @@ export function OffDialog(props: EditProps & {
           <RepeatFields dayKey={dayKey} value={repeat} onChange={setRepeat} />
           <label className="fld3" htmlFor="offName">
             일정 이름
+            {/* 60, 200 은 서버의 상한(backend/src/backend/api/schemas.py 의 UnavailableIn name, reason max_length)과 같습니다. */}
             <input id="offName" value={offName} maxLength={60} placeholder="일정 이름을 입력해주세요." onChange={(event) => setOffName(event.target.value)} />
           </label>
           <label className="fld3" htmlFor="offReason">
@@ -284,9 +286,12 @@ export function OffDialog(props: EditProps & {
   );
 }
 
+/** 예약자 선택의 "팀 없이 내 이름으로" 값입니다. */
+const SELF_KEY = "me";
+
 /** 예약 form 의 입력값과 예약 요청입니다. 선택한 합주실에서 이미 예약된 slot(grid)은 서버를 호출하기 전에 거절합니다. */
 type BookForm = {
-  /** 일정 이름으로 쓸 팀의 key 입니다. "me" 면 예약자 이름입니다. */
+  /** 일정 이름으로 쓸 팀의 key 입니다. SELF_KEY("me")면 팀 없이 예약자 이름으로 예약합니다. 팀 key 는 "team-" 으로 시작해 겹치지 않습니다. */
   who: string;
   setWho: (next: string) => void;
   setRoomId: (next: number) => void;
@@ -301,7 +306,7 @@ type BookForm = {
 
 function useBookForm(props: EditProps & { fixed: { from: number; to: number } | null }, day: DayForm): BookForm {
   const { dayKey, teams, openHour, slotCount, rooms, fixed, onSaved, onClose } = props;
-  const [who, setWho] = useState("me");
+  const [who, setWho] = useState(SELF_KEY);
   const [roomId, setRoomId] = useState<number | null>(null);
   const [range, setRange] = useState<SlotRange | null>(null);
   const picked = range ?? { a: 0, b: slotCount };
@@ -321,7 +326,7 @@ function useBookForm(props: EditProps & { fixed: { from: number; to: number } | 
     // room 이 null 이면 등록된 합주실이 0개이거나 목록을 조회하지 못한 경우입니다. 다시 시도해도 해결되지 않습니다.
     if (room === null) { day.setError("예약할 합주실이 존재하지 않아요. 설정에 합주실이 등록되어 있는지 확인해주세요."); return; }
     if (day.memberId === null) { day.setError(day.noMemberWhy); return; }
-    const teamId = who === "me" ? null : teams.find((team) => team.key === who)?.id ?? null;
+    const teamId = who === SELF_KEY ? null : teams.find((team) => team.key === who)?.id ?? null;
     try {
       await addReservation({
         room_id: room.id,
@@ -330,7 +335,7 @@ function useBookForm(props: EditProps & { fixed: { from: number; to: number } | 
         ends_at: isoAt(dayKey, b, openHour),
       });
     } catch (error) {
-      day.setError(error instanceof Error ? error.message : "예약하지 못했어요.");
+      day.setError(reason(error, "예약하지 못했어요."));
       return;
     }
     day.setError("");
@@ -394,13 +399,14 @@ export function BookDialog(props: EditProps & {
               id="bookWho"
               value={who}
               choices={[
-                { value: "me", label: `${myName} (나)` },
+                { value: SELF_KEY, label: `${myName} (나)` },
                 ...teams.filter((team) => team.mine).map((team) => ({ value: team.key, label: team.name })),
               ]}
               onChange={setWho}
             />
           </label>
           <p className="msg">{day.error}</p>
+          {/* 마이캘린더는 달력 화면(/)의 "내 일정" 탭입니다. 그 탭의 날짜 modal 에 내 예약 목록과 취소 버튼이 있습니다. */}
           {fixed ? <p className="tip">예약 후에는 마이캘린더에서 취소 및 변경이 가능해요.</p> : null}
         </div>
       }

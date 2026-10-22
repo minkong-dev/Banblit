@@ -1,6 +1,6 @@
 // 달력이 사용하는 계산입니다. 날짜와 칸 번호만 다루고 화면이나 서버와 상호작용하지 않습니다.
 // 칸 하나의 길이는 설정의 점유 단위(slot_minutes)입니다. 설정값이 없을 때의 기본값 60분은 서버의
-// backend/src/backend/scheduling/slots.py 의 DEFAULT_SLOT_MINUTES 에 작성되어 있는 내용을 기준으로 합니다.
+// backend/src/backend/contract.py 의 DEFAULT_SLOT_MINUTES 에 작성되어 있는 내용을 기준으로 합니다.
 
 const DAYS_PER_WEEK = 7;
 // 날짜만 있는 값을 Date로 생성할 때 사용하는 시각입니다. 자정으로 설정하면 여름시간제가 있는
@@ -20,8 +20,10 @@ export function monthCells(year: number, month: number): (number | null)[] {
   // 첫날의 요일만큼 앞에 null 을 넣고, 마지막 주가 부족하면 뒤에도 null 을 넣어 채웁니다.
   const leading = new Date(year, month, 1).getDay();
   const lastDay = new Date(year, month + 1, 0).getDate();
+  // Array.from({ length }, (_, i) => …) 는 길이가 length 인 배열을 만들며 index i 마다 함수를 호출합니다. 첫 인자 _ 는 쓰지 않는 요소 값(undefined)입니다.
   const days = Array.from({ length: lastDay }, (_, i) => i + 1);
 
+  // Array<null>(n).fill(null) 은 null 이 n 개 든 배열입니다. Array(n) 만으로는 빈 자리라 spread 가 undefined 를 넣습니다.
   const cells: (number | null)[] = [...Array<null>(leading).fill(null), ...days];
   const trailing = (DAYS_PER_WEEK - (cells.length % DAYS_PER_WEEK)) % DAYS_PER_WEEK;
   return [...cells, ...Array<null>(trailing).fill(null)];
@@ -67,8 +69,8 @@ export function unitLabel(slotMinutes: number): string {
   return slotMinutes === MINUTES_PER_HOUR ? "1시간 단위" : `${slotMinutes}분 단위`;
 }
 
-/** 여는 시각부터 닫는 시각까지 필요한 칸 수입니다. 칸 하나가 한 시간이므로 시각 차이가
- *  곧 칸 수입니다. */
+/** 여는 시각부터 닫는 시각까지의 시간 수입니다. 달력의 index 단위는 slot_minutes 와 무관하게 1시간이고,
+ *  slot_minutes 격자는 cellAt 이 분으로 환산해 적용합니다. */
 export function slotCountOf(openHour: number, closeHour: number): number {
   return closeHour - openHour;
 }
@@ -145,9 +147,10 @@ export function roomBounds(rooms: { opens_at: string; closes_at: string }[]): {
   // 배정이 있든 없든 합주실 설정만 있으면 결정됩니다.
   if (rooms.length === 0) return { open: FALLBACK_OPEN_HOUR, close: FALLBACK_CLOSE_HOUR };
 
-  let open = 24;
+  let open = HOURS_PER_DAY;
   let close = 0;
   for (const room of rooms) {
+    // ponytail: 시각의 분은 읽지 않습니다. 달력 줄이 1시간 단위라 09:30 개방은 09:00 줄부터 그립니다. 그 앞 30분의 예약은 서버가 거절합니다.
     open = Math.min(open, Number(room.opens_at.slice(0, 2)));
     // 00:00 마감은 다음 날 00:00 이라 24시로 셉니다.
     const closes = Number(room.closes_at.slice(0, 2));
@@ -243,6 +246,7 @@ const WEEKDAY = new Intl.DateTimeFormat("ko", { weekday: "short" });
 
 // "2026-09-04" 와 "2026-09-04T14:30:00" 을 함께 받습니다. 뒤에 시간대가 붙어 와도
 // 이 함수에서 제거합니다. 서버는 시간대 없는 값을 주고, 시간대가 붙은 값도 날짜 부분만 읽습니다.
+// (?: ) 는 묶기만 하고 결과 배열에 넣지 않는 그룹입니다. 시각 부분 전체가 없어도 되게 ? 를 붙이되, 번호는 시와 분에만 매깁니다.
 const STAMP = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/;
 
 /** 적힌 날짜를 그대로 담은 Date입니다. 형식이 맞지 않으면 null입니다.
@@ -250,6 +254,7 @@ const STAMP = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?/;
 function dayDate(text: string): Date | null {
   const parsed = STAMP.exec(text);
   if (parsed === null) return null;
+  // 배열 구조 분해에서 비워 둔 자리는 그 index 를 건너뜁니다. parsed[0] 은 전체 일치 문자열이라 쓰지 않습니다.
   const [, year, month, day] = parsed;
   return new Date(Number(year), Number(month) - 1, Number(day), NOON_HOUR);
 }
@@ -295,7 +300,7 @@ export function slotLabels(openHour: number, closeHour: number, slotCount: numbe
   endLabel: (index: number) => string;
 } {
   const label = (index: number): string => slotLabel(index, openHour);
-  const endLabel = (index: number): string => (index >= slotCount ? `${closeHour}:00` : label(index));
+  const endLabel = (index: number): string => (index >= slotCount ? hourLabel(closeHour) : label(index));
   return { label, endLabel };
 }
 
@@ -323,6 +328,11 @@ const A_SUNDAY = { year: 2024, month: 0, day: 7 };
 export const WEEKDAY_NAMES: string[] = Array.from({ length: DAYS_PER_WEEK }, (_, index) =>
   WEEKDAY.format(new Date(A_SUNDAY.year, A_SUNDAY.month, A_SUNDAY.day + index, NOON_HOUR)));
 
+/** "2026-09-14" 의 요일 1글자("월")입니다. 정오로 만들어 시간대로 날짜가 밀리지 않게 합니다. */
+export function weekdayName(day: string): string {
+  return WEEKDAY_NAMES[new Date(`${day}T12:00:00`).getDay()];
+}
+
 /** 불가능 일정의 반복 요일을 담는 값입니다. 월요일 1, 화요일 2, 수요일 4 … 일요일 64 를 더해
  *  하나의 숫자로 저장합니다. 서버의 unavailable_times.repeat_weekdays 와 같은 순서입니다.
  *  0 이면 반복하지 않고, 127(ALL_WEEKDAYS)이면 매일입니다. */
@@ -344,6 +354,7 @@ export function toggleWeekday(mask: number, index: number): number {
 
 /** "2026-09-14" 의 요일 자릿수입니다. 월요일이 0 이고 일요일이 6 입니다. */
 export function weekdayIndex(day: string): number {
+  // getDay() 는 일요일 0, 월요일 1 입니다. 6 을 더하고 7 로 나눈 나머지를 취해 월요일 0, 일요일 6 으로 돌립니다.
   return (new Date(`${day}T12:00:00`).getDay() + 6) % 7;
 }
 

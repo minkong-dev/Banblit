@@ -35,11 +35,11 @@ export const teamSlotsKey = (teamId: number) => [...SLOTS_KEY, teamId] as const;
 /** 팀 1개의 명단입니다. 날짜 dialog, 프로필, 팀 화면, 불가능 일정 히트맵이 같은 cache 를 씁니다. */
 export const teamMembersKey = (teamId: number) => [...TEAM_MEMBERS_KEY, teamId] as const;
 /** 팀 명단 조회 1개입니다. useQuery 와 useQueries 의 queries 에 그대로 넣습니다. */
-export function teamMembersQuery(teamId: number): { queryKey: readonly ["members", number]; queryFn: () => Promise<Member[]> } {
+export function teamMembersQuery(teamId: number): { queryKey: ReturnType<typeof teamMembersKey>; queryFn: () => Promise<Member[]> } {
   return { queryKey: teamMembersKey(teamId), queryFn: () => loadTeamMembers(teamId) };
 }
 /** 팀 1개의 포지션 자리 조회입니다. 포지션 구성 창과 팀 수정 창이 같은 cache 를 씁니다. */
-export function teamSlotsQuery(teamId: number): { queryKey: readonly ["slots", number]; queryFn: () => Promise<TeamSlot[]> } {
+export function teamSlotsQuery(teamId: number): { queryKey: ReturnType<typeof teamSlotsKey>; queryFn: () => Promise<TeamSlot[]> } {
   return { queryKey: teamSlotsKey(teamId), queryFn: () => loadTeamSlots(teamId) };
 }
 
@@ -67,6 +67,8 @@ export const upcomingReservationsKey = (roomIds: readonly number[], from: string
 /** 멤버 검색 결과입니다. 검색어가 비어 있을 때의 key 는 ["member-search", ""] 입니다. */
 export const memberSearchKey = (query: string) => ["member-search", query] as const;
 
+// 아래 두 목록은 key 의 첫 요소만 적습니다. invalidateQueries 는 앞부분이 같은 key 를 전부 무효화하므로 첫 요소 하나로
+// 그 종류의 query 전부(기간 번호가 다른 schedule, records 등)가 다시 조회됩니다. routes/Settings.tsx 가 삭제 뒤에 씁니다.
 // backend/src/backend/db/models.py 의 ON DELETE CASCADE 기준입니다. 기간을 삭제하면 서버가
 // assignments·assignment_runs·assignment_backups 를 함께 삭제합니다. reservations 는 기간을
 // 참조하지 않아 삭제되지 않으므로 무효화 대상에서 뺍니다.

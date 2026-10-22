@@ -9,6 +9,7 @@ import { useLocation } from "react-router-dom";
  *  전환(components/PostBoard.tsx 의 usePostBoard)이 같은 구조라 이 훅 하나를 공유합니다.
  *  openFocus 는 열릴 때 초점을 옮길 대상의 ref 입니다 — 아무 요소에도 연결하지 않으면
  *  focus() 호출이 아무 일도 하지 않으므로, 열 때 초점을 옮기지 않는 화면은 그대로 무시하면 됩니다. */
+// <Focus extends HTMLElement = HTMLElement> 는 generic 매개변수입니다. 호출부가 타입을 지정하지 않으면 = 뒤의 HTMLElement 를 씁니다.
 export function useReturnFocus<Focus extends HTMLElement = HTMLElement>(
   /** 열림 상태를 바깥(주소 등)이 보유할 때 넘깁니다. 없으면 이 훅이 state 로 보유합니다. */
   controlled?: { openId: number | null; setOpenId: (id: number | null) => void },
@@ -20,6 +21,7 @@ export function useReturnFocus<Focus extends HTMLElement = HTMLElement>(
   openFocus: RefObject<Focus | null>;
 } {
   const own = useState<number | null>(null);
+  // 두 경우 모두 [값, 설정 함수] 모양의 tuple 이라 같은 구조 분해로 받습니다. hook 은 조건 없이 항상 호출하고 결과만 고릅니다.
   const [openId, setOpenId] = controlled === undefined ? own : [controlled.openId, controlled.setOpenId];
   const buttons = useRef(new Map<number, HTMLButtonElement>());
   // 돌아갈 버튼 ID를 state가 아닌 ref로 보유합니다. state로 보유하면 초점 이동 후 값을 초기화하는 과정에서 불필요한 재생성이 발생합니다.
@@ -47,6 +49,7 @@ export function useReturnFocus<Focus extends HTMLElement = HTMLElement>(
       back.current = openId;
       setOpenId(null);
     },
+    // register(id) 는 그 id 전용 ref callback 을 반환합니다. React 는 ref 에 넘긴 함수를 요소가 붙을 때 el 로, 떨어질 때 null 로 호출합니다.
     register: (id) => (el) => {
       if (el === null) buttons.current.delete(id);
       else buttons.current.set(id, el);
@@ -76,6 +79,7 @@ export function useDismissible(): {
   // 열림 상태가 저절로 초기화되지 않습니다. effect 대신 렌더링 중에 비교해 이동한 화면이 처음부터 닫힌 상태로 그려집니다.
   const { pathname } = useLocation();
   const [seenPath, setSeenPath] = useState(pathname);
+  // 렌더링 중의 setState 는 React 가 허용하는 방식입니다(이전 렌더링의 값과 비교해 state 를 갱신). 같은 컴포넌트의 state 만 변경하고 DOM 은 건드리지 않습니다.
   if (seenPath !== pathname) {
     setSeenPath(pathname);
     setOpen(false);
@@ -108,11 +112,13 @@ export function useDismissible(): {
  *  id 로 지정한 popover 를 직접 닫습니다. useDismissible 이 하던 것과 같은 useLocation 비교입니다. */
 export function usePopoverRouteClose(id: string): void {
   const { pathname } = useLocation();
-  const [seenPath, setSeenPath] = useState(pathname);
-  if (seenPath !== pathname) {
-    setSeenPath(pathname);
+  const seenPath = useRef(pathname);
+  // hidePopover 는 DOM 을 변경하므로 렌더링 중이 아니라 effect 에서 호출합니다. 첫 렌더링과 같은 주소에서는 호출하지 않습니다.
+  useEffect(() => {
+    if (seenPath.current === pathname) return;
+    seenPath.current = pathname;
     document.getElementById(id)?.hidePopover();
-  }
+  }, [id, pathname]);
 }
 
 // 가장 이른 일정 막대 위에 남기는 여백(px)입니다.

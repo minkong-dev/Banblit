@@ -175,7 +175,7 @@ export type Account = {
   login_id: string | null;
   /** 프로필 사진의 저장 파일명입니다. 없으면 null 입니다. 이 값이 바뀌면 사진을 다시 불러옵니다. */
   avatar: string | null;
-  /** 저장된 값이 아니라 permissions 에서 계산한 값입니다. 22가지가 모두 켜져 있으면 head_manager 입니다. */
+  /** 저장된 값이 아니라 permissions 에서 계산한 값입니다. Permission 23가지가 모두 켜져 있으면 head_manager 입니다. */
   role: "head_manager" | "member";
   permissions: Permission[];
   /** 가진 permission set(권한 집합)의 이름입니다. 화면은 "헤드매니저" 고정 문구 대신 이 이름을 역할로 표시합니다. */
@@ -221,8 +221,10 @@ export type ScheduleRow = {
   end: string;
 };
 
+/** 배정 결과의 합주실, 시각 구간 1개입니다. 팀의 포지션 자리인 TeamSlot 과는 다른 개념입니다. */
 export type Slot = { room_id: number; room: string; start: string; end: string };
 
+// Record<K, V> 는 key 가 K 타입, 값이 V 타입인 객체입니다. 여기서는 팀 이름마다 Slot 배열입니다.
 export type AssignmentOut = { sessions_by_team: Record<string, Slot[]> };
 
 /** 목표 시간보다 적게 배정받은 팀 하나입니다. */
@@ -328,6 +330,7 @@ export type Unavailable = {
 
 /** 전체 멤버의 불가능 일정 1건입니다. 누구의 일정인지 표시해야 하므로 이름이 함께 옵니다.
  *  서버 쪽 짝은 backend/src/backend/api/schemas.py 의 MemberUnavailableOut 입니다. */
+// 타입 사이의 & 는 두 타입의 field 를 전부 가지는 타입(intersection)입니다. Unavailable 의 field 에 member 를 더합니다.
 export type MemberUnavailable = Unavailable & { member: string };
 
 export type Reservation = {
@@ -375,5 +378,6 @@ export type Settings = { slot_minutes: number; session_minutes: number };
 /** 설정을 아직 받지 못했을 때 쓰는 값입니다. 서버 기본값(backend/src/backend/contract.py)과 같아 받는 사이에 격자가 바뀌지 않습니다. */
 export const DEFAULT_SETTINGS: Settings = { slot_minutes: 60, session_minutes: 60 };
 
-/** 합주실을 만들거나 수정할 때 보내는 값입니다. */
+/** 합주실을 만들거나 수정할 때 보내는 값입니다.
+ *  Pick<T, K> 는 T 에서 K 로 적은 field 만 남긴 타입이고, Omit<T, K> 는 K 로 적은 field 를 뺀 타입입니다. */
 export type RoomInput = Pick<Room, "name" | "opens_at" | "closes_at">;

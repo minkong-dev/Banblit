@@ -24,6 +24,8 @@ function useDraft(draftPath: string): { draftId: number | null; markPublished: (
     // 응답이 오기 전에 화면을 떠났으면 true 입니다. 그때 도착한 초안은 바로 삭제합니다.
     // StrictMode 개발 실행은 effect 를 2번 실행하므로 초안 2개 중 첫 번째가 이 경로로 삭제됩니다.
     let left = false;
+    // 떠난 뒤의 초안 삭제 실패는 알리지 않습니다(.catch(() => undefined)). 사용자는 이미 다른 화면에 있고,
+    // 남은 초안은 하루 뒤 서버의 sweep_stale_drafts 가 삭제합니다.
     void createDraft(draftPath)
       .then((post) => {
         if (left) { void deletePost(post.id).catch(() => undefined); return; }
@@ -161,8 +163,8 @@ export function WriteForm(props: {
           <input
             id="postTitle"
             value={title}
-            // 업로드 중 또는 글은 생성되었으나 attachment 업로드에서 실패했을 때 비활성화합니다.
-            // 이미 제출된 값이므로 이 form 에서 수정해도 반영되지 않습니다.
+            // 업로드 중(send.isPending)에만 비활성화합니다. 첨부 업로드가 실패하면 isPending 이 false 로 돌아와 다시 수정할 수 있고,
+            // 다시 제출하면 수정한 제목과 본문으로 발행합니다(publishWithAttachments 가 발행 직전에 전달).
             disabled={send.isPending}
             aria-invalid={bad !== ""}
             aria-describedby={bad === "" ? undefined : "postWhy"}
@@ -189,8 +191,9 @@ export function WriteForm(props: {
         <div className="comments">
           <p className="cap2">첨부파일 {files.length}개</p>
           <ul>
-            {files.map((file) => (
-              <AttachmentRow key={file.name} name={file.name} size={file.size} />
+            {files.map((file, index) => (
+              // 같은 이름의 파일을 2개 선택할 수 있어 이름만으로는 key 가 겹칩니다. 순서를 함께 붙입니다.
+              <AttachmentRow key={`${index}-${file.name}`} name={file.name} size={file.size} />
             ))}
           </ul>
         </div>

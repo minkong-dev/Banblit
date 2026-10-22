@@ -24,7 +24,7 @@ const NOW_REFRESH_MS = 60_000;
 
 /** 현재 시각입니다. 1분마다 갱신해, 화면을 열어 둔 채 정각이나 자정을 넘겨도 오늘 표시와 지난 칸 판정이 따라갑니다.
  *  브라우저 시계와 시간대를 그대로 씁니다. 서버는 시간대 없는 값을 서버 시계로 비교하므로, 사용자 PC 의 시간대가
- *  서버와 다르면 지난 칸 판정이 어긋납니다. 시간대 지원은 미구현입니다(CLAUDE.md 6장). */
+ *  서버와 다르면 지난 칸 판정이 어긋납니다. 시간대 지원은 미구현입니다. 배정 엔진이 시간대 없는 값만 받으므로 화면도 붙이지 않습니다. */
 function useNow(): Date {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -165,6 +165,8 @@ export function MonthView({
 // 주 보기는 합주실이 여는 시간만이 아니라 하루를 통째로 표시합니다. 합주실마다 여는 시각이 달라도
 // 같은 줄에 같은 시각이 오고, 합주실을 변경해도 줄이 밀리지 않습니다. 대신 줄이 많아 늘 스크롤이
 // 생기므로, 주 보기로 들어올 때 합주가 있는 구간으로 자동 스크롤합니다(WeekView 의 useEffect).
+// 00:00 줄은 두지 않습니다. 합주실은 늦어도 다음 날 00:00 에 닫으므로(LATEST_CLOSE_NEXT_DAY) 00:00 에 시작하는 일정이 없고,
+// 00:00 은 전날 마지막 줄의 종료 시간으로만 표시합니다.
 const WEEK_FIRST_HOUR = 1;
 const WEEK_LAST_HOUR = 23;
 const WEEK_HOURS = Array.from(
@@ -179,7 +181,9 @@ export function WeekView({
   dayKeys, closeHour, tab, teams, entriesOf, openHour, slotCount, onOpen, hours = WEEK_HOURS,
 }: ViewProps & { dayKeys: string[]; closeHour: number; onOpen?: (key: string) => void; hours?: number[] }) {
   const label = (index: number) => slotLabel(index, openHour);
-  const endLabel = (index: number) => (index >= slotCount ? `${closeHour}:00` : label(index));
+  const endLabel = (index: number) => (index >= slotCount ? hourLabel(closeHour) : label(index));
+  // 오늘 판정에 useNow 를 씁니다. new Date() 를 렌더링마다 읽으면 화면을 열어 둔 채 자정이 지나도 다시 렌더링되기 전에는 옛 날짜입니다.
+  const today = dayKey(useNow());
 
   // 하루 23줄 중 합주는 합주실이 여는 시간의 줄에만 있습니다. 주 보기로 들어올 때마다 그 줄이
   // 맨 위에 오게 스크롤합니다. 스크롤하지 않으면 항상 01:00 부터 보게 되어 매번 사용자가 스크롤해야 합니다.
@@ -205,7 +209,7 @@ export function WeekView({
       <div className="weekgrid">
         <div className="wh" />
         {dayKeys.map((key, index) => (
-          <div className={["wh", index === 0 ? "sun" : "", key === dayKey(new Date()) ? "today" : ""].filter(Boolean).join(" ")} key={key}>
+          <div className={["wh", index === 0 ? "sun" : "", key === today ? "today" : ""].filter(Boolean).join(" ")} key={key}>
             {WEEKDAY_NAMES[index]}<b>{Number(key.slice(8, 10))}</b>
           </div>
         ))}
@@ -215,10 +219,13 @@ export function WeekView({
             {dayKeys.map((key) => {
               // 막대는 시작 시간이 속한 시간 줄에 두고, 줄 안에서는 --offset(0~1) 만큼 내려 그립니다.
               // 18:10 시작이면 18시 줄에 1/6 만큼 내려간 자리입니다.
+              // ponytail: 같은 시간에 시작하는 항목이 2개 이상이면(합주실이 다른 배정 등) 첫 항목만 그립니다. 전부 그리려면
+              // 칸을 가로로 나누는 열 배치(lib/unavailableMap.ts 의 packColumns 와 같은 방식)가 필요합니다. 하루 modal 에는 전부 나옵니다.
               const entry = visible(entriesOf(key), tab, teams)
                 .find((item) => Math.floor(item.a) + openHour === hour);
               const block = entry === undefined ? null : (
                 <span className={`blk ${entryClass(entry)}`}
+                  // CSSProperties 타입에는 --offset 같은 CSS 변수 이름이 없어 as 로 단정합니다. 값은 calendar.css 가 calc 로 읽습니다.
                   style={{ "--offset": entry.a - Math.floor(entry.a), "--span": entry.b - entry.a } as CSSProperties}>
                   {entryName(entry, teams)}
                   {/* 합주실명을 함께 표시합니다. 맞닿은 두 slot 이 따로 렌더링되는 유일한 이유가

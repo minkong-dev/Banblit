@@ -25,6 +25,7 @@ import { cohortMessage, departmentMessage, emailMessage, loginIdMessage, passwor
 // 사진은 화면에 고정하고 오른쪽 form 만 변경합니다. 화면 5개가 한 layout 을 공유합니다.
 // 주소가 5개로 나뉘어 있어 뒤로 가기와 링크 공유가 동작하고,
 // layout route이므로 화면을 오갈 때 왼쪽 사진은 다시 그려지지 않습니다.
+// key 는 App.tsx 의 AccountLayout 아래 route 경로와 같아야 합니다. 경로를 추가하고 여기에 빠뜨리면 그 화면의 제목이 로그인 제목으로 표시됩니다.
 const HEADS: Record<string, { title: string; sub: string }> = {
   "/login": { title: "로그인", sub: "유일무이 버스킹 동아리 여섯줄 안에서." },
   "/signup": { title: "회원가입", sub: "가입에 필요한 정보를 작성해주세요." },
@@ -78,6 +79,7 @@ function useFormAction(
   check: (data: FormData) => Errors,
   send: (data: FormData) => Promise<void>,
 ): { errors: Errors; onSubmit: (event: FormEvent<HTMLFormElement>) => void; isPending: boolean } {
+  // useActionState 는 [마지막 action 의 반환값(errors), form 에 연결할 action 함수(dispatch), 실행 중 여부(isPending)] 를 반환합니다.
   const [errors, dispatch, isPending] = useActionState<Errors, FormData>(
     async (_previous, data) => {
       const bad = failures(check(data));
@@ -102,6 +104,8 @@ export function SignIn() {
   const { errors, onSubmit, isPending } = useFormAction(
     (data) => ({
       loginId: loginIdMessage(fieldText(data, "loginId").trim()),
+      // 로그인은 passwordMessage(비어 있는지, 최소 길이만), 가입은 signupPasswordMessage, 재설정은 strongPasswordMessage 입니다.
+      // 뒤의 2개는 새 비밀번호 규칙 전부를 검사하고 빈 값 문구만 다릅니다(lib/validate).
       pw: passwordMessage(fieldText(data, "pw")),
     }),
     async (data) => {
@@ -253,6 +257,7 @@ export function SignUp() {
         autoComplete="email" placeholder="이메일을 입력해주세요." error={errors.mail2} />
       <PasswordFields errors={errors} />
 
+      {/* 1~100 은 서버의 범위(backend/src/backend/services/validation/pipeline.py 의 MAX_COHORT)와 같습니다. lib/validate 의 cohortMessage 도 같은 값입니다. */}
       <Field name="cohort" label="기수" type="number" inputMode="numeric"
         min={1} max={100} step={1}
         autoComplete="off" placeholder="예: 46" error={errors.cohort} />
@@ -275,6 +280,7 @@ const MAIL_SENT = "메일을 보냈어요. 전송된 메일을 확인해주세�
 export function FindId() {
   const { errors, onSubmit, isPending } = useFormAction(
     (data) => ({
+      // 비어 있는지만 봅니다. personNameMessage 의 글자 규칙을 적용하면 규칙이 생기기 전에 가입한 이름이 아이디를 찾지 못합니다.
       fidName: fieldText(data, "fidName").trim() ? "" : "이름을 입력해주세요.",
       fidMail: emailMessage(fieldText(data, "fidMail").trim()),
     }),
@@ -334,7 +340,7 @@ export function FindPassword() {
 export function ResetPassword() {
   const navigate = useNavigate();
   // 메일의 링크가 /reset-password?token=... 으로 들어옵니다. 입력칸으로 받지 않습니다.
-  // 43글자 무작위 문자열은 사용자가 직접 입력할 값이 아닙니다.
+  // 서버가 secrets.token_urlsafe(32) 로 만드는 43글자 무작위 문자열(services/auth/password_reset.py)은 사용자가 직접 입력할 값이 아닙니다.
   const token = useSearchParams()[0].get("token") ?? "";
 
   const { errors, onSubmit, isPending } = useFormAction(

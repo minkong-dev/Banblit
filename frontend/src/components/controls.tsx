@@ -16,6 +16,8 @@ const BUTTON_CLASS = { go: "btn go", ghost: "btn", danger: "btn warn" } as const
 
 /** 글자 버튼입니다. go 는 주 행동(저장·제출), ghost 는 보조(취소), danger 는 되돌릴 수 없는 동작입니다.
  *  to 를 주면 같은 모양의 링크(Link)가 됩니다. pending 이면 비활성화하고 pendingLabel 을 표시합니다. */
+// 매개변수의 { a = 기본값, ...rest } 는 props 에서 a 를 꺼내되 없으면 기본값을 쓰고, 꺼내지 않은 나머지 전부를 rest 객체로 받는 구조 분해입니다.
+// keyof typeof BUTTON_CLASS 는 BUTTON_CLASS 의 key 이름들("go" | "ghost" | "danger")로 이루어진 타입입니다.
 export function Button({ kind, to, pending = false, pendingLabel = "저장하는 중…", className, children, type = "button", ...rest }: {
   kind: keyof typeof BUTTON_CLASS;
   to?: string;
@@ -164,6 +166,8 @@ function Range({ type, id, labels, value, onChange, disabled, invalid, step, min
 
 /** 시작·종료 시간 쌍입니다. step 은 초 단위(1시간 칸이면 3600)입니다. */
 export function TimeRange(props: RangeProps & { step?: number }) {
+  // Range 를 함수로 직접 호출해 그 반환 요소를 그대로 돌려줍니다. Range 에 hook 이 없어 React 규칙에 어긋나지 않고,
+  // controls.test 가 반환된 요소 트리(Cell 2개)를 직접 검사합니다.
   return Range({ ...props, type: "time" });
 }
 
@@ -203,6 +207,7 @@ export function Why({ text, id }: { text: string; id?: string }) {
 }
 
 /** 목록이 비었거나 불러오는 중·실패일 때 그 자리에 표시하는 문구입니다. state 가 있으면 stateText 가 문구를 결정합니다. */
+// as 는 TypeScript 의 단정 키워드와 같은 글자라 변수 이름으로 쓸 수 없고, JSX 태그 이름은 대문자여야 변수로 해석되므로 Tag 로 받습니다.
 export function Empty({ state, text, as: Tag = "p" }: { state?: LoadState; text: string; as?: "p" | "li" | "div" }) {
   // 실패는 alert, 불러오는 중은 status 로 스크린 리더에 전달합니다. 비어 있음은 일반 문구입니다.
   const role = state?.kind === "failed" ? "alert" : state?.kind === "loading" ? "status" : undefined;

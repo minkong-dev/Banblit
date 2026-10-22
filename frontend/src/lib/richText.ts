@@ -39,6 +39,7 @@ function makePurifier(): ReturnType<typeof DOMPurify> {
   // iframe 은 태그만 허용하면 어떤 주소든 열립니다. 주소를 직접 확인해 목록 밖이면 태그를 삭제합니다.
   instance.addHook("uponSanitizeElement", (node, data) => {
     if (data.tagName !== "iframe") return;
+    // ?.( ) 는 그 메서드가 있을 때만 호출합니다. hook 에 오는 node 는 Element 가 아닌 Node 일 수 있어 getAttribute, remove 가 없을 수 있습니다.
     const src = (node as Element).getAttribute?.("src") ?? "";
     if (!ALLOWED_FRAME.test(src)) (node as Element).remove?.();
   });
@@ -131,7 +132,8 @@ export function usedColors(html: string): string[] {
 }
 
 /** 글자가 아닌데도 본문을 이루는 요소입니다. 그림·소리·영상·PDF·유튜브·표·구분선이 여기 듭니다.
- *  하나라도 있으면 글자가 없어도 내용이 있는 것으로 봅니다. */
+ *  하나라도 있으면 글자가 없어도 내용이 있는 것으로 봅니다. video, table 은 ALLOWED_TAGS 에 없어 화면에서는 제거되지만,
+ *  편집기에 붙여넣은 HTML 을 저장 전에 빈 글로 판정하지 않으려고 둡니다. */
 const CONTENT_TAGS = /<(img|audio|video|iframe|table|hr)\b/i;
 
 /** 본문에 사람이 읽을 내용이 있는지 판단합니다.
@@ -146,7 +148,7 @@ export function hasContent(html: string): boolean {
 export function textOf(html: string): string {
   return html
     // 블록이 끝나는 자리를 줄바꿈으로 변경합니다. 삭제하기만 하면 앞뒤 문단의 글자가 붙습니다.
-    .replace(/<\/(p|div|li|h[1-3]|blockquote|pre)>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6]|blockquote|pre)>/gi, "\n")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<[^>]*>/g, "")
     .replace(/&nbsp;/g, " ")

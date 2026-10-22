@@ -27,7 +27,8 @@ import {
 import { LOADING_TEXT } from "../lib/loading";
 import type { MemberRow, Permission, PermissionSet, PermissionSetInput } from "../lib/contract";
 
-/** 한 번에 불러오는 멤버 수입니다. 아래로 스크롤하면 이 크기만큼씩 다음 페이지를 불러옵니다. */
+/** 한 번에 불러오는 멤버 수입니다. 아래로 스크롤하면 이 크기만큼씩 다음 페이지를 불러옵니다.
+ *  서버의 기본값과 같은 값입니다(backend/src/backend/api/routers/roster.py 의 limit, 상한 200). */
 const PAGE = 50;
 
 const BLANK: PermissionSetInput = { name: "", description: "", permissions: [] };
@@ -134,6 +135,7 @@ function GrantAdd(props: {
 
   const grant = useMutation({
     mutationFn: (memberId: number) => grantPermissionSet(memberId, set.id),
+    // 성공과 실패 모두 onDone 으로 modal 을 닫고 toast 로 알립니다. 실패 문구는 서버 사유 그대로라 성공 문구와 구별됩니다.
     onSuccess: () => { refreshMemberArea(client); onDone("권한을 부여했어요"); },
     onError: (error) => onDone(reason(error)),
   });
@@ -189,7 +191,8 @@ function GrantHolders(props: {
   );
 }
 
-/** permission set 카드 한 장입니다. 정사각형 카드이며 이름, 멤버 수, 설명이 포함됩니다. */
+/** permission set 카드 한 장입니다. 정사각형 카드이며 이름, 멤버 수, 설명이 포함됩니다.
+ *  권한 검사는 하지 않습니다. 이 구역은 permission_manage, permission_grant, member_expel 중 1개가 있어야 열리고(lib/adminMenu), 버튼의 요청은 서버가 권한별로 거절합니다. */
 function SetTile(props: {
   set: PermissionSet;
   onHolders: () => void;
@@ -274,6 +277,7 @@ function useRailScroll(): { track: RefObject<HTMLUListElement | null>; slide: (w
   const slide = (way: 1 | -1): void => {
     const box = track.current;
     if (box === null) return;
+    // 카드가 아직 없으면 settings.css 의 카드 폭 240px 를 쓰고, 12 는 같은 CSS 의 카드 사이 gap(px)입니다.
     const step = box.querySelector("li")?.getBoundingClientRect().width ?? 240;
     box.scrollBy({ left: way * (step + 12), behavior: "smooth" });
   };
@@ -360,6 +364,8 @@ function MemberRoster(props: {
   // 목록의 바닥이 화면에 들어오면 다음 페이지를 불러옵니다.
   const foot = useLoadMore(done, onMore);
 
+  // ponytail: 필터는 이미 불러온 행(rows)만 거릅니다. 아직 불러오지 않은 page 의 멤버는 스크롤로 더 불러와야 나타납니다.
+  // 서버에서 거르려면 GET /members 에 permission set 조건을 추가해야 합니다.
   const shown =
     filter === "" ? rows : rows.filter((row) => row.permission_sets.includes(filter));
 

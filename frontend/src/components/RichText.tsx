@@ -10,7 +10,7 @@ import FileHandler from "@tiptap/extension-file-handler";
 import TextAlign from "@tiptap/extension-text-align";
 import { TableKit } from "@tiptap/extension-table";
 import { BackgroundColor, Color, FontFamily, FontSize } from "@tiptap/extension-text-style";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   ACCEPTED_MIME, HeadingBackspace, Pdf, Weight, YoutubeTyped, attach,
@@ -183,8 +183,8 @@ export function RichText(props: RichTextProps) {
   const dragging = useWindowDrag();
   // 링크 modal 을 열어 둔 동안만 true 입니다.
   const [linking, setLinking] = useState(false);
-  // 색 선택기의 "글에 사용한 색" 목록입니다. 본문이 바뀔 때마다 다시 셉니다.
-  const used = usedColors(value);
+  // 색 선택기의 "글에 사용한 색" 목록입니다. 본문(value)이 바뀔 때만 다시 셉니다. 링크 modal 을 여닫는 렌더링에서는 다시 세지 않습니다.
+  const used = useMemo(() => usedColors(value), [value]);
 
   if (editor === null) return null;
 

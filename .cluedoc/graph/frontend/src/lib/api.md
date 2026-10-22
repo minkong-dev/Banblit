@@ -12,6 +12,7 @@ flowchart LR
   frontend_src_lib_api["api.ts"]
   frontend_src_lib_api --> frontend_src_lib_contract["contract.ts"]
   frontend_src_App["App.tsx"] --> frontend_src_lib_api
+  frontend_src_components_AppShell["AppShell.tsx"] --> frontend_src_lib_api
   frontend_src_components_Avatar["Avatar.tsx"] --> frontend_src_lib_api
   frontend_src_components_PostActions["PostActions.tsx"] --> frontend_src_lib_api
   frontend_src_components_PostComments["PostComments.tsx"] --> frontend_src_lib_api
@@ -25,6 +26,8 @@ flowchart LR
   frontend_src_routes_Account["Account.tsx"] --> frontend_src_lib_api
   frontend_src_routes_Assignment["Assignment.tsx"] --> frontend_src_lib_api
   frontend_src_routes_AssignmentPanels["AssignmentPanels.tsx"] --> frontend_src_lib_api
+  frontend_src_routes_DayDialog["DayDialog.tsx"] --> frontend_src_lib_api
+  frontend_src_routes_DayDialogParts["DayDialogParts.tsx"] --> frontend_src_lib_api
   frontend_src_routes_Profile["Profile.tsx"] --> frontend_src_lib_api
   frontend_src_routes_Settings["Settings.tsx"] --> frontend_src_lib_api
   frontend_src_routes_SettingsBlinded["SettingsBlinded.tsx"] --> frontend_src_lib_api
@@ -41,6 +44,7 @@ flowchart LR
 ## imported by
 
 - [[graph/frontend/src/App|App.tsx]]
+- [[graph/frontend/src/components/AppShell|AppShell.tsx]]
 - [[graph/frontend/src/components/Avatar|Avatar.tsx]]
 - [[graph/frontend/src/components/PostActions|PostActions.tsx]]
 - [[graph/frontend/src/components/PostComments|PostComments.tsx]]
@@ -54,6 +58,8 @@ flowchart LR
 - [[graph/frontend/src/routes/Account|Account.tsx]]
 - [[graph/frontend/src/routes/Assignment|Assignment.tsx]]
 - [[graph/frontend/src/routes/AssignmentPanels|AssignmentPanels.tsx]]
+- [[graph/frontend/src/routes/DayDialog|DayDialog.tsx]]
+- [[graph/frontend/src/routes/DayDialogParts|DayDialogParts.tsx]]
 - [[graph/frontend/src/routes/Profile|Profile.tsx]]
 - [[graph/frontend/src/routes/Settings|Settings.tsx]]
 - [[graph/frontend/src/routes/SettingsBlinded|SettingsBlinded.tsx]]

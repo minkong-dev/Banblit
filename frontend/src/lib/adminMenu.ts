@@ -27,7 +27,8 @@ export type AdminMenuItem = {
 export const ADMIN_MENU: readonly AdminMenuItem[] = [
   { key: "rooms", label: "합주실", to: "/rooms", needs: ["room_create", "room_edit", "room_delete"] },
   { key: "periods", label: "기간", to: "/periods", needs: ["period_create", "period_edit", "period_delete"] },
-  { key: "members", label: "멤버", to: "/members", needs: ["permission_manage", "permission_grant"] },
+  // 멤버 화면은 권한 세트 관리와 추방을 함께 두므로 추방 권한만 있어도 표시합니다.
+  { key: "members", label: "멤버", to: "/members", needs: ["permission_manage", "permission_grant", "member_expel"] },
   { key: "reservations", label: "예약", to: "/reservations", needs: ["reservation_manage"] },
   { key: "blinded", label: "블라인드", to: "/blinded", needs: ["board_moderate"] },
   { key: "unavailable", label: "불가능 일정", to: "/unavailable", needs: ["unavailable_read"] },

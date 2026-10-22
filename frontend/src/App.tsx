@@ -1,3 +1,4 @@
+// import type 은 타입만 가져옵니다. build 결과 JS 에서 지워지므로 실행 시 react 모듈을 추가로 읽지 않습니다.
 import type { ReactElement } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
@@ -29,6 +30,7 @@ import { isSignedIn } from "./lib/api";
  *  기기에서 로그아웃한 경우 등). 이 경우 RequireAuth 를 통과하지만 이후 요청이
  *  401 로 거절됩니다. */
 function RequireAuth(props: { children: ReactElement }): ReactElement {
+  // 조건 ? a : b 는 조건이 참이면 a, 거짓이면 b 입니다. 로그인했으면 감싼 화면을, 아니면 로그인으로 이동을 반환합니다.
   return isSignedIn() ? props.children : <Navigate to="/login" replace />;
 }
 
@@ -49,24 +51,26 @@ export function App() {
       <Route path="/" element={<SkipIfSignedIn><Landing /></SkipIfSignedIn>} />
       <Route element={<AccountLayout />}>
         <Route path="/login" element={<SkipIfSignedIn><SignIn /></SkipIfSignedIn>} />
-        <Route path="/signup" element={<SignUp />} />
+        <Route path="/signup" element={<SkipIfSignedIn><SignUp /></SkipIfSignedIn>} />
         <Route path="/find-id" element={<FindId />} />
         <Route path="/find-password" element={<FindPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
       </Route>
-      {/* 상단바, 사이드바를 layout route 로 둡니다. 화면을 이동해도 AppShell 은 유지되고 Outlet 안의 화면만 교체됩니다. */}
+      {/* 상단바, 사이드바를 layout route 로 둡니다. 화면을 이동해도 AppShell 은 유지되고 Outlet(components/AppShell.tsx 의
+          <Outlet />, 자식 route 의 element 가 그려지는 자리) 안의 화면만 교체됩니다. */}
       <Route element={<RequireAuth><AppShell /></RequireAuth>}>
         <Route path="/scheduler" element={<Scheduler />} />
         <Route path="/admin" element={<Assignment />} />
         {/* 관리자 메뉴 6개입니다. 주소와 필요 권한은 lib/adminMenu.ts, 구역별 화면은 routes/Settings.tsx 의 ADMIN_SCREENS 입니다.
             권한이 없는 사람이 주소로 바로 들어오면 AdminArea 가 /settings 로 이동시킵니다. */}
+        {/* map 은 메뉴 항목마다 (item) => <Route /> 화살표 함수를 실행해 Route 요소 배열을 반환하고, JSX 는 배열을 그대로 그립니다. */}
         {ADMIN_MENU.map((item) => (
           // key 는 구역을 옮길 때 AdminArea 를 새로 마운트합니다. key 가 없으면 React 가 이전 구역의 state 를 유지합니다.
           <Route key={item.key} path={item.to} element={<AdminArea key={item.key} section={item.key}>{ADMIN_SCREENS[item.key]}</AdminArea>} />
         ))}
         {/* 관리자 메뉴를 구역별 주소로 분리하기 전의 주소입니다. 저장해 둔 링크가 끊기지 않게 둡니다. */}
         <Route path="/settings" element={<SettingsIndex />} />
-        {/* 글, 팀 상세는 주소로 엽니다. :postId?, :teamId? 의 ? 는 그 자리가 없어도 같은 화면이라는 뜻이고,
+        {/* 글, 팀 상세는 주소로 엽니다. :teamId 처럼 : 로 시작하는 구간은 useParams 로 읽는 값이고, :postId?, :teamId? 의 ? 는 그 자리가 없어도 같은 화면이라는 뜻이고,
             정적인 /new 가 :postId 보다 먼저 맞습니다(React Router 의 순위). */}
         <Route path="/notices/:postId?" element={<Notices />} />
         <Route path="/notices/new" element={<NoticeWrite />} />

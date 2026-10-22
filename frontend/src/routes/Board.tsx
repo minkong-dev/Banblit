@@ -55,7 +55,7 @@ function TeamBoard({ teamId, teamName, member, meId, canModerate }: { teamId: nu
         {focus.openId === null ? (
           <PostListPanel
             title={teamName}
-            hint="해당 팀에 소속된 멤버만 볼 수 있어요"
+            hint="해당 팀에 소속된 멤버와 전체 팀 게시판 조회 권한이 있는 멤버만 볼 수 있어요"
             listPath={listPath}
             newPath={`/board/${teamId}/new`}
             canWrite={member}

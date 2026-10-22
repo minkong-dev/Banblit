@@ -40,8 +40,10 @@ export function BoardWrite() {
   return (
     <WritePage
       title={team === undefined ? "글 작성" : `${team.name} 글 작성`}
-      hint="해당 팀에 소속된 멤버만 볼 수 있어요"
+      hint="해당 팀에 소속된 멤버와 전체 팀 게시판 조회 권한이 있는 멤버만 볼 수 있어요"
+      // 이 화면의 route 는 /board/:teamId/new 라 teamId 는 항상 있습니다. ?? "" 는 useParams 의 타입(string | undefined)을 맞추는 것뿐입니다.
       draftPath={`/teams/${teamId ?? ""}/posts/drafts`}
+      // 발행 뒤에는 /board 로 돌아갑니다. Board 화면이 마지막에 보던 팀 탭을 다시 선택하므로 팀 주소를 적지 않습니다.
       listPath="/board"
       listKey={teamPostsPath(teamId ?? "")}
       allowed={team !== undefined}

@@ -6,7 +6,8 @@ import type { Instrument, Member, MyTeam, TeamSlot } from "./contract";
 import { teamColorKey } from "./teamColors";
 import { uniqueNameMessage } from "./validate";
 
-/** 배정 계산이 팀당 10명까지만 받습니다. 그보다 많은 자리는 생성해도 사용할 수 없습니다. */
+/** 팀 1개의 포지션 자리 상한입니다. 서버 쪽은 backend/src/backend/services/roster/pipeline.py 의 MAX_SLOTS_PER_TEAM 에
+ *  작성되어 있는 내용을 기준으로 합니다. 배정 엔진의 제한이 아니라 운영자가 정한 값입니다. */
 export const MAX_SLOTS_PER_TEAM = 10;
 
 export function teamNameMessage(name: string, taken: string[]): string {
@@ -42,7 +43,8 @@ export function seatKey(instrument: Instrument, ordinal: number): string {
 export function seatsOf(counts: Record<string, number>, members: ReadonlyMap<string, Member>): Seat[] {
   return INSTRUMENTS.flatMap((instrument) => {
     const count = counts[instrument] ?? 0;
-    return Array.from({ length: count }, (_unused, index) => ({
+    // Array.from 의 콜백은 (요소, index) 를 받습니다. 요소는 undefined 라 쓰지 않고 index 만 씁니다.
+    return Array.from({ length: count }, (_, index) => ({
       instrument,
       ordinal: index + 1,
       label: slotName(instrument, index + 1, count),

@@ -9,7 +9,8 @@ const MINUTES_PER_HOUR = 60;
 const HOURS_PER_DAY = 24;
 const MINUTES_PER_DAY = HOURS_PER_DAY * MINUTES_PER_HOUR;
 
-/** "2026-10-12T18:30:00" 을 1970-01-01 00:00 부터의 분으로 변환합니다. 시간대를 적용하지 않습니다. */
+/** "2026-10-12T18:30:00" 을 1970-01-01 00:00 부터의 분으로 변환합니다. new Date(문자열) 은 브라우저 시간대를 적용해
+ *  여름시간제 경계에서 1시간이 어긋나므로, 시간대 없이 계산하는 Date.UTC 를 씁니다. 두 값의 차이만 쓰므로 기준점은 무관합니다. */
 function isoMinutes(iso: string): number {
   const part = (from: number, to: number): number => Number(iso.slice(from, to));
   return Date.UTC(part(0, 4), part(5, 7) - 1, part(8, 10), part(11, 13), part(14, 16)) / 60_000;
@@ -69,6 +70,7 @@ export function offRuns(
   for (let hour = open; hour < close; hour += 1) {
     const ids = offMembersAt(times, memberIds, day, hour);
     if (ids.length === 0) continue;
+    // .at(-1) 은 마지막 요소입니다(비어 있으면 undefined). 배열끼리 === 는 같은 객체인지만 보므로, join 한 문자열로 구성이 같은지 비교합니다.
     const last = runs.at(-1);
     if (last !== undefined && last.to === hour && last.ids.join() === ids.join()) {
       runs[runs.length - 1] = { ...last, to: hour + 1 };
@@ -112,7 +114,9 @@ export function laneBars<T extends Unavailable>(items: T[], day: string, open: n
 }
 
 /** 겹치는 막대를 옆으로 나눌 열 번호(col)와, 그 막대가 속한 겹침 묶음의 열 수(cols)입니다. 결과는 입력 순서입니다.
- *  끝난 열은 다시 씁니다. 겹치지 않는 막대는 { col: 0, cols: 1 } 입니다. */
+ *  규칙: 시작 시각 순으로 보면서, 이미 끝난 열(ends 의 값이 from 이하)이 있으면 그 열에 두고 없으면 새 열을 만듭니다.
+ *  앞 막대 전부가 끝난 뒤 시작하는 막대는 새 묶음(group)을 시작하고, 묶음이 끝날 때 그 묶음의 열 수를 cols 에 적습니다.
+ *  겹치지 않는 막대는 { col: 0, cols: 1 } 입니다. */
 export function packColumns(bars: { from: number; to: number }[]): { col: number; cols: number }[] {
   const order = bars.map((_, index) => index).sort((a, b) => bars[a].from - bars[b].from);
   const placed: { col: number; cols: number }[] = bars.map(() => ({ col: 0, cols: 1 }));

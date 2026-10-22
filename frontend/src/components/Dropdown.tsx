@@ -8,7 +8,7 @@ import { useDismissible } from "./hooks";
 import { edgeChoice, moveChoice, openAt } from "../lib/dropdown";
 import type { Choice } from "../lib/dropdown";
 
-/** 선택지 하나의 id 입니다. aria-activedescendant 가 이 값으로 커서 위치를 가리킵니다. */
+/** optionId 는 index 번째 선택지의 DOM id 를 만듭니다. aria-activedescendant 가 이 값으로 커서 위치를 가리킵니다. */
 function optionId(id: string | undefined, index: number): string {
   return `${id ?? "dd"}-opt-${index}`;
 }
@@ -112,7 +112,7 @@ export function Dropdown<T extends string | number>({
         type="button"
         id={id}
         ref={buttonRef}
-        className={[("ddbtn"), className, invalid ? "bad" : ""].filter(Boolean).join(" ")}
+        className={["ddbtn", className, invalid ? "bad" : ""].filter(Boolean).join(" ")}
         aria-label={ariaLabel}
         disabled={disabled}
         aria-haspopup="listbox"
