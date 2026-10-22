@@ -35,6 +35,11 @@ services:
       APP_ORIGIN: "${APP_ORIGIN:-}"
       # 관리자코드입니다. 가입할 때 이 값을 입력한 계정이 권한 항목 전부를 받습니다. 비어 있으면 관리자 가입이 불가능합니다.
       ADMIN_SIGNUP_CODE: "${ADMIN_SIGNUP_CODE:-}"
+      # 소셜 로그인 제공자의 키입니다(.env.example 4-1절). 비어 있는 제공자는 화면에 표시되지 않습니다.
+      GOOGLE_CLIENT_ID: "${GOOGLE_CLIENT_ID:-}"
+      GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
+      KAKAO_CLIENT_ID: "${KAKAO_CLIENT_ID:-}"
+      KAKAO_CLIENT_SECRET: "${KAKAO_CLIENT_SECRET:-}"
     volumes:
       # 게시판 첨부파일입니다. 경로는 위 ATTACHMENT_DIR 과 같은 값이어야 합니다.
       - banblit-attachments:${ATTACHMENT_DIR:-/var/lib/banblit/attachments}
