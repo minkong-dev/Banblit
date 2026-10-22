@@ -9,7 +9,7 @@ sources:
   - "[[graph/backend/src/backend/api/schemas]]"  # 요청, 응답의 형태 — backend/src/backend/api/schemas.py
   - "[[graph/backend/src/backend/api/auth_dependency]]"  # 요청한 사용자와 권한 항목 보유 여부를 확인하는 파일 — backend/src/backend/api/auth_dependency.py
   - "[[graph/backend/src/backend/services/notification/notification_service]]"  # 시간표를 변경한 endpoint가 알림을 생성하는 파일 — backend/src/backend/services/notification/notification_service.py
-  - "[[graph/backend/src/backend/db/health]]"  # 상태 확인 endpoint가 조회하는 대상 — backend/src/backend/db/health.py
+  - "[[graph/backend/src/backend/db/engine]]"  # 상태 확인 endpoint가 조회하는 대상 — backend/src/backend/db/engine.py
 ---
 
 > 문서 버전: 2.2.1 draft

@@ -6,8 +6,7 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session
 
 from backend.db.commit import commit_translating
-from backend.db.engine import create_db_engine
-from backend.db.health import DependencyStatus, check_database as _check_database
+from backend.db.engine import DependencyStatus, check_database as _check_database, create_db_engine
 from backend.db.schedule_store import (
     AssignmentRow,
     BackupRound,

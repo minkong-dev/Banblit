@@ -63,7 +63,7 @@ description: Banblit 의 리팩토링 고유 사항 — 모듈 지도, 시퀀스
 
 ## health check (5절)
 
-- 서버: `api/app.py` 의 `/health`. `db/health.py` 가 DB 연결을 실제로 확인하고, 실패한 의존 대상을 응답에 포함합니다.
+- 서버: `api/app.py` 의 `/health`. `db/engine.py` 의 `check_database` 가 DB 연결을 실제로 확인하고, 실패한 의존 대상을 응답에 포함합니다.
 - compose healthcheck 는 6개 service 에 있습니다. `api` 와 `e2e-api` 는 `/health` 응답, `auto-assign` 은 heartbeat 파일(`/tmp/auto-assign-heartbeat`)의 수정 시각이 확인 간격의 3배 이내인지, `backup` 은 `/tmp/backup-ok` 의 수정 시각이 백업 간격의 2배 이내인지, `db` 는 `pg_isready`, `web` 은 nginx 를 거친 `/api/health` 응답입니다. `banblit up` 은 container 상태가 아니라 `/health` 와 5173 응답으로 준비를 판단합니다.
 
 ## 장애 격리 (4절)
