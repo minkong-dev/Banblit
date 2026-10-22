@@ -19,7 +19,6 @@
 `.claude/agents/` 에 있는 파일이 전부이고, 이 폴더가 유일한 기준입니다(사용자 결정 2026-10-08).
 각 파일 머리의 description 이 "언제 쓰는가" 입니다. 표를 따로 두지 않습니다. ECC(`affaan-m/ECC`)에서
 필요한 것만 옮겨 왔고, 플러그인 자체는 꺼 두었습니다. 전부 켜면 요청마다 에이전트 설명이 수만 토큰씩 붙습니다.
-계획·구조 결정·README 수정은 에이전트 없이 직접 합니다.
 
 서브에이전트는 **중간 산출물을 확인하지 않아도 되는 일**에만 띄웁니다.
 훑을 양이 6만 자를 넘고 돌려받을 것이 한 문단일 때가 그 경우입니다.
@@ -37,27 +36,16 @@
 ---
 ## 2. 이 프로젝트의 스킬
 
-`.claude/skills/` 에 있는 것이 전부입니다. 아래 스무 개는 ECC에서 옮겨 왔습니다.
-
-- **서버** — `python-patterns`, `python-testing`, `fastapi-patterns`, `error-handling`, `coding-standards`
-- **데이터** — `postgres-patterns`, `database-migrations`
-- **배포** — `docker-patterns`, `deployment-patterns`
-- **화면** — `react-patterns`, `react-testing`, `react-performance`, `frontend-a11y`, `design-system`
-- **테스트** — `tdd-workflow`, `e2e-testing`
-- **점검** — `security-review`, `security-scan`, `context-budget`, `repo-scan`
-
-`coding-standards` 는 전역 `refactoring` 스킬의 참조 파일(`reference/coding-standards.md`)로 흡수했습니다. 필요할 때만 참조합니다.
+`.claude/skills/` 에 있는 것이 전부입니다.
 
 ECC 밖의 스킬은 다섯 가지를 씁니다 — 문서는 `cluedoc`(`KeunwooPark/cluedoc`, `.claude/skills/` 에 있습니다),
 외부 포맷 내보내기는 `document-skills`, Claude API 연동은 `claude-api`, `ui-ux-pro-max`, 그리고 보충 스킬 2개 `writing-style-local`·`refactoring-local`.
 
 `writing-style-local`(`.claude/skills/writing-style-local/SKILL.md`)은 이 저장소에서 확정된 표기(집중 합주기간, 전체 합주,
 시작 시간/종료 시간, 권한 세트 등)와 문서별 규칙만 담습니다. 글쓰기 규칙 본문은 전역 `writing-style` 스킬에 있고,
-한국어 글을 쓸 때 두 스킬을 함께 invoke 합니다. 저장소에 있던 전역 스킬 사본은 전역과 중복이라 `trash/` 로 옮겼습니다.
+한국어 글을 쓸 때 두 스킬을 함께 invoke 합니다.
 
-ECC 의 규칙 문서(`.claude/rules/`)는 2026-10-08 에 없앴습니다. 다른 곳에 없던 규칙만 해당 저장소 스킬의
-"ECC rules 에서 흡수" 절로 옮겼고, 나머지는 공통 CLAUDE.md·전역 스킬과 중복이었습니다.
-하네스 구성과 추가·삭제 기준은 `.claude/README.md` 에 있습니다.
+하네스 구성과 추가, 삭제 기준은 `.claude/README.md` 에 있습니다.
 
 `ui-ux-pro-max` 는 **자료를 찾아보는 용도로만 씁니다.** 색 짝·폰트 짝·차트 종류를 고를 때
 엽니다. 화면을 실제로 만드는 것은 6장이 정한 `example-skills:frontend-design` 입니다.
@@ -71,20 +59,10 @@ ECC 의 규칙 문서(`.claude/rules/`)는 2026-10-08 에 없앴습니다. 다�
 모듈을 나누거나 합칠 때, 모듈 간 통신 방식을 정할 때, 메시지 규격을 바꿀 때,
 코드 리뷰에서 컨벤션 위반을 찾을 때도 같습니다.
 
-규칙 본문은 전역 `~/.claude/skills/refactoring/SKILL.md` 에 있습니다.
-`refactoring-local`(`.claude/skills/refactoring-local/SKILL.md`)은 이 저장소의 모듈 지도, 시퀀스 파일 이름(`pipeline.py`),
-직접 호출 예외 목록, 테스트 위치, audit 기본 범위, 그리고 개발자님이 쓴 리팩토링 목적(옛 `refactoring.md`)을 담습니다.
-writing-style 과 같은 구조입니다. 저장소에 있던 `refactoring`·`refactor-audit` 스킬은 전역과 중복이라 `trash/` 로 옮겼습니다.
-
-**수정하기 전에는 `refactoring audit` 으로 먼저 셉니다.** 리뷰어가 위반 판정으로 검사하고,
-러너가 코드를 처음 보는 개발자 입장에서 막히는 지점을 질문으로 남깁니다. 두 결과를
-`AUDIT.md` 한 장으로 합쳐 승인받은 뒤에 수정합니다. 규모를 모르고 손대지 않습니다.
+**수정하기 전에는 `refactoring audit` 으로 먼저 셉니다.**
 
 ---
 ## 2-2. 구현 방식
-
-구현은 공통 규칙 4장의 **모드 3(TDD 후 ponytail)** 로 합니다. 실패하는 테스트를 먼저 쓰고,
-실패하는 모습을 직접 본 다음에만 구현으로 넘어갑니다.
 
 **리뷰는 기능 하나가 끝났을 때 한 번 돌립니다.** 덩어리마다가 아닙니다.
 대상은 저장소가 아니라 `git diff` 로 한정합니다 — 검토자가 읽어야 할 양이 두 자릿수 배로 줄고,
@@ -130,18 +108,9 @@ writing-style 과 같은 구조입니다. 저장소에 있던 `refactoring`·`re
 어느 파일이 어떤 상태이며, 다음 한 걸음이 무엇인지. 뒤쪽 서술을 읽지 않아도 이 항목만으로
 재개할 수 있어야 합니다.
 
-무엇을 했는지는 `git log`에 이미 있으므로 커밋 목록을 옮겨 적지 않습니다.
-**맨 끝에 "남은 것" 항목을 둡니다** — 아직 못 한 작업을 개발일지 맨 끝에 적습니다. 별도 파일을 만들지 않습니다.
-
-> 진행도 문서(`PROGRESS.md`·`TASK.md`)는 `git log`·개발일지와 중복이라 폐지했습니다. 다시 만들지 않습니다.
-
 ### 3-3. COMMAND.md
 
-실행하는 모든 명령어를 기록합니다. 명령어마다 실행 경로, 용도, 붙인 옵션 전부의 의미(생략 시 기본값 포함), 주의점을 적습니다.
-
 - **파일을 통째로 읽지 않습니다.** 해당 명령어를 검색해 확인하고, 없으면 그 자리에만 덧붙입니다.
-- 실제로 실행해 동작을 확인한 명령어만 적습니다. 추측으로 적지 않습니다.
-- 설명하지 못하는 옵션은 붙이지 않습니다.
 
 `.cluedoc/` 하위 문서가 바뀌면 그 모듈을 만들고·돌리고·검증하는 명령어가 같이 바뀌었는지 확인하고 같은 작업 안에서 갱신합니다.
 
@@ -196,15 +165,12 @@ PDF·PPT·Word·Excel은 `document-skills` 스킬을 포맷에 맞게 씁니다.
 허용 scope는 일곱 개입니다 — `scheduling` `docs` `infra` `backend` `frontend` `test` `chore`
 
 - 이 형식은 커밋 검사 훅(`.githooks/commit-msg`)이 강제합니다. 어기면 커밋이 거부됩니다.
-- 새로 받은 저장소는 한 번 `git config core.hooksPath .githooks` 를 실행해 훅을 켭니다.
 - scope를 추가할 때는 `.githooks/commit-msg` 의 `SCOPES` 목록도 함께 수정합니다.
-- 꼬리말(`Co-Authored-By` 등) 규칙은 공통 규칙 8장과 같습니다.
 
 ---
 ## 8. 비밀값
 
-- API 키·비밀번호는 배포 디렉토리와 git에 절대 넣지 않습니다.
-- 저장소 루트의 `.env`(환경별 `.env.dev`, `.env.test` 등)로 관리합니다.
+- 저장소 루트의 `.env`(견본 `.env.example`)로 관리합니다.
 - 파일 최상단에 어떤 API의 키이고 어느 계정에 연결된 것인지 적습니다. 없으면 사용자에게 요청합니다.
 - 인증 토큰은 발행일과 유효기간을 적고 갱신합니다.
 
