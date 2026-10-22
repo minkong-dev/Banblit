@@ -2,7 +2,7 @@
 title: 게시판과 공지
 sources:
   - "[[graph/backend/src/backend/db/models]]"  # Post, Comment, Attachment table — backend/src/backend/db/models.py
-  - "[[graph/backend/src/backend/services/validation/input]]"  # 제목, 본문을 비롯한 모든 입력의 경계 검증 — backend/src/backend/services/validation/input.py
+  - "[[graph/backend/src/backend/services/validation/rules]]"  # 제목, 본문을 비롯한 모든 입력의 경계 검증 — backend/src/backend/services/validation/rules.py
   - "[[graph/backend/src/backend/services/board/board_service]]"  # 글, 댓글 읽기와 쓰기, 소속, 권한 확인 — backend/src/backend/services/board/board_service.py
   - "[[graph/backend/src/backend/services/board/attachment_service]]"  # 파일을 디스크에 저장, 조회, 삭제하는 위치, 허용 확장자 목록 — backend/src/backend/services/board/attachment_service.py
   - "[[graph/backend/migrations/versions/080a74e46f56_initial_schema]]"  # 글, 댓글, 첨부, 블라인드 열을 포함한 통합 초기 schema — backend/migrations/versions/080a74e46f56_initial_schema.py

@@ -8,8 +8,8 @@ from backend.services.validation.pipeline import format_calendar_date
 from backend.services.validation.pipeline import format_clock
 from backend.services.period.pipeline import create_period as create_period_row
 from backend.services.period.pipeline import (
-    AssignRuleIn,
-    WindowIn,
+    AssignRuleInput,
+    WindowInput,
     delete_period,
     get_period_or_raise,
     list_periods,
@@ -23,6 +23,7 @@ from backend.services.period.pipeline import (
     set_ensemble,
     set_ensemble_day,
 )
+# 요청 본문의 AssignRuleIn(pydantic) 과 service 의 AssignRuleInput(dataclass) 을 구분합니다. 본문은 검증용, Input 은 저장할 열 값입니다.
 from backend.api.schemas import (
     AssignRuleIn as AssignRuleBody,
     AssignRuleOut,
@@ -73,34 +74,36 @@ def _ensemble_out(period: Period, days: list[EnsembleDay]) -> EnsembleOut | None
     )
 
 
-def _window_out(period: Period) -> PracticeWindowOut:
-    def pair(starts: time | None, ends: time | None) -> ClockRangeOut | None:
-        # 두 열은 함께 채워지거나 함께 비어 있습니다(periods_practice_window_pairs).
-        if starts is None or ends is None:
-            return None
-        return ClockRangeOut(starts_at=format_clock(starts), ends_at=format_clock(ends))
+def _clock_pair_out(starts: time | None, ends: time | None) -> ClockRangeOut | None:
+    # 두 열은 함께 채워지거나 함께 비어 있습니다(periods_practice_window_pairs).
+    if starts is None or ends is None:
+        return None
+    return ClockRangeOut(starts_at=format_clock(starts), ends_at=format_clock(ends))
 
+
+def _window_out(period: Period) -> PracticeWindowOut:
     return PracticeWindowOut(
-        weekday=pair(period.practice_weekday_starts_at, period.practice_weekday_ends_at),
-        weekend=pair(period.practice_weekend_starts_at, period.practice_weekend_ends_at),
+        weekday=_clock_pair_out(period.practice_weekday_starts_at, period.practice_weekday_ends_at),
+        weekend=_clock_pair_out(period.practice_weekend_starts_at, period.practice_weekend_ends_at),
     )
 
 
-def _window_in(req: PracticeWindowIn | None) -> WindowIn | None:
+def _clock_pair_in(one: ClockRangeOut | None) -> tuple[str, str] | None:
+    return None if one is None else (one.starts_at, one.ends_at)
+
+
+def _window_in(req: PracticeWindowIn | None) -> WindowInput | None:
     # 보내지 않았으면 None 을 그대로 넘겨 저장된 시간대를 유지합니다.
     if req is None:
         return None
-    def pair(one: ClockRangeOut | None) -> tuple[str, str] | None:
-        return None if one is None else (one.starts_at, one.ends_at)
-
-    return WindowIn(weekday=pair(req.weekday), weekend=pair(req.weekend))
+    return WindowInput(weekday=_clock_pair_in(req.weekday), weekend=_clock_pair_in(req.weekend))
 
 
-def _rule_in(req: AssignRuleBody | None) -> AssignRuleIn | None:
+def _rule_in(req: AssignRuleBody | None) -> AssignRuleInput | None:
     # 보내지 않았으면 None 을 그대로 넘겨 저장된 배정 규칙을 유지합니다.
     if req is None:
         return None
-    return AssignRuleIn(
+    return AssignRuleInput(
         target_hours=req.target_hours,
         max_absent=req.max_absent,
         daily_max_hours=req.daily_max_hours,
@@ -198,6 +201,7 @@ def patch_period(
         _rule_in(req.assign_rule),
         now=datetime.now(),
         # 보내지 않은 closes_at 과 null 로 보낸 closes_at 을 구분합니다. 보내지 않으면 저장된 마감 일시를 유지합니다.
+        # "keep" 은 "저장된 값을 유지" 를 뜻하는 표식 문자열입니다(period_crud_service.update_period 의 Literal["keep"]).
         closes_at=req.closes_at if "closes_at" in req.model_fields_set else "keep",
     )
     return _envelope(session, period)

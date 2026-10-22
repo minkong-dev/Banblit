@@ -23,6 +23,7 @@ RESERVATION_MESSAGES = {
     "reservations_no_overlap": "다른 멤버의 예약이 존재하여, 예약이 불가능해요",
 }
 
+# ReservationRow 의 각 자리는 (예약 행, 합주실명, 팀 이름(팀 예약이 아니면 None), 예약한 멤버 이름) 입니다.
 ReservationRow = tuple[Reservation, str, str | None, str]
 
 
@@ -50,6 +51,7 @@ def cancel_reservations_in_focus(session: Session, period: Period, now: datetime
     # "매일" 기간은 종료일이 없어 시작일 뒤 전부가 대상입니다.
     if not period.everyday:
         conditions.append(Reservation.starts_at < datetime.combine(period.ends_on + timedelta(days=1), time()))
+    # list 앞의 * 는 unpacking 연산자입니다. conditions 의 조건을 where 의 인자로 하나씩 펼쳐 전부 AND 로 묶습니다.
     candidates = session.scalars(select(Reservation).where(*conditions)).all()
     cancelled = [
         row for row in candidates
@@ -57,6 +59,7 @@ def cancel_reservations_in_focus(session: Session, period: Period, now: datetime
     ]
     for row in cancelled:
         row.cancelled_at = now
+    # {...} 는 set comprehension 입니다. 예약자 번호를 중복 없이 모아 멤버 1명당 알림 1개만 생성합니다.
     notify_reservations_cancelled(session, {row.member_id for row in cancelled}, now)
     return len(cancelled)
 
@@ -176,6 +179,8 @@ def list_reservations(
     각 행마다 합주실명, 팀 이름(팀 예약이 아니면 None), 예약한 멤버 이름을 함께 포함합니다.
     """
     room = get_room_or_raise(session, room_id)
+    # 시작 시간으로만 범위를 봅니다. 합주실은 늦어도 다음 날 00:00 에 닫으므로(LATEST_CLOSE_NEXT_DAY) 전날 시작한 예약은
+    # from_date 00:00 에 끝나, from_date 의 운영 시간과 겹치지 않습니다.
     range_start = datetime.combine(from_date, time.min)
     range_end = datetime.combine(to_date, time.max)
     rows = session.execute(
@@ -215,12 +220,12 @@ def list_my_reservations(session: Session, member_id: int, now: datetime) -> lis
     ]
 
 
-def _get_own_reservation(
+def _get_manageable_reservation(
     session: Session, reservation_id: int, requester: Member, verb: str
 ) -> Reservation:
-    """reservation_id 의 예약을 찾아, 그 예약을 한 멤버가 requester 일 때만 반환합니다.
+    """reservation_id 의 예약을 찾아, requester 가 그 예약을 한 멤버이거나 reservation_manage 권한자일 때만 반환합니다.
 
-    존재하지 않는 예약과 취소된 예약은 ValueError, 다른 사용자의 예약은 PermissionError 를 발생시킵니다. verb 는 오류 메시지에 들어가는 동작 이름입니다("취소할", "옮길").
+    존재하지 않는 예약과 취소된 예약은 ValueError, 그 외 다른 사용자의 예약은 PermissionError 를 발생시킵니다. verb 는 오류 메시지에 들어가는 동작 이름입니다("취소할", "옮길").
 
     행을 잠급니다(with_for_update).
     """
@@ -249,7 +254,7 @@ def cancel_reservation(
     행을 삭제하지 않고 cancelled_at 만 기록합니다. 취소된 행은 조회, 이동, 취소 대상에서 제외되고 겹침 금지
     제약도 보지 않으므로, 그 시간은 다시 예약할 수 있습니다.
     """
-    reservation = _get_own_reservation(session, reservation_id, requester, "취소할")
+    reservation = _get_manageable_reservation(session, reservation_id, requester, "취소할")
     if reservation.member_id != requester.id:
         raise PermissionError("다른 멤버의 예약은 반려(사유 입력)로만 취소할 수 있어요")
     reservation.cancelled_at = cancelled_at
@@ -267,7 +272,7 @@ def reject_reservation(
     if "reservation_manage" not in account_permissions(session, requester.id):
         raise PermissionError("다른 멤버의 예약을 반려할 권한이 없어요")
     trimmed = require_reject_reason(reason)
-    reservation = _get_own_reservation(session, reservation_id, requester, "반려할")
+    reservation = _get_manageable_reservation(session, reservation_id, requester, "반려할")
     reservation.cancelled_at = rejected_at
     if reservation.member_id != requester.id:
         notify_rejected(
@@ -292,7 +297,7 @@ def update_reservation(
 
     원래 구간과 겹치는 이동도 됩니다. 제약이 취소된 행을 보지 않으므로 옛 행은 비교 대상이 아닙니다.
     """
-    old = _get_own_reservation(session, reservation_id, requester, "옮길")
+    old = _get_manageable_reservation(session, reservation_id, requester, "옮길")
     room = get_room_or_raise(session, old.room_id)
 
     require_valid_slot_bounds(starts_at, ends_at, slot_minutes(session))
@@ -319,4 +324,6 @@ def update_reservation(
     team = None
     if moved.team_id is not None:
         team = session.get(Team, moved.team_id)
-    return moved, room.name, team.name if team is not None else None, requester.name
+    # reservation_manage 권한자가 다른 멤버의 예약을 옮기면 requester 와 예약자가 다르므로 예약자의 이름을 조회합니다.
+    owner = session.get(Member, moved.member_id)
+    return moved, room.name, team.name if team is not None else None, owner.name if owner is not None else requester.name

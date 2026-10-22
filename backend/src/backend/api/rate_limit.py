@@ -7,17 +7,22 @@
 
 import os
 import time
+# OrderedDict 는 항목을 넣은 순서를 기억하고 move_to_end, popitem(last=False) 로 가장 오래된 항목을 꺼낼 수 있는 dict 입니다.
+# deque 는 양쪽 끝에서 넣고 빼는 비용이 일정한 목록입니다. 오래된 요청 시각을 앞에서 빼는 데 씁니다.
 from collections import OrderedDict, deque
 from collections.abc import Callable
 
 from fastapi import HTTPException, Request
 
+# reverse proxy 는 사용자의 요청을 대신 받아 api 로 전달하는 서버입니다. 배포에서는 Caddy(TLS 종료)와 nginx(화면 파일 제공)가 그 역할이라
+# api 가 보는 발신 주소는 proxy 의 주소이고, 실제 발신자는 X-Forwarded-For header 에서 읽어야 합니다.
 # api 앞에 있는 reverse proxy 개수를 담은 환경변수의 이름입니다. 배포는 Caddy, nginx, api 순서라 2(docker-compose.yml),
 # 개발은 nginx 또는 Vite 1개라 1(docker-compose.override.yml)입니다. 환경변수가 없으면 배포 값입니다.
 _PROXY_COUNT_VARIABLE = "TRUSTED_PROXY_COUNT"
 DEFAULT_TRUSTED_PROXY_COUNT = 2
 
 # IP 주소를 변경해 가며 요청하면 _seen 의 항목이 무한히 쌓입니다. 메모리를 고갈시키는 공격이 되므로 상한을 둡니다.
+# 숫자 사이의 _ 는 자릿수 구분 기호로, 10_000 은 10000 과 같은 값입니다.
 DEFAULT_MAX_CALLERS = 10_000
 
 class RateLimiter:
@@ -53,6 +58,7 @@ class RateLimiter:
 
         if len(hits) >= self._limit:
             # 가장 오래된 요청이 window를 벗어날 때까지 남은 초를 반환합니다. 1초 이상으로 보장합니다.
+            # hits[0] + window 가 그 요청이 window 밖으로 나가는 시각이고, 거기서 now 를 빼면 남은 초입니다.
             return max(1, int(hits[0] + self._window - now))
 
         hits.append(now)
@@ -107,6 +113,7 @@ def limit_guesses(name: str) -> Callable[[Request], None]:
 
     def guard(request: Request) -> None:
         limiter: RateLimiter = request.app.state.limiters[name]
+        # time.monotonic 은 시스템 시계를 변경해도 되돌아가지 않는 경과 시간입니다. time.time 은 시계를 뒤로 맞추면 차단이 풀리지 않습니다.
         wait = limiter.check(caller_of(request), now=time.monotonic())
         if wait is None:
             return

@@ -106,6 +106,8 @@ def read_notices(session: Session = Depends(get_session)) -> PostsOut:
     return _posts_out(list_notices(session))
 
 
+# 제목과 본문을 1번에 받아 바로 발행하는 경로입니다. 화면은 첨부를 넣기 위해 아래의 drafts 와 publish 2단계를 쓰고,
+# 이 경로는 첨부 없는 공지를 만드는 테스트와 스크립트가 씁니다.
 @router.post("/notices", response_model=PostEnvelopeOut, status_code=201)
 def create_notice_post(
     req: PostCreateIn,
@@ -156,11 +158,8 @@ def publish(
 
 # 블라인드는 글을 삭제하지 않고 목록·상세에서 가립니다. 작성자 본인에게도 보이지 않습니다.
 # 아래 세 endpoint 는 board_moderate 를 가진 사람만 호출합니다.
-@router.get("/blinded-posts", response_model=PostsOut)
-def read_blinded_posts(
-    _: Member = Depends(require_permission("board_moderate")),
-    session: Session = Depends(get_session),
-) -> PostsOut:
+@router.get("/blinded-posts", response_model=PostsOut, dependencies=[Depends(require_permission("board_moderate"))])
+def read_blinded_posts(session: Session = Depends(get_session)) -> PostsOut:
     return _posts_out(list_blinded_posts(session))
 
 
@@ -333,6 +332,7 @@ def view_attachment(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> FileResponse:
+    # 첫 값은 Attachment 행인데 이 함수는 경로와 content_type 만 쓰므로 _ 로 버립니다.
     try:
         _, path, content_type = attachment_for_inline(session, attachment_id, requester)
     except LookupError as error:

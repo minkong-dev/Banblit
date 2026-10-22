@@ -18,7 +18,8 @@ def create_db_engine(url: str) -> Engine:
     # connect_timeout 은 psycopg 로 전달되어 connection 하나를 여는 데 대기하는 초입니다.
     # pool_timeout 은 이미 열린 connection 을 pool 에서 획득할 때까지 대기하는 초입니다.
     # pool_pre_ping 은 pool 에서 꺼낸 connection 이 유효한지 먼저 검증합니다.
-    # options 는 connection 마다 PostgreSQL 의 statement_timeout, lock_timeout(밀리초)을 설정합니다. 넘으면 DB 가 그 문장을 취소하고
+    # options 는 PostgreSQL 서버 시작 옵션 문자열이고, -c 이름=값 이 그 connection 의 설정 변수 1개를 지정합니다.
+    # 여기서는 connection 마다 statement_timeout, lock_timeout(밀리초)을 설정합니다. 넘으면 DB 가 그 문장을 취소하고
     # OperationalError 가 발생하며, api/app.py 가 503 으로 응답합니다.
     return create_engine(
         url,
@@ -39,7 +40,8 @@ class DependencyStatus:
 
 def check_database(engine: Engine) -> DependencyStatus:
     # 실제로 접속해 SELECT 1을 실행하고, alembic_version에서 적용된 migration(데이터베이스
-    # 스키마 변경) 번호를 읽어 detail에 포함합니다. 번호가 없으면 alembic_version table
+    # 스키마 변경) 번호를 읽어 detail에 포함합니다. alembic 은 migration 도구이고, alembic_version 은 alembic 이
+    # 마지막으로 적용한 revision 번호 1개를 보관하는 table 입니다. 번호가 없으면 alembic_version table
     # (데이터베이스의 행과 열로 이루어진 데이터 구조)은 있는데 migration 이 한 번도 적용되지
     # 않은 상태입니다. 접속 대기 시간은 create_db_engine 의 connect_timeout 이 제한합니다.
     try:

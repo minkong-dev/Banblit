@@ -9,7 +9,11 @@ from backend.db.models import LoginSession
 
 
 def hash_token(token: str) -> str:
-    """token(임시로 발급하는 인증 문자열)의 원문을 일방향 해시로 변환합니다. 저장 및 조회 모두 이 값을 사용합니다."""
+    """token(임시로 발급하는 인증 문자열)의 원문을 일방향 해시로 변환합니다. 저장 및 조회 모두 이 값을 사용합니다.
+
+    DB 의 token_hash 열에는 이 값만 저장하고 원문은 저장하지 않습니다. DB 가 유출되어도 원문을 복원할 수 없습니다.
+    hexdigest() 는 해시 32바이트를 16진수 문자 64자로 반환합니다.
+    """
     return hashlib.sha256(token.encode()).hexdigest()
 
 
@@ -36,6 +40,7 @@ def create_session(session: Session, member_id: int, now: datetime, ttl: timedel
     jobs/auto_assign.py 의 반복(초안 삭제와 같은 자리)에 삭제를 추가합니다.
     """
     _delete_dead_sessions(session, member_id, now)
+    # 32 는 무작위 바이트 수입니다. URL 에 쓸 수 있는 문자로 인코딩되어 43자 문자열이 됩니다.
     token = secrets.token_urlsafe(32)
     session.add(
         LoginSession(

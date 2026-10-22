@@ -27,6 +27,7 @@ def _allowed_extension(name: str, allowed: frozenset[str]) -> str:
 
 def _used_bytes(session: Session, post_id: int) -> int:
     """post_id 의 게시글에 이미 붙어 있는 첨부 파일 크기의 합계를 반환합니다. 첨부가 없으면 0 을 반환합니다."""
+    # coalesce(a, b) 는 a 가 NULL 이면 b 를 반환합니다. 첨부가 0개면 sum 이 NULL 이라 0 으로 받습니다.
     total = session.scalar(
         select(func.coalesce(func.sum(Attachment.size), 0)).where(
             Attachment.post_id == post_id
@@ -64,7 +65,8 @@ def save_attachment(
     stored_name = f"{secrets.token_hex(16)}.{extension}"
     # 합계를 조회하기 전에 그 글의 행을 잠급니다. 잠그지 않으면 같은 글에 동시에 들어온 업로드 2건이
     # 서로의 commit 전 합계를 읽어, 2건 모두 max_post_bytes 만큼 저장합니다. 같은 방식의 잠금을
-    # reservation_service.py 의 _get_own_reservation 이 사용합니다.
+    # reservation_service.py 의 _get_manageable_reservation 이 사용합니다.
+    # 반환값은 쓰지 않습니다. 목적은 행 잠금뿐이고 post 는 위에서 이미 읽었습니다. .one() 은 행이 1개임을 확인합니다.
     session.scalars(select(Post).where(Post.id == post.id).with_for_update()).one()
     remaining = max_post_bytes - _used_bytes(session, post.id)
     size = write_stream(stream, stored_path(stored_name), remaining, "이 글의 첨부 파일 크기 합계가 상한을 초과했어요")
@@ -154,7 +156,8 @@ def attachment_for_inline(
 
 
 def delete_attachment(session: Session, attachment_id: int, requester: Member) -> None:
-    """게시글 작성자인 requester 가 첨부 파일 하나를 삭제합니다. 디스크의 파일과 Attachment 행을 함께 삭제합니다."""
+    """게시글 작성자나 board_moderate 권한자인 requester 가 첨부 파일 하나를 삭제합니다(require_post_author 와 같은 조건).
+    디스크의 파일과 Attachment 행을 함께 삭제합니다."""
     attachment = _get_or_raise(session, attachment_id)
     require_post_author(session, attachment.post_id, requester)
     stored_path(attachment.stored_name).unlink(missing_ok=True)

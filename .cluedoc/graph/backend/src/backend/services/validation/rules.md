@@ -1,21 +1,21 @@
 ---
-source: backend/src/backend/services/validation/input.py
+source: backend/src/backend/services/validation/rules.py
 kind: file
 ---
 
-# input.py
+# rules.py
 
-저장소 경로 `backend/src/backend/services/validation/input.py` 의 관계 노트입니다. `scripts/codegraph.py` 가 생성하므로 직접 수정하지 않습니다.
+저장소 경로 `backend/src/backend/services/validation/rules.py` 의 관계 노트입니다. `scripts/codegraph.py` 가 생성하므로 직접 수정하지 않습니다.
 
 ```mermaid
 flowchart LR
-  backend_src_backend_services_validation_input["input.py"]
-  backend_src_backend_services_validation_input --> backend_src_backend_contract["contract.py"]
-  backend_src_backend_services_validation_input --> backend_src_backend_scheduling_pipeline["pipeline.py"]
-  backend_src_backend_services_validation_pipeline["pipeline.py"] --> backend_src_backend_services_validation_input
-  backend_tests_unit_test_clock_range["test_clock_range.py"] --> backend_src_backend_services_validation_input
-  backend_tests_unit_test_input["test_input.py"] --> backend_src_backend_services_validation_input
-  backend_tests_unit_test_period_input["test_period_input.py"] --> backend_src_backend_services_validation_input
+  backend_src_backend_services_validation_rules["rules.py"]
+  backend_src_backend_services_validation_rules --> backend_src_backend_contract["contract.py"]
+  backend_src_backend_services_validation_rules --> backend_src_backend_scheduling_pipeline["pipeline.py"]
+  backend_src_backend_services_validation_pipeline["pipeline.py"] --> backend_src_backend_services_validation_rules
+  backend_tests_unit_test_clock_range["test_clock_range.py"] --> backend_src_backend_services_validation_rules
+  backend_tests_unit_test_input["test_input.py"] --> backend_src_backend_services_validation_rules
+  backend_tests_unit_test_period_input["test_period_input.py"] --> backend_src_backend_services_validation_rules
 ```
 
 ## imports

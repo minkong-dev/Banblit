@@ -32,7 +32,7 @@ from backend.services.board.board_service import (
     publish_post,
     require_post_author,
     set_post_blinded,
-    sweep_stale_drafts,
+    stale_drafts,
     update_comment,
     update_post,
 )
@@ -74,6 +74,17 @@ def delete_post(session: Session, post_id: int, requester: Member) -> None:
     # 조회할 수 없게 되어, 아무도 삭제하지 못하는 파일이 남습니다.
     remove_post_files(session, post_id)
     delete_post_row(session, post)
+
+
+def sweep_stale_drafts(session: Session, older_than: datetime) -> int:
+    """older_than 이전에 만들어진 초안을 첨부 파일과 함께 삭제하고 삭제한 개수를 반환합니다."""
+    stale = stale_drafts(session, older_than)
+    for post in stale:
+        # delete_post 와 같은 순서입니다. 행을 먼저 삭제하면 그 글의 파일 이름을 조회할 수 없어 파일이 디스크에 남습니다.
+        remove_post_files(session, post.id)
+        session.delete(post)
+    session.commit()
+    return len(stale)
 
 
 __all__ = [

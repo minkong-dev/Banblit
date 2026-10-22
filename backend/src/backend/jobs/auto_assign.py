@@ -108,18 +108,19 @@ def _run_one(
 ) -> AutoRun:
     # 두 계산 시각이 모두 지난 경우에도 계산은 1번만 합니다. 같은 기간을 같은 입력으로 2번
     # 계산한 결과가 같기 때문입니다. 1번 계산하고 두 시각 모두 실행한 것으로 기록합니다.
+    # mark_ran 도 같은 try 안에 둡니다. 밖에 두면 기록 실패가 run_due_assignments 밖으로 전파되어
+    # 남은 기간의 계산과 main 의 초안 삭제가 이번 확인에서 건너뛰어집니다.
     try:
         run_period_assignment(session, period_id, team_ids, room_ids, saved_at=now)
+        # 실행 기록은 계산이 완료된 후에 남깁니다. 시작할 때 기록하면 중간에 실패했을 때
+        # 그 시각이 다시 실행되지 않기 때문입니다. 다시 실행해도 스케줄링 기록이 1개 더 쌓일 뿐
+        # 현재 배정안은 바뀌지 않습니다.
+        # 기록 저장은 run_period_assignment 안에서 이미 commit 되었습니다.
+        mark_ran(session, period_id, now, slots)
     except Exception as error:  # noqa: BLE001 - 한 기간의 계산이 실패해도 다음 기간을 계속 처리합니다
         session.rollback()
         logger.exception("자동 배정이 실패했습니다 (period=%s)", period_id)
         return AutoRun(period_id, now.date(), (), error=str(error))
-
-    # 실행 기록은 계산이 완료된 후에 남깁니다. 시작할 때 기록하면 중간에 실패했을 때
-    # 그 시각이 다시 실행되지 않기 때문입니다. 다시 실행해도 스케줄링 기록이 1개 더 쌓일 뿐
-    # 현재 배정안은 바뀌지 않습니다.
-    # 기록 저장은 run_period_assignment 안에서 이미 commit 되었습니다.
-    mark_ran(session, period_id, now, slots)
     return AutoRun(period_id, now.date(), slots, error=None)
 
 
@@ -161,6 +162,8 @@ def main() -> None:
         # 한 thread 에서 순차적으로 실행합니다. 계산 1회(최대 SOLVER_TIME_LIMIT_SECONDS)가 확인 간격보다 길어도
         # 이 블록이 완료된 후 sleep 으로 진행하므로 실행이 겹치지 않습니다.
         try:
+            # open_session 은 db/pipeline.py 의 get_session_factory 가 반환한 sessionmaker 입니다. with 블록을 나갈 때
+            # session 을 닫고 commit 되지 않은 변경은 버립니다. commit 은 호출하는 service 함수가 각자 수행합니다.
             with open_session() as session:
                 for result in run_due_assignments(session, datetime.now()):
                     logger.info("자동 배정: %s", result)
@@ -175,5 +178,7 @@ def main() -> None:
         sleep(interval)
 
 
+# python -m backend.jobs.auto_assign 처럼 이 파일을 직접 실행할 때만 __name__ 이 "__main__" 입니다.
+# import 될 때는 main 을 실행하지 않습니다.
 if __name__ == "__main__":
     main()

@@ -184,7 +184,7 @@ def test_assign_saves_the_schedule_and_reports_it(
 
     assert job["status"] == "done"
     body = job["result"]
-    slots = body["assignment"]["slots_by_team"]["A"]
+    slots = body["assignment"]["sessions_by_team"]["A"]
     assert len(slots) == 4  # 2일 × slot(1시간 단위 시간 칸) 2개
     assert {slot["room"] for slot in slots} == {"1번방"}
     assert all(slot["room_id"] == room.id for slot in slots)
@@ -296,7 +296,7 @@ def test_a_short_assignment_is_reported_and_kept_as_an_unsaved_record(
     assert body["record_saved_at"] is not None
     # 이영희가 18시에 불가능해 팀 A 는 목표 2시간 중 19시 1시간만 받습니다. 응답에는 실제 id 와 이름으로 반환되어야 합니다.
     assert body["report"]["shortfalls"] == [{"team_id": team.id, "team": "A", "assigned_hours": 1.0}]
-    slots = body["assignment"]["slots_by_team"]["A"]
+    slots = body["assignment"]["sessions_by_team"]["A"]
     assert [slot["room_id"] for slot in slots] == [room.id]
     rows = api_client.get(f"/periods/{period.id}/schedule").json()["rows"]
     assert rows == []  # 메인 캘린더는 그대로입니다
@@ -851,7 +851,7 @@ def test_assign_gives_a_team_one_uninterrupted_session_per_turn(
     job = poll_job(submitted.json()["job"]["id"])
 
     assert job["status"] == "done"
-    slots = job["result"]["assignment"]["slots_by_team"]["A"]
+    slots = job["result"]["assignment"]["sessions_by_team"]["A"]
     assert len(slots) == 4  # 2일 × 60분 session 2회
     for slot in slots:
         start = datetime.fromisoformat(slot["start"])

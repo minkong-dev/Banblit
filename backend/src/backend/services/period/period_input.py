@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
 
 from backend.db.models import Room, UnavailableTime
+# scheduling 의 Member, Room, Team 은 엔진 입력용 dataclass(번호와 불가능 구간만 가짐)이고 db 의 같은 이름 class 는 ORM model 입니다.
+# 이 파일은 둘 다 쓰므로 엔진 쪽에 Engine 접두사를 붙여 구분합니다.
 from backend.scheduling.pipeline import Member as EngineMember
 from backend.scheduling.pipeline import Room as EngineRoom
 from backend.scheduling.pipeline import Team as EngineTeam
@@ -26,8 +28,8 @@ def expand_unavailable(
 ) -> list[TimeInterval]:
     """불가능 일정을 기간과 겹치는 구간 목록으로 확장합니다.
 
-    매일 반복하면 1일, 매주 반복하면 7일 간격으로 되풀이하되, 반복 종료일이 있으면
-    그 날짜까지만 생성합니다.
+    repeat_weekdays 의 요일 bitmask 에 든 요일마다 같은 시각으로 되풀이하되, 반복 종료일이나 반복 횟수가
+    있으면 그 범위까지만 생성합니다. bitmask 가 비어 있으면 1회입니다.
     기간과 전혀 겹치지 않는 구간은 제외합니다.
     """
     expanded: list[TimeInterval] = []
@@ -64,6 +66,8 @@ def _occurrences(row: UnavailableTime, window_end: datetime) -> list[datetime]:
     starts: list[datetime] = []
     current = row.starts_at
     while current < limit:
+        # 1 << n 은 n번째 bit 만 1 인 수(월요일 1, 화요일 2, 수요일 4, ...)이고, & 는 bit 단위 AND 입니다.
+        # chosen 에 그 요일의 bit 가 켜져 있으면 0 이 아닌 값이라 참입니다.
         if chosen & (1 << current.weekday()):
             starts.append(current)
         current += DAY

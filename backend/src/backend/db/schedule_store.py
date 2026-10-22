@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from backend.db.commit import commit_translating
 from backend.db.models import Assignment, AssignmentBackup
 
-# 기간마다 남길 스케줄링 기록 수입니다. 자동 연산이 하루 2회라 5일치입니다.
+# 기간마다 남길 스케줄링 기록 수입니다. 자동 연산이 하루 2회(first_run_at, second_run_at)라 10개가 5일치입니다.
 RECORD_KEEP = 10
 
 
@@ -17,7 +17,8 @@ class AssignmentRow(TypedDict):
     두 곳에 정의하면 한쪽 이름을 변경해도 Python 이 검사하지 못합니다.
     실제 table 의 열은 backend/db/models.py 의 Assignment 가 정의합니다.
 
-    배정 계산은 slot 단위로 전달하고, save_schedule 과 save_record 가 이어진 slot 을 구간 1개로 합쳐 저장합니다.
+    호출자는 slot 또는 session 단위의 구간을 전달하고(services/period/period_service.py 의 assignment_rows 는 session 1회가 행 1개),
+    save_schedule 과 save_record 가 이어진 구간을 1개로 합쳐 저장합니다.
     """
 
     team_id: int
@@ -43,6 +44,7 @@ def merge_runs(rows: list[AssignmentRow]) -> list[AssignmentRow]:
             and last["ends_at"] == row["starts_at"]
         )
         if joins and last is not None:
+            # {**last, ...} 는 last 의 항목을 복사한 새 dict 에 ends_at 만 바꾼 것입니다. last 는 변경하지 않습니다.
             merged[-1] = {**last, "ends_at": row["ends_at"]}
         else:
             merged.append(dict(row))  # type: ignore[arg-type]
@@ -112,6 +114,7 @@ def _prune_backups(session: Session, period_id: int) -> None:
     session.execute(
         delete(AssignmentBackup)
         .where(AssignmentBackup.period_id == period_id)
+        # saved_times 는 최신순이라 [:RECORD_KEEP] 이 남길 기록이고, 그 밖의 saved_at 을 가진 행(오래된 기록)을 삭제합니다.
         .where(AssignmentBackup.saved_at.notin_(saved_times[:RECORD_KEEP]))
     )
 
@@ -157,11 +160,11 @@ def list_backup_rounds(
 
 
 def apply_record(
-    session: Session, period_id: int, saved_at: datetime, applied_at: datetime | None = None
+    session: Session, period_id: int, saved_at: datetime, applied_at: datetime
 ) -> bool:
     """saved_at 의 스케줄링 기록을 현행으로 복사하고 applied_at 을 확정 시각으로 남깁니다. 기록은 목록에 남아 다시 적용할 수 있습니다.
 
-    applied_at 을 생략하면 지금 시각입니다. 그 기록이 없으면 변경하지 않고 False 를 반환합니다.
+    applied_at 은 호출자가 전달합니다. 그 기록이 없으면 변경하지 않고 False 를 반환합니다.
     commit 까지 save_schedule 이 처리합니다.
     """
     batch = session.scalars(
@@ -171,9 +174,8 @@ def apply_record(
     ).all()
     if not batch:
         return False
-    stamp = applied_at or datetime.now()
     for backup in batch:
-        backup.applied_at = stamp
+        backup.applied_at = applied_at
     save_schedule(
         session,
         period_id,

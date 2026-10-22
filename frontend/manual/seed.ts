@@ -109,7 +109,7 @@ function day(offset: number): string {
 }
 
 /** 멤버의 로그인 아이디입니다. 아이디는 영어 소문자와 숫자 4~20자만 받습니다
- *  (backend/src/backend/services/validation/input.py 의 LOGIN_ID_PATTERN). */
+ *  (backend/src/backend/services/validation/rules.py 의 LOGIN_ID_PATTERN). */
 function memberLoginId(studentNo: string): string {
   return `manual${studentNo}`;
 }

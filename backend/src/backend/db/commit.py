@@ -13,7 +13,8 @@ from sqlalchemy.orm import Session
 
 
 def constraint_name(error: IntegrityError) -> str | None:
-    # psycopg 가 제공하는 예외 진단 정보에서 위반된 제약의 이름을 추출합니다.
+    # psycopg 가 제공하는 예외 진단 정보(diag: 제약 이름, table 이름, 상세 문구)에서 위반된 제약의 이름을 추출합니다.
+    # error.orig 가 psycopg 예외가 아닐 수 있고(테스트의 sqlite 등) diag 가 없을 수 있어 getattr 로 2단계 모두 None 을 허용합니다.
     return getattr(getattr(error.orig, "diag", None), "constraint_name", None)
 
 
@@ -30,12 +31,14 @@ def commit_translating(
     같은 session 의 다음 사용이 PendingRollbackError 로 실패합니다.
     """
     try:
+        # 괄호 안에서 호출할 함수를 먼저 고른 뒤 그 함수를 () 로 호출합니다.
         (session.commit if action is None else action)()
     except IntegrityError as error:
         session.rollback()
         message = messages.get(constraint_name(error) or "")
         if message is None:
             raise
+        # raise ... from error 는 새 예외의 __cause__ 에 원래 예외를 연결해, 로그에 두 예외가 함께 남습니다.
         raise error_type(message) from error
     except Exception:
         session.rollback()

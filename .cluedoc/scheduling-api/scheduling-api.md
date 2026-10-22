@@ -3,7 +3,7 @@ title: 스케줄링 API
 sources:
   - "[[graph/backend/src/backend/api/app]]"  # FastAPI 앱을 생성하고 라우터를 등록하는 파일, 오류를 응답으로 변환하는 전역 처리 — backend/src/backend/api/app.py
   - "[[graph/backend/src/backend/api/routers/schedule]]"  # 현재 배정안, 배정, 스케줄링 기록 조회와 적용 endpoint — backend/src/backend/api/routers/schedule.py
-  - "[[graph/backend/src/backend/services/validation/input]]"  # 모든 endpoint 가 함께 쓰는 입력 경계 검증 — backend/src/backend/services/validation/input.py
+  - "[[graph/backend/src/backend/services/validation/rules]]"  # 모든 endpoint 가 함께 쓰는 입력 경계 검증 — backend/src/backend/services/validation/rules.py
   - "[[graph/backend/src/backend/db/commit]]"  # 저장 중 데이터베이스 제약에 위반되었을 때 사용자가 읽을 사유로 변환하는 파일 — backend/src/backend/db/commit.py
   - "[[graph/backend/src/backend/api/routers/routers]]"  # 합주실, 기간, 팀, 예약, 게시판, 계정, 권한, 알림 endpoint — backend/src/backend/api/routers/
   - "[[graph/backend/src/backend/api/schemas]]"  # 요청, 응답의 형태 — backend/src/backend/api/schemas.py

@@ -23,7 +23,7 @@ flowchart LR
   backend_src_backend_services_permission_permission_service["permission_service.py"] --> backend_src_backend_contract
   backend_src_backend_services_roster_roster_service["roster_service.py"] --> backend_src_backend_contract
   backend_src_backend_services_settings_settings_service["settings_service.py"] --> backend_src_backend_contract
-  backend_src_backend_services_validation_input["input.py"] --> backend_src_backend_contract
+  backend_src_backend_services_validation_rules["rules.py"] --> backend_src_backend_contract
   backend_tests_conftest["conftest.py"] --> backend_src_backend_contract
   backend_tests_integration_db_test_auth_endpoints["test_auth_endpoints.py"] --> backend_src_backend_contract
   backend_tests_integration_db_test_member_expel_endpoints["test_member_expel_endpoints.py"] --> backend_src_backend_contract
@@ -54,7 +54,7 @@ flowchart LR
 - [[graph/backend/src/backend/services/permission/permission_service|permission_service.py]]
 - [[graph/backend/src/backend/services/roster/roster_service|roster_service.py]]
 - [[graph/backend/src/backend/services/settings/settings_service|settings_service.py]]
-- [[graph/backend/src/backend/services/validation/input|input.py]]
+- [[graph/backend/src/backend/services/validation/rules|rules.py]]
 - [[graph/backend/tests/conftest|conftest.py]]
 - [[graph/backend/tests/integration/db/test_auth_endpoints|test_auth_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_member_expel_endpoints|test_member_expel_endpoints.py]]

@@ -13,6 +13,9 @@ from backend.db.schedule_store import (
     save_schedule,
 )
 
+# apply_record 의 적용 시각입니다. 이 파일의 검증은 적용 시각을 보지 않습니다.
+NOW = datetime(2026, 8, 1, 12, 0)
+
 
 def _scaffold(session: Session) -> tuple[int, int, int]:
     """FK를 만족시킬 기간·팀·합주실을 하나씩 생성하고 그 id를 반환합니다."""
@@ -167,7 +170,7 @@ def test_applying_a_record_replaces_the_current_schedule_and_keeps_the_record(db
     save_schedule(db_session, period_id, [_row(team_id, room_id, 18)])
     save_record(db_session, period_id, [_row(team_id, room_id, 20)], saved_at=datetime(2026, 8, 1, 9, 0))
 
-    applied = apply_record(db_session, period_id, datetime(2026, 8, 1, 9, 0))
+    applied = apply_record(db_session, period_id, datetime(2026, 8, 1, 9, 0), applied_at=NOW)
 
     assert applied is True
     assert _current(db_session, period_id) == [datetime(2026, 8, 1, 20, 0)]
@@ -190,7 +193,7 @@ def test_applying_a_missing_record_changes_nothing(db_session: Session) -> None:
     period_id, team_id, room_id = _scaffold(db_session)
     save_schedule(db_session, period_id, [_row(team_id, room_id, 18)])
 
-    assert apply_record(db_session, period_id, datetime(2026, 8, 1, 9, 0)) is False
+    assert apply_record(db_session, period_id, datetime(2026, 8, 1, 9, 0), applied_at=NOW) is False
     assert _current(db_session, period_id) == [datetime(2026, 8, 1, 18, 0)]
 
 

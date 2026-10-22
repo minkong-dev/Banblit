@@ -16,7 +16,8 @@ FIND_ID_SUBJECT = "[Banblit] 아이디 안내"
 BAD_TOKEN = "재설정 링크가 만료되었거나 이미 사용되었어요"
 
 # 보낸 메일과 보내지 않은 메일의 사유를 계정 번호로 남깁니다.
-# 로그 수준은 이 모듈에서 INFO 로 지정합니다. handler 는 api/app.py 가 backend logger 에 부착합니다.
+# 로그 수준은 이 모듈에서 INFO 로 지정합니다. 지정하지 않으면 root logger 의 기본 수준 WARNING 을 물려받아
+# 아래 logger.info 가 전부 버려집니다. handler 는 api/app.py 가 backend logger 에 부착합니다.
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -86,6 +87,8 @@ def _consume_token(session: Session, token: str, now: datetime) -> int | None:
         )
         .values(used_at=now)
         .returning(PasswordResetToken.member_id)
+        # synchronize_session=False 는 UPDATE 뒤에 session 에 올라와 있는 같은 행의 python 객체를 갱신하지 않게 합니다.
+        # 이 함수는 그 객체를 쓰지 않으므로 갱신에 드는 조회를 생략합니다.
         .execution_options(synchronize_session=False)
     )
 

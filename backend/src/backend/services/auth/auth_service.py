@@ -18,7 +18,9 @@ from backend.services.permission.pipeline import grant_full_permissions
 from backend.db.models import Member
 from backend.db.pipeline import commit_translating
 
-# hashlib 의 scrypt(메모리를 많이 쓰게 해 대입 공격을 느리게 하는 KDF, Key Derivation Function) 매개변수입니다. OWASP 권고 최솟값입니다.
+# hashlib 의 scrypt(메모리를 많이 쓰게 해 대입 공격을 느리게 하는 KDF, Key Derivation Function) 매개변수입니다.
+# OWASP(웹 보안 지침을 내는 비영리 단체) Password Storage Cheat Sheet 의 권고 최솟값(N=2^14, r=8, p=1)입니다.
+# salt 는 비밀번호마다 새로 만드는 무작위 값으로, 같은 비밀번호라도 저장된 해시가 달라지게 합니다. ** 는 거듭제곱입니다(2**14 = 16384).
 _SCRYPT_N = 2**14
 _SCRYPT_R = 8
 _SCRYPT_P = 1
@@ -34,7 +36,7 @@ MEMBER_MESSAGES = {
 
 
 def hash_password(password: str) -> str:
-    """"scrypt$n$r$p$salt$derived_key" 형식의 문자열을 반환합니다. salt 는 호출마다 새로 생성합니다.
+    """scrypt$n$r$p$salt$derived_key 형식의 문자열을 반환합니다. salt 는 호출마다 새로 생성합니다.
 
     맨 앞 "scrypt"는 형식 표식입니다. 나중에 다른 KDF로 변경하면 형식을 구분하는 데 사용합니다.
     n, r, p 값을 저장된 해시에 포함하면, 나중에 강도를 올려도 기존 계정은 저장 당시의 강도로 검증됩니다.
@@ -48,6 +50,7 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, stored: str) -> bool:
     """저장된 해시에서 읽은 n, r, p 로 다시 계산하여 비교합니다. dklen 은 저장하지 않고 파생값의 길이로 복원합니다."""
+    # 첫 조각은 형식 표식 "scrypt" 라 _ 로 버립니다.
     _, n_text, r_text, p_text, salt_hex, derived_hex = stored.split("$")
     n, r, p = int(n_text), int(r_text), int(p_text)
     dklen = len(bytes.fromhex(derived_hex))
@@ -61,6 +64,7 @@ def verify_password(password: str, stored: str) -> bool:
 
 def _needs_rehash(stored: str) -> bool:
     """저장된 해시에서 읽은 n, r, p 가 현재의 _SCRYPT_N, _SCRYPT_R, _SCRYPT_P 와 다른지 판정합니다."""
+    # 형식 표식, salt, 파생값은 쓰지 않으므로 _ 로 버립니다.
     _, n_text, r_text, p_text, _, _ = stored.split("$")
     return (int(n_text), int(r_text), int(p_text)) != (_SCRYPT_N, _SCRYPT_R, _SCRYPT_P)
 
@@ -116,6 +120,7 @@ def signup(
     )
     session.add(member)
     # 이메일 제약과 신원 제약 위반은 아래 commit 이 아니라 이 flush 에서 감지됩니다.
+    # session.flush 를 호출하지 않고 함수 자체를 전달합니다. commit_translating 이 대신 호출해 IntegrityError 를 ValueError 로 변환합니다.
     commit_translating(session, MEMBER_MESSAGES, session.flush)
     if admin_code is not None and _matches_admin_code(admin_code, expected_code):
         grant_full_permissions(session, member.id)
@@ -137,7 +142,11 @@ def update_profile(
 def change_password(
     session: Session, member: Member, current: str, next_password: str
 ) -> None:
-    """비밀번호를 변경합니다. 현재 비밀번호를 먼저 확인하므로, 다른 사람이 사용 중인 기기에서 비밀번호를 무단으로 변경할 수 없습니다."""
+    """비밀번호를 변경합니다. 현재 비밀번호를 먼저 확인하므로, 다른 사람이 사용 중인 기기에서 비밀번호를 무단으로 변경할 수 없습니다.
+
+    다른 기기의 로그인 session 은 유지합니다. 재설정(password_reset.py 의 reset_password)은 비밀번호를 잃은 상태라 전부 끊지만,
+    변경은 현재 비밀번호를 아는 본인의 요청이기 때문입니다.
+    """
     # password_hash 가 없는 계정은 이 경로로 비밀번호를 변경할 수 없습니다. 비교할 값이 없기 때문입니다.
     if member.password_hash is None or not verify_password(current, member.password_hash):
         raise PermissionError("지금 비밀번호가 맞지 않아요")

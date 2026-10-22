@@ -26,8 +26,8 @@ from backend.services.period.ensemble_service import (
 )
 from backend.services.period.period_crud_service import (
     ScheduleRow,
-    AssignRuleIn,
-    WindowIn,
+    AssignRuleInput,
+    WindowInput,
     create_period,
     delete_period,
     every_team_and_room,
@@ -86,7 +86,8 @@ def run_period_assignment(
     """배정을 계산해 스케줄링 기록으로 저장합니다. 현재 배정안은 변경하지 않고 알리지도 않습니다(사용자 결정 2026-10-13).
 
     현재 배정안은 관리자가 기록을 적용할 때만 변경됩니다(api 의 apply_period_record).
-    수동 실행(api)과 자동 실행(jobs)이 이 함수를 호출합니다. saved_at 은 저장 시각이자 everyday 기간의 배정 날짜입니다.
+    수동 실행(api)과 자동 실행(jobs)이 이 함수를 호출합니다. saved_at 은 스케줄링 기록을 식별하는 저장 시각입니다.
+    everyday 기간의 배정 날짜는 assign_period 가 saved_at.date() 로 계산합니다.
     """
     computed = assign_period(session, period_id, team_ids, room_ids, saved_at)
     rows = assignment_rows(computed.assignment)
@@ -146,8 +147,8 @@ __all__ = [
     "delete_ensemble_day",
     "set_ensemble",
     "set_ensemble_day",
-    "AssignRuleIn",
-    "WindowIn",
+    "AssignRuleInput",
+    "WindowInput",
     "create_period",
     "delete_period",
     "list_periods",

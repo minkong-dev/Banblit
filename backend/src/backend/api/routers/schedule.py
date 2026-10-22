@@ -62,11 +62,13 @@ def _jobs(request: Request) -> JobRunner[PeriodRun]:
 
 
 def _period(period_id: int, session: Session = Depends(get_session)) -> Period:
+    # period_id 는 요청 주소의 {period_id} 입니다. Depends(_period) 로 쓰면 FastAPI 가 endpoint 의 경로 변수를 이 함수에 전달합니다.
     # 기간 존재 여부는 여러 endpoint(API의 요청 주소 단위)가 동일하게 검증합니다. 없으면 ValueError 를 발생시켜 422 로 응답합니다.
     return get_period_or_raise(session, period_id)
 
 
 def _row_out(row: ScheduleRow) -> ScheduleRowOut:
+    # ScheduleRow(contract) 의 tuple 을 순서대로 풀어 씁니다. (팀 번호, 팀 이름, 합주실 번호, 합주실 이름, 시작 시각, 종료 시각) 입니다.
     team_id, team, room_id, room, start, end = row
     return ScheduleRowOut(team_id=team_id, team=team, room_id=room_id, room=room, start=start, end=end)
 
@@ -87,6 +89,7 @@ def _report_out(report: ScheduleReport) -> ScheduleReportOut:
             )
             for a in report.absences
         ],
+        # asdict 는 dataclass 를 dict 로 변환하고, ** 는 그 dict 의 항목을 이름 있는 인자로 펼쳐 전달합니다.
         session_absences=[SessionAbsenceOut(**asdict(item)) for item in report.session_absences],
         over_absent=report.over_absent,
     )
@@ -128,16 +131,16 @@ def _assignment_out(result: PeriodAssignResult) -> AssignmentOut:
             end=room_interval.interval.end,
         )
 
-    # 응답의 slots_by_team 한 항목은 session(합주 1회가 이어지는 구간) 1회입니다. 화면이 쓰는
+    # 응답의 sessions_by_team 한 항목은 session(합주 1회가 이어지는 구간) 1회입니다. 화면이 쓰는
     # field 이름이므로 그대로 둡니다.
-    slots_by_team: dict[str, list[RoomSlotOut]] = {}
+    sessions_by_team: dict[str, list[RoomSlotOut]] = {}
     for team_id, sessions in result.assignment.sessions_by_team.items():
-        slots_by_team[result.team_names[team_id]] = [
+        sessions_by_team[result.team_names[team_id]] = [
             to_slot(room_session) for room_session in sessions
         ]
 
     return AssignmentOut(
-        slots_by_team=slots_by_team,
+        sessions_by_team=sessions_by_team,
         open_slots=[to_slot(slot) for slot in result.assignment.open_slots],
     )
 
@@ -177,16 +180,19 @@ def assign_period_schedule(
     # 팀·합주실 존재 여부나 배정 계산 자체는 접수를 거절할 이유가 아니라 백그라운드 작업의
     # 실패 원인이므로 compute 안에서 처리합니다. 마감된 기간은 접수부터 거절합니다.
     require_not_closed(period, datetime.now())
+    # 요청 session 의 ORM 객체(period)는 응답 뒤 session 이 닫히면 다른 스레드에서 읽을 수 없습니다. 번호(int)만 미리 꺼내 전달합니다.
+    period_id = period.id
+
     def compute() -> PeriodRun:
         # 요청을 받은 스레드의 session 을 그대로 전달하지 않습니다. SQLAlchemy Session 은
         # 스레드끼리 공유하면 안 되므로, 백그라운드 스레드 전용 session 을 새로 엽니다.
         with session_factory() as job_session:
             # 결과는 기록으로만 쌓습니다(services/period/pipeline.py). 현재 배정안은 apply 로만 바뀝니다.
             return run_period_assignment(
-                job_session, period.id, req.team_ids, req.room_ids, saved_at=datetime.now()
+                job_session, period_id, req.team_ids, req.room_ids, saved_at=datetime.now()
             )
 
-    return JobEnvelopeOut(job=_job_out(jobs.submit(period.id, compute)))
+    return JobEnvelopeOut(job=_job_out(jobs.submit(period_id, compute)))
 
 
 # 응답에는 계산 결과와 부족분·불참자 보고가 포함됩니다. assign_read 권한이 조회합니다.
@@ -197,6 +203,7 @@ def assign_period_schedule(
 )
 def read_job(job_id: str, jobs: JobRunner[PeriodRun] = Depends(_jobs)) -> JobEnvelopeOut:
     job = jobs.get(job_id)
+    # 존재하지 않는 대상은 이 서버 전체가 ValueError, 422 로 응답합니다(_period 의 기간과 같은 규칙). 404 를 따로 쓰지 않습니다.
     if job is None:
         raise ValueError("존재하지 않는 작업이에요")
     return JobEnvelopeOut(job=_job_out(job))
@@ -214,20 +221,22 @@ def read_period_records(
     return RecordsOut(
         records=[
             RecordOut(
-                saved_at=round_["saved_at"],
-                slot_count=round_["slot_count"],
-                applied_at=round_["applied_at"],
-                score=_score_out(session, period, round_["saved_at"]),
+                saved_at=record["saved_at"],
+                slot_count=record["slot_count"],
+                applied_at=record["applied_at"],
+                score=_score_out(session, period, record["saved_at"]),
             )
+            # record 는 db/schedule_store.py 의 list_backup_rounds 가 반환하는 dict 1개로, key 는 saved_at, slot_count, applied_at 입니다.
             # slot_count 는 구간 길이를 slot_minutes 로 나눈 값입니다. slot_minutes 는 settings table 의 값입니다.
-            for round_ in list_backup_rounds(session, period.id, slot_minutes(session))
+            for record in list_backup_rounds(session, period.id, slot_minutes(session))
         ]
     )
 
 
 def _score_out(session: Session, period: Period, saved_at: datetime) -> RecordScoreOut | None:
     # 점수는 저장하지 않고 조회할 때마다 현재 불가능 일정으로 계산합니다. 불가능 일정이 변경되면 모든 기록의 점수가 함께 변경됩니다.
-    # ponytail: 기록마다 입력을 다시 읽어 최대 RECORD_KEEP 번 계산합니다. 목록이 느려지면 _prepare 결과를 한 번만 읽도록 묶습니다.
+    # ponytail: 기록마다 입력을 다시 읽어 최대 RECORD_KEEP(db/schedule_store.py, 보관하는 기록 수) 번 계산합니다.
+    # 목록이 느려지면 _prepare(services/period/period_service.py, 계산 입력 준비) 결과를 한 번만 읽도록 묶습니다.
     report = stored_report(session, period, list_backup_round(session, period.id, saved_at), date.today())
     return None if report is None else RecordScoreOut(**asdict(report.score))
 
@@ -239,6 +248,7 @@ def _score_out(session: Session, period: Period, saved_at: datetime) -> RecordSc
     dependencies=[Depends(require_permission("proposal_confirm"))],
 )
 def read_period_record_round(
+    # 경로의 saved_at 은 ISO 8601 형식("2026-10-13T21:00:00")입니다. FastAPI 가 datetime 으로 변환하고, 형식이 다르면 422 입니다.
     saved_at: datetime,
     period: Period = Depends(_period),
     session: Session = Depends(get_session),

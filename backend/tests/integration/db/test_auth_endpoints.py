@@ -499,7 +499,7 @@ def test_changing_my_password_needs_the_current_one(api_client: TestClient) -> N
     _signup(api_client)
 
     response = api_client.post(
-        "/me/password", json={"current": "틀린비밀번호1", "next": "Newpass12345!"}
+        "/me/password", json={"current": "틀린비밀번호1", "new_password": "Newpass12345!"}
     )
 
     assert response.status_code == 401
@@ -512,7 +512,7 @@ def test_changing_my_password_lets_me_log_in_with_the_new_one(
 
     changed = api_client.post(
         "/me/password",
-        json={"current": SIGNUP_BODY["password"], "next": "Newpass12345!"},
+        json={"current": SIGNUP_BODY["password"], "new_password": "Newpass12345!"},
     )
 
     assert changed.status_code == 204, changed.text
@@ -527,7 +527,7 @@ def test_changing_my_password_rejects_a_weak_one(api_client: TestClient) -> None
     _signup(api_client)
 
     response = api_client.post(
-        "/me/password", json={"current": SIGNUP_BODY["password"], "next": "짧다"}
+        "/me/password", json={"current": SIGNUP_BODY["password"], "new_password": "짧다"}
     )
 
     assert response.status_code == 422

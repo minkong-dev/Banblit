@@ -51,6 +51,7 @@ def read_all_unavailable(session: Session = Depends(get_session)) -> AllUnavaila
     rows = list_all_unavailable(session)
     return AllUnavailableOut(
         times=[
+            # model_dump() 는 UnavailableOut 의 field 전부를 dict 로 만들고, ** 가 그 항목을 이름 있는 인자로 펼칩니다. member 만 추가합니다.
             MemberUnavailableOut(**_unavailable_out(row).model_dump(), member=name)
             for row, name in rows
         ]

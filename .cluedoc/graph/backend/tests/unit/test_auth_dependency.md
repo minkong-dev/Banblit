@@ -30,4 +30,4 @@ flowchart LR
 - `test_an_unknown_or_expired_token_is_rejected`: `backend.api.auth_dependency.require_account`
 - `test_a_roster_only_member_without_a_password_is_rejected`: `backend.api.auth_dependency.require_account`, `backend.db.models`
 - `test_a_signed_up_member_passes`: `backend.api.auth_dependency.require_account`, `backend.db.models`
-- `test_a_missing_permission_is_403`: `backend.api.auth_dependency.ensure_permission`, `backend.db.models`
+- `test_a_missing_permission_raises_permission_error`: `backend.api.auth_dependency.ensure_permission`, `backend.db.models`

@@ -5,8 +5,8 @@
 
 from datetime import date
 
-from backend.services.validation import input as rules
-from backend.services.validation.input import (
+from backend.services.validation import rules
+from backend.services.validation.rules import (
     format_calendar_date,
     format_clock,
     format_created_at,

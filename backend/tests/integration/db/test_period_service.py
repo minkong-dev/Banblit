@@ -27,6 +27,9 @@ from conftest import seat
 
 SAVED_AT = datetime(2026, 8, 1, 9, 0)
 
+# apply_record 의 적용 시각입니다. 이 파일의 검증은 적용 시각을 보지 않습니다.
+NOW = datetime(2026, 8, 1, 12, 0)
+
 
 def _period(session: Session, kind: str = "focused", days: int = 1) -> int:
     starts_on = date(2026, 8, 1)
@@ -204,7 +207,7 @@ def test_a_run_does_not_change_the_applied_schedule(db_session: Session) -> None
     room_id = _room(db_session, "1번방", time(18, 0), time(20, 0))
     first = run_period_assignment(db_session, period_id, [team_id], [room_id], saved_at=SAVED_AT)
     assert first.record_saved_at is not None
-    assert apply_record(db_session, period_id, first.record_saved_at) is True
+    assert apply_record(db_session, period_id, first.record_saved_at, applied_at=NOW) is True
     before = db_session.scalars(select(Assignment.starts_at)).all()
 
     run_period_assignment(
@@ -269,7 +272,7 @@ def test_overlapping_period_room_conflict_is_rejected_not_500(
         db_session, period_a, [team_a], [room_id], saved_at=SAVED_AT
     )
     assert first.record_saved_at is not None
-    assert apply_record(db_session, period_a, first.record_saved_at) is True
+    assert apply_record(db_session, period_a, first.record_saved_at, applied_at=NOW) is True
 
     moved = db_session.get(Period, period_a)
     assert moved is not None
@@ -280,7 +283,7 @@ def test_overlapping_period_room_conflict_is_rejected_not_500(
     assert second.record_saved_at is not None
 
     with pytest.raises(ValueError, match="이미"):
-        apply_record(db_session, period_b, second.record_saved_at)
+        apply_record(db_session, period_b, second.record_saved_at, applied_at=NOW)
 
     remaining = db_session.scalars(
         select(Assignment).where(Assignment.period_id == period_a)
@@ -581,7 +584,7 @@ def test_open_slots_come_from_the_saved_schedule_without_recomputing(
         db_session, period_id, [team_a, team_b], [room_id], saved_at=SAVED_AT
     )
     assert result.record_saved_at is not None
-    assert apply_record(db_session, period_id, result.record_saved_at) is True
+    assert apply_record(db_session, period_id, result.record_saved_at, applied_at=NOW) is True
     assert len(result.computed.assignment.open_slots) == 1  # 3칸 - 팀당 1칸 × 2팀
 
     period = db_session.get(Period, period_id)

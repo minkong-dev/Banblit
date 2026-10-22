@@ -6,19 +6,21 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from backend.api.auth_dependency import require_account
-from backend.services.auth.pipeline import change_password, delete_account, sign_in, sign_up, update_profile
-from backend.services.roster.pipeline import avatar_path, delete_avatar, save_avatar
 from backend.services.auth.pipeline import (
     KEEP_TTL,
     SESSION_COOKIE,
     SIGNED_IN_COOKIE,
-    revoke_session,
-)
-from backend.services.auth.pipeline import (
+    change_password,
+    delete_account,
     request_password_reset,
     reset_password,
+    revoke_session,
     send_id_reminder,
+    sign_in,
+    sign_up,
+    update_profile,
 )
+from backend.services.roster.pipeline import avatar_path, delete_avatar, save_avatar
 from backend.services.permission.pipeline import (
     account_permission_set_names,
     account_permissions,
@@ -46,6 +48,7 @@ from backend.db.pipeline import get_session
 router = APIRouter()
 
 # rate limit(같은 요청자가 지정된 시간 안에 보낼 수 있는 요청 횟수 제한)입니다. 횟수는 api/app.py 의 RATE_LIMITS 가 정합니다.
+# Depends(...) 를 변수에 담아 두고 endpoint 의 dependencies=[...] 에 넣습니다. 같은 dependency 를 endpoint 마다 다시 만들지 않습니다.
 _login_guard = Depends(limit_guesses("login"))
 _signup_guard = Depends(limit_guesses("signup"))
 _mail_guard = Depends(limit_guesses("mail"))
@@ -70,6 +73,8 @@ def _set_session_cookies(response: Response, token: str, keep: bool = False) -> 
     response.set_cookie(
         SESSION_COOKIE,
         token,
+        # httponly 는 JavaScript 의 document.cookie 로 이 값을 읽지 못하게 막고, samesite=lax 는 다른 사이트에서 시작한
+        # POST 요청에 이 cookie 를 붙이지 않게 막습니다(CSRF 방지).
         httponly=True,
         samesite="lax",
         path="/",
@@ -103,6 +108,8 @@ def _account_out(session: Session, member: Member) -> AccountOut:
         login_id=member.login_id,
         avatar=member.avatar,
         role="head_manager" if holds_every_permission(permissions) else "member",
+        # account_permissions 는 DB 의 text 값이라 list[str] 이고 AccountOut 은 list[Permission](Literal) 을 요구합니다.
+        # 값은 DB CHECK 제약이 PERMISSIONS 로 제한하므로 mypy 의 타입 불일치 경고만 무시합니다.
         permissions=permissions,  # type: ignore[arg-type]
         permission_sets=account_permission_set_names(session, member.id),
         cohort=member.cohort,
@@ -136,6 +143,8 @@ def signup(
 def login(
     req: LoginIn, response: Response, session: Session = Depends(get_session)
 ) -> AuthOut:
+    # app.py 의 ValueError handler 는 422 로 응답합니다. 로그인 실패는 입력 형식이 아니라 인증 실패이므로 여기서 401 로 바꿉니다.
+    # now 를 sign_in 안에서 구하지 않고 인자로 전달하는 이유는 테스트가 시각을 지정해 만료를 재현하기 위해서입니다. 다른 service 함수도 같습니다.
     try:
         member, token = sign_in(session, req.login_id, req.password, datetime.now(), req.keep)
     except ValueError as error:
@@ -158,7 +167,7 @@ def edit_me(
 # 조회는 로그인한 사용자 누구나 계정 번호로 할 수 있습니다. 명단, 검색 화면이 다른 사용자의 사진을 표시합니다.
 @router.post("/me/avatar", response_model=AckOut)
 def upload_my_avatar(
-    file: UploadFile = File(...),
+    file: UploadFile = File(),
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> AckOut:
@@ -180,6 +189,7 @@ def show_avatar(
     requester: Member = Depends(require_account),
     session: Session = Depends(get_session),
 ) -> FileResponse:
+    # LookupError 는 services/roster/avatar_service.py 의 avatar_path 가 사진이 없을 때 발생시킵니다.
     try:
         path, content_type = avatar_path(session, member_id)
     except LookupError as error:
@@ -192,6 +202,8 @@ def show_avatar(
         headers={
             "X-Content-Type-Options": "nosniff",
             "Content-Disposition": "inline",
+            # default-src 'none' 은 이 응답 안에서 어떤 자원(script, style, font)도 불러오지 못하게 하고, img-src 'self' 는 같은 출처의
+            # 그림만 허용하며, frame-ancestors 'self' 는 다른 사이트가 이 응답을 iframe 으로 넣지 못하게 합니다.
             "Content-Security-Policy": "default-src 'none'; img-src 'self'; frame-ancestors 'self'",
             # 사진을 변경해도 주소가 같아 브라우저가 이전 사진을 표시합니다. 매번 서버에 확인하고,
             # 변경되지 않았으면 FileResponse 가 304 로 응답합니다.
@@ -207,7 +219,7 @@ def edit_my_password(
     session: Session = Depends(get_session),
 ) -> None:
     try:
-        change_password(session, requester, req.current, req.next)
+        change_password(session, requester, req.current, req.new_password)
     except PermissionError as error:
         raise HTTPException(status_code=401, detail=str(error)) from error
     except ValueError as error:

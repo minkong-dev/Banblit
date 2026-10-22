@@ -19,7 +19,7 @@ flowchart LR
   backend_src_backend_services_period_period_input["period_input.py"] --> backend_src_backend_scheduling_pipeline
   backend_src_backend_services_period_period_service["period_service.py"] --> backend_src_backend_scheduling_pipeline
   backend_src_backend_services_reservation_reservation_service["reservation_service.py"] --> backend_src_backend_scheduling_pipeline
-  backend_src_backend_services_validation_input["input.py"] --> backend_src_backend_scheduling_pipeline
+  backend_src_backend_services_validation_rules["rules.py"] --> backend_src_backend_scheduling_pipeline
   backend_tests_unit_test_clock_range["test_clock_range.py"] --> backend_src_backend_scheduling_pipeline
   backend_tests_unit_test_scheduling_pipeline["test_scheduling_pipeline.py"] --> backend_src_backend_scheduling_pipeline
 ```
@@ -38,7 +38,7 @@ flowchart LR
 - [[graph/backend/src/backend/services/period/period_input|period_input.py]]
 - [[graph/backend/src/backend/services/period/period_service|period_service.py]]
 - [[graph/backend/src/backend/services/reservation/reservation_service|reservation_service.py]]
-- [[graph/backend/src/backend/services/validation/input|input.py]]
+- [[graph/backend/src/backend/services/validation/rules|rules.py]]
 - [[graph/backend/tests/unit/test_clock_range|test_clock_range.py]]
 - [[graph/backend/tests/unit/test_scheduling_pipeline|test_scheduling_pipeline.py]]
 

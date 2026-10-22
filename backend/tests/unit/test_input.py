@@ -1,4 +1,4 @@
-"""services/validation/input.py 의 입력 검증 테스트입니다. 빈 문자열·시각·날짜·구간 모든 입력 유형에 같은 검증 규칙이 적용됩니다."""
+"""services/validation/rules.py 의 입력 검증 테스트입니다. 빈 문자열·시각·날짜·구간 모든 입력 유형에 같은 검증 규칙이 적용됩니다."""
 
 
 
@@ -14,7 +14,7 @@ import pytest
 
 
 
-from backend.services.validation.input import (
+from backend.services.validation.rules import (
 
     format_calendar_date,
 
