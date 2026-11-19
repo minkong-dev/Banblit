@@ -3,7 +3,8 @@ title: 배포
 sources:
   - "[[graph/docker-compose.yml]]"  # 배포용 기준 파일. reverse proxy, 백업 service 까지 포함한 정의 파일 1개 — docker-compose.yml
   - "[[graph/docker-compose.override.yml]]"  # 개발에서 reverse proxy, 백업을 비활성화하는 위치 — docker-compose.override.yml
-  - "[[graph/deploy/Caddyfile]]"  # reverse proxy 가 인증서를 받고 요청을 전달하는 규칙 — deploy/Caddyfile
+  - "[[graph/deploy/Caddyfile]]"  # reverse proxy 가 인증서를 받고, 화면을 제공하고, /api 만 서버로 전달하는 규칙 — deploy/Caddyfile
+  - "[[graph/deploy/smoke.sh]]"  # reverse proxy 규칙을 요청 6개로 확인하는 script — deploy/smoke.sh
   - "[[graph/deploy/backup.sh]]"  # 정기 백업과 migration 직전 1회 백업(once)을 진행하는 script — deploy/backup.sh
   - "[[graph/.env.example]]"  # 배포에서 채워야 하는 값의 목록과 뜻 — .env.example
   - "[[graph/backend/src/backend/api/rate_limit]]"  # 값을 추측하는 요청을 제한하는 rate limit — backend/src/backend/api/rate_limit.py
@@ -11,18 +12,16 @@ sources:
   - "[[graph/backend/tests/unit/test_rate_limit]]"  # 상한, 창, 격리의 시나리오 — backend/tests/unit/test_rate_limit.py
   - "[[graph/backend/src/backend/api/routers/docs]]"  # 아이디와 비밀번호를 검증한 뒤 Swagger UI 와 API 명세를 반환 — backend/src/backend/api/routers/docs.py
   - "[[graph/backend/tests/unit/test_api_docs]]"  # Swagger 비밀번호, 404, 429 의 시나리오 — backend/tests/unit/test_api_docs.py
-  - "[[graph/frontend/nginx.conf.template]]"  # 화면을 제공하고 /api 만 서버로 전달하는 규칙 — frontend/nginx.conf.template
   - "[[graph/frontend/Dockerfile]]"  # 화면을 묶을 때 접속 주소를 박아 넣는 위치 — frontend/Dockerfile
   - "[[graph/frontend/index.html]]"  # 크롤러가 읽는 링크 미리보기 태그 — frontend/index.html
 ---
 
-> 문서 버전: 1.3.0 draft
+> 문서 버전: 2.0.0 draft
 
 ```mermaid
 flowchart LR
-    U[사람] -->|https 443| C[reverse proxy<br/>인증서를 자동으로 받습니다]
-    C -->|http 내부망| W[화면<br/>빌드된 파일 + /api 전달]
-    W -->|/api| A[서버]
+    U[사람] -->|https 443| C[reverse proxy<br/>인증서 자동 발급<br/>화면 파일 제공]
+    C -->|/api, http 내부망| A[서버]
     A --> D[(데이터 저장소)]
     B[백업] -.6시간마다.-> D
     B -.주기 백업.-> H[/서버 안 폴더/]
@@ -67,7 +66,9 @@ flowchart LR
 
 ### 진입점은 1개입니다
 
-reverse proxy 만 외부에 열려 있고, 화면 서버와 API 서버는 container(Docker가 실행하는 격리된 프로세스 단위) 내부 네트워크에서만 통신합니다. 화면 서버에 남겨 둔 포트는 container 내부에만 열려 있어, API 서버에 직접 접근해야 하는 경우에만 사용합니다.
+reverse proxy 만 외부에 열려 있고, API 서버는 container(Docker가 실행하는 격리된 프로세스 단위) 내부 네트워크에서만 통신합니다. reverse proxy 는 화면 파일을 직접 제공하고 `/api` 요청만 API 서버로 전달합니다. 서버 안 확인용 http 주소(host 의 `127.0.0.1:8080`)도 같은 규칙을 쓰고, 인증서나 DNS 에 문제가 있을 때 서버 안에서 확인하는 데 사용합니다.
+
+reverse proxy 는 처음에 화면 서버(nginx)와 Caddy 2개였습니다. Caddy 1개가 두 역할을 모두 처리할 수 있어 nginx 를 삭제했습니다(사용자 결정 2026-11-19). 규칙은 `deploy/smoke.sh` 가 화면, 화면 경로 직접 요청, `/images/` 404, `/assets/` cache, 존재하지 않는 `/assets/` 파일의 cache 제외, `/api` 전달, 300MiB 상한과 같은 크기의 전달, 300MiB 초과 413 의 8개 요청으로 확인합니다. 처음 6개 항목은 삭제 전 nginx 구성과 삭제 후 Caddy 구성에서 같은 결과였고, 리뷰에서 발견된 2개 차이(상한 단위 MB 와 MiB, 404 응답의 cache header)를 항목으로 추가한 뒤 수정했습니다.
 
 reverse proxy 는 인증서를 자동으로 받고 갱신합니다. 인증서를 받으려면 **도메인이 이미 이 서버를 가리키고 있어야** 합니다. 인증서 발급 기관이 도메인 소유권을 확인하기 위해 그 주소로 요청을 보내기 때문입니다. 그래서 순서가 결정되어 있습니다. 도메인을 먼저 지정하고, DNS 전파를 확인한 뒤에 reverse proxy 를 실행합니다. 인증서 발급에 반복 실패하면 발급 기관이 일시적으로 요청을 거절하므로, 원인을 수정한 뒤 다시 시도합니다.
 
@@ -146,12 +147,12 @@ Swagger UI(`/api/docs`)는 `.env` 의 `API_DOCS_USER`, `API_DOCS_PASSWORD` 로 b
 
 요청 출처는 **맨 앞의 reverse proxy 가 관찰한 IP 주소**로 식별합니다. 요청을 보낸 쪽이 제출한 값은 신뢰하지 않습니다. 신뢰할 경우 요청자가 IP를 변경하며 시도하여 임계값을 무한히 회피할 수 있습니다.
 
-reverse proxy 는 각자 관찰한 주소를 `X-Forwarded-For` 헤더(요청이 거쳐 온 주소를 쉼표로 나열한 HTTP 헤더)의 맨 뒤에 추가합니다. 배포 경로는 Caddy, nginx, api 순서로 reverse proxy 가 2개이므로, 맨 뒤 값은 Caddy 컨테이너의 주소이고 **뒤에서 2번째 값**이 실제 요청자입니다. reverse proxy 의 개수는 환경변수 `TRUSTED_PROXY_COUNT` 로 지정합니다.
+reverse proxy 는 각자 관찰한 주소를 `X-Forwarded-For` 헤더(요청이 거쳐 온 주소를 쉼표로 나열한 HTTP 헤더)의 맨 뒤에 추가합니다. 배포 경로는 Caddy, api 순서로 reverse proxy 가 1개이므로 **맨 뒤 값**이 실제 요청자입니다. Caddy 는 요청자가 보낸 `X-Forwarded-For` 를 버리고 자신이 관찰한 주소로 새로 작성합니다. 요청자가 값을 바꿔 보내도 로그인 11번째 요청이 429 로 차단되는 것을 확인했습니다. reverse proxy 의 개수는 환경변수 `TRUSTED_PROXY_COUNT` 로 지정합니다.
 
 | 환경 | 값 | 지정 위치 |
 |---|---|---|
-| 배포 (Caddy, nginx, api 순서) | 2 | `docker-compose.yml` 의 `api.environment` |
-| 개발 (nginx 또는 Vite, api 순서) | 1 | `docker-compose.override.yml` 의 `api.environment` |
+| 배포 (Caddy, api 순서) | 1 | `docker-compose.yml` 의 `api.environment` |
+| 개발 (Vite, api 순서) | 1 | `docker-compose.override.yml` 의 `api.environment` |
 | 지정하지 않음, 숫자가 아님, 0 이하 | 1 | `rate_limit.py` 의 `DEFAULT_TRUSTED_PROXY_COUNT` |
 
 헤더의 값 개수가 `TRUSTED_PROXY_COUNT` 보다 적으면 reverse proxy 를 거치지 않은 요청이므로 헤더를 사용하지 않고 접속한 상대의 주소를 사용합니다. 값을 실제 reverse proxy 개수보다 작게 지정하면 모든 사용자가 reverse proxy 컨테이너 주소 1개로 합산되어 서비스 전체가 상한 1개를 공유합니다. Caddy 앞에 CDN 같은 reverse proxy 를 추가하면 이 값과 Caddy 의 `trusted_proxies` 설정을 함께 변경해야 합니다.

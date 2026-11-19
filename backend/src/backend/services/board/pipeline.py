@@ -37,8 +37,8 @@ from backend.services.board.board_service import (
     update_post,
 )
 
-# 글 1개에 붙은 첨부 파일 크기의 합계 상한입니다. 파일 1개의 상한은 nginx 의 client_max_body_size
-# (frontend/nginx.conf.template)가 담당합니다. 합계 상한이 없으면 같은 글에 파일을 반복해서 붙여 디스크를 채울 수 있습니다.
+# 글 1개에 붙은 첨부 파일 크기의 합계 상한입니다. 파일 1개의 상한은 Caddy 의 request_body max_size
+# (deploy/Caddyfile)가 담당합니다. 합계 상한이 없으면 같은 글에 파일을 반복해서 붙여 디스크를 채울 수 있습니다.
 MAX_POST_BYTES = 300 * 1024 * 1024
 # 업로드할 수 있는 파일 확장자입니다. 화면 쪽 사본은 frontend/src/lib/boards.ts 의 ALLOWED_EXTENSIONS 이고,
 # 파일 선택창의 accept 와 업로드 전 검증에 씁니다. 여기를 수정하면 그 사본도 같은 작업 안에서 수정합니다.

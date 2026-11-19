@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 
 // 화면은 5173, api 는 8000 port 에서 실행됩니다. 브라우저는 다른 출처로 보내는 요청을 막으므로 개발 서버가 proxy 합니다.
 // 화면은 api 를 /api/... 로 호출하고(frontend/src/lib/api.ts 의 API_PREFIX), 개발 서버는 /api 접두사를 삭제해 전달합니다.
-// 배포에서는 frontend/nginx.conf.template 이 같은 일을 합니다.
+// 배포에서는 deploy/Caddyfile 이 같은 일을 합니다.
 const API_PREFIX = "/api";
 
 export default defineConfig({

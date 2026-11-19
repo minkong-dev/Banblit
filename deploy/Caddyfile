@@ -1,25 +1,69 @@
-# reverse proxy 입니다. 인증서를 자동으로 받고 갱신하며, http 요청을 https 로 전환합니다.
+# reverse proxy 입니다. 인증서를 자동으로 받고 갱신하며, http 요청을 https 로 전환합니다. 화면 파일을 제공하고 /api 요청만 api 로 전달합니다.
 # 배포는 로그인 cookie 에 Secure 가 붙으므로 https 가 아니면 로그인이 되지 않습니다.
 # 도메인은 .env 의 BANBLIT_DOMAIN 에 작성되어 있는 값을 기준으로 합니다.
 # docker-compose.yml 의 caddy service 가 읽습니다.
 
-{$BANBLIT_DOMAIN} {
+{
+	servers {
+		# 요청 header 를 10초 안에 다 보내지 않는 연결을 끊습니다. 연결을 열어 둔 채 header 를 천천히 보내 연결 수를 고갈시키는 요청을 차단합니다.
+		timeouts {
+			read_header 10s
+		}
+	}
+}
+
+# 도메인 주소와 서버 안 확인용 주소(:8080)가 같은 규칙을 씁니다.
+(app) {
 	encode zstd gzip
 
-	# 화면과 /api 의 분기는 web(nginx) 이 합니다. caddy 는 전부 web 으로 전달합니다.
-	# web 이 응답하지 않을 때 대기하는 상한입니다. nginx 의 proxy_read_timeout(30s)보다 길게 둡니다.
-	reverse_proxy web:80 {
-		transport http {
-			dial_timeout 5s
-			response_header_timeout 40s
+	# /api 접두사를 삭제하고 전달합니다. api 의 endpoint 는 /periods 처럼 /api 접두사를 포함하지 않습니다.
+	handle_path /api/* {
+		# 첨부파일 1개의 크기 상한입니다. 화면의 MAX_ATTACHMENT_BYTES(frontend/src/lib/boards.ts), deploy/smoke.sh 와 같은 값이어야 합니다.
+		request_body {
+			max_size 300MiB
+		}
+		# api 응답을 기다리는 상한입니다. 배정 계산은 job 으로 접수하고 바로 응답하므로 요청 1개는 30초를 넘지 않습니다.
+		# 변경할 경우 화면의 REQUEST_TIMEOUT_MS(frontend/src/lib/api.ts)와 api 의 쿼리 상한(backend/src/backend/db/engine.py)을 함께 확인합니다.
+		reverse_proxy api:8000 {
+			transport http {
+				dial_timeout 5s
+				response_header_timeout 30s
+			}
 		}
 	}
 
-	# 접속 기록만 남깁니다. 요청 본문(비밀번호, 재설정 token)은 남기지 않습니다.
+	handle {
+		root * /srv
+		# build 결과 파일은 이름에 content hash 가 포함되므로 1년 동안 cache 합니다. 존재하지 않는 파일의 404 는 cache 하지 않습니다.
+		@asset {
+			path /assets/*
+			file
+		}
+		header @asset Cache-Control "public, max-age=31536000, immutable"
+		# 존재하지 않는 경로는 index.html 을 반환합니다. 이 설정이 없을 경우 /scheduler 를 직접 요청하면 404 가 발생합니다.
+		# /assets/, /images/ 는 제외합니다. index.html 로 대체하면 링크 미리보기 수집기가 HTML 을 이미지로 저장합니다.
+		@page {
+			not path /assets/* /images/*
+			not file
+		}
+		rewrite @page /index.html
+		file_server
+	}
+}
+
+{$BANBLIT_DOMAIN} {
+	import app
+
+	# 접속 기록만 남깁니다. 요청 본문(비밀번호)은 남기지 않고, 주소의 token 값(비밀번호 재설정 링크)은 삭제하고 남깁니다.
 	log {
 		output file /var/log/caddy/access.log {
 			roll_size 10MiB
 			roll_keep 5
+		}
+		format filter {
+			request>uri query {
+				delete token
+			}
 		}
 	}
 
@@ -30,4 +74,9 @@
 		Referrer-Policy "same-origin"
 		-Server
 	}
+}
+
+# 서버 안에서 상태를 확인하는 주소입니다. docker-compose.yml 이 host 의 127.0.0.1 에만 엽니다.
+http://:8080 {
+	import app
 }

@@ -14,11 +14,11 @@ sources:
   - "[[graph/frontend/src/components/PostAttachments]]"  # 올라간 파일을 내려받고 삭제하는 목록 — frontend/src/components/PostAttachments.tsx
   - "[[graph/frontend/src/components/PostBoard]]"  # 글 목록과 상세를 전환하는 게시판 화면 — frontend/src/components/PostBoard.tsx
   - "[[graph/frontend/src/routes/SettingsBlinded]]"  # 가려 둔 글을 보고 되돌리는 화면 — frontend/src/routes/SettingsBlinded.tsx
-  - "[[graph/frontend/nginx.conf.template]]"  # reverse proxy(nginx)의 요청 크기 상한 — frontend/nginx.conf.template
+  - "[[graph/deploy/Caddyfile]]"  # reverse proxy(Caddy)의 요청 크기 상한 — deploy/Caddyfile
   - "[[graph/docker-compose.yml]]"  # 파일이 저장되는 위치와 그 위치를 지정하는 환경변수 — docker-compose.yml
 ---
 
-> 문서 버전: 2.4.1 draft
+> 문서 버전: 2.4.2 draft
 
 ```mermaid
 flowchart TD
@@ -100,7 +100,7 @@ flowchart TD
 flowchart TD
     A[작성자가 파일을 선택합니다] --> B{화면이 먼저 검증합니다<br/>크기, 확장자}
     B -->|거절| X1[선택 위치에서 사유를 표시합니다]
-    B -->|통과| C{reverse proxy(nginx)가 큰 요청을 거절합니다}
+    B -->|통과| C{reverse proxy(Caddy)가 큰 요청을 거절합니다}
     C -->|거절| X2[서버에 도달하기 전에 거절]
     C -->|통과| D{서버가 다시 검증합니다<br/>허용 목록에 있는 종류인가}
     D -->|아니다| X3[거절]
@@ -135,10 +135,10 @@ flowchart TD
 | 어디 | 무엇을 하나 | 왜 |
 | --- | --- | --- |
 | 화면 | 파일을 선택하는 위치에서 크기와 종류를 먼저 검증합니다 | 300MB를 전부 업로드한 뒤에 거절되면 그 시간이 전부 낭비됩니다 |
-| reverse proxy(nginx) | 상한을 넘는 요청을 애플리케이션에 도달하기 전에 거절합니다 | 애플리케이션까지 들어와야 거절되면, 거절할 요청 1개가 서버 worker(요청을 처리하는 서버 process)를 그동안 점유합니다 |
+| reverse proxy(Caddy) | 상한을 넘는 요청을 애플리케이션에 도달하기 전에 거절합니다 | 애플리케이션까지 들어와야 거절되면, 거절할 요청 1개가 서버 worker(요청을 처리하는 서버 process)를 그동안 점유합니다 |
 | 서버 | 이미 붙어 있는 첨부의 합계에 이번 파일을 더한 값이 300MB를 넘으면 거절합니다 | 파일 1개의 상한만 있으면 같은 글에 300MB 파일을 반복해서 붙여 디스크를 채울 수 있습니다 |
 
-개발 구성에는 reverse proxy(nginx)가 없습니다. 개발에서는 Vite 개발 서버가 그 자리를 대신하는데 요청 크기를 검증하지 않아서, 상한을 넘는 파일이 애플리케이션까지 들어옵니다. 화면을 거치면 검증되지만 화면을 거치지 않는 요청은 검증되지 않으므로, 배포에서만 2겹이 됩니다.
+개발 구성에는 reverse proxy(Caddy)가 없습니다. 개발에서는 Vite 개발 서버가 그 자리를 대신하는데 요청 크기를 검증하지 않아서, 상한을 넘는 파일이 애플리케이션까지 들어옵니다. 화면을 거치면 검증되지만 화면을 거치지 않는 요청은 검증되지 않으므로, 배포에서만 2겹이 됩니다.
 
 글을 삭제하면 파일도 삭제됩니다. table의 행은 글이 삭제될 때 함께 삭제되지만 디스크의 파일은 자동으로 삭제되지 않으므로, 글을 삭제하는 코드는 table의 행이 삭제되기 전에 디스크의 파일을 먼저 삭제합니다. 순서를 변경하면 어느 파일이 그 글에 속하는지 알 수 없어져 아무도 삭제할 수 없는 참조되지 않는 파일이 계속 쌓입니다.
 

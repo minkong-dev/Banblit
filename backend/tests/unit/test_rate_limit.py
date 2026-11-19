@@ -95,8 +95,15 @@ def test_caller_is_what_the_proxy_saw_not_what_the_client_claimed() -> None:
     assert caller_of(request) == "203.0.113.9"
 
 
+def test_caller_defaults_to_one_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
+    # 배포 경로는 Caddy, api 순서입니다. 환경변수가 없으면 맨 뒤 값을 요청자로 봅니다.
+    monkeypatch.delenv("TRUSTED_PROXY_COUNT", raising=False)
+
+    assert caller_of(_request("172.18.0.5", "1.1.1.1, 203.0.113.9")) == "203.0.113.9"
+
+
 def test_caller_skips_every_trusted_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
-    # 배포 경로는 Caddy → nginx → api 입니다. nginx 가 맨 뒤에 추가하는 값은 Caddy 컨테이너 주소이므로
+    # Caddy 앞에 CDN 같은 reverse proxy 를 1개 더 둔 경우입니다. 맨 뒤 값은 그 reverse proxy 의 주소이므로
     # 요청자는 뒤에서 2번째 값입니다.
     monkeypatch.setenv("TRUSTED_PROXY_COUNT", "2")
     request = _request("172.18.0.6", "1.1.1.1, 203.0.113.9, 172.18.0.5")

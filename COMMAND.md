@@ -334,7 +334,7 @@ docker compose exec api ls -l /var/lib/banblit/attachments
   - **작성자 본인만 첨부하고 삭제할 수 있습니다.** 다른 계정의 cookie 로 1행을 전송하면 403 을 반환합니다. 팀 게시판 게시글이면 내려받기도 그 팀 소속 멤버만 할 수 있습니다.
   - **허용 목록에 없는 확장자는 422 로 거절됩니다.** 목록은 `backend/src/backend/services/board/pipeline.py` 의 `ALLOWED_EXTENSIONS` 1곳에만 있습니다.
   - **Git Bash 에서 `;filename=` 에 한글을 적으면 이름이 깨져 저장됩니다.** 터미널이 UTF-8 로 전송하지 않기 때문입니다. 서버 문제가 아닙니다. 브라우저와 테스트(`tests/integration/db/test_attachment_endpoints.py`)에서는 한글 이름이 그대로 저장됩니다.
-  - **개발 구성에는 reverse proxy(nginx)가 없습니다.** 크기 상한(`client_max_body_size 300m`)은 배포 구성에서만 적용되므로, 개발에서 300MB 를 초과해 전송하면 그대로 통과합니다. 배포 구성으로 확인하려면 `11-1` 로 실행한 서버에서 확인합니다.
+  - **개발 구성에는 reverse proxy(Caddy)가 없습니다.** 크기 상한(`deploy/Caddyfile` 의 `request_body max_size 300MiB`)은 배포 구성에서만 적용되므로, 개발에서 300MB 를 초과해 전송하면 그대로 통과합니다. 배포 구성으로 확인하려면 `11-1` 로 실행한 서버에서 확인합니다.
   - 저장 폴더는 `banblit-attachments` volume 입니다. `docker compose down` 으로 정지해도 유지되고, `down -v` 로만 삭제됩니다.
 
 ---
@@ -642,20 +642,20 @@ docker compose run --rm --no-deps web npm run build
   - `--rm --no-deps` — `10-2` 와 같은 이유입니다.
 - **주의점**
   - **`frontend/dist/` 는 저장소가 추적하지 않습니다**(`.gitignore`). 이 명령을 실행해도 `git status` 에는 아무것도 뜨지 않습니다. 배포에 나가는 bundle 은 `10-4-1` 의 Docker image 를 만들 때 그 안에서 다시 생성하므로, 여기서 만든 `frontend/dist/` 는 로컬 확인용입니다.
-  - 배포에서 이 bundle 을 제공하는 것은 nginx 입니다(`frontend/Dockerfile` 의 `prod` 단계가 `dist` 를 `/usr/share/nginx/html` 로 복사합니다). 요청 경로는 Caddy, nginx, api 순서이고, `/api` 만 서버로 전달하는 규칙이 `frontend/nginx.conf.template` 에 있습니다. 개발 서버(Vite)는 배포에 포함되지 않습니다.
+  - 배포에서 이 bundle 을 제공하는 것은 Caddy 입니다(`frontend/Dockerfile` 의 `prod` 단계가 `dist` 를 `/srv` 로 복사합니다). 요청 경로는 Caddy, api 순서이고, `/api` 만 서버로 전달하는 규칙이 `deploy/Caddyfile` 에 있습니다. 개발 서버(Vite)는 배포에 포함되지 않습니다.
 
 ### 10-4-1. 배포용 화면 Docker image 를 만들고 링크 미리보기 주소를 확인하기
 
 ```
-docker compose -f docker-compose.yml build web
-docker run --rm --entrypoint sh banblit-frontend:prod -c "grep -o 'property=\"og:[a-z_]*\" content=\"[^\"]*\"' /usr/share/nginx/html/index.html"
+docker compose -f docker-compose.yml build caddy
+docker run --rm --entrypoint sh banblit-caddy:prod -c "grep -o 'property=\"og:[a-z_]*\" content=\"[^\"]*\"' /srv/index.html"
 ```
 
 - **실행 경로**: 저장소 루트 (`Banblit/`)
-- **용도**: 배포용 화면 Docker image(`banblit-frontend:prod`)를 만들고, 그 안의 `index.html` 에 링크 미리보기 태그(`og:*`)가 실제 주소로 채워졌는지 확인합니다. 주소는 build 시점에 치환되므로, Docker image 를 만든 뒤가 아니면 확인할 수 없습니다.
+- **용도**: 배포용 화면 Docker image(`banblit-caddy:prod`)를 만들고, 그 안의 `index.html` 에 링크 미리보기 태그(`og:*`)가 실제 주소로 채워졌는지 확인합니다. 주소는 build 시점에 치환되므로, Docker image 를 만든 뒤가 아니면 확인할 수 없습니다.
 - **옵션**
-  - `-f docker-compose.yml` — 배포용 설정만 사용합니다. 이 옵션이 없으면 `docker-compose.override.yml` 이 `web` 의 `build` 를 삭제해 `No services to build` 만 출력하고 끝납니다.
-  - `--entrypoint sh` — nginx 를 실행하지 않고 셸로 들어갑니다. 이 Docker image 의 기본 실행 명령이 nginx 라 붙이지 않으면 nginx 가 실행됩니다.
+  - `-f docker-compose.yml` — 배포용 설정만 사용합니다. 생략해도 같은 Docker image 가 생성됩니다. `docker-compose.override.yml` 은 caddy 의 `build` 를 변경하지 않습니다.
+  - `--entrypoint sh` — Caddy 를 실행하지 않고 셸로 들어갑니다. 이 Docker image 의 기본 실행 명령이 Caddy 라 붙이지 않으면 Caddy 가 실행됩니다.
   - `grep -o` — 맞은 부분만 출력합니다. `index.html` 은 한 줄이 길어 줄 단위로 출력하면 읽기 어렵습니다.
 - **주의점**
   - 출력의 주소가 `http://localhost:8080` 이면 `.env` 의 `APP_ORIGIN` 이 비어 있는 것입니다. 배포 서버에서는 반드시 입력합니다. 빈 값이면 카카오톡, 페이스북 미리보기 이미지가 보이지 않습니다.
@@ -867,6 +867,28 @@ ls backend/migrations/versions
 
 ---
 
+### 11-7. reverse proxy 규칙 확인하기
+
+```
+bash deploy/smoke.sh
+```
+
+- **실행 경로**: 저장소 루트. 배포 서버 또는 배포 구성을 실행한 PC
+- **용도**: Caddy 가 화면, `/api` 전달, `/images/` 404, `/assets/` cache, 첨부파일 300MiB 상한을 규칙대로 처리하는지 요청 8개로 확인합니다. 실패한 항목이 1개 이상이면 1 로 종료합니다. CI 의 `deploy-images` job 이 같은 명령을 실행합니다.
+- **옵션**
+  - 인자 없음 — `http://127.0.0.1:8080` 을 확인합니다. `.env` 의 `WEB_PORT` 기본값입니다.
+  - `<주소>` — 그 주소를 확인합니다. `WEB_PORT` 를 변경한 경우 사용합니다.
+- **주의점**
+  - **300MiB 크기의 요청을 2회 전송합니다.** 서버 안에서 실행하면 네트워크를 쓰지 않지만, 외부 주소로 실행하면 600MiB 가 전송됩니다.
+  - 이 PC 에서 개발용 container 와 섞지 않고 실행하려면 project 이름을 지정합니다. `-p` 를 생략하면 개발용 DB volume 을 배포 구성이 사용합니다.
+    ```
+    BANBLIT_DOMAIN=localhost docker compose -p banblit-smoke -f docker-compose.yml up -d --wait db
+    docker compose -p banblit-smoke -f docker-compose.yml run --rm --no-deps api alembic upgrade head
+    BANBLIT_DOMAIN=localhost docker compose -p banblit-smoke -f docker-compose.yml up -d --wait caddy
+    bash deploy/smoke.sh
+    docker compose -p banblit-smoke -f docker-compose.yml down -v
+    ```
+
 ## 12. E2E 테스트
 
 ### 12-1. E2E 테스트 실행하기
@@ -1041,7 +1063,7 @@ switch(`-Auto` 등)는 wrapper 스크립트가 `--auto` 로 변환해 전달하�
 | 모드 | 언제 | 무엇이 실행되는가 |
 |---|---|---|
 | `dev` | 윈도우(기본) | 개발용 override 가 적용되어 Vite 개발 서버와 api 가 실행됩니다. reverse proxy, 백업은 실행되지 않습니다 |
-| `deploy` | 윈도우 이외의 OS(기본) | base 1개만 적용됩니다. nginx, reverse proxy(caddy), 정기 백업이 함께 실행되고 https 로 요청을 받습니다 |
+| `deploy` | 윈도우 이외의 OS(기본) | base 1개만 적용됩니다. reverse proxy(caddy), 정기 백업이 함께 실행되고 https 로 요청을 받습니다 |
 
 ### 14-1. 명령을 어느 경로에서나 사용하도록 등록하기
 

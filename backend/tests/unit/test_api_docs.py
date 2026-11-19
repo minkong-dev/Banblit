@@ -47,13 +47,17 @@ def test_docs_block_repeated_guesses() -> None:
     assert client.get("/docs", auth=(USER, PASSWORD)).status_code == 429
 
 
-def test_docs_block_everyone_after_too_many_failures_from_many_addresses() -> None:
+def test_docs_block_everyone_after_too_many_failures_from_many_addresses(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # 주소마다 상한(RATE_LIMITS["docs"]) 아래로 보내야 전체 합산 상한만 검증됩니다.
+    monkeypatch.setenv("TRUSTED_PROXY_COUNT", "1")
     client = TestClient(app)
     limit, _ = RATE_LIMITS["docs_failures"]
     for i in range(limit):
-        client.get("/docs", auth=(USER, "wrong"), headers={"x-forwarded-for": f"10.0.{i // 250}.{i % 250}, 172.0.0.1"})
+        client.get("/docs", auth=(USER, "wrong"), headers={"x-forwarded-for": f"10.0.{i // 250}.{i % 250}"})
 
-    fresh = {"x-forwarded-for": "10.9.9.9, 172.0.0.1"}
+    fresh = {"x-forwarded-for": "10.9.9.9"}
     assert client.get("/docs", auth=(USER, PASSWORD), headers=fresh).status_code == 429
 
 

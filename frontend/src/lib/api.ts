@@ -7,7 +7,7 @@ import { SESSION_REJECTED_CODE } from "./contract";
 export const REQUEST_TIMEOUT_MS = 8000;
 
 // 서버 주소 앞에 붙이는 접두사입니다. 화면 주소와 서버 주소가 같은 이름으로 겹치는 것을 막습니다.
-// 접두사를 붙이는 곳과 제거하는 곳은 각각 하나입니다(개발은 vite.config.ts, 배포는 frontend/nginx.conf.template).
+// 접두사를 붙이는 곳과 제거하는 곳은 각각 하나입니다(개발은 vite.config.ts, 배포는 deploy/Caddyfile).
 const API_PREFIX = "/api";
 
 // 파일 업로드가 완료될 때까지 기다리는 시간(밀리초)입니다.

@@ -9,7 +9,7 @@
 #
 #   dev     — 개발용. docker-compose.override.yml 이 적용되어 Vite 개발 서버와 api 가 실행됩니다.
 #             reverse proxy(caddy), 백업 service 는 실행되지 않고, 로그인 cookie 의 Secure 가 꺼집니다.
-#   deploy  — 배포용. docker-compose.yml 1개만 씁니다. nginx, caddy, 정기 백업이 함께 실행되고 https 로 받습니다.
+#   deploy  — 배포용. docker-compose.yml 1개만 씁니다. caddy, 정기 백업이 함께 실행되고 https 로 받습니다.
 #
 # 어느 방식인지는 실행 중인 OS 로 결정합니다 — 윈도우는 dev, 그 밖은 deploy.
 # --dev / --deploy 로 직접 지정할 수 있고, 어느 방식을 선택했는지 매번 화면에 출력합니다.
@@ -76,7 +76,7 @@ COMMAND="${COMMAND:-up}"
 if [ "$MODE" = 'deploy' ]; then
   # 배포는 docker-compose.yml 1개만 씁니다. -f 를 지정하면 docker compose 가 override 파일을 자동으로 적용하지 않습니다.
   COMPOSE=(docker compose -f docker-compose.yml)
-  # 배포에서 alembic 은 api service 의 Docker image 안에서 실행합니다. --no-deps 로 web, caddy 는 재실행하지 않습니다.
+  # 배포에서 alembic 은 api service 의 Docker image 안에서 실행합니다. --no-deps 로 caddy 는 재실행하지 않습니다.
   ALEMBIC=(run --rm --no-deps api alembic)
 else
   COMPOSE=(docker compose)
@@ -100,8 +100,8 @@ web_port() {
 
 health_url() {
   if [ "$MODE" = 'deploy' ]; then
-    # 배포에서 api 는 host 에 포트를 열지 않습니다. nginx 를 거쳐 확인합니다 —
-    # web, api, db 가 연결되어 동작하는지까지 요청 1번으로 확인합니다.
+    # 배포에서 api 는 host 에 포트를 열지 않습니다. caddy 를 거쳐 확인합니다 —
+    # caddy, api, db 가 연결되어 동작하는지까지 요청 1번으로 확인합니다.
     printf 'http://127.0.0.1:%s/api/health' "$(web_port)"
   else
     printf '%s' "$DEV_API_HEALTH_URL"
@@ -399,7 +399,9 @@ up_deploy() {
   migrate_db
 
   step "아직 실행되지 않은 Container 를 모두 생성합니다"
-  "${COMPOSE[@]}" up -d
+  # --remove-orphans 는 docker-compose.yml 에서 삭제된 service 의 container 를 삭제합니다.
+  # 삭제하지 않으면 그 container 가 포트를 계속 점유하여 새 container 가 시작하지 못합니다.
+  "${COMPOSE[@]}" up -d --remove-orphans
 
   step "정상 응답이 올 때까지 대기합니다"
   wait_url "$(health_url)" "$DEPLOY_TIMEOUT" 'API' || {
@@ -444,6 +446,8 @@ cmd_down() {
 
 cmd_restart() {
   local targets=(api web)
+  # 배포에는 web 이 없고 caddy 가 화면을 제공합니다.
+  [ "$MODE" = 'dev' ] || targets=(api caddy)
   [ -z "$SERVICE" ] || targets=("$SERVICE")
   step "Container를 강제로 재실행합니다 — ${targets[*]}"
   # docker compose restart 를 쓰지 않습니다.

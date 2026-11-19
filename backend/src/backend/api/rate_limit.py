@@ -14,12 +14,12 @@ from collections.abc import Callable
 
 from fastapi import HTTPException, Request
 
-# reverse proxy 는 사용자의 요청을 대신 받아 api 로 전달하는 서버입니다. 배포에서는 Caddy(TLS 종료)와 nginx(화면 파일 제공)가 그 역할이라
+# reverse proxy 는 사용자의 요청을 대신 받아 api 로 전달하는 서버입니다. 배포에서는 Caddy(TLS 종료, 화면 파일 제공)가 그 역할이라
 # api 가 보는 발신 주소는 proxy 의 주소이고, 실제 발신자는 X-Forwarded-For header 에서 읽어야 합니다.
-# api 앞에 있는 reverse proxy 개수를 담은 환경변수의 이름입니다. 배포는 Caddy, nginx, api 순서라 2(docker-compose.yml),
-# 개발은 nginx 또는 Vite 1개라 1(docker-compose.override.yml)입니다. 환경변수가 없으면 배포 값입니다.
+# api 앞에 있는 reverse proxy 개수를 담은 환경변수의 이름입니다. 배포는 Caddy, 개발은 Vite 1개라 1 입니다.
+# 환경변수가 없으면 배포 값입니다.
 _PROXY_COUNT_VARIABLE = "TRUSTED_PROXY_COUNT"
-DEFAULT_TRUSTED_PROXY_COUNT = 2
+DEFAULT_TRUSTED_PROXY_COUNT = 1
 
 # IP 주소를 변경해 가며 요청하면 _seen 의 항목이 무한히 쌓입니다. 메모리를 고갈시키는 공격이 되므로 상한을 둡니다.
 # 숫자 사이의 _ 는 자릿수 구분 기호로, 10_000 은 10000 과 같은 값입니다.
