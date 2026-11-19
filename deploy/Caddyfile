@@ -19,6 +19,10 @@
 	# /api 접두사를 삭제하고 전달합니다. api 의 endpoint 는 /periods 처럼 /api 접두사를 포함하지 않습니다.
 	handle_path /api/* {
 		# 첨부파일 1개의 크기 상한입니다. 화면의 MAX_ATTACHMENT_BYTES(frontend/src/lib/boards.ts), deploy/smoke.sh 와 같은 값이어야 합니다.
+		# Content-Length 가 상한을 넘는 요청은 본문을 받기 전에 413 을 반환합니다. 314572800 은 300MiB 입니다.
+		@too_large expression `{header.Content-Length} != "" && int({header.Content-Length}) > 314572800`
+		respond @too_large 413
+		# Content-Length 없이 나눠 보내는 요청(chunked)은 전달하면서 크기를 세어 상한에서 끊습니다.
 		request_body {
 			max_size 300MiB
 		}

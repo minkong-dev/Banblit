@@ -16,7 +16,7 @@ sources:
   - "[[graph/frontend/index.html]]"  # 크롤러가 읽는 링크 미리보기 태그 — frontend/index.html
 ---
 
-> 문서 버전: 2.0.0 draft
+> 문서 버전: 2.0.1 draft
 
 ```mermaid
 flowchart LR
@@ -188,6 +188,16 @@ reverse proxy 는 각자 관찰한 주소를 `X-Forwarded-For` 헤더(요청이 
 ```
 
 개발 환경에서는 실행 명령이 마이그레이션을 자동으로 포함합니다. **배포에서는 수동으로 진행합니다.** 실제 데이터가 있는 환경에서 자동 마이그레이션은 되돌릴 방법이 없기 때문입니다.
+
+**트러블슈팅 — nginx 를 삭제한 첫 배포에서 caddy 가 시작하지 못함 (2026-11-19, 배포 서버)**
+- 무엇이: `banblit update` 를 실행하자 caddy 가 `Bind for 127.0.0.1:8080 failed: port is already allocated` 로 시작하지 못해 사이트에 접속할 수 없었습니다.
+- 왜: 옛 `web` container 가 8080 을 계속 점유했습니다. 이 container 를 삭제하는 `--remove-orphans` 는 새 `banblit.sh` 에 있지만, `update` 는 git pull 전에 읽은 옛 `banblit.sh` 로 끝까지 실행됩니다.
+- 어떻게: 서버에서 `docker compose -f docker-compose.yml down --remove-orphans` 후 `banblit up` 으로 복구했습니다. service 를 삭제하는 변경을 반영할 때는 이 2개 명령으로 반영합니다.
+
+**트러블슈팅 — 상한을 넘는 첨부파일이 413 이 아니라 400 으로 거절됨 (2026-11-19, 배포 서버)**
+- 무엇이: 배포 서버에서 `deploy/smoke.sh` 의 300MiB 초과 항목이 400 을 반환했습니다. 로컬에서는 413 이었습니다.
+- 왜: `request_body max_size` 는 본문을 api 로 전달하면서 크기를 세므로, 300MiB 까지는 api 로 전달됩니다. 서버에서는 api 가 Caddy 보다 먼저 400 을 응답했습니다(api 로그 `POST /posts/1/attachments 400`). 옛 nginx 는 `Content-Length` 만 보고 본문을 받기 전에 413 을 반환했습니다.
+- 어떻게: `Content-Length` 가 314572800(300MiB)을 넘으면 본문을 받기 전에 413 을 반환하도록 `deploy/Caddyfile` 에 추가했습니다. 로컬에서 smoke 8개가 통과했고, 초과 요청이 api 로그에 남지 않는 것을 확인했습니다. `Content-Length` 가 없는 chunked 요청은 `max_size` 가 상한에서 전달을 끊습니다.
 
 ## Conclusion
 
