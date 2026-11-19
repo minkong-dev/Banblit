@@ -420,13 +420,16 @@ cmd_up() {
   if [ "$MODE" = 'deploy' ]; then up_deploy; else up_dev; fi
   register_hooks
   register_command
+  # 배포는 마지막에 api 응답과 reverse proxy 규칙을 확인합니다. 실패하면 1 로 종료합니다.
+  if [ "$MODE" = 'deploy' ]; then cmd_status; fi
 }
 
 # 서버 소스코드를 Github 최신 릴리즈로 갱신합니다.
 cmd_update() {
   step "Git pull을 실행하여 소스코드를 업데이트합니다"
   git pull
-  cmd_up
+  # 지금 실행 중인 것은 git pull 전의 banblit.sh 입니다. 새로 받은 banblit.sh 로 up 을 실행합니다.
+  exec bash ./banblit.sh up "--$MODE"
 }
 
 cmd_down() {
@@ -470,10 +473,17 @@ cmd_status() {
   "${COMPOSE[@]}" ps
   step "READY"
   local body
+  local failed=0
   if body="$(curl -fsS --max-time 5 "$(health_url)" 2>/dev/null)"; then
     note "API  $body"
   else
     note "API  응답 없음"
+    failed=1
+  fi
+  if [ "$MODE" = 'deploy' ]; then
+    step "Reverse proxy 규칙"
+    note "300MiB 크기의 요청을 2회 전송합니다."
+    bash deploy/smoke.sh "http://127.0.0.1:$(web_port)" || failed=1
   fi
   if [ "$MODE" = 'dev' ]; then
     if curl -fsS --max-time 5 "$DEV_WEB_URL" >/dev/null 2>&1; then
@@ -482,6 +492,7 @@ cmd_status() {
       note "web Container Up failed (timeout)"
     fi
   fi
+  return "$failed"
 }
 
 cmd_migrate() {
@@ -530,7 +541,7 @@ COMMAND
   down      Product 를 종료합니다.
   restart   대상을 재실행합니다.
   logs      최근 1분 이내에 출력된 로그를 출력합니다.
-  status    Container 의 Health check 를 진행합니다.
+  status    Container 의 Health check 를 진행합니다. [DEPLOY] reverse proxy 규칙(deploy/smoke.sh)도 확인합니다.
   migrate   migration 를 적용하고 현재 revision 을 출력합니다.
   check     [DEV] pytest 와 mypy 를 통해 Test를 실행합니다.
   help      도움말을 출력합니다.

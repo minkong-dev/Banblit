@@ -89,8 +89,13 @@ jobs:
       - name: 환경 변수 파일 생성
         run: cp .env.example .env
 
+      # 저장소의 코드와 설정은 Docker image 안에 복사합니다. host 파일을 연결하면 banblit.sh update 가 변경을 반영하지 않습니다.
+      - name: 저장소 파일을 container 에 연결하지 않는지 확인
+        run: |
+          ! grep -nE '^\s*-\s*.?\./|source:\s*.?\./' docker-compose.yml
+
       - name: 배포용 Docker image build
-        run: docker compose -f docker-compose.yml build api caddy
+        run: docker compose -f docker-compose.yml build api caddy backup
 
       # 배포 구성을 실행하고 Caddy 가 화면, /api, 업로드 상한을 규칙대로 처리하는지 확인합니다(deploy/smoke.sh).
       # BANBLIT_DOMAIN 이 localhost 이면 Caddy 는 외부 발급처 대신 자체 인증서를 씁니다.
