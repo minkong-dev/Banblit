@@ -44,7 +44,7 @@ if not _service_logs.handlers:
     )
     _service_logs.addHandler(_service_handler)
 
-app = FastAPI(title="Banblit Scheduling API")
+app = FastAPI(title="Banblit Scheduling API", root_path="/api")
 
 # 같은 요청자가 window 초 안에 보낼 수 있는 요청 횟수입니다. 값은 (횟수 int, window 초 float) 입니다. 비밀번호를 하나씩
 # 시도하는 것을 막지 못하면 짧은 비밀번호는 시도 횟수만 충분하면 맞힐 수 있습니다. 메일을 보내는 endpoint 는
