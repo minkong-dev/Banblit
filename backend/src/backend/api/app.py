@@ -14,6 +14,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from backend.api.routers import (
     auth,
     boards,
+    docs,
     notifications,
     periods,
     permissions,
@@ -44,7 +45,8 @@ if not _service_logs.handlers:
     )
     _service_logs.addHandler(_service_handler)
 
-app = FastAPI(title="Banblit Scheduling API", root_path="/api")
+# 기본 문서 경로 3개를 끄고, 비밀번호를 검증하는 routers/docs.py 의 /docs, /openapi.json 만 제공합니다.
+app = FastAPI(title="Banblit Scheduling API", root_path="/api", docs_url=None, redoc_url=None, openapi_url=None)
 
 # 같은 요청자가 window 초 안에 보낼 수 있는 요청 횟수입니다. 값은 (횟수 int, window 초 float) 입니다. 비밀번호를 하나씩
 # 시도하는 것을 막지 못하면 짧은 비밀번호는 시도 횟수만 충분하면 맞힐 수 있습니다. 메일을 보내는 endpoint 는
@@ -56,6 +58,10 @@ RATE_LIMITS: dict[str, tuple[int, float]] = {
     "reset": (10, 3600),
     # 소셜 로그인 callback 입니다. 비밀번호 로그인과 bucket 을 나눠 한쪽의 429 가 다른 쪽을 막지 않게 합니다.
     "social": (20, 300),
+    # Swagger UI 의 basic auth 입니다(routers/docs.py). 화면 1회가 /docs 401, /docs 200, /openapi.json 의 3회로 세어집니다.
+    "docs": (30, 300),
+    # Swagger UI 의 틀린 비밀번호를 IP 주소와 무관하게 합산한 횟수입니다. 넘기면 전원이 429 를 받습니다.
+    "docs_failures": (100, 3600),
 }
 
 
@@ -176,3 +182,4 @@ app.include_router(permissions.router)
 app.include_router(notifications.router)
 app.include_router(schedule.router)
 app.include_router(settings.router)
+app.include_router(docs.router)

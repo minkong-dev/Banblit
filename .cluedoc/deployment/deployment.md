@@ -9,12 +9,14 @@ sources:
   - "[[graph/backend/src/backend/api/rate_limit]]"  # 값을 추측하는 요청을 제한하는 rate limit — backend/src/backend/api/rate_limit.py
   - "[[graph/backend/src/backend/api/routers/auth]]"  # 그 rate limit이 적용된 5개 endpoint — backend/src/backend/api/routers/auth.py
   - "[[graph/backend/tests/unit/test_rate_limit]]"  # 상한, 창, 격리의 시나리오 — backend/tests/unit/test_rate_limit.py
+  - "[[graph/backend/src/backend/api/routers/docs]]"  # 아이디와 비밀번호를 검증한 뒤 Swagger UI 와 API 명세를 반환 — backend/src/backend/api/routers/docs.py
+  - "[[graph/backend/tests/unit/test_api_docs]]"  # Swagger 비밀번호, 404, 429 의 시나리오 — backend/tests/unit/test_api_docs.py
   - "[[graph/frontend/nginx.conf.template]]"  # 화면을 제공하고 /api 만 서버로 전달하는 규칙 — frontend/nginx.conf.template
   - "[[graph/frontend/Dockerfile]]"  # 화면을 묶을 때 접속 주소를 박아 넣는 위치 — frontend/Dockerfile
   - "[[graph/frontend/index.html]]"  # 크롤러가 읽는 링크 미리보기 태그 — frontend/index.html
 ---
 
-> 문서 버전: 1.2.0 draft
+> 문서 버전: 1.3.0 draft
 
 ```mermaid
 flowchart LR
@@ -133,6 +135,10 @@ reverse proxy 는 인증서를 자동으로 받고 갱신합니다. 인증서를
 | 가입 | 1시간에 5회 |
 | 아이디 찾기, 비밀번호 재설정 메일 | 1시간에 5회 |
 | 비밀번호 재설정 확인 | 1시간에 10회 |
+| Swagger UI | 5분에 30회. 화면 1회가 요청 3회입니다 |
+| Swagger UI 틀린 비밀번호, IP 주소 무관 합산 | 1시간에 100회. 넘기면 전원이 차단됩니다 |
+
+Swagger UI(`/api/docs`)는 `.env` 의 `API_DOCS_USER`, `API_DOCS_PASSWORD` 로 basic auth(브라우저 입력창으로 아이디와 비밀번호를 받는 방식)를 검증합니다. Banblit 계정과 별개인 개발자 전용 값이고, 둘 중 하나라도 비어 있으면 404 를 반환합니다. `/api/redoc` 은 제공하지 않습니다(사용자 결정 2026-11-19).
 
 **남은 시도 횟수는 알려주지 않습니다.** 임계값을 알면 그보다 아래에서 계속 시도할 수 있기 때문입니다. 대신 "잠시 후 다시 시도하세요"라는 메시지와 대기 시간만 반환합니다.
 

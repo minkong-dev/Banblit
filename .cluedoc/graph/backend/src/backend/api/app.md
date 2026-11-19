@@ -15,6 +15,7 @@ flowchart LR
   backend_src_backend_api_app --> backend_src_backend_api_rate_limit["rate_limit.py"]
   backend_src_backend_api_app --> backend_src_backend_api_routers_auth["auth.py"]
   backend_src_backend_api_app --> backend_src_backend_api_routers_boards["boards.py"]
+  backend_src_backend_api_app --> backend_src_backend_api_routers_docs["docs.py"]
   backend_src_backend_api_app --> backend_src_backend_api_routers_notifications["notifications.py"]
   backend_src_backend_api_app --> backend_src_backend_api_routers_periods["periods.py"]
   backend_src_backend_api_app --> backend_src_backend_api_routers_permissions["permissions.py"]
@@ -30,6 +31,7 @@ flowchart LR
   backend_tests_integration_db_test_reject_endpoints["test_reject_endpoints.py"] --> backend_src_backend_api_app
   backend_tests_integration_db_test_reservation_endpoints["test_reservation_endpoints.py"] --> backend_src_backend_api_app
   backend_tests_unit_test_api_database_down["test_api_database_down.py"] --> backend_src_backend_api_app
+  backend_tests_unit_test_api_docs["test_api_docs.py"] --> backend_src_backend_api_app
   backend_tests_unit_test_api_errors["test_api_errors.py"] --> backend_src_backend_api_app
   backend_tests_unit_test_api_health["test_api_health.py"] --> backend_src_backend_api_app
   backend_tests_unit_test_integrity_error_handler["test_integrity_error_handler.py"] --> backend_src_backend_api_app
@@ -43,6 +45,7 @@ flowchart LR
 - [[graph/backend/src/backend/api/rate_limit|rate_limit.py]]
 - [[graph/backend/src/backend/api/routers/auth|auth.py]]
 - [[graph/backend/src/backend/api/routers/boards|boards.py]]
+- [[graph/backend/src/backend/api/routers/docs|docs.py]]
 - [[graph/backend/src/backend/api/routers/notifications|notifications.py]]
 - [[graph/backend/src/backend/api/routers/periods|periods.py]]
 - [[graph/backend/src/backend/api/routers/permissions|permissions.py]]
@@ -61,6 +64,7 @@ flowchart LR
 - [[graph/backend/tests/integration/db/test_reject_endpoints|test_reject_endpoints.py]]
 - [[graph/backend/tests/integration/db/test_reservation_endpoints|test_reservation_endpoints.py]]
 - [[graph/backend/tests/unit/test_api_database_down|test_api_database_down.py]]
+- [[graph/backend/tests/unit/test_api_docs|test_api_docs.py]]
 - [[graph/backend/tests/unit/test_api_errors|test_api_errors.py]]
 - [[graph/backend/tests/unit/test_api_health|test_api_health.py]]
 - [[graph/backend/tests/unit/test_integrity_error_handler|test_integrity_error_handler.py]]
