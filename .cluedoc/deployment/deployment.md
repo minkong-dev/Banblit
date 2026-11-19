@@ -16,7 +16,7 @@ sources:
   - "[[graph/frontend/index.html]]"  # 크롤러가 읽는 링크 미리보기 태그 — frontend/index.html
 ---
 
-> 문서 버전: 2.0.1 draft
+> 문서 버전: 2.1.0 draft
 
 ```mermaid
 flowchart LR
@@ -187,7 +187,9 @@ reverse proxy 는 각자 관찰한 주소를 `X-Forwarded-For` 헤더(요청이 
                    아직 없는 테이블 열을 읽어 500 error 발생
 ```
 
-개발 환경에서는 실행 명령이 마이그레이션을 자동으로 포함합니다. **배포에서는 수동으로 진행합니다.** 실제 데이터가 있는 환경에서 자동 마이그레이션은 되돌릴 방법이 없기 때문입니다.
+개발과 배포 모두 실행 명령(`banblit up`, `banblit update`)이 마이그레이션을 자동으로 포함합니다. 배포에서는 마이그레이션 직전에 백업을 1회 진행하고, 백업에 실패하면 마이그레이션을 실행하지 않고 중단합니다. 되돌릴 때는 이 백업으로 복원합니다.
+
+`banblit update` 는 git pull 뒤에 새로 받은 `banblit.sh` 로 다시 실행하고, 마지막에 `banblit status` 로 api 응답과 reverse proxy 규칙 8개(`deploy/smoke.sh`)를 확인합니다. 1개라도 실패하면 실패로 종료합니다. Caddy 는 `2.11` 로 고정해, 저장소 변경 없이 Caddy 의 동작이 바뀌지 않게 합니다.
 
 **트러블슈팅 — nginx 를 삭제한 첫 배포에서 caddy 가 시작하지 못함 (2026-11-19, 배포 서버)**
 - 무엇이: `banblit update` 를 실행하자 caddy 가 `Bind for 127.0.0.1:8080 failed: port is already allocated` 로 시작하지 못해 사이트에 접속할 수 없었습니다.
@@ -198,6 +200,13 @@ reverse proxy 는 각자 관찰한 주소를 `X-Forwarded-For` 헤더(요청이 
 - 무엇이: 배포 서버에서 `deploy/smoke.sh` 의 300MiB 초과 항목이 400 을 반환했습니다. 로컬에서는 413 이었습니다.
 - 왜: `request_body max_size` 는 본문을 api 로 전달하면서 크기를 세므로, 300MiB 까지는 api 로 전달됩니다. 서버에서는 api 가 Caddy 보다 먼저 400 을 응답했습니다(api 로그 `POST /posts/1/attachments 400`). 옛 nginx 는 `Content-Length` 만 보고 본문을 받기 전에 413 을 반환했습니다.
 - 어떻게: `Content-Length` 가 314572800(300MiB)을 넘으면 본문을 받기 전에 413 을 반환하도록 `deploy/Caddyfile` 에 추가했습니다. 로컬에서 smoke 8개가 통과했고, 초과 요청이 api 로그에 남지 않는 것을 확인했습니다. `Content-Length` 가 없는 chunked 요청은 `max_size` 가 상한에서 전달을 끊습니다.
+
+**저장소의 코드와 설정은 Docker image 안에 복사합니다(사용자 결정 2026-11-19).** host 에서 container 에 연결하는 것은 데이터(DB, 첨부파일, 인증서, 백업 파일)뿐입니다. CI 의 `deploy-images` job 이 `docker-compose.yml` 에 저장소 파일(`./` 로 시작하는 경로) 연결이 없는지 확인합니다.
+
+**트러블슈팅 — Caddyfile 을 수정해 update 했는데 반영되지 않음 (2026-11-19, 배포 서버)**
+- 무엇이: `banblit update` 뒤에도 smoke 의 300MiB 초과 항목이 400 이었고, caddy 는 `Running` 으로 재시작되지 않았습니다.
+- 왜: `deploy/Caddyfile` 과 `deploy/backup.sh` 는 host 파일을 container 에 연결해 쓰고 있었습니다(2026-09-09). `update` 는 Docker image 가 변경된 container 만 다시 생성하므로, 두 파일만 수정하면 반영되지 않습니다.
+- 어떻게: 두 파일을 각 Docker image 안에 복사하도록 변경했습니다. caddy 는 `frontend/Dockerfile` 이 `additional_contexts` 로 받은 deploy 폴더에서, backup 은 `deploy/backup.Dockerfile` 이 복사합니다. 로컬에서 Caddyfile 을 수정한 뒤 `build`, `up -d` 를 실행하면 caddy 가 `Recreated` 되고 새 내용을 읽는 것을 확인했습니다.
 
 ## Conclusion
 
