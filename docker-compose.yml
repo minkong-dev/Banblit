@@ -40,6 +40,9 @@ services:
       GOOGLE_CLIENT_SECRET: "${GOOGLE_CLIENT_SECRET:-}"
       KAKAO_CLIENT_ID: "${KAKAO_CLIENT_ID:-}"
       KAKAO_CLIENT_SECRET: "${KAKAO_CLIENT_SECRET:-}"
+      # Swagger UI(/api/docs)의 basic auth 계정입니다. API_DOCS_USER 나 API_DOCS_PASSWORD 가 비어 있으면 /api/docs 가 404 입니다.
+      API_DOCS_USER: "${API_DOCS_USER:-}"
+      API_DOCS_PASSWORD: "${API_DOCS_PASSWORD:-}"
     volumes:
       # 게시판 첨부파일입니다. 경로는 위 ATTACHMENT_DIR 과 같은 값이어야 합니다.
       - banblit-attachments:${ATTACHMENT_DIR:-/var/lib/banblit/attachments}

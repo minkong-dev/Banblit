@@ -6,6 +6,7 @@ kind: directory
 # unit/
 
 - [[graph/backend/tests/unit/test_api_database_down|test_api_database_down.py]]
+- [[graph/backend/tests/unit/test_api_docs|test_api_docs.py]]
 - [[graph/backend/tests/unit/test_api_errors|test_api_errors.py]]
 - [[graph/backend/tests/unit/test_api_health|test_api_health.py]]
 - [[graph/backend/tests/unit/test_assignment|test_assignment.py]]

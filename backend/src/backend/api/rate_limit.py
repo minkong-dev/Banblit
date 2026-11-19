@@ -46,24 +46,27 @@ class RateLimiter:
 
         차단된 요청은 hits 에 추가하지 않습니다. 추가할 경우 요청을 계속 보내는 동안 가장 오래된 요청 시각이 window 를 벗어나지 않아 차단이 해제되지 않습니다.
         """
+        wait = self.peek(caller, now)
+        if wait is not None:
+            return wait
+        self._seen.setdefault(caller, deque()).append(now)
+        self._seen.move_to_end(caller)
+        self._forget_oldest()
+        return None
+
+    def peek(self, caller: str, now: float) -> int | None:
+        """check 와 같은 값을 반환하되 요청을 세지 않습니다."""
         hits = self._seen.get(caller)
         if hits is None:
-            hits = deque()
-            self._seen[caller] = hits
-        self._seen.move_to_end(caller)
-
+            return None
         # window 를 벗어난 요청 시각은 제거합니다.
         while hits and hits[0] <= now - self._window:
             hits.popleft()
-
-        if len(hits) >= self._limit:
-            # 가장 오래된 요청이 window를 벗어날 때까지 남은 초를 반환합니다. 1초 이상으로 보장합니다.
-            # hits[0] + window 가 그 요청이 window 밖으로 나가는 시각이고, 거기서 now 를 빼면 남은 초입니다.
-            return max(1, int(hits[0] + self._window - now))
-
-        hits.append(now)
-        self._forget_oldest()
-        return None
+        if len(hits) < self._limit:
+            return None
+        # 가장 오래된 요청이 window를 벗어날 때까지 남은 초를 반환합니다. 1초 이상으로 보장합니다.
+        # hits[0] + window 가 그 요청이 window 밖으로 나가는 시각이고, 거기서 now 를 빼면 남은 초입니다.
+        return max(1, int(hits[0] + self._window - now))
 
     def size(self) -> int:
         return len(self._seen)

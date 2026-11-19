@@ -7,6 +7,7 @@ kind: directory
 
 - [[graph/backend/src/backend/api/routers/auth|auth.py]]
 - [[graph/backend/src/backend/api/routers/boards|boards.py]]
+- [[graph/backend/src/backend/api/routers/docs|docs.py]]
 - [[graph/backend/src/backend/api/routers/notifications|notifications.py]]
 - [[graph/backend/src/backend/api/routers/periods|periods.py]]
 - [[graph/backend/src/backend/api/routers/permissions|permissions.py]]
