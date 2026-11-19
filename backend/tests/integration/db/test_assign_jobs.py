@@ -175,6 +175,11 @@ def test_health_responds_while_an_assignment_job_is_running(
         return real_assign_period(*args, **kwargs)
 
     monkeypatch.setattr(app_module, "run_period_assignment", slow_assign_period)
+    # /health 는 DATABASE_URL 의 DB 를 조회합니다. migration 이 적용된 테스트 DB 로 지정합니다.
+    # 지정하지 않으면 migration 이 적용되지 않은 CI 의 DB 에서 503 을 반환합니다.
+    monkeypatch.setenv(
+        "DATABASE_URL", db_session.get_bind().engine.url.render_as_string(hide_password=False)
+    )
 
     submitted = api_client.post(
         f"/periods/{period_id}/assign",
