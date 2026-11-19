@@ -106,7 +106,7 @@ def enabled_social_providers() -> list[SocialProvider]:
 
 
 def social_redirect_uri(name: SocialProvider) -> str:
-    """제공자에 등록한 callback 주소입니다. 화면 주소 뒤에 /api 를 붙입니다(nginx, vite 가 /api 를 삭제해 api 로 전달합니다)."""
+    """제공자에 등록한 callback 주소입니다. 화면 주소 뒤에 /api 를 붙입니다(Caddy, vite 가 /api 를 삭제해 api 로 전달합니다)."""
     return f"{os.environ.get('APP_ORIGIN', '').rstrip('/')}/api/social/{name}/callback"
 
 

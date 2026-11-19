@@ -41,18 +41,15 @@ services:
       AUTO_ASSIGN_INTERVAL_SECONDS: "${AUTO_ASSIGN_INTERVAL_SECONDS:-10}"
     restart: "no"
 
-  # 화면입니다. nginx 대신 Vite 개발 서버를 실행합니다.
+  # 화면입니다. 개발 전용이고 Vite 개발 서버를 실행합니다. 배포는 caddy 가 화면을 제공합니다.
+  # banblit up 이 5173 응답으로 준비를 판단합니다.
   # node_modules 는 named volume 에 둡니다. 윈도우 폴더에 두면 파일 수가 많아 느려집니다.
   web:
     image: node:24-alpine
-    build: !reset null
     working_dir: /app
     command: sh -c "npm install && npm run dev"
-    ports: !override
+    ports:
       - "5173:5173"
-    # 개발은 nginx 가 아니라 Vite 라 배포용 healthcheck(/api/health)를 끕니다. banblit up 이 5173 응답으로 준비를 판단합니다.
-    healthcheck:
-      disable: true
     volumes:
       - ./frontend:/app
       - banblit-web-modules:/app/node_modules

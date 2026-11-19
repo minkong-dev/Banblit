@@ -12,7 +12,7 @@ sources:
   - "[[graph/backend/tests/conftest]]"  # 전용 테스트 DB에 실제 마이그레이션을 적용하는 픽스처 — backend/tests/conftest.py
 ---
 
-> 문서 버전: 2.3.0 draft
+> 문서 버전: 2.3.1 draft
 
 ```mermaid
 erDiagram
@@ -201,7 +201,7 @@ flowchart LR
     C --> R[api 가 503 응답, 로그에 경로와 사유]
 ```
 
-25초는 배포 nginx 의 응답 대기 30초보다 짧게 지정한 값입니다. 길면 nginx 가 먼저 504 를 반환해 api 의 문구가 화면에 도착하지 않습니다. 두 상한은 환경변수(`DB_STATEMENT_TIMEOUT`, `DB_LOCK_TIMEOUT`)로 변경할 수 있고, 0 이하 값은 시작할 때 거부합니다.
+25초는 배포 Caddy 의 응답 대기 30초보다 짧게 지정한 값입니다. 길면 Caddy 가 먼저 504 를 반환해 api 의 문구가 화면에 도착하지 않습니다. 두 상한은 환경변수(`DB_STATEMENT_TIMEOUT`, `DB_LOCK_TIMEOUT`)로 변경할 수 있고, 0 이하 값은 시작할 때 거부합니다.
 
 ### TDD로 검증했습니다
 

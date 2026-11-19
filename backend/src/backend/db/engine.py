@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 CONNECT_TIMEOUT = 5
 POOL_TIMEOUT = 10
-# 쿼리 1개의 실행 상한(초)입니다. 배포 nginx 의 응답 대기 30초(proxy_read_timeout)보다 짧아야 api 가 503 으로 먼저 응답합니다.
+# 쿼리 1개의 실행 상한(초)입니다. 배포 Caddy 의 응답 대기 30초(deploy/Caddyfile 의 response_header_timeout)보다 짧아야 api 가 503 으로 먼저 응답합니다.
 STATEMENT_TIMEOUT = 25
 # 다른 요청이 잡은 행 잠금을 기다리는 상한(초)입니다.
 LOCK_TIMEOUT = 5

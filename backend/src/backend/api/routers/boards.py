@@ -280,8 +280,8 @@ def upload_attachment(
 ) -> AttachmentEnvelopeOut:
     # file.file은 framework가 이미 임시 파일로 준비한 파일 객체입니다. 서비스에는
     # UploadFile이 아니라 읽을 수 있는 객체만 전달합니다 — 서비스가 endpoint(API의 요청 주소 단위) 형식을 모르게 둡니다.
-    # 파일 크기 상한 검사를 이 함수에 두지 않습니다. 이 함수에 도달하기 전에 nginx 의
-    # client_max_body_size(frontend/nginx.conf.template)가 이미 거부했습니다.
+    # 파일 크기 상한 검사를 이 함수에 두지 않습니다. 이 함수에 도달하기 전에 Caddy 의
+    # request_body max_size(deploy/Caddyfile)가 이미 거부했습니다.
     attachment = save_attachment(
         session,
         post_id,

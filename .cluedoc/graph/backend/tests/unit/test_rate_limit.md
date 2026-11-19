@@ -33,6 +33,7 @@ flowchart LR
 - `_request`
 - `test_caller_is_the_peer_when_nothing_is_in_front`: `backend.api.rate_limit`
 - `test_caller_is_what_the_proxy_saw_not_what_the_client_claimed`: `backend.api.rate_limit`
+- `test_caller_defaults_to_one_proxy`: `backend.api.rate_limit`
 - `test_caller_skips_every_trusted_proxy`: `backend.api.rate_limit`
 - `test_caller_is_the_peer_when_a_trusted_proxy_was_bypassed`: `backend.api.rate_limit`
 - `test_caller_falls_back_when_there_is_no_peer`: `backend.api.rate_limit`

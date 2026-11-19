@@ -46,7 +46,7 @@ sources:
   - "[[graph/frontend/src/components/PostBoard]]"  # 글 목록과 상세를 전환하는 게시판 컴포넌트 — frontend/src/components/PostBoard.tsx
   - "[[graph/frontend/src/components/PostComments]]"  # 댓글 작성 form 과 댓글 한 줄 — frontend/src/components/PostComments.tsx
   - "[[graph/frontend/src/components/PostActions]]"  # 글 블라인드, 삭제, 수정 버튼 — frontend/src/components/PostActions.tsx
-  - "[[graph/frontend/nginx.conf.template]]"  # reverse proxy(nginx)의 요청 크기 상한 — frontend/nginx.conf.template
+  - "[[graph/deploy/Caddyfile]]"  # reverse proxy(Caddy)의 요청 크기 상한 — deploy/Caddyfile
   - "[[graph/frontend/src/components/components]]"  # 2개 화면이 함께 쓰는 컴포넌트 — frontend/src/components/
   - "[[graph/frontend/src/lib/lib]]"  # 서버 호출과 순수 계산 (테스트가 있는 곳) — frontend/src/lib/
   - "[[graph/frontend/src/styles/styles]]"  # 화면별 스타일 — frontend/src/styles/
@@ -54,7 +54,7 @@ sources:
   - "[[graph/docker-compose.yml]]"  # web 컨테이너가 화면을 제공합니다 — docker-compose.yml
 ---
 
-> 문서 버전: 3.11.1 draft
+> 문서 버전: 3.11.2 draft
 
 ```mermaid
 flowchart LR
